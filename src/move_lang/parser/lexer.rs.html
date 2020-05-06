@@ -425,12 +425,72 @@
 <span id="425">425</span>
 <span id="426">426</span>
 <span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">errors</span>::<span class="kw-2">*</span>, <span class="ident">parser</span>::<span class="ident">syntax</span>::<span class="ident">make_loc</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">errors</span>::<span class="kw-2">*</span>, <span class="ident">parser</span>::<span class="ident">syntax</span>::<span class="ident">make_loc</span>, <span class="ident">FileCommentMap</span>, <span class="ident">MatchedFileCommentMap</span>};
+<span class="kw">use</span> <span class="ident">codespan</span>::{<span class="ident">ByteIndex</span>, <span class="ident">Span</span>};
+<span class="kw">use</span> <span class="ident">move_ir_types</span>::<span class="ident">location</span>::<span class="ident">Loc</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">BTreeMap</span>, <span class="ident">fmt</span>};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">PartialOrd</span>, <span class="ident">Ord</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Tok</span> {
@@ -586,6 +646,8 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Lexer</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span> {
     <span class="ident">text</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;input</span> <span class="ident">str</span>,
     <span class="ident">file</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>,
+    <span class="ident">doc_comments</span>: <span class="ident">FileCommentMap</span>,
+    <span class="ident">matched_doc_comments</span>: <span class="ident">MatchedFileCommentMap</span>,
     <span class="ident">prev_end</span>: <span class="ident">usize</span>,
     <span class="ident">cur_start</span>: <span class="ident">usize</span>,
     <span class="ident">cur_end</span>: <span class="ident">usize</span>,
@@ -593,10 +655,16 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span> <span class="ident">Lexer</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;input</span> <span class="ident">str</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Lexer</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">text</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;input</span> <span class="ident">str</span>,
+        <span class="ident">file</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>,
+        <span class="ident">doc_comments</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">Span</span>, <span class="ident">String</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Lexer</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span> {
         <span class="ident">Lexer</span> {
-            <span class="ident">text</span>: <span class="ident">s</span>,
-            <span class="ident">file</span>: <span class="ident">f</span>,
+            <span class="ident">text</span>,
+            <span class="ident">file</span>,
+            <span class="ident">doc_comments</span>,
+            <span class="ident">matched_doc_comments</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
             <span class="ident">prev_end</span>: <span class="number">0</span>,
             <span class="ident">cur_start</span>: <span class="number">0</span>,
             <span class="ident">cur_end</span>: <span class="number">0</span>,
@@ -631,6 +699,54 @@
         <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">text</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="ident">text</span>.<span class="ident">len</span>();
         <span class="kw">let</span> (<span class="ident">tok</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">find_token</span>(<span class="self">self</span>.<span class="ident">file</span>, <span class="ident">text</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">tok</span>)
+    }
+
+    <span class="comment">// Matches the doc comments after the last token (or the beginning of the file) to the position</span>
+    <span class="comment">// of the current token. This moves the comments out of `doc_comments` and</span>
+    <span class="comment">// into `matched_doc_comments`. At the end of parsing, if `doc_comments` is not empty, errors</span>
+    <span class="comment">// for stale doc comments will be produced.</span>
+    <span class="comment">//</span>
+    <span class="comment">// Calling this function during parsing effectively marks a valid point for documentation</span>
+    <span class="comment">// comments. The documentation comments are not stored in the AST, but can be retrieved by</span>
+    <span class="comment">// using the start position of an item as an index into `matched_doc_comments`.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">match_doc_comments</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">previous_end_loc</span>() <span class="kw">as</span> <span class="ident">u32</span>;
+        <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">cur_start</span> <span class="kw">as</span> <span class="ident">u32</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">matched</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+        <span class="kw">let</span> <span class="ident">merged</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">doc_comments</span>
+            .<span class="ident">range</span>(<span class="ident">Span</span>::<span class="ident">new</span>(<span class="ident">start</span>, <span class="ident">start</span>)..<span class="ident">Span</span>::<span class="ident">new</span>(<span class="ident">end</span>, <span class="ident">end</span>))
+            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">span</span>, <span class="ident">s</span>)<span class="op">|</span> {
+                <span class="ident">matched</span>.<span class="ident">push</span>(<span class="kw-2">*</span><span class="ident">span</span>);
+                <span class="ident">s</span>.<span class="ident">clone</span>()
+            })
+            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+            .<span class="ident">join</span>(<span class="string">&quot;\n&quot;</span>);
+        <span class="kw">for</span> <span class="ident">span</span> <span class="kw">in</span> <span class="ident">matched</span> {
+            <span class="self">self</span>.<span class="ident">doc_comments</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">span</span>);
+        }
+        <span class="self">self</span>.<span class="ident">matched_doc_comments</span>.<span class="ident">insert</span>(<span class="ident">ByteIndex</span>(<span class="ident">end</span>), <span class="ident">merged</span>);
+    }
+
+    <span class="comment">// At the end of parsing, checks whether there are any unmatched documentation comments,</span>
+    <span class="comment">// producing errors if so. Otherwise returns a map from file position to associated</span>
+    <span class="comment">// documentation.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">check_and_get_doc_comments</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">MatchedFileCommentMap</span>, <span class="ident">Errors</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">errors</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">doc_comments</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">span</span>, <span class="kw">_</span>)<span class="op">|</span> {
+                <span class="macro">vec</span><span class="macro">!</span>[(
+                    <span class="ident">Loc</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">file</span>, <span class="kw-2">*</span><span class="ident">span</span>),
+                    <span class="string">&quot;documentation comment cannot be matched to a language item&quot;</span>.<span class="ident">to_string</span>(),
+                )]
+            })
+            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Errors</span><span class="op">&gt;</span>();
+        <span class="kw">if</span> <span class="ident">errors</span>.<span class="ident">is_empty</span>() {
+            <span class="prelude-val">Ok</span>(<span class="ident">std</span>::<span class="ident">mem</span>::<span class="ident">take</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">matched_doc_comments</span>))
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Err</span>(<span class="ident">errors</span>)
+        }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">advance</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
