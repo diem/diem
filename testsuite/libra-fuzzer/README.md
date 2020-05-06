@@ -83,10 +83,10 @@ See [Google OSS-Fuzz's documentation on reproducing bugs](https://google.github.
 
 ### Fuzzing Coverage
 
-To test coverage of our fuzzers you can run the following command with [tarpaulin](https://crates.io/crates/cargo-tarpaulin):
+To test coverage of our fuzzers you can run the following command with [grcov](https://github.com/mozilla/grcov):
 
 ```
-CORPUS_PATH=fuzz/corpus cargo tarpaulin -p libra-fuzzer -- coverage
+CORPUS_PATH=fuzz/corpus cargo xtest --html-cov-dir <some path for html output> -p libra-fuzzer -- coverage
 ```
 
 ### Google OSS-Fuzz Integration
