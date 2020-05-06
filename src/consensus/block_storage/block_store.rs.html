@@ -454,6 +454,39 @@
 <span id="454">454</span>
 <span id="455">455</span>
 <span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -465,6 +498,7 @@
         <span class="ident">PersistentLivenessStorage</span>, <span class="ident">RecoveryData</span>, <span class="ident">RootInfo</span>, <span class="ident">RootMetadata</span>,
     },
     <span class="ident">state_replication</span>::<span class="ident">StateComputer</span>,
+    <span class="ident">util</span>::<span class="ident">time_service</span>::<span class="ident">duration_since_epoch</span>,
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">bail</span>, <span class="ident">ensure</span>, <span class="ident">format_err</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">consensus_types</span>::{
@@ -477,10 +511,11 @@
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">epoch_info</span>::<span class="ident">EpochInfo</span>;
-<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>;
+<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>, <span class="ident">transaction</span>::<span class="ident">TransactionStatus</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::{<span class="ident">vec_deque</span>::<span class="ident">VecDeque</span>, <span class="ident">HashMap</span>},
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">RwLock</span>},
+    <span class="ident">time</span>::<span class="ident">Duration</span>,
 };
 <span class="kw">use</span> <span class="ident">termion</span>::<span class="ident">color</span>::<span class="kw-2">*</span>;
 
@@ -490,6 +525,37 @@
 
 <span class="attribute">#[<span class="ident">path</span> <span class="op">=</span> <span class="string">&quot;sync_manager.rs&quot;</span>]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">sync_manager</span>;
+
+<span class="kw">fn</span> <span class="ident">update_counters_for_committed_blocks</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">blocks_to_commit</span>: <span class="kw-2">&amp;</span>[<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>]) {
+    <span class="kw">for</span> <span class="ident">block</span> <span class="kw">in</span> <span class="ident">blocks_to_commit</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">time_to_commit</span>) <span class="op">=</span>
+            <span class="ident">duration_since_epoch</span>().<span class="ident">checked_sub</span>(<span class="ident">Duration</span>::<span class="ident">from_micros</span>(<span class="ident">block</span>.<span class="ident">timestamp_usecs</span>()))
+        {
+            <span class="ident">counters</span>::<span class="ident">CREATION_TO_COMMIT_S</span>.<span class="ident">observe_duration</span>(<span class="ident">time_to_commit</span>);
+        }
+        <span class="kw">let</span> <span class="ident">txn_status</span> <span class="op">=</span> <span class="ident">block</span>.<span class="ident">compute_result</span>().<span class="ident">compute_status</span>();
+        <span class="ident">counters</span>::<span class="ident">NUM_TXNS_PER_BLOCK</span>.<span class="ident">observe</span>(<span class="ident">txn_status</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">f64</span>);
+        <span class="ident">counters</span>::<span class="ident">COMMITTED_BLOCKS_COUNT</span>.<span class="ident">inc</span>();
+        <span class="ident">counters</span>::<span class="ident">LAST_COMMITTED_ROUND</span>.<span class="ident">set</span>(<span class="ident">block</span>.<span class="ident">round</span>() <span class="kw">as</span> <span class="ident">i64</span>);
+
+        <span class="kw">for</span> <span class="ident">status</span> <span class="kw">in</span> <span class="ident">txn_status</span>.<span class="ident">iter</span>() {
+            <span class="kw">match</span> <span class="ident">status</span> {
+                <span class="ident">TransactionStatus</span>::<span class="ident">Keep</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">counters</span>::<span class="ident">COMMITTED_TXNS_COUNT</span>
+                        .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;success&quot;</span>])
+                        .<span class="ident">inc</span>();
+                }
+                <span class="ident">TransactionStatus</span>::<span class="ident">Discard</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">counters</span>::<span class="ident">COMMITTED_TXNS_COUNT</span>
+                        .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;failed&quot;</span>])
+                        .<span class="ident">inc</span>();
+                }
+                <span class="comment">// TODO(zekunli): add counter</span>
+                <span class="ident">TransactionStatus</span>::<span class="ident">Retry</span> <span class="op">=</span><span class="op">&gt;</span> (),
+            }
+        }
+    }
+}
 
 <span class="doccomment">/// Responsible for maintaining all the blocks of payload and the dependencies of those blocks</span>
 <span class="doccomment">/// (parent and previous QC links).  It is expected to be accessed concurrently by multiple threads</span>
@@ -616,11 +682,8 @@
         <span class="ident">tree</span>
     }
 
-    <span class="doccomment">/// Commit the given block id with the proof, returns the path from current root or error</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">commit</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">finality_proof</span>: <span class="ident">LedgerInfoWithSignatures</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Commit the given block id with the proof, returns () on success or error</span>
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">commit</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">finality_proof</span>: <span class="ident">LedgerInfoWithSignatures</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">block_id_to_commit</span> <span class="op">=</span> <span class="ident">finality_proof</span>.<span class="ident">ledger_info</span>().<span class="ident">consensus_block_id</span>();
         <span class="kw">let</span> <span class="ident">block_to_commit</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">get_block</span>(<span class="ident">block_id_to_commit</span>)
@@ -635,6 +698,9 @@
         <span class="kw">let</span> <span class="ident">blocks_to_commit</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">path_from_root</span>(<span class="ident">block_id_to_commit</span>)
             .<span class="ident">unwrap_or_else</span>(<span class="ident">Vec</span>::<span class="ident">new</span>);
+        <span class="kw">for</span> <span class="ident">block</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">blocks_to_commit</span> {
+            <span class="macro">end_trace</span><span class="macro">!</span>(<span class="string">&quot;commit&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">block</span>.<span class="ident">id</span>()});
+        }
 
         <span class="self">self</span>.<span class="ident">state_computer</span>
             .<span class="ident">commit</span>(
@@ -643,7 +709,7 @@
             )
             .<span class="kw">await</span>
             .<span class="ident">expect</span>(<span class="string">&quot;Failed to persist commit&quot;</span>);
-        <span class="ident">counters</span>::<span class="ident">LAST_COMMITTED_ROUND</span>.<span class="ident">set</span>(<span class="ident">block_to_commit</span>.<span class="ident">round</span>() <span class="kw">as</span> <span class="ident">i64</span>);
+        <span class="ident">update_counters_for_committed_blocks</span>(<span class="kw-2">&amp;</span><span class="ident">blocks_to_commit</span>);
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{}Committed{} {}&quot;</span>, <span class="ident">Fg</span>(<span class="ident">Blue</span>), <span class="ident">Fg</span>(<span class="ident">Reset</span>), <span class="kw-2">*</span><span class="ident">block_to_commit</span>);
         <span class="macro">event</span><span class="macro">!</span>(<span class="string">&quot;committed&quot;</span>,
             <span class="string">&quot;block_id&quot;</span>: <span class="ident">block_to_commit</span>.<span class="ident">id</span>().<span class="ident">short_str</span>(),
@@ -651,7 +717,7 @@
             <span class="string">&quot;parent_id&quot;</span>: <span class="ident">block_to_commit</span>.<span class="ident">parent_id</span>().<span class="ident">short_str</span>(),
         );
         <span class="self">self</span>.<span class="ident">prune_tree</span>(<span class="ident">block_to_commit</span>.<span class="ident">id</span>());
-        <span class="prelude-val">Ok</span>(<span class="ident">blocks_to_commit</span>)
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">rebuild</span>(

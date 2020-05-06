@@ -318,6 +318,31 @@
 <span id="318">318</span>
 <span id="319">319</span>
 <span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -394,23 +419,48 @@
     <span class="doccomment">/// Fetches dependencies for given sync_info.quorum_cert</span>
     <span class="doccomment">/// If gap is large, performs state sync using process_highest_commit_cert</span>
     <span class="doccomment">/// Inserts sync_info.quorum_cert into block store as the last step</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">sync_to</span>(
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">add_certs</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">sync_info</span>: <span class="kw-2">&amp;</span><span class="ident">SyncInfo</span>,
         <span class="kw-2">mut</span> <span class="ident">retriever</span>: <span class="ident">BlockRetriever</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">process_highest_commit_cert</span>(<span class="ident">sync_info</span>.<span class="ident">highest_commit_cert</span>().<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">retriever</span>)
+        <span class="self">self</span>.<span class="ident">sync_to_highest_commit_cert</span>(<span class="ident">sync_info</span>.<span class="ident">highest_commit_cert</span>().<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">retriever</span>)
             .<span class="kw">await</span><span class="question-mark">?</span>;
 
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">need_fetch_for_quorum_cert</span>(<span class="ident">sync_info</span>.<span class="ident">highest_quorum_cert</span>()) {
-            <span class="ident">NeedFetchResult</span>::<span class="ident">NeedFetch</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="self">self</span>.<span class="ident">fetch_quorum_cert</span>(<span class="ident">sync_info</span>.<span class="ident">highest_quorum_cert</span>().<span class="ident">clone</span>(), <span class="ident">retriever</span>)
-                    .<span class="kw">await</span><span class="question-mark">?</span>
-            }
-            <span class="ident">NeedFetchResult</span>::<span class="ident">QCBlockExist</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="self">self</span>.<span class="ident">insert_single_quorum_cert</span>(<span class="ident">sync_info</span>.<span class="ident">highest_quorum_cert</span>().<span class="ident">clone</span>())<span class="question-mark">?</span>
-            }
+        <span class="self">self</span>.<span class="ident">insert_quorum_cert</span>(<span class="ident">sync_info</span>.<span class="ident">highest_commit_cert</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">retriever</span>)
+            .<span class="kw">await</span><span class="question-mark">?</span>;
+
+        <span class="self">self</span>.<span class="ident">insert_quorum_cert</span>(<span class="ident">sync_info</span>.<span class="ident">highest_quorum_cert</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">retriever</span>)
+            .<span class="kw">await</span><span class="question-mark">?</span>;
+
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tc</span>) <span class="op">=</span> <span class="ident">sync_info</span>.<span class="ident">highest_timeout_certificate</span>() {
+            <span class="self">self</span>.<span class="ident">insert_timeout_certificate</span>(<span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">tc</span>.<span class="ident">clone</span>()))<span class="question-mark">?</span>;
+        }
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">insert_quorum_cert</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">qc</span>: <span class="kw-2">&amp;</span><span class="ident">QuorumCert</span>,
+        <span class="ident">retriever</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BlockRetriever</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">need_fetch_for_quorum_cert</span>(<span class="kw-2">&amp;</span><span class="ident">qc</span>) {
+            <span class="ident">NeedFetchResult</span>::<span class="ident">NeedFetch</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">fetch_quorum_cert</span>(<span class="ident">qc</span>.<span class="ident">clone</span>(), <span class="ident">retriever</span>).<span class="kw">await</span><span class="question-mark">?</span>,
+            <span class="ident">NeedFetchResult</span>::<span class="ident">QCBlockExist</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">insert_single_quorum_cert</span>(<span class="ident">qc</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>,
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> (),
+        }
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">root</span>().<span class="ident">round</span>() <span class="op">&lt;</span> <span class="ident">qc</span>.<span class="ident">commit_info</span>().<span class="ident">round</span>() {
+            <span class="kw">let</span> <span class="ident">finality_proof</span> <span class="op">=</span> <span class="ident">qc</span>.<span class="ident">ledger_info</span>();
+            <span class="self">self</span>.<span class="ident">commit</span>(<span class="ident">finality_proof</span>.<span class="ident">clone</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="kw">if</span> <span class="ident">qc</span>.<span class="ident">ends_epoch</span>() {
+                <span class="ident">retriever</span>
+                    .<span class="ident">network</span>
+                    .<span class="ident">broadcast_epoch_change</span>(<span class="ident">EpochChangeProof</span>::<span class="ident">new</span>(
+                        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">finality_proof</span>.<span class="ident">clone</span>()],
+                        <span class="comment">/* more = */</span> <span class="bool-val">false</span>,
+                    ))
+                    .<span class="kw">await</span>;
+            }
         }
         <span class="prelude-val">Ok</span>(())
     }
@@ -422,7 +472,7 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">fetch_quorum_cert</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">qc</span>: <span class="ident">QuorumCert</span>,
-        <span class="kw-2">mut</span> <span class="ident">retriever</span>: <span class="ident">BlockRetriever</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+        <span class="ident">retriever</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BlockRetriever</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pending</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">retrieve_qc</span> <span class="op">=</span> <span class="ident">qc</span>.<span class="ident">clone</span>();
@@ -453,7 +503,7 @@
     <span class="doccomment">/// 2. We persist the 3-chain to storage before start sync to ensure we could restart if we</span>
     <span class="doccomment">/// crash in the middle of the sync.</span>
     <span class="doccomment">/// 3. We prune the old tree and replace with a new tree built with the 3-chain.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_highest_commit_cert</span>(
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">sync_to_highest_commit_cert</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">highest_commit_cert</span>: <span class="ident">QuorumCert</span>,
         <span class="ident">retriever</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BlockRetriever</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,

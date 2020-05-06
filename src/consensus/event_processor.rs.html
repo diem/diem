@@ -859,138 +859,6 @@
 <span id="859">859</span>
 <span id="860">860</span>
 <span id="861">861</span>
-<span id="862">862</span>
-<span id="863">863</span>
-<span id="864">864</span>
-<span id="865">865</span>
-<span id="866">866</span>
-<span id="867">867</span>
-<span id="868">868</span>
-<span id="869">869</span>
-<span id="870">870</span>
-<span id="871">871</span>
-<span id="872">872</span>
-<span id="873">873</span>
-<span id="874">874</span>
-<span id="875">875</span>
-<span id="876">876</span>
-<span id="877">877</span>
-<span id="878">878</span>
-<span id="879">879</span>
-<span id="880">880</span>
-<span id="881">881</span>
-<span id="882">882</span>
-<span id="883">883</span>
-<span id="884">884</span>
-<span id="885">885</span>
-<span id="886">886</span>
-<span id="887">887</span>
-<span id="888">888</span>
-<span id="889">889</span>
-<span id="890">890</span>
-<span id="891">891</span>
-<span id="892">892</span>
-<span id="893">893</span>
-<span id="894">894</span>
-<span id="895">895</span>
-<span id="896">896</span>
-<span id="897">897</span>
-<span id="898">898</span>
-<span id="899">899</span>
-<span id="900">900</span>
-<span id="901">901</span>
-<span id="902">902</span>
-<span id="903">903</span>
-<span id="904">904</span>
-<span id="905">905</span>
-<span id="906">906</span>
-<span id="907">907</span>
-<span id="908">908</span>
-<span id="909">909</span>
-<span id="910">910</span>
-<span id="911">911</span>
-<span id="912">912</span>
-<span id="913">913</span>
-<span id="914">914</span>
-<span id="915">915</span>
-<span id="916">916</span>
-<span id="917">917</span>
-<span id="918">918</span>
-<span id="919">919</span>
-<span id="920">920</span>
-<span id="921">921</span>
-<span id="922">922</span>
-<span id="923">923</span>
-<span id="924">924</span>
-<span id="925">925</span>
-<span id="926">926</span>
-<span id="927">927</span>
-<span id="928">928</span>
-<span id="929">929</span>
-<span id="930">930</span>
-<span id="931">931</span>
-<span id="932">932</span>
-<span id="933">933</span>
-<span id="934">934</span>
-<span id="935">935</span>
-<span id="936">936</span>
-<span id="937">937</span>
-<span id="938">938</span>
-<span id="939">939</span>
-<span id="940">940</span>
-<span id="941">941</span>
-<span id="942">942</span>
-<span id="943">943</span>
-<span id="944">944</span>
-<span id="945">945</span>
-<span id="946">946</span>
-<span id="947">947</span>
-<span id="948">948</span>
-<span id="949">949</span>
-<span id="950">950</span>
-<span id="951">951</span>
-<span id="952">952</span>
-<span id="953">953</span>
-<span id="954">954</span>
-<span id="955">955</span>
-<span id="956">956</span>
-<span id="957">957</span>
-<span id="958">958</span>
-<span id="959">959</span>
-<span id="960">960</span>
-<span id="961">961</span>
-<span id="962">962</span>
-<span id="963">963</span>
-<span id="964">964</span>
-<span id="965">965</span>
-<span id="966">966</span>
-<span id="967">967</span>
-<span id="968">968</span>
-<span id="969">969</span>
-<span id="970">970</span>
-<span id="971">971</span>
-<span id="972">972</span>
-<span id="973">973</span>
-<span id="974">974</span>
-<span id="975">975</span>
-<span id="976">976</span>
-<span id="977">977</span>
-<span id="978">978</span>
-<span id="979">979</span>
-<span id="980">980</span>
-<span id="981">981</span>
-<span id="982">982</span>
-<span id="983">983</span>
-<span id="984">984</span>
-<span id="985">985</span>
-<span id="986">986</span>
-<span id="987">987</span>
-<span id="988">988</span>
-<span id="989">989</span>
-<span id="990">990</span>
-<span id="991">991</span>
-<span id="992">992</span>
-<span id="993">993</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1005,7 +873,6 @@
     <span class="ident">block</span>::<span class="ident">Block</span>,
     <span class="ident">block_retrieval</span>::{<span class="ident">BlockRetrievalResponse</span>, <span class="ident">BlockRetrievalStatus</span>},
     <span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Payload</span>, <span class="ident">Round</span>},
-    <span class="ident">executed_block</span>::<span class="ident">ExecutedBlock</span>,
     <span class="ident">proposal_msg</span>::<span class="ident">ProposalMsg</span>,
     <span class="ident">quorum_cert</span>::<span class="ident">QuorumCert</span>,
     <span class="ident">sync_info</span>::<span class="ident">SyncInfo</span>,
@@ -1018,10 +885,7 @@
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">TransactionAccumulatorHasher</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_security_logger</span>::{<span class="ident">security_log</span>, <span class="ident">SecurityEvent</span>};
-<span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">epoch_change</span>::<span class="ident">EpochChangeProof</span>, <span class="ident">epoch_info</span>::<span class="ident">EpochInfo</span>, <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>,
-    <span class="ident">transaction</span>::<span class="ident">TransactionStatus</span>, <span class="ident">validator_verifier</span>::<span class="ident">ValidatorVerifier</span>,
-};
+<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">epoch_info</span>::<span class="ident">EpochInfo</span>, <span class="ident">validator_verifier</span>::<span class="ident">ValidatorVerifier</span>};
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">use</span> <span class="ident">safety_rules</span>::<span class="ident">ConsensusState</span>;
 <span class="kw">use</span> <span class="ident">safety_rules</span>::<span class="ident">TSafetyRules</span>;
@@ -1352,34 +1216,6 @@
             .<span class="ident">process_proposal</span>(<span class="ident">proposal_msg</span>.<span class="ident">take_proposal</span>())
     }
 
-    <span class="doccomment">/// In case some peer&#39;s round or HQC is stale, send a SyncInfo message to that peer.</span>
-    <span class="kw">fn</span> <span class="ident">help_remote_if_stale</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">peer</span>: <span class="ident">Author</span>, <span class="ident">remote_round</span>: <span class="ident">Round</span>, <span class="ident">remote_hqc_round</span>: <span class="ident">Round</span>) {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">proposal_generator</span>.<span class="ident">author</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">peer</span> {
-            <span class="kw">return</span>;
-        }
-        <span class="comment">// pacemaker&#39;s round is sync_info.highest_round() + 1</span>
-        <span class="kw">if</span> <span class="ident">remote_round</span> <span class="op">+</span> <span class="number">1</span> <span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">pacemaker</span>.<span class="ident">current_round</span>()
-            <span class="op">|</span><span class="op">|</span> <span class="ident">remote_hqc_round</span>
-                <span class="op">&lt;</span> <span class="self">self</span>
-                    .<span class="ident">block_store</span>
-                    .<span class="ident">highest_quorum_cert</span>()
-                    .<span class="ident">certified_block</span>()
-                    .<span class="ident">round</span>()
-        {
-            <span class="kw">let</span> <span class="ident">sync_info</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">gen_sync_info</span>();
-
-            <span class="macro">debug</span><span class="macro">!</span>(
-                <span class="string">&quot;Peer {} is at round {} with hqc round {}, sending it {}&quot;</span>,
-                <span class="ident">peer</span>.<span class="ident">short_str</span>(),
-                <span class="ident">remote_round</span>,
-                <span class="ident">remote_hqc_round</span>,
-                <span class="ident">sync_info</span>,
-            );
-            <span class="ident">counters</span>::<span class="ident">SYNC_INFO_MSGS_SENT_COUNT</span>.<span class="ident">inc</span>();
-            <span class="self">self</span>.<span class="ident">network</span>.<span class="ident">send_sync_info</span>(<span class="ident">sync_info</span>, <span class="ident">peer</span>);
-        }
-    }
-
     <span class="doccomment">/// The function makes sure that it brings the missing dependencies from the QC and LedgerInfo</span>
     <span class="doccomment">/// of the given sync info and update the pacemaker with the certificates if succeed.</span>
     <span class="doccomment">/// Returns Error in case sync mgr failed to bring the missing dependencies.</span>
@@ -1390,63 +1226,48 @@
         <span class="ident">author</span>: <span class="ident">Author</span>,
         <span class="ident">help_remote</span>: <span class="ident">bool</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="ident">help_remote</span> {
-            <span class="self">self</span>.<span class="ident">help_remote_if_stale</span>(<span class="ident">author</span>, <span class="ident">sync_info</span>.<span class="ident">highest_round</span>(), <span class="ident">sync_info</span>.<span class="ident">hqc_round</span>());
-        }
-
-        <span class="kw">let</span> <span class="ident">current_hqc_round</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">block_store</span>
-            .<span class="ident">highest_quorum_cert</span>()
-            .<span class="ident">certified_block</span>()
-            .<span class="ident">round</span>();
-
-        <span class="kw">let</span> <span class="ident">current_htc_round</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">block_store</span>
-            .<span class="ident">highest_timeout_cert</span>()
-            .<span class="ident">map_or</span>(<span class="number">0</span>, <span class="op">|</span><span class="ident">tc</span><span class="op">|</span> <span class="ident">tc</span>.<span class="ident">round</span>());
-
-        <span class="kw">if</span> <span class="ident">current_hqc_round</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">sync_info</span>.<span class="ident">hqc_round</span>()
-            <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">current_htc_round</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">sync_info</span>.<span class="ident">htc_round</span>()
-            <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">root</span>().<span class="ident">round</span>()
-                <span class="op">&gt;</span><span class="op">=</span> <span class="ident">sync_info</span>.<span class="ident">highest_commit_cert</span>().<span class="ident">commit_info</span>().<span class="ident">round</span>()
-        {
+        <span class="kw">let</span> <span class="ident">local_sync_info</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">gen_sync_info</span>();
+        <span class="kw">if</span> <span class="ident">sync_info</span>.<span class="ident">is_stale</span>(<span class="kw-2">&amp;</span><span class="ident">local_sync_info</span>) {
+            <span class="kw">if</span> <span class="ident">help_remote</span> {
+                <span class="ident">counters</span>::<span class="ident">SYNC_INFO_MSGS_SENT_COUNT</span>.<span class="ident">inc</span>();
+                <span class="macro">debug</span><span class="macro">!</span>(
+                    <span class="string">&quot;Peer {} has stale state {}, send it back {}&quot;</span>,
+                    <span class="ident">author</span>.<span class="ident">short_str</span>(),
+                    <span class="ident">sync_info</span>,
+                    <span class="ident">local_sync_info</span>,
+                );
+                <span class="self">self</span>.<span class="ident">network</span>.<span class="ident">send_sync_info</span>(<span class="ident">local_sync_info</span>, <span class="ident">author</span>);
+            }
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
         }
-
-        <span class="comment">// Some information in SyncInfo is ahead of what we have locally.</span>
-        <span class="comment">// First verify the SyncInfo (didn&#39;t verify it in the yet).</span>
-        <span class="ident">sync_info</span>.<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">epoch_info</span>().<span class="ident">verifier</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
-            <span class="ident">security_log</span>(<span class="ident">SecurityEvent</span>::<span class="ident">InvalidSyncInfoMsg</span>)
-                .<span class="ident">error</span>(<span class="kw-2">&amp;</span><span class="ident">e</span>)
-                .<span class="ident">data</span>(<span class="kw-2">&amp;</span><span class="ident">sync_info</span>)
-                .<span class="ident">log</span>();
-            <span class="ident">e</span>
-        })<span class="question-mark">?</span>;
-
-        <span class="macro">debug</span><span class="macro">!</span>(
-            <span class="string">&quot;Starting sync: current_hqc_round = {}, sync_info_hqc_round = {}&quot;</span>,
-            <span class="ident">current_hqc_round</span>,
-            <span class="ident">sync_info</span>.<span class="ident">hqc_round</span>(),
-        );
-        <span class="self">self</span>.<span class="ident">block_store</span>
-            .<span class="ident">sync_to</span>(<span class="kw-2">&amp;</span><span class="ident">sync_info</span>, <span class="self">self</span>.<span class="ident">create_block_retriever</span>(<span class="ident">author</span>))
-            .<span class="kw">await</span>
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
-                <span class="macro">warn</span><span class="macro">!</span>(
-                    <span class="string">&quot;Fail to sync up to HQC @ round {}: {}&quot;</span>,
-                    <span class="ident">sync_info</span>.<span class="ident">hqc_round</span>(),
-                    <span class="ident">e</span>
-                );
+        <span class="kw">if</span> <span class="ident">local_sync_info</span>.<span class="ident">is_stale</span>(<span class="kw-2">&amp;</span><span class="ident">sync_info</span>) {
+            <span class="macro">debug</span><span class="macro">!</span>(
+                <span class="string">&quot;Local state {} is stale than peer {} remote state {}&quot;</span>,
+                <span class="ident">local_sync_info</span>,
+                <span class="ident">author</span>.<span class="ident">short_str</span>(),
+                <span class="ident">sync_info</span>
+            );
+            <span class="comment">// Some information in SyncInfo is ahead of what we have locally.</span>
+            <span class="comment">// First verify the SyncInfo (didn&#39;t verify it in the yet).</span>
+            <span class="ident">sync_info</span>.<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">epoch_info</span>().<span class="ident">verifier</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
+                <span class="ident">security_log</span>(<span class="ident">SecurityEvent</span>::<span class="ident">InvalidSyncInfoMsg</span>)
+                    .<span class="ident">error</span>(<span class="kw-2">&amp;</span><span class="ident">e</span>)
+                    .<span class="ident">data</span>(<span class="kw-2">&amp;</span><span class="ident">sync_info</span>)
+                    .<span class="ident">log</span>();
                 <span class="ident">e</span>
             })<span class="question-mark">?</span>;
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Caught up to HQC at round {}&quot;</span>, <span class="ident">sync_info</span>.<span class="ident">hqc_round</span>());
+            <span class="self">self</span>.<span class="ident">block_store</span>
+                .<span class="ident">add_certs</span>(<span class="kw-2">&amp;</span><span class="ident">sync_info</span>, <span class="self">self</span>.<span class="ident">create_block_retriever</span>(<span class="ident">author</span>))
+                .<span class="kw">await</span>
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
+                    <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Fail to sync up to {}: {:?}&quot;</span>, <span class="ident">sync_info</span>, <span class="ident">e</span>);
+                    <span class="ident">e</span>
+                })<span class="question-mark">?</span>;
 
-        <span class="comment">// Update the block store and potentially start a new round.</span>
-        <span class="self">self</span>.<span class="ident">process_certificates</span>(
-            <span class="ident">sync_info</span>.<span class="ident">highest_quorum_cert</span>(),
-            <span class="ident">sync_info</span>.<span class="ident">highest_timeout_certificate</span>(),
-        )
-        .<span class="kw">await</span>
+            <span class="comment">// Update safety rules and pacemaker and potentially start a new round.</span>
+            <span class="self">self</span>.<span class="ident">process_certificates</span>().<span class="kw">await</span><span class="question-mark">?</span>;
+        }
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Process the SyncInfo sent by peers to catch up to latest state.</span>
@@ -1534,37 +1355,21 @@
     }
 
     <span class="doccomment">/// This function is called only after all the dependencies of the given QC have been retrieved.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_certificates</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">qc</span>: <span class="kw-2">&amp;</span><span class="ident">QuorumCert</span>,
-        <span class="ident">tc</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">TimeoutCertificate</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">safety_rules</span>.<span class="ident">update</span>(<span class="ident">qc</span>)<span class="question-mark">?</span>;
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_certificates</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">sync_info</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">gen_sync_info</span>();
+        <span class="self">self</span>.<span class="ident">safety_rules</span>.<span class="ident">update</span>(<span class="ident">sync_info</span>.<span class="ident">highest_quorum_cert</span>())<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">consensus_state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">safety_rules</span>.<span class="ident">consensus_state</span>()<span class="question-mark">?</span>;
         <span class="ident">counters</span>::<span class="ident">PREFERRED_BLOCK_ROUND</span>.<span class="ident">set</span>(<span class="ident">consensus_state</span>.<span class="ident">preferred_round</span>() <span class="kw">as</span> <span class="ident">i64</span>);
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">highest_committed_proposal_round</span> <span class="op">=</span> <span class="prelude-val">None</span>;
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">block</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">get_block</span>(<span class="ident">qc</span>.<span class="ident">commit_info</span>().<span class="ident">id</span>()) {
-            <span class="kw">if</span> <span class="ident">block</span>.<span class="ident">round</span>() <span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">root</span>().<span class="ident">round</span>() {
-                <span class="comment">// We don&#39;t want to use NIL commits for pacemaker round interval calculations.</span>
-                <span class="kw">if</span> <span class="op">!</span><span class="ident">block</span>.<span class="ident">is_nil_block</span>() {
-                    <span class="ident">highest_committed_proposal_round</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">block</span>.<span class="ident">round</span>());
-                }
-                <span class="kw">let</span> <span class="ident">finality_proof</span> <span class="op">=</span> <span class="ident">qc</span>.<span class="ident">ledger_info</span>().<span class="ident">clone</span>();
-                <span class="self">self</span>.<span class="ident">process_commit</span>(<span class="ident">finality_proof</span>).<span class="kw">await</span>;
-            }
-        }
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tc_round</span> <span class="op">=</span> <span class="prelude-val">None</span>;
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">timeout_cert</span>) <span class="op">=</span> <span class="ident">tc</span> {
-            <span class="ident">tc_round</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">timeout_cert</span>.<span class="ident">round</span>());
-            <span class="self">self</span>.<span class="ident">block_store</span>
-                .<span class="ident">insert_timeout_certificate</span>(<span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">timeout_cert</span>.<span class="ident">clone</span>()))
-                .<span class="ident">context</span>(<span class="string">&quot;Failed to process TC&quot;</span>)<span class="question-mark">?</span>;
-        }
+        <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">root</span>();
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">new_round_event</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">pacemaker</span>.<span class="ident">process_certificates</span>(
-            <span class="prelude-val">Some</span>(<span class="ident">qc</span>.<span class="ident">certified_block</span>().<span class="ident">round</span>()),
-            <span class="ident">tc_round</span>,
-            <span class="ident">highest_committed_proposal_round</span>,
+            <span class="prelude-val">Some</span>(<span class="ident">sync_info</span>.<span class="ident">highest_quorum_cert</span>().<span class="ident">certified_block</span>().<span class="ident">round</span>()),
+            <span class="ident">sync_info</span>.<span class="ident">highest_timeout_certificate</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">tc</span><span class="op">|</span> <span class="ident">tc</span>.<span class="ident">round</span>()),
+            <span class="kw">if</span> <span class="ident">root</span>.<span class="ident">is_nil_block</span>() {
+                <span class="prelude-val">None</span>
+            } <span class="kw">else</span> {
+                <span class="prelude-val">Some</span>(<span class="ident">root</span>.<span class="ident">round</span>())
+            },
         ) {
             <span class="self">self</span>.<span class="ident">process_new_round_event</span>(<span class="ident">new_round_event</span>).<span class="kw">await</span>;
         }
@@ -1697,6 +1502,13 @@
             .<span class="ident">block_store</span>
             .<span class="ident">execute_and_insert_block</span>(<span class="ident">proposed_block</span>)
             .<span class="ident">context</span>(<span class="string">&quot;Failed to execute_and_insert the block&quot;</span>)<span class="question-mark">?</span>;
+        <span class="comment">// notify mempool about failed txn</span>
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">payload</span>) <span class="op">=</span> <span class="ident">executed_block</span>.<span class="ident">payload</span>() {
+            <span class="kw">let</span> <span class="ident">compute_result</span> <span class="op">=</span> <span class="ident">executed_block</span>.<span class="ident">compute_result</span>();
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">txn_manager</span>.<span class="ident">commit_txns</span>(<span class="ident">payload</span>, <span class="kw-2">&amp;</span><span class="ident">compute_result</span>).<span class="kw">await</span> {
+                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Failed to notify mempool of rejected txns: {:?}&quot;</span>, <span class="ident">e</span>);
+            }
+        }
         <span class="kw">let</span> <span class="ident">block</span> <span class="op">=</span> <span class="ident">executed_block</span>.<span class="ident">block</span>();
 
         <span class="comment">// Checking pacemaker round again, because multiple proposed_block can now race</span>
@@ -1829,19 +1641,11 @@
         <span class="ident">qc</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>,
         <span class="ident">preferred_peer</span>: <span class="ident">Author</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="comment">// Process local highest commit cert should be no-op, this will sync us to the QC</span>
         <span class="self">self</span>.<span class="ident">block_store</span>
-            .<span class="ident">sync_to</span>(
-                <span class="kw-2">&amp;</span><span class="ident">SyncInfo</span>::<span class="ident">new</span>(
-                    <span class="ident">qc</span>.<span class="ident">as_ref</span>().<span class="ident">clone</span>(),
-                    <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">highest_commit_cert</span>().<span class="ident">as_ref</span>().<span class="ident">clone</span>(),
-                    <span class="prelude-val">None</span>,
-                ),
-                <span class="self">self</span>.<span class="ident">create_block_retriever</span>(<span class="ident">preferred_peer</span>),
-            )
+            .<span class="ident">insert_quorum_cert</span>(<span class="kw-2">&amp;</span><span class="ident">qc</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">create_block_retriever</span>(<span class="ident">preferred_peer</span>))
             .<span class="kw">await</span>
             .<span class="ident">context</span>(<span class="string">&quot;Failed to process a newly aggregated QC&quot;</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">process_certificates</span>(<span class="ident">qc</span>.<span class="ident">as_ref</span>(), <span class="prelude-val">None</span>).<span class="kw">await</span>
+        <span class="self">self</span>.<span class="ident">process_certificates</span>().<span class="kw">await</span>
     }
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new_tc_aggregated</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">tc</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">TimeoutCertificate</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
@@ -1850,75 +1654,7 @@
             .<span class="ident">context</span>(<span class="string">&quot;Failed to process a newly aggregated TC&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Process local highest qc should be no-op</span>
-        <span class="self">self</span>.<span class="ident">process_certificates</span>(
-            <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">highest_quorum_cert</span>().<span class="ident">as_ref</span>(),
-            <span class="prelude-val">Some</span>(<span class="ident">tc</span>.<span class="ident">as_ref</span>()),
-        )
-        .<span class="kw">await</span>
-    }
-
-    <span class="doccomment">/// Upon (potentially) new commit, commit the blocks via block store.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_commit</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">finality_proof</span>: <span class="ident">LedgerInfoWithSignatures</span>) {
-        <span class="kw">let</span> <span class="ident">blocks_to_commit</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">commit</span>(<span class="ident">finality_proof</span>.<span class="ident">clone</span>()).<span class="kw">await</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">blocks</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">blocks</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">e</span>);
-                <span class="kw">return</span>;
-            }
-        };
-        <span class="kw">for</span> <span class="ident">block</span> <span class="kw">in</span> <span class="ident">blocks_to_commit</span>.<span class="ident">iter</span>() {
-            <span class="macro">end_trace</span><span class="macro">!</span>(<span class="string">&quot;commit&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">block</span>.<span class="ident">id</span>()});
-        }
-        <span class="self">Self</span>::<span class="ident">update_counters_for_committed_blocks</span>(<span class="ident">blocks_to_commit</span>.<span class="ident">clone</span>());
-
-        <span class="comment">// notify mempool of rejected txns via txn_manager</span>
-        <span class="kw">for</span> <span class="ident">committed</span> <span class="kw">in</span> <span class="ident">blocks_to_commit</span> {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">payload</span>) <span class="op">=</span> <span class="ident">committed</span>.<span class="ident">payload</span>() {
-                <span class="kw">let</span> <span class="ident">compute_result</span> <span class="op">=</span> <span class="ident">committed</span>.<span class="ident">compute_result</span>();
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">txn_manager</span>.<span class="ident">commit_txns</span>(<span class="ident">payload</span>, <span class="kw-2">&amp;</span><span class="ident">compute_result</span>).<span class="kw">await</span> {
-                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Failed to notify mempool of rejected txns: {:?}&quot;</span>, <span class="ident">e</span>);
-                }
-            }
-        }
-
-        <span class="kw">if</span> <span class="ident">finality_proof</span>.<span class="ident">ledger_info</span>().<span class="ident">next_epoch_info</span>().<span class="ident">is_some</span>() {
-            <span class="self">self</span>.<span class="ident">network</span>
-                .<span class="ident">broadcast_epoch_change</span>(<span class="ident">EpochChangeProof</span>::<span class="ident">new</span>(
-                    <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">finality_proof</span>],
-                    <span class="comment">/* more = */</span> <span class="bool-val">false</span>,
-                ))
-                .<span class="kw">await</span>
-        }
-    }
-
-    <span class="kw">fn</span> <span class="ident">update_counters_for_committed_blocks</span>(<span class="ident">blocks_to_commit</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>) {
-        <span class="kw">for</span> <span class="ident">block</span> <span class="kw">in</span> <span class="ident">blocks_to_commit</span> {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">time_to_commit</span>) <span class="op">=</span>
-                <span class="ident">duration_since_epoch</span>().<span class="ident">checked_sub</span>(<span class="ident">Duration</span>::<span class="ident">from_micros</span>(<span class="ident">block</span>.<span class="ident">timestamp_usecs</span>()))
-            {
-                <span class="ident">counters</span>::<span class="ident">CREATION_TO_COMMIT_S</span>.<span class="ident">observe_duration</span>(<span class="ident">time_to_commit</span>);
-            }
-            <span class="ident">counters</span>::<span class="ident">COMMITTED_BLOCKS_COUNT</span>.<span class="ident">inc</span>();
-            <span class="kw">let</span> <span class="ident">txn_status</span> <span class="op">=</span> <span class="ident">block</span>.<span class="ident">compute_result</span>().<span class="ident">compute_status</span>();
-            <span class="ident">counters</span>::<span class="ident">NUM_TXNS_PER_BLOCK</span>.<span class="ident">observe</span>(<span class="ident">txn_status</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">f64</span>);
-
-            <span class="kw">for</span> <span class="ident">status</span> <span class="kw">in</span> <span class="ident">txn_status</span>.<span class="ident">iter</span>() {
-                <span class="kw">match</span> <span class="ident">status</span> {
-                    <span class="ident">TransactionStatus</span>::<span class="ident">Keep</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="ident">counters</span>::<span class="ident">COMMITTED_TXNS_COUNT</span>
-                            .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;success&quot;</span>])
-                            .<span class="ident">inc</span>();
-                    }
-                    <span class="ident">TransactionStatus</span>::<span class="ident">Discard</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="ident">counters</span>::<span class="ident">COMMITTED_TXNS_COUNT</span>
-                            .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;failed&quot;</span>])
-                            .<span class="ident">inc</span>();
-                    }
-                    <span class="comment">// TODO(zekunli): add counter</span>
-                    <span class="ident">TransactionStatus</span>::<span class="ident">Retry</span> <span class="op">=</span><span class="op">&gt;</span> (),
-                }
-            }
-        }
+        <span class="self">self</span>.<span class="ident">process_certificates</span>().<span class="kw">await</span>
     }
 
     <span class="doccomment">/// Retrieve a n chained blocks from the block store starting from</span>
