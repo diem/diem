@@ -28,11 +28,12 @@ module VASP {
         expiration_date: u64,
         // Certificate used for TLS keys off-chain. Mutable
         ca_cert: vector<u8>,
-        // 32 byte single Ed25519 public key whose counterpart must be used to sign the payment
-        // metadata for travel rule transactions. Note that this is different (and simpler) than the
-        // `authentication_key` used in LibraAccount::T, which is a hash of a public key + signature
-        // scheme identifier. Mutable
-        travel_rule_public_key: vector<u8>,
+        // 32 byte Ed25519 public key whose counterpart must be used to sign
+        // (1) the payment metadata for on-chain travel rule transactions
+        // (2) the KYC information exchanged in the off-chain travel rule protocol.
+        // Note that this is different than `authentication_key` used in LibraAccount::T, which is
+        // a hash of a public key + signature scheme identifier, not a public key. Mutable
+        compliance_public_key: vector<u8>,
     }
 
     // A ChildVASP type for representing `AccountType<ChildVASP>` accounts.
@@ -107,6 +108,7 @@ module VASP {
 
     // Update the CA certificate of the root VASP at `root_vasp_addr` with
     // the new `ca_cert`. Must be sent from an association account.
+    // TODO: allow a VASP to rotate its CA cert
     public fun update_ca_cert(root_vasp_addr: address, ca_cert: vector<u8>) {
         Transaction::assert(is_root_vasp(root_vasp_addr), 7001);
         let root_vasp = AccountType::account_metadata<RootVASP>(root_vasp_addr);
@@ -114,6 +116,14 @@ module VASP {
         AccountType::update<RootVASP>(root_vasp_addr, root_vasp);
     }
 
+    // Rotate the compliance public key for `root_vasp_addr` to `new_public_key`.
+    // TODO: allow a VASP to rotate its own compliance key
+    public fun rotate_compliance_public_key(root_vasp_addr: address, new_public_key: vector<u8>) {
+        Transaction::assert(Vector::length(&new_public_key) == 32, 7004);
+        let root_vasp = AccountType::account_metadata<RootVASP>(root_vasp_addr);
+        root_vasp.compliance_public_key = new_public_key;
+        AccountType::update<RootVASP>(root_vasp_addr, root_vasp);
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     // To-be root-vasp called functions
@@ -123,7 +133,7 @@ module VASP {
         human_name: vector<u8>,
         base_url: vector<u8>,
         ca_cert: vector<u8>,
-        travel_rule_public_key: vector<u8>
+        compliance_public_key: vector<u8>
     ): RootVASP {
         // NOTE: Only callable in testnet
         Transaction::assert(Testnet::is_testnet(), 10041);
@@ -133,7 +143,7 @@ module VASP {
            human_name,
            base_url,
            ca_cert,
-           travel_rule_public_key,
+           compliance_public_key,
         }
     }
 
@@ -145,16 +155,16 @@ module VASP {
         human_name: vector<u8>,
         base_url: vector<u8>,
         ca_cert: vector<u8>,
-        travel_rule_public_key: vector<u8>
+        compliance_public_key: vector<u8>
     ) {
         // Sanity check for key validity
-        Transaction::assert(Vector::length(&travel_rule_public_key) == 32, 7004);
+        Transaction::assert(Vector::length(&compliance_public_key) == 32, 7004);
         AccountType::apply_for<RootVASP>(RootVASP {
             expiration_date: current_time() + cert_lifetime(),
             human_name,
             base_url,
             ca_cert,
-            travel_rule_public_key,
+            compliance_public_key,
         }, singleton_addr());
         AccountType::apply_for_granting_capability<ChildVASP>();
     }
@@ -343,12 +353,11 @@ module VASP {
         *&root_vasp.base_url
     }
 
-
-    // Return the travel rule public key for the VASP account at `addr`.
-    public fun travel_rule_public_key(addr: address): vector<u8> {
+    // Return the compliance public key for the VASP account at `addr`.
+    public fun compliance_public_key(addr: address): vector<u8> {
         let root_vasp_addr = root_vasp_address(addr);
         let root_vasp = AccountType::account_metadata<RootVASP>(root_vasp_addr);
-        *&root_vasp.travel_rule_public_key
+        *&root_vasp.compliance_public_key
     }
 
     // Return the expiration date for the VASP account at `addr`.

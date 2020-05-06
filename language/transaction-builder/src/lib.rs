@@ -311,6 +311,13 @@ encode_txn_script! {
 }
 
 encode_txn_script! {
+    name: encode_rotate_compliance_public_key_script,
+    args: [vasp_root_addr: Address, new_key: Bytes],
+    script: RotateCompliancePublicKey,
+    doc: "Encode a program that rotates `vasp_root_addr`'s compliance public key to `new_key`."
+}
+
+encode_txn_script! {
     name: encode_rotate_consensus_pubkey_script,
     args: [new_key: Bytes],
     script: RotateConsensusPubkey,
@@ -517,7 +524,7 @@ encode_txn_script! {
 
 encode_txn_script! {
     name: encode_apply_for_root_vasp,
-    args: [human_name: Bytes, base_url: Bytes, ca_cert: Bytes],
+    args: [human_name: Bytes, base_url: Bytes, ca_cert: Bytes, travel_rule_public_key: Bytes],
     script: ApplyForRootVasp,
     doc: "Applies for the sending account to be added as a root VASP account."
 }
