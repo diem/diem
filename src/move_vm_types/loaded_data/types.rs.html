@@ -262,9 +262,6 @@
 <span id="262">262</span>
 <span id="263">263</span>
 <span id="264">264</span>
-<span id="265">265</span>
-<span id="266">266</span>
-<span id="267">267</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -279,7 +276,7 @@
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Write</span>;
 <span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">errors</span>::<span class="ident">VMResult</span>;
 
-<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">access_path</span>::{<span class="ident">AccessPath</span>, <span class="ident">Accesses</span>};
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">access_path</span>::<span class="ident">AccessPath</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
 <span class="doccomment">/// VM representation of a struct type in Move.</span>
@@ -318,10 +315,7 @@
 
 <span class="kw">impl</span> <span class="ident">FatStructType</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">resource_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">AccessPath</span>::<span class="ident">resource_access_vec</span>(
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">struct_tag</span>()<span class="question-mark">?</span>,
-            <span class="kw-2">&amp;</span><span class="ident">Accesses</span>::<span class="ident">empty</span>(),
-        ))
+        <span class="prelude-val">Ok</span>(<span class="ident">AccessPath</span>::<span class="ident">resource_access_vec</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">struct_tag</span>()<span class="question-mark">?</span>))
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">subst</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ty_args</span>: <span class="kw-2">&amp;</span>[<span class="ident">FatType</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">FatStructType</span><span class="op">&gt;</span> {

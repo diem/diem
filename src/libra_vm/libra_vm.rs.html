@@ -1097,7 +1097,7 @@
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_state_view</span>::<span class="ident">StateView</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">access_path</span>::{<span class="ident">AccessPath</span>, <span class="ident">Accesses</span>},
+    <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">account_config</span>,
     <span class="ident">block_metadata</span>::<span class="ident">BlockMetadata</span>,
@@ -2144,7 +2144,7 @@
 <span class="doccomment">/// Get the AccessPath to a resource stored under `address` with type name `tag`</span>
 <span class="kw">fn</span> <span class="ident">create_access_path</span>(<span class="ident">address</span>: <span class="ident">AccountAddress</span>, <span class="ident">tag</span>: <span class="ident">StructTag</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AccessPath</span> {
     <span class="kw">let</span> <span class="ident">resource_tag</span> <span class="op">=</span> <span class="ident">ResourceKey</span>::<span class="ident">new</span>(<span class="ident">address</span>, <span class="ident">tag</span>);
-    <span class="ident">AccessPath</span>::<span class="ident">resource_access_path</span>(<span class="kw-2">&amp;</span><span class="ident">resource_tag</span>, <span class="kw-2">&amp;</span><span class="ident">Accesses</span>::<span class="ident">empty</span>())
+    <span class="ident">AccessPath</span>::<span class="ident">resource_access_path</span>(<span class="kw-2">&amp;</span><span class="ident">resource_tag</span>)
 }
 
 <span class="kw">fn</span> <span class="ident">get_transaction_output</span>(

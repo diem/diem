@@ -1440,7 +1440,7 @@
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">HashValue</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">access_path</span>::{<span class="ident">AccessPath</span>, <span class="ident">Accesses</span>},
+    <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
     <span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">StructTag</span>, <span class="ident">TypeTag</span>},
     <span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>},
 };
@@ -2706,7 +2706,7 @@
             <span class="ident">name</span>: <span class="ident">fat_type</span>.<span class="ident">name</span>.<span class="ident">clone</span>(),
             <span class="ident">type_params</span>,
         };
-        <span class="kw">let</span> <span class="ident">resource_key</span> <span class="op">=</span> <span class="ident">AccessPath</span>::<span class="ident">resource_access_vec</span>(<span class="kw-2">&amp;</span><span class="ident">tag</span>, <span class="kw-2">&amp;</span><span class="ident">Accesses</span>::<span class="ident">empty</span>());
+        <span class="kw">let</span> <span class="ident">resource_key</span> <span class="op">=</span> <span class="ident">AccessPath</span>::<span class="ident">resource_access_vec</span>(<span class="kw-2">&amp;</span><span class="ident">tag</span>);
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">fat_type</span>,
             <span class="ident">resource_key</span>,

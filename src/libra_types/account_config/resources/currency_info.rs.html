@@ -80,15 +80,12 @@
 <span id="80">80</span>
 <span id="81">81</span>
 <span id="82">82</span>
-<span id="83">83</span>
-<span id="84">84</span>
-<span id="85">85</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">access_path</span>::{<span class="ident">AccessPath</span>, <span class="ident">Accesses</span>},
+    <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
     <span class="ident">account_config</span>::<span class="ident">constants</span>::{
         <span class="ident">association_address</span>, <span class="ident">type_tag_for_currency_code</span>, <span class="ident">CORE_CODE_ADDRESS</span>,
     },
@@ -155,14 +152,11 @@
             <span class="ident">association_address</span>(),
             <span class="ident">CurrencyInfoResource</span>::<span class="ident">struct_tag_for</span>(<span class="ident">currency_code</span>),
         );
-        <span class="ident">AccessPath</span>::<span class="ident">resource_access_path</span>(<span class="kw-2">&amp;</span><span class="ident">resource_key</span>, <span class="kw-2">&amp;</span><span class="ident">Accesses</span>::<span class="ident">empty</span>())
+        <span class="ident">AccessPath</span>::<span class="ident">resource_access_path</span>(<span class="kw-2">&amp;</span><span class="ident">resource_key</span>)
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">access_path_for</span>(<span class="ident">currency_code</span>: <span class="ident">Identifier</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="ident">AccessPath</span>::<span class="ident">resource_access_vec</span>(
-            <span class="kw-2">&amp;</span><span class="ident">CurrencyInfoResource</span>::<span class="ident">struct_tag_for</span>(<span class="ident">currency_code</span>),
-            <span class="kw-2">&amp;</span><span class="ident">Accesses</span>::<span class="ident">empty</span>(),
-        )
+        <span class="ident">AccessPath</span>::<span class="ident">resource_access_vec</span>(<span class="kw-2">&amp;</span><span class="ident">CurrencyInfoResource</span>::<span class="ident">struct_tag_for</span>(<span class="ident">currency_code</span>))
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_from_bytes</span>(<span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {

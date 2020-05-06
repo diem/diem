@@ -199,15 +199,12 @@
 <span id="199">199</span>
 <span id="200">200</span>
 <span id="201">201</span>
-<span id="202">202</span>
-<span id="203">203</span>
-<span id="204">204</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">access_path</span>::{<span class="ident">AccessPath</span>, <span class="ident">Accesses</span>},
+    <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">account_config</span>::<span class="ident">CORE_CODE_ADDRESS</span>,
     <span class="ident">event</span>::{<span class="ident">EventHandle</span>, <span class="ident">EventKey</span>},
@@ -337,20 +334,17 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">access_path_for_config</span>(<span class="ident">address</span>: <span class="ident">AccountAddress</span>, <span class="ident">config_name</span>: <span class="ident">Identifier</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AccessPath</span> {
     <span class="ident">AccessPath</span>::<span class="ident">new</span>(
         <span class="ident">address</span>,
-        <span class="ident">AccessPath</span>::<span class="ident">resource_access_vec</span>(
-            <span class="kw-2">&amp;</span><span class="ident">StructTag</span> {
+        <span class="ident">AccessPath</span>::<span class="ident">resource_access_vec</span>(<span class="kw-2">&amp;</span><span class="ident">StructTag</span> {
+            <span class="ident">address</span>: <span class="ident">CORE_CODE_ADDRESS</span>,
+            <span class="ident">module</span>: <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;LibraConfig&quot;</span>).<span class="ident">unwrap</span>(),
+            <span class="ident">name</span>: <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;T&quot;</span>).<span class="ident">unwrap</span>(),
+            <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">TypeTag</span>::<span class="ident">Struct</span>(<span class="ident">StructTag</span> {
                 <span class="ident">address</span>: <span class="ident">CORE_CODE_ADDRESS</span>,
-                <span class="ident">module</span>: <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;LibraConfig&quot;</span>).<span class="ident">unwrap</span>(),
+                <span class="ident">module</span>: <span class="ident">config_name</span>,
                 <span class="ident">name</span>: <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;T&quot;</span>).<span class="ident">unwrap</span>(),
-                <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">TypeTag</span>::<span class="ident">Struct</span>(<span class="ident">StructTag</span> {
-                    <span class="ident">address</span>: <span class="ident">CORE_CODE_ADDRESS</span>,
-                    <span class="ident">module</span>: <span class="ident">config_name</span>,
-                    <span class="ident">name</span>: <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;T&quot;</span>).<span class="ident">unwrap</span>(),
-                    <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[],
-                })],
-            },
-            <span class="kw-2">&amp;</span><span class="ident">Accesses</span>::<span class="ident">empty</span>(),
-        ),
+                <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+            })],
+        }),
     )
 }
 
