@@ -573,7 +573,7 @@ fn verify_execute<T: LibraInterface>(mut node: Node<T>) {
     );
 
     // Verify rotation transaction not executed, now expired
-    node.time.increment_by(crate::TXN_RETRY_SECS);
+    node.time.increment_by(crate::TXN_EXPIRATION_SECS);
     node.update_libra_timestamp();
     assert_eq!(
         Action::SubmitKeyRotationTransaction,
