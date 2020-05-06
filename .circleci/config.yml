@@ -122,7 +122,6 @@ commands:
       - run:
           name: Send job status
           command: |
-            set -x
             if [ -e <<parameters.payload_file>> ]; then
               jq -n \
                 --arg msg "$(cat <<parameters.payload_file>>)" \
@@ -147,8 +146,8 @@ commands:
                 <<parameters.webhook>>
               else
                 echo "Not sending messages as no webhook url is set."
-                echo "Chances are you are not building on master or circle is misconfigured."
-                echo "webhook is <<parameters.webhook>>"
+                echo "Chances are you are not building on master, or circle is misconfigured."
+                echo "webhook is empty"
                 exit 0
               fi
             fi
