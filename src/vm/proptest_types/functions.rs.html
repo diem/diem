@@ -655,16 +655,20 @@
 <span id="655">655</span>
 <span id="656">656</span>
 <span id="657">657</span>
+<span id="658">658</span>
+<span id="659">659</span>
+<span id="660">660</span>
+<span id="661">661</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">file_format</span>::{
-        <span class="ident">Bytecode</span>, <span class="ident">CodeOffset</span>, <span class="ident">CodeUnit</span>, <span class="ident">FieldHandle</span>, <span class="ident">FieldHandleIndex</span>, <span class="ident">FieldInstantiation</span>,
-        <span class="ident">FunctionDefinition</span>, <span class="ident">FunctionHandle</span>, <span class="ident">FunctionHandleIndex</span>, <span class="ident">FunctionInstantiation</span>,
-        <span class="ident">IdentifierIndex</span>, <span class="ident">LocalIndex</span>, <span class="ident">ModuleHandleIndex</span>, <span class="ident">Signature</span>, <span class="ident">SignatureIndex</span>,
-        <span class="ident">StructDefInstantiation</span>, <span class="ident">StructDefinitionIndex</span>, <span class="ident">TableIndex</span>,
+        <span class="ident">Bytecode</span>, <span class="ident">CodeOffset</span>, <span class="ident">CodeUnit</span>, <span class="ident">ConstantPoolIndex</span>, <span class="ident">FieldHandle</span>, <span class="ident">FieldHandleIndex</span>,
+        <span class="ident">FieldInstantiation</span>, <span class="ident">FunctionDefinition</span>, <span class="ident">FunctionHandle</span>, <span class="ident">FunctionHandleIndex</span>,
+        <span class="ident">FunctionInstantiation</span>, <span class="ident">IdentifierIndex</span>, <span class="ident">LocalIndex</span>, <span class="ident">ModuleHandleIndex</span>, <span class="ident">Signature</span>,
+        <span class="ident">SignatureIndex</span>, <span class="ident">StructDefInstantiation</span>, <span class="ident">StructDefinitionIndex</span>, <span class="ident">TableIndex</span>,
     },
     <span class="ident">proptest_types</span>::{
         <span class="ident">signature</span>::{<span class="ident">SignatureGen</span>, <span class="ident">SignatureTokenGen</span>},
@@ -1155,9 +1159,13 @@
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Bytecode</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">bytecode</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">BytecodeGen</span>::<span class="ident">Simple</span>(<span class="ident">bytecode</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">bytecode</span>,
-            <span class="ident">BytecodeGen</span>::<span class="ident">LdConst</span>(<span class="ident">_idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="comment">// TODO constant generation</span>
-                <span class="kw">return</span> <span class="prelude-val">None</span>;
+            <span class="ident">BytecodeGen</span>::<span class="ident">LdConst</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">if</span> <span class="ident">state</span>.<span class="ident">constant_pool_len</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
+                    <span class="kw">return</span> <span class="prelude-val">None</span>;
+                }
+                <span class="ident">Bytecode</span>::<span class="ident">LdConst</span>(<span class="ident">ConstantPoolIndex</span>(
+                    <span class="ident">idx</span>.<span class="ident">index</span>(<span class="ident">state</span>.<span class="ident">constant_pool_len</span>) <span class="kw">as</span> <span class="ident">TableIndex</span>
+                ))
             }
             <span class="ident">BytecodeGen</span>::<span class="ident">MutBorrowField</span>((<span class="ident">def</span>, <span class="ident">field</span>)) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">def_idx</span> <span class="op">=</span> <span class="ident">def</span>.<span class="ident">index</span>(<span class="ident">state</span>.<span class="ident">struct_defs_len</span>);

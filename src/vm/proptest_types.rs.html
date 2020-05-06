@@ -484,6 +484,14 @@
 <span id="484">484</span>
 <span id="485">485</span>
 <span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -505,10 +513,14 @@
     <span class="ident">sample</span>::<span class="ident">Index</span> <span class="kw">as</span> <span class="ident">PropIndex</span>,
 };
 
+<span class="kw">mod</span> <span class="ident">constants</span>;
 <span class="kw">mod</span> <span class="ident">functions</span>;
 <span class="kw">mod</span> <span class="ident">signature</span>;
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">proptest_types</span>::<span class="ident">functions</span>::{<span class="ident">FnHandleMaterializeState</span>, <span class="ident">FunctionHandleGen</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">proptest_types</span>::{
+    <span class="ident">constants</span>::<span class="ident">ConstantPoolGen</span>,
+    <span class="ident">functions</span>::{<span class="ident">FnHandleMaterializeState</span>, <span class="ident">FunctionHandleGen</span>},
+};
 <span class="kw">use</span> <span class="ident">functions</span>::{<span class="ident">FnDefnMaterializeState</span>, <span class="ident">FunctionDefinitionGen</span>};
 <span class="kw">use</span> <span class="ident">signature</span>::{<span class="ident">KindGen</span>, <span class="ident">SignatureTokenGen</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">BTreeSet</span>, <span class="ident">HashMap</span>, <span class="ident">HashSet</span>};
@@ -563,10 +575,12 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CompiledModuleStrategyGen</span> {
     <span class="ident">size</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// Range of number of fields in a struct and number of arguments in a function to generate.</span>
-    <span class="doccomment">/// The default value is 0..4.</span>
-    <span class="ident">member_count</span>: <span class="ident">SizeRange</span>,
-    <span class="doccomment">/// Length of code units (function definition). XXX the unit might change here.</span>
+    <span class="ident">field_count</span>: <span class="ident">SizeRange</span>,
+    <span class="ident">struct_type_params</span>: <span class="ident">SizeRange</span>,
+    <span class="ident">parameters_count</span>: <span class="ident">SizeRange</span>,
+    <span class="ident">return_count</span>: <span class="ident">SizeRange</span>,
+    <span class="ident">func_type_params</span>: <span class="ident">SizeRange</span>,
+    <span class="ident">acquires_count</span>: <span class="ident">SizeRange</span>,
     <span class="ident">code_len</span>: <span class="ident">SizeRange</span>,
 }
 
@@ -575,16 +589,25 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">size</span>: <span class="ident">TableSize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">size</span>: <span class="ident">size</span> <span class="kw">as</span> <span class="ident">usize</span>,
-            <span class="ident">member_count</span>: (<span class="number">0</span>..<span class="number">4</span>).<span class="ident">into</span>(),
+            <span class="ident">field_count</span>: (<span class="number">0</span>..<span class="number">5</span>).<span class="ident">into</span>(),
+            <span class="ident">struct_type_params</span>: (<span class="number">0</span>..<span class="number">2</span>).<span class="ident">into</span>(),
+            <span class="ident">parameters_count</span>: (<span class="number">0</span>..<span class="number">4</span>).<span class="ident">into</span>(),
+            <span class="ident">return_count</span>: (<span class="number">0</span>..<span class="number">2</span>).<span class="ident">into</span>(),
+            <span class="ident">func_type_params</span>: (<span class="number">0</span>..<span class="number">2</span>).<span class="ident">into</span>(),
+            <span class="ident">acquires_count</span>: (<span class="number">0</span>..<span class="number">1</span>).<span class="ident">into</span>(),
             <span class="ident">code_len</span>: (<span class="number">0</span>..<span class="number">50</span>).<span class="ident">into</span>(),
         }
     }
 
-    <span class="doccomment">/// Set a new range for the number of fields in a struct or the number of arguments in a</span>
-    <span class="doccomment">/// function.</span>
+    <span class="doccomment">/// Zero out all fields, type parameters, arguments and return types of struct and functions.</span>
     <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">member_count</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">count</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">SizeRange</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">member_count</span> <span class="op">=</span> <span class="ident">count</span>.<span class="ident">into</span>();
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">zeros_all</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+        <span class="self">self</span>.<span class="ident">field_count</span> <span class="op">=</span> <span class="number">0</span>.<span class="ident">into</span>();
+        <span class="self">self</span>.<span class="ident">struct_type_params</span> <span class="op">=</span> <span class="number">0</span>.<span class="ident">into</span>();
+        <span class="self">self</span>.<span class="ident">parameters_count</span> <span class="op">=</span> <span class="number">0</span>.<span class="ident">into</span>();
+        <span class="self">self</span>.<span class="ident">return_count</span> <span class="op">=</span> <span class="number">0</span>.<span class="ident">into</span>();
+        <span class="self">self</span>.<span class="ident">func_type_params</span> <span class="op">=</span> <span class="number">0</span>.<span class="ident">into</span>();
+        <span class="self">self</span>.<span class="ident">acquires_count</span> <span class="op">=</span> <span class="number">0</span>.<span class="ident">into</span>();
         <span class="self">self</span>
     }
 
@@ -594,11 +617,8 @@
         <span class="comment">// leaf pool generator</span>
         <span class="comment">//</span>
         <span class="kw">let</span> <span class="ident">address_pool_strat</span> <span class="op">=</span> <span class="ident">btree_set</span>(<span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span>(), <span class="number">1</span>..<span class="op">=</span><span class="self">self</span>.<span class="ident">size</span>);
-        <span class="kw">let</span> <span class="ident">id_base_range</span> <span class="op">=</span> <span class="kw">if</span> <span class="self">self</span>.<span class="ident">size</span> <span class="op">&lt;</span> <span class="number">20</span> { <span class="number">10</span> } <span class="kw">else</span> { <span class="number">1</span> };
-        <span class="kw">let</span> <span class="ident">identifiers_strat</span> <span class="op">=</span> <span class="ident">btree_set</span>(
-            <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span>(),
-            <span class="ident">id_base_range</span>..<span class="op">=</span><span class="self">self</span>.<span class="ident">size</span> <span class="op">+</span> <span class="ident">id_base_range</span>,
-        );
+        <span class="kw">let</span> <span class="ident">identifiers_strat</span> <span class="op">=</span> <span class="ident">btree_set</span>(<span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span>(), <span class="number">5</span>..<span class="op">=</span><span class="self">self</span>.<span class="ident">size</span> <span class="op">+</span> <span class="number">5</span>);
+        <span class="kw">let</span> <span class="ident">constant_pool_strat</span> <span class="op">=</span> <span class="ident">ConstantPoolGen</span>::<span class="ident">strategy</span>(<span class="number">0</span>..<span class="op">=</span><span class="self">self</span>.<span class="ident">size</span>, <span class="number">0</span>..<span class="op">=</span><span class="self">self</span>.<span class="ident">size</span>);
 
         <span class="comment">// The number of PropIndex instances in each tuple represents the number of pointers out</span>
         <span class="comment">// from an instance of that particular kind of node.</span>
@@ -616,7 +636,7 @@
             <span class="number">1</span>..<span class="op">=</span><span class="self">self</span>.<span class="ident">size</span>,
         );
         <span class="kw">let</span> <span class="ident">struct_defs_strat</span> <span class="op">=</span> <span class="ident">vec</span>(
-            <span class="ident">StructDefinitionGen</span>::<span class="ident">strategy</span>(<span class="self">self</span>.<span class="ident">member_count</span>.<span class="ident">clone</span>()),
+            <span class="ident">StructDefinitionGen</span>::<span class="ident">strategy</span>(<span class="self">self</span>.<span class="ident">field_count</span>.<span class="ident">clone</span>()),
             <span class="number">1</span>..<span class="op">=</span><span class="self">self</span>.<span class="ident">size</span>,
         );
 
@@ -629,18 +649,18 @@
         <span class="comment">// FieldHandle, StructInstantiation, FunctionInstantiation, FieldInstantiation</span>
         <span class="kw">let</span> <span class="ident">function_handles_strat</span> <span class="op">=</span> <span class="ident">vec</span>(
             <span class="ident">FunctionHandleGen</span>::<span class="ident">strategy</span>(
-                <span class="self">self</span>.<span class="ident">member_count</span>.<span class="ident">clone</span>(),
-                <span class="self">self</span>.<span class="ident">member_count</span>.<span class="ident">clone</span>(),
-                <span class="self">self</span>.<span class="ident">member_count</span>.<span class="ident">clone</span>(),
+                <span class="self">self</span>.<span class="ident">parameters_count</span>.<span class="ident">clone</span>(),
+                <span class="self">self</span>.<span class="ident">return_count</span>.<span class="ident">clone</span>(),
+                <span class="self">self</span>.<span class="ident">func_type_params</span>.<span class="ident">clone</span>(),
             ),
             <span class="number">1</span>..<span class="op">=</span><span class="self">self</span>.<span class="ident">size</span>,
         );
         <span class="kw">let</span> <span class="ident">function_defs_strat</span> <span class="op">=</span> <span class="ident">vec</span>(
             <span class="ident">FunctionDefinitionGen</span>::<span class="ident">strategy</span>(
-                <span class="self">self</span>.<span class="ident">member_count</span>.<span class="ident">clone</span>(),
-                <span class="self">self</span>.<span class="ident">member_count</span>.<span class="ident">clone</span>(),
-                <span class="self">self</span>.<span class="ident">member_count</span>.<span class="ident">clone</span>(),
-                <span class="self">self</span>.<span class="ident">member_count</span>.<span class="ident">clone</span>(),
+                <span class="self">self</span>.<span class="ident">return_count</span>.<span class="ident">clone</span>(),
+                <span class="self">self</span>.<span class="ident">parameters_count</span>.<span class="ident">clone</span>(),
+                <span class="self">self</span>.<span class="ident">func_type_params</span>.<span class="ident">clone</span>(),
+                <span class="self">self</span>.<span class="ident">acquires_count</span>.<span class="ident">clone</span>(),
                 <span class="self">self</span>.<span class="ident">code_len</span>,
             ),
             <span class="number">1</span>..<span class="op">=</span><span class="self">self</span>.<span class="ident">size</span>,
@@ -648,27 +668,26 @@
 
         <span class="comment">// Note that prop_test only allows a tuple of length up to 10</span>
         (
-            (<span class="ident">address_pool_strat</span>, <span class="ident">identifiers_strat</span>),
+            (<span class="ident">address_pool_strat</span>, <span class="ident">identifiers_strat</span>, <span class="ident">constant_pool_strat</span>),
             <span class="ident">module_handles_strat</span>,
             (<span class="ident">struct_handles_strat</span>, <span class="ident">struct_defs_strat</span>),
             (<span class="ident">function_handles_strat</span>, <span class="ident">function_defs_strat</span>),
         )
             .<span class="ident">prop_map</span>(
                 <span class="op">|</span>(
-                    (<span class="ident">address_identifier_gens</span>, <span class="ident">identifier_gens</span>),
+                    (<span class="ident">address_identifier_gens</span>, <span class="ident">identifier_gens</span>, <span class="ident">constant_pool_gen</span>),
                     <span class="ident">module_handles_gen</span>,
                     (<span class="ident">struct_handle_gens</span>, <span class="ident">struct_def_gens</span>),
                     (<span class="ident">function_handle_gens</span>, <span class="ident">function_def_gens</span>),
                 )<span class="op">|</span> {
                     <span class="comment">//</span>
                     <span class="comment">// leaf pools</span>
-                    <span class="comment">// TODO constant generation</span>
-                    <span class="kw">let</span> <span class="ident">constant_pool</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-                    <span class="kw">let</span> <span class="ident">constant_pool_len</span> <span class="op">=</span> <span class="ident">constant_pool</span>.<span class="ident">len</span>();
                     <span class="kw">let</span> <span class="ident">address_identifiers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">address_identifier_gens</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>();
                     <span class="kw">let</span> <span class="ident">address_identifiers_len</span> <span class="op">=</span> <span class="ident">address_identifiers</span>.<span class="ident">len</span>();
                     <span class="kw">let</span> <span class="ident">identifiers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">identifier_gens</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>();
                     <span class="kw">let</span> <span class="ident">identifiers_len</span> <span class="op">=</span> <span class="ident">identifiers</span>.<span class="ident">len</span>();
+                    <span class="kw">let</span> <span class="ident">constant_pool</span> <span class="op">=</span> <span class="ident">constant_pool_gen</span>.<span class="ident">constant_pool</span>();
+                    <span class="kw">let</span> <span class="ident">constant_pool_len</span> <span class="op">=</span> <span class="ident">constant_pool</span>.<span class="ident">len</span>();
 
                     <span class="comment">//</span>
                     <span class="comment">// module handles</span>
@@ -856,8 +875,6 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">struct</span> <span class="ident">StructDefinitionGen</span> {
     <span class="ident">name_idx</span>: <span class="ident">PropIndex</span>,
-    <span class="comment">// the is_nominal_resource field of generated struct handle is set to true if</span>
-    <span class="comment">// either any of the fields contains a resource or self.is_nominal_resource is true</span>
     <span class="ident">is_nominal_resource</span>: <span class="ident">bool</span>,
     <span class="ident">type_parameters</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">KindGen</span><span class="op">&gt;</span>,
     <span class="ident">is_public</span>: <span class="ident">bool</span>,
@@ -865,15 +882,14 @@
 }
 
 <span class="kw">impl</span> <span class="ident">StructDefinitionGen</span> {
-    <span class="kw">fn</span> <span class="ident">strategy</span>(<span class="ident">member_count</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">SizeRange</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">strategy</span>(<span class="ident">field_count</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">SizeRange</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="self">Self</span><span class="op">&gt;</span> {
         (
             <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">PropIndex</span><span class="op">&gt;</span>(),
             <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>(),
             <span class="comment">// TODO: how to not hard-code the number?</span>
             <span class="ident">vec</span>(<span class="ident">KindGen</span>::<span class="ident">strategy</span>(), <span class="number">0</span>..<span class="number">10</span>),
             <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>(),
-            <span class="comment">// XXX 0..4 is the default member_count in CompiledModule</span>
-            <span class="ident">option</span>::<span class="ident">of</span>(<span class="ident">vec</span>(<span class="ident">FieldDefinitionGen</span>::<span class="ident">strategy</span>(), <span class="ident">member_count</span>)),
+            <span class="ident">option</span>::<span class="ident">of</span>(<span class="ident">vec</span>(<span class="ident">FieldDefinitionGen</span>::<span class="ident">strategy</span>(), <span class="ident">field_count</span>)),
         )
             .<span class="ident">prop_map</span>(
                 <span class="op">|</span>(<span class="ident">name_idx</span>, <span class="ident">is_nominal_resource</span>, <span class="ident">_type_parameters</span>, <span class="ident">is_public</span>, <span class="ident">field_defs</span>)<span class="op">|</span> <span class="self">Self</span> {
