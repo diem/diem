@@ -3,8 +3,8 @@ address 0x0:
 // These modules only change resources stored under the three addresses:
 // LibraAssociation's account address: 0xA550C18
 // ValidatorSet resource address: 0x1D8
-// DiscoverySet resource address: 0xD15C0
-// ValidatorSet and DiscoverySet are stored under different addresses in order to facilitate
+// FullNodeDiscoverySet resource address: 0xD15C0
+// ValidatorSet and FullNodeDiscoverySet are stored under different addresses in order to facilitate
 // cheaper reads of these sets from storage.
 module LibraSystem {
     use 0x0::Event;
@@ -29,22 +29,21 @@ module LibraSystem {
         validators: vector<ValidatorInfo>,
     }
 
-    // DiscoveryInfo describes how other full-nodes and clients can establish
+    // FullNodeDiscoveryInfo describes how other full-nodes and clients can establish
     // a network connection with this full node.
-    // TODO(valerini): rename DiscoveryInfo -> FullNodeInfo, DiscoverySet -> FullNodeSet, etc.
-    struct DiscoveryInfo {
+    struct FullNodeDiscoveryInfo {
         addr: address,
         discovery_config: ValidatorConfig::FullNodeConfig,
     }
 
     struct DiscoverySetChangeEvent {
-        new_discovery_set: vector<DiscoveryInfo>,
+        new_discovery_set: vector<FullNodeDiscoveryInfo>,
         new_validator_set: T,
     }
 
-    resource struct DiscoverySet {
+    resource struct FullNodeDiscoverySet {
         // The current discovery set. Updated only at epoch boundaries via reconfiguration.
-        discovery_set: vector<DiscoveryInfo>,
+        discovery_set: vector<FullNodeDiscoveryInfo>,
         // Handle where discovery set change events are emitted
         change_events: Event::EventHandle<DiscoverySetChangeEvent>,
     }
@@ -72,20 +71,20 @@ module LibraSystem {
         LibraConfig::set<T>(0x1D8, value)
     }
 
-    // This can only be invoked by the DiscoverySet address
+    // This can only be invoked by the FullNodeDiscoverySet address
     // to instantiate the resource under that address.
     // It can only be called a single time. Currently, it is invoked in the genesis transaction.
     public fun initialize_discovery_set() {
         // Only callable by the discovery set address
         Transaction::assert(Transaction::sender() == 0xD15C0, 1);
 
-        move_to_sender<DiscoverySet>(DiscoverySet {
+        move_to_sender<FullNodeDiscoverySet>(FullNodeDiscoverySet {
             discovery_set: Vector::empty(),
             change_events: Event::new_event_handle<DiscoverySetChangeEvent>(),
         });
     }
 
-    fun add_validator_no_discovery_event(account_address: address) acquires DiscoverySet {
+    fun add_validator_no_discovery_event(account_address: address) acquires FullNodeDiscoverySet {
         Transaction::assert(Transaction::sender() == 0xA550C18, 1);
         // A prospective validator must have a validator config resource
         Transaction::assert(ValidatorConfig::has(account_address), 17);
@@ -102,9 +101,9 @@ module LibraSystem {
         });
 
         let discovery_config = ValidatorConfig::get_full_node_config(account_address);
-        let discovery_set_ref = &mut borrow_global_mut<DiscoverySet>(0xD15C0).discovery_set;
+        let discovery_set_ref = &mut borrow_global_mut<FullNodeDiscoverySet>(0xD15C0).discovery_set;
         Vector::push_back(
-            discovery_set_ref, DiscoveryInfo {
+            discovery_set_ref, FullNodeDiscoveryInfo {
                 addr: account_address,
                 discovery_config: discovery_config
             });
@@ -114,13 +113,13 @@ module LibraSystem {
 
     // Adds a new validator, only callable by the LibraAssociation address
     // TODO(valerini): allow the Association to add multiple validators in a single block
-    public fun add_validator(account_address: address) acquires DiscoverySet {
+    public fun add_validator(account_address: address) acquires FullNodeDiscoverySet {
         add_validator_no_discovery_event(account_address);
         emit_discovery_set_change();
     }
 
     // Removes a validator, only callable by the LibraAssociation address
-    public fun remove_validator(account_address: address) acquires DiscoverySet {
+    public fun remove_validator(account_address: address) acquires FullNodeDiscoverySet {
         Transaction::assert(Transaction::sender() == 0xA550C18, 1);
         let validator_set = get_validator_set();
 
@@ -131,11 +130,11 @@ module LibraSystem {
         // Remove corresponding ValidatorInfo from the validator set
         _  = Vector::swap_remove(&mut validator_set.validators, to_remove_index);
 
-        // Remove corresponding DiscoveryInfo from the discovery set, the indices should match
-        let discovery_set_ref = &mut borrow_global_mut<DiscoverySet>(0xD15C0).discovery_set;
+        // Remove corresponding FullNodeDiscoveryInfo from the discovery set, the indices should match
+        let discovery_set_ref = &mut borrow_global_mut<FullNodeDiscoverySet>(0xD15C0).discovery_set;
         // Make sure the fullnode address at to_remove_index is correct
         Transaction::assert(Vector::borrow(discovery_set_ref, to_remove_index).addr == account_address, 24);
-        // Remove corresponding DiscoveryInfo from the discovery set
+        // Remove corresponding FullNodeDiscoveryInfo from the discovery set
         _  = Vector::swap_remove(discovery_set_ref, to_remove_index);
 
         set_validator_set(validator_set);
@@ -149,12 +148,12 @@ module LibraSystem {
     // Here validators' consensus_pubkey, validator's networking information and/or
     // validator's full-node information may change.
     // NewEpochEvent event and/or DiscoverySetChangeEvent will be fired.
-    public fun update_and_reconfigure() acquires DiscoverySet {
+    public fun update_and_reconfigure() acquires FullNodeDiscoverySet {
         Transaction::assert(is_sender_authorized_(), 22);
 
         let validator_set = get_validator_set();
         let validators = &mut validator_set.validators;
-        let discoveries = &mut borrow_global_mut<DiscoverySet>(0xD15C0).discovery_set;
+        let discoveries = &mut borrow_global_mut<FullNodeDiscoverySet>(0xD15C0).discovery_set;
 
         let size = Vector::length(validators);
         if (size == 0) {
@@ -242,7 +241,7 @@ module LibraSystem {
     }
 
     // Updates ith validator info, if nothing changed, return false
-    fun update_ith_discovery_info_(validators: &mut vector<DiscoveryInfo>, i: u64): bool {
+    fun update_ith_discovery_info_(validators: &mut vector<FullNodeDiscoveryInfo>, i: u64): bool {
         let size = Vector::length(validators);
         if (i >= size) {
             return false
@@ -283,8 +282,8 @@ module LibraSystem {
         !Vector::is_empty(&get_validator_index_(validators_vec_ref, addr))
     }
 
-    fun emit_discovery_set_change() acquires DiscoverySet {
-        let discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
+    fun emit_discovery_set_change() acquires FullNodeDiscoverySet {
+        let discovery_set_ref = borrow_global_mut<FullNodeDiscoverySet>(0xD15C0);
         Event::emit_event<DiscoverySetChangeEvent>(
             &mut discovery_set_ref.change_events,
             DiscoverySetChangeEvent {
@@ -304,10 +303,10 @@ module LibraSystem {
     }
 
     // This getter is only used in tests
-    public fun get_full_node_config(addr: address): ValidatorConfig::FullNodeConfig acquires DiscoverySet {
+    public fun get_full_node_config(addr: address): ValidatorConfig::FullNodeConfig acquires FullNodeDiscoverySet {
         // To simplify the code, we use the fact that at the moment fullnode config is stored at
         // the same index in the vector of fullnode configs as in the vector of validator configs
-        let discovery_set_ref = &borrow_global<DiscoverySet>(0xD15C0).discovery_set;
+        let discovery_set_ref = &borrow_global<FullNodeDiscoverySet>(0xD15C0).discovery_set;
         let validator_index_vec = get_validator_index_(&get_validator_set().validators, addr);
         let validator_index = *Vector::borrow(&validator_index_vec, 0);
         // Make sure the fullnode address at to_remove_index is correct

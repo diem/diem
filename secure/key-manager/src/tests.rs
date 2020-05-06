@@ -16,7 +16,7 @@ use libra_types::{
     account_state::AccountState,
     block_info::BlockInfo,
     block_metadata::{BlockMetadata, LibraBlockResource},
-    discovery_set::DiscoverySet,
+    discovery_set::FullNodeDiscoverySet,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     mempool_status::{MempoolStatus, MempoolStatusCode},
     on_chain_config::{ConfigurationResource, ValidatorSet},
@@ -127,12 +127,12 @@ impl<T: LibraInterface> LibraInterfaceTestHarness<T> {
     }
 
     /// Returns the discover set associated with the discovery set address.
-    fn retrieve_discovery_set(&self) -> Result<DiscoverySet, Error> {
+    fn retrieve_discovery_set(&self) -> Result<FullNodeDiscoverySet, Error> {
         let account = account_config::discovery_set_address();
         let account_state = self.libra.retrieve_account_state(account)?;
         Ok(account_state
             .get_discovery_set_resource()?
-            .ok_or_else(|| Error::DataDoesNotExist("DiscoverySetResource".into()))?
+            .ok_or_else(|| Error::DataDoesNotExist("FullNodeDiscoverySetResource".into()))?
             .discovery_set()
             .clone())
     }

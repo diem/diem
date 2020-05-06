@@ -202,7 +202,7 @@ impl AccountStateWithProof {
     /// doesn't exist, returns (None, 0). While if the path is invalid, raises error.
     ///
     /// For example:
-    ///   1. if asked for DiscoverySetChange event from an ordinary user account,
+    ///   1. if asked for FullNodeDiscoverySetChange event from an ordinary user account,
     /// this returns (None, 0)
     ///   2. but if asked for a random path that we don't understand, it's an error.
     pub fn get_event_key_and_count_by_query_path(

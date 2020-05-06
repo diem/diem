@@ -472,7 +472,7 @@ proptest! {
         db.save_transactions(&[genesis_txn_to_commit], 0, Some(&ledger_info_with_sigs)).unwrap();
 
         // The mock genesis txn is really just an ordinary user account, there is no
-        // DiscoverySetResource under it.
+        // FullNodeDiscoverySetResource under it.
         let (events, account_state_with_proof) = db
             .get_events_by_query_path(
                 &AccessPath::new(account, DISCOVERY_SET_CHANGE_EVENT_PATH.to_vec()),

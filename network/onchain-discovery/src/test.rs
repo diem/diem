@@ -18,7 +18,7 @@ use libra_network_address::NetworkAddress;
 use libra_types::{
     account_config,
     account_state::AccountState,
-    discovery_set::{DiscoveryInfoFull, DiscoverySetFull},
+    discovery_set::{DiscoveryInfo, DiscoverySet},
     waypoint::Waypoint,
     PeerId,
 };
@@ -489,8 +489,8 @@ fn queries_peers_on_tick() {
     rt.block_on(f_server_service).unwrap();
 }
 
-async fn get_discovery_set(storage: &Arc<dyn StorageRead>) -> DiscoverySetFull {
-    // Here we zip FullNodeSet and ValidatorSet into DiscoverySet
+async fn get_discovery_set(storage: &Arc<dyn StorageRead>) -> DiscoverySet {
+    // Here we zip FullNodeSet and ValidatorSet into FullNodeDiscoverySet
     // TODO(valerini or phlip9): read different addresses from storage based on role
     //                           to take advantage of the optimization
     let account_state = storage
@@ -507,11 +507,11 @@ async fn get_discovery_set(storage: &Arc<dyn StorageRead>) -> DiscoverySetFull {
     let validator_set = account_state.get_validator_set().unwrap().unwrap();
     let validator_set = &(*validator_set.payload());
 
-    let mut discovery_set_vec = Vec::<DiscoveryInfoFull>::new();
+    let mut discovery_set_vec = Vec::<DiscoveryInfo>::new();
     // zipping together two vectors into a discovery set
     for it in discovery_set.into_iter().zip(validator_set.iter()) {
         let (discovery_info, validator_info) = it;
-        discovery_set_vec.push(DiscoveryInfoFull {
+        discovery_set_vec.push(DiscoveryInfo {
             account_address: validator_info.account_address,
             validator_network_identity_pubkey: validator_info.network_identity_public_key,
             validator_network_address: validator_info.network_address.clone(),
@@ -519,5 +519,5 @@ async fn get_discovery_set(storage: &Arc<dyn StorageRead>) -> DiscoverySetFull {
             fullnodes_network_address: discovery_info.fullnodes_network_address.clone(),
         });
     }
-    DiscoverySetFull::new(discovery_set_vec)
+    DiscoverySet::new(discovery_set_vec)
 }

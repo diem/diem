@@ -8,7 +8,7 @@ use crate::{
         ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
     },
     block_metadata::{LibraBlockResource, NEW_BLOCK_EVENT_PATH},
-    discovery_set::{DiscoverySetResource, DISCOVERY_SET_CHANGE_EVENT_PATH},
+    discovery_set::{FullNodeDiscoverySetResource, DISCOVERY_SET_CHANGE_EVENT_PATH},
     event::EventHandle,
     libra_timestamp::LibraTimestampResource,
     move_resource::MoveResource,
@@ -50,8 +50,8 @@ impl AccountState {
         self.get_resource(&ConfigurationResource::resource_path())
     }
 
-    pub fn get_discovery_set_resource(&self) -> Result<Option<DiscoverySetResource>> {
-        self.get_resource(&DiscoverySetResource::resource_path())
+    pub fn get_discovery_set_resource(&self) -> Result<Option<FullNodeDiscoverySetResource>> {
+        self.get_resource(&FullNodeDiscoverySetResource::resource_path())
     }
 
     pub fn get_libra_timestamp_resource(&self) -> Result<Option<LibraTimestampResource>> {
@@ -156,7 +156,7 @@ impl fmt::Debug for AccountState {
             f,
             "{{ \n \
              AccountResource {{ {} }} \n \
-             DiscoverySet {{ {} }} \n \
+             FullNodeDiscoverySet {{ {} }} \n \
              LibraTimestamp {{ {} }} \n \
              ValidatorConfig {{ {} }} \n \
              ValidatorSet {{ {} }} \n \

@@ -6,7 +6,7 @@ use crate::{
     account_address::AccountAddress,
     account_config,
     contract_event::ContractEvent,
-    discovery_info::DiscoveryInfo,
+    discovery_info::FullNodeDiscoveryInfo,
     event::{EventHandle, EventKey},
     language_storage::{StructTag, TypeTag},
     move_resource::MoveResource,
@@ -26,7 +26,7 @@ pub static DISCOVERY_SET_MODULE_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("LibraSystem").unwrap());
 
 pub static DISCOVERY_SET_STRUCT_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("DiscoverySet").unwrap());
+    Lazy::new(|| Identifier::new("FullNodeDiscoverySet").unwrap());
 
 pub static DISCOVERY_SET_CHANGE_EVENT_STRUCT_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("DiscoverySetChangeEvent").unwrap());
@@ -51,13 +51,13 @@ pub static DISCOVERY_SET_TYPE_TAG: Lazy<TypeTag> =
 pub static DISCOVERY_SET_CHANGE_EVENT_TYPE_TAG: Lazy<TypeTag> =
     Lazy::new(|| TypeTag::Struct(DISCOVERY_SET_CHANGE_EVENT_STRUCT_TAG.clone()));
 
-/// Path to the DiscoverySet resource.
+/// Path to the FullNodeDiscoverySet resource.
 pub static DISCOVERY_SET_RESOURCE_PATH: Lazy<Vec<u8>> =
     Lazy::new(|| AccessPath::resource_access_vec(&*DISCOVERY_SET_STRUCT_TAG, &Accesses::empty()));
 
 /// The path to the discovery set change event handle under a DiscoverSetResource.
 pub static DISCOVERY_SET_CHANGE_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
-    let mut path = DiscoverySetResource::resource_path();
+    let mut path = FullNodeDiscoverySetResource::resource_path();
     path.extend_from_slice(b"/change_events_count/");
     path
 });
@@ -71,34 +71,34 @@ pub static GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH: Lazy<AccessPath> = Lazy::new(
 });
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct DiscoverySetResource {
+pub struct FullNodeDiscoverySetResource {
     /// The current discovery set. Updated only at epoch boundaries via reconfiguration.
-    discovery_set: DiscoverySet,
+    discovery_set: FullNodeDiscoverySet,
     /// Handle where discovery set change events are emitted
     change_events: EventHandle,
 }
 
-impl DiscoverySetResource {
+impl FullNodeDiscoverySetResource {
     pub fn change_events(&self) -> &EventHandle {
         &self.change_events
     }
 
-    pub fn discovery_set(&self) -> &DiscoverySet {
+    pub fn discovery_set(&self) -> &FullNodeDiscoverySet {
         &self.discovery_set
     }
 }
 
-impl MoveResource for DiscoverySetResource {
+impl MoveResource for FullNodeDiscoverySetResource {
     const MODULE_NAME: &'static str = "LibraSystem";
-    const STRUCT_NAME: &'static str = "DiscoverySet";
+    const STRUCT_NAME: &'static str = "FullNodeDiscoverySet";
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct DiscoverySet(Vec<DiscoveryInfo>);
+pub struct FullNodeDiscoverySet(Vec<FullNodeDiscoveryInfo>);
 
-impl DiscoverySet {
-    pub fn new(discovery_set: Vec<DiscoveryInfo>) -> Self {
+impl FullNodeDiscoverySet {
+    pub fn new(discovery_set: Vec<FullNodeDiscoveryInfo>) -> Self {
         Self(discovery_set)
     }
 
@@ -111,11 +111,50 @@ impl DiscoverySet {
     }
 }
 
-impl Deref for DiscoverySet {
-    type Target = [DiscoveryInfo];
+impl Deref for FullNodeDiscoverySet {
+    type Target = [FullNodeDiscoveryInfo];
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl IntoIterator for FullNodeDiscoverySet {
+    type Item = FullNodeDiscoveryInfo;
+    type IntoIter = vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DiscoverySetChangeEventInternal {
+    pub discovery_set: FullNodeDiscoverySet,
+    pub validator_set: ValidatorSet,
+}
+
+impl DiscoverySetChangeEventInternal {
+    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
+        lcs::from_bytes(bytes).map_err(Into::into)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DiscoveryInfo {
+    pub account_address: AccountAddress,
+    pub validator_network_identity_pubkey: x25519::PublicKey,
+    pub validator_network_address: RawNetworkAddress,
+    pub fullnodes_network_identity_pubkey: x25519::PublicKey,
+    pub fullnodes_network_address: RawNetworkAddress,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DiscoverySet(Vec<DiscoveryInfo>);
+
+impl DiscoverySet {
+    pub fn new(discovery_set: Vec<DiscoveryInfo>) -> Self {
+        Self(discovery_set)
     }
 }
 
@@ -128,49 +167,10 @@ impl IntoIterator for DiscoverySet {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct DiscoverySetChangeEventInternal {
-    pub discovery_set: DiscoverySet,
-    pub validator_set: ValidatorSet,
-}
-
-impl DiscoverySetChangeEventInternal {
-    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        lcs::from_bytes(bytes).map_err(Into::into)
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct DiscoveryInfoFull {
-    pub account_address: AccountAddress,
-    pub validator_network_identity_pubkey: x25519::PublicKey,
-    pub validator_network_address: RawNetworkAddress,
-    pub fullnodes_network_identity_pubkey: x25519::PublicKey,
-    pub fullnodes_network_address: RawNetworkAddress,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct DiscoverySetFull(Vec<DiscoveryInfoFull>);
-
-impl DiscoverySetFull {
-    pub fn new(discovery_set: Vec<DiscoveryInfoFull>) -> Self {
-        Self(discovery_set)
-    }
-}
-
-impl IntoIterator for DiscoverySetFull {
-    type Item = DiscoveryInfoFull;
-    type IntoIter = vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct DiscoverySetChangeEvent {
     pub event_seq_num: u64,
-    pub discovery_set: DiscoverySetFull,
+    pub discovery_set: DiscoverySet,
 }
 
 impl TryFrom<&ContractEvent> for DiscoverySetChangeEvent {
@@ -191,7 +191,7 @@ impl TryFrom<&ContractEvent> for DiscoverySetChangeEvent {
             DiscoverySetChangeEventInternal::try_from_bytes(contract_event.event_data())?;
         // Here we rezip the fullnodeset and validatorset into a discoveryset
         // TODO(valerini or phlip9): better separate validator discovery and fullnode discovery code
-        let mut discovery_set_vec = Vec::<DiscoveryInfoFull>::new();
+        let mut discovery_set_vec = Vec::<DiscoveryInfo>::new();
         // zipping together two vectors into a discovery set
         for it in discovery_event_internal
             .discovery_set
@@ -199,7 +199,7 @@ impl TryFrom<&ContractEvent> for DiscoverySetChangeEvent {
             .zip(discovery_event_internal.validator_set.into_iter())
         {
             let (discovery_info, validator_info) = it;
-            discovery_set_vec.push(DiscoveryInfoFull {
+            discovery_set_vec.push(DiscoveryInfo {
                 account_address: validator_info.account_address,
                 validator_network_identity_pubkey: validator_info.network_identity_public_key,
                 validator_network_address: validator_info.network_address,
@@ -207,7 +207,7 @@ impl TryFrom<&ContractEvent> for DiscoverySetChangeEvent {
                 fullnodes_network_address: discovery_info.fullnodes_network_address,
             });
         }
-        let discovery_set = DiscoverySetFull::new(discovery_set_vec);
+        let discovery_set = DiscoverySet::new(discovery_set_vec);
 
         Ok(DiscoverySetChangeEvent {
             event_seq_num,
@@ -225,7 +225,7 @@ pub mod mock {
     use libra_network_address::{NetworkAddress, RawNetworkAddress};
     use std::str::FromStr;
 
-    pub fn mock_discovery_set(validator_set: &ValidatorSet) -> DiscoverySetFull {
+    pub fn mock_discovery_set(validator_set: &ValidatorSet) -> DiscoverySet {
         let mock_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
         let mock_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
         let mock_addr = RawNetworkAddress::try_from(&mock_addr).unwrap();
@@ -233,7 +233,7 @@ pub mod mock {
         let discovery_set = validator_set
             .payload()
             .iter()
-            .map(|validator_pubkeys| DiscoveryInfoFull {
+            .map(|validator_pubkeys| DiscoveryInfo {
                 account_address: *validator_pubkeys.account_address(),
                 validator_network_identity_pubkey: validator_pubkeys.network_identity_public_key(),
                 validator_network_address: mock_addr.clone(),
@@ -241,6 +241,6 @@ pub mod mock {
                 fullnodes_network_address: mock_addr.clone(),
             })
             .collect::<Vec<_>>();
-        DiscoverySetFull::new(discovery_set)
+        DiscoverySet::new(discovery_set)
     }
 }

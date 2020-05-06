@@ -8,7 +8,7 @@ use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
 use libra_types::{
     discovery_set::{
-        DiscoveryInfoFull, DiscoverySetChangeEvent, DiscoverySetFull,
+        DiscoveryInfo, DiscoverySetChangeEvent, DiscoverySet,
         GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH,
     },
     get_with_proof::{
@@ -126,12 +126,12 @@ impl TryFrom<QueryDiscoverySetResponse> for QueryDiscoverySetResponseWithEvent {
     }
 }
 
-/// An internal representation of the DiscoverySet.
+/// An internal representation of the FullNodeDiscoverySet.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DiscoverySetInternal(pub HashMap<PeerId, DiscoveryInfoInternal>);
 
 impl DiscoverySetInternal {
-    pub fn from_discovery_set(role_filter: RoleType, discovery_set: DiscoverySetFull) -> Self {
+    pub fn from_discovery_set(role_filter: RoleType, discovery_set: DiscoverySet) -> Self {
         Self(
             discovery_set
                 .into_iter()
@@ -175,7 +175,7 @@ pub struct DiscoveryInfoInternal(pub x25519::PublicKey, pub Vec<NetworkAddress>)
 impl DiscoveryInfoInternal {
     pub fn try_from_discovery_info(
         role_filter: RoleType,
-        discovery_info: DiscoveryInfoFull,
+        discovery_info: DiscoveryInfo,
     ) -> Result<Self> {
         let info = match role_filter {
             RoleType::Validator => Self(

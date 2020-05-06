@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 /// respectively to contact this validator.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct DiscoveryInfo {
+pub struct FullNodeDiscoveryInfo {
     // The validator's account address.
     pub account_address: AccountAddress,
     // This static pubkey is used in the connection handshake to authenticate
