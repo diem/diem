@@ -21,11 +21,12 @@ use pretty::RcDoc;
 use regex::Regex;
 
 use spec_lang::{
+    code_writer::CodeWriter,
     env::{FunId, GlobalEnv, Loc, ModuleId, StructId},
     ty::{PrimitiveType, Type},
 };
 
-use crate::{cli::Options, code_writer::CodeWriter};
+use crate::cli::Options;
 // DENUG
 // use backtrace::Backtrace;
 use stackless_bytecode_generator::{

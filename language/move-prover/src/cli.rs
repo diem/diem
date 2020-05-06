@@ -6,6 +6,7 @@
 //! Functionality related to the command line interface of the move prover.
 
 use clap::{App, Arg};
+use docgen::docgen::DocgenOptions;
 use log::LevelFilter;
 use serde::Serialize;
 use simplelog::{
@@ -35,7 +36,7 @@ static LOGGER_CONFIGURED: AtomicBool = AtomicBool::new(false);
 static TEST_MODE: AtomicBool = AtomicBool::new(false);
 
 /// Default for what functions to verify.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum VerificationScope {
     /// Verify only public functions.
     Public,
@@ -46,13 +47,17 @@ pub enum VerificationScope {
 }
 
 /// Represents options provided to the tool.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Options {
     /// Path to the boogie prelude. The special string `INLINE_PRELUDE` is used to refer to
     /// a prelude build into this binary.
     pub prelude_path: String,
     /// The path to the boogie output which represents the verification problem.
     pub output_path: String,
+    /// Whether to run the documentation generator instead of the prover.
+    pub docgen: bool,
+    /// Options for the document generator.
+    pub docgen_options: DocgenOptions,
     /// An account address to use if none is specified in the source.
     pub account_address: String,
     /// Verbosity level for logging.
@@ -99,7 +104,7 @@ pub struct Options {
 }
 
 /// Options used for prelude template. See `prelude.bpl` for documentation.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct PreludeTemplateContext {
     pub array_theory: bool,
     pub native_equality: bool,
@@ -129,6 +134,8 @@ impl Default for Options {
         Options {
             prelude_path: INLINE_PRELUDE.to_string(),
             output_path: "output.bpl".to_string(),
+            docgen: false,
+            docgen_options: DocgenOptions::default(),
             account_address: "0x234567".to_string(),
             verbosity_level: LevelFilter::Info,
             move_sources: vec![],
@@ -159,6 +166,8 @@ impl Options {
     // the program name.
     pub fn initialize_from_args(&mut self, args: &[String]) -> anyhow::Result<()> {
         // Clap definition of the command line interface.
+        // TODO: this has grown to much and needs factorization and better grouping, as well
+        //   as the option to read things from a file.
         let is_number = |s: String| {
             s.parse::<usize>()
                 .map(|_| ())
@@ -205,6 +214,49 @@ impl Options {
                     .short("g")
                     .long("generate-only")
                     .help("only generate boogie file but do not call boogie"),
+            )
+            .arg(
+                Arg::with_name("docgen")
+                    .long("docgen")
+                    .help("run the documentation generator instead of the prover. \
+                    Generated docs will be written to `--output=<path>`"),
+            )
+            .arg(
+                Arg::with_name("doc-include-impl")
+                    .long("doc-include-impl")
+                    .value_name("BOOL")
+                    .default_value("true")
+                    .possible_values(&["true", "false"])
+                    .require_equals(true)
+                    .help("whether to include implementations in generated docs."),
+            )
+            .arg(
+                Arg::with_name("doc-include-private")
+                    .long("doc-include-private")
+                    .value_name("BOOL")
+                    .default_value("false")
+                    .possible_values(&["true", "false"])
+                    .require_equals(true)
+                    .help("whether private functions shall be included in generated docs."),
+            )
+            .arg(
+                Arg::with_name("doc-spec-inline")
+                    .long("doc-spec-inline")
+                    .value_name("BOOL")
+                    .default_value("true")
+                    .possible_values(&["true", "false"])
+                    .require_equals(true)
+                    .help("whether to generate specifications inline with declarations \
+                     or put them into a separate section."),
+            )
+            .arg(
+                Arg::with_name("doc-collapsed-sections")
+                    .long("doc-collapsed-sections")
+                    .value_name("BOOL")
+                    .default_value("true")
+                    .possible_values(&["true", "false"])
+                    .require_equals(true)
+                    .help("whether to use collapsed sections for some details")
             )
             .arg(
                 Arg::with_name("verify")
@@ -452,6 +504,11 @@ impl Options {
         self.template_context.stratification_depth = get_int("stratification-depth")?;
         self.bench_repeat = get_int("bench-repeat")?;
         self.generate_smt = get_bool("generate-smt")?;
+        self.docgen = matches.is_present("docgen");
+        self.docgen_options.include_impl = get_bool("doc-include-impl")?;
+        self.docgen_options.include_private_fun = get_bool("doc-include-private")?;
+        self.docgen_options.specs_inlined = get_bool("doc-spec-inline")?;
+        self.docgen_options.collapsed_sections = get_bool("doc-collapsed-sections")?;
         Ok(())
     }
 

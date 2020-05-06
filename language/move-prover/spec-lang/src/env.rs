@@ -9,7 +9,7 @@ use log::info;
 
 use std::cell::RefCell;
 
-use codespan::{ByteIndex, ByteOffset, FileId, Files, Location, Span};
+use codespan::{ByteIndex, ByteOffset, FileId, Files, Location, Span, SpanOutOfBoundsError};
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label, Severity},
     term::{emit, termcolor::WriteColor, Config},
@@ -33,7 +33,7 @@ use vm::{
 };
 
 use crate::{
-    ast::{ModuleName, PropertyBag, Spec, SpecFunDecl, SpecVarDecl, Value},
+    ast::{ModuleName, PropertyBag, Spec, SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value},
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type},
 };
@@ -130,6 +130,10 @@ pub struct FieldId(Symbol);
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct FunId(Symbol);
 
+/// Identifier for a schema.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+pub struct SchemaId(Symbol);
+
 /// Identifier for a specification function, relative to module.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct SpecFunId(RawIndex);
@@ -144,6 +148,16 @@ pub struct SpecVarId(RawIndex);
 pub struct NodeId(RawIndex);
 
 impl FunId {
+    pub fn new(sym: Symbol) -> Self {
+        Self(sym)
+    }
+
+    pub fn symbol(self) -> Symbol {
+        self.0
+    }
+}
+
+impl SchemaId {
     pub fn new(sym: Symbol) -> Self {
         Self(sym)
     }
@@ -217,6 +231,10 @@ impl ModuleId {
 pub struct GlobalEnv {
     /// A Files database for the codespan crate which supports diagnostics.
     source_files: Files<String>,
+    /// A map of FileId in the Files database to information about documentation comments in a file.
+    /// The comments are represented as map from ByteIndex into string, where the index is the
+    /// start position of the associated language item in the source.
+    doc_comments: BTreeMap<FileId, BTreeMap<ByteIndex, String>>,
     /// A mapping from file names to associated FileId. Though this information is
     /// already in `source_files`, we can't get it out of there so need to book keep here.
     file_name_map: BTreeMap<String, FileId>,
@@ -267,6 +285,7 @@ impl GlobalEnv {
         let internal_loc = fake_loc("<internal>");
         GlobalEnv {
             source_files,
+            doc_comments: Default::default(),
             unknown_loc,
             unknown_move_ir_loc,
             internal_loc,
@@ -296,6 +315,11 @@ impl GlobalEnv {
             self.file_id_is_dep.insert(file_id);
         }
         file_id
+    }
+
+    /// Adds documentation for a file.
+    pub fn add_documentation(&mut self, file_id: FileId, docs: BTreeMap<ByteIndex, String>) {
+        self.doc_comments.insert(file_id, docs);
     }
 
     /// Adds diagnostic to the environment.
@@ -335,14 +359,15 @@ impl GlobalEnv {
     /// TODO: move-lang should use FileId as well so we don't need this here. There is already
     /// a todo in their code to remove the current use of `&'static str` for file names in Loc.
     pub fn to_loc(&self, loc: &MoveIrLoc) -> Loc {
-        let file_id = self
-            .file_name_map
-            .get(loc.file())
-            .expect("file name undefined");
         Loc {
-            file_id: *file_id,
+            file_id: self.get_file_id(loc.file()).expect("file name undefined"),
             span: loc.span(),
         }
+    }
+
+    /// Returns the file id for a file name, if defined.
+    pub fn get_file_id(&self, fname: &str) -> Option<FileId> {
+        self.file_name_map.get(fname).cloned()
     }
 
     /// Maps a FileId to an index which can be mapped back to a FileId.
@@ -375,6 +400,11 @@ impl GlobalEnv {
                     line_column,
                 )
             })
+    }
+
+    /// Return the source text for the given location.
+    pub fn get_source(&self, loc: &Loc) -> Result<&str, SpanOutOfBoundsError> {
+        self.source_files.source_slice(loc.file_id, loc.span)
     }
 
     // Gets the number of source files in this environment.
@@ -413,6 +443,7 @@ impl GlobalEnv {
         loc_map: BTreeMap<NodeId, Loc>,
         type_map: BTreeMap<NodeId, Type>,
         instantiation_map: BTreeMap<NodeId, Vec<Type>>,
+        spec_block_infos: Vec<SpecBlockInfo>,
     ) {
         let idx = self.module_data.len();
         let name = ModuleName::from_str(
@@ -454,6 +485,7 @@ impl GlobalEnv {
             loc_map,
             type_map,
             instantiation_map,
+            spec_block_infos,
         });
     }
 
@@ -644,6 +676,14 @@ impl GlobalEnv {
             self.symbol_pool.make(storage_id.name().as_str()),
         )
     }
+
+    /// Get documentation associated with an item at Loc.
+    pub fn get_doc(&self, loc: &Loc) -> &str {
+        self.doc_comments
+            .get(&loc.file_id)
+            .and_then(|comments| comments.get(&loc.span.start()).map(|s| s.as_str()))
+            .unwrap_or("")
+    }
 }
 
 impl Default for GlobalEnv {
@@ -702,6 +742,9 @@ pub struct ModuleData {
 
     /// A map from node id to associated instantiation of type parameters.
     pub instantiation_map: BTreeMap<NodeId, Vec<Type>>,
+
+    /// A list of spec block infos, for documentation generation.
+    pub spec_block_infos: Vec<SpecBlockInfo>,
 }
 
 /// Represents a module environment.
@@ -734,6 +777,16 @@ impl<'env> ModuleEnv<'env> {
     pub fn is_in_dependency(&self) -> bool {
         let file_id = self.data.loc.file_id;
         self.env.file_id_is_dep.contains(&file_id)
+    }
+
+    /// Returns documentation associated with this module.
+    pub fn get_doc(&self) -> &str {
+        self.env.get_doc(&self.data.loc)
+    }
+
+    /// Returns spec block documentation infos.
+    pub fn get_spec_block_infos(&self) -> &[SpecBlockInfo] {
+        &self.data.spec_block_infos
     }
 
     /// Shortcut for accessing the symbol pool.
@@ -1078,6 +1131,11 @@ impl<'env> StructEnv<'env> {
         self.data.loc.clone()
     }
 
+    /// Get documentation associated with this struct.
+    pub fn get_doc(&self) -> &str {
+        self.module_env.env.get_doc(&self.data.loc)
+    }
+
     /// Returns properties from pragmas.
     pub fn get_properties(&self) -> &PropertyBag {
         &self.data.spec.properties
@@ -1177,7 +1235,34 @@ impl<'env> StructEnv<'env> {
             .map(|(i, k)| {
                 TypeParameter(
                     self.module_env.env.symbol_pool.make(&format!("$tv{}", i)),
-                    *k,
+                    TypeConstraint::from(*k),
+                )
+            })
+            .collect_vec()
+    }
+
+    /// Returns the type parameters associated with this struct, with actual names.
+    pub fn get_named_type_parameters(&self) -> Vec<TypeParameter> {
+        let view = StructDefinitionView::new(
+            &self.module_env.data.module,
+            self.module_env.data.module.struct_def_at(self.data.def_idx),
+        );
+        view.type_parameters()
+            .iter()
+            .enumerate()
+            .map(|(i, k)| {
+                let name = self
+                    .module_env
+                    .data
+                    .source_map
+                    .get_struct_source_map(self.data.def_idx)
+                    .ok()
+                    .and_then(|smap| smap.type_parameters.get(i))
+                    .map(|(s, _)| s.as_str())
+                    .unwrap_or_else(|| "?");
+                TypeParameter(
+                    self.module_env.env.symbol_pool.make(name),
+                    TypeConstraint::from(*k),
                 )
             })
             .collect_vec()
@@ -1229,6 +1314,26 @@ impl<'env> FieldEnv<'env> {
         FieldId(self.data.name)
     }
 
+    /// Get documentation associated with this field.
+    pub fn get_doc(&self) -> &str {
+        if let Ok(smap) = self
+            .struct_env
+            .module_env
+            .data
+            .source_map
+            .get_struct_source_map(self.data.def_idx)
+        {
+            let loc = self
+                .struct_env
+                .module_env
+                .env
+                .to_loc(&smap.fields[self.data.offset]);
+            self.struct_env.module_env.env.get_doc(&loc)
+        } else {
+            ""
+        }
+    }
+
     /// Gets the type of this field.
     pub fn get_type(&self) -> Type {
         let struct_def = self
@@ -1256,8 +1361,25 @@ impl<'env> FieldEnv<'env> {
 /// # Function Environment
 
 /// Represents a type parameter.
-#[derive(Debug, Clone)]
-pub struct TypeParameter(pub Symbol, pub Kind);
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TypeParameter(pub Symbol, pub TypeConstraint);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TypeConstraint {
+    None,
+    Copyable,
+    Resource,
+}
+
+impl TypeConstraint {
+    fn from(k: Kind) -> Self {
+        match k {
+            Kind::All => TypeConstraint::None,
+            Kind::Copyable => TypeConstraint::Copyable,
+            Kind::Resource => TypeConstraint::Resource,
+        }
+    }
+}
 
 /// Represents a parameter.
 #[derive(Debug, Clone)]
@@ -1305,6 +1427,11 @@ impl<'env> FunctionEnv<'env> {
     /// Gets the id of this function.
     pub fn get_id(&self) -> FunId {
         FunId(self.data.name)
+    }
+
+    /// Get documentation associated with this function.
+    pub fn get_doc(&self) -> &str {
+        self.module_env.env.get_doc(&self.data.loc)
     }
 
     /// Gets the definition index of this function.
@@ -1399,7 +1526,31 @@ impl<'env> FunctionEnv<'env> {
             .map(|(i, k)| {
                 TypeParameter(
                     self.module_env.env.symbol_pool.make(&format!("$tv{}", i)),
-                    *k,
+                    TypeConstraint::from(*k),
+                )
+            })
+            .collect_vec()
+    }
+
+    /// Returns the type parameters with the real names.
+    pub fn get_named_type_parameters(&self) -> Vec<TypeParameter> {
+        let view = self.definition_view();
+        view.type_parameters()
+            .iter()
+            .enumerate()
+            .map(|(i, k)| {
+                let name = self
+                    .module_env
+                    .data
+                    .source_map
+                    .get_function_source_map(self.data.def_idx)
+                    .ok()
+                    .and_then(|fmap| fmap.type_parameters.get(i))
+                    .map(|(s, _)| s.as_str())
+                    .unwrap_or_else(|| "?");
+                TypeParameter(
+                    self.module_env.env.symbol_pool.make(name),
+                    TypeConstraint::from(*k),
                 )
             })
             .collect_vec()

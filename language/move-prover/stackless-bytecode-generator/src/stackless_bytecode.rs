@@ -180,6 +180,7 @@ impl<'env> fmt::Display for BorrowNodeDisplay<'env> {
                 let ty = Type::Struct(s.module_id, s.struct_id, vec![]);
                 let tctx = TypeDisplayContext::WithEnv {
                     env: self.func_target.global_env(),
+                    type_param_names: None,
                 };
                 write!(f, "{}", ty.display(&tctx))?;
             }
@@ -591,6 +592,7 @@ impl<'env> OperationDisplay<'env> {
         if !targs.is_empty() {
             let tctx = TypeDisplayContext::WithEnv {
                 env: self.func_target.global_env(),
+                type_param_names: None,
             };
             write!(f, "<")?;
             for (i, ty) in targs.iter().enumerate() {
@@ -608,6 +610,7 @@ impl<'env> OperationDisplay<'env> {
         let ty = Type::Struct(mid, sid, targs.to_vec());
         let tctx = TypeDisplayContext::WithEnv {
             env: self.func_target.global_env(),
+            type_param_names: None,
         };
         format!("{}", ty.display(&tctx))
     }

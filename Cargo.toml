@@ -66,6 +66,7 @@ members = [
     "language/move-ir/types",
     "language/move-lang",
     "language/move-prover",
+    "language/move-prover/docgen",
     "language/move-prover/spec-lang",
     "language/move-prover/stackless-bytecode-generator",
     "language/move-prover/test-utils",

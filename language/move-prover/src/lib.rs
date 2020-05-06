@@ -7,16 +7,16 @@ use crate::{
     boogie_wrapper::BoogieWrapper,
     bytecode_translator::BoogieTranslator,
     cli::{Options, INLINE_PRELUDE},
-    code_writer::CodeWriter,
     prelude_template_helpers::StratificationHelper,
 };
 use anyhow::anyhow;
 use codespan_reporting::term::termcolor::WriteColor;
+use docgen::docgen::Docgen;
 use handlebars::Handlebars;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 use regex::Regex;
-use spec_lang::{env::GlobalEnv, run_spec_lang_compiler};
+use spec_lang::{code_writer::CodeWriter, emit, emitln, env::GlobalEnv, run_spec_lang_compiler};
 use stackless_bytecode_generator::{
     borrow_analysis::BorrowAnalysisProcessor,
     eliminate_imm_refs::EliminateImmRefsProcessor,
@@ -34,9 +34,6 @@ use std::{
     path::{Path, PathBuf},
     time::Instant,
 };
-
-#[macro_use]
-mod code_writer;
 
 mod boogie_helpers;
 mod boogie_wrapper;
@@ -72,6 +69,10 @@ pub fn run_move_prover<W: WriteColor>(
     if env.has_errors() {
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with transformation errors"));
+    }
+    // Until this point, prover and docgen have same code. Here we part ways.
+    if options.docgen {
+        return run_docgen(&env, &options, &targets);
     }
     let writer = CodeWriter::new(env.internal_loc());
     add_prelude(&options, &writer)?;
@@ -116,6 +117,21 @@ pub fn run_move_prover<W: WriteColor>(
             return Err(anyhow!("exiting with boogie verification errors"));
         }
     }
+    Ok(())
+}
+
+fn run_docgen(
+    env: &GlobalEnv,
+    options: &Options,
+    _func_targets: &FunctionTargetsHolder,
+) -> anyhow::Result<()> {
+    let path = Path::new(&options.output_path).with_extension("md");
+    let mut generator = Docgen::new(env, &options.docgen_options);
+    info!("generating documentation");
+    generator.gen();
+    generator
+        .into_code_writer()
+        .process_result(move |content| fs::write(path.as_path(), content))?;
     Ok(())
 }
 
@@ -233,7 +249,7 @@ fn calculate_file_map(search_path: &[String]) -> anyhow::Result<BTreeMap<String,
 /// Extracts matches out of some text file. `pat` must be a regular expression with one anonymous
 /// group. The list of the content of this group is returned. Use as in in
 /// `extract_matches(file, "use 0x0::([a-zA-Z_]+)")`
-pub fn extract_matches(path: &Path, pat: &str) -> anyhow::Result<Vec<String>> {
+fn extract_matches(path: &Path, pat: &str) -> anyhow::Result<Vec<String>> {
     let rex = Regex::new(&format!("(?m){}", pat))?;
     let mut content = String::new();
     let mut file = File::open(path)?;

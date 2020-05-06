@@ -6,7 +6,7 @@
 use crate::{
     ast::QualifiedSymbol,
     env::{GlobalEnv, ModuleId, StructEnv, StructId},
-    symbol::SymbolPool,
+    symbol::{Symbol, SymbolPool},
 };
 use std::{collections::BTreeMap, fmt, fmt::Formatter};
 
@@ -417,6 +417,7 @@ pub enum TypeDisplayContext<'a> {
     },
     WithEnv {
         env: &'a GlobalEnv,
+        type_param_names: Option<Vec<Symbol>>,
     },
 }
 
@@ -476,7 +477,7 @@ impl<'a> fmt::Display for TypeDisplay<'a> {
                             f.write_str("??unknown??")?;
                         }
                     }
-                    TypeDisplayContext::WithEnv { env } => {
+                    TypeDisplayContext::WithEnv { env, .. } => {
                         let func_env = env.get_module(*mid).into_struct(*sid);
                         write!(
                             f,
@@ -500,7 +501,22 @@ impl<'a> fmt::Display for TypeDisplay<'a> {
                 }
                 write!(f, "{}", t.display(self.context))
             }
-            TypeParameter(idx) => write!(f, "#{}", idx),
+            TypeParameter(idx) => {
+                if let TypeDisplayContext::WithEnv {
+                    env,
+                    type_param_names: Some(names),
+                } = self.context
+                {
+                    let idx = *idx as usize;
+                    if idx < names.len() {
+                        write!(f, "{}", names[idx].display(env.symbol_pool()))
+                    } else {
+                        write!(f, "#{}", idx)
+                    }
+                } else {
+                    write!(f, "#{}", idx)
+                }
+            }
             Var(idx) => write!(f, "?{}", idx),
             Error => f.write_str("?error"),
         }

@@ -9,7 +9,8 @@ license = "Apache-2.0"
 [dependencies]
 # libra dependencies
 move-lang = { path = "../move-lang", version = "0.0.1" }
-spec-lang = { path = "spec-lang", version = "0.0.1" }
+spec-lang = { path = "spec-lang", version = "0.1.0" }
+docgen = { path = "docgen", version = "0.1.0" }
 stackless-bytecode-generator = { path = "stackless-bytecode-generator", version = "0.1.0"}
 vm = { path = "../vm", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }

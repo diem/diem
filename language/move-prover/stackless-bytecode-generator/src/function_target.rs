@@ -283,6 +283,7 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
         }
         let tctx = TypeDisplayContext::WithEnv {
             env: self.global_env(),
+            type_param_names: None,
         };
         write!(f, "(")?;
         for i in 0..self.get_parameter_count() {

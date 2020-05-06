@@ -10,6 +10,8 @@ use itertools::Itertools;
 use log::{debug, info, log, warn, Level};
 
 use spec_lang::{
+    code_writer::CodeWriter,
+    emit, emitln,
     env::{GlobalEnv, Loc, ModuleEnv, StructEnv, TypeParameter},
     ty::{PrimitiveType, Type},
 };
@@ -31,7 +33,6 @@ use crate::{
         boogie_well_formed_check, WellFormedMode,
     },
     cli::{Options, VerificationScope},
-    code_writer::CodeWriter,
     spec_translator::SpecTranslator,
 };
 
