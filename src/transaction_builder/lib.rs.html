@@ -523,6 +523,29 @@
 <span id="523">523</span>
 <span id="524">524</span>
 <span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -628,7 +651,7 @@
     <span class="ident">args</span>: [<span class="ident">new_validator</span>: <span class="ident">Address</span>],
     <span class="ident">script</span>: <span class="ident">AddValidator</span>,
     <span class="ident">doc</span>: <span class="string">&quot;Encode a program adding `new_validator` to the pending validator set. Fails if the\
-          `new_validator` address is already in the validator set, already in the pending valdiator set,\
+          `new_validator` address is already in the validator set, already in the pending validator set,\
           or does not have a `ValidatorConfig` resource stored at the address&quot;</span>
 }
 
@@ -757,6 +780,17 @@
 }
 
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {
+    <span class="ident">name</span>: <span class="ident">encode_publish_shared_ed25519_public_key_script</span>,
+    <span class="ident">args</span>: [<span class="ident">public_key</span>: <span class="ident">Bytes</span>],
+    <span class="ident">script</span>: <span class="ident">PublishSharedEd2551PublicKey</span>,
+    <span class="ident">doc</span>: <span class="string">&quot;(1) Rotate the authentication key of the sender to `public_key`\
+          (2) Publish a resource containing a 32-byte ed25519 public key and the rotation capability\
+          of the sender under the sender&#39;s address.\
+          Aborts if the sender already has a `SharedEd25519PublicKey` resource.\
+          Aborts if the length of `new_public_key` is not 32.&quot;</span>
+}
+
+<span class="macro">encode_txn_script</span><span class="macro">!</span> {
     <span class="ident">name</span>: <span class="ident">encode_register_approved_payment_script</span>,
     <span class="ident">args</span>: [<span class="ident">public_key</span>: <span class="ident">Bytes</span>],
     <span class="ident">script</span>: <span class="ident">RegisterApprovedPayment</span>,
@@ -811,6 +845,18 @@
     <span class="ident">script</span>: <span class="ident">RotateAuthenticationKey</span>,
     <span class="ident">doc</span>: <span class="string">&quot;Encode a program that rotates the sender&#39;s authentication key to `new_key`. `new_key`\
           should be a 256 bit sha3 hash of an ed25519 public key.&quot;</span>
+}
+
+<span class="macro">encode_txn_script</span><span class="macro">!</span> {
+    <span class="ident">name</span>: <span class="ident">encode_rotate_shared_ed25519_public_key_script</span>,
+    <span class="ident">args</span>: [<span class="ident">new_public_key</span>: <span class="ident">Bytes</span>],
+    <span class="ident">script</span>: <span class="ident">RotateSharedEd2551PublicKey</span>,
+    <span class="ident">doc</span>: <span class="string">&quot;(1) rotate the public key stored in the sender&#39;s `SharedEd25519PublicKey` resource to\
+          `new_public_key`\
+          (2) rotate the authentication key using the capability stored in the sender&#39;s\
+          `SharedEd25519PublicKey` to a new value derived from `new_public_key`\
+          Aborts if the sender does not have a `SharedEd25519PublicKey` resource.\
+          Aborts if the length of `new_public_key` is not 32.&quot;</span>
 }
 
 <span class="comment">// TODO: this should go away once we are no longer using it in tests</span>

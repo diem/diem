@@ -269,6 +269,12 @@
 <span id="269">269</span>
 <span id="270">270</span>
 <span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -318,6 +324,7 @@
     <span class="ident">PeerToPeer</span>,
     <span class="ident">PeerToPeerWithMetadata</span>,
     <span class="ident">Preburn</span>,
+    <span class="ident">PublishSharedEd2551PublicKey</span>,
     <span class="ident">RecertifyChildAccount</span>,
     <span class="ident">RegisterApprovedPayment</span>,
     <span class="ident">RegisterPreburner</span>,
@@ -329,6 +336,7 @@
     <span class="ident">RemoveValidator</span>,
     <span class="ident">RotateAuthenticationKey</span>,
     <span class="ident">RotateConsensusPubkey</span>,
+    <span class="ident">RotateSharedEd2551PublicKey</span>,
     <span class="ident">UnmintLbr</span>,
     <span class="ident">UpdateLibraVersion</span>,
     <span class="ident">UpdateExchangeRate</span>,
@@ -366,6 +374,7 @@
             <span class="ident">PeerToPeer</span>,
             <span class="ident">PeerToPeerWithMetadata</span>,
             <span class="ident">Preburn</span>,
+            <span class="ident">PublishSharedEd2551PublicKey</span>,
             <span class="ident">RecertifyChildAccount</span>,
             <span class="ident">RegisterApprovedPayment</span>,
             <span class="ident">RegisterPreburner</span>,
@@ -377,6 +386,7 @@
             <span class="ident">RemoveValidator</span>,
             <span class="ident">RotateAuthenticationKey</span>,
             <span class="ident">RotateConsensusPubkey</span>,
+            <span class="ident">RotateSharedEd2551PublicKey</span>,
             <span class="ident">UnmintLbr</span>,
             <span class="ident">UpdateLibraVersion</span>,
             <span class="ident">UpdateExchangeRate</span>,
@@ -492,6 +502,7 @@
                 <span class="ident">PeerToPeer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;peer_to_peer&quot;</span>,
                 <span class="ident">PeerToPeerWithMetadata</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;peer_to_peer_with_metadata&quot;</span>,
                 <span class="ident">Preburn</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;preburn&quot;</span>,
+                <span class="ident">PublishSharedEd2551PublicKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;publish_shared_ed25519_public_key&quot;</span>,
                 <span class="ident">RecertifyChildAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;recertify_child_account&quot;</span>,
                 <span class="ident">RegisterApprovedPayment</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;register_approved_payment&quot;</span>,
                 <span class="ident">RegisterPreburner</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;register_preburner&quot;</span>,
@@ -503,6 +514,7 @@
                 <span class="ident">RemoveValidator</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;remove_validator&quot;</span>,
                 <span class="ident">RotateAuthenticationKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_authentication_key&quot;</span>,
                 <span class="ident">RotateConsensusPubkey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_consensus_pubkey&quot;</span>,
+                <span class="ident">RotateSharedEd2551PublicKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_shared_ed25519_public_key&quot;</span>,
                 <span class="ident">UnmintLbr</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;unmint_lbr&quot;</span>,
                 <span class="ident">UpdateLibraVersion</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;update_libra_version&quot;</span>,
                 <span class="ident">UpdateExchangeRate</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;update_exchange_rate&quot;</span>,
@@ -522,6 +534,13 @@
         <span class="comment">// StdlibScript::all() (and vice versa)</span>
         <span class="kw">let</span> <span class="ident">files</span> <span class="op">=</span> <span class="ident">STAGED_TXN_SCRIPTS_DIR</span>.<span class="ident">files</span>();
         <span class="kw">let</span> <span class="ident">scripts</span> <span class="op">=</span> <span class="ident">StdlibScript</span>::<span class="ident">all</span>();
+        <span class="kw">for</span> <span class="ident">file</span> <span class="kw">in</span> <span class="ident">files</span> {
+            <span class="macro">assert</span><span class="macro">!</span>(
+                <span class="ident">StdlibScript</span>::<span class="ident">is</span>(<span class="ident">file</span>.<span class="ident">contents</span>()),
+                <span class="string">&quot;File {} missing from StdlibScript enum&quot;</span>,
+                <span class="ident">file</span>.<span class="ident">path</span>().<span class="ident">display</span>()
+            )
+        }
         <span class="macro">assert_eq</span><span class="macro">!</span>(
             <span class="ident">files</span>.<span class="ident">len</span>(),
             <span class="ident">scripts</span>.<span class="ident">len</span>(),
@@ -532,13 +551,6 @@
                 <span class="string">&quot;Did you forget to rebuild the standard library?&quot;</span>
             }
         );
-        <span class="kw">for</span> <span class="ident">file</span> <span class="kw">in</span> <span class="ident">files</span> {
-            <span class="macro">assert</span><span class="macro">!</span>(
-                <span class="ident">StdlibScript</span>::<span class="ident">is</span>(<span class="ident">file</span>.<span class="ident">contents</span>()),
-                <span class="string">&quot;File {} missing from StdlibScript enum&quot;</span>,
-                <span class="ident">file</span>.<span class="ident">path</span>().<span class="ident">display</span>()
-            )
-        }
     }
 }
 </pre></div>
