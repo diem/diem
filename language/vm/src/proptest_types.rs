@@ -18,10 +18,14 @@ use proptest::{
     sample::Index as PropIndex,
 };
 
+mod constants;
 mod functions;
 mod signature;
 
-use crate::proptest_types::functions::{FnHandleMaterializeState, FunctionHandleGen};
+use crate::proptest_types::{
+    constants::ConstantPoolGen,
+    functions::{FnHandleMaterializeState, FunctionHandleGen},
+};
 use functions::{FnDefnMaterializeState, FunctionDefinitionGen};
 use signature::{KindGen, SignatureTokenGen};
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -76,10 +80,12 @@ impl CompiledModule {
 #[derive(Clone, Debug)]
 pub struct CompiledModuleStrategyGen {
     size: usize,
-    /// Range of number of fields in a struct and number of arguments in a function to generate.
-    /// The default value is 0..4.
-    member_count: SizeRange,
-    /// Length of code units (function definition). XXX the unit might change here.
+    field_count: SizeRange,
+    struct_type_params: SizeRange,
+    parameters_count: SizeRange,
+    return_count: SizeRange,
+    func_type_params: SizeRange,
+    acquires_count: SizeRange,
     code_len: SizeRange,
 }
 
@@ -88,16 +94,25 @@ impl CompiledModuleStrategyGen {
     pub fn new(size: TableSize) -> Self {
         Self {
             size: size as usize,
-            member_count: (0..4).into(),
+            field_count: (0..5).into(),
+            struct_type_params: (0..2).into(),
+            parameters_count: (0..4).into(),
+            return_count: (0..2).into(),
+            func_type_params: (0..2).into(),
+            acquires_count: (0..1).into(),
             code_len: (0..50).into(),
         }
     }
 
-    /// Set a new range for the number of fields in a struct or the number of arguments in a
-    /// function.
+    /// Zero out all fields, type parameters, arguments and return types of struct and functions.
     #[inline]
-    pub fn member_count(&mut self, count: impl Into<SizeRange>) -> &mut Self {
-        self.member_count = count.into();
+    pub fn zeros_all(&mut self) -> &mut Self {
+        self.field_count = 0.into();
+        self.struct_type_params = 0.into();
+        self.parameters_count = 0.into();
+        self.return_count = 0.into();
+        self.func_type_params = 0.into();
+        self.acquires_count = 0.into();
         self
     }
 
@@ -107,11 +122,8 @@ impl CompiledModuleStrategyGen {
         // leaf pool generator
         //
         let address_pool_strat = btree_set(any::<AccountAddress>(), 1..=self.size);
-        let id_base_range = if self.size < 20 { 10 } else { 1 };
-        let identifiers_strat = btree_set(
-            any::<Identifier>(),
-            id_base_range..=self.size + id_base_range,
-        );
+        let identifiers_strat = btree_set(any::<Identifier>(), 5..=self.size + 5);
+        let constant_pool_strat = ConstantPoolGen::strategy(0..=self.size, 0..=self.size);
 
         // The number of PropIndex instances in each tuple represents the number of pointers out
         // from an instance of that particular kind of node.
@@ -129,7 +141,7 @@ impl CompiledModuleStrategyGen {
             1..=self.size,
         );
         let struct_defs_strat = vec(
-            StructDefinitionGen::strategy(self.member_count.clone()),
+            StructDefinitionGen::strategy(self.field_count.clone()),
             1..=self.size,
         );
 
@@ -142,18 +154,18 @@ impl CompiledModuleStrategyGen {
         // FieldHandle, StructInstantiation, FunctionInstantiation, FieldInstantiation
         let function_handles_strat = vec(
             FunctionHandleGen::strategy(
-                self.member_count.clone(),
-                self.member_count.clone(),
-                self.member_count.clone(),
+                self.parameters_count.clone(),
+                self.return_count.clone(),
+                self.func_type_params.clone(),
             ),
             1..=self.size,
         );
         let function_defs_strat = vec(
             FunctionDefinitionGen::strategy(
-                self.member_count.clone(),
-                self.member_count.clone(),
-                self.member_count.clone(),
-                self.member_count.clone(),
+                self.return_count.clone(),
+                self.parameters_count.clone(),
+                self.func_type_params.clone(),
+                self.acquires_count.clone(),
                 self.code_len,
             ),
             1..=self.size,
@@ -161,27 +173,26 @@ impl CompiledModuleStrategyGen {
 
         // Note that prop_test only allows a tuple of length up to 10
         (
-            (address_pool_strat, identifiers_strat),
+            (address_pool_strat, identifiers_strat, constant_pool_strat),
             module_handles_strat,
             (struct_handles_strat, struct_defs_strat),
             (function_handles_strat, function_defs_strat),
         )
             .prop_map(
                 |(
-                    (address_identifier_gens, identifier_gens),
+                    (address_identifier_gens, identifier_gens, constant_pool_gen),
                     module_handles_gen,
                     (struct_handle_gens, struct_def_gens),
                     (function_handle_gens, function_def_gens),
                 )| {
                     //
                     // leaf pools
-                    // TODO constant generation
-                    let constant_pool = vec![];
-                    let constant_pool_len = constant_pool.len();
                     let address_identifiers: Vec<_> = address_identifier_gens.into_iter().collect();
                     let address_identifiers_len = address_identifiers.len();
                     let identifiers: Vec<_> = identifier_gens.into_iter().collect();
                     let identifiers_len = identifiers.len();
+                    let constant_pool = constant_pool_gen.constant_pool();
+                    let constant_pool_len = constant_pool.len();
 
                     //
                     // module handles
@@ -369,8 +380,6 @@ impl StDefnMaterializeState {
 #[derive(Clone, Debug)]
 struct StructDefinitionGen {
     name_idx: PropIndex,
-    // the is_nominal_resource field of generated struct handle is set to true if
-    // either any of the fields contains a resource or self.is_nominal_resource is true
     is_nominal_resource: bool,
     type_parameters: Vec<KindGen>,
     is_public: bool,
@@ -378,15 +387,14 @@ struct StructDefinitionGen {
 }
 
 impl StructDefinitionGen {
-    fn strategy(member_count: impl Into<SizeRange>) -> impl Strategy<Value = Self> {
+    fn strategy(field_count: impl Into<SizeRange>) -> impl Strategy<Value = Self> {
         (
             any::<PropIndex>(),
             any::<bool>(),
             // TODO: how to not hard-code the number?
             vec(KindGen::strategy(), 0..10),
             any::<bool>(),
-            // XXX 0..4 is the default member_count in CompiledModule
-            option::of(vec(FieldDefinitionGen::strategy(), member_count)),
+            option::of(vec(FieldDefinitionGen::strategy(), field_count)),
         )
             .prop_map(
                 |(name_idx, is_nominal_resource, _type_parameters, is_public, field_defs)| Self {

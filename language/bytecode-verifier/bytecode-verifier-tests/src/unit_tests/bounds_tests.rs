@@ -151,7 +151,7 @@ proptest! {
 #[test]
 fn valid_bounds_no_members() {
     let mut gen = CompiledModuleStrategyGen::new(20);
-    gen.member_count(0);
+    gen.zeros_all();
     proptest!(|(_module in gen.generate())| {
         // gen.generate() will panic if there are any bounds check issues.
     });
