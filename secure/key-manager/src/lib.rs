@@ -47,7 +47,6 @@ const MAX_GAS_AMOUNT: u64 = 400_000;
 const ROTATION_PERIOD_SECS: u64 = 604_800; // 1 week
 const SLEEP_PERIOD_SECS: u64 = 600; // 10 minutes, after which the key manager will awaken again
 const TXN_EXPIRATION_SECS: u64 = 3600; // 1 hour, we'll try again after that
-const TXN_RETRY_SECS: u64 = 3600; // 1 hour retry period
 
 /// Defines actions that KeyManager should perform after a check of all associated state.
 #[derive(Debug, PartialEq)]
@@ -236,7 +235,7 @@ where
 
         // If this is inconsistent, then the transaction either failed or was never submitted.
         if let Err(Error::ConfigStorageKeyMismatch(..)) = self.compare_storage_to_config() {
-            return if last_rotation + TXN_RETRY_SECS <= self.time_service.now() {
+            return if last_rotation + TXN_EXPIRATION_SECS <= self.time_service.now() {
                 Ok(Action::SubmitKeyRotationTransaction)
             } else {
                 Ok(Action::NoAction)
