@@ -58,12 +58,21 @@ fn create_and_execute_key_manager(
 ) -> Result<(), Error> {
     let account = network_config.peer_id;
     let libra_interface = create_libra_interface(key_manager_config.json_rpc_address);
-    let time_service = RealTimeService::new();
-
     let storage: Box<dyn Storage> = (&key_manager_config.secure_backend)
         .try_into()
         .expect("Unable to initialize storage");
-    KeyManager::new(account, libra_interface, BoxStorage(storage), time_service).execute()
+    let time_service = RealTimeService::new();
+
+    KeyManager::new(
+        account,
+        libra_interface,
+        BoxStorage(storage),
+        time_service,
+        key_manager_config.rotation_period_secs,
+        key_manager_config.sleep_period_secs,
+        key_manager_config.txn_expiration_secs,
+    )
+    .execute()
 }
 
 fn create_libra_interface(json_rpc_address: SocketAddr) -> JsonRpcLibraInterface {
