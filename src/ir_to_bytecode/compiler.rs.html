@@ -1917,6 +1917,8 @@
 <span id="1917">1917</span>
 <span id="1918">1918</span>
 <span id="1919">1919</span>
+<span id="1920">1920</span>
+<span id="1921">1921</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1944,7 +1946,7 @@
 <span class="kw">use</span> <span class="ident">vm</span>::{
     <span class="ident">access</span>::<span class="ident">ModuleAccess</span>,
     <span class="ident">file_format</span>::{
-        <span class="self">self</span>, <span class="ident">Bytecode</span>, <span class="ident">CodeOffset</span>, <span class="ident">CodeUnit</span>, <span class="ident">CompiledModule</span>, <span class="ident">CompiledModuleMut</span>, <span class="ident">CompiledScript</span>,
+        <span class="ident">Bytecode</span>, <span class="ident">CodeOffset</span>, <span class="ident">CodeUnit</span>, <span class="ident">CompiledModule</span>, <span class="ident">CompiledModuleMut</span>, <span class="ident">CompiledScript</span>,
         <span class="ident">CompiledScriptMut</span>, <span class="ident">Constant</span>, <span class="ident">FieldDefinition</span>, <span class="ident">FunctionDefinition</span>, <span class="ident">FunctionSignature</span>, <span class="ident">Kind</span>,
         <span class="ident">Signature</span>, <span class="ident">SignatureToken</span>, <span class="ident">StructDefinition</span>, <span class="ident">StructDefinitionIndex</span>, <span class="ident">StructFieldInformation</span>,
         <span class="ident">StructHandleIndex</span>, <span class="ident">TableIndex</span>, <span class="ident">TypeParameterIndex</span>, <span class="ident">TypeSignature</span>,
@@ -2313,15 +2315,11 @@
 
 <span class="doccomment">/// Compile a transaction script.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_script</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="lifetime">&#39;a</span> <span class="op">+</span> <span class="ident">ModuleAccess</span><span class="op">&gt;</span>(
-    <span class="ident">address</span>: <span class="ident">AccountAddress</span>,
+    <span class="ident">address</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span>,
     <span class="ident">script</span>: <span class="ident">Script</span>,
     <span class="ident">dependencies</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">CompiledScript</span>, <span class="ident">SourceMap</span><span class="op">&lt;</span><span class="ident">Loc</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">current_module</span> <span class="op">=</span> <span class="ident">QualifiedModuleIdent</span> {
-        <span class="ident">address</span>,
-        <span class="ident">name</span>: <span class="ident">ModuleName</span>::<span class="ident">new</span>(<span class="ident">file_format</span>::<span class="ident">self_module_name</span>().<span class="ident">to_string</span>()),
-    };
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">Context</span>::<span class="ident">new</span>(<span class="ident">dependencies</span>, <span class="ident">current_module</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">Context</span>::<span class="ident">new</span>(<span class="ident">dependencies</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 
     <span class="ident">compile_imports</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>, <span class="ident">address</span>, <span class="ident">script</span>.<span class="ident">imports</span>)<span class="question-mark">?</span>;
     <span class="ident">compile_explicit_dependency_declarations</span>(
@@ -2380,10 +2378,10 @@
         <span class="ident">address</span>,
         <span class="ident">name</span>: <span class="ident">module</span>.<span class="ident">name</span>,
     };
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">Context</span>::<span class="ident">new</span>(<span class="ident">dependencies</span>, <span class="ident">current_module</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">Context</span>::<span class="ident">new</span>(<span class="ident">dependencies</span>, <span class="prelude-val">Some</span>(<span class="ident">current_module</span>))<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">self_name</span> <span class="op">=</span> <span class="ident">ModuleName</span>::<span class="ident">new</span>(<span class="ident">ModuleName</span>::<span class="ident">self_name</span>().<span class="ident">into</span>());
     <span class="comment">// Explicitly declare all imports as they will be included even if not used</span>
-    <span class="ident">compile_imports</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>, <span class="ident">address</span>, <span class="ident">module</span>.<span class="ident">imports</span>)<span class="question-mark">?</span>;
+    <span class="ident">compile_imports</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>, <span class="prelude-val">Some</span>(<span class="ident">address</span>), <span class="ident">module</span>.<span class="ident">imports</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Explicitly declare all structs as they will be included even if not used</span>
     <span class="kw">for</span> <span class="ident">s</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">module</span>.<span class="ident">structs</span> {
@@ -2480,13 +2478,19 @@
 
 <span class="kw">fn</span> <span class="ident">compile_imports</span>(
     <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
-    <span class="ident">address</span>: <span class="ident">AccountAddress</span>,
+    <span class="ident">address_opt</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span>,
     <span class="ident">imports</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ImportDefinition</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">for</span> <span class="ident">import</span> <span class="kw">in</span> <span class="ident">imports</span> {
-        <span class="kw">let</span> <span class="ident">ident</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">import</span>.<span class="ident">ident</span> {
-            <span class="ident">ModuleIdent</span>::<span class="ident">Transaction</span>(<span class="ident">name</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">QualifiedModuleIdent</span> { <span class="ident">address</span>, <span class="ident">name</span> },
-            <span class="ident">ModuleIdent</span>::<span class="ident">Qualified</span>(<span class="ident">id</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">id</span>,
+        <span class="kw">let</span> <span class="ident">ident</span> <span class="op">=</span> <span class="kw">match</span> (<span class="ident">address_opt</span>, <span class="ident">import</span>.<span class="ident">ident</span>) {
+            (<span class="prelude-val">Some</span>(<span class="ident">address</span>), <span class="ident">ModuleIdent</span>::<span class="ident">Transaction</span>(<span class="ident">name</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">QualifiedModuleIdent</span> { <span class="ident">address</span>, <span class="ident">name</span> }
+            }
+            (<span class="prelude-val">None</span>, <span class="ident">ModuleIdent</span>::<span class="ident">Transaction</span>(<span class="ident">name</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">bail</span><span class="macro">!</span>(
+                <span class="string">&quot;Invalid import &#39;{}&#39;. No address specified for script so cannot resolve import&quot;</span>,
+                <span class="ident">name</span>
+            ),
+            (<span class="kw">_</span>, <span class="ident">ModuleIdent</span>::<span class="ident">Qualified</span>(<span class="ident">id</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">id</span>,
         };
         <span class="ident">context</span>.<span class="ident">declare_import</span>(<span class="ident">ident</span>, <span class="ident">import</span>.<span class="ident">alias</span>)<span class="question-mark">?</span>;
     }

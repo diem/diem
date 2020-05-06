@@ -1403,6 +1403,9 @@
 <span id="1403">1403</span>
 <span id="1404">1404</span>
 <span id="1405">1405</span>
+<span id="1406">1406</span>
+<span id="1407">1407</span>
+<span id="1408">1408</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2061,7 +2064,7 @@
     }
 
     <span class="doccomment">/// Compile Move program</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_program</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">space_delim_strings</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_program</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">space_delim_strings</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="macro">ensure</span><span class="macro">!</span>(
             <span class="ident">space_delim_strings</span>[<span class="number">0</span>] <span class="op">=</span><span class="op">=</span> <span class="string">&quot;compile&quot;</span>,
             <span class="string">&quot;inconsistent command &#39;{}&#39; for compile_program&quot;</span>,
@@ -2095,21 +2098,24 @@
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;compilation failed&quot;</span>));
         }
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">output_files</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">fs</span>::<span class="ident">read_dir</span>(<span class="ident">tmp_output_path</span>)<span class="question-mark">?</span>.<span class="ident">collect</span>();
-        <span class="kw">match</span> <span class="ident">output_files</span>.<span class="ident">pop</span>() {
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;compiler failed to produce an output file&quot;</span>)),
-            <span class="prelude-val">Some</span>(<span class="ident">file</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">if</span> <span class="op">!</span><span class="ident">output_files</span>.<span class="ident">is_empty</span>() {
-                    <span class="prelude-val">Err</span>(<span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;compiler output has more than one file&quot;</span>))
-                } <span class="kw">else</span> {
-                    <span class="prelude-val">Ok</span>(<span class="ident">file</span><span class="question-mark">?</span>
-                        .<span class="ident">path</span>()
-                        .<span class="ident">to_str</span>()
-                        .<span class="ident">expect</span>(<span class="string">&quot;compiler output file path cannot be converted to a string&quot;</span>)
-                        .<span class="ident">to_string</span>())
-                }
-            }
+        <span class="kw">let</span> <span class="ident">output_files</span> <span class="op">=</span> <span class="ident">walkdir</span>::<span class="ident">WalkDir</span>::<span class="ident">new</span>(<span class="ident">tmp_output_path</span>)
+            .<span class="ident">into_iter</span>()
+            .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">ok</span>())
+            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
+                <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">e</span>.<span class="ident">path</span>();
+                <span class="ident">e</span>.<span class="ident">file_type</span>().<span class="ident">is_file</span>()
+                    <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">path</span>
+                        .<span class="ident">extension</span>()
+                        .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">to_str</span>())
+                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">ext</span><span class="op">|</span> <span class="ident">ext</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;mv&quot;</span>)
+                        .<span class="ident">unwrap_or</span>(<span class="bool-val">false</span>)
+            })
+            .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">path</span>().<span class="ident">to_str</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">to_string</span>()))
+            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+        <span class="kw">if</span> <span class="ident">output_files</span>.<span class="ident">is_empty</span>() {
+            <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;compiler failed to produce an output file&quot;</span>)
         }
+        <span class="prelude-val">Ok</span>(<span class="ident">output_files</span>)
     }
 
     <span class="doccomment">/// Submit a transaction to the network given the unsigned raw transaction, sender public key</span>

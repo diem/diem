@@ -384,6 +384,46 @@
 <span id="384">384</span>
 <span id="385">385</span>
 <span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -420,9 +460,9 @@
     <span class="ident">path</span>::{<span class="ident">Path</span>, <span class="ident">PathBuf</span>},
 };
 
-<span class="kw">const</span> <span class="ident">MOVE_EXTENSION</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;move&quot;</span>;
-<span class="kw">const</span> <span class="ident">MOVE_COMPILED_EXTENSION</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;mv&quot;</span>;
-<span class="kw">const</span> <span class="ident">SOURCE_MAP_EXTENSION</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;mvsm&quot;</span>;
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MOVE_EXTENSION</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;move&quot;</span>;
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MOVE_COMPILED_EXTENSION</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;mv&quot;</span>;
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SOURCE_MAP_EXTENSION</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;mvsm&quot;</span>;
 
 <span class="comment">//**************************************************************************************************</span>
 <span class="comment">// Entry</span>
@@ -523,24 +563,68 @@
     <span class="ident">compiled_units</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">CompiledUnit</span><span class="op">&gt;</span>,
     <span class="ident">out_dir</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">create_dir_all</span>(<span class="ident">out_dir</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> (<span class="ident">compiled_units</span>, <span class="ident">ice_errors</span>) <span class="op">=</span> <span class="ident">compiled_unit</span>::<span class="ident">verify_units</span>(<span class="ident">compiled_units</span>);
-    <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">compiled_unit</span>) <span class="kw">in</span> <span class="ident">compiled_units</span>.<span class="ident">into_iter</span>().<span class="ident">enumerate</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="macro">format</span><span class="macro">!</span>(
-            <span class="string">&quot;{}/transaction_{}_{}&quot;</span>,
-            <span class="ident">out_dir</span>,
-            <span class="ident">idx</span>,
-            <span class="ident">compiled_unit</span>.<span class="ident">name</span>(),
-        ));
+    <span class="kw">const</span> <span class="ident">SCRIPT_SUB_DIR</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;scripts&quot;</span>;
+    <span class="kw">const</span> <span class="ident">MODULE_SUB_DIR</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;modules&quot;</span>;
 
-        <span class="kw">if</span> <span class="ident">emit_source_maps</span> {
-            <span class="ident">path</span>.<span class="ident">set_extension</span>(<span class="ident">SOURCE_MAP_EXTENSION</span>);
-            <span class="ident">File</span>::<span class="ident">create</span>(<span class="ident">path</span>.<span class="ident">as_path</span>())<span class="question-mark">?</span>.<span class="ident">write_all</span>(<span class="kw-2">&amp;</span><span class="ident">compiled_unit</span>.<span class="ident">serialize_source_map</span>())<span class="question-mark">?</span>;
-        }
+    <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">emit_unit</span> {
+        (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">path</span>:<span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">unit</span>:<span class="ident">ident</span>) <span class="op">=</span><span class="op">&gt;</span> {{
+            <span class="kw">if</span> <span class="ident">emit_source_maps</span> {
+                <span class="macro-nonterminal">$</span><span class="macro-nonterminal">path</span>.<span class="ident">set_extension</span>(<span class="ident">SOURCE_MAP_EXTENSION</span>);
+                <span class="ident">File</span>::<span class="ident">create</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">path</span>.<span class="ident">as_path</span>())<span class="question-mark">?</span>.<span class="ident">write_all</span>(<span class="kw-2">&amp;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">unit</span>.<span class="ident">serialize_source_map</span>())<span class="question-mark">?</span>;
+            }
 
-        <span class="ident">path</span>.<span class="ident">set_extension</span>(<span class="ident">MOVE_COMPILED_EXTENSION</span>);
-        <span class="ident">File</span>::<span class="ident">create</span>(<span class="ident">path</span>.<span class="ident">as_path</span>())<span class="question-mark">?</span>.<span class="ident">write_all</span>(<span class="kw-2">&amp;</span><span class="ident">compiled_unit</span>.<span class="ident">serialize</span>())<span class="question-mark">?</span>;
+            <span class="macro-nonterminal">$</span><span class="macro-nonterminal">path</span>.<span class="ident">set_extension</span>(<span class="ident">MOVE_COMPILED_EXTENSION</span>);
+            <span class="ident">File</span>::<span class="ident">create</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">path</span>.<span class="ident">as_path</span>())<span class="question-mark">?</span>.<span class="ident">write_all</span>(<span class="kw-2">&amp;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">unit</span>.<span class="ident">serialize</span>())<span class="question-mark">?</span>
+        }};
     }
+
+    <span class="kw">let</span> (<span class="ident">compiled_units</span>, <span class="ident">ice_errors</span>) <span class="op">=</span> <span class="ident">compiled_unit</span>::<span class="ident">verify_units</span>(<span class="ident">compiled_units</span>);
+    <span class="kw">let</span> (<span class="ident">modules</span>, <span class="ident">scripts</span>): (<span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>) <span class="op">=</span> <span class="ident">compiled_units</span>
+        .<span class="ident">into_iter</span>()
+        .<span class="ident">partition</span>(<span class="op">|</span><span class="ident">u</span><span class="op">|</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="ident">u</span>, <span class="ident">CompiledUnit</span>::<span class="ident">Module</span> { .. }));
+
+    <span class="comment">// modules</span>
+    <span class="kw">if</span> <span class="op">!</span><span class="ident">modules</span>.<span class="ident">is_empty</span>() {
+        <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">create_dir_all</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/{}&quot;</span>, <span class="ident">out_dir</span>, <span class="ident">MODULE_SUB_DIR</span>))<span class="question-mark">?</span>;
+    }
+    <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">unit</span>) <span class="kw">in</span> <span class="ident">modules</span>.<span class="ident">into_iter</span>().<span class="ident">enumerate</span>() {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="macro">format</span><span class="macro">!</span>(
+            <span class="string">&quot;{}/{}/{}_{}&quot;</span>,
+            <span class="ident">out_dir</span>,
+            <span class="ident">MODULE_SUB_DIR</span>,
+            <span class="ident">idx</span>,
+            <span class="ident">unit</span>.<span class="ident">name</span>(),
+        ));
+        <span class="macro">emit_unit</span><span class="macro">!</span>(<span class="ident">path</span>, <span class="ident">unit</span>);
+    }
+
+    <span class="comment">// scripts</span>
+    <span class="kw">if</span> <span class="op">!</span><span class="ident">scripts</span>.<span class="ident">is_empty</span>() {
+        <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">create_dir_all</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/{}&quot;</span>, <span class="ident">out_dir</span>, <span class="ident">SCRIPT_SUB_DIR</span>))<span class="question-mark">?</span>;
+    }
+    <span class="kw">for</span> <span class="ident">unit</span> <span class="kw">in</span> <span class="ident">scripts</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/{}/{}&quot;</span>, <span class="ident">out_dir</span>, <span class="ident">SCRIPT_SUB_DIR</span>, <span class="ident">unit</span>.<span class="ident">name</span>()));
+        <span class="macro">emit_unit</span><span class="macro">!</span>(<span class="ident">path</span>, <span class="ident">unit</span>);
+    }
+    <span class="comment">// let script_map = {</span>
+    <span class="comment">//     let mut m: BTreeMap&lt;String, Vec&lt;CompiledUnit&gt;&gt; = BTreeMap::new();</span>
+    <span class="comment">//     for u in scripts {</span>
+    <span class="comment">//         m.entry(u.name()).or_insert_with(Vec::new).push(u)</span>
+    <span class="comment">//     }</span>
+    <span class="comment">//     m</span>
+    <span class="comment">// };</span>
+    <span class="comment">// for (n, units) in script_map {</span>
+    <span class="comment">//     let num_units = units.len();</span>
+    <span class="comment">//     for (idx, unit) in units.into_iter().enumerate() {</span>
+    <span class="comment">//         let file_name = if num_units == 1 {</span>
+    <span class="comment">//             format!(&quot;{}&quot;, n)</span>
+    <span class="comment">//         } else {</span>
+    <span class="comment">//             format!(&quot;{}_{}&quot;, n, idx)</span>
+    <span class="comment">//         };</span>
+    <span class="comment">//         let mut path = PathBuf::from(format!(&quot;{}/{}/{}&quot;, out_dir, SCRIPT_SUB_DIR, file_name));</span>
+    <span class="comment">//         emit_unit!(path, unit);</span>
+    <span class="comment">//     }</span>
+    <span class="comment">// }</span>
     <span class="kw">if</span> <span class="op">!</span><span class="ident">ice_errors</span>.<span class="ident">is_empty</span>() {
         <span class="ident">errors</span>::<span class="ident">report_errors</span>(<span class="ident">files</span>, <span class="ident">ice_errors</span>)
     }
@@ -589,18 +673,14 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">errors</span>: <span class="ident">Errors</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
 
     <span class="kw">for</span> <span class="ident">fname</span> <span class="kw">in</span> <span class="ident">targets</span> {
-        <span class="kw">let</span> (<span class="ident">def_opt</span>, <span class="kw-2">mut</span> <span class="ident">es</span>) <span class="op">=</span> <span class="ident">parse_file</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">files</span>, <span class="ident">fname</span>)<span class="question-mark">?</span>;
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">def</span>) <span class="op">=</span> <span class="ident">def_opt</span> {
-            <span class="ident">source_definitions</span>.<span class="ident">push</span>(<span class="ident">def</span>);
-        }
+        <span class="kw">let</span> (<span class="ident">defs</span>, <span class="kw-2">mut</span> <span class="ident">es</span>) <span class="op">=</span> <span class="ident">parse_file</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">files</span>, <span class="ident">fname</span>)<span class="question-mark">?</span>;
+        <span class="ident">source_definitions</span>.<span class="ident">extend</span>(<span class="ident">defs</span>);
         <span class="ident">errors</span>.<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">es</span>);
     }
 
     <span class="kw">for</span> <span class="ident">fname</span> <span class="kw">in</span> <span class="ident">deps</span> {
-        <span class="kw">let</span> (<span class="ident">def_opt</span>, <span class="kw-2">mut</span> <span class="ident">es</span>) <span class="op">=</span> <span class="ident">parse_file</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">files</span>, <span class="ident">fname</span>)<span class="question-mark">?</span>;
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">def</span>) <span class="op">=</span> <span class="ident">def_opt</span> {
-            <span class="ident">lib_definitions</span>.<span class="ident">push</span>(<span class="ident">def</span>);
-        }
+        <span class="kw">let</span> (<span class="ident">defs</span>, <span class="kw-2">mut</span> <span class="ident">es</span>) <span class="op">=</span> <span class="ident">parse_file</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">files</span>, <span class="ident">fname</span>)<span class="question-mark">?</span>;
+        <span class="ident">lib_definitions</span>.<span class="ident">extend</span>(<span class="ident">defs</span>);
         <span class="ident">errors</span>.<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">es</span>);
     }
 
@@ -668,7 +748,7 @@
 <span class="kw">fn</span> <span class="ident">parse_file</span>(
     <span class="ident">files</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">FilesSourceText</span>,
     <span class="ident">fname</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">parser</span>::<span class="ident">ast</span>::<span class="ident">FileDefinition</span><span class="op">&gt;</span>, <span class="ident">Errors</span>)<span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">parser</span>::<span class="ident">ast</span>::<span class="ident">Definition</span><span class="op">&gt;</span>, <span class="ident">Errors</span>)<span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">errors</span>: <span class="ident">Errors</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">f</span> <span class="op">=</span> <span class="ident">File</span>::<span class="ident">open</span>(<span class="ident">fname</span>)
         .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">err</span>.<span class="ident">kind</span>(), <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}: {}&quot;</span>, <span class="ident">err</span>, <span class="ident">fname</span>)))<span class="question-mark">?</span>;
@@ -678,19 +758,19 @@
         <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">errors</span>.<span class="ident">push</span>(<span class="ident">err</span>);
             <span class="ident">files</span>.<span class="ident">insert</span>(<span class="ident">fname</span>, <span class="ident">source_buffer</span>);
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>((<span class="prelude-val">None</span>, <span class="ident">errors</span>));
+            <span class="kw">return</span> <span class="prelude-val">Ok</span>((<span class="macro">vec</span><span class="macro">!</span>[], <span class="ident">errors</span>));
         }
         <span class="prelude-val">Ok</span>(<span class="ident">no_comments_buffer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">no_comments_buffer</span>,
     };
-    <span class="kw">let</span> <span class="ident">def_opt</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">parse_file_string</span>(<span class="ident">fname</span>, <span class="kw-2">&amp;</span><span class="ident">no_comments_buffer</span>) {
-        <span class="prelude-val">Ok</span>(<span class="ident">def</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">def</span>),
+    <span class="kw">let</span> <span class="ident">defs</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">parse_file_string</span>(<span class="ident">fname</span>, <span class="kw-2">&amp;</span><span class="ident">no_comments_buffer</span>) {
+        <span class="prelude-val">Ok</span>(<span class="ident">defs</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">defs</span>,
         <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">errors</span>.<span class="ident">push</span>(<span class="ident">err</span>);
-            <span class="prelude-val">None</span>
+            <span class="macro">vec</span><span class="macro">!</span>[]
         }
     };
     <span class="ident">files</span>.<span class="ident">insert</span>(<span class="ident">fname</span>, <span class="ident">no_comments_buffer</span>);
-    <span class="prelude-val">Ok</span>((<span class="ident">def_opt</span>, <span class="ident">errors</span>))
+    <span class="prelude-val">Ok</span>((<span class="ident">defs</span>, <span class="ident">errors</span>))
 }
 
 <span class="comment">//**************************************************************************************************</span>

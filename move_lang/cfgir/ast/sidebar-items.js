@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["FunctionBody_",""]],"fn":[["remap_labels",""]],"struct":[["Function",""],["ModuleDefinition",""],["Program",""]],"type":[["BasicBlock",""],["BasicBlocks",""],["FunctionBody",""]]});
+initSidebarItems({"enum":[["FunctionBody_",""]],"fn":[["remap_labels",""]],"struct":[["Function",""],["ModuleDefinition",""],["Program",""],["Script",""]],"type":[["BasicBlock",""],["BasicBlocks",""],["FunctionBody",""]]});

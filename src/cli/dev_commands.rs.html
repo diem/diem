@@ -297,6 +297,11 @@
 <span id="297">297</span>
 <span id="298">298</span>
 <span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -353,7 +358,12 @@
         }
         <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;&gt;&gt; Compiling program&quot;</span>);
         <span class="kw">match</span> <span class="ident">client</span>.<span class="ident">compile_program</span>(<span class="ident">params</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">path</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Successfully compiled a program at {}&quot;</span>, <span class="ident">path</span>),
+            <span class="prelude-val">Ok</span>(<span class="ident">paths</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Successfully compiled a program at:&quot;</span>);
+                <span class="kw">for</span> <span class="ident">p</span> <span class="kw">in</span> <span class="ident">paths</span> {
+                    <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;  {}&quot;</span>, <span class="ident">p</span>);
+                }
+            }
             <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">e</span>),
         }
     }

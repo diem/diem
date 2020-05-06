@@ -422,6 +422,9 @@
 <span id="422">422</span>
 <span id="423">423</span>
 <span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -499,6 +502,7 @@
     <span class="ident">PipePipe</span>,
     <span class="ident">RBrace</span>,
     <span class="ident">Fun</span>,
+    <span class="ident">Script</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="kw">for</span> <span class="ident">Tok</span> {
@@ -573,6 +577,7 @@
             <span class="ident">PipePipe</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;||&quot;</span>,
             <span class="ident">RBrace</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;}&quot;</span>,
             <span class="ident">Fun</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;fun&quot;</span>,
+            <span class="ident">Script</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;script&quot;</span>,
         };
         <span class="ident">fmt</span>::<span class="ident">Display</span>::<span class="ident">fmt</span>(<span class="ident">s</span>, <span class="ident">formatter</span>)
     }
@@ -839,6 +844,7 @@
         <span class="string">&quot;public&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Tok</span>::<span class="ident">Public</span>,
         <span class="string">&quot;resource&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Tok</span>::<span class="ident">Resource</span>,
         <span class="string">&quot;return&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Tok</span>::<span class="ident">Return</span>,
+        <span class="string">&quot;script&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Tok</span>::<span class="ident">Script</span>,
         <span class="string">&quot;spec&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Tok</span>::<span class="ident">Spec</span>,
         <span class="string">&quot;struct&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Tok</span>::<span class="ident">Struct</span>,
         <span class="string">&quot;true&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Tok</span>::<span class="ident">True</span>,

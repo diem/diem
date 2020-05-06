@@ -899,6 +899,7 @@
 <span id="899">899</span>
 <span id="900">900</span>
 <span id="901">901</span>
+<span id="902">902</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1779,11 +1780,12 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">disassemble</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-            <span class="string">&quot;{}.{}&quot;</span>,
-            <span class="self">self</span>.<span class="ident">source_mapper</span>.<span class="ident">source_map</span>.<span class="ident">module_name</span>.<span class="number">0</span>.<span class="ident">short_str</span>(),
-            <span class="self">self</span>.<span class="ident">source_mapper</span>.<span class="ident">source_map</span>.<span class="ident">module_name</span>.<span class="number">1</span>.<span class="ident">to_string</span>()
-        );
+        <span class="kw">let</span> <span class="ident">name_opt</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">source_mapper</span>.<span class="ident">source_map</span>.<span class="ident">module_name_opt</span>.<span class="ident">as_ref</span>();
+        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">name_opt</span>.<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">addr</span>, <span class="ident">n</span>)<span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}.{}&quot;</span>, <span class="ident">addr</span>.<span class="ident">short_str</span>(), <span class="ident">n</span>.<span class="ident">to_string</span>()));
+        <span class="kw">let</span> <span class="ident">header</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">name</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;module {}&quot;</span>, <span class="ident">s</span>),
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;script&quot;</span>.<span class="ident">to_owned</span>(),
+        };
 
         <span class="kw">let</span> <span class="ident">struct_defs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="self">self</span>.<span class="ident">source_mapper</span>.<span class="ident">bytecode</span>.<span class="ident">struct_defs</span>().<span class="ident">len</span>())
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">disassemble_struct_def</span>(<span class="ident">StructDefinitionIndex</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">TableIndex</span>)))
@@ -1794,8 +1796,8 @@
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="macro">format</span><span class="macro">!</span>(
-            <span class="string">&quot;module {name} {{\n{struct_defs}\n\n{function_defs}\n}}&quot;</span>,
-            <span class="ident">name</span> <span class="op">=</span> <span class="ident">name</span>,
+            <span class="string">&quot;{header} {{\n{struct_defs}\n\n{function_defs}\n}}&quot;</span>,
+            <span class="ident">header</span> <span class="op">=</span> <span class="ident">header</span>,
             <span class="ident">struct_defs</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">struct_defs</span>.<span class="ident">join</span>(<span class="string">&quot;\n&quot;</span>),
             <span class="ident">function_defs</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">function_defs</span>.<span class="ident">join</span>(<span class="string">&quot;\n&quot;</span>)
         ))

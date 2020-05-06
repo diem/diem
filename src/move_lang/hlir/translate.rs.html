@@ -1469,6 +1469,28 @@
 <span id="1469">1469</span>
 <span id="1470">1470</span>
 <span id="1471">1471</span>
+<span id="1472">1472</span>
+<span id="1473">1473</span>
+<span id="1474">1474</span>
+<span id="1475">1475</span>
+<span id="1476">1476</span>
+<span id="1477">1477</span>
+<span id="1478">1478</span>
+<span id="1479">1479</span>
+<span id="1480">1480</span>
+<span id="1481">1481</span>
+<span id="1482">1482</span>
+<span id="1483">1483</span>
+<span id="1484">1484</span>
+<span id="1485">1485</span>
+<span id="1486">1486</span>
+<span id="1487">1487</span>
+<span id="1488">1488</span>
+<span id="1489">1489</span>
+<span id="1490">1490</span>
+<span id="1491">1491</span>
+<span id="1492">1492</span>
+<span id="1493">1493</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1483,7 +1505,7 @@
     <span class="ident">typing</span>::<span class="ident">ast</span> <span class="kw">as</span> <span class="ident">T</span>,
 };
 <span class="kw">use</span> <span class="ident">move_ir_types</span>::<span class="ident">location</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">BTreeSet</span>, <span class="ident">VecDeque</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">BTreeMap</span>, <span class="ident">BTreeSet</span>, <span class="ident">VecDeque</span>};
 
 <span class="comment">//**************************************************************************************************</span>
 <span class="comment">// Vars</span>
@@ -1626,11 +1648,9 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">program</span>(<span class="ident">prog</span>: <span class="ident">T</span>::<span class="ident">Program</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">H</span>::<span class="ident">Program</span>, <span class="ident">Errors</span>) {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">Context</span>::<span class="ident">new</span>(<span class="macro">vec</span><span class="macro">!</span>[]);
     <span class="kw">let</span> <span class="ident">modules</span> <span class="op">=</span> <span class="ident">modules</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>, <span class="ident">prog</span>.<span class="ident">modules</span>);
-    <span class="kw">let</span> <span class="ident">main</span> <span class="op">=</span> <span class="ident">prog</span>
-        .<span class="ident">main</span>
-        .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">addr</span>, <span class="ident">n</span>, <span class="ident">fdef</span>)<span class="op">|</span> (<span class="ident">addr</span>, <span class="ident">n</span>.<span class="ident">clone</span>(), <span class="ident">function</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>, <span class="ident">n</span>, <span class="ident">fdef</span>)));
+    <span class="kw">let</span> <span class="ident">scripts</span> <span class="op">=</span> <span class="ident">scripts</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>, <span class="ident">prog</span>.<span class="ident">scripts</span>);
 
-    (<span class="ident">H</span>::<span class="ident">Program</span> { <span class="ident">modules</span>, <span class="ident">main</span> }, <span class="ident">context</span>.<span class="ident">get_errors</span>())
+    (<span class="ident">H</span>::<span class="ident">Program</span> { <span class="ident">modules</span>, <span class="ident">scripts</span> }, <span class="ident">context</span>.<span class="ident">get_errors</span>())
 }
 
 <span class="kw">fn</span> <span class="ident">modules</span>(
@@ -1666,6 +1686,30 @@
             <span class="ident">functions</span>,
         },
     )
+}
+
+<span class="kw">fn</span> <span class="ident">scripts</span>(
+    <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
+    <span class="ident">tscripts</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">T</span>::<span class="ident">Script</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">H</span>::<span class="ident">Script</span><span class="op">&gt;</span> {
+    <span class="ident">tscripts</span>
+        .<span class="ident">into_iter</span>()
+        .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">n</span>, <span class="ident">s</span>)<span class="op">|</span> (<span class="ident">n</span>, <span class="ident">script</span>(<span class="ident">context</span>, <span class="ident">s</span>)))
+        .<span class="ident">collect</span>()
+}
+
+<span class="kw">fn</span> <span class="ident">script</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">tscript</span>: <span class="ident">T</span>::<span class="ident">Script</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">H</span>::<span class="ident">Script</span> {
+    <span class="kw">let</span> <span class="ident">T</span>::<span class="ident">Script</span> {
+        <span class="ident">loc</span>,
+        <span class="ident">function_name</span>,
+        <span class="ident">function</span>: <span class="ident">tfunction</span>,
+    } <span class="op">=</span> <span class="ident">tscript</span>;
+    <span class="kw">let</span> <span class="ident">function</span> <span class="op">=</span> <span class="ident">function</span>(<span class="ident">context</span>, <span class="ident">function_name</span>.<span class="ident">clone</span>(), <span class="ident">tfunction</span>);
+    <span class="ident">H</span>::<span class="ident">Script</span> {
+        <span class="ident">loc</span>,
+        <span class="ident">function_name</span>,
+        <span class="ident">function</span>,
+    }
 }
 
 <span class="comment">//**************************************************************************************************</span>

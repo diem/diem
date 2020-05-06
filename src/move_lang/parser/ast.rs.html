@@ -1359,23 +1359,6 @@
 <span id="1359">1359</span>
 <span id="1360">1360</span>
 <span id="1361">1361</span>
-<span id="1362">1362</span>
-<span id="1363">1363</span>
-<span id="1364">1364</span>
-<span id="1365">1365</span>
-<span id="1366">1366</span>
-<span id="1367">1367</span>
-<span id="1368">1368</span>
-<span id="1369">1369</span>
-<span id="1370">1370</span>
-<span id="1371">1371</span>
-<span id="1372">1372</span>
-<span id="1373">1373</span>
-<span id="1374">1374</span>
-<span id="1375">1375</span>
-<span id="1376">1376</span>
-<span id="1377">1377</span>
-<span id="1378">1378</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1429,25 +1412,21 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Program</span> {
-    <span class="kw">pub</span> <span class="ident">source_definitions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">FileDefinition</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">lib_definitions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">FileDefinition</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">source_definitions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Definition</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">lib_definitions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Definition</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">large_enum_variant</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">FileDefinition</span> {
-    <span class="ident">Modules</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ModuleOrAddress</span><span class="op">&gt;</span>),
-    <span class="ident">Main</span>(<span class="ident">Main</span>),
-}
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ModuleOrAddress</span> {
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Definition</span> {
     <span class="ident">Module</span>(<span class="ident">ModuleDefinition</span>),
-    <span class="ident">Address</span>(<span class="ident">Loc</span>, <span class="ident">Address</span>),
+    <span class="ident">Address</span>(<span class="ident">Loc</span>, <span class="ident">Address</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ModuleDefinition</span><span class="op">&gt;</span>),
+    <span class="ident">Script</span>(<span class="ident">Script</span>),
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Main</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Script</span> {
+    <span class="kw">pub</span> <span class="ident">loc</span>: <span class="ident">Loc</span>,
     <span class="kw">pub</span> <span class="ident">uses</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">ModuleIdent</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ModuleName</span><span class="op">&gt;</span>)<span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">function</span>: <span class="ident">Function</span>,
     <span class="kw">pub</span> <span class="ident">specs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SpecBlock</span><span class="op">&gt;</span>,
@@ -1928,10 +1907,6 @@
     <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SELF_NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;Self&quot;</span>;
 }
 
-<span class="kw">impl</span> <span class="ident">FunctionName</span> {
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MAIN_NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;main&quot;</span>;
-}
-
 <span class="kw">impl</span> <span class="ident">Var</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">starts_with_underscore</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="number">0</span>.<span class="ident">value</span>.<span class="ident">starts_with</span>(<span class="string">&#39;_&#39;</span>)
@@ -2088,24 +2063,26 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> <span class="ident">FileDefinition</span> {
+<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> <span class="ident">Definition</span> {
     <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">FileDefinition</span>::<span class="ident">Main</span>(<span class="ident">m</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">m</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>),
-            <span class="ident">FileDefinition</span>::<span class="ident">Modules</span>(<span class="ident">moras</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">for</span> <span class="ident">mora</span> <span class="kw">in</span> <span class="ident">moras</span> {
-                    <span class="ident">mora</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
-                    <span class="ident">w</span>.<span class="ident">new_line</span>();
-                    <span class="ident">w</span>.<span class="ident">new_line</span>();
+            <span class="ident">Definition</span>::<span class="ident">Address</span>(<span class="kw">_</span>, <span class="ident">addr</span>, <span class="ident">modules</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;address {} {{&quot;</span>, <span class="ident">addr</span>));
+                <span class="kw">for</span> <span class="ident">m</span> <span class="kw">in</span> <span class="ident">modules</span> {
+                    <span class="ident">m</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>)
                 }
+                <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="string">&quot;}&quot;</span>);
             }
+            <span class="ident">Definition</span>::<span class="ident">Module</span>(<span class="ident">m</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">m</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>),
+            <span class="ident">Definition</span>::<span class="ident">Script</span>(<span class="ident">m</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">m</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> <span class="ident">Main</span> {
+<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> <span class="ident">Script</span> {
     <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
-        <span class="kw">let</span> <span class="ident">Main</span> {
+        <span class="kw">let</span> <span class="ident">Script</span> {
+            <span class="ident">loc</span>: <span class="ident">_loc</span>,
             <span class="ident">uses</span>,
             <span class="ident">function</span>,
             <span class="ident">specs</span>,
@@ -2115,17 +2092,6 @@
         <span class="kw">for</span> <span class="ident">spec</span> <span class="kw">in</span> <span class="ident">specs</span> {
             <span class="ident">spec</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
             <span class="ident">w</span>.<span class="ident">new_line</span>();
-        }
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> <span class="ident">ModuleOrAddress</span> {
-    <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">ModuleOrAddress</span>::<span class="ident">Address</span>(<span class="kw">_</span>, <span class="ident">addr</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;address {}:&quot;</span>, <span class="ident">addr</span>));
-            }
-            <span class="ident">ModuleOrAddress</span>::<span class="ident">Module</span>(<span class="ident">m</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">m</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>),
         }
     }
 }

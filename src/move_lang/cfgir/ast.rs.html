@@ -212,6 +212,29 @@
 <span id="212">212</span>
 <span id="213">213</span>
 <span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -219,7 +242,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">hlir</span>::<span class="ident">ast</span>::{<span class="ident">Command</span>, <span class="ident">Command_</span>, <span class="ident">FunctionSignature</span>, <span class="ident">Label</span>, <span class="ident">SingleType</span>, <span class="ident">StructDefinition</span>},
     <span class="ident">parser</span>::<span class="ident">ast</span>::{<span class="ident">FunctionName</span>, <span class="ident">FunctionVisibility</span>, <span class="ident">ModuleIdent</span>, <span class="ident">StructName</span>, <span class="ident">Var</span>},
-    <span class="ident">shared</span>::{<span class="ident">ast_debug</span>::<span class="kw-2">*</span>, <span class="ident">unique_map</span>::<span class="ident">UniqueMap</span>, <span class="kw-2">*</span>},
+    <span class="ident">shared</span>::{<span class="ident">ast_debug</span>::<span class="kw-2">*</span>, <span class="ident">unique_map</span>::<span class="ident">UniqueMap</span>},
 };
 <span class="kw">use</span> <span class="ident">move_ir_types</span>::<span class="ident">location</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">BTreeMap</span>, <span class="ident">BTreeSet</span>, <span class="ident">VecDeque</span>};
@@ -233,7 +256,18 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Program</span> {
     <span class="kw">pub</span> <span class="ident">modules</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">ModuleIdent</span>, <span class="ident">ModuleDefinition</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">main</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">Address</span>, <span class="ident">FunctionName</span>, <span class="ident">Function</span>)<span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">scripts</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Script</span><span class="op">&gt;</span>,
+}
+
+<span class="comment">//**************************************************************************************************</span>
+<span class="comment">// Scripts</span>
+<span class="comment">//**************************************************************************************************</span>
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Script</span> {
+    <span class="kw">pub</span> <span class="ident">loc</span>: <span class="ident">Loc</span>,
+    <span class="kw">pub</span> <span class="ident">function_name</span>: <span class="ident">FunctionName</span>,
+    <span class="kw">pub</span> <span class="ident">function</span>: <span class="ident">Function</span>,
 }
 
 <span class="comment">//**************************************************************************************************</span>
@@ -326,17 +360,29 @@
 
 <span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> <span class="ident">Program</span> {
     <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
-        <span class="kw">let</span> <span class="ident">Program</span> { <span class="ident">modules</span>, <span class="ident">main</span> } <span class="op">=</span> <span class="self">self</span>;
+        <span class="kw">let</span> <span class="ident">Program</span> { <span class="ident">modules</span>, <span class="ident">scripts</span> } <span class="op">=</span> <span class="self">self</span>;
         <span class="kw">for</span> (<span class="ident">m</span>, <span class="ident">mdef</span>) <span class="kw">in</span> <span class="ident">modules</span> {
             <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;module {}&quot;</span>, <span class="ident">m</span>));
             <span class="ident">w</span>.<span class="ident">block</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">mdef</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>));
             <span class="ident">w</span>.<span class="ident">new_line</span>();
         }
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">addr</span>, <span class="ident">n</span>, <span class="ident">fdef</span>)) <span class="op">=</span> <span class="ident">main</span> {
-            <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;address {}:&quot;</span>, <span class="ident">addr</span>));
-            (<span class="ident">n</span>.<span class="ident">clone</span>(), <span class="ident">fdef</span>).<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+        <span class="kw">for</span> (<span class="ident">n</span>, <span class="ident">s</span>) <span class="kw">in</span> <span class="ident">scripts</span> {
+            <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;script {}&quot;</span>, <span class="ident">n</span>));
+            <span class="ident">w</span>.<span class="ident">block</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>));
+            <span class="ident">w</span>.<span class="ident">new_line</span>()
         }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> <span class="ident">Script</span> {
+    <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
+        <span class="kw">let</span> <span class="ident">Script</span> {
+            <span class="ident">loc</span>: <span class="ident">_loc</span>,
+            <span class="ident">function_name</span>,
+            <span class="ident">function</span>,
+        } <span class="op">=</span> <span class="self">self</span>;
+        (<span class="ident">function_name</span>.<span class="ident">clone</span>(), <span class="ident">function</span>).<span class="ident">ast_debug</span>(<span class="ident">w</span>);
     }
 }
 

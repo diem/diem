@@ -1955,6 +1955,51 @@
 <span id="1955">1955</span>
 <span id="1956">1956</span>
 <span id="1957">1957</span>
+<span id="1958">1958</span>
+<span id="1959">1959</span>
+<span id="1960">1960</span>
+<span id="1961">1961</span>
+<span id="1962">1962</span>
+<span id="1963">1963</span>
+<span id="1964">1964</span>
+<span id="1965">1965</span>
+<span id="1966">1966</span>
+<span id="1967">1967</span>
+<span id="1968">1968</span>
+<span id="1969">1969</span>
+<span id="1970">1970</span>
+<span id="1971">1971</span>
+<span id="1972">1972</span>
+<span id="1973">1973</span>
+<span id="1974">1974</span>
+<span id="1975">1975</span>
+<span id="1976">1976</span>
+<span id="1977">1977</span>
+<span id="1978">1978</span>
+<span id="1979">1979</span>
+<span id="1980">1980</span>
+<span id="1981">1981</span>
+<span id="1982">1982</span>
+<span id="1983">1983</span>
+<span id="1984">1984</span>
+<span id="1985">1985</span>
+<span id="1986">1986</span>
+<span id="1987">1987</span>
+<span id="1988">1988</span>
+<span id="1989">1989</span>
+<span id="1990">1990</span>
+<span id="1991">1991</span>
+<span id="1992">1992</span>
+<span id="1993">1993</span>
+<span id="1994">1994</span>
+<span id="1995">1995</span>
+<span id="1996">1996</span>
+<span id="1997">1997</span>
+<span id="1998">1998</span>
+<span id="1999">1999</span>
+<span id="2000">2000</span>
+<span id="2001">2001</span>
+<span id="2002">2002</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -3319,6 +3364,52 @@
 }
 
 <span class="comment">//**************************************************************************************************</span>
+<span class="comment">// AddressBlock</span>
+<span class="comment">//**************************************************************************************************</span>
+
+<span class="comment">// Parse an address block:</span>
+<span class="comment">//      AddressBlock =</span>
+<span class="comment">//          &quot;address&quot; &lt;Address&gt; &quot;{&quot;</span>
+<span class="comment">//              &lt;Module&gt;*</span>
+<span class="comment">//          &quot;}&quot;</span>
+<span class="comment">//</span>
+<span class="comment">// Note that &quot;address&quot; is not a token.</span>
+<span class="kw">fn</span> <span class="ident">parse_address_block</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>(
+    <span class="ident">tokens</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Lexer</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Loc</span>, <span class="ident">Address</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ModuleDefinition</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">const</span> <span class="ident">UNEXPECTED_TOKEN</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;Invalid code unit. Expected &#39;address&#39;, &#39;module&#39;, or &#39;script&#39;&quot;</span>;
+    <span class="kw">if</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">IdentifierValue</span> {
+        <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">tokens</span>.<span class="ident">start_loc</span>();
+        <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">start</span> <span class="op">+</span> <span class="ident">tokens</span>.<span class="ident">content</span>().<span class="ident">len</span>();
+        <span class="kw">let</span> <span class="ident">loc</span> <span class="op">=</span> <span class="ident">make_loc</span>(<span class="ident">tokens</span>.<span class="ident">file_name</span>(), <span class="ident">start</span>, <span class="ident">end</span>);
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">vec</span><span class="macro">!</span>[(
+            <span class="ident">loc</span>,
+            <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}. Got &#39;{}&#39;&quot;</span>, <span class="ident">UNEXPECTED_TOKEN</span>, <span class="ident">tokens</span>.<span class="ident">content</span>()),
+        )]);
+    }
+    <span class="kw">let</span> <span class="ident">addr_name</span> <span class="op">=</span> <span class="ident">parse_identifier</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>;
+    <span class="kw">if</span> <span class="ident">addr_name</span>.<span class="ident">value</span> <span class="op">!</span><span class="op">=</span> <span class="string">&quot;address&quot;</span> {
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">vec</span><span class="macro">!</span>[(
+            <span class="ident">addr_name</span>.<span class="ident">loc</span>,
+            <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}. Got &#39;{}&#39;&quot;</span>, <span class="ident">UNEXPECTED_TOKEN</span>, <span class="ident">addr_name</span>.<span class="ident">value</span>),
+        )]);
+    }
+    <span class="kw">let</span> <span class="ident">start_loc</span> <span class="op">=</span> <span class="ident">tokens</span>.<span class="ident">start_loc</span>();
+    <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">parse_address</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">end_loc</span> <span class="op">=</span> <span class="ident">tokens</span>.<span class="ident">previous_end_loc</span>();
+    <span class="kw">let</span> <span class="ident">loc</span> <span class="op">=</span> <span class="ident">make_loc</span>(<span class="ident">tokens</span>.<span class="ident">file_name</span>(), <span class="ident">start_loc</span>, <span class="ident">end_loc</span>);
+
+    <span class="ident">consume_token</span>(<span class="ident">tokens</span>, <span class="ident">Tok</span>::<span class="ident">LBrace</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">modules</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+    <span class="kw">while</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">RBrace</span> {
+        <span class="ident">modules</span>.<span class="ident">push</span>(<span class="ident">parse_module</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>);
+    }
+    <span class="ident">consume_token</span>(<span class="ident">tokens</span>, <span class="ident">Tok</span>::<span class="ident">RBrace</span>)<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>((<span class="ident">loc</span>, <span class="ident">addr</span>, <span class="ident">modules</span>))
+}
+
+<span class="comment">//**************************************************************************************************</span>
 <span class="comment">// Modules</span>
 <span class="comment">//**************************************************************************************************</span>
 
@@ -3390,6 +3481,49 @@
     })
 }
 
+<span class="comment">//**************************************************************************************************</span>
+<span class="comment">// Scripts</span>
+<span class="comment">//**************************************************************************************************</span>
+
+<span class="comment">// Parse a script:</span>
+<span class="comment">//      Script =</span>
+<span class="comment">//          &quot;script&quot; &quot;{&quot;</span>
+<span class="comment">//              &lt;UseDecl&gt;*</span>
+<span class="comment">//              &lt;MoveFunctionDecl&gt;</span>
+<span class="comment">//          &quot;}&quot;</span>
+<span class="kw">fn</span> <span class="ident">parse_script</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>(<span class="ident">tokens</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Lexer</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Script</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">start_loc</span> <span class="op">=</span> <span class="ident">tokens</span>.<span class="ident">start_loc</span>();
+
+    <span class="ident">consume_token</span>(<span class="ident">tokens</span>, <span class="ident">Tok</span>::<span class="ident">Script</span>)<span class="question-mark">?</span>;
+    <span class="ident">consume_token</span>(<span class="ident">tokens</span>, <span class="ident">Tok</span>::<span class="ident">LBrace</span>)<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">uses</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+    <span class="kw">while</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">Use</span> {
+        <span class="ident">uses</span>.<span class="ident">push</span>(<span class="ident">parse_use_decl</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>);
+    }
+    <span class="kw">let</span> <span class="ident">function</span> <span class="op">=</span> <span class="ident">parse_function_decl</span>(<span class="ident">tokens</span>, <span class="comment">/* allow_native */</span> <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">specs</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+    <span class="kw">while</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">Spec</span> {
+        <span class="ident">specs</span>.<span class="ident">push</span>(<span class="ident">parse_spec_block</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>)
+    }
+
+    <span class="kw">if</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">RBrace</span> {
+        <span class="kw">let</span> <span class="ident">loc</span> <span class="op">=</span> <span class="ident">current_token_loc</span>(<span class="ident">tokens</span>);
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">vec</span><span class="macro">!</span>[(
+            <span class="ident">loc</span>,
+            <span class="string">&quot;Unexpected characters after end of &#39;script&#39; function&quot;</span>.<span class="ident">to_string</span>(),
+        )]);
+    }
+    <span class="ident">consume_token</span>(<span class="ident">tokens</span>, <span class="ident">Tok</span>::<span class="ident">RBrace</span>)<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">loc</span> <span class="op">=</span> <span class="ident">make_loc</span>(<span class="ident">tokens</span>.<span class="ident">file_name</span>(), <span class="ident">start_loc</span>, <span class="ident">tokens</span>.<span class="ident">previous_end_loc</span>());
+    <span class="prelude-val">Ok</span>(<span class="ident">Script</span> {
+        <span class="ident">loc</span>,
+        <span class="ident">uses</span>,
+        <span class="ident">function</span>,
+        <span class="ident">specs</span>,
+    })
+}
 <span class="comment">//**************************************************************************************************</span>
 <span class="comment">// Specification Blocks</span>
 <span class="comment">//**************************************************************************************************</span>
@@ -3845,70 +3979,26 @@
 
 <span class="comment">// Parse a file:</span>
 <span class="comment">//      File =</span>
-<span class="comment">//          ((&quot;address&quot; &lt;Address&gt; &quot;:&quot;) | &lt;Module&gt;)*</span>
-<span class="comment">//          | &lt;UseDecl&gt;* &lt;MoveFunctionDecl&gt;</span>
-<span class="comment">//</span>
-<span class="comment">// Note that &quot;address&quot; is not a token.</span>
-<span class="kw">fn</span> <span class="ident">parse_file</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>(<span class="ident">tokens</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Lexer</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FileDefinition</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">f</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">EOF</span>
-        <span class="op">|</span><span class="op">|</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">Module</span>
-        <span class="op">|</span><span class="op">|</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">IdentifierValue</span>
-    {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-        <span class="kw">while</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">EOF</span> {
-            <span class="kw">let</span> <span class="ident">m</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">Module</span> {
-                <span class="ident">ModuleOrAddress</span>::<span class="ident">Module</span>(<span class="ident">parse_module</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>)
-            } <span class="kw">else</span> {
-                <span class="kw">let</span> <span class="ident">addr_name</span> <span class="op">=</span> <span class="ident">parse_identifier</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>;
-                <span class="kw">if</span> <span class="ident">addr_name</span>.<span class="ident">value</span> <span class="op">!</span><span class="op">=</span> <span class="string">&quot;address&quot;</span> {
-                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">vec</span><span class="macro">!</span>[(
-                        <span class="ident">addr_name</span>.<span class="ident">loc</span>,
-                        <span class="macro">format</span><span class="macro">!</span>(
-                            <span class="string">&quot;Invalid address directive. Expected &#39;address&#39; got &#39;{}&#39;&quot;</span>,
-                            <span class="ident">addr_name</span>.<span class="ident">value</span>
-                        ),
-                    )]);
-                }
-                <span class="kw">let</span> <span class="ident">start_loc</span> <span class="op">=</span> <span class="ident">tokens</span>.<span class="ident">start_loc</span>();
-                <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">parse_address</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>;
-                <span class="kw">let</span> <span class="ident">end_loc</span> <span class="op">=</span> <span class="ident">tokens</span>.<span class="ident">previous_end_loc</span>();
-                <span class="ident">consume_token</span>(<span class="ident">tokens</span>, <span class="ident">Tok</span>::<span class="ident">Colon</span>)<span class="question-mark">?</span>;
-                <span class="kw">let</span> <span class="ident">loc</span> <span class="op">=</span> <span class="ident">make_loc</span>(<span class="ident">tokens</span>.<span class="ident">file_name</span>(), <span class="ident">start_loc</span>, <span class="ident">end_loc</span>);
-                <span class="ident">ModuleOrAddress</span>::<span class="ident">Address</span>(<span class="ident">loc</span>, <span class="ident">addr</span>)
-            };
-            <span class="ident">v</span>.<span class="ident">push</span>(<span class="ident">m</span>);
-        }
-        <span class="ident">FileDefinition</span>::<span class="ident">Modules</span>(<span class="ident">v</span>)
-    } <span class="kw">else</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">uses</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-        <span class="kw">while</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">Use</span> {
-            <span class="ident">uses</span>.<span class="ident">push</span>(<span class="ident">parse_use_decl</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>);
-        }
-        <span class="kw">let</span> <span class="ident">function</span> <span class="op">=</span> <span class="ident">parse_function_decl</span>(<span class="ident">tokens</span>, <span class="comment">/* allow_native */</span> <span class="bool-val">false</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">specs</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-        <span class="kw">while</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">Spec</span> {
-            <span class="ident">specs</span>.<span class="ident">push</span>(<span class="ident">parse_spec_block</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>)
-        }
-        <span class="kw">if</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">EOF</span> {
-            <span class="kw">let</span> <span class="ident">loc</span> <span class="op">=</span> <span class="ident">current_token_loc</span>(<span class="ident">tokens</span>);
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">vec</span><span class="macro">!</span>[(
-                <span class="ident">loc</span>,
-                <span class="string">&quot;Unexpected characters after end of main function&quot;</span>.<span class="ident">to_string</span>(),
-            )]);
-        }
-        <span class="ident">FileDefinition</span>::<span class="ident">Main</span>(<span class="ident">Main</span> {
-            <span class="ident">uses</span>,
-            <span class="ident">function</span>,
-            <span class="ident">specs</span>,
+<span class="comment">//          (&lt;AddressBlock&gt; | &lt;Module&gt; | &lt;Script&gt;)*</span>
+<span class="kw">fn</span> <span class="ident">parse_file</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>(<span class="ident">tokens</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Lexer</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Definition</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">defs</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+    <span class="kw">while</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">EOF</span> {
+        <span class="ident">defs</span>.<span class="ident">push</span>(<span class="kw">match</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() {
+            <span class="ident">Tok</span>::<span class="ident">Module</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Definition</span>::<span class="ident">Module</span>(<span class="ident">parse_module</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>),
+            <span class="ident">Tok</span>::<span class="ident">Script</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Definition</span>::<span class="ident">Script</span>(<span class="ident">parse_script</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> (<span class="ident">loc</span>, <span class="ident">addr</span>, <span class="ident">modules</span>) <span class="op">=</span> <span class="ident">parse_address_block</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>;
+                <span class="ident">Definition</span>::<span class="ident">Address</span>(<span class="ident">loc</span>, <span class="ident">addr</span>, <span class="ident">modules</span>)
+            }
         })
-    };
-    <span class="prelude-val">Ok</span>(<span class="ident">f</span>)
+    }
+    <span class="prelude-val">Ok</span>(<span class="ident">defs</span>)
 }
 
 <span class="doccomment">/// Parse the `input` string as a file of Move source code and return the</span>
 <span class="doccomment">/// result as either a FileDefinition value or an Error. The `file` name</span>
 <span class="doccomment">/// is used to identify source locations in error messages.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse_file_string</span>(<span class="ident">file</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FileDefinition</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse_file_string</span>(<span class="ident">file</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Definition</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tokens</span> <span class="op">=</span> <span class="ident">Lexer</span>::<span class="ident">new</span>(<span class="ident">input</span>, <span class="ident">file</span>);
     <span class="ident">tokens</span>.<span class="ident">advance</span>()<span class="question-mark">?</span>;
     <span class="ident">parse_file</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tokens</span>)

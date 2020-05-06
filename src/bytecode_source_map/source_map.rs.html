@@ -537,6 +537,10 @@
 <span id="537">537</span>
 <span id="538">538</span>
 <span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -599,8 +603,9 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SourceMap</span><span class="op">&lt;</span><span class="ident">Location</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Eq</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The name &lt;address.module_name&gt; for module/script that this source map is for</span>
-    <span class="kw">pub</span> <span class="ident">module_name</span>: (<span class="ident">AccountAddress</span>, <span class="ident">Identifier</span>),
+    <span class="doccomment">/// The name &lt;address.module_name&gt; for module that this source map is for</span>
+    <span class="doccomment">/// None if it is a script</span>
+    <span class="kw">pub</span> <span class="ident">module_name_opt</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">AccountAddress</span>, <span class="ident">Identifier</span>)<span class="op">&gt;</span>,
 
     <span class="comment">// A mapping of StructDefinitionIndex to source map for each struct/resource</span>
     <span class="ident">struct_map</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">TableIndex</span>, <span class="ident">StructSourceMap</span><span class="op">&lt;</span><span class="ident">Location</span><span class="op">&gt;</span><span class="op">&gt;</span>,
@@ -827,10 +832,13 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Location</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Eq</span><span class="op">&gt;</span> <span class="ident">SourceMap</span><span class="op">&lt;</span><span class="ident">Location</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">module_name</span>: <span class="ident">QualifiedModuleIdent</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">ident</span> <span class="op">=</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="ident">module_name</span>.<span class="ident">name</span>.<span class="ident">into_inner</span>()).<span class="ident">unwrap</span>();
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">module_name_opt</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">QualifiedModuleIdent</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">module_name_opt</span> <span class="op">=</span> <span class="ident">module_name_opt</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">module_name</span><span class="op">|</span> {
+            <span class="kw">let</span> <span class="ident">ident</span> <span class="op">=</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="ident">module_name</span>.<span class="ident">name</span>.<span class="ident">into_inner</span>()).<span class="ident">unwrap</span>();
+            (<span class="ident">module_name</span>.<span class="ident">address</span>, <span class="ident">ident</span>)
+        });
         <span class="self">Self</span> {
-            <span class="ident">module_name</span>: (<span class="ident">module_name</span>.<span class="ident">address</span>, <span class="ident">ident</span>),
+            <span class="ident">module_name_opt</span>,
             <span class="ident">struct_map</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
             <span class="ident">function_map</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
         }
@@ -1020,7 +1028,7 @@
         <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">module</span>.<span class="ident">address_identifier_at</span>(<span class="ident">module_handle</span>.<span class="ident">address</span>);
         <span class="kw">let</span> <span class="ident">module_ident</span> <span class="op">=</span> <span class="ident">QualifiedModuleIdent</span>::<span class="ident">new</span>(<span class="ident">module_name</span>, <span class="ident">address</span>);
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">empty_source_map</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">new</span>(<span class="ident">module_ident</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">empty_source_map</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">new</span>(<span class="prelude-val">Some</span>(<span class="ident">module_ident</span>));
 
         <span class="kw">for</span> (<span class="ident">function_idx</span>, <span class="ident">function_def</span>) <span class="kw">in</span> <span class="ident">module</span>.<span class="ident">function_defs</span>().<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
             <span class="ident">empty_source_map</span>.<span class="ident">add_top_level_function_mapping</span>(
@@ -1058,7 +1066,7 @@
         <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">impl</span> <span class="ident">FnMut</span>(<span class="ident">Location</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Other</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SourceMap</span><span class="op">&lt;</span><span class="ident">Other</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">SourceMap</span> {
-            <span class="ident">module_name</span>,
+            <span class="ident">module_name_opt</span>,
             <span class="ident">struct_map</span>,
             <span class="ident">function_map</span>,
         } <span class="op">=</span> <span class="self">self</span>;
@@ -1071,7 +1079,7 @@
             .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">n</span>, <span class="ident">m</span>)<span class="op">|</span> (<span class="ident">n</span>, <span class="ident">m</span>.<span class="ident">remap_locations</span>(<span class="ident">f</span>)))
             .<span class="ident">collect</span>();
         <span class="ident">SourceMap</span> {
-            <span class="ident">module_name</span>,
+            <span class="ident">module_name_opt</span>,
             <span class="ident">struct_map</span>,
             <span class="ident">function_map</span>,
         }
