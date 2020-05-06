@@ -184,6 +184,7 @@
 <span id="184">184</span>
 <span id="185">185</span>
 <span id="186">186</span>
+<span id="187">187</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -192,7 +193,8 @@
 <span class="kw">use</span> <span class="ident">libra_secure_json_rpc</span>::<span class="ident">JsonRpcClient</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">account_config</span>, <span class="ident">account_state</span>::<span class="ident">AccountState</span>,
-    <span class="ident">transaction</span>::<span class="ident">Transaction</span>, <span class="ident">validator_config</span>::<span class="ident">ValidatorConfig</span>, <span class="ident">validator_info</span>::<span class="ident">ValidatorInfo</span>,
+    <span class="ident">on_chain_config</span>::<span class="ident">config_address</span>, <span class="ident">transaction</span>::<span class="ident">Transaction</span>, <span class="ident">validator_config</span>::<span class="ident">ValidatorConfig</span>,
+    <span class="ident">validator_info</span>::<span class="ident">ValidatorInfo</span>,
 };
 
 <span class="doccomment">/// This defines a generic trait used to interact with the Libra blockchain. In production, this</span>
@@ -269,7 +271,7 @@
     }
 
     <span class="kw">fn</span> <span class="ident">last_reconfiguration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">account</span> <span class="op">=</span> <span class="ident">account_config</span>::<span class="ident">association_address</span>();
+        <span class="kw">let</span> <span class="ident">account</span> <span class="op">=</span> <span class="ident">config_address</span>();
         <span class="kw">let</span> <span class="ident">configuration_resource</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">retrieve_account_state</span>(<span class="ident">account</span>)<span class="question-mark">?</span>
             .<span class="ident">get_configuration_resource</span>();

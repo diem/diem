@@ -224,7 +224,6 @@
 <span id="224">224</span>
 <span id="225">225</span>
 <span id="226">226</span>
-<span id="227">227</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -235,12 +234,11 @@
 <span class="kw">use</span> <span class="ident">executor_types</span>::<span class="ident">ExecutedTrees</span>;
 <span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">account_config</span>::<span class="ident">association_address</span>,
     <span class="ident">account_state</span>::<span class="ident">AccountState</span>,
     <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>,
     <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>,
     <span class="ident">move_resource</span>::<span class="ident">MoveStorage</span>,
-    <span class="ident">on_chain_config</span>::{<span class="ident">OnChainConfigPayload</span>, <span class="ident">ON_CHAIN_CONFIG_REGISTRY</span>},
+    <span class="ident">on_chain_config</span>::{<span class="ident">config_address</span>, <span class="ident">OnChainConfigPayload</span>, <span class="ident">ON_CHAIN_CONFIG_REGISTRY</span>},
     <span class="ident">transaction</span>::<span class="ident">TransactionListWithProof</span>,
 };
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashSet</span>, <span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
@@ -323,7 +321,7 @@
             .<span class="ident">collect</span>();
         <span class="kw">let</span> <span class="ident">configs</span> <span class="op">=</span> <span class="ident">storage</span>.<span class="ident">batch_fetch_resources</span>(<span class="ident">access_paths</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">epoch</span> <span class="op">=</span> <span class="ident">storage</span>
-            .<span class="ident">get_latest_account_state</span>(<span class="ident">association_address</span>())<span class="question-mark">?</span>
+            .<span class="ident">get_latest_account_state</span>(<span class="ident">config_address</span>())<span class="question-mark">?</span>
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">blob</span><span class="op">|</span> {
                 <span class="ident">AccountState</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span><span class="ident">blob</span>).<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">state</span><span class="op">|</span> {
                     <span class="prelude-val">Ok</span>(<span class="ident">state</span>
