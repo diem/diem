@@ -204,6 +204,8 @@
 <span id="204">204</span>
 <span id="205">205</span>
 <span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -248,16 +250,18 @@
         <span class="string">&quot;&lt;account_ref_id&gt;|&lt;account_address&gt;&quot;</span>
     }
     <span class="kw">fn</span> <span class="ident">get_description</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
-        <span class="string">&quot;Get the current balance of an account&quot;</span>
+        <span class="string">&quot;Get the current balances of an account&quot;</span>
     }
     <span class="kw">fn</span> <span class="ident">execute</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">client</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ClientProxy</span>, <span class="ident">params</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>]) {
         <span class="kw">if</span> <span class="ident">params</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">2</span> {
             <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Invalid number of arguments for balance query&quot;</span>);
             <span class="kw">return</span>;
         }
-        <span class="kw">match</span> <span class="ident">client</span>.<span class="ident">get_balance</span>(<span class="kw-2">&amp;</span><span class="ident">params</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">balance</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Balance is: {}&quot;</span>, <span class="ident">balance</span>),
-            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">report_error</span>(<span class="string">&quot;Failed to get balance&quot;</span>, <span class="ident">e</span>),
+        <span class="kw">match</span> <span class="ident">client</span>.<span class="ident">get_balances</span>(<span class="kw-2">&amp;</span><span class="ident">params</span>) {
+            <span class="prelude-val">Ok</span>(<span class="ident">balances</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">balances</span>
+                .<span class="ident">iter</span>()
+                .<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">balance</span><span class="op">|</span> <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Balance is: {}&quot;</span>, <span class="ident">balance</span>)),
+            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">report_error</span>(<span class="string">&quot;Failed to get balances&quot;</span>, <span class="ident">e</span>),
         }
     }
 }

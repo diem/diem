@@ -480,6 +480,9 @@
 <span id="480">480</span>
 <span id="481">481</span>
 <span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -523,7 +526,7 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AccountView</span> {
-    <span class="kw">pub</span> <span class="ident">balance</span>: <span class="ident">AmountView</span>,
+    <span class="kw">pub</span> <span class="ident">balances</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AmountView</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">sequence_number</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">authentication_key</span>: <span class="ident">BytesView</span>,
     <span class="kw">pub</span> <span class="ident">sent_events_key</span>: <span class="ident">BytesView</span>,
@@ -533,9 +536,12 @@
 }
 
 <span class="kw">impl</span> <span class="ident">AccountView</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">account</span>: <span class="kw-2">&amp;</span><span class="ident">AccountResource</span>, <span class="ident">balance</span>: <span class="kw-2">&amp;</span><span class="ident">BalanceResource</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">account</span>: <span class="kw-2">&amp;</span><span class="ident">AccountResource</span>, <span class="ident">balances</span>: <span class="kw-2">&amp;</span>[<span class="ident">BalanceResource</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">balance</span>: <span class="ident">AmountView</span>::<span class="ident">new</span>(<span class="ident">balance</span>.<span class="ident">coin</span>(), <span class="ident">account</span>.<span class="ident">balance_currency_code</span>()),
+            <span class="ident">balances</span>: <span class="ident">balances</span>
+                .<span class="ident">iter</span>()
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">balance</span><span class="op">|</span> <span class="ident">AmountView</span>::<span class="ident">new</span>(<span class="ident">balance</span>.<span class="ident">coin</span>(), <span class="ident">account</span>.<span class="ident">balance_currency_code</span>()))
+                .<span class="ident">collect</span>(),
             <span class="ident">sequence_number</span>: <span class="ident">account</span>.<span class="ident">sequence_number</span>(),
             <span class="ident">authentication_key</span>: <span class="ident">BytesView</span>::<span class="ident">from</span>(<span class="ident">account</span>.<span class="ident">authentication_key</span>()),
             <span class="ident">sent_events_key</span>: <span class="ident">BytesView</span>::<span class="ident">from</span>(<span class="ident">account</span>.<span class="ident">sent_events</span>().<span class="ident">key</span>().<span class="ident">as_bytes</span>()),
