@@ -42,11 +42,9 @@ mod tests;
 
 pub const VALIDATOR_KEY: &str = "validator";
 pub const CONSENSUS_KEY: &str = "consensus";
+
 const GAS_UNIT_PRICE: u64 = 0;
 const MAX_GAS_AMOUNT: u64 = 400_000;
-const ROTATION_PERIOD_SECS: u64 = 604_800; // 1 week
-const SLEEP_PERIOD_SECS: u64 = 600; // 10 minutes, after which the key manager will awaken again
-const TXN_EXPIRATION_SECS: u64 = 3600; // 1 hour, we'll try again after that
 
 /// Defines actions that KeyManager should perform after a check of all associated state.
 #[derive(Debug, PartialEq)]
@@ -93,6 +91,9 @@ pub struct KeyManager<LI, S, T> {
     storage: S,
     time_service: T,
     last_checked_libra_timestamp: u64,
+    rotation_period_secs: u64, // The frequency by which to rotate all keys
+    sleep_period_secs: u64,    // The amount of time to sleep between key management checks
+    txn_expiration_secs: u64,  // The time after which a rotation transaction expires
 }
 
 impl<LI, S, T> KeyManager<LI, S, T>
@@ -101,13 +102,24 @@ where
     S: Storage,
     T: TimeService,
 {
-    pub fn new(account: AccountAddress, libra: LI, storage: S, time_service: T) -> Self {
+    pub fn new(
+        account: AccountAddress,
+        libra: LI,
+        storage: S,
+        time_service: T,
+        rotation_period_secs: u64,
+        sleep_period_secs: u64,
+        txn_expiration_secs: u64,
+    ) -> Self {
         Self {
             account,
             libra,
             storage,
             time_service,
             last_checked_libra_timestamp: 0,
+            rotation_period_secs,
+            sleep_period_secs,
+            txn_expiration_secs,
         }
     }
 
@@ -121,9 +133,9 @@ where
             info!("Checking the status of the keys.");
             self.execute_once()?;
 
-            info!("Going to sleep for {} seconds.", SLEEP_PERIOD_SECS);
+            info!("Going to sleep for {} seconds.", self.sleep_period_secs);
             COUNTERS.sleeps.inc();
-            self.time_service.sleep(SLEEP_PERIOD_SECS);
+            self.time_service.sleep(self.sleep_period_secs);
         }
     }
 
@@ -191,7 +203,7 @@ where
     ) -> Result<Ed25519PublicKey, Error> {
         let account_prikey = self.storage.export_private_key(VALIDATOR_KEY)?;
         let seq_id = self.libra.retrieve_sequence_number(self.account)?;
-        let expiration = Duration::from_secs(self.time_service.now() + TXN_EXPIRATION_SECS);
+        let expiration = Duration::from_secs(self.time_service.now() + self.txn_expiration_secs);
         let txn =
             build_rotation_transaction(self.account, seq_id, &account_prikey, &new_key, expiration);
         self.libra.submit_transaction(txn)?;
@@ -235,14 +247,14 @@ where
 
         // If this is inconsistent, then the transaction either failed or was never submitted.
         if let Err(Error::ConfigStorageKeyMismatch(..)) = self.compare_storage_to_config() {
-            return if last_rotation + TXN_EXPIRATION_SECS <= self.time_service.now() {
+            return if last_rotation + self.txn_expiration_secs <= self.time_service.now() {
                 Ok(Action::SubmitKeyRotationTransaction)
             } else {
                 Ok(Action::NoAction)
             };
         }
 
-        if last_rotation + ROTATION_PERIOD_SECS <= self.time_service.now() {
+        if last_rotation + self.rotation_period_secs <= self.time_service.now() {
             Ok(Action::FullKeyRotation)
         } else {
             Ok(Action::NoAction)
