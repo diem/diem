@@ -29,7 +29,7 @@
 
 use crate::{
     common::NetworkPublicKeys,
-    peer_manager::{self, conn_status_channel, ConnectionRequestSender, PeerManagerError},
+    peer_manager::{self, conn_notifs_channel, ConnectionRequestSender, PeerManagerError},
 };
 use futures::{
     channel::oneshot,
@@ -65,7 +65,7 @@ pub struct ConnectivityManager<TTicker, TBackoff> {
     /// Channel to send connection requests to PeerManager.
     connection_reqs_tx: ConnectionRequestSender,
     /// Channel to receive notifications from PeerManager.
-    connection_notifs_rx: conn_status_channel::Receiver,
+    connection_notifs_rx: conn_notifs_channel::Receiver,
     /// Channel over which we receive requests from other actors.
     requests_rx: channel::Receiver<ConnectivityRequest>,
     /// Peers queued to be dialed, potentially with some delay. The dial can be canceled by
@@ -138,7 +138,7 @@ where
         seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
         ticker: TTicker,
         connection_reqs_tx: ConnectionRequestSender,
-        connection_notifs_rx: conn_status_channel::Receiver,
+        connection_notifs_rx: conn_notifs_channel::Receiver,
         requests_rx: channel::Receiver<ConnectivityRequest>,
         backoff_strategy: TBackoff,
         max_delay_ms: u64,
@@ -200,7 +200,7 @@ where
                     self.handle_request(req);
                 },
                 notif = self.connection_notifs_rx.select_next_some() => {
-                    trace!("Event Id: {}, type: peer_manager::ConnectionStatusNotification, notif: {:?}", self.event_id, notif);
+                    trace!("Event Id: {}, type: peer_manager::ConnectionNotification, notif: {:?}", self.event_id, notif);
                     self.handle_control_notification(notif);
                 },
                 peer_id = pending_dials.select_next_some() => {
@@ -406,15 +406,15 @@ where
             .update(src, addrs);
     }
 
-    fn handle_control_notification(&mut self, notif: peer_manager::ConnectionStatusNotification) {
+    fn handle_control_notification(&mut self, notif: peer_manager::ConnectionNotification) {
         match notif {
-            peer_manager::ConnectionStatusNotification::NewPeer(peer_id, addr) => {
+            peer_manager::ConnectionNotification::NewPeer(peer_id, addr) => {
                 self.connected.insert(peer_id, addr);
                 // Cancel possible queued dial to this peer.
                 self.dial_states.remove(&peer_id);
                 self.dial_queue.remove(&peer_id);
             }
-            peer_manager::ConnectionStatusNotification::LostPeer(peer_id, addr, _reason) => {
+            peer_manager::ConnectionNotification::LostPeer(peer_id, addr, _reason) => {
                 match self.connected.get(&peer_id) {
                     Some(curr_addr) if *curr_addr == addr => {
                         // Remove node from connected peers list.

@@ -49,7 +49,7 @@ use libra_types::{
     waypoint::Waypoint,
 };
 use network::{
-    peer_manager::{conn_status_channel, ConnectionRequestSender, PeerManagerRequestSender},
+    peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::Event,
 };
 use safety_rules::{ConsensusState, PersistentSafetyStorage, SafetyRulesManager};
@@ -140,7 +140,7 @@ impl NodeSetup {
         let (consensus_tx, consensus_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
-        let (_, conn_status_rx) = conn_status_channel::new();
+        let (_, conn_status_rx) = conn_notifs_channel::new();
         let network_sender = ConsensusNetworkSender::new(
             PeerManagerRequestSender::new(network_reqs_tx),
             ConnectionRequestSender::new(connection_reqs_tx),

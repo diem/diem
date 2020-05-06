@@ -13,7 +13,7 @@ use futures::channel::{mpsc, oneshot};
 use libra_config::config::{NetworkConfig, NodeConfig};
 use libra_types::{mempool_status::MempoolStatusCode, transaction::SignedTransaction, PeerId};
 use network::peer_manager::{
-    conn_status_channel, ConnectionRequestSender, PeerManagerRequestSender,
+    conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender,
 };
 use std::{
     num::NonZeroUsize,
@@ -61,7 +61,7 @@ impl MockSharedMempool {
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (_network_notifs_tx, network_notifs_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-        let (_, conn_notifs_rx) = conn_status_channel::new();
+        let (_, conn_notifs_rx) = conn_notifs_channel::new();
         let network_sender = MempoolNetworkSender::new(
             PeerManagerRequestSender::new(network_reqs_tx),
             ConnectionRequestSender::new(connection_reqs_tx),

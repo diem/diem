@@ -7,7 +7,7 @@ pub use crate::protocols::rpc::error::RpcError;
 use crate::{
     error::NetworkError,
     peer_manager::{
-        ConnectionRequestSender, ConnectionStatusNotification, PeerManagerNotification,
+        ConnectionNotification, ConnectionRequestSender, PeerManagerNotification,
         PeerManagerRequestSender,
     },
     ProtocolId,
@@ -89,8 +89,8 @@ pub struct NetworkEvents<TMessage> {
             fn(PeerManagerNotification) -> Result<Event<TMessage>, NetworkError>,
         >,
         Map<
-            libra_channel::Receiver<PeerId, ConnectionStatusNotification>,
-            fn(ConnectionStatusNotification) -> Result<Event<TMessage>, NetworkError>,
+            libra_channel::Receiver<PeerId, ConnectionNotification>,
+            fn(ConnectionNotification) -> Result<Event<TMessage>, NetworkError>,
         >,
     >,
     _marker: PhantomData<TMessage>,
@@ -99,7 +99,7 @@ pub struct NetworkEvents<TMessage> {
 impl<TMessage: Message> NetworkEvents<TMessage> {
     pub fn new(
         peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
-        connection_notifs_rx: libra_channel::Receiver<PeerId, ConnectionStatusNotification>,
+        connection_notifs_rx: libra_channel::Receiver<PeerId, ConnectionNotification>,
     ) -> Self {
         let data_event_stream = peer_mgr_notifs_rx.map(
             peer_mgr_notif_to_event
@@ -107,7 +107,7 @@ impl<TMessage: Message> NetworkEvents<TMessage> {
         );
         let control_event_stream = connection_notifs_rx.map(
             control_msg_to_event
-                as fn(ConnectionStatusNotification) -> Result<Event<TMessage>, NetworkError>,
+                as fn(ConnectionNotification) -> Result<Event<TMessage>, NetworkError>,
         );
         Self {
             event_stream: ::futures::stream::select(data_event_stream, control_event_stream),
@@ -144,13 +144,11 @@ fn peer_mgr_notif_to_event<TMessage: Message>(
 }
 
 fn control_msg_to_event<TMessage>(
-    notif: ConnectionStatusNotification,
+    notif: ConnectionNotification,
 ) -> Result<Event<TMessage>, NetworkError> {
     match notif {
-        ConnectionStatusNotification::NewPeer(peer_id, _addr) => Ok(Event::NewPeer(peer_id)),
-        ConnectionStatusNotification::LostPeer(peer_id, _addr, _reason) => {
-            Ok(Event::LostPeer(peer_id))
-        }
+        ConnectionNotification::NewPeer(peer_id, _addr) => Ok(Event::NewPeer(peer_id)),
+        ConnectionNotification::LostPeer(peer_id, _addr, _reason) => Ok(Event::LostPeer(peer_id)),
     }
 }
 

@@ -44,7 +44,7 @@ use std::{
 };
 use tokio::runtime::Handle;
 
-pub mod conn_status_channel;
+pub mod conn_notifs_channel;
 mod error;
 #[cfg(test)]
 mod tests;
@@ -80,7 +80,7 @@ pub enum ConnectionRequest {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum ConnectionStatusNotification {
+pub enum ConnectionNotification {
     /// Connection with a new peer has been established.
     NewPeer(PeerId, NetworkAddress),
     /// Connection to a peer has been terminated. This could have been triggered from either end.
@@ -221,7 +221,7 @@ where
     /// Address to listen on for incoming connections.
     listen_addr: NetworkAddress,
     /// Connection Listener, listening on `listen_addr`
-    connection_handler: Option<ConnectionHandler<TTransport, TSocket>>,
+    transport_handler: Option<TransportHandler<TTransport, TSocket>>,
     /// Map from PeerId to corresponding Peer object.
     active_peers: HashMap<
         PeerId,
@@ -237,15 +237,15 @@ where
     upstream_handlers:
         HashMap<ProtocolId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     /// Channels to send NewPeer/LostPeer notifications to.
-    connection_event_handlers: Vec<conn_status_channel::Sender>,
+    connection_event_handlers: Vec<conn_notifs_channel::Sender>,
     /// Channel used to send Dial requests to the ConnectionHandler actor
-    dial_request_tx: channel::Sender<ConnectionHandlerRequest>,
+    transport_reqs_tx: channel::Sender<TransportRequest>,
     /// Sender for connection events.
-    connection_notifs_tx: channel::Sender<ConnectionNotification<TSocket>>,
+    transport_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
     /// Receiver for connection requests.
     connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
     /// Receiver for connection events.
-    connection_notifs_rx: channel::Receiver<ConnectionNotification<TSocket>>,
+    transport_notifs_rx: channel::Receiver<TransportNotification<TSocket>>,
     /// A map of outstanding disconnect requests.
     outstanding_disconnect_requests:
         HashMap<ConnectionId, oneshot::Sender<Result<(), PeerManagerError>>>,
@@ -278,26 +278,26 @@ where
             ProtocolId,
             libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
         >,
-        connection_event_handlers: Vec<conn_status_channel::Sender>,
+        connection_event_handlers: Vec<conn_notifs_channel::Sender>,
         channel_size: usize,
         max_concurrent_network_reqs: usize,
         max_concurrent_network_notifs: usize,
     ) -> Self {
-        let (connection_notifs_tx, connection_notifs_rx) = channel::new(
+        let (transport_notifs_tx, transport_notifs_rx) = channel::new(
             channel_size,
             &counters::PENDING_CONNECTION_HANDLER_NOTIFICATIONS,
         );
-        let (dial_request_tx, dial_request_rx) =
+        let (transport_reqs_tx, transport_reqs_rx) =
             channel::new(channel_size, &counters::PENDING_PEER_MANAGER_DIAL_REQUESTS);
         //TODO now that you can only listen on a socket inside of a tokio runtime we'll need to
         // rethink how we init the PeerManager so we don't have to do this funny thing.
-        let connection_handler_notifs_tx = connection_notifs_tx.clone();
-        let (connection_handler, listen_addr) = executor.enter(|| {
-            ConnectionHandler::new(
+        let transport_notifs_tx_clone = transport_notifs_tx.clone();
+        let (transport_handler, listen_addr) = executor.enter(|| {
+            TransportHandler::new(
                 transport,
                 listen_addr,
-                dial_request_rx,
-                connection_handler_notifs_tx.clone(),
+                transport_reqs_rx,
+                transport_notifs_tx_clone,
             )
         });
         Self {
@@ -305,13 +305,13 @@ where
             own_peer_id,
             role,
             listen_addr,
-            connection_handler: Some(connection_handler),
+            transport_handler: Some(transport_handler),
             active_peers: HashMap::new(),
             requests_rx,
             connection_reqs_rx,
-            dial_request_tx,
-            connection_notifs_tx,
-            connection_notifs_rx,
+            transport_reqs_tx,
+            transport_notifs_tx,
+            transport_notifs_rx,
             outstanding_disconnect_requests: HashMap::new(),
             phantom_transport: PhantomData,
             upstream_handlers,
@@ -333,7 +333,7 @@ where
         self.start_connection_listener();
         loop {
             ::futures::select! {
-                connection_event = self.connection_notifs_rx.select_next_some() => {
+                connection_event = self.transport_notifs_rx.select_next_some() => {
                   self.handle_connection_event(connection_event);
                 }
                 request = self.requests_rx.select_next_some() => {
@@ -351,10 +351,10 @@ where
         }
     }
 
-    fn handle_connection_event(&mut self, event: ConnectionNotification<TSocket>) {
-        trace!("ConnectionNotification::{:?}", event);
+    fn handle_connection_event(&mut self, event: TransportNotification<TSocket>) {
+        trace!("TransportNotification::{:?}", event);
         match event {
-            ConnectionNotification::NewConnection(conn) => {
+            TransportNotification::NewConnection(conn) => {
                 info!("New connection established: {:?}", conn,);
                 // Update libra_network_peer counter.
                 self.add_peer(conn);
@@ -362,7 +362,7 @@ where
                     .with_label_values(&[self.role.as_str(), "connected"])
                     .set(self.active_peers.len() as i64);
             }
-            ConnectionNotification::Disconnected(lost_conn_metadata, reason) => {
+            TransportNotification::Disconnected(lost_conn_metadata, reason) => {
                 // See: https://github.com/libra/libra/issues/3128#issuecomment-605351504 for
                 // detailed reasoning on `Disconnected` events should be handled correctly.
                 info!(
@@ -490,11 +490,11 @@ where
     }
 
     fn start_connection_listener(&mut self) {
-        let connection_handler = self
-            .connection_handler
+        let transport_handler = self
+            .transport_handler
             .take()
-            .expect("Connection handler already taken");
-        self.executor.spawn(connection_handler.listen());
+            .expect("Transport handler already taken");
+        self.executor.spawn(transport_handler.listen());
     }
 
     /// In the event two peers simultaneously dial each other we need to be able to do
@@ -575,7 +575,7 @@ where
         let (network_reqs_tx, network_notifs_rx) = NetworkProvider::start(
             self.executor.clone(),
             connection,
-            self.connection_notifs_tx.clone(),
+            self.transport_notifs_tx.clone(),
             self.max_concurrent_network_reqs,
             self.max_concurrent_network_notifs,
             self.channel_size,
@@ -592,7 +592,7 @@ where
                 handler
                     .push(
                         peer_id,
-                        ConnectionStatusNotification::NewPeer(peer_id, conn_meta.addr().clone()),
+                        ConnectionNotification::NewPeer(peer_id, conn_meta.addr().clone()),
                     )
                     .unwrap();
             }
@@ -609,7 +609,7 @@ where
         for handler in self.connection_event_handlers.iter_mut() {
             if let Err(e) = handler.push(
                 peer_id,
-                ConnectionStatusNotification::LostPeer(peer_id, addr.clone(), reason),
+                ConnectionNotification::LostPeer(peer_id, addr.clone(), reason),
             ) {
                 warn!(
                     "Failed to send lost peer notification to handler for peer: {}. Error: {:?}",
@@ -626,8 +626,8 @@ where
         address: NetworkAddress,
         response_tx: oneshot::Sender<Result<(), PeerManagerError>>,
     ) {
-        let request = ConnectionHandlerRequest::DialPeer(peer_id, address, response_tx);
-        self.dial_request_tx.send(request).await.unwrap();
+        let request = TransportRequest::DialPeer(peer_id, address, response_tx);
+        self.transport_reqs_tx.send(request).await.unwrap();
     }
 
     fn spawn_peer_network_events_handler(
@@ -695,7 +695,7 @@ where
 }
 
 #[derive(Debug)]
-enum ConnectionHandlerRequest {
+enum TransportRequest {
     DialPeer(
         PeerId,
         NetworkAddress,
@@ -704,7 +704,7 @@ enum ConnectionHandlerRequest {
 }
 
 #[derive(Debug)]
-pub enum ConnectionNotification<TSocket>
+pub enum TransportNotification<TSocket>
 where
     TSocket: AsyncRead + AsyncWrite,
 {
@@ -713,7 +713,7 @@ where
 }
 
 /// Responsible for listening for new incoming connections
-struct ConnectionHandler<TTransport, TSocket>
+struct TransportHandler<TTransport, TSocket>
 where
     TTransport: Transport,
     TSocket: AsyncRead + AsyncWrite,
@@ -721,11 +721,11 @@ where
     /// [`Transport`] that is used to establish connections
     transport: TTransport,
     listener: Fuse<TTransport::Listener>,
-    dial_request_rx: channel::Receiver<ConnectionHandlerRequest>,
-    connection_notifs_tx: channel::Sender<ConnectionNotification<TSocket>>,
+    transport_reqs_rx: channel::Receiver<TransportRequest>,
+    transport_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
 }
 
-impl<TTransport, TSocket> ConnectionHandler<TTransport, TSocket>
+impl<TTransport, TSocket> TransportHandler<TTransport, TSocket>
 where
     TTransport: Transport<Output = Connection<TSocket>>,
     TTransport::Listener: 'static,
@@ -736,8 +736,8 @@ where
     fn new(
         transport: TTransport,
         listen_addr: NetworkAddress,
-        dial_request_rx: channel::Receiver<ConnectionHandlerRequest>,
-        connection_notifs_tx: channel::Sender<ConnectionNotification<TSocket>>,
+        transport_reqs_rx: channel::Receiver<TransportRequest>,
+        transport_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
     ) -> (Self, NetworkAddress) {
         let (listener, listen_addr) = transport
             .listen_on(listen_addr)
@@ -747,8 +747,8 @@ where
             Self {
                 transport,
                 listener: listener.fuse(),
-                dial_request_rx,
-                connection_notifs_tx,
+                transport_reqs_rx,
+                transport_notifs_tx,
             },
             listen_addr,
         )
@@ -762,7 +762,7 @@ where
 
         loop {
             futures::select! {
-                dial_request = self.dial_request_rx.select_next_some() => {
+                dial_request = self.transport_reqs_rx.select_next_some() => {
                     if let Some(fut) = self.dial_peer(dial_request) {
                         pending_outbound_connections.push(fut);
                     }
@@ -793,7 +793,7 @@ where
 
     fn dial_peer(
         &self,
-        dial_peer_request: ConnectionHandlerRequest,
+        dial_peer_request: TransportRequest,
     ) -> Option<
         BoxFuture<
             'static,
@@ -806,7 +806,7 @@ where
         >,
     > {
         match dial_peer_request {
-            ConnectionHandlerRequest::DialPeer(peer_id, addr, response_tx) => {
+            TransportRequest::DialPeer(peer_id, addr, response_tx) => {
                 match self.transport.dial(addr.clone()) {
                     Ok(upgrade) => Some(
                         upgrade
@@ -846,9 +846,9 @@ where
                         peer_id.short_str(),
                         addr
                     );
-                    let event = ConnectionNotification::NewConnection(connection);
+                    let event = TransportNotification::NewConnection(connection);
                     // Send the new connection to PeerManager
-                    self.connection_notifs_tx.send(event).await.unwrap();
+                    self.transport_notifs_tx.send(event).await.unwrap();
                     Ok(())
                 } else {
                     let e = ::anyhow::format_err!(
@@ -897,9 +897,9 @@ where
                     connection.metadata.peer_id().short_str(),
                     addr
                 );
-                let event = ConnectionNotification::NewConnection(connection);
+                let event = TransportNotification::NewConnection(connection);
                 // Send the new connection to PeerManager
-                self.connection_notifs_tx.send(event).await.unwrap();
+                self.transport_notifs_tx.send(event).await.unwrap();
             }
             Err(e) => {
                 warn!("Connection from {} failed to upgrade {}", addr, e);

@@ -20,7 +20,7 @@ use futures::{channel::mpsc, SinkExt, StreamExt};
 use libra_types::{block_info::BlockInfo, PeerId};
 use network::{
     peer_manager::{
-        conn_status_channel, ConnectionRequestSender, PeerManagerNotification, PeerManagerRequest,
+        conn_notifs_channel, ConnectionRequestSender, PeerManagerNotification, PeerManagerRequest,
         PeerManagerRequestSender,
     },
     protocols::rpc::InboundRpcRequest,
@@ -377,7 +377,7 @@ mod tests {
             let (consensus_tx, consensus_rx) =
                 libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
             let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
-            let (_, conn_status_rx) = conn_status_channel::new();
+            let (_, conn_status_rx) = conn_notifs_channel::new();
             let network_sender = ConsensusNetworkSender::new(
                 PeerManagerRequestSender::new(network_reqs_tx),
                 ConnectionRequestSender::new(connection_reqs_tx),
@@ -458,7 +458,7 @@ mod tests {
             let (consensus_tx, consensus_rx) =
                 libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
             let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
-            let (_, conn_status_rx) = conn_status_channel::new();
+            let (_, conn_status_rx) = conn_notifs_channel::new();
             let network_sender = ConsensusNetworkSender::new(
                 PeerManagerRequestSender::new(network_reqs_tx),
                 ConnectionRequestSender::new(connection_reqs_tx),

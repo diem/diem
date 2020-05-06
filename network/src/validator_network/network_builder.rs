@@ -14,7 +14,7 @@ use crate::{
     connectivity_manager::{ConnectivityManager, ConnectivityRequest},
     counters,
     peer_manager::{
-        conn_status_channel, ConnectionRequest, ConnectionRequestSender, PeerManager,
+        conn_notifs_channel, ConnectionRequest, ConnectionRequestSender, PeerManager,
         PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
     },
     protocols::{
@@ -100,7 +100,7 @@ pub struct NetworkBuilder {
     ping_failures_tolerated: u64,
     upstream_handlers:
         HashMap<ProtocolId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
-    connection_event_handlers: Vec<conn_status_channel::Sender>,
+    connection_event_handlers: Vec<conn_notifs_channel::Sender>,
     pm_reqs_tx: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
     pm_reqs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     connection_reqs_tx: libra_channel::Sender<PeerId, ConnectionRequest>,
@@ -317,7 +317,7 @@ impl NetworkBuilder {
         PeerManagerRequestSender,
         libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
         ConnectionRequestSender,
-        conn_status_channel::Receiver,
+        conn_notifs_channel::Receiver,
     ) {
         self.direct_send_protocols
             .extend(direct_send_protocols.clone());
@@ -335,7 +335,7 @@ impl NetworkBuilder {
             self.upstream_handlers
                 .insert(protocol, network_notifs_tx.clone());
         }
-        let (connection_notifs_tx, connection_notifs_rx) = conn_status_channel::new();
+        let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
         // Auto-subscribe all application level handlers to connection events.
         self.connection_event_handlers.push(connection_notifs_tx);
         (
@@ -346,8 +346,8 @@ impl NetworkBuilder {
         )
     }
 
-    pub fn add_connection_event_listener(&mut self) -> conn_status_channel::Receiver {
-        let (tx, rx) = conn_status_channel::new();
+    pub fn add_connection_event_listener(&mut self) -> conn_notifs_channel::Receiver {
+        let (tx, rx) = conn_notifs_channel::new();
         self.connection_event_handlers.push(tx);
         rx
     }

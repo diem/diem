@@ -26,7 +26,7 @@ use libra_vm::LibraVM;
 use network::{
     connectivity_manager::ConnectivityRequest,
     peer_manager::{
-        ConnectionRequestSender, ConnectionStatusNotification, PeerManagerNotification,
+        ConnectionNotification, ConnectionRequestSender, PeerManagerNotification,
         PeerManagerRequest, PeerManagerRequestSender,
     },
     protocols::rpc::{InboundRpcRequest, OutboundRpcRequest},
@@ -45,13 +45,13 @@ use tokio::{
 
 struct MockOnchainDiscoveryNetworkSender {
     peer_mgr_notifs_tx: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
-    conn_notifs_tx: libra_channel::Sender<PeerId, ConnectionStatusNotification>,
+    conn_notifs_tx: libra_channel::Sender<PeerId, ConnectionNotification>,
 }
 
 impl MockOnchainDiscoveryNetworkSender {
     fn new(
         peer_mgr_notifs_tx: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
-        conn_notifs_tx: libra_channel::Sender<PeerId, ConnectionStatusNotification>,
+        conn_notifs_tx: libra_channel::Sender<PeerId, ConnectionNotification>,
     ) -> Self {
         Self {
             peer_mgr_notifs_tx,
@@ -95,15 +95,11 @@ impl MockOnchainDiscoveryNetworkSender {
 
     async fn new_peer(&mut self, peer_id: PeerId) {
         let addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
-        let notif = ConnectionStatusNotification::NewPeer(peer_id, addr);
+        let notif = ConnectionNotification::NewPeer(peer_id, addr);
         self.send_connection_notif(peer_id, notif).await;
     }
 
-    async fn send_connection_notif(
-        &mut self,
-        peer_id: PeerId,
-        notif: ConnectionStatusNotification,
-    ) {
+    async fn send_connection_notif(&mut self, peer_id: PeerId, notif: ConnectionNotification) {
         let (delivered_tx, delivered_rx) = oneshot::channel();
         self.conn_notifs_tx
             .push_with_feedback(peer_id, notif, Some(delivered_tx))

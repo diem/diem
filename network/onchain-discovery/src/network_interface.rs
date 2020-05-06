@@ -9,7 +9,7 @@ use libra_types::PeerId;
 use network::{
     connectivity_manager::ConnectivityRequest,
     peer_manager::{
-        conn_status_channel, ConnectionRequestSender, PeerManagerNotification,
+        conn_notifs_channel, ConnectionRequestSender, PeerManagerNotification,
         PeerManagerRequestSender,
     },
     protocols::{network::NetworkSender, rpc::error::RpcError},
@@ -75,7 +75,7 @@ pub fn add_to_network(
 ) -> (
     OnchainDiscoveryNetworkSender,
     libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
-    conn_status_channel::Receiver,
+    conn_notifs_channel::Receiver,
 ) {
     let (network_sender, network_receiver, conn_reqs_tx, conn_notifs_rx) = network
         .add_protocol_handler(
