@@ -1,13 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! A helper to emit code. Supports indentation and maintains source to target location information.
-
 use std::collections::{BTreeMap, Bound};
 
-use codespan::{ByteIndex, ColumnIndex, Files, LineIndex};
+use codespan::{ByteIndex, ByteOffset, ColumnIndex, Files, LineIndex, RawIndex, RawOffset};
 
-use spec_lang::env::Loc;
+use crate::env::Loc;
 use std::cell::RefCell;
 
 struct CodeWriterData {
@@ -23,9 +21,18 @@ struct CodeWriterData {
     /// A sparse mapping from byte index in written output to location in source file.
     /// Any index not in this map is approximated by the next smaller index on lookup.
     output_location_map: BTreeMap<ByteIndex, Loc>,
+
+    /// A map from label indices to the current position in output they are pointing to.
+    label_map: BTreeMap<ByteIndex, ByteIndex>,
 }
 
+/// A helper to emit code. Supports indentation and maintains source to target location information.
 pub struct CodeWriter(RefCell<CodeWriterData>);
+
+/// A label which can be created at the code writers current output position to later insert
+/// code at this position.
+#[derive(Debug, Clone, Copy)]
+pub struct CodeWriterLabel(ByteIndex);
 
 impl CodeWriter {
     /// Creates new code writer, with the given default location.
@@ -38,7 +45,40 @@ impl CodeWriter {
             indent: 0,
             current_location: loc,
             output_location_map,
+            label_map: Default::default(),
         }))
+    }
+
+    /// Creates a label at which code can be inserted later.
+    pub fn create_label(&self) -> CodeWriterLabel {
+        let mut data = self.0.borrow_mut();
+        let index = ByteIndex(data.output.len() as RawIndex);
+        data.label_map.insert(index, index);
+        CodeWriterLabel(index)
+    }
+
+    /// Inserts code at the previously created label.
+    pub fn insert_at_label(&self, label: CodeWriterLabel, s: &str) {
+        let mut data = self.0.borrow_mut();
+        let index = *data.label_map.get(&label.0).expect("label undefined");
+        let shift = ByteOffset(s.len() as RawOffset);
+        // Shift indices after index.
+        data.label_map = std::mem::take(&mut data.label_map)
+            .into_iter()
+            .map(|(i, j)| if j > index { (i, j + shift) } else { (i, j) })
+            .collect();
+        data.output_location_map = std::mem::take(&mut data.output_location_map)
+            .into_iter()
+            .map(|(i, loc)| {
+                if i > index {
+                    (i + shift, loc)
+                } else {
+                    (i, loc)
+                }
+            })
+            .collect();
+        // Insert text.
+        data.output.insert_str(index.0 as usize, s);
     }
 
     /// Calls a function to process the code written so far. This is embedded into a function
@@ -138,6 +178,7 @@ impl CodeWriter {
 }
 
 /// Macro to emit a simple or formatted string.
+#[macro_export]
 macro_rules! emit {
     ($target:expr, $s:expr) => (
        $target.emit($s)
@@ -148,6 +189,7 @@ macro_rules! emit {
 }
 
 /// Macro to emit a simple or formatted string followed by a new line.
+#[macro_export]
 macro_rules! emitln {
     ($target:expr) => (
        $target.emit_line("")

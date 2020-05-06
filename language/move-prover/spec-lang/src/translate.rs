@@ -32,11 +32,12 @@ use vm::{
 use crate::{
     ast::{
         Condition, ConditionKind, Exp, LocalVarDecl, ModuleName, Operation, QualifiedSymbol, Spec,
-        SpecFunDecl, SpecVarDecl, Value,
+        SpecBlockInfo, SpecBlockTarget, SpecFunDecl, SpecVarDecl, Value,
     },
     env::{
-        FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleId, MoveIrLoc, NodeId, SpecFunId,
-        SpecVarId, StructData, StructId, SCRIPT_AST_FUN_NAME, SCRIPT_BYTECODE_FUN_NAME,
+        FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleId, MoveIrLoc, NodeId, SchemaId,
+        SpecFunId, SpecVarId, StructData, StructId, TypeConstraint, TypeParameter,
+        SCRIPT_AST_FUN_NAME, SCRIPT_BYTECODE_FUN_NAME,
     },
     project_1st, project_2nd,
     symbol::{Symbol, SymbolPool},
@@ -641,6 +642,8 @@ pub struct ModuleTranslator<'env, 'translator> {
     struct_specs: BTreeMap<Symbol, Spec>,
     /// Translated module spec
     module_spec: Spec,
+    /// Spec block infos.
+    spec_block_infos: Vec<SpecBlockInfo>,
 }
 
 /// # Entry Points
@@ -665,6 +668,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             fun_specs: BTreeMap::new(),
             struct_specs: BTreeMap::new(),
             module_spec: Spec::default(),
+            spec_block_infos: Default::default(),
         }
     }
 
@@ -695,6 +699,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     ) {
         self.decl_ana(&module_def);
         self.def_ana(&module_def, function_infos);
+        self.collect_spec_block_infos(&module_def);
         self.populate_env_from_result(loc, compiled_module, source_map);
     }
 }
@@ -2453,6 +2458,63 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     }
 }
 
+/// # Spec Block Infos
+
+impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
+    /// Collect location and target information for all spec blocks. This is used for documentation
+    /// generation.
+    fn collect_spec_block_infos(&mut self, module_def: &EA::ModuleDefinition) {
+        for block in &module_def.specs {
+            let block_loc = self.parent.to_loc(&block.loc);
+            let member_locs = block
+                .value
+                .members
+                .iter()
+                .map(|m| self.parent.to_loc(&m.loc))
+                .collect_vec();
+            let target = match self.get_spec_block_context(&block.value.target) {
+                Some(SpecBlockContext::Module) => SpecBlockTarget::Module,
+                Some(SpecBlockContext::Function(qsym)) => {
+                    SpecBlockTarget::Function(self.module_id, FunId::new(qsym.symbol))
+                }
+                Some(SpecBlockContext::FunctionCode(qsym, info)) => SpecBlockTarget::FunctionCode(
+                    self.module_id,
+                    FunId::new(qsym.symbol),
+                    info.offset as usize,
+                ),
+                Some(SpecBlockContext::Struct(qsym)) => {
+                    SpecBlockTarget::Struct(self.module_id, StructId::new(qsym.symbol))
+                }
+                Some(SpecBlockContext::Schema(qsym)) => {
+                    let entry = self
+                        .parent
+                        .spec_schema_table
+                        .get(&qsym)
+                        .expect("schema defined");
+                    SpecBlockTarget::Schema(
+                        self.module_id,
+                        SchemaId::new(qsym.symbol),
+                        entry
+                            .type_params
+                            .iter()
+                            .map(|(name, _)| TypeParameter(*name, TypeConstraint::None))
+                            .collect_vec(),
+                    )
+                }
+                None => {
+                    // This has been reported as an error. Choose a dummy target.
+                    SpecBlockTarget::Module
+                }
+            };
+            self.spec_block_infos.push(SpecBlockInfo {
+                loc: block_loc,
+                member_locs,
+                target,
+            })
+        }
+    }
+}
+
 /// # Environment Population
 
 impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
@@ -2478,7 +2540,6 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                         .struct_specs
                         .remove(&name)
                         .unwrap_or_else(Spec::default);
-                    // Ensure that all invariant kinds
                     Some((
                         StructId::new(name),
                         self.parent.env.create_struct_data(
@@ -2545,6 +2606,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             std::mem::take(&mut self.loc_map),
             std::mem::take(&mut self.type_map),
             std::mem::take(&mut self.instantiation_map),
+            std::mem::take(&mut self.spec_block_infos),
         );
     }
 }

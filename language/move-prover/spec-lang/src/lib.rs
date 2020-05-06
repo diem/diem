@@ -20,6 +20,7 @@ use move_lang::{
 };
 
 pub mod ast;
+pub mod code_writer;
 pub mod env;
 pub mod symbol;
 mod translate;
@@ -54,6 +55,7 @@ pub fn run_spec_lang_compiler(
     let mut env = GlobalEnv::new();
     // First pass: compile move code.
     let (files, units_or_errors) = move_compile_no_report(&all_sources, &[], address_opt)?;
+    // Enter sources into env, remember file ids as
     for (fname, fsrc) in files {
         env.add_source(fname, &fsrc, deps.contains(&fname.to_string()));
     }
@@ -72,7 +74,12 @@ pub fn run_spec_lang_compiler(
                 // AST clonable and tee it somehow out of the regular compile chain.
                 let (_, eprog_or_errors) =
                     move_compile_to_expansion_no_report(&all_sources, &[], address_opt)?;
-                let eprog = eprog_or_errors.expect("no compilation errors").0;
+                let (eprog, comment_map) = eprog_or_errors.expect("no compilation errors");
+                // Add any documentation comments found by the move compiler to the env.
+                for (fname, documentation) in comment_map {
+                    let file_id = env.get_file_id(fname).expect("file name defined");
+                    env.add_documentation(file_id, documentation);
+                }
                 // Run the spec checker on verified units plus expanded AST. This will
                 // populate the environment including any errors.
                 run_spec_checker(&mut env, verified_units, eprog)?;

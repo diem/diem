@@ -13,17 +13,16 @@ use spec_lang::{
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 
-use crate::{
-    boogie_helpers::{
-        boogie_byte_blob, boogie_declare_global, boogie_field_name, boogie_global_declarator,
-        boogie_local_type, boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name,
-        boogie_type_value, boogie_well_formed_expr, WellFormedMode,
-    },
-    code_writer::CodeWriter,
+use crate::boogie_helpers::{
+    boogie_byte_blob, boogie_declare_global, boogie_field_name, boogie_global_declarator,
+    boogie_local_type, boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name,
+    boogie_type_value, boogie_well_formed_expr, WellFormedMode,
 };
 use itertools::Itertools;
 use spec_lang::{
     ast::{Condition, ConditionKind, Exp, LocalVarDecl, Operation, Value},
+    code_writer::CodeWriter,
+    emit, emitln,
     env::GlobalEnv,
     symbol::Symbol,
 };
