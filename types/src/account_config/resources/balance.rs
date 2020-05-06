@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    access_path::{AccessPath, Accesses},
+    access_path::AccessPath,
     account_config::constants::{lbr_type_tag, ACCOUNT_MODULE_NAME, CORE_CODE_ADDRESS},
     language_storage::{StructTag, TypeTag},
     move_resource::MoveResource,
@@ -39,10 +39,7 @@ impl BalanceResource {
 
     // TODO: remove this once the MoveResource trait allows type arguments to `resource_path`.
     pub fn access_path_for(currency_typetag: TypeTag) -> Vec<u8> {
-        AccessPath::resource_access_vec(
-            &BalanceResource::struct_tag_for_currency(currency_typetag),
-            &Accesses::empty(),
-        )
+        AccessPath::resource_access_vec(&BalanceResource::struct_tag_for_currency(currency_typetag))
     }
 }
 

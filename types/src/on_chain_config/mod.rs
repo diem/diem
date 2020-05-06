@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    access_path::{AccessPath, Accesses},
+    access_path::AccessPath,
     account_address::AccountAddress,
     account_config::CORE_CODE_ADDRESS,
     event::{EventHandle, EventKey},
@@ -132,20 +132,17 @@ pub fn new_epoch_event_key() -> EventKey {
 pub fn access_path_for_config(address: AccountAddress, config_name: Identifier) -> AccessPath {
     AccessPath::new(
         address,
-        AccessPath::resource_access_vec(
-            &StructTag {
+        AccessPath::resource_access_vec(&StructTag {
+            address: CORE_CODE_ADDRESS,
+            module: Identifier::new("LibraConfig").unwrap(),
+            name: Identifier::new("T").unwrap(),
+            type_params: vec![TypeTag::Struct(StructTag {
                 address: CORE_CODE_ADDRESS,
-                module: Identifier::new("LibraConfig").unwrap(),
+                module: config_name,
                 name: Identifier::new("T").unwrap(),
-                type_params: vec![TypeTag::Struct(StructTag {
-                    address: CORE_CODE_ADDRESS,
-                    module: config_name,
-                    name: Identifier::new("T").unwrap(),
-                    type_params: vec![],
-                })],
-            },
-            &Accesses::empty(),
-        ),
+                type_params: vec![],
+            })],
+        }),
     )
 }
 
