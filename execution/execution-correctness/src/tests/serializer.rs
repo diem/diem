@@ -14,6 +14,5 @@ fn block_executor() -> Box<dyn BlockExecutor> {
     let (config, _handle) = start_storage_service();
     let execution_correctness_manager =
         ExecutionCorrectnessManager::new_serializer(config.storage.simple_address);
-    let block_executor = execution_correctness_manager.client();
-    block_executor
+    execution_correctness_manager.client()
 }

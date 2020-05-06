@@ -25,7 +25,6 @@ pub trait RemoteService {
 pub fn execute(storage_addr: SocketAddr, listen_addr: SocketAddr) {
     let block_executor = Box::new(Executor::<LibraVM>::new(
         SimpleStorageClient::new(&storage_addr).into(),
-
     ));
     let mut serializer_service = SerializerService::new(block_executor);
     let mut network_server = NetworkServer::new(listen_addr);

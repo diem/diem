@@ -20,12 +20,12 @@ impl SpawnedProcess {
         config.save_config(&config_path).unwrap();
 
         let service = &config.execution.service;
-        let server_addr = if let ExecutionCorrectnessService::SpawnedProcess(remote_service) = service
-        {
-            remote_service.server_address
-        } else {
-            panic!("Invalid ExecutionCorrectnessService, expected SpawnedProcess.");
-        };
+        let server_addr =
+            if let ExecutionCorrectnessService::SpawnedProcess(remote_service) = service {
+                remote_service.server_address
+            } else {
+                panic!("Invalid ExecutionCorrectnessService, expected SpawnedProcess.");
+            };
 
         Self {
             handle: runner::run(&config_path.path()),

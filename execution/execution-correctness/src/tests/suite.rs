@@ -3,8 +3,7 @@
 
 use executor_types::BlockExecutor;
 use executor_utils::test_helpers::{
-    extract_signer,
-    gen_block_id, gen_ledger_info_with_sigs, get_test_signed_transaction,
+    extract_signer, gen_block_id, gen_ledger_info_with_sigs, get_test_signed_transaction,
 };
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, PrivateKey, Uniform};
 use libra_types::{
@@ -52,7 +51,7 @@ pub fn run_test_suite(func: fn() -> Box<dyn BlockExecutor>) {
     let block1_id = gen_block_id(1);
 
     let output1 = executor
-        .execute_block((block1_id, block1.clone()), parent_block_id)
+        .execute_block((block1_id, block1), parent_block_id)
         .unwrap();
 
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, output1, block1_id, vec![&signer]);

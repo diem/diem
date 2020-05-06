@@ -10,8 +10,10 @@ mod thread;
 use executor::db_bootstrapper::bootstrap_db_if_empty;
 use libra_config::{config::NodeConfig, utils};
 use libra_vm::LibraVM;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::thread::JoinHandle;
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    thread::JoinHandle,
+};
 use storage_service::{init_libra_db, start_simple_storage_service_with_db};
 
 fn start_storage_service() -> (NodeConfig, JoinHandle<()>) {

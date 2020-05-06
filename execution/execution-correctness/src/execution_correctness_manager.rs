@@ -36,11 +36,9 @@ impl ExecutionCorrectnessManager {
         let storage_address = config.storage.simple_address;
         match &config.execution.service {
             ExecutionCorrectnessService::Process(remote_service) => {
-                return Self::new_process(remote_service.server_address)
+                Self::new_process(remote_service.server_address)
             }
-            ExecutionCorrectnessService::SpawnedProcess(_) => {
-                return Self::new_spawned_process(config)
-            }
+            ExecutionCorrectnessService::SpawnedProcess(_) => Self::new_spawned_process(config),
             ExecutionCorrectnessService::Local => Self::new_local(storage_address),
             ExecutionCorrectnessService::Serializer => Self::new_serializer(storage_address),
             ExecutionCorrectnessService::Thread => Self::new_thread(storage_address),

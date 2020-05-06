@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
     io::{Read, Write},
+    net::SocketAddr,
     path::PathBuf,
-    net::SocketAddr
 };
 
 const GENESIS_DEFAULT: &str = "genesis.blob";
@@ -78,8 +78,7 @@ impl ExecutionConfig {
 
 /// Defines how execution correctness should be run
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(tag = "type")]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum ExecutionCorrectnessService {
     /// This runs execution correctness in the same thread as event processor.
     Local,

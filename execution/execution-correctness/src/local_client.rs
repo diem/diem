@@ -6,8 +6,10 @@ use libra_crypto::HashValue;
 use libra_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
 };
-use std::boxed::Box;
-use std::sync::{Arc, Mutex};
+use std::{
+    boxed::Box,
+    sync::{Arc, Mutex},
+};
 
 /// A local interface into ExecutionCorrectness. Constructed in such a way that the container / caller
 /// cannot distinguish this API from an actual client/server process without being exposed to
