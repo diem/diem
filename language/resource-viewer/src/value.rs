@@ -108,11 +108,7 @@ impl<'d, 'a> serde::de::Visitor<'d> for VectorElementVisitor<'a> {
     where
         A: serde::de::SeqAccess<'d>,
     {
-        let mut vals = Vec::new();
-        while let Some(elem) = seq.next_element_seed(self.0)? {
-            vals.push(elem)
-        }
-        Ok(vals)
+        Ok(seq.next_element_seed(self.0)?.into_iter().collect())
     }
 }
 
@@ -131,10 +127,9 @@ impl<'d, 'a> serde::de::Visitor<'d> for StructFieldVisitor<'a> {
     {
         let mut val = Vec::new();
         for (i, field_type) in self.0.iter().enumerate() {
-            if let Some(elem) = seq.next_element_seed(field_type)? {
-                val.push(elem)
-            } else {
-                return Err(A::Error::invalid_length(i, &self));
+            match seq.next_element_seed(field_type)? {
+                Some(elem) => val.push(elem),
+                None => return Err(A::Error::invalid_length(i, &self)),
             }
         }
         Ok(val)
@@ -186,6 +181,7 @@ impl TryFrom<&FatType> for MoveTypeLayout {
                     .map(MoveTypeLayout::try_from)
                     .collect::<AResult<Vec<_>>>()?,
             )),
+
             _ => return Err(anyhow!("Unexpected type: {:?}", ty)),
         })
     }

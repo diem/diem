@@ -160,20 +160,17 @@ impl<'a> Resolver<'a> {
             .collect();
         match &struct_def.field_information {
             StructFieldInformation::Native => Err(anyhow!("Unexpected Native Struct")),
-            StructFieldInformation::Declared(defs) => {
-                let mut fields = vec![];
-                for field_def in defs.iter() {
-                    fields.push(self.resolve_signature(module.clone(), &field_def.signature.0)?);
-                }
-                Ok(FatStructType {
-                    address,
-                    module: module_name,
-                    name,
-                    is_resource,
-                    ty_args,
-                    layout: fields,
-                })
-            }
+            StructFieldInformation::Declared(defs) => Ok(FatStructType {
+                address,
+                module: module_name,
+                name,
+                is_resource,
+                ty_args,
+                layout: defs
+                    .iter()
+                    .map(|field_def| self.resolve_signature(module.clone(), &field_def.signature.0))
+                    .collect::<Result<_>>()?,
+            }),
         }
     }
 }
