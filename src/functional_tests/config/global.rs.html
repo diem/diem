@@ -252,6 +252,8 @@
 <span id="252">252</span>
 <span id="253">253</span>
 <span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -261,7 +263,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">common</span>::<span class="ident">strip</span>, <span class="ident">errors</span>::<span class="kw-2">*</span>, <span class="ident">genesis_accounts</span>::<span class="ident">make_genesis_accounts</span>};
 <span class="kw">use</span> <span class="ident">language_e2e_tests</span>::{
-    <span class="ident">account</span>::{<span class="ident">Account</span>, <span class="ident">AccountData</span>},
+    <span class="ident">account</span>::{<span class="ident">Account</span>, <span class="ident">AccountData</span>, <span class="ident">AccountTypeSpecifier</span>},
     <span class="ident">keygen</span>::<span class="ident">KeyGen</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">generator</span>;
@@ -325,8 +327,8 @@
     <span class="kw">pub</span> <span class="ident">sequence_number</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Special role this account has in the system (if any)</span>
     <span class="kw">pub</span> <span class="ident">role</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Role</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Specifier on whether this account is an empty account or not</span>
-    <span class="kw">pub</span> <span class="ident">is_empty_account_type</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Specifier on what type of account this is. Default is VASP.</span>
+    <span class="kw">pub</span> <span class="ident">account_type_specifier</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AccountTypeSpecifier</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">FromStr</span> <span class="kw">for</span> <span class="ident">Role</span> {
@@ -383,13 +385,15 @@
             <span class="kw">let</span> <span class="ident">sequence_number</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">get</span>(<span class="number">2</span>).<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>().<span class="ident">ok</span>());
             <span class="kw">let</span> <span class="ident">role</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">get</span>(<span class="number">3</span>).<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">Role</span><span class="op">&gt;</span>().<span class="ident">ok</span>());
             <span class="comment">// These two are mutually exclusive, so we can double-use the third position</span>
-            <span class="kw">let</span> <span class="ident">is_empty_account_type</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">get</span>(<span class="number">3</span>).<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>().<span class="ident">ok</span>());
+            <span class="kw">let</span> <span class="ident">account_type_specifier</span> <span class="op">=</span> <span class="ident">v</span>
+                .<span class="ident">get</span>(<span class="number">3</span>)
+                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">AccountTypeSpecifier</span><span class="op">&gt;</span>().<span class="ident">ok</span>());
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">Entry</span>::<span class="ident">AccountDefinition</span>(<span class="ident">AccountDefinition</span> {
                 <span class="ident">name</span>: <span class="ident">v</span>[<span class="number">0</span>].<span class="ident">to_string</span>(),
                 <span class="ident">balance</span>,
                 <span class="ident">sequence_number</span>,
                 <span class="ident">role</span>,
-                <span class="ident">is_empty_account_type</span>,
+                <span class="ident">account_type_specifier</span>,
             }));
         }
         <span class="prelude-val">Err</span>(<span class="ident">ErrorKind</span>::<span class="ident">Other</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;failed to parse &#39;{}&#39; as global config entry&quot;</span>, <span class="ident">s</span>)).<span class="ident">into</span>())
@@ -449,7 +453,7 @@
                             <span class="ident">balance</span>.<span class="ident">amount</span>,
                             <span class="ident">balance</span>.<span class="ident">currency_code</span>,
                             <span class="ident">def</span>.<span class="ident">sequence_number</span>.<span class="ident">unwrap_or</span>(<span class="number">0</span>),
-                            <span class="ident">def</span>.<span class="ident">is_empty_account_type</span>.<span class="ident">unwrap_or</span>(<span class="bool-val">false</span>),
+                            <span class="ident">def</span>.<span class="ident">account_type_specifier</span>.<span class="ident">unwrap_or_default</span>(),
                         )
                     } <span class="kw">else</span> {
                         <span class="kw">let</span> (<span class="ident">privkey</span>, <span class="ident">pubkey</span>) <span class="op">=</span> <span class="ident">keygen</span>.<span class="ident">generate_keypair</span>();
@@ -459,7 +463,7 @@
                             <span class="ident">balance</span>.<span class="ident">amount</span>,
                             <span class="ident">balance</span>.<span class="ident">currency_code</span>,
                             <span class="ident">def</span>.<span class="ident">sequence_number</span>.<span class="ident">unwrap_or</span>(<span class="number">0</span>),
-                            <span class="ident">def</span>.<span class="ident">is_empty_account_type</span>.<span class="ident">unwrap_or</span>(<span class="bool-val">false</span>),
+                            <span class="ident">def</span>.<span class="ident">account_type_specifier</span>.<span class="ident">unwrap_or_default</span>(),
                         )
                     };
                     <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">def</span>.<span class="ident">name</span>.<span class="ident">to_ascii_lowercase</span>();
@@ -489,7 +493,7 @@
                 <span class="ident">DEFAULT_BALANCE</span>.<span class="ident">currency_code</span>.<span class="ident">clone</span>(),
                 <span class="comment">/* sequence_number */</span>
                 <span class="number">0</span>,
-                <span class="comment">/* is_empty_account_type */</span> <span class="bool-val">false</span>,
+                <span class="comment">/* is_empty_account_type */</span> <span class="ident">AccountTypeSpecifier</span>::<span class="ident">default</span>(),
             ));
         }
         <span class="prelude-val">Ok</span>(<span class="ident">Config</span> {

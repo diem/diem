@@ -361,7 +361,7 @@
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">rngs</span>::<span class="ident">StdRng</span>, <span class="ident">SeedableRng</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">BTreeMap</span>, <span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">path</span>::<span class="ident">PathBuf</span>, <span class="ident">sync</span>::<span class="ident">mpsc</span>};
 <span class="kw">use</span> <span class="ident">storage_interface</span>::<span class="ident">DbReader</span>;
-<span class="kw">use</span> <span class="ident">transaction_builder</span>::{<span class="ident">encode_create_account_script</span>, <span class="ident">encode_transfer_with_metadata_script</span>};
+<span class="kw">use</span> <span class="ident">transaction_builder</span>::{<span class="ident">encode_mint_script</span>, <span class="ident">encode_transfer_with_metadata_script</span>};
 
 <span class="kw">struct</span> <span class="ident">AccountData</span> {
     <span class="ident">private_key</span>: <span class="ident">Ed25519PrivateKey</span>,
@@ -442,7 +442,7 @@
                     (<span class="ident">i</span> <span class="op">*</span> <span class="ident">block_size</span> <span class="op">+</span> <span class="ident">j</span> <span class="op">+</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">u64</span>,
                     <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">genesis_key</span>,
                     <span class="self">self</span>.<span class="ident">genesis_key</span>.<span class="ident">public_key</span>(),
-                    <span class="ident">encode_create_account_script</span>(
+                    <span class="ident">encode_mint_script</span>(
                         <span class="ident">lbr_type_tag</span>(),
                         <span class="kw-2">&amp;</span><span class="ident">account</span>.<span class="ident">address</span>,
                         <span class="ident">account</span>.<span class="ident">auth_key_prefix</span>(),
@@ -653,7 +653,7 @@
         <span class="ident">sequence_number</span>,
         <span class="ident">program</span>,
         <span class="number">1_000_000</span>, <span class="comment">/* max_gas_amount */</span>
-        <span class="number">1</span>,         <span class="comment">/* gas_unit_price */</span>
+        <span class="number">0</span>,         <span class="comment">/* gas_unit_price */</span>
         <span class="ident">expiration_time</span>,
     );
 

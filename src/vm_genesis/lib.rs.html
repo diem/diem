@@ -430,12 +430,6 @@
 <span id="430">430</span>
 <span id="431">431</span>
 <span id="432">432</span>
-<span id="433">433</span>
-<span id="434">434</span>
-<span id="435">435</span>
-<span id="436">436</span>
-<span id="437">437</span>
-<span id="438">438</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -475,9 +469,6 @@
 <span class="kw">const</span> <span class="ident">GENESIS_SEED</span>: [<span class="ident">u8</span>; <span class="number">32</span>] <span class="op">=</span> [<span class="number">42</span>; <span class="number">32</span>];
 
 <span class="kw">const</span> <span class="ident">GENESIS_MODULE_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;Genesis&quot;</span>;
-
-<span class="doccomment">/// The initial balance of the association account.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">ASSOCIATION_INIT_BALANCE</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1_000_000_000_000_000</span>;
 
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">GENESIS_KEYPAIR</span>: <span class="ident">Lazy</span><span class="op">&lt;</span>(<span class="ident">Ed25519PrivateKey</span>, <span class="ident">Ed25519PublicKey</span>)<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">StdRng</span>::<span class="ident">from_seed</span>(<span class="ident">GENESIS_SEED</span>);
@@ -606,7 +597,6 @@
         <span class="macro">vec</span><span class="macro">!</span>[
             <span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">root_association_address</span>),
             <span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">burn_account_address</span>),
-            <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">ASSOCIATION_INIT_BALANCE</span>),
             <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">genesis_auth_key</span>.<span class="ident">clone</span>()),
         ],
     );
@@ -683,7 +673,6 @@
 <span class="doccomment">/// Create and initialize the validator set.</span>
 <span class="kw">fn</span> <span class="ident">create_and_initialize_validator_set</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">GenesisContext</span>, <span class="ident">_lbr_ty</span>: <span class="kw-2">&amp;</span><span class="ident">TypeTag</span>) {
     <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">config_address</span>());
-
     <span class="ident">context</span>.<span class="ident">exec</span>(<span class="string">&quot;LibraSystem&quot;</span>, <span class="string">&quot;initialize_validator_set&quot;</span>, <span class="macro">vec</span><span class="macro">!</span>[], <span class="macro">vec</span><span class="macro">!</span>[]);
 }
 
@@ -694,7 +683,7 @@
 
     <span class="ident">context</span>.<span class="ident">exec</span>(
         <span class="string">&quot;LibraAccount&quot;</span>,
-        <span class="string">&quot;create_unhosted_account&quot;</span>,
+        <span class="string">&quot;create_account&quot;</span>,
         <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">lbr_ty</span>.<span class="ident">clone</span>()],
         <span class="macro">vec</span><span class="macro">!</span>[
             <span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">discovery_set_address</span>),
@@ -720,7 +709,7 @@
 
         <span class="ident">context</span>.<span class="ident">exec</span>(
             <span class="string">&quot;LibraAccount&quot;</span>,
-            <span class="string">&quot;create_unhosted_account&quot;</span>,
+            <span class="string">&quot;create_testnet_account&quot;</span>,
             <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">lbr_ty</span>.<span class="ident">clone</span>()],
             <span class="macro">vec</span><span class="macro">!</span>[
                 <span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">account</span>),
@@ -793,19 +782,18 @@
 <span class="doccomment">/// Verify the consistency of the genesis `WriteSet`</span>
 <span class="kw">fn</span> <span class="ident">verify_genesis_write_set</span>(<span class="ident">events</span>: <span class="kw-2">&amp;</span>[<span class="ident">ContractEvent</span>]) {
     <span class="comment">// Sanity checks on emitted events:</span>
-    <span class="comment">// (1) The genesis tx should emit 4 events: a pair of payment sent/received events for</span>
-    <span class="comment">// minting to the genesis address, a ValidatorSetChangeEvent, and a</span>
+    <span class="comment">// (1) The genesis tx should emit 2 events: a ValidatorSetChangeEvent, and a</span>
     <span class="comment">// DiscoverySetChangeEvent.</span>
     <span class="macro">assert_eq</span><span class="macro">!</span>(
         <span class="ident">events</span>.<span class="ident">len</span>(),
-        <span class="number">4</span>,
-        <span class="string">&quot;Genesis transaction should emit four events, but found {} events: {:?}&quot;</span>,
+        <span class="number">2</span>,
+        <span class="string">&quot;Genesis transaction should emit two events, but found {} events: {:?}&quot;</span>,
         <span class="ident">events</span>.<span class="ident">len</span>(),
         <span class="ident">events</span>,
     );
 
-    <span class="comment">// (2) The third event should be the new epoch event</span>
-    <span class="kw">let</span> <span class="ident">new_epoch_event</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">events</span>[<span class="number">2</span>];
+    <span class="comment">// (2) The first event should be the new epoch event</span>
+    <span class="kw">let</span> <span class="ident">new_epoch_event</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">events</span>[<span class="number">0</span>];
     <span class="macro">assert_eq</span><span class="macro">!</span>(
         <span class="kw-2">*</span><span class="ident">new_epoch_event</span>.<span class="ident">key</span>(),
         <span class="ident">new_epoch_event_key</span>(),

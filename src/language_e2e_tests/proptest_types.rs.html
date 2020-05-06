@@ -53,7 +53,7 @@
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">account</span>::{<span class="ident">lbr_currency_code</span>, <span class="ident">Account</span>, <span class="ident">AccountData</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">account</span>::{<span class="ident">lbr_currency_code</span>, <span class="ident">Account</span>, <span class="ident">AccountData</span>, <span class="ident">AccountTypeSpecifier</span>};
 <span class="kw">use</span> <span class="ident">proptest</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 
 <span class="kw">impl</span> <span class="ident">Arbitrary</span> <span class="kw">for</span> <span class="ident">Account</span> {
@@ -94,7 +94,7 @@
                         <span class="ident">received_events_count</span>,
                         <span class="bool-val">false</span>, <span class="comment">// TODO: vary withdrawal capability param?</span>
                         <span class="bool-val">false</span>, <span class="comment">// TODO: vary rotation capability param?</span>
-                        <span class="bool-val">false</span>, <span class="comment">// TODO: Vary account type?</span>
+                        <span class="ident">AccountTypeSpecifier</span>::<span class="ident">default</span>(), <span class="comment">// TODO: Vary account type?</span>
                         <span class="bool-val">false</span>,
                     )
                 },
