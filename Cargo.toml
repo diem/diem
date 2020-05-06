@@ -3,10 +3,8 @@
 members = [
     "admission-control/admission-control-proto",
     "admission-control/admission-control-service",
-    "client/cli",
     "client/json-rpc",
     "client/libra-dev",
-    "client/libra-wallet",
     "common/bitvec",
     "common/bounded-executor",
     "common/channel",
@@ -116,6 +114,8 @@ members = [
     "storage/storage-proto",
     "storage/storage-service",
     "testsuite",
+    "testsuite/cli",
+    "testsuite/cli/libra-wallet",
     "testsuite/cluster-test",
     "testsuite/generate-format",
     "testsuite/libra-fuzzer",
@@ -129,7 +129,7 @@ members = [
 # features or test features. These are the crates we want built with no extra
 # test-only code included.
 default-members = [
-    "client/cli",
+    "testsuite/cli",
     "language/compiler",
     "language/tools/vm-genesis",
     "libra-node",

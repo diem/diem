@@ -30,8 +30,8 @@ generate-key = { path = "../../config/generate-key", version = "0.1.0" }
 crash-handler = { path = "../../common/crash-handler", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
-libra-wallet = { path = "../libra-wallet", version = "0.1.0" }
-libra-json-rpc-client = { path = "../json-rpc", version = "0.1.0" }
+libra-wallet = { path = "libra-wallet", version = "0.1.0" }
+libra-json-rpc-client = { path = "../../client/json-rpc", version = "0.1.0" }
 libra-logger =  { path = "../../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
 libra-network-address = { path = "../../network/network-address", version = "0.1.0" }

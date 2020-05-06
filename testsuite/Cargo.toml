@@ -20,7 +20,7 @@ debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
 # In order to limit the potential waiting time for binaries to be built while
 # running tests all binaries which are being tested under this testsuite
 # should have their crates listed as dev-dependencies.
-cli = { path = "../client/cli", version = "0.1.0", features = ["fuzzing"] }
+cli = { path = "cli", version = "0.1.0", features = ["fuzzing"] }
 generate-key = { path = "../config/generate-key", version = "0.1.0" }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-swarm = { path = "libra-swarm", version = "0.1.0" }
