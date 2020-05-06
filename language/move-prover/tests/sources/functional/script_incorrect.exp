@@ -6,7 +6,10 @@ error:  A postcondition might not hold on this return path.
  10 │     aborts_if false;
     │     ^^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/functional/script_incorrect.move:5:1: main (entry)
     =     at tests/sources/functional/script_provider.move:9:5: register (entry)
     =     at tests/sources/functional/script_provider.move:10:9: register
     =     at tests/sources/functional/script_provider.move:12:5: register
     =     at tests/sources/functional/script_provider.move:9:5: register (exit)
+    =     at tests/sources/functional/script_incorrect.move:6:21: main
+    =     at tests/sources/functional/script_incorrect.move:5:1: main (exit)
