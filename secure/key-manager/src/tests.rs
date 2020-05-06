@@ -9,7 +9,6 @@ use futures::{channel::mpsc::channel, StreamExt};
 use libra_config::{config::NodeConfig, utils, utils::get_genesis_txn};
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_global_constants::OPERATOR_KEY;
-use libra_secure_json_rpc::JsonRpcClient;
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Policy, Value};
 use libra_secure_time::{MockTimeService, TimeService};
 use libra_types::{
@@ -286,8 +285,7 @@ impl LibraInterface for MockLibraInterface {
 // This setup is useful for testing nodes as they operate in a production environment.
 fn setup_node_using_json_rpc(config: &NodeConfig) -> (Node<JsonRpcLibraInterface>, Runtime) {
     let (_storage, db_rw) = setup_libra_db(config);
-    let (client, server) = setup_json_client_and_server(db_rw.clone());
-    let libra = JsonRpcLibraInterface::new(client);
+    let (libra, server) = setup_libra_interface_and_json_server(db_rw.clone());
     let executor = Executor::new(db_rw);
 
     (setup_node(config, executor, libra), server)
@@ -373,10 +371,13 @@ fn setup_secure_storage(
     sec_storage
 }
 
-// Generates and returns a (client, server) pair, where the client is a lightweight JSON client
-// and the server is a JSON server that serves the JSON RPC requests. The server communicates
-// with the given database reader/writer to handle each JSON RPC request.
-fn setup_json_client_and_server(db_rw: DbReaderWriter) -> (JsonRpcClient, Runtime) {
+// Generates and returns a (libra interface, server) pair, where the libra interface is a JSON RPC
+// based interface using the lightweight JSON client internally, and the server is a JSON server
+// that serves the JSON RPC requests. The server communicates with the given database reader/writer
+// to handle each JSON RPC request.
+fn setup_libra_interface_and_json_server(
+    db_rw: DbReaderWriter,
+) -> (JsonRpcLibraInterface, Runtime) {
     let address = "0.0.0.0";
     let port = utils::get_available_port();
     let host = format!("{}:{}", address, port);
@@ -397,10 +398,10 @@ fn setup_json_client_and_server(db_rw: DbReaderWriter) -> (JsonRpcClient, Runtim
         }
     });
 
-    let url = format!("http://{}", host);
-    let client = JsonRpcClient::new(url);
+    let json_rpc_endpoint = format!("http://{}", host);
+    let libra = JsonRpcLibraInterface::new(json_rpc_endpoint);
 
-    (client, server)
+    (libra, server)
 }
 
 #[test]
