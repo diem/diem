@@ -679,7 +679,7 @@ impl AccountData {
             0,
             lbr_currency_code(),
             0,
-            AccountTypeSpecifier::Vasp,
+            AccountTypeSpecifier::Empty,
         )
     }
 

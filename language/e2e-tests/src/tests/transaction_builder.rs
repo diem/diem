@@ -14,7 +14,7 @@ use crate::{
     executor::FakeExecutor,
     keygen::KeyGen,
 };
-use libra_crypto::{hash::HashValue, traits::SigningKey};
+use libra_crypto::{ed25519::Ed25519PrivateKey, traits::SigningKey};
 use libra_types::account_config;
 use transaction_builder::*;
 
@@ -66,40 +66,62 @@ fn register_preburn_burn() {
 }
 
 #[test]
-fn approved_payment() {
+fn dual_attestation_payment() {
     let mut executor = FakeExecutor::from_genesis_file();
-    // account that will receive the approved payment
+    let association = Account::new_association();
+    // account that will receive the dual attestation payment
     let payment_receiver = {
-        let data = AccountData::new(1_000_000, 0);
+        let data = AccountData::new_empty();
         executor.add_account_data(&data);
         data.into_account()
     };
-    // account that will send the approved payment
+    // account that will send the dual attestation payment
     let payment_sender = {
         let data = AccountData::new(1_000_000, 0);
         executor.add_account_data(&data);
         data.into_account()
     };
 
-    // Register the receiver account
     let mut keygen = KeyGen::from_seed([9u8; 32]);
     let (private_key, public_key) = keygen.generate_keypair();
+    // apply for the recipient to be a vasp
     executor.execute_and_apply(payment_receiver.signed_script_txn(
-        encode_register_approved_payment_script(public_key.to_bytes().to_vec()),
+        encode_apply_for_root_vasp(vec![], vec![], vec![], public_key.to_bytes().to_vec()),
         0,
     ));
 
+    // approve the request from association account
+    executor.execute_and_apply(
+        association.signed_script_txn(encode_grant_vasp_account(*payment_receiver.address()), 1),
+    );
+
     // Do the offline protocol: generate a payment id, sign with the receiver's private key, include
     // in transaction from sender's account
-    let payment_id = 9999;
-    let message = HashValue::from_sha3_256(&lcs::to_bytes(&payment_id).expect("couldn't hash"));
-    let signature = private_key.sign_message(&message);
+    let ref_id = lcs::to_bytes(&7777).unwrap();
+    // choose an amount above the dual attestation threshold
+    let payment_amount = 1_000_000u64;
+    // UTF8-encoded string "@$LIBRA_ATTEST$@"
+    let mut domain_separator = vec![
+        0x22, 0x40, 0x24, 0x4c, 0x49, 0x42, 0x52, 0x41, 0x5f, 0x41, 0x54, 0x54, 0x45, 0x53, 0x54,
+        0x40, 0x22,
+    ];
+    let message = {
+        let mut msg = ref_id.clone();
+        msg.append(&mut lcs::to_bytes(&payment_sender.address()).unwrap());
+        msg.append(&mut lcs::to_bytes(&payment_amount).unwrap());
+        msg.append(&mut domain_separator);
+        msg
+    };
+    //    let signature = private_key.sign_arbitrary_message(&message);
+    let signature =
+        <Ed25519PrivateKey as SigningKey>::sign_arbitrary_message(&private_key, &message);
     executor.execute_and_apply(payment_sender.signed_script_txn(
-        encode_approved_payment_script(
+        encode_transfer_with_metadata_script(
             account_config::lbr_type_tag(),
-            *payment_receiver.address(),
-            100,
-            message.to_vec(),
+            payment_receiver.address(),
+            vec![],
+            payment_amount,
+            ref_id,
             signature.to_bytes().to_vec(),
         ),
         0,

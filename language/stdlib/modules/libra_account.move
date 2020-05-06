@@ -156,12 +156,19 @@ module LibraAccount {
         ) {
             // sanity check of signature validity
             Transaction::assert(Vector::length(&metadata_signature) == 64, 9001);
+            // message should be metadata | sender_address | amount | domain_separator
+            // separator is the UTF8-encoded string @$LIBRA_ATTEST$@
+            let domain_separator = x"2240244c494252415f4154544553544022";
+            let message = copy metadata;
+            Vector::append(&mut message, LCS::to_bytes(&sender));
+            Vector::append(&mut message, LCS::to_bytes(&deposit_value));
+            Vector::append(&mut message, domain_separator);
             // cryptographic check of signature validity
             Transaction::assert(
                 Signature::ed25519_verify(
                     metadata_signature,
-                    VASP::travel_rule_public_key(payee),
-                    copy metadata
+                    VASP::compliance_public_key(payee),
+                    message
                 ),
                 9002, // TODO: proper error code
             );

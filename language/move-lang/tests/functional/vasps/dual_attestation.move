@@ -1,5 +1,5 @@
-// Register a sender and recipient VASP, check that applicable payments go through the travel rule
-// amount and signature checks
+// Register a sender and recipient VASP, check that applicable payments go through dual attestation
+// checks
 
 //! account: payer, 10000000, 0, empty
 //! account: child, 10000000, 0, empty
@@ -24,7 +24,7 @@ fun main() {
 script {
 use 0x0::VASP;
 fun main() {
-    let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
+    let pubkey = x"e14c7ddb7713c9c7315f337393f4261d1713a5f8c6c6e14c4986e616460251e6";
     VASP::apply_for_vasp_root_credential(x"DDD", x"EEE", x"FFF", pubkey);
 }
 }
@@ -54,12 +54,13 @@ fun main() {
 //! sender: payer
 script {
 use 0x0::LBR;
+use 0x0::LCS;
 use 0x0::LibraAccount;
 fun main() {
-    let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
-    let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
+    let ref_id = LCS::to_bytes(&7777);
+    let signature = x"8d83d481068a7b73a914e7d53f84cbfb8d55cdbd2306e17dae14fa0e6fa8ab0cea9f4c1bab22b701e57aa2e0e3f15bb6b40d62a32b7e158a384b6529f6463a09";
 
-    LibraAccount::pay_from_sender_with_metadata<LBR::T>({{payee}}, 1000, payment_id, signature);
+    LibraAccount::pay_from_sender_with_metadata<LBR::T>({{payee}}, 1000000, ref_id, signature);
 }
 }
 // check: EXECUTED
@@ -69,12 +70,13 @@ fun main() {
 //! sender: payer
 script {
 use 0x0::LBR;
+use 0x0::LCS;
 use 0x0::LibraAccount;
 fun main() {
-    let payment_id = x"1000000000000000000000000000000000000000000000000000000000000001";
-    let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
+    let ref_id = LCS::to_bytes(&9999);
+    let signature = x"8d83d481068a7b73a914e7d53f84cbfb8d55cdbd2306e17dae14fa0e6fa8ab0cea9f4c1bab22b701e57aa2e0e3f15bb6b40d62a32b7e158a384b6529f6463a09";
 
-    LibraAccount::pay_from_sender_with_metadata<LBR::T>({{payee}}, 1000, payment_id, signature);
+    LibraAccount::pay_from_sender_with_metadata<LBR::T>({{payee}}, 1000, ref_id, signature);
 }
 }
 // check: ABORTED
@@ -88,7 +90,7 @@ use 0x0::LBR;
 use 0x0::LibraAccount;
 fun main() {
     let payment_id = x"";
-    let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
+    let signature = x"8d83d481068a7b73a914e7d53f84cbfb8d55cdbd2306e17dae14fa0e6fa8ab0cea9f4c1bab22b701e57aa2e0e3f15bb6b40d62a32b7e158a384b6529f6463a09";
 
     LibraAccount::pay_from_sender_with_metadata<LBR::T>({{payee}}, 1000, payment_id, signature);
 }
@@ -96,7 +98,7 @@ fun main() {
 // check: ABORTED
 // check: 9002
 
-// transaction < 1000 threshold not subject to travel rule, goes through with any signature
+// transaction < 1000 threshold not subject to dual attestation, goes through with any signature
 //! new-transaction
 //! sender: payer
 script {
@@ -111,7 +113,7 @@ fun main() {
 }
 // check: EXECUTED
 
-// Test that intra-VASP transactions are not subject to the travel rule.
+// Test that intra-VASP transactions are not subject to dual attestation
 // First, we must do some setup by creating a child VASP for payer
 
 // payer allows child accounts
@@ -147,7 +149,7 @@ fun main() {
 }
 // check: EXECUTED
 
-// intra-VASP transaction >= 1000 threshold, should go throug with any signature
+// intra-VASP transaction >= 1000 threshold, should go through with any signature
 //! new-transaction
 //! sender: payer
 script {
@@ -178,7 +180,7 @@ fun main() {
 // check: EXECUTED
 
 
-// check that unhosted wallet <-> VASP transactions are not subject to the travel rule
+// check that unhosted wallet <-> VASP transactions do not require dual attestation
 
 // VASP -> wallet direction
 //! new-transaction
@@ -210,7 +212,7 @@ fun main() {
 }
 // check: EXECUTED
 
-// finally, check that unhosted <-> unhosted transactions are not subject to the travel rule
+// finally, check that unhosted <-> unhosted transactions do not require dual attestation
 
 // wallet -> VASP direction
 //! new-transaction
@@ -223,6 +225,22 @@ fun main() {
     let signature = x"";
 
     LibraAccount::pay_from_sender_with_metadata<LBR::T>({{bob}}, 1001, payment_id, signature);
+}
+}
+// check: EXECUTED
+
+// Association can rotate the compliance public key for an account
+//! new-transaction
+//! sender: association
+script {
+use 0x0::Transaction;
+use 0x0::VASP;
+fun main() {
+    let old_pubkey = VASP::compliance_public_key({{payer}});
+    let new_pubkey = x"1111110d7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
+    Transaction::assert(&old_pubkey != &new_pubkey, 777);
+    VASP::rotate_compliance_public_key({{payer}}, copy new_pubkey);
+    Transaction::assert(VASP::compliance_public_key({{payer}}) == new_pubkey, 777);
 }
 }
 // check: EXECUTED
