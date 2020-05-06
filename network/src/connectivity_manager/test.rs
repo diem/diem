@@ -4,7 +4,7 @@
 use super::*;
 use crate::{
     peer::DisconnectReason,
-    peer_manager::{conn_status_channel, ConnectionRequest},
+    peer_manager::{conn_notifs_channel, ConnectionRequest},
 };
 use channel::{libra_channel, message_queues::QueueStyle};
 use core::str::FromStr;
@@ -25,14 +25,14 @@ fn setup_conn_mgr(
     seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
 ) -> (
     libra_channel::Receiver<PeerId, ConnectionRequest>,
-    conn_status_channel::Sender,
+    conn_notifs_channel::Sender,
     channel::Sender<ConnectivityRequest>,
     channel::Sender<()>,
 ) {
     let self_peer_id = PeerId::random();
     let (connection_reqs_tx, connection_reqs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
-    let (connection_notifs_tx, connection_notifs_rx) = conn_status_channel::new();
+    let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
     let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(0);
     let (ticker_tx, ticker_rx) = channel::new_test(0);
     let mut rng = StdRng::from_seed(TEST_SEED);
@@ -96,9 +96,9 @@ async fn get_dial_queue_size(conn_mgr_reqs_tx: &mut channel::Sender<Connectivity
 }
 
 async fn send_notification_await_delivery(
-    connection_notifs_tx: &mut conn_status_channel::Sender,
+    connection_notifs_tx: &mut conn_notifs_channel::Sender,
     peer_id: PeerId,
-    notif: peer_manager::ConnectionStatusNotification,
+    notif: peer_manager::ConnectionNotification,
 ) {
     let (delivered_tx, delivered_rx) = oneshot::channel();
     connection_notifs_tx
@@ -109,7 +109,7 @@ async fn send_notification_await_delivery(
 
 async fn expect_disconnect_request(
     connection_reqs_rx: &mut libra_channel::Receiver<PeerId, ConnectionRequest>,
-    connection_notifs_tx: &mut conn_status_channel::Sender,
+    connection_notifs_tx: &mut conn_notifs_channel::Sender,
     peer_id: PeerId,
     address: NetworkAddress,
     result: Result<(), PeerManagerError>,
@@ -128,7 +128,7 @@ async fn expect_disconnect_request(
         send_notification_await_delivery(
             connection_notifs_tx,
             peer_id,
-            peer_manager::ConnectionStatusNotification::LostPeer(
+            peer_manager::ConnectionNotification::LostPeer(
                 peer_id,
                 address,
                 DisconnectReason::Requested,
@@ -140,7 +140,7 @@ async fn expect_disconnect_request(
 
 async fn expect_dial_request(
     connection_reqs_rx: &mut libra_channel::Receiver<PeerId, ConnectionRequest>,
-    connection_notifs_tx: &mut conn_status_channel::Sender,
+    connection_notifs_tx: &mut conn_notifs_channel::Sender,
     conn_mgr_reqs_tx: &mut channel::Sender<ConnectivityRequest>,
     peer_id: PeerId,
     address: NetworkAddress,
@@ -165,7 +165,7 @@ async fn expect_dial_request(
         send_notification_await_delivery(
             connection_notifs_tx,
             peer_id,
-            peer_manager::ConnectionStatusNotification::NewPeer(peer_id, address),
+            peer_manager::ConnectionNotification::NewPeer(peer_id, address),
         )
         .await;
     }
@@ -248,7 +248,7 @@ fn connect_to_seeds_on_startup() {
         send_notification_await_delivery(
             &mut connection_notifs_tx,
             seed_peer_id,
-            peer_manager::ConnectionStatusNotification::LostPeer(
+            peer_manager::ConnectionNotification::LostPeer(
                 seed_peer_id,
                 seed_addr.clone(),
                 DisconnectReason::ConnectionLost,
@@ -373,7 +373,7 @@ fn addr_change() {
         send_notification_await_delivery(
             &mut connection_notifs_tx,
             other_peer_id,
-            peer_manager::ConnectionStatusNotification::LostPeer(
+            peer_manager::ConnectionNotification::LostPeer(
                 other_peer_id,
                 other_address,
                 DisconnectReason::ConnectionLost,
@@ -447,7 +447,7 @@ fn lost_connection() {
         send_notification_await_delivery(
             &mut connection_notifs_tx,
             other_peer_id,
-            peer_manager::ConnectionStatusNotification::LostPeer(
+            peer_manager::ConnectionNotification::LostPeer(
                 other_peer_id,
                 other_address.clone(),
                 DisconnectReason::ConnectionLost,
@@ -692,10 +692,7 @@ fn no_op_requests() {
         send_notification_await_delivery(
             &mut connection_notifs_tx,
             other_peer_id,
-            peer_manager::ConnectionStatusNotification::NewPeer(
-                other_peer_id,
-                other_address.clone(),
-            ),
+            peer_manager::ConnectionNotification::NewPeer(other_peer_id, other_address.clone()),
         )
         .await;
 
@@ -729,7 +726,7 @@ fn no_op_requests() {
         send_notification_await_delivery(
             &mut connection_notifs_tx,
             other_peer_id,
-            peer_manager::ConnectionStatusNotification::LostPeer(
+            peer_manager::ConnectionNotification::LostPeer(
                 other_peer_id,
                 other_address.clone(),
                 DisconnectReason::ConnectionLost,
@@ -798,7 +795,7 @@ fn backoff_on_failure() {
         send_notification_await_delivery(
             &mut connection_notifs_tx,
             peer_b,
-            peer_manager::ConnectionStatusNotification::NewPeer(peer_b, peer_b_address.clone()),
+            peer_manager::ConnectionNotification::NewPeer(peer_b, peer_b_address.clone()),
         )
         .await;
 

@@ -25,7 +25,7 @@ use libra_network_address::NetworkAddress;
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     peer_manager::{
-        conn_status_channel, ConnectionRequestSender, ConnectionStatusNotification,
+        conn_notifs_channel, ConnectionNotification, ConnectionRequestSender,
         PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
     },
     DisconnectReason, ProtocolId,
@@ -47,7 +47,7 @@ struct SharedMempoolNetwork {
         HashMap<PeerId, libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>>,
     network_notifs_txs:
         HashMap<PeerId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
-    network_conn_event_notifs_txs: HashMap<PeerId, conn_status_channel::Sender>,
+    network_conn_event_notifs_txs: HashMap<PeerId, conn_notifs_channel::Sender>,
     runtimes: HashMap<PeerId, Runtime>,
     subscribers: HashMap<PeerId, UnboundedReceiver<SharedMempoolNotification>>,
     peer_ids: HashMap<PeerId, PeerId>,
@@ -63,7 +63,7 @@ fn init_single_shared_mempool(smp: &mut SharedMempoolNetwork, peer_id: PeerId, c
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let (network_notifs_tx, network_notifs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-    let (conn_status_tx, conn_status_rx) = conn_status_channel::new();
+    let (conn_status_tx, conn_status_rx) = conn_notifs_channel::new();
     let network_sender = MempoolNetworkSender::new(
         PeerManagerRequestSender::new(network_reqs_tx),
         ConnectionRequestSender::new(connection_reqs_tx),
@@ -122,7 +122,7 @@ fn init_smp_multiple_networks(
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (network_notifs_tx, network_notifs_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-        let (conn_status_tx, conn_status_rx) = conn_status_channel::new();
+        let (conn_status_tx, conn_status_rx) = conn_notifs_channel::new();
         let network_sender = MempoolNetworkSender::new(
             PeerManagerRequestSender::new(network_reqs_tx),
             ConnectionRequestSender::new(connection_reqs_tx),
@@ -245,7 +245,7 @@ impl SharedMempoolNetwork {
         }
     }
 
-    fn send_connection_event(&mut self, peer: &PeerId, notif: ConnectionStatusNotification) {
+    fn send_connection_event(&mut self, peer: &PeerId, notif: ConnectionNotification) {
         let conn_notifs_tx = self.network_conn_event_notifs_txs.get_mut(peer).unwrap();
         conn_notifs_tx.push(*peer, notif).unwrap();
         self.wait_for_event(peer, SharedMempoolNotification::PeerStateChange);
@@ -375,7 +375,7 @@ fn test_basic_flow() {
     // A discovers new peer B
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_b, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock()),
     );
 
     for seq in 0..3 {
@@ -407,7 +407,7 @@ fn test_metric_cache_ignore_shared_txns() {
     // Let peer_a discover new peer_b.
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_b, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock()),
     );
     for txn in txns.iter().take(3) {
         // Let peer_a share txns with peer_b
@@ -431,7 +431,7 @@ fn test_interruption_in_sync() {
     // A discovers first peer
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_b, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock()),
     );
     // make sure first txn delivered to first peer
     assert_eq!(*peer_b, smp.deliver_message(&peer_a, 1).1);
@@ -439,7 +439,7 @@ fn test_interruption_in_sync() {
     // A discovers second peer
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_c, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_c, NetworkAddress::mock()),
     );
     // make sure first txn delivered to second peer
     assert_eq!(*peer_c, smp.deliver_message(&peer_a, 1).1);
@@ -447,7 +447,7 @@ fn test_interruption_in_sync() {
     // A loses connection to B
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::LostPeer(
+        ConnectionNotification::LostPeer(
             *peer_b,
             NetworkAddress::mock(),
             DisconnectReason::ConnectionLost,
@@ -468,7 +468,7 @@ fn test_interruption_in_sync() {
     // A reconnects to B
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_b, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock()),
     );
 
     // B should receive transaction 2
@@ -488,7 +488,7 @@ fn test_ready_transactions() {
     // first message delivery
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_b, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock()),
     );
     smp.deliver_message(&peer_a, 1);
 
@@ -510,11 +510,11 @@ fn test_broadcast_self_transactions() {
     // A and B discover each other
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_b, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock()),
     );
     smp.send_connection_event(
         &peer_b,
-        ConnectionStatusNotification::NewPeer(*peer_a, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_a, NetworkAddress::mock()),
     );
 
     // A sends txn to B
@@ -546,11 +546,11 @@ fn test_broadcast_dependencies() {
     // A and B discover each other
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_b, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock()),
     );
     smp.send_connection_event(
         &peer_b,
-        ConnectionStatusNotification::NewPeer(*peer_a, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_a, NetworkAddress::mock()),
     );
 
     // B receives 0
@@ -574,11 +574,11 @@ fn test_broadcast_updated_transaction() {
     // A and B discover each other
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_b, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock()),
     );
     smp.send_connection_event(
         &peer_b,
-        ConnectionStatusNotification::NewPeer(*peer_a, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_a, NetworkAddress::mock()),
     );
 
     // B receives 0
@@ -714,7 +714,7 @@ fn test_broadcast_ack_single_account_single_peer() {
     // FN discovers new peer V
     smp.send_connection_event(
         &full_node,
-        ConnectionStatusNotification::NewPeer(validator, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(validator, NetworkAddress::mock()),
     );
 
     // deliver messages until FN mempool is empty
@@ -758,7 +758,7 @@ fn test_broadcast_ack_multiple_accounts_single_peer() {
     // full node discovers new validator peer
     smp.send_connection_event(
         &full_node,
-        ConnectionStatusNotification::NewPeer(validator, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(validator, NetworkAddress::mock()),
     );
 
     // deliver message
@@ -820,11 +820,11 @@ fn test_k_policy_broadcast_no_fallback() {
     // fn_0 discovers primary and fallback upstream peers
     smp.send_connection_event(
         &fn_0,
-        ConnectionStatusNotification::NewPeer(v_0, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(v_0, NetworkAddress::mock()),
     );
     smp.send_connection_event(
         &fn_0_fallback_network_id,
-        ConnectionStatusNotification::NewPeer(fn_1, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(fn_1, NetworkAddress::mock()),
     );
 
     // add txn to fn_0
@@ -868,7 +868,7 @@ fn test_k_policy_broadcast_not_enough_fallbacks() {
     // fn_0 discovers primary peer but no fallback peers available
     smp.send_connection_event(
         &fn_0,
-        ConnectionStatusNotification::NewPeer(v_0, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(v_0, NetworkAddress::mock()),
     );
 
     // add txn to fn_0

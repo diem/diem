@@ -4,7 +4,7 @@
 use super::*;
 use crate::{
     peer_manager::{
-        self, conn_status_channel, ConnectionRequestSender, PeerManagerNotification,
+        self, conn_notifs_channel, ConnectionRequestSender, PeerManagerNotification,
         PeerManagerRequest,
     },
     protocols::direct_send::Message,
@@ -53,7 +53,7 @@ fn setup_discovery(
     libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     channel::Receiver<ConnectivityRequest>,
     libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
-    conn_status_channel::Sender,
+    conn_notifs_channel::Sender,
     channel::Sender<()>,
 ) {
     let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) =
@@ -63,7 +63,7 @@ fn setup_discovery(
     let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(1);
     let (network_notifs_tx, network_notifs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
-    let (connection_notifs_tx, connection_notifs_rx) = conn_status_channel::new();
+    let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
     let (ticker_tx, ticker_rx) = channel::new_test(0);
     let role = RoleType::Validator;
     let discovery = {
@@ -274,7 +274,7 @@ fn outbound() {
         connection_notifs_tx
             .push_with_feedback(
                 other_peer_id,
-                peer_manager::ConnectionStatusNotification::NewPeer(
+                peer_manager::ConnectionNotification::NewPeer(
                     other_peer_id,
                     other_peer_info.addrs[0].clone(),
                 ),
@@ -338,7 +338,7 @@ fn old_note_higher_epoch() {
         connection_notifs_tx
             .push_with_feedback(
                 other_peer_id,
-                peer_manager::ConnectionStatusNotification::NewPeer(
+                peer_manager::ConnectionNotification::NewPeer(
                     other_peer_id,
                     other_peer_addrs[0].clone(),
                 ),
@@ -426,7 +426,7 @@ fn old_note_max_epoch() {
         connection_notifs_tx
             .push_with_feedback(
                 other_peer_id,
-                peer_manager::ConnectionStatusNotification::NewPeer(
+                peer_manager::ConnectionNotification::NewPeer(
                     other_peer_id,
                     other_peer_addrs[0].clone(),
                 ),

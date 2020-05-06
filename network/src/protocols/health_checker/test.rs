@@ -4,7 +4,7 @@
 use super::*;
 use crate::{
     peer_manager::{
-        self, conn_status_channel, ConnectionRequest, PeerManagerNotification, PeerManagerRequest,
+        self, conn_notifs_channel, ConnectionRequest, PeerManagerNotification, PeerManagerRequest,
     },
     protocols::rpc::InboundRpcRequest,
     ProtocolId,
@@ -24,7 +24,7 @@ fn setup_permissive_health_checker(
     libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
     libra_channel::Receiver<PeerId, ConnectionRequest>,
-    conn_status_channel::Sender,
+    conn_notifs_channel::Sender,
     channel::Sender<()>,
 ) {
     let (ticker_tx, ticker_rx) = channel::new_test(0);
@@ -35,7 +35,7 @@ fn setup_permissive_health_checker(
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (network_notifs_tx, network_notifs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
-    let (connection_notifs_tx, connection_notifs_rx) = conn_status_channel::new();
+    let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
 
     let hc_network_tx = HealthCheckerNetworkSender::new(
         PeerManagerRequestSender::new(peer_mgr_reqs_tx),
@@ -66,7 +66,7 @@ fn setup_strict_health_checker(
     libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
     libra_channel::Receiver<PeerId, ConnectionRequest>,
-    conn_status_channel::Sender,
+    conn_notifs_channel::Sender,
     channel::Sender<()>,
 ) {
     setup_permissive_health_checker(rt, 0 /* ping_failures_tolerated */)
@@ -168,13 +168,13 @@ async fn expect_disconnect(
 
 async fn send_new_peer_notification(
     peer_id: PeerId,
-    connection_notifs_tx: &mut conn_status_channel::Sender,
+    connection_notifs_tx: &mut conn_notifs_channel::Sender,
 ) {
     let (delivered_tx, delivered_rx) = oneshot::channel();
     connection_notifs_tx
         .push_with_feedback(
             peer_id,
-            peer_manager::ConnectionStatusNotification::NewPeer(
+            peer_manager::ConnectionNotification::NewPeer(
                 peer_id,
                 NetworkAddress::from_str("/ip6/::1/tcp/8081").unwrap(),
             ),

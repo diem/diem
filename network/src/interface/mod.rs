@@ -14,7 +14,7 @@
 use crate::{
     counters,
     peer::{Peer, PeerHandle, PeerNotification},
-    peer_manager::ConnectionNotification,
+    peer_manager::TransportNotification,
     protocols::{
         direct_send::{DirectSend, DirectSendNotification, DirectSendRequest, Message},
         rpc::{InboundRpcRequest, OutboundRpcRequest, Rpc, RpcNotification},
@@ -65,7 +65,7 @@ where
     pub fn start(
         executor: Handle,
         connection: Connection<TSocket>,
-        connection_notifs_tx: channel::Sender<ConnectionNotification<TSocket>>,
+        connection_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
         max_concurrent_reqs: usize,
         max_concurrent_notifs: usize,
         channel_size: usize,
@@ -291,14 +291,14 @@ where
 
     async fn handle_peer_notification(
         notif: PeerNotification,
-        mut connection_notifs_tx: channel::Sender<ConnectionNotification<TSocket>>,
+        mut connection_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
     ) {
         match notif {
             PeerNotification::PeerDisconnected(conn_info, reason) => {
                 // Send notification to PeerManager. PeerManager is responsible for initiating
                 // cleanup.
                 if let Err(err) = connection_notifs_tx
-                    .send(ConnectionNotification::Disconnected(conn_info, reason))
+                    .send(TransportNotification::Disconnected(conn_info, reason))
                     .await
                 {
                     warn!("Failed to push Disconnected event to connection event handler. Probably in shutdown mode. Error: {:?}", err);

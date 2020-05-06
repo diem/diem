@@ -4,8 +4,8 @@
 use crate::{
     peer::DisconnectReason,
     peer_manager::{
-        conn_status_channel, error::PeerManagerError, ConnectionNotification, ConnectionRequest,
-        ConnectionStatusNotification, PeerManager, PeerManagerNotification, PeerManagerRequest,
+        conn_notifs_channel, error::PeerManagerError, ConnectionNotification, ConnectionRequest,
+        PeerManager, PeerManagerNotification, PeerManagerRequest, TransportNotification,
     },
     protocols::wire::{
         handshake::v1::MessagingProtocolVersion,
@@ -79,7 +79,7 @@ fn build_test_peer_manager(
     libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
     libra_channel::Sender<PeerId, ConnectionRequest>,
     libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
-    conn_status_channel::Receiver,
+    conn_notifs_channel::Receiver,
 ) {
     let (peer_manager_request_tx, peer_manager_request_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
@@ -87,7 +87,7 @@ fn build_test_peer_manager(
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (hello_tx, hello_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
-    let (conn_status_tx, conn_status_rx) = conn_status_channel::new();
+    let (conn_status_tx, conn_status_rx) = conn_notifs_channel::new();
 
     let peer_manager = PeerManager::new(
         executor,
@@ -136,9 +136,9 @@ async fn assert_peer_disconnected_event(
         MemorySocket,
     >,
 ) {
-    let connection_event = peer_manager.connection_notifs_rx.select_next_some().await;
+    let connection_event = peer_manager.transport_notifs_rx.select_next_some().await;
     match &connection_event {
-        ConnectionNotification::Disconnected(ref actual_metadata, ref actual_reason) => {
+        TransportNotification::Disconnected(ref actual_metadata, ref actual_reason) => {
             assert_eq!(actual_metadata.peer_id(), peer_id);
             assert_eq!(*actual_reason, reason);
             assert_eq!(actual_metadata.origin(), origin);
@@ -536,7 +536,7 @@ fn peer_manager_simultaneous_dial_disconnect_event() {
         // Create a PeerDisconnect event with an older connection_id.  This would happen if the
         // Disconnected event from a closed connection arrives after the new connection has been
         // added to active_peers.
-        let event = ConnectionNotification::Disconnected(
+        let event = TransportNotification::Disconnected(
             ConnectionMetadata::new(
                 ids[0],
                 ConnectionId::from(0),
@@ -578,10 +578,7 @@ fn test_dial_disconnect() {
 
         // Expect NewPeer notification from PeerManager.
         let conn_notif = conn_status_rx.next().await.unwrap();
-        assert!(matches!(
-            conn_notif,
-            ConnectionStatusNotification::NewPeer(_, _)
-        ));
+        assert!(matches!(conn_notif, ConnectionNotification::NewPeer(_, _)));
 
         // Send DisconnectPeer request to PeerManager.
         let (disconnect_resp_tx, disconnect_resp_rx) = oneshot::channel();
@@ -593,7 +590,7 @@ fn test_dial_disconnect() {
             .await;
 
         // Send disconnected event from Peer to PeerManaager
-        let event = ConnectionNotification::Disconnected(
+        let event = TransportNotification::Disconnected(
             ConnectionMetadata::new(
                 ids[0],
                 ConnectionId::from(0),
@@ -610,7 +607,7 @@ fn test_dial_disconnect() {
         let conn_notif = conn_status_rx.next().await.unwrap();
         assert!(matches!(
             conn_notif,
-            ConnectionStatusNotification::LostPeer(_, _, _)
+            ConnectionNotification::LostPeer(_, _, _)
         ));
 
         // Sender of disconnect request should receive acknowledgement once connection is closed.
