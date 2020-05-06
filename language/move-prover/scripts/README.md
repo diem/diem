@@ -4,6 +4,12 @@ There are three experimental scripts in this folder.
 3. `install-z3.sh` installs a specific version of Z3.
 
 `install-dotnet.sh` must be executed before `install-boogie.sh`.  There is no other dependency.
+`install-dotnet.sh` installs the Dotnet Core SDK and the `dotnet` tool.  The installation could fail
+on your machine because a few directories must be writable by your user account.  You should
+change the ownership of these directories to your user.
+  sudo chown -R $(whoami) /usr/local/bin /usr/local/lib /usr/local/sbin
+And make sure that your user has write permission.
+  chmod u+w /usr/local/bin /usr/local/lib /usr/local/sbin
 
 The commands `boogie` and `z3` should be in your path once these scripts have finished successfully.
 
@@ -22,6 +28,6 @@ this crate, these environment variables must be set.  To set these environment v
 execute the following at the command-line after running the installation scripts described
 above:
 ```
-export BOOGIE_EXE=~/.dotnet/tools/boogie
+export BOOGIE_EXE=/Users/$(whoami)/.dotnet/tools/boogie
 export Z3_EXE=/usr/local/bin/z3
 ```
