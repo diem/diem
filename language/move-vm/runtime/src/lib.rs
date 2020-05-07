@@ -18,5 +18,7 @@ mod loader;
 mod move_vm;
 mod native_functions;
 mod runtime;
+#[macro_use]
+mod tracing;
 
 pub use move_vm::*;

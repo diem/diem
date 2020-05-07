@@ -8,6 +8,8 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+colored = "1.9.3"
+
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 bytecode-source-map = { path = "../../compiler/bytecode-source-map", version = "0.1.0" }
 ir-to-bytecode-syntax = { path = "../../compiler/ir-to-bytecode/syntax", version = "0.1.0" }
@@ -16,9 +18,9 @@ libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 move-ir-types = { path = "../../move-ir/types", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
+move-coverage = { path = "../move-coverage", version = "0.1.0" }
 
 structopt = "0.3.14"
 
 [features]
 default = []
-fuzzing = ["libra-types/fuzzing"]

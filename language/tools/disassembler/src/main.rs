@@ -9,6 +9,7 @@ use bytecode_source_map::{
     utils::{remap_owned_loc_to_loc, source_map_from_file, OwnedLoc},
 };
 use disassembler::disassembler::{Disassembler, DisassemblerOptions};
+use move_coverage::coverage_map::CoverageMap;
 use move_ir_types::location::Spanned;
 use std::{fs, path::Path};
 use structopt::StructOpt;
@@ -45,6 +46,11 @@ struct Args {
     /// source code file.move.
     #[structopt(short = "b", long = "bytecode")]
     pub bytecode_file_path: String,
+
+    /// (Optional) Path to a trace file for the VM in order to print trace information in the
+    /// disassembled output.
+    #[structopt(short = "c", long = "move-coverage-path")]
+    pub code_coverage_path: Option<String>,
 }
 
 fn main() {
@@ -103,7 +109,11 @@ fn main() {
         source_mapping.with_source_code((source_path.to_str().unwrap().to_string(), source_code));
     }
 
-    let disassembler = Disassembler::new(source_mapping, disassembler_options);
+    let mut disassembler = Disassembler::new(source_mapping, disassembler_options);
+
+    if let Some(file_path) = &args.code_coverage_path {
+        disassembler.add_coverage_map(CoverageMap::from_trace_file(file_path));
+    }
 
     let dissassemble_string = disassembler.disassemble().expect("Unable to dissassemble");
 
