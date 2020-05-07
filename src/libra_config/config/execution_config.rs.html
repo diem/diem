@@ -117,6 +117,33 @@
 <span id="117">117</span>
 <span id="118">118</span>
 <span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -128,6 +155,7 @@
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">fs</span>::<span class="ident">File</span>,
     <span class="ident">io</span>::{<span class="ident">Read</span>, <span class="ident">Write</span>},
+    <span class="ident">net</span>::<span class="ident">SocketAddr</span>,
     <span class="ident">path</span>::<span class="ident">PathBuf</span>,
 };
 
@@ -139,6 +167,7 @@
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">skip</span>)]</span>
     <span class="kw">pub</span> <span class="ident">genesis</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Transaction</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">genesis_file_location</span>: <span class="ident">PathBuf</span>,
+    <span class="kw">pub</span> <span class="ident">service</span>: <span class="ident">ExecutionCorrectnessService</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">ExecutionConfig</span> {
@@ -153,7 +182,8 @@
             <span class="ident">f</span>,
             <span class="string">&quot;, genesis_file_location: {:?} }}&quot;</span>,
             <span class="self">self</span>.<span class="ident">genesis_file_location</span>
-        )
+        )<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">service</span>.<span class="ident">fmt</span>(<span class="ident">f</span>)
     }
 }
 
@@ -162,6 +192,7 @@
         <span class="ident">ExecutionConfig</span> {
             <span class="ident">genesis</span>: <span class="prelude-val">None</span>,
             <span class="ident">genesis_file_location</span>: <span class="ident">PathBuf</span>::<span class="ident">new</span>(),
+            <span class="ident">service</span>: <span class="ident">ExecutionCorrectnessService</span>::<span class="ident">Local</span>,
         }
     }
 }
@@ -190,6 +221,29 @@
         }
         <span class="prelude-val">Ok</span>(())
     }
+}
+
+<span class="doccomment">/// Defines how execution correctness should be run</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;type&quot;</span>, <span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;snake_case&quot;</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ExecutionCorrectnessService</span> {
+    <span class="doccomment">/// This runs execution correctness in the same thread as event processor.</span>
+    <span class="ident">Local</span>,
+    <span class="doccomment">/// This is the production, separate service approach</span>
+    <span class="ident">Process</span>(<span class="ident">RemoteExecutionService</span>),
+    <span class="doccomment">/// This runs safety rules in the same thread as event processor but data is passed through the</span>
+    <span class="doccomment">/// light weight RPC (serializer)</span>
+    <span class="ident">Serializer</span>,
+    <span class="doccomment">/// This instructs Consensus that this is an test model, where Consensus should take the</span>
+    <span class="doccomment">/// existing config, create a new process, and pass to it the config</span>
+    <span class="ident">SpawnedProcess</span>(<span class="ident">RemoteExecutionService</span>),
+    <span class="doccomment">/// This creates a separate thread to run execution correctness, it is similar to a fork / exec style</span>
+    <span class="ident">Thread</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RemoteExecutionService</span> {
+    <span class="kw">pub</span> <span class="ident">server_address</span>: <span class="ident">SocketAddr</span>,
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>

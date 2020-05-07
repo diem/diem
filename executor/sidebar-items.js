@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["db_bootstrapper",""]],"struct":[["Executor","`Executor` implements all functionalities the execution module needs to provide."]],"trait":[["BlockExecutor",""],["ChunkExecutor",""]]});
+initSidebarItems({"mod":[["db_bootstrapper",""]],"struct":[["Executor","`Executor` implements all functionalities the execution module needs to provide."]]});

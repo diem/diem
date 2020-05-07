@@ -254,7 +254,6 @@
 <span id="254">254</span>
 <span id="255">255</span>
 <span id="256">256</span>
-<span id="257">257</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -277,7 +276,7 @@
 
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">format_err</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">block</span>::<span class="ident">Block</span>;
-<span class="kw">use</span> <span class="ident">executor_types</span>::{<span class="ident">ExecutedTrees</span>, <span class="ident">ProcessedVMOutput</span>};
+<span class="kw">use</span> <span class="ident">executor_types</span>::{<span class="ident">Error</span>, <span class="ident">ExecutedTrees</span>, <span class="ident">ProcessedVMOutput</span>};
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::{<span class="ident">hash</span>::<span class="ident">PRE_GENESIS_BLOCK_ID</span>, <span class="ident">HashValue</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">ledger_info</span>::<span class="ident">LedgerInfo</span>, <span class="ident">transaction</span>::<span class="ident">Transaction</span>};
@@ -452,7 +451,7 @@
             <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Transaction</span><span class="op">&gt;</span>,  <span class="comment">/* block transactions */</span>
             <span class="ident">ProcessedVMOutput</span>, <span class="comment">/* block execution output */</span>
         ),
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="comment">// 0. Check existence first</span>
         <span class="kw">let</span> (<span class="ident">block_id</span>, <span class="ident">txns</span>, <span class="ident">output</span>) <span class="op">=</span> <span class="ident">block</span>;
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">block_map</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">block_id</span>) {
@@ -483,7 +482,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">prune</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">committed_ledger_info</span>: <span class="kw-2">&amp;</span><span class="ident">LedgerInfo</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">prune</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">committed_ledger_info</span>: <span class="kw-2">&amp;</span><span class="ident">LedgerInfo</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">arc_latest_committed_block</span> <span class="op">=</span>
             <span class="self">self</span>.<span class="ident">get_block</span>(<span class="kw-2">&amp;</span><span class="ident">committed_ledger_info</span>.<span class="ident">consensus_block_id</span>())<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">latest_committed_block</span> <span class="op">=</span> <span class="ident">arc_latest_committed_block</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
@@ -496,21 +495,20 @@
     }
 
     <span class="comment">// This function is intended to be called internally.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_id</span>: <span class="kw-2">&amp;</span><span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">SpeculationBlock</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">block_map</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_id</span>: <span class="kw-2">&amp;</span><span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">SpeculationBlock</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>
+            .<span class="ident">block_map</span>
             .<span class="ident">lock</span>()
             .<span class="ident">unwrap</span>()
             .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">block_id</span>)
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-                <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Cannot find speculation result for block id {:x}&quot;</span>, <span class="ident">block_id</span>)
-            })<span class="question-mark">?</span>
+            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">BlockNotFound</span>(<span class="kw-2">*</span><span class="ident">block_id</span>))<span class="question-mark">?</span>
             .<span class="ident">upgrade</span>()
             .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
                 <span class="macro">format_err</span><span class="macro">!</span>(
                     <span class="string">&quot;block {:x} has been deallocated. Something went wrong.&quot;</span>,
                     <span class="ident">block_id</span>
                 )
-            })
+            })<span class="question-mark">?</span>)
     }
 }
 </pre></div>

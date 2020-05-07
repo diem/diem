@@ -1784,7 +1784,7 @@
 <span class="doccomment">/// The status of executing a transaction. The VM decides whether or not we should `Keep` the</span>
 <span class="doccomment">/// transaction output or `Discard` it based upon the execution of the transaction. We wrap these</span>
 <span class="doccomment">/// decisions around a `VMStatus` that provides more detail on the final execution state of the VM.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">TransactionStatus</span> {
     <span class="doccomment">/// Discard the transaction output</span>
     <span class="ident">Discard</span>(<span class="ident">VMStatus</span>),

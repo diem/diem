@@ -137,10 +137,9 @@
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">counters</span>, <span class="ident">state_replication</span>::<span class="ident">StateComputer</span>};
-<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">ensure</span>, <span class="prelude-ty">Result</span>};
+<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">ensure</span>, <span class="ident">Error</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">block</span>::<span class="ident">Block</span>;
-<span class="kw">use</span> <span class="ident">executor</span>::<span class="ident">BlockExecutor</span>;
-<span class="kw">use</span> <span class="ident">executor_types</span>::<span class="ident">StateComputeResult</span>;
+<span class="kw">use</span> <span class="ident">executor_types</span>::{<span class="ident">BlockExecutor</span>, <span class="ident">StateComputeResult</span>};
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">HashValue</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
@@ -208,6 +207,7 @@
                 (<span class="ident">block</span>.<span class="ident">id</span>(), <span class="self">Self</span>::<span class="ident">transactions_from_block</span>(<span class="ident">block</span>)),
                 <span class="ident">parent_block_id</span>,
             )
+            .<span class="ident">map_err</span>(<span class="ident">Error</span>::<span class="ident">from</span>)
             .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">result</span><span class="op">|</span> {
                 <span class="kw">let</span> <span class="ident">execution_duration</span> <span class="op">=</span> <span class="ident">pre_execution_instant</span>.<span class="ident">elapsed</span>();
                 <span class="kw">let</span> <span class="ident">num_txns</span> <span class="op">=</span> <span class="ident">result</span>.<span class="ident">transaction_info_hashes</span>().<span class="ident">len</span>();
