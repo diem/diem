@@ -2333,6 +2333,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-global-constants"
+version = "0.1.0"
+
+[[package]]
 name = "libra-json-rpc"
 version = "0.1.0"
 dependencies = [
@@ -2445,6 +2449,7 @@ version = "0.1.0"
 dependencies = [
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-global-constants 0.1.0",
  "libra-network-address 0.1.0",
  "libra-secure-storage 0.1.0",
  "libra-secure-time 0.1.0",

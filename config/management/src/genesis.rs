@@ -1,8 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{constants, error::Error, layout::Layout, SingleBackend};
+use crate::{
+    error::Error,
+    layout::Layout,
+    management_constants::{COMMON_NS, LAYOUT, VALIDATOR_CONFIG},
+    SingleBackend,
+};
 use libra_crypto::ed25519::Ed25519PublicKey;
+use libra_global_constants::{ASSOCIATION_KEY, OPERATOR_KEY};
 use libra_secure_storage::Storage;
 use libra_types::transaction::{Transaction, TransactionPayload};
 use std::{convert::TryInto, path::PathBuf};
@@ -43,7 +49,7 @@ impl Genesis {
         let association: Box<dyn Storage> = association_config.try_into()?;
 
         let association_key = association
-            .get(constants::ASSOCIATION_KEY)
+            .get(ASSOCIATION_KEY)
             .map_err(|e| Error::RemoteStorageReadError(e.to_string()))?;
         association_key
             .value
@@ -56,11 +62,11 @@ impl Genesis {
         let mut common_config = self.backend.backend.clone();
         common_config
             .parameters
-            .insert("namespace".into(), constants::COMMON_NS.into());
+            .insert("namespace".into(), COMMON_NS.into());
         let common: Box<dyn Storage> = common_config.try_into()?;
 
         let layout = common
-            .get(constants::LAYOUT)
+            .get(LAYOUT)
             .map_err(|e| Error::RemoteStorageReadError(e.to_string()))?
             .value
             .string()
@@ -79,14 +85,14 @@ impl Genesis {
             let validator: Box<dyn Storage> = validator_config.try_into()?;
 
             let key = validator
-                .get(constants::OPERATOR_KEY)
+                .get(OPERATOR_KEY)
                 .map_err(|e| Error::RemoteStorageReadError(e.to_string()))?
                 .value
                 .ed25519_public_key()
                 .map_err(|e| Error::RemoteStorageReadError(e.to_string()))?;
 
             let txn = validator
-                .get(constants::VALIDATOR_CONFIG)
+                .get(VALIDATOR_CONFIG)
                 .map_err(|e| Error::RemoteStorageReadError(e.to_string()))?
                 .value;
             let txn = txn.transaction().unwrap();

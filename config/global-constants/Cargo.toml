@@ -1,0 +1,10 @@
+[package]
+name = "libra-global-constants"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra's global constant crate: the source of truth for constant definitions that span multiple crates"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
