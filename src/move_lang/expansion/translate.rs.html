@@ -1289,6 +1289,44 @@
 <span id="1289">1289</span>
 <span id="1290">1290</span>
 <span id="1291">1291</span>
+<span id="1292">1292</span>
+<span id="1293">1293</span>
+<span id="1294">1294</span>
+<span id="1295">1295</span>
+<span id="1296">1296</span>
+<span id="1297">1297</span>
+<span id="1298">1298</span>
+<span id="1299">1299</span>
+<span id="1300">1300</span>
+<span id="1301">1301</span>
+<span id="1302">1302</span>
+<span id="1303">1303</span>
+<span id="1304">1304</span>
+<span id="1305">1305</span>
+<span id="1306">1306</span>
+<span id="1307">1307</span>
+<span id="1308">1308</span>
+<span id="1309">1309</span>
+<span id="1310">1310</span>
+<span id="1311">1311</span>
+<span id="1312">1312</span>
+<span id="1313">1313</span>
+<span id="1314">1314</span>
+<span id="1315">1315</span>
+<span id="1316">1316</span>
+<span id="1317">1317</span>
+<span id="1318">1318</span>
+<span id="1319">1319</span>
+<span id="1320">1320</span>
+<span id="1321">1321</span>
+<span id="1322">1322</span>
+<span id="1323">1323</span>
+<span id="1324">1324</span>
+<span id="1325">1325</span>
+<span id="1326">1326</span>
+<span id="1327">1327</span>
+<span id="1328">1328</span>
+<span id="1329">1329</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1298,7 +1336,7 @@
     <span class="ident">expansion</span>::<span class="ident">ast</span>::{<span class="self">self</span> <span class="kw">as</span> <span class="ident">E</span>, <span class="ident">Fields</span>, <span class="ident">SpecId</span>},
     <span class="ident">parser</span>::<span class="ident">ast</span>::{
         <span class="self">self</span> <span class="kw">as</span> <span class="ident">P</span>, <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">FunctionVisibility</span>, <span class="ident">Kind</span>, <span class="ident">ModuleIdent</span>, <span class="ident">ModuleIdent_</span>,
-        <span class="ident">ModuleName</span>, <span class="ident">StructName</span>,
+        <span class="ident">ModuleName</span>, <span class="ident">StructName</span>, <span class="ident">Var</span>,
     },
     <span class="ident">shared</span>::{<span class="ident">remembering_unique_map</span>::<span class="ident">RememberingUniqueMap</span>, <span class="ident">unique_map</span>::<span class="ident">UniqueMap</span>, <span class="kw-2">*</span>},
 };
@@ -1705,6 +1743,7 @@
         <span class="ident">type_parameters</span>,
         <span class="ident">fields</span>,
     };
+    <span class="ident">check_valid_struct_name</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="ident">name</span>);
     (<span class="ident">name</span>, <span class="ident">sdef</span>)
 }
 
@@ -1806,7 +1845,10 @@
     <span class="kw">let</span> <span class="ident">parameters</span> <span class="op">=</span> <span class="ident">pparams</span>
         .<span class="ident">into_iter</span>()
         .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">v</span>, <span class="ident">t</span>)<span class="op">|</span> (<span class="ident">v</span>, <span class="ident">type_</span>(<span class="ident">context</span>, <span class="ident">t</span>)))
-        .<span class="ident">collect</span>();
+        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+    <span class="kw">for</span> (<span class="ident">v</span>, <span class="kw">_</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">parameters</span> {
+        <span class="ident">check_valid_local_name</span>(<span class="ident">context</span>, <span class="ident">v</span>)
+    }
     <span class="kw">let</span> <span class="ident">return_type</span> <span class="op">=</span> <span class="ident">type_</span>(<span class="ident">context</span>, <span class="ident">pret_ty</span>);
     <span class="ident">E</span>::<span class="ident">FunctionSignature</span> {
         <span class="ident">type_parameters</span>,
@@ -2317,7 +2359,10 @@
     <span class="kw">use</span> <span class="ident">E</span>::<span class="ident">LValue_</span> <span class="kw">as</span> <span class="ident">EL</span>;
     <span class="kw">use</span> <span class="ident">P</span>::<span class="ident">Bind_</span> <span class="kw">as</span> <span class="ident">PB</span>;
     <span class="kw">let</span> <span class="ident">b_</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">pb_</span> {
-        <span class="ident">PB</span>::<span class="ident">Var</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EL</span>::<span class="ident">Var</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">E</span>::<span class="ident">ModuleAccess_</span>::<span class="ident">Name</span>(<span class="ident">v</span>.<span class="number">0</span>)), <span class="prelude-val">None</span>),
+        <span class="ident">PB</span>::<span class="ident">Var</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">check_valid_local_name</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="ident">v</span>);
+            <span class="ident">EL</span>::<span class="ident">Var</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">E</span>::<span class="ident">ModuleAccess_</span>::<span class="ident">Name</span>(<span class="ident">v</span>.<span class="number">0</span>)), <span class="prelude-val">None</span>)
+        }
         <span class="ident">PB</span>::<span class="ident">Unpack</span>(<span class="ident">ptn</span>, <span class="ident">ptys_opt</span>, <span class="ident">pfields</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">tn</span> <span class="op">=</span> <span class="ident">module_access</span>(<span class="ident">context</span>, <span class="ident">ptn</span>)<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">tys_opt</span> <span class="op">=</span> <span class="ident">optional_types</span>(<span class="ident">context</span>, <span class="ident">ptys_opt</span>);
@@ -2579,6 +2624,37 @@
     <span class="kw">match</span> <span class="ident">edot_</span> {
         <span class="ident">ED</span>::<span class="ident">Exp</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">unbound_names_exp</span>(<span class="ident">unbound</span>, <span class="ident">e</span>),
         <span class="ident">ED</span>::<span class="ident">Dot</span>(<span class="ident">d</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">unbound_names_dotted</span>(<span class="ident">unbound</span>, <span class="ident">d</span>),
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">check_valid_local_name</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">v</span>: <span class="kw-2">&amp;</span><span class="ident">Var</span>) {
+    <span class="kw">fn</span> <span class="ident">is_valid</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+        <span class="ident">s</span>.<span class="ident">starts_with</span>(<span class="string">&#39;_&#39;</span>) <span class="op">|</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">starts_with</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="ident">c</span>, <span class="string">&#39;a&#39;</span>..<span class="op">=</span><span class="string">&#39;z&#39;</span>))
+    }
+    <span class="kw">if</span> <span class="op">!</span><span class="ident">is_valid</span>(<span class="ident">v</span>.<span class="ident">value</span>()) {
+        <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+            <span class="string">&quot;Invalid local name &#39;{}&#39;. Local names must start with &#39;a&#39;..&#39;z&#39; (or &#39;_&#39;)&quot;</span>,
+            <span class="ident">v</span>,
+        );
+        <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">v</span>.<span class="ident">loc</span>(), <span class="ident">msg</span>)])
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">check_valid_struct_name</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">n</span>: <span class="kw-2">&amp;</span><span class="ident">StructName</span>) {
+    <span class="ident">check_valid_struct_or_constant_name</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="ident">n</span>.<span class="number">0</span>, <span class="string">&quot;struct&quot;</span>, <span class="string">&quot;Struct&quot;</span>)
+}
+
+<span class="kw">fn</span> <span class="ident">check_valid_struct_or_constant_name</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">n</span>: <span class="kw-2">&amp;</span><span class="ident">Name</span>, <span class="ident">lcase</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">ucase</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
+    <span class="kw">fn</span> <span class="ident">is_valid</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+        <span class="ident">s</span>.<span class="ident">starts_with</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="ident">c</span>, <span class="string">&#39;A&#39;</span>..<span class="op">=</span><span class="string">&#39;Z&#39;</span>))
+    }
+
+    <span class="kw">if</span> <span class="op">!</span><span class="ident">is_valid</span>(<span class="kw-2">&amp;</span><span class="ident">n</span>.<span class="ident">value</span>) {
+        <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+            <span class="string">&quot;Invalid {} name &#39;{}&#39;. {} names must start with &#39;A&#39;..&#39;Z&#39;&quot;</span>,
+            <span class="ident">lcase</span>, <span class="ident">n</span>, <span class="ident">ucase</span>,
+        );
+        <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">n</span>.<span class="ident">loc</span>, <span class="ident">msg</span>)])
     }
 }
 </pre></div>
