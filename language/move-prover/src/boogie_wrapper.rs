@@ -105,6 +105,7 @@ impl<'env> BoogieWrapper<'env> {
                 output.status.code()
             ))
         } else {
+            info!("analyzing boogie output");
             let out = String::from_utf8_lossy(&output.stdout).to_string();
             let mut errors = self.extract_verification_errors(&out);
             errors.extend(self.extract_compilation_errors(&out));
@@ -166,7 +167,7 @@ impl<'env> BoogieWrapper<'env> {
             && (on_source || !self.options.stable_test_output)
         {
             let mut locals_shown = BTreeSet::new();
-            let mut aborted = false;
+            let mut aborted = None;
             let cleaned_trace = error
                 .execution_trace
                 .iter()
@@ -197,16 +198,28 @@ impl<'env> BoogieWrapper<'env> {
                 // Cut the trace after abort -- the remaining only propagates the abort up
                 // the call stack and isn't useful.
                 .filter_map(|(orig_pos, source_loc, source_pos, mut kind, msg)| {
-                    if aborted {
+                    if aborted.is_some() {
                         return None;
                     }
-                    aborted = error
+                    // DEBUG
+                    //warn!(
+                    //    "checking abort at {}.{}",
+                    //    source_pos.1.line, source_pos.1.column
+                    //);
+                    // END DEBUG
+                    let aborts_here = error
                         .model
                         .as_ref()
-                        .map(|model| model.tracked_aborts.get(&source_loc).is_some())
+                        .map(|model| {
+                            model
+                                .tracked_aborts
+                                .get(&(source_pos.0.clone(), source_pos.1.line))
+                                .is_some()
+                        })
                         .unwrap_or(false);
-                    if aborted {
-                        kind = &TraceKind::Aborted
+                    if aborts_here {
+                        kind = &TraceKind::Aborted;
+                        aborted = Some(source_loc.clone());
                     }
                     Some((orig_pos, source_loc, source_pos, kind, msg))
                 })
@@ -244,6 +257,16 @@ impl<'env> BoogieWrapper<'env> {
                         .collect_vec()
                 })
                 .collect_vec();
+            if let Some(abort_loc) = aborted {
+                // Patch the diag for aborted case. In this case, none of the aborts_if clauses
+                // covered the abort case, and the error message can be misleading.
+                diag.message = "abort not covered by any of the `aborts_if` clauses".to_string();
+                diag.secondary_labels = vec![Label::new(
+                    abort_loc.file_id(),
+                    abort_loc.span(),
+                    "abort happened here",
+                )];
+            }
             diag = diag.with_notes(trace);
         }
         self.env.add_diag(diag);
@@ -513,7 +536,7 @@ fn make_position(line_str: &str, col_str: &str) -> Location {
 pub struct Model {
     vars: BTreeMap<ModelValue, ModelValue>,
     tracked_locals: BTreeMap<Loc, Vec<(LocalDescriptor, ModelValue)>>,
-    tracked_aborts: BTreeMap<Loc, AbortDescriptor>,
+    tracked_aborts: BTreeMap<(String, LineIndex), AbortDescriptor>,
 }
 
 impl Model {
@@ -560,7 +583,11 @@ impl Model {
                         continue;
                     }
                     let (mark, loc) = Self::extract_abort_marker(wrapper, k)?;
-                    tracked_aborts.insert(loc, mark);
+                    let pos = wrapper
+                        .env
+                        .get_position(loc)
+                        .ok_or_else(Self::invalid_track_info)?;
+                    tracked_aborts.insert((pos.0, pos.1.line), mark);
                 }
                 // DEBUG
                 // for (loc, values) in &tracked_locals {
@@ -568,6 +595,15 @@ impl Model {
                 //     for (var, val) in values {
                 //         info!("  {} -> {:?}", var.var_idx, val);
                 //     }
+                // }
+                // END DEBUG
+                // DEBUG
+                // for (pos, mark) in &tracked_aborts {
+                //    warn!(
+                //        "{} -> {}",
+                //       pos.1,
+                //        mark.func_id.symbol().display(wrapper.env.symbol_pool())
+                //    );
                 // }
                 // END DEBUG
                 let model = Model {
@@ -939,6 +975,10 @@ impl ModelValue {
         let mut next = 0;
         let mut sparse = false;
         for idx in values.values.keys().sorted() {
+            if *idx >= values.size {
+                // outside of domain, ignore.
+                continue;
+            }
             let mut p = values.values.get(idx)?.pretty_or_raw(wrapper, model, param);
             if *idx > next {
                 p = PrettyDoc::text(format!("{}: ", idx)).append(p);
@@ -952,7 +992,8 @@ impl ModelValue {
                 .default
                 .pretty(wrapper, model, param)
                 .unwrap_or_else(|| PrettyDoc::text("undef"));
-            entries.push(PrettyDoc::text("else: ").append(default));
+            entries.insert(0, PrettyDoc::text(format!("(size): {}", values.size)));
+            entries.push(PrettyDoc::text("default: ").append(default));
         }
         Some(PrettyDoc::text("vector").append(Self::pretty_vec_or_struct_body(entries)))
     }

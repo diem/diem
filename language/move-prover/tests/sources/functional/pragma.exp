@@ -1,12 +1,16 @@
 Move prover returns: exiting with boogie verification errors
-error:  A postcondition might not hold on this return path.
+error: abort not covered by any of the `aborts_if` clauses
 
-    ┌── tests/sources/functional/pragma.move:15:9 ───
+    ┌── tests/sources/functional/pragma.move:10:5 ───
     │
- 15 │         aborts_if _c;
-    │         ^^^^^^^^^^^^^
+ 10 │ ╭     fun always_aborts_with_verify_incorrect(_c: bool) {
+ 11 │ │         abort(1)
+ 12 │ │     }
+    │ ╰─────^
+    ·
+ 11 │         abort(1)
+    │         -------- abort happened here
     │
     =     at tests/sources/functional/pragma.move:10:5: always_aborts_with_verify_incorrect (entry)
-    =     at tests/sources/functional/pragma.move:11:9: always_aborts_with_verify_incorrect
+    =     at tests/sources/functional/pragma.move:11:9: always_aborts_with_verify_incorrect (ABORTED)
     =         _c = <redacted>
-    =     at tests/sources/functional/pragma.move:10:5: always_aborts_with_verify_incorrect (exit)

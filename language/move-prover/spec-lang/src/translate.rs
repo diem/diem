@@ -45,6 +45,7 @@ use crate::{
 use move_ir_types::location::Spanned;
 use move_lang::parser::ast::BinOp_;
 use regex::Regex;
+use std::{fmt, fmt::Formatter};
 
 // =================================================================================================
 /// # Translator
@@ -709,6 +710,20 @@ enum SpecBlockContext<'a> {
     Function(QualifiedSymbol),
     FunctionCode(QualifiedSymbol, &'a SpecInfo),
     Schema(QualifiedSymbol),
+}
+
+impl<'a> fmt::Display for SpecBlockContext<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use SpecBlockContext::*;
+        match self {
+            Module => write!(f, "module context")?,
+            Struct(..) => write!(f, "struct context")?,
+            Function(..) => write!(f, "function context")?,
+            FunctionCode(..) => write!(f, "code context")?,
+            Schema(..) => write!(f, "schema context")?,
+        }
+        Ok(())
+    }
 }
 
 impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
@@ -1394,7 +1409,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         context: &SpecBlockContext,
         loc: &Loc,
         kind: &ConditionKind,
-        error_msg: &str,
+        detail: &str,
     ) -> bool {
         use SpecBlockContext::*;
         let ok = match context {
@@ -1412,7 +1427,10 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             Schema(_) => true,
         };
         if !ok {
-            self.parent.error(loc, &format!("`{}` {}", kind, error_msg));
+            self.parent.error(
+                loc,
+                &format!("`{}` not allowed in {} {}", kind, context, detail),
+            );
         }
         ok
     }
@@ -1493,7 +1511,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 kind,
                 exp: translated,
             }],
-            "not allowed in this context",
+            "",
         );
     }
 
@@ -2200,12 +2218,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 
         // Write the conditions to the context item.
         // TODO: merge pragma properties as well?
-        self.add_conditions_to_context(
-            context,
-            loc,
-            spec.conditions,
-            "(included from schema) not allowed in this context",
-        );
+        self.add_conditions_to_context(context, loc, spec.conditions, "(included from schema)");
     }
 
     /// Analyzes a schema apply weaving operator.

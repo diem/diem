@@ -22,6 +22,9 @@ const DEFAULT_BOOGIE_FLAGS: &[&str] = &[
     "-noinfer",
     "-printVerifiedProceduresCount:0",
     "-printModel:4",
+    // Right now, we let boogie only produce one error per procedure. The boogie wrapper isn't
+    // capable to sort out multiple errors and associate them with models otherwise.
+    "-errorLimit:1",
 ];
 
 /// Atomic used to prevent re-initialization of logging.
@@ -347,7 +350,7 @@ impl Options {
         if self.use_array_theory {
             add(&["-useArrayTheory"]);
         } else {
-            add(&["-proverOpt:O:smt.QI.EAGER_THRESHOLD=100"]);
+            add(&["-proverOpt:O:smt.QI.EAGER_THRESHOLD=30"]);
         }
         for f in &self.boogie_flags {
             add(&[f.as_str()]);

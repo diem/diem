@@ -102,7 +102,7 @@ error: `y` cannot be matched to an existing name in inclusion context
     │                 ^^^^^^^^^^^^^^^^^^^^^^
     │
 
-error: `requires` (included from schema) not allowed in this context
+error: `requires` not allowed in struct context (included from schema)
 
     ┌── tests/sources/schemas_err.move:70:9 ───
     │

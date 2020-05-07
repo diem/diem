@@ -263,7 +263,7 @@ module LibraAccount {
         aborts_if !Libra::token_is_registered<LBR::T>();
         aborts_if amount > 1000000000 * 1000000;
         aborts_if Libra::info<LBR::T>().total_value + amount > max_u128();
-        //include Libra::MintAbortsIf<LBR::T>; //FIXME: uncomment this so that a schema inclusion bug manifests. The bug is in the instantiation of the type variable
+        include Libra::MintAbortsIf<LBR::T>; //FIXME: uncomment this so that a schema inclusion bug manifests. The bug is in the instantiation of the type variable
         aborts_if !Libra::exists_sender_mint_capability<LBR::T>();
 
         // derived from deposit
@@ -525,14 +525,19 @@ fun simplified_pay_from_capability(
     if (!exists(payee)) {
         create_account(payee, auth_key_prefix)
     };
-    let _ = borrow_global<T>(cap.account_address).sent_events.counter; // It's verified if this line is commented out (and removing `T` from the acquires clause).
+    let _ = borrow_global<T>(cap.account_address).sent_events.counter;
     let val = Libra::value(&borrow_global<Balance<LBR::T>>(cap.account_address).coin);
     if(val < amount) {
         abort 1
     };
 }
 spec fun simplified_pay_from_capability {
+    // TODO: this currently fails because create_account fails.
     pragma verify=false;
+
+    // capability check
+    aborts_if exists<T>(payee) && !exists<T>(cap.account_address);
+
     // derived from create_account
     aborts_if !exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32;
     aborts_if !exists<T>(payee) && exists<Balance<LBR::T>>(payee);
@@ -799,6 +804,8 @@ spec fun simplified_pay_from_capability {
         );
     }
     spec fun create_account {
+        // TODO: this currently fails, need to figure out why.
+        pragma verify=true;
         aborts_if len(LCS::serialize(fresh_address)) + len(auth_key_prefix) != 32;
         aborts_if exists<Balance<LBR::T>>(fresh_address);
         aborts_if exists<T>(fresh_address);

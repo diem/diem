@@ -163,7 +163,7 @@ fn calculate_deps_recursively(
     if !visited.insert(path.to_string_lossy().to_string()) {
         return Ok(());
     }
-    for dep in extract_matches(path, r"use .*::\s*(\w+);")? {
+    for dep in extract_matches(path, r"0x[0-9,a,b,c,d,e,f,A,B,C,D,E,F]+::\s*(\w+)")? {
         if let Some(dep_path) = file_map.get(&dep) {
             let dep_str = dep_path.to_string_lossy().to_string();
             if !deps.contains(&dep_str) {

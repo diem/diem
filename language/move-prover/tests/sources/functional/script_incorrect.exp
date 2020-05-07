@@ -1,15 +1,19 @@
 Move prover returns: exiting with boogie verification errors
-error:  A postcondition might not hold on this return path.
+error: abort not covered by any of the `aborts_if` clauses
 
-    ┌── tests/sources/functional/script_incorrect.move:10:5 ───
+   ┌── tests/sources/functional/script_incorrect.move:5:1 ───
+   │
+ 5 │ ╭ fun main<Token>() {
+ 6 │ │     ScriptProvider::register<Token>();
+ 7 │ │ }
+   │ ╰─^
+   │
+   =     at tests/sources/functional/script_incorrect.move:5:1: main (entry)
+   =     at tests/sources/functional/script_provider.move:9:5: register (entry)
+   =     at tests/sources/functional/script_provider.move:10:9: register (ABORTED)
+
+    ┌── tests/sources/functional/script_provider.move:10:9 ───
     │
- 10 │     aborts_if false;
-    │     ^^^^^^^^^^^^^^^^
+ 10 │         Transaction::assert(Transaction::sender() == 0x1, 1);
+    │         ---------------------------------------------------- abort happened here
     │
-    =     at tests/sources/functional/script_incorrect.move:5:1: main (entry)
-    =     at tests/sources/functional/script_provider.move:9:5: register (entry)
-    =     at tests/sources/functional/script_provider.move:10:9: register
-    =     at tests/sources/functional/script_provider.move:12:5: register
-    =     at tests/sources/functional/script_provider.move:9:5: register (exit)
-    =     at tests/sources/functional/script_incorrect.move:6:21: main
-    =     at tests/sources/functional/script_incorrect.move:5:1: main (exit)
