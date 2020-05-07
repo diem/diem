@@ -21,7 +21,7 @@ num-traits = "0.2"
 reqwest = { version = "0.10.4", features = ["blocking", "json", "rustls-tls"], default-features = false }
 serde = { version = "1.0.106", features = ["derive"] }
 structopt = "0.3.14"
-ureq = { version = "0.12.1"}
+ureq = { version = "1.0.0"}
 walkdir = "2.3.1"
 
 admission-control-proto = { path = "../../admission-control/admission-control-proto", version = "0.1.0" }
