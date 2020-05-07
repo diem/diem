@@ -492,9 +492,18 @@ jobs:
 workflows:
   commit-workflow:
     jobs:
-      - build-docker
-      - validate-cluster-test-dockerfile
-      - terraform
+      - build-docker:
+        filters:
+          branches:
+            ignore: gh-pages
+      - validate-cluster-test-dockerfile:
+        filters:
+          branches:
+            ignore: gh-pages
+      - terraform:
+        filters:
+          branches:
+            ignore: gh-pages
       - prefetch-crates:
         filters:
           branches:
