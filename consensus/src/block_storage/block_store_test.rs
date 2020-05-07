@@ -21,8 +21,7 @@ use consensus_types::{
 };
 use libra_crypto::{HashValue, PrivateKey};
 use libra_types::{
-    account_address::AccountAddress, validator_signer::ValidatorSigner,
-    validator_verifier::random_validator_verifier,
+    validator_signer::ValidatorSigner, validator_verifier::random_validator_verifier,
 };
 use proptest::prelude::*;
 use std::{cmp::min, collections::HashSet};
@@ -111,7 +110,7 @@ proptest! {
             // recursion depth
             50)
     ){
-        let authors: HashSet<Author> = private_keys.iter().map(|private_key| AccountAddress::from_public_key(&private_key.public_key())).collect();
+        let authors: HashSet<Author> = private_keys.iter().map(|private_key| libra_types::account_address::from_public_key(&private_key.public_key())).collect();
         let block_store = build_empty_tree();
         for block in blocks {
             if block.round() > 0 && authors.contains(&block.author().unwrap()) {

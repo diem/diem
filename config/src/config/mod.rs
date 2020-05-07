@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{ensure, Result};
-use libra_types::PeerId;
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
@@ -263,8 +262,9 @@ impl NodeConfig {
         if self.base.role == RoleType::Validator {
             test.initialize_storage = true;
             test.random_account_key(rng);
-            let peer_id =
-                PeerId::from_public_key(&test.account_keypair.as_ref().unwrap().public_key());
+            let peer_id = libra_types::account_address::from_public_key(
+                &test.account_keypair.as_ref().unwrap().public_key(),
+            );
 
             if self.validator_network.is_none() {
                 self.validator_network = Some(NetworkConfig::default());

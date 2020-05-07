@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     block_info::BlockInfo,
     ledger_info::LedgerInfo,
@@ -342,7 +341,7 @@ fn test_verify_account_state_and_event() {
     let pubkey = privkey.public_key();
     let txn2_hash = Transaction::UserTransaction(
         RawTransaction::new_script(
-            AccountAddress::from_public_key(&pubkey),
+            crate::account_address::from_public_key(&pubkey),
             /* sequence_number = */ 0,
             Script::new(vec![], vec![], vec![]),
             /* max_gas_amount = */ 0,

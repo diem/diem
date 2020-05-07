@@ -12,8 +12,7 @@ use libra_crypto::{
 };
 use libra_proptest_helpers::Index;
 use libra_types::{
-    account_address::AccountAddress,
-    transaction::{SignedTransaction, TransactionStatus},
+    transaction::{authenticator::AuthenticationKey, SignedTransaction, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };
 use proptest::prelude::*;
@@ -35,7 +34,7 @@ impl AUTransactionGen for RotateKeyGen {
     ) -> (SignedTransaction, (TransactionStatus, u64)) {
         let sender = universe.pick(self.sender).1;
 
-        let key_hash = AccountAddress::authentication_key(&self.new_keypair.public_key).to_vec();
+        let key_hash = AuthenticationKey::ed25519(&self.new_keypair.public_key).to_vec();
         let txn = rotate_key_txn(sender.account(), key_hash, sender.sequence_number);
 
         // This should work all the time except for if the balance is too low for gas.

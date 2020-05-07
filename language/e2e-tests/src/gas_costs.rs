@@ -9,7 +9,7 @@ use crate::{
     executor::FakeExecutor,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
-use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
+use libra_types::transaction::{authenticator::AuthenticationKey, SignedTransaction};
 use once_cell::sync::Lazy;
 
 /// The gas each transaction is configured to reserve. If the gas available in the account,
@@ -245,7 +245,7 @@ pub static ROTATE_KEY: Lazy<u64> = Lazy::new(|| {
     let sender = AccountData::new(1_000_000, 10);
     executor.add_account_data(&sender);
     let pubkey = Ed25519PrivateKey::generate_for_testing().public_key();
-    let new_key_hash = AccountAddress::authentication_key(&pubkey).to_vec();
+    let new_key_hash = AuthenticationKey::ed25519(&pubkey).to_vec();
 
     let txn = rotate_key_txn(sender.account(), new_key_hash, 10);
     compute_gas_used(txn, &mut executor)

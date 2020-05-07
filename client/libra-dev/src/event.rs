@@ -176,7 +176,7 @@ pub unsafe extern "C" fn libra_LibraEvent_free(ptr: *mut LibraEvent) {
 fn test_libra_LibraEvent_from() {
     use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
     use libra_types::{
-        account_address::AccountAddress,
+        account_address::{self, AccountAddress},
         account_config::{from_currency_code_string, SentPaymentEvent, LBR_NAME},
         contract_event::ContractEvent,
         event::{EventHandle, EventKey},
@@ -186,7 +186,7 @@ fn test_libra_LibraEvent_from() {
     use std::ffi::CStr;
 
     let public_key = Ed25519PrivateKey::generate_for_testing().public_key();
-    let sender_address = AccountAddress::from_public_key(&public_key);
+    let sender_address = account_address::from_public_key(&public_key);
     let sent_event_handle = EventHandle::new(EventKey::new_from_address(&sender_address, 0), 0);
     let sequence_number = sent_event_handle.count();
     let event_key = sent_event_handle.key();

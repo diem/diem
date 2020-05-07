@@ -68,7 +68,7 @@ impl Account {
     /// Like with [`Account::new`], the account returned by this constructor is a purely logical
     /// entity.
     pub fn with_keypair(privkey: Ed25519PrivateKey, pubkey: Ed25519PublicKey) -> Self {
-        let addr = AccountAddress::from_public_key(&pubkey);
+        let addr = libra_types::account_address::from_public_key(&pubkey);
         Account {
             addr,
             privkey,
@@ -822,7 +822,7 @@ impl AccountData {
         let balance_currency_code = self.balance_currency_code.as_bytes();
         let account = Value::struct_(Struct::pack(vec![
             // TODO: this needs to compute the auth key instead
-            Value::vector_u8(AccountAddress::authentication_key(&self.account.pubkey).to_vec()),
+            Value::vector_u8(AuthenticationKey::ed25519(&self.account.pubkey).to_vec()),
             Value::bool(self.delegated_key_rotation_capability),
             Value::bool(self.delegated_withdrawal_capability),
             Value::struct_(Struct::pack(vec![

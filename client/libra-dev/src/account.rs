@@ -6,7 +6,7 @@ use crate::{
     error::*,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey};
-use libra_types::account_address::AccountAddress;
+use libra_types::account_address;
 use std::{convert::TryFrom, slice};
 
 /// Takes in private key in bytes and return the associated public key and address
@@ -32,7 +32,7 @@ pub unsafe extern "C" fn libra_LibraAccountKey_from(
         }
     };
     let public_key = private_key.public_key();
-    let address = AccountAddress::from_public_key(&public_key);
+    let address = account_address::from_public_key(&public_key);
 
     *out = LibraAccountKey {
         address: address.into(),
@@ -47,6 +47,7 @@ pub unsafe extern "C" fn libra_LibraAccountKey_from(
 #[test]
 fn test_libra_account_from() {
     use libra_crypto::Uniform;
+    use libra_types::account_address::{self, AccountAddress};
 
     let private_key = Ed25519PrivateKey::generate_for_testing();
     let mut libra_account = LibraAccountKey::default();
@@ -55,7 +56,7 @@ fn test_libra_account_from() {
     assert_eq!(result, LibraStatus::Ok);
 
     let public_key = private_key.public_key();
-    let address = AccountAddress::from_public_key(&public_key);
+    let address = account_address::from_public_key(&public_key);
 
     assert_eq!(libra_account.public_key, public_key.to_bytes());
     assert_eq!(libra_account.private_key, private_key.to_bytes());
