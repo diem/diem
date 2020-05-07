@@ -4,6 +4,7 @@
 use anyhow::Result;
 use consensus_types::common::Round;
 use libra_crypto::ed25519::Ed25519PrivateKey;
+use libra_global_constants::{CONSENSUS_KEY, EPOCH, LAST_VOTED_ROUND, PREFERRED_ROUND, WAYPOINT};
 use libra_secure_storage::{InMemoryStorage, Policy, Storage, Value};
 use libra_types::waypoint::Waypoint;
 use std::str::FromStr;
@@ -16,12 +17,6 @@ use std::str::FromStr;
 pub struct PersistentSafetyStorage {
     internal_store: Box<dyn Storage>,
 }
-
-const CONSENSUS_KEY: &str = "consensus_key";
-const EPOCH: &str = "epoch";
-const LAST_VOTED_ROUND: &str = "last_voted_round";
-const PREFERRED_ROUND: &str = "preferred_round";
-const WAYPOINT: &str = "waypoint";
 
 impl PersistentSafetyStorage {
     pub fn in_memory(private_key: Ed25519PrivateKey) -> Self {
