@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `network/src/peer_manager/conn_status_channel.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>conn_status_channel.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../network/index.html'><div class='logo-container'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `network/src/peer_manager/conn_notifs_channel.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>conn_notifs_channel.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../network/index.html'><div class='logo-container'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -102,20 +102,20 @@
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="doccomment">//! `conn_status_channel` is a channel which delivers to the receiver only the last of N</span>
+<span class="doccomment">//! `conn_notifs_channel` is a channel which delivers to the receiver only the last of N</span>
 <span class="doccomment">//! messages that might have been sent by sender(s) since the last poll. The items are separated</span>
 <span class="doccomment">//! using a key that is provided by the sender with each message.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! It provides an mpsc channel which has two ends `conn_status_channel::Receiver`</span>
-<span class="doccomment">//! and `conn_status_channel::Sender` which behave similarly to existing mpsc data structures.</span>
+<span class="doccomment">//! It provides an mpsc channel which has two ends `conn_notifs_channel::Receiver`</span>
+<span class="doccomment">//! and `conn_notifs_channel::Sender` which behave similarly to existing mpsc data structures.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">peer_manager</span>::<span class="ident">ConnectionStatusNotification</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">peer_manager</span>::<span class="ident">ConnectionNotification</span>;
 <span class="kw">use</span> <span class="ident">channel</span>::{<span class="ident">libra_channel</span>, <span class="ident">message_queues</span>::<span class="ident">QueueStyle</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">num</span>::<span class="ident">NonZeroUsize</span>;
 
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Sender</span> <span class="op">=</span> <span class="ident">libra_channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">ConnectionStatusNotification</span><span class="op">&gt;</span>;
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Receiver</span> <span class="op">=</span> <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">ConnectionStatusNotification</span><span class="op">&gt;</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Sender</span> <span class="op">=</span> <span class="ident">libra_channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">ConnectionNotification</span><span class="op">&gt;</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Receiver</span> <span class="op">=</span> <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">ConnectionNotification</span><span class="op">&gt;</span>;
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Sender</span>, <span class="ident">Receiver</span>) {
     <span class="ident">libra_channel</span>::<span class="ident">new</span>(<span class="ident">QueueStyle</span>::<span class="ident">LIFO</span>, <span class="ident">NonZeroUsize</span>::<span class="ident">new</span>(<span class="number">1</span>).<span class="ident">unwrap</span>(), <span class="prelude-val">None</span>)
@@ -137,13 +137,13 @@
             <span class="ident">sender</span>
                 .<span class="ident">push</span>(
                     <span class="ident">peer_id_a</span>,
-                    <span class="ident">ConnectionStatusNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id_a</span>, <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>()),
+                    <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id_a</span>, <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>()),
                 )
                 .<span class="ident">unwrap</span>();
             <span class="ident">sender</span>
                 .<span class="ident">push</span>(
                     <span class="ident">peer_id_a</span>,
-                    <span class="ident">ConnectionStatusNotification</span>::<span class="ident">LostPeer</span>(
+                    <span class="ident">ConnectionNotification</span>::<span class="ident">LostPeer</span>(
                         <span class="ident">peer_id_a</span>,
                         <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>(),
                         <span class="ident">DisconnectReason</span>::<span class="ident">ConnectionLost</span>,
@@ -153,13 +153,13 @@
             <span class="ident">sender</span>
                 .<span class="ident">push</span>(
                     <span class="ident">peer_id_a</span>,
-                    <span class="ident">ConnectionStatusNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id_a</span>, <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>()),
+                    <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id_a</span>, <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>()),
                 )
                 .<span class="ident">unwrap</span>();
             <span class="ident">sender</span>
                 .<span class="ident">push</span>(
                     <span class="ident">peer_id_a</span>,
-                    <span class="ident">ConnectionStatusNotification</span>::<span class="ident">LostPeer</span>(
+                    <span class="ident">ConnectionNotification</span>::<span class="ident">LostPeer</span>(
                         <span class="ident">peer_id_a</span>,
                         <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>(),
                         <span class="ident">DisconnectReason</span>::<span class="ident">Requested</span>,
@@ -169,7 +169,7 @@
             <span class="comment">// Ensure that only the last message is received.</span>
             <span class="macro">assert_eq</span><span class="macro">!</span>(
                 <span class="ident">receiver</span>.<span class="ident">select_next_some</span>().<span class="kw">await</span>,
-                <span class="ident">ConnectionStatusNotification</span>::<span class="ident">LostPeer</span>(
+                <span class="ident">ConnectionNotification</span>::<span class="ident">LostPeer</span>(
                     <span class="ident">peer_id_a</span>,
                     <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>(),
                     <span class="ident">DisconnectReason</span>::<span class="ident">Requested</span>
@@ -181,13 +181,13 @@
             <span class="ident">sender</span>
                 .<span class="ident">push</span>(
                     <span class="ident">peer_id_a</span>,
-                    <span class="ident">ConnectionStatusNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id_a</span>, <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>()),
+                    <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id_a</span>, <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>()),
                 )
                 .<span class="ident">unwrap</span>();
             <span class="ident">sender</span>
                 .<span class="ident">push</span>(
                     <span class="ident">peer_id_b</span>,
-                    <span class="ident">ConnectionStatusNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id_b</span>, <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>()),
+                    <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id_b</span>, <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>()),
                 )
                 .<span class="ident">unwrap</span>();
             <span class="comment">// Assert that we receive 2 updates, since they are sent for different peers.</span>

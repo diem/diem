@@ -155,7 +155,7 @@
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="ident">NetworkConfig</span>, <span class="ident">NodeConfig</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">mempool_status</span>::<span class="ident">MempoolStatusCode</span>, <span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>, <span class="ident">PeerId</span>};
 <span class="kw">use</span> <span class="ident">network</span>::<span class="ident">peer_manager</span>::{
-    <span class="ident">conn_status_channel</span>, <span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerRequestSender</span>,
+    <span class="ident">conn_notifs_channel</span>, <span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerRequestSender</span>,
 };
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">num</span>::<span class="ident">NonZeroUsize</span>,
@@ -203,7 +203,7 @@
             <span class="ident">libra_channel</span>::<span class="ident">new</span>(<span class="ident">QueueStyle</span>::<span class="ident">FIFO</span>, <span class="ident">NonZeroUsize</span>::<span class="ident">new</span>(<span class="number">8</span>).<span class="ident">unwrap</span>(), <span class="prelude-val">None</span>);
         <span class="kw">let</span> (<span class="ident">_network_notifs_tx</span>, <span class="ident">network_notifs_rx</span>) <span class="op">=</span>
             <span class="ident">libra_channel</span>::<span class="ident">new</span>(<span class="ident">QueueStyle</span>::<span class="ident">FIFO</span>, <span class="ident">NonZeroUsize</span>::<span class="ident">new</span>(<span class="number">8</span>).<span class="ident">unwrap</span>(), <span class="prelude-val">None</span>);
-        <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">conn_notifs_rx</span>) <span class="op">=</span> <span class="ident">conn_status_channel</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">conn_notifs_rx</span>) <span class="op">=</span> <span class="ident">conn_notifs_channel</span>::<span class="ident">new</span>();
         <span class="kw">let</span> <span class="ident">network_sender</span> <span class="op">=</span> <span class="ident">MempoolNetworkSender</span>::<span class="ident">new</span>(
             <span class="ident">PeerManagerRequestSender</span>::<span class="ident">new</span>(<span class="ident">network_reqs_tx</span>),
             <span class="ident">ConnectionRequestSender</span>::<span class="ident">new</span>(<span class="ident">connection_reqs_tx</span>),

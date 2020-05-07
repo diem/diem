@@ -431,7 +431,7 @@
 };
 <span class="kw">use</span> <span class="ident">network</span>::{
     <span class="ident">connectivity_manager</span>::{<span class="ident">ConnectivityRequest</span>, <span class="ident">DiscoverySource</span>},
-    <span class="ident">peer_manager</span>::{<span class="ident">conn_status_channel</span>, <span class="ident">ConnectionStatusNotification</span>},
+    <span class="ident">peer_manager</span>::{<span class="ident">conn_notifs_channel</span>, <span class="ident">ConnectionNotification</span>},
 };
 <span class="kw">use</span> <span class="ident">option_future</span>::<span class="ident">OptionFuture</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">rngs</span>::<span class="ident">SmallRng</span>, <span class="ident">Rng</span>, <span class="ident">SeedableRng</span>};
@@ -457,7 +457,7 @@
     <span class="doccomment">/// A channel to send requests to the network instance.</span>
     <span class="ident">network_tx</span>: <span class="ident">OnchainDiscoveryNetworkSender</span>,
     <span class="doccomment">/// A channel to receive connection updates from the network.</span>
-    <span class="ident">conn_notifs_rx</span>: <span class="ident">conn_status_channel</span>::<span class="ident">Receiver</span>,
+    <span class="ident">conn_notifs_rx</span>: <span class="ident">conn_notifs_channel</span>::<span class="ident">Receiver</span>,
     <span class="doccomment">/// internal gRPC client to send read requests to Libra Storage.</span>
     <span class="ident">libra_db</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">DbReader</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Ticker to periodically query our peers for the latest discovery set.</span>
@@ -487,7 +487,7 @@
         <span class="ident">role</span>: <span class="ident">RoleType</span>,
         <span class="ident">waypoint</span>: <span class="ident">Waypoint</span>,
         <span class="ident">network_tx</span>: <span class="ident">OnchainDiscoveryNetworkSender</span>,
-        <span class="ident">conn_notifs_rx</span>: <span class="ident">conn_status_channel</span>::<span class="ident">Receiver</span>,
+        <span class="ident">conn_notifs_rx</span>: <span class="ident">conn_notifs_channel</span>::<span class="ident">Receiver</span>,
         <span class="ident">libra_db</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">DbReader</span><span class="op">&gt;</span>,
         <span class="ident">peer_query_ticker</span>: <span class="ident">TTicker</span>,
         <span class="ident">storage_query_ticker</span>: <span class="ident">TTicker</span>,
@@ -527,7 +527,7 @@
             <span class="self">self</span>.<span class="ident">event_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">event_id</span>.<span class="ident">wrapping_add</span>(<span class="number">1</span>);
             <span class="ident">futures</span>::<span class="macro">select</span><span class="macro">!</span> {
                 <span class="ident">notif</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">conn_notifs_rx</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;event id: {}, type: ConnectionStatusNotification&quot;</span>, <span class="self">self</span>.<span class="ident">event_id</span>);
+                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;event id: {}, type: ConnectionNotification&quot;</span>, <span class="self">self</span>.<span class="ident">event_id</span>);
                     <span class="self">self</span>.<span class="ident">handle_connection_notif</span>(<span class="ident">notif</span>);
                 },
                 <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">peer_query_ticker</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
@@ -559,14 +559,14 @@
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">handle_connection_notif</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">notif</span>: <span class="ident">ConnectionStatusNotification</span>) {
+    <span class="kw">fn</span> <span class="ident">handle_connection_notif</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">notif</span>: <span class="ident">ConnectionNotification</span>) {
         <span class="kw">match</span> <span class="ident">notif</span> {
-            <span class="ident">ConnectionStatusNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>, <span class="ident">_addr</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>, <span class="ident">_addr</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;connected to new peer: {}&quot;</span>, <span class="ident">peer_id</span>.<span class="ident">short_str</span>());
                 <span class="comment">// Add peer to connected peer list.</span>
                 <span class="self">self</span>.<span class="ident">connected_peers</span>.<span class="ident">insert</span>(<span class="ident">peer_id</span>);
             }
-            <span class="ident">ConnectionStatusNotification</span>::<span class="ident">LostPeer</span>(<span class="ident">peer_id</span>, <span class="ident">_addr</span>, <span class="ident">_reason</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">ConnectionNotification</span>::<span class="ident">LostPeer</span>(<span class="ident">peer_id</span>, <span class="ident">_addr</span>, <span class="ident">_reason</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;disconnected from peer: {}&quot;</span>, <span class="ident">peer_id</span>.<span class="ident">short_str</span>());
                 <span class="comment">// Remove peer from connected peer list.</span>
                 <span class="self">self</span>.<span class="ident">connected_peers</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">peer_id</span>);

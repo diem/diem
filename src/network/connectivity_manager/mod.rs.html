@@ -554,7 +554,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">common</span>::<span class="ident">NetworkPublicKeys</span>,
-    <span class="ident">peer_manager</span>::{<span class="self">self</span>, <span class="ident">conn_status_channel</span>, <span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerError</span>},
+    <span class="ident">peer_manager</span>::{<span class="self">self</span>, <span class="ident">conn_notifs_channel</span>, <span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerError</span>},
 };
 <span class="kw">use</span> <span class="ident">futures</span>::{
     <span class="ident">channel</span>::<span class="ident">oneshot</span>,
@@ -590,7 +590,7 @@
     <span class="doccomment">/// Channel to send connection requests to PeerManager.</span>
     <span class="ident">connection_reqs_tx</span>: <span class="ident">ConnectionRequestSender</span>,
     <span class="doccomment">/// Channel to receive notifications from PeerManager.</span>
-    <span class="ident">connection_notifs_rx</span>: <span class="ident">conn_status_channel</span>::<span class="ident">Receiver</span>,
+    <span class="ident">connection_notifs_rx</span>: <span class="ident">conn_notifs_channel</span>::<span class="ident">Receiver</span>,
     <span class="doccomment">/// Channel over which we receive requests from other actors.</span>
     <span class="ident">requests_rx</span>: <span class="ident">channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">ConnectivityRequest</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Peers queued to be dialed, potentially with some delay. The dial can be canceled by</span>
@@ -663,7 +663,7 @@
         <span class="ident">seed_peers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">ticker</span>: <span class="ident">TTicker</span>,
         <span class="ident">connection_reqs_tx</span>: <span class="ident">ConnectionRequestSender</span>,
-        <span class="ident">connection_notifs_rx</span>: <span class="ident">conn_status_channel</span>::<span class="ident">Receiver</span>,
+        <span class="ident">connection_notifs_rx</span>: <span class="ident">conn_notifs_channel</span>::<span class="ident">Receiver</span>,
         <span class="ident">requests_rx</span>: <span class="ident">channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">ConnectivityRequest</span><span class="op">&gt;</span>,
         <span class="ident">backoff_strategy</span>: <span class="ident">TBackoff</span>,
         <span class="ident">max_delay_ms</span>: <span class="ident">u64</span>,
@@ -725,7 +725,7 @@
                     <span class="self">self</span>.<span class="ident">handle_request</span>(<span class="ident">req</span>);
                 },
                 <span class="ident">notif</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">connection_notifs_rx</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Event Id: {}, type: peer_manager::ConnectionStatusNotification, notif: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">event_id</span>, <span class="ident">notif</span>);
+                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Event Id: {}, type: peer_manager::ConnectionNotification, notif: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">event_id</span>, <span class="ident">notif</span>);
                     <span class="self">self</span>.<span class="ident">handle_control_notification</span>(<span class="ident">notif</span>);
                 },
                 <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">pending_dials</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
@@ -931,15 +931,15 @@
             .<span class="ident">update</span>(<span class="ident">src</span>, <span class="ident">addrs</span>);
     }
 
-    <span class="kw">fn</span> <span class="ident">handle_control_notification</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">notif</span>: <span class="ident">peer_manager</span>::<span class="ident">ConnectionStatusNotification</span>) {
+    <span class="kw">fn</span> <span class="ident">handle_control_notification</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">notif</span>: <span class="ident">peer_manager</span>::<span class="ident">ConnectionNotification</span>) {
         <span class="kw">match</span> <span class="ident">notif</span> {
-            <span class="ident">peer_manager</span>::<span class="ident">ConnectionStatusNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>, <span class="ident">addr</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">peer_manager</span>::<span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>, <span class="ident">addr</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="self">self</span>.<span class="ident">connected</span>.<span class="ident">insert</span>(<span class="ident">peer_id</span>, <span class="ident">addr</span>);
                 <span class="comment">// Cancel possible queued dial to this peer.</span>
                 <span class="self">self</span>.<span class="ident">dial_states</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">peer_id</span>);
                 <span class="self">self</span>.<span class="ident">dial_queue</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">peer_id</span>);
             }
-            <span class="ident">peer_manager</span>::<span class="ident">ConnectionStatusNotification</span>::<span class="ident">LostPeer</span>(<span class="ident">peer_id</span>, <span class="ident">addr</span>, <span class="ident">_reason</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">peer_manager</span>::<span class="ident">ConnectionNotification</span>::<span class="ident">LostPeer</span>(<span class="ident">peer_id</span>, <span class="ident">addr</span>, <span class="ident">_reason</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">match</span> <span class="self">self</span>.<span class="ident">connected</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">peer_id</span>) {
                     <span class="prelude-val">Some</span>(<span class="ident">curr_addr</span>) <span class="kw">if</span> <span class="kw-2">*</span><span class="ident">curr_addr</span> <span class="op">=</span><span class="op">=</span> <span class="ident">addr</span> <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="comment">// Remove node from connected peers list.</span>

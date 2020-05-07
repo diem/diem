@@ -327,7 +327,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">counters</span>,
     <span class="ident">peer</span>::{<span class="ident">Peer</span>, <span class="ident">PeerHandle</span>, <span class="ident">PeerNotification</span>},
-    <span class="ident">peer_manager</span>::<span class="ident">ConnectionNotification</span>,
+    <span class="ident">peer_manager</span>::<span class="ident">TransportNotification</span>,
     <span class="ident">protocols</span>::{
         <span class="ident">direct_send</span>::{<span class="ident">DirectSend</span>, <span class="ident">DirectSendNotification</span>, <span class="ident">DirectSendRequest</span>, <span class="ident">Message</span>},
         <span class="ident">rpc</span>::{<span class="ident">InboundRpcRequest</span>, <span class="ident">OutboundRpcRequest</span>, <span class="ident">Rpc</span>, <span class="ident">RpcNotification</span>},
@@ -378,7 +378,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start</span>(
         <span class="ident">executor</span>: <span class="ident">Handle</span>,
         <span class="ident">connection</span>: <span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">TSocket</span><span class="op">&gt;</span>,
-        <span class="ident">connection_notifs_tx</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">ConnectionNotification</span><span class="op">&lt;</span><span class="ident">TSocket</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">connection_notifs_tx</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">TransportNotification</span><span class="op">&lt;</span><span class="ident">TSocket</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">max_concurrent_reqs</span>: <span class="ident">usize</span>,
         <span class="ident">max_concurrent_notifs</span>: <span class="ident">usize</span>,
         <span class="ident">channel_size</span>: <span class="ident">usize</span>,
@@ -604,14 +604,14 @@
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_peer_notification</span>(
         <span class="ident">notif</span>: <span class="ident">PeerNotification</span>,
-        <span class="kw-2">mut</span> <span class="ident">connection_notifs_tx</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">ConnectionNotification</span><span class="op">&lt;</span><span class="ident">TSocket</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="kw-2">mut</span> <span class="ident">connection_notifs_tx</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">TransportNotification</span><span class="op">&lt;</span><span class="ident">TSocket</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) {
         <span class="kw">match</span> <span class="ident">notif</span> {
             <span class="ident">PeerNotification</span>::<span class="ident">PeerDisconnected</span>(<span class="ident">conn_info</span>, <span class="ident">reason</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="comment">// Send notification to PeerManager. PeerManager is responsible for initiating</span>
                 <span class="comment">// cleanup.</span>
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">connection_notifs_tx</span>
-                    .<span class="ident">send</span>(<span class="ident">ConnectionNotification</span>::<span class="ident">Disconnected</span>(<span class="ident">conn_info</span>, <span class="ident">reason</span>))
+                    .<span class="ident">send</span>(<span class="ident">TransportNotification</span>::<span class="ident">Disconnected</span>(<span class="ident">conn_info</span>, <span class="ident">reason</span>))
                     .<span class="kw">await</span>
                 {
                     <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Failed to push Disconnected event to connection event handler. Probably in shutdown mode. Error: {:?}&quot;</span>, <span class="ident">err</span>);

@@ -111,7 +111,7 @@
 <span class="kw">use</span> <span class="ident">network</span>::{
     <span class="ident">connectivity_manager</span>::<span class="ident">ConnectivityRequest</span>,
     <span class="ident">peer_manager</span>::{
-        <span class="ident">conn_status_channel</span>, <span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerNotification</span>,
+        <span class="ident">conn_notifs_channel</span>, <span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerNotification</span>,
         <span class="ident">PeerManagerRequestSender</span>,
     },
     <span class="ident">protocols</span>::{<span class="ident">network</span>::<span class="ident">NetworkSender</span>, <span class="ident">rpc</span>::<span class="ident">error</span>::<span class="ident">RpcError</span>},
@@ -177,7 +177,7 @@
 ) <span class="op">-</span><span class="op">&gt;</span> (
     <span class="ident">OnchainDiscoveryNetworkSender</span>,
     <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>(<span class="ident">PeerId</span>, <span class="ident">ProtocolId</span>), <span class="ident">PeerManagerNotification</span><span class="op">&gt;</span>,
-    <span class="ident">conn_status_channel</span>::<span class="ident">Receiver</span>,
+    <span class="ident">conn_notifs_channel</span>::<span class="ident">Receiver</span>,
 ) {
     <span class="kw">let</span> (<span class="ident">network_sender</span>, <span class="ident">network_receiver</span>, <span class="ident">conn_reqs_tx</span>, <span class="ident">conn_notifs_rx</span>) <span class="op">=</span> <span class="ident">network</span>
         .<span class="ident">add_protocol_handler</span>(

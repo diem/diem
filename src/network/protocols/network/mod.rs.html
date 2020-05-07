@@ -260,8 +260,6 @@
 <span id="260">260</span>
 <span id="261">261</span>
 <span id="262">262</span>
-<span id="263">263</span>
-<span id="264">264</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -272,7 +270,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">error</span>::<span class="ident">NetworkError</span>,
     <span class="ident">peer_manager</span>::{
-        <span class="ident">ConnectionRequestSender</span>, <span class="ident">ConnectionStatusNotification</span>, <span class="ident">PeerManagerNotification</span>,
+        <span class="ident">ConnectionNotification</span>, <span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerNotification</span>,
         <span class="ident">PeerManagerRequestSender</span>,
     },
     <span class="ident">ProtocolId</span>,
@@ -354,8 +352,8 @@
             <span class="kw">fn</span>(<span class="ident">PeerManagerNotification</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span>, <span class="ident">NetworkError</span><span class="op">&gt;</span>,
         <span class="op">&gt;</span>,
         <span class="ident">Map</span><span class="op">&lt;</span>
-            <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">ConnectionStatusNotification</span><span class="op">&gt;</span>,
-            <span class="kw">fn</span>(<span class="ident">ConnectionStatusNotification</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span>, <span class="ident">NetworkError</span><span class="op">&gt;</span>,
+            <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">ConnectionNotification</span><span class="op">&gt;</span>,
+            <span class="kw">fn</span>(<span class="ident">ConnectionNotification</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span>, <span class="ident">NetworkError</span><span class="op">&gt;</span>,
         <span class="op">&gt;</span>,
     <span class="op">&gt;</span>,
     <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span>,
@@ -364,7 +362,7 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">TMessage</span>: <span class="ident">Message</span><span class="op">&gt;</span> <span class="ident">NetworkEvents</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">peer_mgr_notifs_rx</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>(<span class="ident">PeerId</span>, <span class="ident">ProtocolId</span>), <span class="ident">PeerManagerNotification</span><span class="op">&gt;</span>,
-        <span class="ident">connection_notifs_rx</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">ConnectionStatusNotification</span><span class="op">&gt;</span>,
+        <span class="ident">connection_notifs_rx</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">ConnectionNotification</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">data_event_stream</span> <span class="op">=</span> <span class="ident">peer_mgr_notifs_rx</span>.<span class="ident">map</span>(
             <span class="ident">peer_mgr_notif_to_event</span>
@@ -372,7 +370,7 @@
         );
         <span class="kw">let</span> <span class="ident">control_event_stream</span> <span class="op">=</span> <span class="ident">connection_notifs_rx</span>.<span class="ident">map</span>(
             <span class="ident">control_msg_to_event</span>
-                <span class="kw">as</span> <span class="kw">fn</span>(<span class="ident">ConnectionStatusNotification</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span>, <span class="ident">NetworkError</span><span class="op">&gt;</span>,
+                <span class="kw">as</span> <span class="kw">fn</span>(<span class="ident">ConnectionNotification</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span>, <span class="ident">NetworkError</span><span class="op">&gt;</span>,
         );
         <span class="self">Self</span> {
             <span class="ident">event_stream</span>: ::<span class="ident">futures</span>::<span class="ident">stream</span>::<span class="ident">select</span>(<span class="ident">data_event_stream</span>, <span class="ident">control_event_stream</span>),
@@ -409,13 +407,11 @@
 }
 
 <span class="kw">fn</span> <span class="ident">control_msg_to_event</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span>(
-    <span class="ident">notif</span>: <span class="ident">ConnectionStatusNotification</span>,
+    <span class="ident">notif</span>: <span class="ident">ConnectionNotification</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span>, <span class="ident">NetworkError</span><span class="op">&gt;</span> {
     <span class="kw">match</span> <span class="ident">notif</span> {
-        <span class="ident">ConnectionStatusNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>, <span class="ident">_addr</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Event</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>)),
-        <span class="ident">ConnectionStatusNotification</span>::<span class="ident">LostPeer</span>(<span class="ident">peer_id</span>, <span class="ident">_addr</span>, <span class="ident">_reason</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">Event</span>::<span class="ident">LostPeer</span>(<span class="ident">peer_id</span>))
-        }
+        <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>, <span class="ident">_addr</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Event</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>)),
+        <span class="ident">ConnectionNotification</span>::<span class="ident">LostPeer</span>(<span class="ident">peer_id</span>, <span class="ident">_addr</span>, <span class="ident">_reason</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Event</span>::<span class="ident">LostPeer</span>(<span class="ident">peer_id</span>)),
     }
 }
 
