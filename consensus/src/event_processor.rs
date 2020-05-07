@@ -620,11 +620,10 @@ impl<T: Payload> EventProcessor<T> {
             .highest_timeout_cert()
             .filter(|tc| tc.round() > hqc.certified_block().round())
             .map(|tc| tc.as_ref().clone());
-        SyncInfo::new(
-            hqc,
-            self.block_store.highest_commit_cert().as_ref().clone(),
-            htc,
-        )
+        // No need to include HCC if it's the same as HQC
+        let hcc = Some(self.block_store.highest_commit_cert().as_ref().clone())
+            .filter(|cert| *cert != hqc);
+        SyncInfo::new(hqc, hcc, htc)
     }
 
     /// The function generates a VoteMsg for a given proposed_block:

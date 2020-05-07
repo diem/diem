@@ -13,7 +13,7 @@ pub struct SyncInfo {
     /// Highest quorum certificate known to the peer.
     highest_quorum_cert: QuorumCert,
     /// Highest ledger info known to the peer.
-    highest_commit_cert: QuorumCert,
+    highest_commit_cert: Option<QuorumCert>,
     /// Optional highest timeout certificate if available.
     highest_timeout_cert: Option<TimeoutCertificate>,
 }
@@ -28,8 +28,8 @@ impl Display for SyncInfo {
             f,
             "SyncInfo[round: {}, HQC: {}, HCC: {}, HTC: {}]",
             self.highest_round(),
-            self.highest_quorum_cert,
-            self.highest_commit_cert,
+            self.highest_quorum_cert(),
+            self.highest_commit_cert(),
             htc_repr,
         )
     }
@@ -38,7 +38,7 @@ impl Display for SyncInfo {
 impl SyncInfo {
     pub fn new(
         highest_quorum_cert: QuorumCert,
-        highest_commit_cert: QuorumCert,
+        highest_commit_cert: Option<QuorumCert>,
         highest_timeout_cert: Option<TimeoutCertificate>,
     ) -> Self {
         Self {
@@ -55,7 +55,9 @@ impl SyncInfo {
 
     /// Highest ledger info
     pub fn highest_commit_cert(&self) -> &QuorumCert {
-        &self.highest_commit_cert
+        self.highest_commit_cert
+            .as_ref()
+            .unwrap_or(&self.highest_quorum_cert)
     }
 
     /// Highest timeout certificate if available
@@ -82,9 +84,9 @@ impl SyncInfo {
     }
 
     pub fn verify(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
-        let epoch = self.highest_quorum_cert.certified_block().epoch();
+        let epoch = self.highest_quorum_cert().certified_block().epoch();
         ensure!(
-            epoch == self.highest_commit_cert.certified_block().epoch(),
+            epoch == self.highest_commit_cert().certified_block().epoch(),
             "Multi epoch in SyncInfo - HCC and HQC"
         );
         if let Some(tc) = &self.highest_timeout_cert {
@@ -92,17 +94,20 @@ impl SyncInfo {
         }
 
         ensure!(
-            self.highest_quorum_cert.certified_block().round()
-                >= self.highest_commit_cert.certified_block().round(),
+            self.highest_quorum_cert().certified_block().round()
+                >= self.highest_commit_cert().certified_block().round(),
             "HQC has lower round than HCC"
         );
         ensure!(
-            *self.highest_commit_cert.commit_info() != BlockInfo::empty(),
+            *self.highest_commit_cert().commit_info() != BlockInfo::empty(),
             "HCC has no committed block"
         );
         self.highest_quorum_cert
             .verify(validator)
-            .and_then(|_| self.highest_commit_cert.verify(validator))
+            .and_then(|_| match &self.highest_commit_cert {
+                Some(cert) => cert.verify(validator),
+                None => Ok(()),
+            })
             .and_then(|_| {
                 if let Some(tc) = &self.highest_timeout_cert {
                     tc.verify(validator)?;

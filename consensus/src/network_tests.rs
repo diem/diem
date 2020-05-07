@@ -410,7 +410,7 @@ mod tests {
         let previous_qc = certificate_for_genesis();
         let proposal = ProposalMsg::new(
             Block::new_proposal(vec![0], 1, 1, previous_qc.clone(), &signers[0]),
-            SyncInfo::new(previous_qc.clone(), previous_qc, None),
+            SyncInfo::new(previous_qc.clone(), None, None),
         );
         timed_block_on(&mut runtime, async {
             nodes[0]
