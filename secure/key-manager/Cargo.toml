@@ -16,6 +16,7 @@ thiserror = "1.0"
 
 libra-config = { path = "../../config", version = "0.1.0", features = ["fuzzing"]}
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+libra-global-constants = { path = "../../config/global-constants", version = "0.1.0"}
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-secure-json-rpc = { path = "../../secure/json-rpc", version = "0.1.0" }
 libra-secure-push-metrics = { path = "../../secure/push-metrics", version = "0.1.0" }

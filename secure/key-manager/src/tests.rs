@@ -8,6 +8,7 @@ use executor_types::BlockExecutor;
 use futures::{channel::mpsc::channel, StreamExt};
 use libra_config::{config::NodeConfig, utils, utils::get_genesis_txn};
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
+use libra_global_constants::OPERATOR_KEY;
 use libra_secure_json_rpc::JsonRpcClient;
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Policy, Value};
 use libra_secure_time::{MockTimeService, TimeService};
@@ -349,7 +350,7 @@ fn setup_secure_storage(
     let a_prikey = Value::Ed25519PrivateKey(a_keypair.take_private().unwrap());
 
     sec_storage
-        .create(crate::VALIDATOR_KEY, a_prikey, &Policy::public())
+        .create(OPERATOR_KEY, a_prikey, &Policy::public())
         .unwrap();
 
     let mut c_keypair = test_config.consensus_keypair.unwrap();
