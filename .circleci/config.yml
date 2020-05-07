@@ -495,7 +495,10 @@ workflows:
       - build-docker
       - validate-cluster-test-dockerfile
       - terraform
-      - prefetch-crates
+      - prefetch-crates:
+        filters:
+          branches:
+            ignore: gh-pages
       - lint:
           requires:
             - prefetch-crates
@@ -517,15 +520,9 @@ workflows:
       - run-crypto-unit-test:
           requires:
             - prefetch-crates
-      #- run-flaky-unit-test:
-      #    requires:
-      #      - prefetch-crates
       - build-docs:
           requires:
             - lint
-          filters:
-            branches:
-              only: master
       - deploy-docs:
           requires:
             - build-docs
