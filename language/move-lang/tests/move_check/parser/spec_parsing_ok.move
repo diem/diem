@@ -9,7 +9,6 @@
 
 module M {
     spec module {
-        use 0x0::Vector;
         global expected_coin_sum: u64;
         global other: bool;
 

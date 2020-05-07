@@ -15,7 +15,7 @@ use crate::{
 };
 use move_ir_types::location::*;
 use state::*;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 //**************************************************************************************************
 // Entry and trait bindings
@@ -97,7 +97,7 @@ impl<'a> AbstractInterpreter for LocalsSafety<'a> {}
 pub fn verify(
     errors: &mut Errors,
     signature: &FunctionSignature,
-    _acquires: &BTreeSet<StructName>,
+    _acquires: &BTreeMap<StructName, Loc>,
     locals: &UniqueMap<Var, SingleType>,
     cfg: &super::cfg::BlockCFG,
 ) -> BTreeMap<Label, LocalStates> {

@@ -12,7 +12,7 @@ use crate::{
 };
 use move_ir_types::location::*;
 use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
+    collections::{BTreeMap, VecDeque},
     fmt,
 };
 
@@ -65,7 +65,7 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 pub struct Function {
     pub visibility: FunctionVisibility,
     pub signature: FunctionSignature,
-    pub acquires: BTreeSet<StructName>,
+    pub acquires: BTreeMap<StructName, Loc>,
     pub body: FunctionBody,
 }
 
@@ -98,7 +98,7 @@ pub struct ModuleCall {
     pub type_arguments: Vec<Type>,
     pub arguments: Box<Exp>,
     pub parameter_types: Vec<Type>,
-    pub acquires: BTreeSet<StructName>,
+    pub acquires: BTreeMap<StructName, Loc>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -295,7 +295,7 @@ impl AstDebug for (FunctionName, &Function) {
         signature.ast_debug(w);
         if !acquires.is_empty() {
             w.write(" acquires ");
-            w.comma(acquires, |w, s| w.write(&format!("{}", s)));
+            w.comma(acquires.keys(), |w, s| w.write(&format!("{}", s)));
             w.write(" ");
         }
         match &body.value {
@@ -526,7 +526,7 @@ impl AstDebug for ModuleCall {
             w.write("[");
             if !acquires.is_empty() {
                 w.write("acquires: [");
-                w.comma(acquires, |w, s| w.write(&format!("{}", s)));
+                w.comma(acquires.keys(), |w, s| w.write(&format!("{}", s)));
                 w.write("], ");
             }
             if !parameter_types.is_empty() {

@@ -3,7 +3,7 @@ error:
    ┌── tests/move_check/expansion/duplicate_alias.move:8:19 ───
    │
  8 │     use 0x1::Y as Z;
-   │                   ^ Duplicate definition for alias 'Z'
+   │                   ^ Duplicate module alias 'Z'. Module aliases must be unique within a given module
    ·
  7 │     use 0x1::X as Z;
    │                   - Previously defined here

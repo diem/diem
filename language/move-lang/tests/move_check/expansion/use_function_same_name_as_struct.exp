@@ -1,0 +1,38 @@
+error: 
+
+    ┌── tests/move_check/expansion/use_function_same_name_as_struct.move:10:12 ───
+    │
+ 10 │     struct u {}
+    │            ^ Duplicate module member or alias 'u'. Top level names in a module must be unique
+    ·
+  9 │     use 0x1::X::u;
+    │                 - Previously defined here
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/use_function_same_name_as_struct.move:10:12 ───
+    │
+ 10 │     struct u {}
+    │            ^ Invalid struct name 'u'. Struct names must start with 'A'..'Z'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/use_function_same_name_as_struct.move:15:22 ───
+    │
+ 15 │     use 0x1::X::u as Bar;
+    │                      ^^^ Duplicate module member or alias 'Bar'. Top level names in a module must be unique
+    ·
+ 14 │     struct Bar {}
+    │            --- Previously defined here
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/use_function_same_name_as_struct.move:15:22 ───
+    │
+ 15 │     use 0x1::X::u as Bar;
+    │                      ^^^ Unused 'use' of alias 'Bar'. Consider removing it
+    │
+

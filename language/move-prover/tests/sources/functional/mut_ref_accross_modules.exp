@@ -65,10 +65,10 @@ error:  This assertion might not hold.
     =     at tests/sources/functional/mut_ref_accross_modules.move:37:18: new
     =         result = <redacted>
     =     at tests/sources/functional/mut_ref_accross_modules.move:34:5: new (exit)
-    =     at tests/sources/functional/mut_ref_accross_modules.move:120:18: private_to_public_caller_invalid_data_invariant
-    =         x = <redacted>
+    =     at tests/sources/functional/mut_ref_accross_modules.move:120:14: private_to_public_caller_invalid_data_invariant
     =     at tests/sources/functional/mut_ref_accross_modules.move:121:18: private_to_public_caller_invalid_data_invariant
-    =         r = <redacted>
+    =         r = <redacted>,
+    =         x = <redacted>
     =     at tests/sources/functional/mut_ref_accross_modules.move:72:5: private_decrement (entry)
     =     at tests/sources/functional/mut_ref_accross_modules.move:73:27: private_decrement
     =         x = <redacted>,
@@ -79,9 +79,8 @@ error:  This assertion might not hold.
     =     at tests/sources/functional/mut_ref_accross_modules.move:75:17: private_decrement
     =         x = <redacted>,
     =         r = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:124:10: private_to_public_caller_invalid_data_invariant
-    =         r = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:126:10: private_to_public_caller_invalid_data_invariant
+    =     at tests/sources/functional/mut_ref_accross_modules.move:72:9: private_decrement
+    =     at tests/sources/functional/mut_ref_accross_modules.move:51:16: increment
 
 error:  A precondition for this call might not hold.
 

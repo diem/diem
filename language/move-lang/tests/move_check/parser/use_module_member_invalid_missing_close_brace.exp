@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/use_module_member_invalid_missing_close_brace.move:6:5 ───
+   │
+ 6 │     fun foo() {
+   │     ^ Expected '}'
+   ·
+ 4 │     use 0x0::X::{S as XS
+   │                 - To match this '{'
+   │
+

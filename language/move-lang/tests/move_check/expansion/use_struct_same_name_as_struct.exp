@@ -1,0 +1,60 @@
+error: 
+
+    ┌── tests/move_check/expansion/use_struct_same_name_as_struct.move:10:12 ───
+    │
+ 10 │     struct U {}
+    │            ^ Duplicate module member or alias 'U'. Top level names in a module must be unique
+    ·
+  8 │     use 0x1::X::{U, U as U2};
+    │                  - Previously defined here
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/use_struct_same_name_as_struct.move:11:12 ───
+    │
+ 11 │     struct U2 {}
+    │            ^^ Duplicate module member or alias 'U2'. Top level names in a module must be unique
+    ·
+  8 │     use 0x1::X::{U, U as U2};
+    │                          -- Previously defined here
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/use_struct_same_name_as_struct.move:15:18 ───
+    │
+ 15 │     use 0x1::X::{R, R as R2};
+    │                  ^ Duplicate module member or alias 'R'. Top level names in a module must be unique
+    ·
+ 13 │     struct R {}
+    │            - Previously defined here
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/use_struct_same_name_as_struct.move:15:18 ───
+    │
+ 15 │     use 0x1::X::{R, R as R2};
+    │                  ^ Unused 'use' of alias 'R'. Consider removing it
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/use_struct_same_name_as_struct.move:15:26 ───
+    │
+ 15 │     use 0x1::X::{R, R as R2};
+    │                          ^^ Duplicate module member or alias 'R2'. Top level names in a module must be unique
+    ·
+ 12 │     struct R2 {}
+    │            -- Previously defined here
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/use_struct_same_name_as_struct.move:15:26 ───
+    │
+ 15 │     use 0x1::X::{R, R as R2};
+    │                          ^^ Unused 'use' of alias 'R2'. Consider removing it
+    │
+

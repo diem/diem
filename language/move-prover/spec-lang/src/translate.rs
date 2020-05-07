@@ -42,7 +42,7 @@ use crate::{
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE},
 };
-use move_ir_types::location::Spanned;
+use move_ir_types::location::{sp, Spanned};
 use move_lang::parser::ast::BinOp_;
 use regex::Regex;
 use std::{fmt, fmt::Formatter};
@@ -3041,6 +3041,19 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             }
             EA::Exp_::Name(maccess, type_params) => {
                 self.translate_name(&loc, maccess, type_params.as_deref(), expected_type)
+            }
+            EA::Exp_::GlobalCall(n, type_params, args) => {
+                let maccess_ = EA::ModuleAccess_::Name(n.clone());
+                let maccess = sp(n.loc, maccess_);
+                // Need to make a &[&Exp] out of args.
+                let args = args.value.iter().map(|e| e).collect_vec();
+                self.translate_fun_call(
+                    expected_type,
+                    &loc,
+                    &maccess,
+                    type_params.as_deref(),
+                    &args,
+                )
             }
             EA::Exp_::Call(maccess, type_params, args) => {
                 // Need to make a &[&Exp] out of args.

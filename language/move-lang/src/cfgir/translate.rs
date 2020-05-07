@@ -180,7 +180,7 @@ fn function(context: &mut Context, _name: FunctionName, f: H::Function) -> G::Fu
 fn function_body(
     context: &mut Context,
     signature: &H::FunctionSignature,
-    acquires: &BTreeSet<StructName>,
+    acquires: &BTreeMap<StructName, Loc>,
     sp!(loc, tb_): H::FunctionBody,
 ) -> G::FunctionBody {
     use G::FunctionBody_ as GB;
