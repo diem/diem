@@ -38,4 +38,5 @@ fn main() {
         let addr = start_stream_server(&executor, build_tcp_noise_transport(), addr);
         info!("bench: tcp+noise: listening on: {}", addr);
     }
+    std::thread::park();
 }
