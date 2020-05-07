@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod cross_test;
+mod cryptohasher;
 mod ed25519_test;
 mod hash_test;
 mod hkdf_test;
