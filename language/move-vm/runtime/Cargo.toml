@@ -12,7 +12,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-mirai-annotations = "1.7.0"
+mirai-annotations = "1.8.0"
 
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }

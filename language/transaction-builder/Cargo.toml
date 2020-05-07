@@ -9,7 +9,7 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-mirai-annotations = "1.7.0"
+mirai-annotations = "1.8.0"
 
 libra-config = { path = "../../config", version = "0.1.0" }
 stdlib = { path = "../stdlib", version = "0.1.0" }
