@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 bit-vec = "0.6.2"
-mirai-annotations = "1.7.0"
+mirai-annotations = "1.8.0"
 once_cell = "1.3.1"
 proptest = { version = "0.9.6", optional = true }
 sha2 = "0.8.0"
