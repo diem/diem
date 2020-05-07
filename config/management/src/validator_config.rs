@@ -1,8 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{constants, error::Error, SecureBackends};
+use crate::{
+    error::Error,
+    management_constants::{GAS_UNIT_PRICE, MAX_GAS_AMOUNT, TXN_EXPIRATION_SECS, VALIDATOR_CONFIG},
+    SecureBackends,
+};
 use libra_crypto::{ed25519::Ed25519PublicKey, hash::CryptoHash, x25519, ValidCryptoMaterial};
+use libra_global_constants::{
+    CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OWNER_KEY, VALIDATOR_NETWORK_KEY,
+};
 use libra_network_address::{NetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{Storage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
@@ -37,12 +44,10 @@ impl ValidatorConfig {
         }
 
         // Step 1) Retrieve keys from local storage
-        let consensus_key = ed25519_from_storage(constants::CONSENSUS_KEY, local.as_mut())?;
-        let fullnode_network_key =
-            x25519_from_storage(constants::FULLNODE_NETWORK_KEY, local.as_mut())?;
-        let validator_network_key =
-            x25519_from_storage(constants::VALIDATOR_NETWORK_KEY, local.as_mut())?;
-        let owner_key = ed25519_from_storage(constants::OWNER_KEY, local.as_mut())?;
+        let consensus_key = ed25519_from_storage(CONSENSUS_KEY, local.as_mut())?;
+        let fullnode_network_key = x25519_from_storage(FULLNODE_NETWORK_KEY, local.as_mut())?;
+        let validator_network_key = x25519_from_storage(VALIDATOR_NETWORK_KEY, local.as_mut())?;
+        let owner_key = ed25519_from_storage(OWNER_KEY, local.as_mut())?;
 
         let fullnode_address = RawNetworkAddress::try_from(&self.fullnode_address)
             .map_err(|e| Error::UnexpectedError(format!("(fullnode_address) {}", e)))?;
@@ -66,17 +71,17 @@ impl ValidatorConfig {
         // TODO(davidiw): In genesis this is irrelevant -- afterward we need to obtain the
         // current sequence number by querying the blockchain.
         let sequence_number = 0;
-        let expiration_time = RealTimeService::new().now() + constants::TXN_EXPIRATION_SECS;
+        let expiration_time = RealTimeService::new().now() + TXN_EXPIRATION_SECS;
         let raw_transaction = RawTransaction::new_script(
             sender,
             sequence_number,
             script,
-            constants::MAX_GAS_AMOUNT,
-            constants::GAS_UNIT_PRICE,
+            MAX_GAS_AMOUNT,
+            GAS_UNIT_PRICE,
             Duration::from_secs(expiration_time),
         );
         let signature = local
-            .sign_message(constants::OWNER_KEY, &raw_transaction.hash())
+            .sign_message(OWNER_KEY, &raw_transaction.hash())
             .map_err(|e| Error::LocalStorageSigningError(e.to_string()))?;
         let signed_txn = SignedTransaction::new(raw_transaction, owner_key, signature);
         let txn = Transaction::UserTransaction(signed_txn);
@@ -91,7 +96,7 @@ impl ValidatorConfig {
 
             let txn = Value::Transaction(txn.clone());
             remote
-                .create_with_default_policy(constants::VALIDATOR_CONFIG, txn)
+                .create_with_default_policy(VALIDATOR_CONFIG, txn)
                 .map_err(|e| Error::RemoteStorageWriteError(e.to_string()))?;
         }
 

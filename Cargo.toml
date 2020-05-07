@@ -30,6 +30,7 @@ members = [
     "config",
     "config/config-builder",
     "config/generate-key",
+    "config/global-constants",
     "config/management",
     "consensus",
     "consensus/consensus-types",

@@ -11,25 +11,19 @@ mod validator_config;
 
 use crate::{error::Error, layout::SetLayout, secure_backend::SecureBackend};
 use libra_crypto::ed25519::Ed25519PublicKey;
+use libra_global_constants::{
+    ASSOCIATION_KEY, CONSENSUS_KEY, EPOCH, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND, OPERATOR_KEY,
+    OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
+};
 use libra_secure_storage::{Storage, Value};
 use libra_types::{transaction::Transaction, waypoint::Waypoint};
 use std::{convert::TryInto, fmt::Write, str::FromStr};
 use structopt::StructOpt;
 
-pub mod constants {
-    pub const ASSOCIATION_KEY: &str = "association";
+pub mod management_constants {
     pub const COMMON_NS: &str = "common";
-    pub const CONSENSUS_KEY: &str = "consensus";
-    pub const EPOCH: &str = "epoch";
-    pub const FULLNODE_NETWORK_KEY: &str = "fullnode_network";
-    pub const LAST_VOTED_ROUND: &str = "last_voted_round";
     pub const LAYOUT: &str = "layout";
-    pub const OWNER_KEY: &str = "owner";
-    pub const OPERATOR_KEY: &str = "operator";
-    pub const PREFERRED_ROUND: &str = "preferred_round";
     pub const VALIDATOR_CONFIG: &str = "validator_config";
-    pub const VALIDATOR_NETWORK_KEY: &str = "validator_network";
-    pub const WAYPOINT: &str = "waypoint";
 
     pub const GAS_UNIT_PRICE: u64 = 0;
     pub const MAX_GAS_AMOUNT: u64 = 1_000_000;
@@ -110,7 +104,7 @@ impl Command {
 
     pub fn association_key(self) -> Result<Ed25519PublicKey, Error> {
         if let Command::AssociationKey(secure_backends) = self {
-            Self::submit_key(constants::ASSOCIATION_KEY, secure_backends)
+            Self::submit_key(ASSOCIATION_KEY, secure_backends)
         } else {
             Err(Error::UnexpectedCommand(
                 CommandName::AssociationKey,
@@ -132,7 +126,7 @@ impl Command {
 
     pub fn operator_key(self) -> Result<Ed25519PublicKey, Error> {
         if let Command::OperatorKey(secure_backends) = self {
-            Self::submit_key(constants::OPERATOR_KEY, secure_backends)
+            Self::submit_key(OPERATOR_KEY, secure_backends)
         } else {
             Err(Error::UnexpectedCommand(
                 CommandName::OperatorKey,
@@ -143,7 +137,7 @@ impl Command {
 
     pub fn owner_key(self) -> Result<Ed25519PublicKey, Error> {
         if let Command::OwnerKey(secure_backends) = self {
-            Self::submit_key(constants::OWNER_KEY, secure_backends)
+            Self::submit_key(OWNER_KEY, secure_backends)
         } else {
             Err(Error::UnexpectedCommand(
                 CommandName::OwnerKey,
@@ -188,28 +182,20 @@ impl Command {
             writeln!(buffer, "Keys").unwrap();
             writeln!(buffer, "=================================================").unwrap();
 
-            Self::write_key(storage.as_ref(), &mut buffer, constants::CONSENSUS_KEY);
-            Self::write_key(
-                storage.as_ref(),
-                &mut buffer,
-                constants::FULLNODE_NETWORK_KEY,
-            );
-            Self::write_key(storage.as_ref(), &mut buffer, constants::OWNER_KEY);
-            Self::write_key(storage.as_ref(), &mut buffer, constants::OPERATOR_KEY);
-            Self::write_key(
-                storage.as_ref(),
-                &mut buffer,
-                constants::VALIDATOR_NETWORK_KEY,
-            );
+            Self::write_key(storage.as_ref(), &mut buffer, CONSENSUS_KEY);
+            Self::write_key(storage.as_ref(), &mut buffer, FULLNODE_NETWORK_KEY);
+            Self::write_key(storage.as_ref(), &mut buffer, OWNER_KEY);
+            Self::write_key(storage.as_ref(), &mut buffer, OPERATOR_KEY);
+            Self::write_key(storage.as_ref(), &mut buffer, VALIDATOR_NETWORK_KEY);
 
             writeln!(buffer, "=================================================").unwrap();
             writeln!(buffer, "Data").unwrap();
             writeln!(buffer, "=================================================").unwrap();
 
-            Self::write_u64(storage.as_ref(), &mut buffer, constants::EPOCH);
-            Self::write_u64(storage.as_ref(), &mut buffer, constants::LAST_VOTED_ROUND);
-            Self::write_u64(storage.as_ref(), &mut buffer, constants::PREFERRED_ROUND);
-            Self::write_waypoint(storage.as_ref(), &mut buffer, constants::WAYPOINT);
+            Self::write_u64(storage.as_ref(), &mut buffer, EPOCH);
+            Self::write_u64(storage.as_ref(), &mut buffer, LAST_VOTED_ROUND);
+            Self::write_u64(storage.as_ref(), &mut buffer, PREFERRED_ROUND);
+            Self::write_waypoint(storage.as_ref(), &mut buffer, WAYPOINT);
 
             writeln!(buffer, "=================================================").unwrap();
 
@@ -322,6 +308,7 @@ pub struct SingleBackend {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::management_constants::{COMMON_NS, LAYOUT, VALIDATOR_CONFIG};
     use libra_network_address::NetworkAddress;
     use libra_secure_storage::{Policy, Value, VaultStorage};
     use libra_types::account_address::AccountAddress;
@@ -347,7 +334,7 @@ pub mod tests {
         // Step 1) Define and upload the layout specifying which identities have which roles. This
         // is uplaoded to the common namespace.
 
-        let mut common = default_storage(constants::COMMON_NS.into());
+        let mut common = default_storage(COMMON_NS.into());
         common.reset_and_clear().unwrap();
 
         // Note: owners are irrelevant currently
@@ -364,7 +351,7 @@ pub mod tests {
             .unwrap();
         file.sync_all().unwrap();
 
-        set_layout(temppath.path().to_str().unwrap(), constants::COMMON_NS).unwrap();
+        set_layout(temppath.path().to_str().unwrap(), COMMON_NS).unwrap();
 
         // Step 2) Upload the association key:
 
@@ -424,12 +411,7 @@ pub mod tests {
             .unwrap();
         file.sync_all().unwrap();
         set_layout(temppath.path().to_str().unwrap(), namespace).unwrap();
-        let stored_layout = storage
-            .get(constants::LAYOUT)
-            .unwrap()
-            .value
-            .string()
-            .unwrap();
+        let stored_layout = storage.get(LAYOUT).unwrap().value.string().unwrap();
         assert_eq!(layout_text, stored_layout);
     }
 
@@ -453,7 +435,7 @@ pub mod tests {
         )
         .unwrap();
 
-        let remote_txn = remote.get(constants::VALIDATOR_CONFIG).unwrap().value;
+        let remote_txn = remote.get(VALIDATOR_CONFIG).unwrap().value;
         let remote_txn = remote_txn.transaction().unwrap();
 
         assert_eq!(local_txn, remote_txn);
@@ -479,13 +461,13 @@ pub mod tests {
     #[test]
     #[ignore]
     fn test_owner_key() {
-        test_key(constants::OWNER_KEY, owner_key);
+        test_key(OWNER_KEY, owner_key);
     }
 
     #[test]
     #[ignore]
     fn test_operator_key() {
-        test_key(constants::OPERATOR_KEY, operator_key);
+        test_key(OPERATOR_KEY, operator_key);
     }
 
     fn test_key(key_name: &str, op: fn(&str, &str) -> Result<Ed25519PublicKey, Error>) {
@@ -526,34 +508,22 @@ pub mod tests {
         let policy = Policy::public();
         storage.reset_and_clear().unwrap();
 
-        storage
-            .create_key(constants::ASSOCIATION_KEY, &policy)
-            .unwrap();
-        storage
-            .create_key(constants::CONSENSUS_KEY, &policy)
-            .unwrap();
-        storage
-            .create_key(constants::FULLNODE_NETWORK_KEY, &policy)
-            .unwrap();
-        storage.create_key(constants::OWNER_KEY, &policy).unwrap();
-        storage
-            .create_key(constants::OPERATOR_KEY, &policy)
-            .unwrap();
-        storage
-            .create_key(constants::VALIDATOR_NETWORK_KEY, &policy)
-            .unwrap();
+        storage.create_key(ASSOCIATION_KEY, &policy).unwrap();
+        storage.create_key(CONSENSUS_KEY, &policy).unwrap();
+        storage.create_key(FULLNODE_NETWORK_KEY, &policy).unwrap();
+        storage.create_key(OWNER_KEY, &policy).unwrap();
+        storage.create_key(OPERATOR_KEY, &policy).unwrap();
+        storage.create_key(VALIDATOR_NETWORK_KEY, &policy).unwrap();
 
+        storage.create(EPOCH, Value::U64(0), &policy).unwrap();
         storage
-            .create(constants::EPOCH, Value::U64(0), &policy)
+            .create(LAST_VOTED_ROUND, Value::U64(0), &policy)
             .unwrap();
         storage
-            .create(constants::LAST_VOTED_ROUND, Value::U64(0), &policy)
+            .create(PREFERRED_ROUND, Value::U64(0), &policy)
             .unwrap();
         storage
-            .create(constants::PREFERRED_ROUND, Value::U64(0), &policy)
-            .unwrap();
-        storage
-            .create(constants::WAYPOINT, Value::String("".into()), &policy)
+            .create(WAYPOINT, Value::String("".into()), &policy)
             .unwrap();
     }
 

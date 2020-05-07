@@ -17,6 +17,7 @@ toml = { version = "0.5.3", default-features = false }
 
 libra-config = { path = "..", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+libra-global-constants = { path = "../../config/global-constants", version = "0.1.0"}
 libra-network-address = { path = "../../network/network-address", version = "0.1.0" }
 libra-secure-storage = { path = "../../secure/storage", version = "0.1.0" }
 libra-secure-time = { path = "../../secure/time", version = "0.1.0" }
