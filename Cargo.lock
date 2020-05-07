@@ -265,7 +265,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "backup-restore"
+name = "backup-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.30 (registry+https://github.com/rust-lang/crates.io-index)",
