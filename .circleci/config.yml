@@ -5,6 +5,10 @@ executors:
     docker:
       - image: circleci/rust:buster
     resource_class: 2xlarge
+  unittest-executor:
+    docker:
+      - image: circleci/rust:buster
+    resource_class: 2xlarge+
   test-executor:
     docker:
       - image: circleci/rust:buster
@@ -309,7 +313,7 @@ jobs:
           build_url: "${CIRCLE_BUILD_URL}#tests/containers/${CIRCLE_NODE_INDEX}"
           webhook: "${WEBHOOK_FLAKY_TESTS}"
   run-unit-test:
-    executor: build-executor
+    executor: unittest-executor
     description: Run all unit tests, excluding E2E and flaky tests that are
       explicitly ignored.
     steps:
