@@ -1,0 +1,8 @@
+error: 
+
+    ┌── tests/move_check/expansion/use_function_tparam_shadows.move:10:9 ───
+    │
+ 10 │         foo()
+    │         ^^^ Unbound function 'foo' in current scope
+    │
+

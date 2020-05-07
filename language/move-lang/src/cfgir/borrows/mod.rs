@@ -10,8 +10,9 @@ use crate::{
     parser::ast::{BinOp_, StructName, Var},
     shared::unique_map::UniqueMap,
 };
+use move_ir_types::location::*;
 use state::*;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 //**************************************************************************************************
 // Entry and trait bindings
@@ -80,7 +81,7 @@ impl AbstractInterpreter for BorrowSafety {}
 pub fn verify(
     errors: &mut Errors,
     signature: &FunctionSignature,
-    acquires: &BTreeSet<StructName>,
+    acquires: &BTreeMap<StructName, Loc>,
     locals: &UniqueMap<Var, SingleType>,
     cfg: &super::cfg::BlockCFG,
 ) -> BTreeMap<Label, BorrowState> {
@@ -223,7 +224,7 @@ fn exp(context: &mut Context, parent_e: &Exp) -> Values {
                     let (errors, values) =
                         context
                             .borrow_state
-                            .call(*eloc, evalues, &BTreeSet::new(), ret_ty);
+                            .call(*eloc, evalues, &BTreeMap::new(), ret_ty);
                     context.add_errors(errors);
                     values
                 }

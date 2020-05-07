@@ -18,12 +18,13 @@ use crate::{
     shared::unique_map::UniqueMap,
 };
 use cfg::*;
-use std::collections::BTreeSet;
+use move_ir_types::location::*;
+use std::collections::{BTreeMap, BTreeSet};
 
 pub fn refine_inference_and_verify(
     errors: &mut Errors,
     signature: &FunctionSignature,
-    acquires: &BTreeSet<StructName>,
+    acquires: &BTreeMap<StructName, Loc>,
     locals: &UniqueMap<Var, SingleType>,
     cfg: &mut BlockCFG,
     infinite_loop_starts: &BTreeSet<Label>,

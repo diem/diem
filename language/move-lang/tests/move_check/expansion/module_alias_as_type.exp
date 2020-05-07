@@ -1,11 +1,16 @@
 error: 
 
+   ┌── tests/move_check/expansion/module_alias_as_type.move:6:14 ───
+   │
+ 6 │     use 0x1::X;
+   │              ^ Unused 'use' of alias 'X'. Consider removing it
+   │
+
+error: 
+
    ┌── tests/move_check/expansion/module_alias_as_type.move:7:16 ───
    │
  7 │     fun foo(x: X) {}
-   │                ^ Unexpected module alias 'X'
-   ·
- 7 │     fun foo(x: X) {}
-   │                - Modules are not types. Try accessing a struct inside the module instead
+   │                ^ Unbound type 'X' in current scope
    │
 

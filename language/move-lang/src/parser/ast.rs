@@ -65,9 +65,15 @@ pub enum Definition {
 #[derive(Debug)]
 pub struct Script {
     pub loc: Loc,
-    pub uses: Vec<(ModuleIdent, Option<ModuleName>)>,
+    pub uses: Vec<Use>,
     pub function: Function,
     pub specs: Vec<SpecBlock>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Use {
+    Module(ModuleIdent, Option<ModuleName>),
+    Members(ModuleIdent, Vec<(Name, Option<Name>)>),
 }
 
 //**************************************************************************************************
@@ -87,11 +93,16 @@ pub struct ModuleIdent(pub Spanned<ModuleIdent_>);
 #[derive(Debug)]
 pub struct ModuleDefinition {
     pub loc: Loc,
-    pub uses: Vec<(ModuleIdent, Option<ModuleName>)>,
     pub name: ModuleName,
-    pub structs: Vec<StructDefinition>,
-    pub functions: Vec<Function>,
-    pub specs: Vec<SpecBlock>,
+    pub members: Vec<ModuleMember>,
+}
+
+#[derive(Debug)]
+pub enum ModuleMember {
+    Function(Function),
+    Struct(StructDefinition),
+    Spec(SpecBlock),
+    Use(Use),
 }
 
 //**************************************************************************************************
@@ -167,7 +178,7 @@ pub struct Function {
 #[derive(Debug, PartialEq)]
 pub struct SpecBlock_ {
     pub target: SpecBlockTarget,
-    pub uses: Vec<(ModuleIdent, Option<ModuleName>)>,
+    pub uses: Vec<Use>,
     pub members: Vec<SpecBlockMember>,
 }
 
@@ -725,7 +736,11 @@ impl AstDebug for Script {
             function,
             specs,
         } = self;
-        uses.ast_debug(w);
+        for u in uses {
+            u.ast_debug(w);
+            w.new_line();
+        }
+        w.new_line();
         function.ast_debug(w);
         for spec in specs {
             spec.ast_debug(w);
@@ -738,46 +753,51 @@ impl AstDebug for ModuleDefinition {
     fn ast_debug(&self, w: &mut AstWriter) {
         let ModuleDefinition {
             loc: _loc,
-            uses,
             name,
-            structs,
-            functions,
-            specs,
+            members,
         } = self;
         w.write(&format!("module {}", name));
         w.block(|w| {
-            uses.ast_debug(w);
-            for sdef in structs {
-                sdef.ast_debug(w);
-                w.new_line();
-            }
-            for fdef in functions {
-                fdef.ast_debug(w);
-                w.new_line();
-            }
-            for spec in specs {
-                spec.ast_debug(w);
-                w.new_line();
+            for mem in members {
+                mem.ast_debug(w)
             }
         });
     }
 }
 
-impl AstDebug for Vec<(ModuleIdent, Option<ModuleName>)> {
+impl AstDebug for ModuleMember {
     fn ast_debug(&self, w: &mut AstWriter) {
-        w.semicolon(self, |w, item| item.ast_debug(w));
-        w.writeln(";");
+        match self {
+            ModuleMember::Function(f) => f.ast_debug(w),
+            ModuleMember::Struct(s) => s.ast_debug(w),
+            ModuleMember::Spec(s) => s.ast_debug(w),
+            ModuleMember::Use(u) => u.ast_debug(w),
+        }
     }
 }
 
-impl AstDebug for (ModuleIdent, Option<ModuleName>) {
+impl AstDebug for Use {
     fn ast_debug(&self, w: &mut AstWriter) {
-        let (m, alias_opt) = self;
-        w.write(&format!("use {}", m));
-        if let Some(alias) = alias_opt {
-            w.write(&format!(" as {}", alias))
+        match self {
+            Use::Module(m, alias_opt) => {
+                w.write(&format!("use {}", m));
+                if let Some(alias) = alias_opt {
+                    w.write(&format!(" as {}", alias))
+                }
+            }
+            Use::Members(m, sub_uses) => {
+                w.write(&format!("use {}::", m));
+                w.block(|w| {
+                    w.comma(sub_uses, |w, (n, alias_opt)| {
+                        w.write(&format!("{}", n));
+                        if let Some(alias) = alias_opt {
+                            w.write(&format!(" as {}", alias))
+                        }
+                    })
+                })
+            }
         }
-        w.writeln(";");
+        w.write(";")
     }
 }
 

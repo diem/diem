@@ -1,0 +1,30 @@
+error: 
+
+    ┌── tests/move_check/expansion/use_function_same_name_as_function.move:10:9 ───
+    │
+ 10 │     fun u() {
+    │         ^ Duplicate module member or alias 'u'. Top level names in a module must be unique
+    ·
+  9 │     use 0x1::X::u;
+    │                 - Previously defined here
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/use_function_same_name_as_function.move:17:22 ───
+    │
+ 17 │     use 0x1::X::u as bar;
+    │                      ^^^ Duplicate module member or alias 'bar'. Top level names in a module must be unique
+    ·
+ 15 │     fun bar() {
+    │         --- Previously defined here
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/use_function_same_name_as_function.move:17:22 ───
+    │
+ 17 │     use 0x1::X::u as bar;
+    │                      ^^^ Unused 'use' of alias 'bar'. Consider removing it
+    │
+

@@ -14,7 +14,7 @@ use crate::{
     typing::ast as T,
 };
 use move_ir_types::location::*;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, VecDeque};
 
 //**************************************************************************************************
 // Entry
@@ -192,7 +192,7 @@ fn function_signature(context: &mut Context, sig: &N::FunctionSignature) {
 
 fn function_body(
     context: &mut Context,
-    acquires: &BTreeSet<StructName>,
+    acquires: &BTreeMap<StructName, Loc>,
     sp!(loc, nb_): N::FunctionBody,
 ) -> T::FunctionBody {
     assert!(context.constraints.is_empty());

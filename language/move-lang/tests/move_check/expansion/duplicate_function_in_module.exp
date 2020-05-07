@@ -3,7 +3,7 @@ error:
    ┌── tests/move_check/expansion/duplicate_function_in_module.move:3:9 ───
    │
  3 │     fun foo() { }
-   │         ^^^ Duplicate definition for function 'foo' in module 'M'
+   │         ^^^ Duplicate module member or alias 'foo'. Top level names in a module must be unique
    ·
  2 │     fun foo() { }
    │         --- Previously defined here

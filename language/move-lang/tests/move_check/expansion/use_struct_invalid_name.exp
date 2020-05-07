@@ -1,0 +1,19 @@
+error: 
+
+   ┌── tests/move_check/expansion/use_struct_invalid_name.move:7:17 ───
+   │
+ 7 │     use 0x1::X::u;
+   │                 ^ Invalid 'use'. Unbound member 'u' in module '0x1::X'
+   ·
+ 2 │ module X {
+   │        - Module '0x1::X' declared here
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/use_struct_invalid_name.move:8:19 ───
+   │
+ 8 │     struct X { f: u }
+   │                   ^ Unbound type 'u' in current scope
+   │
+

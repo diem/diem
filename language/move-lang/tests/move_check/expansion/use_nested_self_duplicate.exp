@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/expansion/use_nested_self_duplicate.move:9:14 ───
+   │
+ 9 │     use 0x1::X::Self;
+   │              ^ Duplicate module alias 'X'. Module aliases must be unique within a given module
+   ·
+ 8 │     use 0x1::X;
+   │              - Previously defined here
+   │
+

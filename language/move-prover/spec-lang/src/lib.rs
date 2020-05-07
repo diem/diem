@@ -135,8 +135,6 @@ fn run_spec_checker(
                 } => {
                     let move_lang::expansion::ast::Script {
                         loc,
-                        uses,
-                        unused_aliases: _unused_aliases,
                         function_name,
                         function,
                         specs,
@@ -175,8 +173,6 @@ fn run_spec_checker(
                     function_infos.add(function_name, function_info).unwrap();
                     let expanded_module = ModuleDefinition {
                         loc,
-                        uses,
-                        unused_aliases: vec![],
                         is_source_module: true,
                         structs: UniqueMap::new(),
                         functions,

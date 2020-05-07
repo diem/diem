@@ -212,7 +212,7 @@ where
 
 // Parse an identifier:
 //      Identifier = <IdentifierValue>
-fn parse_identifier<'input>(tokens: &mut Lexer<'input>) -> Result<Spanned<String>, Error> {
+fn parse_identifier<'input>(tokens: &mut Lexer<'input>) -> Result<Name, Error> {
     if tokens.peek() != Tok::IdentifierValue {
         return Err(unexpected_token_error(tokens, "an identifier"));
     }
@@ -1415,22 +1415,55 @@ fn parse_address_block<'input>(
 //**************************************************************************************************
 
 // Parse a use declaration:
-//      UseDecl = "use" <ModuleIdent> ("as" <ModuleName>)? ";"
-fn parse_use_decl<'input>(
-    tokens: &mut Lexer<'input>,
-) -> Result<(ModuleIdent, Option<ModuleName>), Error> {
+//      UseDecl =
+//          "use" <ModuleIdent> <UseAlias> ";" |
+//          "use" <ModuleIdent> :: <UseMember> ";" |
+//          "use" <ModuleIdent> :: "{" Comma<UseMember> "}" ";"
+fn parse_use_decl<'input>(tokens: &mut Lexer<'input>) -> Result<Use, Error> {
     consume_token(tokens, Tok::Use)?;
     let ident = parse_module_ident(tokens)?;
-    let alias = if tokens.peek() == Tok::As {
-        tokens.advance()?;
-        Some(parse_module_name(tokens)?)
-    } else {
-        None
+    let alias_opt = parse_use_alias(tokens)?;
+    let use_ = match (&alias_opt, tokens.peek()) {
+        (None, Tok::ColonColon) => {
+            consume_token(tokens, Tok::ColonColon)?;
+            let sub_uses = match tokens.peek() {
+                Tok::LBrace => parse_comma_list(
+                    tokens,
+                    Tok::LBrace,
+                    Tok::RBrace,
+                    parse_use_member,
+                    "a module member alias",
+                )?,
+                _ => vec![parse_use_member(tokens)?],
+            };
+            Use::Members(ident, sub_uses)
+        }
+        _ => Use::Module(ident, alias_opt.map(ModuleName)),
     };
     consume_token(tokens, Tok::Semicolon)?;
-    Ok((ident, alias))
+    Ok(use_)
 }
 
+// Parse an alias for a module member:
+//      UseMember = <Identifier> <UseAlias>
+fn parse_use_member<'input>(tokens: &mut Lexer<'input>) -> Result<(Name, Option<Name>), Error> {
+    let member = parse_identifier(tokens)?;
+    let alias_opt = parse_use_alias(tokens)?;
+    Ok((member, alias_opt))
+}
+
+// Parse an 'as' use alias:
+//      UseAlias = ("as" <Identifier>)?
+fn parse_use_alias<'input>(tokens: &mut Lexer<'input>) -> Result<Option<Name>, Error> {
+    Ok(if tokens.peek() == Tok::As {
+        tokens.advance()?;
+        Some(parse_identifier(tokens)?)
+    } else {
+        None
+    })
+}
+
+// TODO rework parsing modifiers
 fn is_struct_definition<'input>(tokens: &mut Lexer<'input>) -> Result<bool, Error> {
     let mut t = tokens.peek();
     if t == Tok::Native {
@@ -1453,34 +1486,22 @@ fn parse_module<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleDefinition, 
     let name = parse_module_name(tokens)?;
     consume_token(tokens, Tok::LBrace)?;
 
-    let mut uses = vec![];
-    while tokens.peek() == Tok::Use {
-        uses.push(parse_use_decl(tokens)?);
-    }
-
-    let mut structs = vec![];
-    let mut functions = vec![];
-    let mut specs = vec![];
+    let mut members = vec![];
     while tokens.peek() != Tok::RBrace {
-        if tokens.peek() == Tok::Spec {
-            specs.push(parse_spec_block(tokens)?);
-        } else if is_struct_definition(tokens)? {
-            structs.push(parse_struct_definition(tokens)?);
-        } else {
-            functions.push(parse_function_decl(tokens, /* allow_native */ true)?);
-        }
+        members.push(match tokens.peek() {
+            Tok::Spec => ModuleMember::Spec(parse_spec_block(tokens)?),
+            Tok::Use => ModuleMember::Use(parse_use_decl(tokens)?),
+            // TODO rework parsing modifiers
+            _ if is_struct_definition(tokens)? => {
+                ModuleMember::Struct(parse_struct_definition(tokens)?)
+            }
+            _ => ModuleMember::Function(parse_function_decl(tokens, /* allow_native */ true)?),
+        })
     }
-    tokens.advance()?; // consume the RBrace
+    consume_token(tokens, Tok::RBrace)?;
 
     let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
-    Ok(ModuleDefinition {
-        loc,
-        uses,
-        name,
-        structs,
-        functions,
-        specs,
-    })
+    Ok(ModuleDefinition { loc, name, members })
 }
 
 //**************************************************************************************************

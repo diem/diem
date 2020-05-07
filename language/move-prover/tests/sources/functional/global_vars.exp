@@ -77,7 +77,6 @@ error:  A postcondition might not hold on this return path.
     =         t = <redacted>,
     =         t = <redacted>
     =     at tests/sources/functional/global_vars.move:66:5: update_valid_still_mutating (exit)
-    =     at tests/sources/functional/global_vars.move:86:9: update_incorrect
     =     at tests/sources/functional/global_vars.move:87:9: update_incorrect
     =     at tests/sources/functional/global_vars.move:84:5: update_incorrect (exit)
     =         result = <redacted>
