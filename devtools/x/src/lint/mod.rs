@@ -19,9 +19,10 @@ pub struct Args {
 pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
     let workspace_config = xctx.config().workspace_config();
 
-    let project_linters: &[&dyn ProjectLinter] = &[&guppy::BannedDirectDeps::new(
-        &workspace_config.banned_direct_deps,
-    )];
+    let project_linters: &[&dyn ProjectLinter] = &[
+        &guppy::BannedDirectDeps::new(&workspace_config.banned_direct_deps),
+        &guppy::DirectDepDups,
+    ];
 
     let package_linters: &[&dyn PackageLinter] = &[
         &guppy::EnforcedAttributes::new(&workspace_config.enforced_attributes),

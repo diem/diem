@@ -197,14 +197,6 @@ jobs:
       - run:
           name: cargo fmt
           command: cargo xfmt --check
-      - run:
-          name: cargo guppy
-          command: |
-            cargo install cargo-guppy \
-              --git http://github.com/calibra/cargo-guppy \
-              --rev 8b2bc45c0cd6323a7a2b8170ddad6d2a5b79047b
-            [[ -z $(cargo guppy dups --target x86_64-unknown-linux-gnu \
-              --kind directthirdparty) ]]
   build-dev:
     executor: build-executor
     description: Development Build

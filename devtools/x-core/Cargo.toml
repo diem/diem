@@ -8,6 +8,6 @@ publish = false
 license = "Apache-2.0"
 
 [dependencies]
-guppy = "0.4.0"
+guppy = "0.4.1"
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 once_cell = "1.3.1"
