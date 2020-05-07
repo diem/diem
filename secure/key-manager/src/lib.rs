@@ -24,6 +24,7 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey,
 };
+use libra_global_constants::{CONSENSUS_KEY, OPERATOR_KEY};
 use libra_logger::info;
 use libra_secure_storage::Storage;
 use libra_secure_time::TimeService;
@@ -39,9 +40,6 @@ pub mod libra_interface;
 
 #[cfg(test)]
 mod tests;
-
-pub const VALIDATOR_KEY: &str = "validator";
-pub const CONSENSUS_KEY: &str = "consensus";
 
 const GAS_UNIT_PRICE: u64 = 0;
 const MAX_GAS_AMOUNT: u64 = 400_000;
@@ -201,7 +199,7 @@ where
         &self,
         new_key: Ed25519PublicKey,
     ) -> Result<Ed25519PublicKey, Error> {
-        let account_prikey = self.storage.export_private_key(VALIDATOR_KEY)?;
+        let account_prikey = self.storage.export_private_key(OPERATOR_KEY)?;
         let seq_id = self.libra.retrieve_sequence_number(self.account)?;
         let expiration = Duration::from_secs(self.time_service.now() + self.txn_expiration_secs);
         let txn =
