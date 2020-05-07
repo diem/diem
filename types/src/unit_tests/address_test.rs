@@ -52,7 +52,7 @@ fn test_address() {
     });
 
     let hash_vec =
-        &Vec::from_hex("2f06a55a39cbe1bdfbb3a1ca7a770674af51849d48a9ce5a9beb6f82bde14e6f")
+        &Vec::from_hex("87090718c95e76db89afa7148a6294e3a2ce7aacddcb8d21172dd8cce1a3bbd6")
             .expect("You must provide a valid Hex format");
 
     let mut hash = [0u8; 32];
