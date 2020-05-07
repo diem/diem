@@ -69,7 +69,7 @@ impl TransactionGenerator {
         for _i in 0..num_accounts {
             let private_key = Ed25519PrivateKey::generate(&mut rng);
             let public_key = private_key.public_key();
-            let address = AccountAddress::from_public_key(&public_key);
+            let address = libra_types::account_address::from_public_key(&public_key);
             let account = AccountData {
                 private_key,
                 public_key,

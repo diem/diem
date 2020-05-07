@@ -101,7 +101,7 @@ impl ExtendedPrivKey {
 
     /// Compute the account address for this account's public key
     pub fn get_address(&self) -> AccountAddress {
-        AccountAddress::from_public_key(&self.get_public())
+        libra_types::account_address::from_public_key(&self.get_public())
     }
 
     /// Compute the authentication key for this account's public key

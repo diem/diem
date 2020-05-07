@@ -3,7 +3,7 @@
 
 use crate::{
     access_path::AccessPath,
-    account_address::AccountAddress,
+    account_address::{self, AccountAddress},
     account_config::{AccountResource, BalanceResource, LBR_NAME},
     account_state_blob::AccountStateBlob,
     block_info::{BlockInfo, Round},
@@ -114,7 +114,7 @@ struct AccountInfo {
 
 impl AccountInfo {
     pub fn new(private_key: Ed25519PrivateKey, public_key: Ed25519PublicKey) -> Self {
-        let address = AccountAddress::from_public_key(&public_key);
+        let address = account_address::from_public_key(&public_key);
         Self {
             address,
             private_key,
@@ -357,7 +357,7 @@ impl SignatureCheckedTransaction {
     ) -> impl Strategy<Value = Self> {
         (keypair_strategy, payload_strategy)
             .prop_flat_map(|(keypair, payload)| {
-                let address = AccountAddress::from_public_key(&keypair.public_key);
+                let address = account_address::from_public_key(&keypair.public_key);
                 (
                     Just(keypair),
                     RawTransaction::strategy_impl(Just(address), Just(payload)),
@@ -552,7 +552,7 @@ prop_compose! {
         keypair in ed25519::keypair_strategy(),
     ) -> (AccountAddress, Ed25519Signature) {
         let signature = keypair.private_key.sign_message(&hash);
-        (AccountAddress::from_public_key(&keypair.public_key), signature)
+        (account_address::from_public_key(&keypair.public_key), signature)
     }
 }
 

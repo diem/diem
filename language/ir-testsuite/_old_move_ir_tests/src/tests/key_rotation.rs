@@ -50,7 +50,7 @@ main() {{
 
   return;
 }}",
-        hex::encode(AccountAddress::from_public_key(pubkey))
+        hex::encode(libra_types::account_address::from_public_key(pubkey))
     );
 
     // rotate key

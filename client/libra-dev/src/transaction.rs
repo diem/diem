@@ -16,7 +16,7 @@ use libra_crypto::{
     PrivateKey,
 };
 use libra_types::{
-    account_address::AccountAddress,
+    account_address::{self, AccountAddress},
     account_config::lbr_type_tag,
     transaction::{
         authenticator::AuthenticationKey, helpers::TransactionSigner, RawTransaction,
@@ -59,7 +59,7 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
     };
 
     let public_key = private_key.public_key();
-    let sender_address = AccountAddress::from_public_key(&public_key);
+    let sender_address = account_address::from_public_key(&public_key);
 
     if receiver.is_null() {
         update_last_error("receiver parameter must not be null.".to_string());
@@ -479,7 +479,7 @@ mod test {
         let private_key_bytes = private_key.to_bytes();
 
         // create transfer parameters
-        let sender_address = AccountAddress::from_public_key(&public_key);
+        let sender_address = account_address::from_public_key(&public_key);
         let receiver_auth_key = AuthenticationKey::random();
         let sequence = 0;
         let amount = 100_000_000;
@@ -584,7 +584,7 @@ mod test {
         let public_key = private_key.public_key();
 
         // create transfer parameters
-        let sender_address = AccountAddress::from_public_key(&public_key);
+        let sender_address = account_address::from_public_key(&public_key);
         let receiver_auth_key = AuthenticationKey::random();
         let sequence = 0;
         let amount = 100_000_000;

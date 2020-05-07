@@ -14,7 +14,6 @@ use libra_crypto::{
     PrivateKey, SigningKey, Uniform,
 };
 use libra_types::{
-    account_address::AccountAddress,
     transaction::{authenticator::AuthenticationKey, SignedTransaction, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };
@@ -28,7 +27,7 @@ fn rotate_ed25519_key() {
 
     let privkey = Ed25519PrivateKey::generate_for_testing();
     let pubkey = privkey.public_key();
-    let new_key_hash = AccountAddress::authentication_key(&pubkey).to_vec();
+    let new_key_hash = AuthenticationKey::ed25519(&pubkey).to_vec();
     let txn = rotate_key_txn(sender.account(), new_key_hash.clone(), 10);
 
     // execute transaction

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod access_path_test;
-mod address_test;
 mod block_metadata_test;
 mod canonical_serialization_examples;
 mod code_debug_fmt_test;
