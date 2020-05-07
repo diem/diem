@@ -5,6 +5,7 @@ use crate::{
     gas,
     loader::{Function, Loader, Resolver},
     native_functions::FunctionContext,
+    trace,
 };
 use libra_logger::prelude::*;
 use libra_types::{
@@ -679,6 +680,7 @@ impl Frame {
         let code = self.function.code();
         loop {
             for instruction in &code[self.pc as usize..] {
+                trace!(self.function.pretty_string(), self.pc, instruction);
                 self.pc += 1;
 
                 match instruction {

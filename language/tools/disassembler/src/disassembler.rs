@@ -7,7 +7,9 @@ use bytecode_source_map::{
     source_map::{FunctionSourceMap, SourceName},
 };
 use bytecode_verifier::control_flow_graph::{ControlFlowGraph, VMControlFlowGraph};
+use colored::*;
 use move_core_types::identifier::IdentStr;
+use move_coverage::coverage_map::{CoverageMap, FunctionCoverage};
 use vm::{
     access::ModuleAccess,
     file_format::{
@@ -48,6 +50,8 @@ pub struct Disassembler<Location: Clone + Eq> {
     source_mapper: SourceMapping<Location>,
     // The various options that we can set for disassembly.
     options: DisassemblerOptions,
+    // Optional coverage map for use in displaying code coverage
+    coverage_map: Option<CoverageMap>,
 }
 
 impl<Location: Clone + Eq> Disassembler<Location> {
@@ -55,7 +59,12 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         Self {
             source_mapper,
             options,
+            coverage_map: None,
         }
+    }
+
+    pub fn add_coverage_map(&mut self, coverage_map: CoverageMap) {
+        self.coverage_map = Some(coverage_map);
     }
 
     //***************************************************************************
@@ -87,6 +96,51 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             .source_mapper
             .bytecode
             .struct_def_at(struct_definition_index))
+    }
+
+    //***************************************************************************
+    // Code Coverage Helpers
+    //***************************************************************************
+
+    fn get_function_coverage(&self, function_name: &IdentStr) -> Option<&FunctionCoverage> {
+        self.source_mapper
+            .source_map
+            .module_name_opt
+            .as_ref()
+            .and_then(|module| {
+                self.coverage_map.as_ref().and_then(|coverage_map| {
+                    coverage_map
+                        .module_maps
+                        .get(&module)
+                        .and_then(|module_map| module_map.get_function_coverage(function_name))
+                })
+            })
+    }
+
+    fn is_function_called(&self, function_name: &IdentStr) -> bool {
+        self.get_function_coverage(function_name).is_some()
+    }
+
+    fn format_function_coverage(&self, name: &IdentStr, function_body: String) -> String {
+        if self.is_function_called(name) {
+            function_body.green()
+        } else {
+            function_body.red()
+        }
+        .to_string()
+    }
+
+    fn format_with_instruction_coverage(
+        pc: usize,
+        function_coverage_map: Option<&FunctionCoverage>,
+        instruction: String,
+    ) -> String {
+        let coverage = function_coverage_map.and_then(|map| map.get(&(pc as u64)));
+        match coverage {
+            Some(coverage) => format!("[{}]\t{}: {}", coverage, pc, instruction).green(),
+            None => format!("\t{}: {}", pc, instruction).red(),
+        }
+        .to_string()
     }
 
     //***************************************************************************
@@ -678,7 +732,6 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             .source_mapper
             .bytecode
             .function_handle_at(function_def.function);
-
         let code = match &function_def.code {
             Some(code) => code,
             None => return Ok(vec!["".to_string()]),
@@ -693,6 +746,12 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             .source_mapper
             .source_map
             .get_function_source_map(function_definition_index)?;
+
+        let function_name = self
+            .source_mapper
+            .bytecode
+            .identifier_at(function_handle.name);
+        let function_code_coverage_map = self.get_function_coverage(function_name);
 
         let decl_location = &function_source_map.decl_location;
         let instrs: Vec<String> = code
@@ -712,7 +771,13 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         let mut instrs: Vec<String> = instrs
             .into_iter()
             .enumerate()
-            .map(|(instr_index, dis_instr)| format!("\t{}: {}", instr_index, dis_instr))
+            .map(|(instr_index, dis_instr)| {
+                Self::format_with_instruction_coverage(
+                    instr_index,
+                    function_code_coverage_map,
+                    dis_instr,
+                )
+            })
             .collect();
 
         if self.options.print_basic_blocks {
@@ -799,8 +864,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         let name = self
             .source_mapper
             .bytecode
-            .identifier_at(function_handle.name)
-            .to_string();
+            .identifier_at(function_handle.name);
         let return_ = self
             .source_mapper
             .bytecode
@@ -841,14 +905,17 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             }
             None => "".to_string(),
         };
-        Ok(format!(
-            "{visibility_modifier}{name}{ty_params}({params}){ret_type}{body}",
-            visibility_modifier = visibility_modifier,
-            name = name,
-            ty_params = ty_params,
-            params = &parameters.join(", "),
-            ret_type = Self::format_ret_type(&ret_type),
-            body = body,
+        Ok(self.format_function_coverage(
+            name,
+            format!(
+                "{visibility_modifier}{name}{ty_params}({params}){ret_type}{body}",
+                visibility_modifier = visibility_modifier,
+                name = name,
+                ty_params = ty_params,
+                params = &parameters.join(", "),
+                ret_type = Self::format_ret_type(&ret_type),
+                body = body,
+            ),
         ))
     }
 
