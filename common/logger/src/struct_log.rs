@@ -11,6 +11,7 @@ use std::{
     fs::{File, OpenOptions},
     io,
     io::Write as IoWrite,
+    net::UdpSocket,
     str::FromStr,
     sync::{
         atomic::{AtomicUsize, Ordering},
@@ -178,10 +179,13 @@ pub fn struct_logger_set() -> bool {
 }
 
 /// Initializes struct logger from STRUCT_LOG_FILE env var
+/// If STRUCT_LOG_FILE is set, STRUCT_LOG_UDP_ADDR will be ignored
 /// Can only be called once
-pub fn init_struct_log_from_env() -> Result<(), InitFileLoggerError> {
+pub fn init_struct_log_from_env() -> Result<(), InitLoggerError> {
     if let Ok(file) = env::var("STRUCT_LOG_FILE") {
         init_file_struct_log(file)
+    } else if let Ok(udp_address) = env::var("STRUCT_LOG_UDP_ADDR") {
+        init_udp_struct_log(udp_address)
     } else {
         Ok(())
     }
@@ -189,10 +193,18 @@ pub fn init_struct_log_from_env() -> Result<(), InitFileLoggerError> {
 
 /// Initializes struct logger sink that writes to specified file
 /// Can only be called once
-pub fn init_file_struct_log(file_path: String) -> Result<(), InitFileLoggerError> {
-    let logger = FileStructLog::start_new(file_path).map_err(InitFileLoggerError::IoError)?;
+pub fn init_file_struct_log(file_path: String) -> Result<(), InitLoggerError> {
+    let logger = FileStructLog::start_new(file_path).map_err(InitLoggerError::IoError)?;
     let logger = Box::leak(Box::new(logger));
-    set_struct_logger(logger).map_err(|_| InitFileLoggerError::StructLoggerAlreadySet)
+    set_struct_logger(logger).map_err(|_| InitLoggerError::StructLoggerAlreadySet)
+}
+
+/// Initializes struct logger sink that stream logs through UDP protocol
+/// Can only be called once
+pub fn init_udp_struct_log(udp_address: String) -> Result<(), InitLoggerError> {
+    let logger = UDPStructLog::start_new(udp_address).map_err(InitLoggerError::IoError)?;
+    let logger = Box::leak(Box::new(logger));
+    set_struct_logger(logger).map_err(|_| InitLoggerError::StructLoggerAlreadySet)
 }
 
 /// Initialize struct logger sink that prints all structured logs to stdout
@@ -204,7 +216,7 @@ pub fn init_println_struct_log() -> Result<(), ()> {
 }
 
 #[derive(Debug)]
-pub enum InitFileLoggerError {
+pub enum InitLoggerError {
     IoError(io::Error),
     StructLoggerAlreadySet,
 }
@@ -280,6 +292,68 @@ impl FileStructLogThread {
             };
             if let Err(e) = writeln!(&mut self.file, "{}", json) {
                 log::error!("Failed to write struct log entry: {}", e);
+            }
+        }
+    }
+}
+
+/// Sink that streams all structured logs to an address through UDP protocol
+struct UDPStructLog {
+    sender: SyncSender<StructuredLogEntry>,
+}
+
+impl UDPStructLog {
+    /// Creates new UDPStructLog and starts async thread to send results
+    pub fn start_new(udp_address: String) -> io::Result<Self> {
+        let (sender, receiver) = mpsc::sync_channel(1_024);
+        let socket = UdpSocket::bind(udp_address.clone()).expect("couldn't bind to address");
+        let sink_thread = UDPStructLogThread {
+            receiver,
+            socket,
+            udp_address,
+        };
+        thread::spawn(move || sink_thread.run());
+        Ok(Self { sender })
+    }
+}
+
+impl StructLogSink for UDPStructLog {
+    fn send(&self, entry: StructuredLogEntry) {
+        if let Err(e) = self.sender.try_send(entry) {
+            // Use log crate macro to avoid generation of structured log in this case
+            // Otherwise we will have infinite loop
+            log::error!("Failed to send structured log: {}", e);
+        }
+    }
+}
+
+struct UDPStructLogThread {
+    receiver: Receiver<StructuredLogEntry>,
+    socket: UdpSocket,
+    udp_address: String,
+}
+
+impl UDPStructLogThread {
+    pub fn run(self) {
+        for entry in self.receiver {
+            let json = match serde_json::to_value(entry) {
+                Err(e) => {
+                    log::error!("Failed to serialize struct log entry: {}", e);
+                    continue;
+                }
+                Ok(json) => json,
+            };
+            match self
+                .socket
+                .send_to(json.to_string().as_bytes(), self.udp_address.clone())
+            {
+                Ok(_) => {
+                    continue;
+                }
+                Err(e) => {
+                    println!("Error while sending data to socket: {}", e);
+                    break;
+                }
             }
         }
     }
