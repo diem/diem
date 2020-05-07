@@ -19,14 +19,14 @@ pub trait PackageLinter: Linter {
 pub struct PackageContext<'l> {
     project_ctx: ProjectContext<'l>,
     workspace_path: &'l Path,
-    metadata: &'l PackageMetadata,
+    metadata: PackageMetadata<'l>,
 }
 
 impl<'l> PackageContext<'l> {
     pub fn new(
         project_ctx: ProjectContext<'l>,
         workspace_path: &'l Path,
-        metadata: &'l PackageMetadata,
+        metadata: PackageMetadata<'l>,
     ) -> Self {
         Self {
             project_ctx,
@@ -46,8 +46,8 @@ impl<'l> PackageContext<'l> {
     }
 
     /// Returns the metadata for this package.
-    pub fn metadata(&self) -> &'l PackageMetadata {
-        self.metadata
+    pub fn metadata(&self) -> &PackageMetadata<'l> {
+        &self.metadata
     }
 }
 

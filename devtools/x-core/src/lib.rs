@@ -1,8 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use cargo_metadata::{CargoOpt, MetadataCommand};
-use guppy::graph::PackageGraph;
+use guppy::{graph::PackageGraph, MetadataCommand};
 use once_cell::sync::OnceCell;
 use std::path::Path;
 
@@ -35,10 +34,7 @@ impl XCoreContext {
             let mut cmd = MetadataCommand::new();
             // Run cargo metadata from the root of the workspace.
             cmd.current_dir(self.project_root);
-            // Using --all-features means guppy can capture the full set of features and packages
-            // enabled in the workspace.
-            cmd.features(CargoOpt::AllFeatures);
-            Ok(PackageGraph::from_command(&mut cmd)?)
+            Ok(cmd.build_graph()?)
         })
     }
 }

@@ -4,7 +4,6 @@
 //! Project and package linters that run queries on guppy.
 
 use crate::config::EnforcedAttributesConfig;
-use guppy::graph::BuildTargetId;
 use std::{collections::HashMap, ffi::OsStr};
 use x_lint::prelude::*;
 
@@ -43,14 +42,12 @@ impl<'cfg> ProjectLinter for BannedDirectDeps<'cfg> {
 
         for (package, message) in banned_packages {
             // Look at the reverse direct dependencies of this package.
-            let dep_links = package_graph
-                .reverse_dep_links(package.id())
-                .expect("valid package ID");
-            for link in dep_links {
-                if let Some(workspace_path) = link.from.workspace_path() {
+            for link in package.reverse_direct_links() {
+                let from = link.from();
+                if let Some(workspace_path) = from.workspace_path() {
                     out.write_kind(
                         LintKind::Package {
-                            name: link.from.name(),
+                            name: from.name(),
                             workspace_path,
                         },
                         LintLevel::Error,
@@ -183,7 +180,7 @@ impl PackageLinter for WorkspaceHack {
         ctx: &PackageContext<'l>,
         out: &mut LintFormatter<'l, '_>,
     ) -> Result<RunStatus<'l>> {
-        let package_id = ctx.metadata().id();
+        let package = ctx.metadata();
         let pkg_graph = ctx
             .project_ctx()
             .package_graph()
@@ -195,17 +192,13 @@ impl PackageLinter for WorkspaceHack {
             .id();
 
         // libra-workspace-hack does not need to depend on itself
-        if package_id == workspace_hack_id {
+        if package.id() == workspace_hack_id {
             return Ok(RunStatus::Executed);
         }
 
-        let has_links = pkg_graph
-            .dep_links(package_id)
-            .expect("valid package ID")
-            .next()
-            .is_some();
+        let has_links = package.direct_links().next().is_some();
         let has_hack_dep = pkg_graph
-            .directly_depends_on(package_id, workspace_hack_id)
+            .directly_depends_on(package.id(), workspace_hack_id)
             .expect("valid package ID");
         if has_links && !has_hack_dep {
             out.write(LintLevel::Error, "missing libra-workspace-hack dependency");
@@ -233,18 +226,11 @@ impl PackageLinter for IrrelevantBuildDeps {
     ) -> Result<RunStatus<'l>> {
         let metadata = ctx.metadata();
 
-        // TODO: clean up with guppy 0.4.
-        let has_build_script = metadata.build_target(&BuildTargetId::BuildScript).is_some();
+        let has_build_dep = metadata
+            .direct_links()
+            .any(|link| link.build().is_present());
 
-        let has_build_dep = ctx
-            .project_ctx()
-            .package_graph()
-            .unwrap()
-            .dep_links(metadata.id())
-            .unwrap()
-            .any(|link| link.edge.build().is_some());
-
-        if !has_build_script && has_build_dep {
+        if !metadata.has_build_script() && has_build_dep {
             out.write(LintLevel::Error, "build dependencies but no build script");
         }
 
