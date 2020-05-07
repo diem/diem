@@ -14,7 +14,7 @@
 //! will run the socket bench server handling the remote_tcp benchmark. A
 //! corresponding client would exercise this benchmark using
 //!
-//! `TCP_ADDR=/ip6/::1/tcp/12345 cargo bench -p network remote_tcp`
+//! `TCP_ADDR=/ip6/::1/tcp/12345 cargo x bench -p network remote_tcp`
 
 use libra_logger::info;
 use netcore::transport::tcp::TcpTransport;
@@ -38,4 +38,5 @@ fn main() {
         let addr = start_stream_server(&executor, build_tcp_noise_transport(), addr);
         info!("bench: tcp+noise: listening on: {}", addr);
     }
+    std::thread::park();
 }
