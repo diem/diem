@@ -73,7 +73,8 @@ axiom l#TypeValueArray(EmptyTypeValueArray) == 0;
 axiom v#TypeValueArray(EmptyTypeValueArray) == MapConstTypeValue(DefaultTypeValue);
 
 function {:inline} ExtendTypeValueArray(ta: TypeValueArray, tv: TypeValue): TypeValueArray {
-    TypeValueArray(v#TypeValueArray(ta)[l#TypeValueArray(ta) := tv], l#TypeValueArray(ta) + 1)
+    (var len := l#TypeValueArray(ta);
+     TypeValueArray(v#TypeValueArray(ta)[len := tv], len + 1))
 }
 
 
@@ -171,7 +172,8 @@ function {:inline} SliceValueArray(a: ValueArray, i: int, j: int): ValueArray { 
     ValueArray((lambda k:int :: if 0 <= k && k < j-i then v#ValueArray(a)[i+k] else DefaultValue), (if j-i < 0 then 0 else j-i))
 }
 function {:inline} ExtendValueArray(a: ValueArray, elem: Value): ValueArray {
-    ValueArray(v#ValueArray(a)[l#ValueArray(a) := elem], l#ValueArray(a) + 1)
+    (var len := l#ValueArray(a);
+     ValueArray(v#ValueArray(a)[len := elem], len + 1))
 }
 function {:inline} UpdateValueArray(a: ValueArray, i: int, elem: Value): ValueArray {
     ValueArray(v#ValueArray(a)[i := elem], l#ValueArray(a))
