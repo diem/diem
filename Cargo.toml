@@ -104,7 +104,7 @@ members = [
     "secure/transaction-scripts",
     "state-synchronizer",
     "storage/accumulator",
-    "storage/backup-restore",
+    "storage/backup/backup-cli",
     "storage/inspector",
     "storage/jellyfish-merkle",
     "storage/libradb",

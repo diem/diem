@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use backup_restore::{
+use backup_cli::{
     adapter::{local_storage::LocalStorage, Adapter},
     FileHandle,
 };
