@@ -14,7 +14,7 @@ use crate::{
     shared::{unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 //**************************************************************************************************
 // Context
@@ -42,7 +42,7 @@ pub struct FunctionInfo {
     pub defined_loc: Loc,
     pub visibility: FunctionVisibility,
     pub signature: FunctionSignature,
-    pub acquires: BTreeSet<StructName>,
+    pub acquires: BTreeMap<StructName, Loc>,
 }
 
 pub struct ModuleInfo {
@@ -604,7 +604,13 @@ pub fn make_function_type(
     m: &ModuleIdent,
     f: &FunctionName,
     ty_args_opt: Option<Vec<Type>>,
-) -> (Loc, Vec<Type>, Vec<(Var, Type)>, BTreeSet<StructName>, Type) {
+) -> (
+    Loc,
+    Vec<Type>,
+    Vec<(Var, Type)>,
+    BTreeMap<StructName, Loc>,
+    Type,
+) {
     let in_current_module = match &context.current_module {
         Some(current) => m == current,
         None => false,
@@ -646,7 +652,7 @@ pub fn make_function_type(
     let acquires = if in_current_module {
         finfo.acquires.clone()
     } else {
-        BTreeSet::new()
+        BTreeMap::new()
     };
     let defined_loc = finfo.defined_loc;
     match &finfo.visibility {

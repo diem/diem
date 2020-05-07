@@ -3,9 +3,9 @@
 
 use crate::{
     parser::ast::{
-        BinOp, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, ModuleName,
-        PragmaProperty, ResourceLoc, SpecApplyPattern, SpecBlockTarget, SpecConditionKind,
-        StructName, UnaryOp, Value, Var,
+        BinOp, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, PragmaProperty,
+        ResourceLoc, SpecApplyPattern, SpecBlockTarget, SpecConditionKind, StructName, UnaryOp,
+        Value, Var,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
@@ -32,8 +32,6 @@ pub struct Program {
 #[derive(Debug)]
 pub struct Script {
     pub loc: Loc,
-    pub uses: BTreeMap<ModuleIdent, Loc>,
-    pub unused_aliases: Vec<ModuleIdent>,
     pub function_name: FunctionName,
     pub function: Function,
     pub specs: Vec<SpecBlock>,
@@ -46,8 +44,6 @@ pub struct Script {
 #[derive(Debug)]
 pub struct ModuleDefinition {
     pub loc: Loc,
-    pub uses: BTreeMap<ModuleIdent, Loc>,
-    pub unused_aliases: Vec<ModuleIdent>,
     pub is_source_module: bool,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub functions: UniqueMap<FunctionName, Function>,
@@ -113,7 +109,6 @@ pub struct Function {
 #[derive(Debug, PartialEq)]
 pub struct SpecBlock_ {
     pub target: SpecBlockTarget,
-    pub uses: Vec<(ModuleIdent, Option<ModuleName>)>,
     pub members: Vec<SpecBlockMember>,
 }
 
@@ -338,30 +333,10 @@ impl AstDebug for Script {
     fn ast_debug(&self, w: &mut AstWriter) {
         let Script {
             loc: _loc,
-            uses,
-            unused_aliases,
             function_name,
             function,
             specs,
         } = self;
-        if !uses.is_empty() {
-            w.writeln("uses: ");
-            w.indent(2, |w| {
-                w.list(uses, ",", |w, (m, _)| {
-                    w.write(&format!("{}", m));
-                    true
-                })
-            });
-        }
-        if !unused_aliases.is_empty() {
-            w.writeln("unused_aliases: ");
-            w.indent(2, |w| {
-                w.list(unused_aliases, ",", |w, m| {
-                    w.write(&format!("{}", m));
-                    true
-                })
-            });
-        }
         (function_name.clone(), function).ast_debug(w);
         for spec in specs {
             spec.ast_debug(w);
@@ -374,8 +349,6 @@ impl AstDebug for ModuleDefinition {
     fn ast_debug(&self, w: &mut AstWriter) {
         let ModuleDefinition {
             loc: _loc,
-            uses,
-            unused_aliases,
             is_source_module,
             structs,
             functions,
@@ -386,24 +359,6 @@ impl AstDebug for ModuleDefinition {
         } else {
             "library module"
         });
-        if !uses.is_empty() {
-            w.writeln("uses: ");
-            w.indent(2, |w| {
-                w.list(uses, ",", |w, (m, _)| {
-                    w.write(&format!("{}", m));
-                    true
-                })
-            });
-        }
-        if !unused_aliases.is_empty() {
-            w.writeln("unused_aliases: ");
-            w.indent(2, |w| {
-                w.list(unused_aliases, ",", |w, m| {
-                    w.write(&format!("{}", m));
-                    true
-                })
-            });
-        }
         for sdef in structs {
             sdef.ast_debug(w);
             w.new_line();

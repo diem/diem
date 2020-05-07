@@ -1,0 +1,24 @@
+error: 
+
+   ┌── tests/move_check/expansion/use_nested_self_as_invalid.move:8:26 ───
+   │
+ 8 │     use 0x1::X::{Self as B, foo, S};
+   │                          ^ Unused 'use' of alias 'B'. Consider removing it
+   │
+
+error: 
+
+    ┌── tests/move_check/expansion/use_nested_self_as_invalid.move:10:19 ───
+    │
+ 10 │     struct X { f: X::S, f2: S }
+    │                   ^ Unbound module alias 'X'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/use_nested_self_as_invalid.move:12:9 ───
+    │
+ 12 │         X::foo();
+    │         ^ Unbound module alias 'X'
+    │
+

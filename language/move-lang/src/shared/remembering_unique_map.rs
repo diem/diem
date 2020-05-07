@@ -36,6 +36,10 @@ impl<K: TName, V> RememberingUniqueMap<K, V> {
         self.map.add(key, value)
     }
 
+    pub fn key_gotten(&self, key: &K) -> bool {
+        self.gotten_keys.contains(key)
+    }
+
     pub fn contains_key(&self, key: &K) -> bool {
         self.map.contains_key(key)
     }
@@ -125,6 +129,10 @@ impl<K: TName, V> RememberingUniqueMap<K, V> {
             map,
             gotten_keys: BTreeSet::new(),
         })
+    }
+
+    pub fn into_inner(self) -> UniqueMap<K, V> {
+        self.map
     }
 
     pub fn remember(self) -> BTreeSet<K> {

@@ -1,0 +1,14 @@
+error: 
+
+    ┌── tests/move_check/expansion/use_struct_tparam_shadows.move:12:9 ───
+    │
+ 12 │         x
+    │         ^ Invalid return expression
+    ·
+ 11 │     fun foo<S>(x: S): 0x1::X::S {
+    │                   - The type: 'S'
+    ·
+ 11 │     fun foo<S>(x: S): 0x1::X::S {
+    │                       --------- Is not compatible with: '0x1::X::S'
+    │
+

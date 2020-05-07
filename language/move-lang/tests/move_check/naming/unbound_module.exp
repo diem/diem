@@ -1,8 +1,16 @@
 error: 
 
+   ┌── tests/move_check/naming/unbound_module.move:2:9 ───
+   │
+ 2 │     use 0x0::X as X;
+   │         ^^^^^^ Invalid 'use'. Unbound module: '0x0::X'
+   │
+
+error: 
+
    ┌── tests/move_check/naming/unbound_module.move:4:9 ───
    │
  4 │         X::foo();
-   │         ^^^^^^ Unbound module '0x0::X'
+   │         ^ Unbound module alias 'X'
    │
 

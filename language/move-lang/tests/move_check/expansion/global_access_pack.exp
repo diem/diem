@@ -3,9 +3,6 @@ error:
    ┌── tests/move_check/expansion/global_access_pack.move:3:9 ───
    │
  3 │         ::S { }
-   │         ^^^ Invalid use of global name '::S'
-   ·
- 3 │         ::S { }
-   │         --- Global names can only be used in function calls
+   │         ^^^ Invalid use of global name '::S'. Global names can only be used in function calls
    │
 

@@ -42,7 +42,6 @@ pub struct Script {
 
 #[derive(Debug)]
 pub struct ModuleDefinition {
-    pub uses: BTreeMap<ModuleIdent, Loc>,
     pub is_source_module: bool,
     /// `dependency_order` is the topological order/rank in the dependency graph.
     /// `dependency_order` is initialized at `0` and set in the uses pass
@@ -90,7 +89,7 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 pub struct Function {
     pub visibility: FunctionVisibility,
     pub signature: FunctionSignature,
-    pub acquires: BTreeSet<StructName>,
+    pub acquires: BTreeMap<StructName, Loc>,
     pub body: FunctionBody,
 }
 
@@ -507,7 +506,6 @@ impl AstDebug for ModuleDefinition {
         let ModuleDefinition {
             is_source_module,
             dependency_order,
-            uses,
             structs,
             functions,
         } = self;
@@ -517,10 +515,6 @@ impl AstDebug for ModuleDefinition {
             w.writeln("source module")
         }
         w.writeln(&format!("dependency order #{}", dependency_order));
-        if !uses.is_empty() {
-            w.writeln("uses: ");
-            w.indent(2, |w| w.comma(uses, |w, (m, _)| w.write(&format!("{}", m))))
-        }
         for sdef in structs {
             sdef.ast_debug(w);
             w.new_line();
@@ -582,7 +576,7 @@ impl AstDebug for (FunctionName, &Function) {
         signature.ast_debug(w);
         if !acquires.is_empty() {
             w.write(" acquires ");
-            w.comma(acquires, |w, s| w.write(&format!("{}", s)));
+            w.comma(acquires.keys(), |w, s| w.write(&format!("{}", s)));
             w.write(" ")
         }
         match &body.value {

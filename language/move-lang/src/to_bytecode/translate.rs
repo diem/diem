@@ -373,7 +373,7 @@ fn function(
     let signature = function_signature(context, signature);
     let acquires = acquires
         .into_iter()
-        .map(|s| context.struct_definition_name(m.unwrap(), s))
+        .map(|(s, _)| context.struct_definition_name(m.unwrap(), s))
         .collect();
     let body = match body.value {
         G::FunctionBody_::Native => IR::FunctionBody::Native,

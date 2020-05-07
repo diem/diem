@@ -91,7 +91,7 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 pub struct Function {
     pub visibility: FunctionVisibility,
     pub signature: FunctionSignature,
-    pub acquires: BTreeSet<StructName>,
+    pub acquires: BTreeMap<StructName, Loc>,
     pub body: FunctionBody,
 }
 
@@ -210,7 +210,7 @@ pub struct ModuleCall {
     pub name: FunctionName,
     pub type_arguments: Vec<BaseType>,
     pub arguments: Box<Exp>,
-    pub acquires: BTreeSet<StructName>,
+    pub acquires: BTreeMap<StructName, Loc>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -586,7 +586,7 @@ impl AstDebug for (FunctionName, &Function) {
         signature.ast_debug(w);
         if !acquires.is_empty() {
             w.write(" acquires ");
-            w.comma(acquires, |w, s| w.write(&format!("{}", s)));
+            w.comma(acquires.keys(), |w, s| w.write(&format!("{}", s)));
             w.write(" ");
         }
         match &body.value {
@@ -931,7 +931,7 @@ impl AstDebug for ModuleCall {
         w.write(&format!("{}::{}", module, name));
         if !acquires.is_empty() {
             w.write("[acquires: [");
-            w.comma(acquires, |w, s| w.write(&format!("{}", s)));
+            w.comma(acquires.keys(), |w, s| w.write(&format!("{}", s)));
             w.write("]], ");
         }
         w.write("<");

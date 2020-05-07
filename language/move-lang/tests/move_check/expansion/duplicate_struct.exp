@@ -3,7 +3,7 @@ error:
    ┌── tests/move_check/expansion/duplicate_struct.move:3:12 ───
    │
  3 │     struct S {}
-   │            ^ Duplicate definition for struct 'S' in module 'M'
+   │            ^ Duplicate module member or alias 'S'. Top level names in a module must be unique
    ·
  2 │     struct S {}
    │            - Previously defined here

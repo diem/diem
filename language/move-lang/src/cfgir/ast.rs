@@ -7,7 +7,7 @@ use crate::{
     shared::{ast_debug::*, unique_map::UniqueMap},
 };
 use move_ir_types::location::*;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, VecDeque};
 
 // HLIR + Unstructured Control Flow + CFG
 
@@ -64,7 +64,7 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 pub struct Function {
     pub visibility: FunctionVisibility,
     pub signature: FunctionSignature,
-    pub acquires: BTreeSet<StructName>,
+    pub acquires: BTreeMap<StructName, Loc>,
     pub body: FunctionBody,
 }
 
@@ -192,7 +192,7 @@ impl AstDebug for (FunctionName, &Function) {
         signature.ast_debug(w);
         if !acquires.is_empty() {
             w.write(" acquires ");
-            w.comma(acquires, |w, s| w.write(&format!("{}", s)));
+            w.comma(acquires.keys(), |w, s| w.write(&format!("{}", s)));
             w.write(" ");
         }
         match &body.value {

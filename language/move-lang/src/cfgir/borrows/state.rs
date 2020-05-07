@@ -40,7 +40,7 @@ pub type Values = Vec<Value>;
 #[derive(Clone, Debug, PartialEq)]
 pub struct BorrowState {
     locals: UniqueMap<Var, Value>,
-    acquired_resources: BTreeSet<StructName>,
+    acquired_resources: BTreeMap<StructName, Loc>,
     borrows: BorrowGraph,
     next_id: usize,
     // true if the previous pass had errors
@@ -82,7 +82,7 @@ impl Value {
 impl BorrowState {
     pub fn initial<T>(
         locals: &UniqueMap<Var, T>,
-        acquired_resources: BTreeSet<StructName>,
+        acquired_resources: BTreeMap<StructName, Loc>,
         prev_errors: bool,
     ) -> Self {
         let mut new_state = BorrowState {
@@ -395,7 +395,7 @@ impl BorrowState {
         }
 
         // Check resources are not borrowed
-        for resource in &self.acquired_resources {
+        for resource in self.acquired_resources.keys() {
             let borrowed_by = self.resource_borrowed_by(resource);
             let mut resource_errors =
                 Self::borrow_error(&self.borrows, loc, &borrowed_by, &BTreeMap::new(), || {
@@ -595,12 +595,12 @@ impl BorrowState {
         &mut self,
         loc: Loc,
         args: Values,
-        resources: &BTreeSet<StructName>,
+        resources: &BTreeMap<StructName, Loc>,
         return_ty: &Type,
     ) -> (Errors, Values) {
         let mut errors = vec![];
         // Check acquires
-        for resource in resources {
+        for resource in resources.keys() {
             let borrowed_by = self.resource_borrowed_by(resource);
             let borrows = &self.borrows;
             // TODO point to location of acquire
