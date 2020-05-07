@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use itertools::Itertools;
 #[allow(unused_imports)]
-use log::{debug, info};
+use log::{debug, info, warn};
 
 use spec_lang::{
     env::{GlobalEnv, Loc, ModuleEnv, StructEnv, TypeParameter},
@@ -884,6 +884,15 @@ impl<'env> ModuleTranslator<'env> {
                         "call $tmp := $CopyOrMoveValue($GetLocal($m, $frame + {}));",
                         src
                     );
+                    emit!(
+                        self.writer,
+                        &boogie_well_formed_check(
+                            self.module_env.env,
+                            "$tmp",
+                            &func_target.get_local_type(*dest),
+                            WellFormedMode::Default
+                        )
+                    );
                     emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
                 }
             }
@@ -984,7 +993,6 @@ impl<'env> ModuleTranslator<'env> {
                         // code outside of the module is executed.
                         if callee_env.module_env.get_id()
                             != func_target.func_env.module_env.get_id()
-                            && callee_env.module_env.get_spec().has_conditions()
                         {
                             let spec_translator =
                                 SpecTranslator::new(self.writer, &callee_env.module_env, false)

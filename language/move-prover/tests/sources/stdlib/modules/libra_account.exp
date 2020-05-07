@@ -1,0 +1,85 @@
+Move prover returns: exiting with boogie verification errors
+error: abort not covered by any of the `aborts_if` clauses
+
+     ┌── tests/sources/stdlib/modules/libra_account.move:784:5 ───
+     │
+ 784 │ ╭     public fun create_account(fresh_address: address, auth_key_prefix: vector<u8>) {
+ 785 │ │         let generator = EventHandleGenerator {counter: 0};
+ 786 │ │         let authentication_key = auth_key_prefix;
+ 787 │ │         Vector::append(&mut authentication_key, LCS::to_bytes(&fresh_address));
+ 788 │ │         Transaction::assert(Vector::length(&authentication_key) == 32, 12);
+ 789 │ │
+ 790 │ │         save_account(
+ 791 │ │             Balance{
+ 792 │ │                 coin: Libra::zero<LBR::T>()
+ 793 │ │             },
+ 794 │ │             T {
+ 795 │ │                 authentication_key,
+ 796 │ │                 delegated_key_rotation_capability: false,
+ 797 │ │                 delegated_withdrawal_capability: false,
+ 798 │ │                 received_events: new_event_handle_impl<ReceivedPaymentEvent>(&mut generator, fresh_address),
+ 799 │ │                 sent_events: new_event_handle_impl<SentPaymentEvent>(&mut generator, fresh_address),
+ 800 │ │                 sequence_number: 0,
+ 801 │ │                 event_generator: generator,
+ 802 │ │             },
+ 803 │ │             fresh_address,
+ 804 │ │         );
+ 805 │ │     }
+     │ ╰─────^
+     ·
+ 790 │         save_account(
+     │         ------------ abort happened here
+     │
+     =     at tests/sources/stdlib/modules/libra_account.move:784:5: create_account (entry)
+     =     at tests/sources/stdlib/modules/libra_account.move:785:13: create_account
+     =         fresh_address = <redacted>,
+     =         auth_key_prefix = <redacted>,
+     =         generator = <redacted>
+     =     at tests/sources/stdlib/modules/libra_account.move:786:34: create_account
+     =         authentication_key = <redacted>
+     =     at tests/sources/stdlib/modules/libra_account.move:787:24: create_account
+     =     at tests/sources/stdlib/modules/libra_account.move:788:37: create_account
+     =         $t4 = <redacted>
+     =     at tests/sources/stdlib/modules/libra.move:429:5: zero (entry)
+     =     at tests/sources/stdlib/modules/libra.move:137:5: assert_is_registered (entry)
+     =     at tests/sources/stdlib/modules/libra.move:138:9: assert_is_registered
+     =         $t0 = <redacted>
+     =     at tests/sources/stdlib/modules/libra.move:137:5: assert_is_registered (exit)
+     =     at tests/sources/stdlib/modules/libra.move:431:9: zero
+     =     at tests/sources/stdlib/modules/libra.move:432:9: zero
+     =         result = <redacted>
+     =     at tests/sources/stdlib/modules/libra.move:429:5: zero (exit)
+     =     at tests/sources/stdlib/modules/libra_account.move:1271:5: new_event_handle_impl (entry)
+     =     at tests/sources/stdlib/modules/libra_account.move:1255:5: fresh_guid (entry)
+     =     at tests/sources/stdlib/modules/libra_account.move:1256:33: fresh_guid
+     =         counter = <redacted>,
+     =         sender = <redacted>,
+     =         sender_bytes = <redacted>
+     =     at tests/sources/stdlib/modules/libra_account.move:1257:42: fresh_guid
+     =         count_bytes = <redacted>
+     =     at tests/sources/stdlib/modules/libra_account.move:1258:27: fresh_guid
+     =         counter = <redacted>
+     =     at tests/sources/stdlib/modules/libra_account.move:1261:24: fresh_guid
+     =         counter = <redacted>
+     =     at tests/sources/stdlib/modules/libra_account.move:1263:9: fresh_guid
+     =         result = <redacted>
+     =     at tests/sources/stdlib/modules/libra_account.move:1255:5: fresh_guid (exit)
+     =     at tests/sources/stdlib/modules/libra_account.move:1272:43: new_event_handle_impl
+     =         counter = <redacted>,
+     =         counter = <redacted>,
+     =         sender = <redacted>,
+     =         result = <redacted>
+     =     at tests/sources/stdlib/modules/libra_account.move:1271:5: new_event_handle_impl (exit)
+     =     at tests/sources/stdlib/modules/libra_account.move:798:34: create_account
+     =     at tests/sources/stdlib/modules/libra_account.move:1271:5: new_event_handle_impl (entry)
+     =     at tests/sources/stdlib/modules/libra_account.move:1255:5: fresh_guid (entry)
+     =     at tests/sources/stdlib/modules/libra_account.move:1256:33: fresh_guid
+     =     at tests/sources/stdlib/modules/libra_account.move:1257:42: fresh_guid
+     =     at tests/sources/stdlib/modules/libra_account.move:1258:27: fresh_guid
+     =     at tests/sources/stdlib/modules/libra_account.move:1261:24: fresh_guid
+     =     at tests/sources/stdlib/modules/libra_account.move:1263:9: fresh_guid
+     =     at tests/sources/stdlib/modules/libra_account.move:1255:5: fresh_guid (exit)
+     =     at tests/sources/stdlib/modules/libra_account.move:1272:43: new_event_handle_impl
+     =     at tests/sources/stdlib/modules/libra_account.move:1271:5: new_event_handle_impl (exit)
+     =     at tests/sources/stdlib/modules/libra_account.move:799:30: create_account
+     =     at tests/sources/stdlib/modules/libra_account.move:790:9: create_account (ABORTED)

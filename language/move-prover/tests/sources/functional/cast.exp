@@ -1,24 +1,32 @@
 Move prover returns: exiting with boogie verification errors
-error:  A postcondition might not hold on this return path.
+error: abort not covered by any of the `aborts_if` clauses
 
-    ┌── tests/sources/functional/cast.move:44:9 ───
+    ┌── tests/sources/functional/cast.move:40:5 ───
     │
- 44 │         aborts_if false;
-    │         ^^^^^^^^^^^^^^^^
+ 40 │ ╭     fun aborting_u64_cast_incorrect(x: u128): u64 {
+ 41 │ │         (x as u64)
+ 42 │ │     }
+    │ ╰─────^
+    ·
+ 41 │         (x as u64)
+    │         ---------- abort happened here
     │
     =     at tests/sources/functional/cast.move:40:5: aborting_u64_cast_incorrect (entry)
-    =     at tests/sources/functional/cast.move:41:9: aborting_u64_cast_incorrect
+    =     at tests/sources/functional/cast.move:41:9: aborting_u64_cast_incorrect (ABORTED)
     =         x = <redacted>
-    =     at tests/sources/functional/cast.move:40:5: aborting_u64_cast_incorrect (exit)
 
-error:  A postcondition might not hold on this return path.
+error: abort not covered by any of the `aborts_if` clauses
 
-    ┌── tests/sources/functional/cast.move:30:9 ───
+    ┌── tests/sources/functional/cast.move:26:5 ───
     │
- 30 │         aborts_if false;
-    │         ^^^^^^^^^^^^^^^^
+ 26 │ ╭     fun aborting_u8_cast_incorrect(x: u64): u8 {
+ 27 │ │         (x as u8)
+ 28 │ │     }
+    │ ╰─────^
+    ·
+ 27 │         (x as u8)
+    │         --------- abort happened here
     │
     =     at tests/sources/functional/cast.move:26:5: aborting_u8_cast_incorrect (entry)
-    =     at tests/sources/functional/cast.move:27:9: aborting_u8_cast_incorrect
+    =     at tests/sources/functional/cast.move:27:9: aborting_u8_cast_incorrect (ABORTED)
     =         x = <redacted>
-    =     at tests/sources/functional/cast.move:26:5: aborting_u8_cast_incorrect (exit)

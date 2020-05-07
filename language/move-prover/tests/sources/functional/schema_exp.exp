@@ -1,15 +1,19 @@
 Move prover returns: exiting with boogie verification errors
-error:  A postcondition might not hold on this return path.
+error: abort not covered by any of the `aborts_if` clauses
 
-   ┌── tests/sources/functional/schema_exp.move:8:9 ───
-   │
- 8 │         aborts_if false;
-   │         ^^^^^^^^^^^^^^^^
-   │
-   =     at tests/sources/functional/schema_exp.move:20:5: bar_incorrect (entry)
-   =     at tests/sources/functional/schema_exp.move:21:9: bar_incorrect
-   =         c = <redacted>
-   =     at tests/sources/functional/schema_exp.move:20:5: bar_incorrect (exit)
+    ┌── tests/sources/functional/schema_exp.move:20:5 ───
+    │
+ 20 │ ╭     fun bar_incorrect(c: bool) {
+ 21 │ │         if (!c) abort(1);
+ 22 │ │     }
+    │ ╰─────^
+    ·
+ 21 │         if (!c) abort(1);
+    │         ---------------- abort happened here
+    │
+    =     at tests/sources/functional/schema_exp.move:20:5: bar_incorrect (entry)
+    =     at tests/sources/functional/schema_exp.move:21:9: bar_incorrect (ABORTED)
+    =         c = <redacted>
 
 error:  A postcondition might not hold on this return path.
 

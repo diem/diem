@@ -40,11 +40,11 @@ module Libra {
 
     // There is a MintCapability for Token iff the token is registered
     spec schema MintCapabilityCountInvariant<Token> {
-         invariant !token_is_registered<Token>() ==> mint_capability_count<Token> == 0;
-         invariant token_is_registered<Token>() ==> mint_capability_count<Token> == 1;
+         invariant module !token_is_registered<Token>() ==> mint_capability_count<Token> == 0;
+         invariant module token_is_registered<Token>() ==> mint_capability_count<Token> == 1;
     }
     spec module {
-        apply MintCapabilityCountInvariant<Token> to *<Token>;
+        apply MintCapabilityCountInvariant<Token> to public *<Token>;
     }
 
     resource struct Info<Token> {
@@ -89,12 +89,12 @@ module Libra {
          // Note: What is the value of a ghost variable in the genesis state?
          // State machine with two states (not registered/registered), so write as two invariants.
 
-         invariant !token_is_registered<Token>() ==> sum_of_token_values<Token> == 0;
-         invariant token_is_registered<Token>()
+         invariant module !token_is_registered<Token>() ==> sum_of_token_values<Token> == 0;
+         invariant module token_is_registered<Token>()
                      ==> sum_of_token_values<Token> == global<Info<Token>>(0xA550C18).total_value;
     }
     spec module {
-        apply SumOfTokenValuesInvariant<Token> to *<Token>;
+        apply SumOfTokenValuesInvariant<Token> to public *<Token>;
     }
 
     // A holding area where funds that will subsequently be burned wait while their underyling

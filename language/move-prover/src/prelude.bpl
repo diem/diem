@@ -517,6 +517,7 @@ procedure {:inline 1} $BorrowField(src: Reference, f: FieldName) returns (dst: R
 }
 
 procedure {:inline 1} $GetGlobal(address: Value, ta: TypeValue) returns (dst: Value)
+requires is#Address(address);
 {
     var r: Reference;
 
@@ -772,7 +773,7 @@ function {:inline} $Vector_type_value(tv: TypeValue): TypeValue {
 }
 
 function {:inline} $Vector_is_well_formed(v: Value): bool {
-    is#Vector(v) && $vlen(v) >= 0 &&
+    is#Vector(v) &&
     (
         var va := v#Vector(v);
         0 <= l#ValueArray(va) &&
@@ -1009,19 +1010,19 @@ procedure {:inline 1} $LibraAccount_save_account_OLD(ta: TypeValue, balance: Val
 
     a := a#Address(addr);
     t_T := $LibraAccount_T_type_value();
-    l_T := Global(t_T, a);
     if ($ResourceExistsRaw($m, t_T, a)) {
         $abort_flag := true;
         return;
     }
 
     t_Balance := $LibraAccount_Balance_type_value(ta);
-    l_Balance := Global(t_Balance, a);
     if ($ResourceExistsRaw($m, t_Balance, a)) {
         $abort_flag := true;
         return;
     }
 
+    l_T := Global(t_T, a);
+    l_Balance := Global(t_Balance, a);
     $m := Memory(domain#Memory($m)[l_T := true][l_Balance := true], contents#Memory($m)[l_T := account][l_Balance := balance]);
 }
 
@@ -1055,37 +1056,33 @@ procedure {:inline 1} Signature_ed25519_threshold_verify(bitmap: Value, signatur
 }
 
 // ==================================================================================
-// Native lcs
-
-// TODO: implement the below methods
-
-// ==================================================================================
 // Native LCS::serialize
 
-// native public fun serialize<MoveValue>(v: &MoveValue): vector<u8>;
+// native define serialize<MoveValue>(v: &MoveValue): vector<u8>;
 
 // Serialize is modeled as an uninterpreted function, with an additional
 // axiom to say it's an injection.
 
 function {:inline} $LCS_serialize($m: Memory, $txn: Transaction, ta: TypeValue, v: Value): Value {
-    $LCS_serialize_core(ta, v)
+    $LCS_serialize_core(v)
 }
 
-function $LCS_serialize_core(ta: TypeValue, v: Value): Value;
+function $LCS_serialize_core(v: Value): Value;
 
 // This says that $serialize respects isEquals (substitution property)
 // Without this, Boogie will get false positives where v1, v2 differ at invalid
 // indices.
-axiom (forall ta: TypeValue ::
-       (forall v1,v2: Value :: IsEqual(v1, v2) ==> IsEqual($LCS_serialize_core(ta, v1), $LCS_serialize_core(ta, v2))));
+axiom (forall v1,v2: Value :: IsEqual(v1, v2) ==> IsEqual($LCS_serialize_core(v1), $LCS_serialize_core(v2)));
 
 
 // This says that serialize is an injection
-axiom (forall ta1, ta2: TypeValue ::
-       (forall v1, v2: Value :: IsEqual($LCS_serialize_core(ta1, v1), $LCS_serialize_core(ta2, v2))
-           ==> IsEqual(v1, v2) && (ta1 == ta2)));
+axiom (forall v1, v2: Value :: IsEqual($LCS_serialize_core(v1), $LCS_serialize_core(v2))
+           ==> IsEqual(v1, v2));
+
+// This says that serialize returns a non-empty vec<u8>
+axiom (forall v: Value :: ( var r := $LCS_serialize_core(v); $IsValidU8Vector(r) && $vlen(r) > 0 ) );
 
 procedure $LCS_to_bytes(ta: TypeValue, v: Value) returns (res: Value);
-ensures res == $LCS_serialize_core(ta, v);
+ensures res == $LCS_serialize_core(v);
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
 ensures $vlen(res) > 0;

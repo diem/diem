@@ -10,6 +10,9 @@ use spec_lang::{
     ty::{PrimitiveType, Type},
 };
 
+#[allow(unused_imports)]
+use log::{debug, info, warn};
+
 use crate::{
     boogie_helpers::{
         boogie_byte_blob, boogie_declare_global, boogie_field_name, boogie_global_declarator,
@@ -333,19 +336,33 @@ impl<'env> SpecTranslator<'env> {
             emitln!(self.writer);
         }
 
-        // Generate aborts_if
-        // abort_if P means function abort if P holds.
-        // multiple abort_if conditions are "or"ed. If no condition holds, function does not abort.
+        // Generate aborts_if. Logically, if we have abort conditions P1..Pn, we have
+        // (P1 || .. || Pn) <==> abort_flag. However, we generate different code to get
+        // better error positions.
         let aborts_if = spec.filter_kind(ConditionKind::AbortsIf).collect_vec();
         if !aborts_if.is_empty() {
-            self.writer.set_location(&aborts_if[0].loc);
-            emit!(self.writer, "ensures (");
-            self.translate_seq(aborts_if.iter(), " || ", |c| {
+            // Emit `ensures P1 ==> abort_flag; ... ensures PN ==> abort_flag;`. This gives us
+            // good error positions which Pi is expected to cause failure but doesn't. (Boogie
+            // reports positions only back per entire ensures, not individual sub-expression.)
+            for c in &aborts_if {
+                self.writer.set_location(&c.loc);
+                emit!(self.writer, "ensures b#Boolean(old(");
+                self.translate_exp(&c.exp);
+                emitln!(self.writer, ")) ==> $abort_flag;")
+            }
+
+            // Emit `ensures abort_flag => (P1 || .. || Pn)`. If the error
+            // is reported on this condition, we catch the case where the function aborts but no
+            // conditions covers it. We use as a position for the ensures the function itself,
+            // because reporting on (non-covering) aborts_if conditions is misleading.
+            self.writer.set_location(&func_target.get_loc());
+            emit!(self.writer, "ensures $abort_flag ==> (");
+            self.translate_seq(aborts_if.iter(), "\n    || ", |c| {
                 emit!(self.writer, "b#Boolean(old(");
                 self.translate_exp_parenthesised(&c.exp);
                 emit!(self.writer, "))")
             });
-            emitln!(self.writer, ") <==> $abort_flag;");
+            emitln!(self.writer, ");");
         }
 
         // Generate ensures

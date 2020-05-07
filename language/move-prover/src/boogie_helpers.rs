@@ -162,6 +162,16 @@ pub fn boogie_well_formed_expr(
     ty: &Type,
     mode: WellFormedMode,
 ) -> String {
+    boogie_well_formed_expr_impl(env, name, ty, mode, 0)
+}
+
+fn boogie_well_formed_expr_impl(
+    env: &GlobalEnv,
+    name: &str,
+    ty: &Type,
+    mode: WellFormedMode,
+    nest: usize,
+) -> String {
     let mut conds = vec![];
     match ty {
         Type::Primitive(p) => match p {
@@ -173,7 +183,25 @@ pub fn boogie_well_formed_expr(
             PrimitiveType::Address => conds.push(format!("is#Address({})", name)),
             PrimitiveType::Range => conds.push(format!("$IsValidRange({})", name)),
         },
-        Type::Vector(_) => conds.push(format!("$Vector_is_well_formed({})", name)),
+        Type::Vector(elem_ty) => {
+            conds.push(format!("$Vector_is_well_formed({})", name));
+            if !matches!(**elem_ty, Type::TypeParameter(..)) {
+                conds.push(format!(
+                    "(forall $${}: int :: $${} >= 0 && $${} < $vlen({}) ==> {})",
+                    nest,
+                    nest,
+                    nest,
+                    name,
+                    boogie_well_formed_expr_impl(
+                        env,
+                        &format!("$vmap({})[$${}]", name, nest),
+                        &elem_ty,
+                        mode,
+                        nest + 1
+                    )
+                ));
+            }
+        }
         Type::Struct(module_idx, struct_idx, _) => {
             let struct_env = env.get_module(*module_idx).into_struct(*struct_idx);
             let well_formed_name = if mode == WellFormedMode::WithoutInvariant {
@@ -194,11 +222,12 @@ pub fn boogie_well_formed_expr(
             } else {
                 mode
             };
-            conds.push(boogie_well_formed_expr(
+            conds.push(boogie_well_formed_expr_impl(
                 env,
                 &format!("$Dereference($m, {})", name),
                 rtype,
                 mode,
+                nest + 1,
             ));
         }
         // TODO: tuple and functions?
