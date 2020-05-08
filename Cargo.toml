@@ -105,6 +105,7 @@ members = [
     "state-synchronizer",
     "storage/accumulator",
     "storage/backup/backup-cli",
+    "storage/backup/backup-service",
     "storage/inspector",
     "storage/jellyfish-merkle",
     "storage/libradb",

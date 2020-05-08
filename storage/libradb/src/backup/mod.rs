@@ -18,6 +18,7 @@ use libra_types::{
 use std::sync::Arc;
 
 /// `BackupHandler` provides functionalities for LibraDB data backup.
+#[derive(Clone)]
 pub struct BackupHandler {
     ledger_store: Arc<LedgerStore>,
     transaction_store: Arc<TransactionStore>,
