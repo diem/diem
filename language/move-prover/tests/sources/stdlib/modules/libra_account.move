@@ -504,18 +504,9 @@ module LibraAccount {
         aborts_if exists<T>(payee) && global<T>(payee).received_events.counter + 1 > max_u64(); // modified
     }
 
-// FIXME: This function is not verified, but should be.
+// FIXME: This function is not verified, instead verification does not terminate. Turn pragma verify=true to
+// reproduce.
 // It's verified if the  line (i.e., "let _ = ...") in the function is commented out (and removing `T` from the acquires clause).
-// There are two issues:
-// (1) The line/bug makes Prover much slower
-// (2) The line/bug cause Prover to fail with the following message:
-//  bug:  A precondition for this call might not hold.
-//
-//       |--- output.bpl:717:2 ---
-//       |
-//   717 | requires is#Integer(src1) && is#Integer(src2);
-//       |  ^
-//       |
 fun simplified_pay_from_capability(
     payee: address,
     auth_key_prefix: vector<u8>,
@@ -532,7 +523,7 @@ fun simplified_pay_from_capability(
     };
 }
 spec fun simplified_pay_from_capability {
-    // TODO: this currently fails because create_account fails.
+    // TODO: this currently does not terminate if set to true. See above.
     pragma verify=false;
 
     // capability check

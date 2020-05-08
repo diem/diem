@@ -350,7 +350,7 @@ impl Options {
         if self.use_array_theory {
             add(&["-useArrayTheory"]);
         } else {
-            add(&["-proverOpt:O:smt.QI.EAGER_THRESHOLD=30"]);
+            add(&["-proverOpt:O:smt.QI.EAGER_THRESHOLD=100"]);
         }
         for f in &self.boogie_flags {
             add(&[f.as_str()]);
