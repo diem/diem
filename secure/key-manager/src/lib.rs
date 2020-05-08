@@ -147,7 +147,7 @@ where
     pub fn compare_storage_to_config(&self) -> Result<(), Error> {
         let storage_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
         let validator_config = self.libra.retrieve_validator_config(self.account)?;
-        let config_key = validator_config.consensus_pubkey;
+        let config_key = validator_config.consensus_public_key;
 
         if storage_key == config_key {
             return Ok(());
@@ -159,7 +159,7 @@ where
         let validator_info = self.libra.retrieve_validator_info(self.account)?;
         let info_key = validator_info.consensus_public_key();
         let validator_config = self.libra.retrieve_validator_config(self.account)?;
-        let config_key = validator_config.consensus_pubkey;
+        let config_key = validator_config.consensus_public_key;
 
         if &config_key == info_key {
             return Ok(());

@@ -14,13 +14,13 @@ use libra_crypto::{
     PrivateKey, Uniform,
 };
 use libra_mempool::mocks::MockSharedMempool;
-use libra_network_address::NetworkAddress;
+use libra_network_address::{NetworkAddress, RawNetworkAddress};
 use libra_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,
     on_chain_config::ValidatorSet, proof::TransactionListProof,
-    transaction::TransactionListWithProof, validator_info::ValidatorInfo,
-    validator_signer::ValidatorSigner, validator_verifier::random_validator_verifier,
-    waypoint::Waypoint,
+    transaction::TransactionListWithProof, validator_config::ValidatorConfig,
+    validator_info::ValidatorInfo, validator_signer::ValidatorSigner,
+    validator_verifier::random_validator_verifier, waypoint::Waypoint,
 };
 use network::{
     validator_network::network_builder::{NetworkBuilder, TransportType},
@@ -29,6 +29,7 @@ use network::{
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::HashMap,
+    convert::TryFrom,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc, RwLock,
@@ -147,13 +148,18 @@ impl SynchronizerEnv {
         // The voting power of peer 0 is enough to generate an LI that passes validation.
         for (idx, signer) in signers.iter().enumerate() {
             let voting_power = if idx == 0 { 1000 } else { 1 };
-            let validator_info = ValidatorInfo::new(
-                signer.author(),
-                voting_power,
+            let addr: NetworkAddress = "/memory/0".parse().unwrap();
+            let validator_config = ValidatorConfig::new(
                 signer.public_key(),
                 signing_private_keys[idx].public_key(),
                 identity_private_keys[idx].public_key(),
+                RawNetworkAddress::try_from(&addr).unwrap(),
+                identity_private_keys[idx].public_key(),
+                RawNetworkAddress::try_from(&addr).unwrap(),
+                // Vec::<AccountAddress>::new(),
             );
+            let validator_info =
+                ValidatorInfo::new(signer.author(), voting_power, validator_config);
             validators_keys.push(validator_info);
         }
         (signers, signing_private_keys, validators_keys)
@@ -173,9 +179,7 @@ impl SynchronizerEnv {
                 ValidatorInfo::new(
                     signers[idx].author(),
                     validator_keys.consensus_voting_power(),
-                    signers[idx].public_key(),
-                    validator_keys.network_signing_public_key().clone(),
-                    validator_keys.network_identity_public_key(),
+                    validator_keys.config().clone(),
                 )
             })
             .collect::<Vec<ValidatorInfo>>();

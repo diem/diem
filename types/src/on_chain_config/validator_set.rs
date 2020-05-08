@@ -6,7 +6,7 @@ use anyhow::{Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::{convert::TryFrom, fmt};
+use std::{convert::TryFrom, fmt, iter::IntoIterator, vec};
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
@@ -77,4 +77,13 @@ impl From<ValidatorSet> for crate::proto::types::ValidatorSet {
 impl OnChainConfig for ValidatorSet {
     // validator_set_address
     const IDENTIFIER: &'static str = "LibraSystem";
+}
+
+impl IntoIterator for ValidatorSet {
+    type Item = ValidatorInfo;
+    type IntoIter = vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.payload.into_iter()
+    }
 }

@@ -35,7 +35,6 @@ main() {
 //! block-time: 2
 
 // not: NewEpochEvent
-// not: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! new-transaction
@@ -45,18 +44,17 @@ import 0x0.ValidatorConfig;
 
 // rotate vivian's pubkey and then run the block prologue. Now, reconfiguration should be triggered.
 main() {
-    let info: LibraSystem.ValidatorInfo;
+    let info: ValidatorConfig.Config;
 
     ValidatorConfig.rotate_consensus_pubkey_of_sender(h"40");
     LibraSystem.update_and_reconfigure();
     // check that the validator set contains Vivian's new key after reconfiguration
-    info = LibraSystem.get_validator_info({{vivian}});
-    assert(ValidatorConfig.get_consensus_pubkey(LibraSystem.get_validator_config(&info)) == h"40", 98);
+    info = LibraSystem.get_validator_config({{vivian}});
+    assert(ValidatorConfig.get_consensus_pubkey(&info) == h"40", 98);
     return;
 }
 
 // check: NewEpochEvent
-// not: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! new-transaction
@@ -74,7 +72,6 @@ main() {
 }
 
 // not: NewEpochEvent
-// not: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! block-prologue
@@ -94,7 +91,6 @@ main() {
 }
 
 // check: NewEpochEvent
-// not: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! block-prologue
@@ -114,7 +110,6 @@ main() {
 }
 
 // check: NewEpochEvent
-// not: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! new-transaction
@@ -124,14 +119,14 @@ import 0x0.ValidatorConfig;
 // trigger a reconfiguration and check that both vivian and viola's key updates are reflected in
 // the set
 main() {
-    let info: LibraSystem.ValidatorInfo;
+    let info: ValidatorConfig.Config;
 
     // check that the validator set contains Viola's new key
-    info = LibraSystem.get_validator_info({{viola}});
-    assert(ValidatorConfig.get_consensus_pubkey(LibraSystem.get_validator_config(&info)) == h"80", 15);
+    info = LibraSystem.get_validator_config({{viola}});
+    assert(ValidatorConfig.get_consensus_pubkey(&info) == h"80", 15);
     // check that the validator set contains Vivian's new key
-    info = LibraSystem.get_validator_info({{vivian}});
-    assert(ValidatorConfig.get_consensus_pubkey(LibraSystem.get_validator_config(&info)) == h"90", 17);
+    info = LibraSystem.get_validator_config({{vivian}});
+    assert(ValidatorConfig.get_consensus_pubkey(&info) == h"90", 17);
     return;
 }
 // check: EXECUTED

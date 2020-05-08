@@ -8,13 +8,14 @@ use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
 use libra_types::{
     account_config,
+    account_state::AccountState,
     account_state_blob::AccountStateWithProof,
-    discovery_info::DiscoveryInfo,
-    discovery_set::{DiscoverySet, DiscoverySetResource},
     epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures,
+    on_chain_config::ValidatorSet,
     proof::AccumulatorConsistencyProof,
     trusted_state::{TrustedState, TrustedStateChange},
+    validator_info::ValidatorInfo,
     PeerId,
 };
 use serde::{Deserialize, Serialize};
@@ -27,7 +28,7 @@ pub enum OnchainDiscoveryMsg {
     QueryDiscoverySetResponse(Box<QueryDiscoverySetResponse>),
 }
 
-/// A request for another peer's latest discovery set and a validator change proof
+/// A request for another peer's latest validator set and a validator change proof
 /// to get the client up-to-date if they're behind.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct QueryDiscoverySetRequest {
@@ -39,8 +40,8 @@ pub struct QueryDiscoverySetRequest {
 /// A response to a [`QueryDiscoverySetRequest`]. The server will include an
 /// epoch change proof if the client is behind.
 ///
-/// The discovery set only changes when there is a new epoch. To minimize
-/// wire overhead, the server will include the discovery set account's
+/// The validator set only changes when there is a new epoch. To minimize
+/// wire overhead, the server will include the validator set account's
 /// [`AccountStateWithProof`] _if and only if_ the server also presents a
 /// non-empty epoch change proof.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -53,30 +54,30 @@ pub struct QueryDiscoverySetResponse {
 
 impl QueryDiscoverySetResponse {
     /// Verify and ratchet the given trusted state, returning the verified trusted
-    /// state change and latest discovery set (if present).
+    /// state change and latest validator set (if present).
     ///
     /// 1. Verify and ratchet trusted state using epoch changes and latest ledger info
-    /// 2. (If present) Verify discovery set account state proof
-    /// 3. (If present) Deserialize `DiscoverySet` from discovery resource in account blob
+    /// 2. (If present) Verify validator set account state proof
+    /// 3. (If present) Deserialize `ValidatorSet` from validator set resource in account blob
     pub fn verify_and_ratchet<'a>(
         &'a self,
         req_msg: &QueryDiscoverySetRequest,
         trusted_state: &'a TrustedState,
-    ) -> Result<(TrustedStateChange<'a>, Option<DiscoverySet>)> {
+    ) -> Result<(TrustedStateChange<'a>, Option<ValidatorSet>)> {
         // TODO(philiphayes): how to deal with partial epoch change proofs?
         // should probably not return discovery set until at head?
 
         let has_epoch_change = !self.epoch_change_proof.ledger_info_with_sigs.is_empty();
-        let has_discovery_set = self.account_state.is_some();
+        let has_validator_set = self.account_state.is_some();
 
-        // enforce property: epoch change <==> some discovery set in response
+        // enforce property: epoch change <==> some validator set in response
         ensure!(
-            has_epoch_change == has_discovery_set,
-            "mismatch between epoch change and discovery set. \
-             has_epoch_change iff has_discovery_set: \
-             has_epoch_change: {}, has_discovery_set: {}",
+            has_epoch_change == has_validator_set,
+            "mismatch between epoch change and validator set. \
+             has_epoch_change iff has_validator_set: \
+             has_epoch_change: {}, has_validator_set: {}",
             has_epoch_change,
-            has_discovery_set,
+            has_validator_set,
         );
 
         // check response is not stale
@@ -93,36 +94,36 @@ impl QueryDiscoverySetResponse {
             .verify_and_ratchet(&self.latest_li, &self.epoch_change_proof)
             .context("failed to ratchet trusted_state")?;
 
-        // if the response contains the discovery set account, then verify
-        // account_state_proof and pull out the discovery set
-        let opt_discovery_set = self
+        // if the response contains the validator set account, then verify
+        // account_state_proof and pull out the validator set
+        let opt_validator_set = self
             .account_state
             .as_ref()
-            .map(|account_state| -> Result<DiscoverySet> {
+            .map(|account_state| -> Result<ValidatorSet> {
                 account_state
                     .verify(
                         self.latest_li.ledger_info(),
                         ledger_version,
-                        account_config::discovery_set_address(),
+                        account_config::validator_set_address(),
                     )
-                    .context("failed to verify account state proof for discovery set resource")?;
+                    .context("failed to verify account state proof for validator set resource")?;
 
                 let blob = account_state
                     .blob
                     .as_ref()
-                    .ok_or_else(|| format_err!("discovery account blob cannot be missing"))?;
+                    .ok_or_else(|| format_err!("validator set account blob cannot be missing"))?;
 
-                let discovery_set_resource = DiscoverySetResource::try_from(blob)
-                    .context("failed to deserialize discovery set resource")?;
-
-                Ok(DiscoverySet::from(discovery_set_resource))
+                let validator_set = AccountState::try_from(blob)?
+                    .get_validator_set()?
+                    .ok_or_else(|| format_err!("validator set resource cannot be missing"))?;
+                Ok(validator_set)
             })
             .transpose()?;
 
         // TODO(philiphayes): do something with accumulator_proof?
         // self.query_res.accumulator_proof.
 
-        Ok((trusted_state_change, opt_discovery_set))
+        Ok((trusted_state_change, opt_validator_set))
     }
 }
 
@@ -131,14 +132,14 @@ impl QueryDiscoverySetResponse {
 pub struct DiscoverySetInternal(pub HashMap<PeerId, DiscoveryInfoInternal>);
 
 impl DiscoverySetInternal {
-    pub fn from_discovery_set(role_filter: RoleType, discovery_set: DiscoverySet) -> Self {
+    pub fn from_validator_set(role_filter: RoleType, validator_set: ValidatorSet) -> Self {
         Self(
-            discovery_set
+            validator_set
                 .into_iter()
-                .filter_map(|discovery_info| {
-                    let peer_id = discovery_info.account_address;
+                .filter_map(|validator_info| {
+                    let peer_id = *validator_info.account_address();
                     let res_info =
-                        DiscoveryInfoInternal::try_from_discovery_info(role_filter, discovery_info);
+                        DiscoveryInfoInternal::try_from_validator_info(role_filter, validator_info);
 
                     // ignore network addresses that fail to deserialize
                     res_info
@@ -173,21 +174,25 @@ impl DiscoverySetInternal {
 pub struct DiscoveryInfoInternal(pub x25519::PublicKey, pub Vec<NetworkAddress>);
 
 impl DiscoveryInfoInternal {
-    pub fn try_from_discovery_info(
+    pub fn try_from_validator_info(
         role_filter: RoleType,
-        discovery_info: DiscoveryInfo,
+        validator_info: ValidatorInfo,
     ) -> Result<Self> {
         let info = match role_filter {
             RoleType::Validator => Self(
-                discovery_info.validator_network_identity_pubkey,
+                validator_info
+                    .config()
+                    .validator_network_identity_public_key,
                 vec![NetworkAddress::try_from(
-                    &discovery_info.validator_network_address,
+                    &validator_info.config().validator_network_address,
                 )?],
             ),
             RoleType::FullNode => Self(
-                discovery_info.fullnodes_network_identity_pubkey,
+                validator_info
+                    .config()
+                    .full_node_network_identity_public_key,
                 vec![NetworkAddress::try_from(
-                    &discovery_info.fullnodes_network_address,
+                    &validator_info.config().full_node_network_address,
                 )?],
             ),
         };
