@@ -263,7 +263,7 @@ impl NodeConfig {
             test.initialize_storage = true;
             test.random_account_key(rng);
             let peer_id = libra_types::account_address::from_public_key(
-                &test.account_keypair.as_ref().unwrap().public_key(),
+                &test.operator_keypair.as_ref().unwrap().public_key(),
             );
 
             if self.validator_network.is_none() {

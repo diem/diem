@@ -32,7 +32,7 @@ grpc_max_receive_len = 100000000
 
 [test]
 auth_key = "8e0d19280063fa870fe4dbb85cc724091a398451c5c11e1e76e64cdc7b588510"
-account_private_key = "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7"
+operator_private_key = "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7"
 consensus_private_key = "29b721769ce64e43d57133b074d839d531ed1f28510afb45ace10a1f4b794d6f"
 initialize_storage = true
 

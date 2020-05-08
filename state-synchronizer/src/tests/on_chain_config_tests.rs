@@ -85,7 +85,7 @@ fn test_on_chain_config_pub_sub() {
         .test
         .as_mut()
         .unwrap()
-        .account_keypair
+        .operator_keypair
         .as_mut()
         .unwrap();
 
