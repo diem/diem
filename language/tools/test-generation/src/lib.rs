@@ -27,7 +27,7 @@ use libra_types::{
     account_address::AccountAddress, language_storage::TypeTag, vm_error::StatusCode,
 };
 use libra_vm::LibraVM;
-use move_vm_types::values::Value;
+use move_vm_types::{transaction_metadata::TransactionMetadata, values::Value};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{fs, io::Write, panic, thread};
 use utils::module_generation::generate_module;
@@ -38,7 +38,6 @@ use vm::{
         CompiledModule, CompiledModuleMut, FunctionDefinitionIndex, Kind, SignatureToken,
         StructHandleIndex,
     },
-    transaction_metadata::TransactionMetadata,
 };
 
 /// This function calls the Bytecode verifier to test it

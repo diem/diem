@@ -5,8 +5,10 @@ use crate::runtime::VMRuntime;
 use bytecode_verifier::VerifiedModule;
 use libra_types::language_storage::{ModuleId, TypeTag};
 use move_core_types::{gas_schedule::CostTable, identifier::IdentStr};
-use move_vm_types::{chain_state::ChainState, values::Value};
-use vm::{errors::VMResult, transaction_metadata::TransactionMetadata};
+use move_vm_types::{
+    chain_state::ChainState, transaction_metadata::TransactionMetadata, values::Value,
+};
+use vm::errors::VMResult;
 
 pub struct MoveVM {
     runtime: VMRuntime,

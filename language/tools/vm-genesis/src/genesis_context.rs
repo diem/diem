@@ -20,8 +20,8 @@ use move_core_types::{
     identifier::Identifier,
 };
 use move_vm_runtime::MoveVM;
+use move_vm_types::transaction_metadata::TransactionMetadata;
 use std::collections::{btree_map::BTreeMap, HashMap};
-use vm::transaction_metadata::TransactionMetadata;
 
 use move_vm_state::{
     data_cache::{BlockDataCache, RemoteCache},

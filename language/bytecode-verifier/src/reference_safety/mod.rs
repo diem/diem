@@ -14,7 +14,7 @@ use crate::{
     control_flow_graph::VMControlFlowGraph,
 };
 use abstract_state::{AbstractState, AbstractValue};
-use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_error::VMStatus;
 use mirai_annotations::*;
 use vm::{
     access::ModuleAccess,
@@ -313,19 +313,6 @@ fn execute_inner(
             let struct_inst = verifier.module().struct_instantiation_at(*idx);
             let struct_def = verifier.module().struct_def_at(struct_inst.def);
             unpack(verifier, struct_def)
-        }
-
-        Bytecode::GetTxnGasUnitPrice
-        | Bytecode::GetTxnMaxGasUnits
-        | Bytecode::GetGasRemaining
-        | Bytecode::GetTxnSequenceNumber
-        | Bytecode::GetTxnPublicKey => {
-            return Err(
-                VMStatus::new(StatusCode::UNKNOWN_VERIFICATION_ERROR).with_message(format!(
-                    "Bytecode {:?} is deprecated and will be removed soon",
-                    bytecode
-                )),
-            );
         }
     };
     Ok(())

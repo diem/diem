@@ -101,11 +101,6 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::MoveLoc(_)
             | Bytecode::MutBorrowLoc(_)
             | Bytecode::ImmBorrowLoc(_)
-            | Bytecode::GetTxnGasUnitPrice
-            | Bytecode::GetTxnMaxGasUnits
-            | Bytecode::GetGasRemaining
-            | Bytecode::GetTxnPublicKey
-            | Bytecode::GetTxnSequenceNumber
             | Bytecode::GetTxnSenderAddress => (0, 1),
 
             // Instructions that pop and push once

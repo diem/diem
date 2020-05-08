@@ -1047,14 +1047,6 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.temp_count += 1;
             }
 
-            MoveBytecode::GetTxnGasUnitPrice
-            | MoveBytecode::GetTxnMaxGasUnits
-            | MoveBytecode::GetGasRemaining
-            | MoveBytecode::GetTxnSequenceNumber
-            | MoveBytecode::GetTxnPublicKey => panic!(
-                "MoveBytecode {:?} is deprecated and will be removed soon",
-                bytecode
-            ),
             MoveBytecode::Nop => self.code.push(Bytecode::Nop(attr_id)),
         }
     }

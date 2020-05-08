@@ -572,14 +572,5 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
             preconditions: vec![],
             effects: Effects::NoTyParams(vec![]),
         },
-        // XXX: Deprecated instructions, to remove
-        Bytecode::GetTxnGasUnitPrice
-        | Bytecode::GetTxnMaxGasUnits
-        | Bytecode::GetTxnSequenceNumber
-        | Bytecode::GetTxnPublicKey
-        | Bytecode::GetGasRemaining => Summary {
-            preconditions: vec![state_never!()],
-            effects: Effects::NoTyParams(vec![]),
-        },
     }
 }

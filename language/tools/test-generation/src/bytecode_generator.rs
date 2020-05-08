@@ -214,23 +214,7 @@ impl<'a> BytecodeGenerator<'a> {
             (StackEffect::Sub, BytecodeType::NoArg(Bytecode::Ge)),
             (
                 StackEffect::Add,
-                BytecodeType::NoArg(Bytecode::GetTxnGasUnitPrice),
-            ),
-            (
-                StackEffect::Add,
-                BytecodeType::NoArg(Bytecode::GetTxnMaxGasUnits),
-            ),
-            (
-                StackEffect::Add,
-                BytecodeType::NoArg(Bytecode::GetTxnSequenceNumber),
-            ),
-            (
-                StackEffect::Add,
                 BytecodeType::NoArg(Bytecode::GetTxnSenderAddress),
-            ),
-            (
-                StackEffect::Add,
-                BytecodeType::NoArg(Bytecode::GetTxnPublicKey),
             ),
             (StackEffect::Nop, BytecodeType::StructIndex(Bytecode::Pack)),
             (

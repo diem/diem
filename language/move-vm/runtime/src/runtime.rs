@@ -9,12 +9,14 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use move_core_types::{gas_schedule::CostTable, identifier::IdentStr};
-use move_vm_types::{interpreter_context::InterpreterContext, values::Value};
+use move_vm_types::{
+    interpreter_context::InterpreterContext, transaction_metadata::TransactionMetadata,
+    values::Value,
+};
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, vm_error, Location, VMResult},
     file_format::Signature,
-    transaction_metadata::TransactionMetadata,
     CompiledModule, IndexKind,
 };
 

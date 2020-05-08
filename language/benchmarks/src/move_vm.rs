@@ -15,9 +15,8 @@ use move_core_types::{
 use move_lang::{compiled_unit::CompiledUnit, shared::Address};
 use move_vm_runtime::MoveVM;
 use move_vm_state::{data_cache::BlockDataCache, execution_context::TransactionExecutionContext};
-use move_vm_types::gas_schedule::zero_cost_schedule;
+use move_vm_types::{gas_schedule::zero_cost_schedule, transaction_metadata::TransactionMetadata};
 use std::path::PathBuf;
-use vm::transaction_metadata::TransactionMetadata;
 
 /// Entry point for the bench, provide a function name to invoke in Module Bench in bench.move.
 pub fn bench(c: &mut Criterion, fun: &str) {
