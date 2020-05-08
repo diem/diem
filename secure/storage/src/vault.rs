@@ -138,7 +138,7 @@ impl VaultStorage {
     /// Create a new policy in Vault, see the explanation for Policy for how the data is
     /// structured. Vault does not distingush a create and update. An update must first read the
     /// existing policy, amend the contents,  and then be applied via this API.
-    fn set_policy(
+    pub fn set_policy(
         &self,
         policy_name: &str,
         engine: &VaultEngine,
@@ -190,7 +190,12 @@ impl VaultStorage {
             .version)
     }
 
-    fn set_policies(&self, name: &str, engine: &VaultEngine, policy: &Policy) -> Result<(), Error> {
+    pub fn set_policies(
+        &self,
+        name: &str,
+        engine: &VaultEngine,
+        policy: &Policy,
+    ) -> Result<(), Error> {
         for perm in &policy.permissions {
             match &perm.id {
                 Identity::User(id) => self.set_policy(id, engine, name, &perm.capabilities)?,
@@ -225,30 +230,11 @@ impl KVStorage for VaultStorage {
         self.client.unsealed().unwrap_or(false) && self.client.transit_enabled().unwrap_or(false)
     }
 
-    fn create(&mut self, key: &str, value: Value, policy: &Policy) -> Result<(), Error> {
-        // Vault internally does not distinguish creation versus update except by permissions. So we
-        // simulate that by first getting the key. If it doesn't exist, we're okay.
-        match self.get_secret(&key) {
-            Ok(_) => return Err(Error::KeyAlreadyExists(key.to_string())),
-            Err(Error::KeyNotSet(_)) => (/* Expected this for new keys! */),
-            Err(e) => return Err(e),
-        }
-
-        self.set_secret(&key, value)?;
-        if !policy.is_default() {
-            self.set_policies(key, &VaultEngine::KVSecrets, policy)?;
-        }
-        Ok(())
-    }
-
     fn get(&self, key: &str) -> Result<GetResponse, Error> {
         self.get_secret(&key)
     }
 
     fn set(&mut self, key: &str, value: Value) -> Result<(), Error> {
-        // Vault internally does not distinguish create versus udpate except by permissions. So we
-        // simulate that by first getting the key. If it exists, we can update it.
-        self.get_secret(&key)?;
         self.set_secret(&key, value)?;
         Ok(())
     }
@@ -332,7 +318,7 @@ impl CryptoStorage for VaultStorage {
     }
 }
 
-enum VaultEngine {
+pub enum VaultEngine {
     KVSecrets,
     Transit,
 }

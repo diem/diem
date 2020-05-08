@@ -9,7 +9,7 @@ use futures::{channel::mpsc::channel, StreamExt};
 use libra_config::{config::NodeConfig, utils, utils::get_genesis_txn};
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_global_constants::OPERATOR_KEY;
-use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Policy, Value};
+use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Value};
 use libra_secure_time::{MockTimeService, TimeService};
 use libra_types::{
     account_address::AccountAddress,
@@ -344,27 +344,18 @@ fn setup_secure_storage(
     let mut a_keypair = test_config.operator_keypair.unwrap();
     let a_prikey = Value::Ed25519PrivateKey(a_keypair.take_private().unwrap());
 
-    sec_storage
-        .create(OPERATOR_KEY, a_prikey, &Policy::public())
-        .unwrap();
+    sec_storage.set(OPERATOR_KEY, a_prikey).unwrap();
 
     let mut c_keypair = test_config.consensus_keypair.unwrap();
     let c_prikey = c_keypair.take_private().unwrap();
     let c_prikey0 = Value::Ed25519PrivateKey(c_prikey.clone());
     let c_prikey1 = Value::Ed25519PrivateKey(c_prikey);
 
-    sec_storage
-        .create(crate::CONSENSUS_KEY, c_prikey0, &Policy::public())
-        .unwrap();
+    sec_storage.set(crate::CONSENSUS_KEY, c_prikey0).unwrap();
     // Ugly hack but we need this until we support retrieving a policy from within storage and that
     // currently is not easy, since we would need to convert from Vault -> Libra policy.
-    sec_storage
-        .create(
-            &format!("{}_previous", crate::CONSENSUS_KEY),
-            c_prikey1,
-            &Policy::public(),
-        )
-        .unwrap();
+    let previous = format!("{}_previous", crate::CONSENSUS_KEY);
+    sec_storage.set(&previous, c_prikey1).unwrap();
     sec_storage
 }
 

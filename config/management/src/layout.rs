@@ -62,7 +62,7 @@ impl SetLayout {
 
         let value = Value::String(data);
         remote
-            .create_with_default_policy(LAYOUT, value)
+            .set(LAYOUT, value)
             .map_err(|e| Error::RemoteStorageWriteError(e.to_string()))?;
 
         Ok(layout)

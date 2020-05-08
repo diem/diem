@@ -262,7 +262,7 @@ impl Command {
             }
 
             remote
-                .create_with_default_policy(key_name, key)
+                .set(key_name, key)
                 .map_err(|e| Error::RemoteStorageWriteError(e.to_string()))?;
         }
 
@@ -515,16 +515,10 @@ pub mod tests {
         storage.create_key(OPERATOR_KEY, &policy).unwrap();
         storage.create_key(VALIDATOR_NETWORK_KEY, &policy).unwrap();
 
-        storage.create(EPOCH, Value::U64(0), &policy).unwrap();
-        storage
-            .create(LAST_VOTED_ROUND, Value::U64(0), &policy)
-            .unwrap();
-        storage
-            .create(PREFERRED_ROUND, Value::U64(0), &policy)
-            .unwrap();
-        storage
-            .create(WAYPOINT, Value::String("".into()), &policy)
-            .unwrap();
+        storage.set(EPOCH, Value::U64(0)).unwrap();
+        storage.set(LAST_VOTED_ROUND, Value::U64(0)).unwrap();
+        storage.set(PREFERRED_ROUND, Value::U64(0)).unwrap();
+        storage.set(WAYPOINT, Value::String("".into())).unwrap();
     }
 
     fn association_key(local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {

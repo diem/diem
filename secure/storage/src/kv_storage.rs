@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Error, Policy, Value};
+use crate::{Error, Value};
 use serde::{Deserialize, Serialize};
 
 /// A secure key/value storage engine. Create takes a policy that is enforced internally by the
@@ -12,33 +12,12 @@ pub trait KVStorage: Send + Sync {
     /// Returns true if the backend service is online and available.
     fn available(&self) -> bool;
 
-    /// Creates a new value in storage and fails if it already exists
-    fn create(&mut self, key: &str, value: Value, policy: &Policy) -> Result<(), Error>;
-
-    fn create_with_default_policy(&mut self, key: &str, value: Value) -> Result<(), Error> {
-        self.create(key, value, &Policy::default())
-    }
-
-    /// Creates a new value if it does not exist fails only if there is some other issue.
-    fn create_if_not_exists(
-        &mut self,
-        key: &str,
-        value: Value,
-        policy: &Policy,
-    ) -> Result<(), Error> {
-        self.create(key, value, policy).or_else(|err| {
-            if let Error::KeyAlreadyExists(_) = err {
-                Ok(())
-            } else {
-                Err(err)
-            }
-        })
-    }
-
-    /// Retrieves a value from storage and fails if invalid permissions or it does not exist
+    /// Retrieves a value from storage and fails if the backend is unavailable or the process has
+    /// invalid permissions.
     fn get(&self, key: &str) -> Result<GetResponse, Error>;
 
-    /// Sets a value in storage and fails if invalid permissions or it does not exist
+    /// Sets a value in storage and fails if the backend is unavailable or the process has
+    /// invalid permissions.
     fn set(&mut self, key: &str, value: Value) -> Result<(), Error>;
 
     // @TODO(davidiw): Make this accessible only to tests.

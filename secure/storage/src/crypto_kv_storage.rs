@@ -14,18 +14,15 @@ use rand::{rngs::OsRng, Rng, SeedableRng};
 pub trait CryptoKVStorage: KVStorage {}
 
 impl<T: CryptoKVStorage> CryptoStorage for T {
-    fn create_key(&mut self, name: &str, policy: &Policy) -> Result<Ed25519PublicKey, Error> {
+    fn create_key(&mut self, name: &str, _policy: &Policy) -> Result<Ed25519PublicKey, Error> {
         // Generate and store the new named key pair
         let (private_key, public_key) = new_ed25519_key_pair()?;
-        self.create(name, Value::Ed25519PrivateKey(private_key), policy)?;
+        self.set(name, Value::Ed25519PrivateKey(private_key))?;
 
-        // Set the previous key pair version to be the newly generated key pair. This is useful so
-        // that we can also set the appropriate policy permissions on the previous key pair version
-        // now, and not have to do it later on a rotation.
-        self.create(
+        // Set the previous key pair version to be the newly generated key pair.
+        self.set(
             &get_previous_version_name(name),
             Value::Ed25519PrivateKey(self.export_private_key(name)?),
-            policy,
         )?;
 
         Ok(public_key)

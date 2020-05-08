@@ -96,7 +96,7 @@ impl ValidatorConfig {
 
             let txn = Value::Transaction(txn.clone());
             remote
-                .create_with_default_policy(VALIDATOR_CONFIG, txn)
+                .set(VALIDATOR_CONFIG, txn)
                 .map_err(|e| Error::RemoteStorageWriteError(e.to_string()))?;
         }
 

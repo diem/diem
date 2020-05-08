@@ -15,6 +15,8 @@ use std::time::{Duration, SystemTime};
 /// https://www.vaultproject.io/docs/secrets/transit/index.html).
 pub trait CryptoStorage: Send + Sync {
     /// Securely generates a new named Ed25519 key pair and returns the corresponding public key.
+    /// There are no guarantees about the state of the system after calling this multiple times.
+    /// The behavior is implementation specific.
     ///
     /// The new key pair is named according to the 'name' and is held in secure storage
     /// under the given 'policy'. To access or use the key pair (e.g., sign or encrypt data),

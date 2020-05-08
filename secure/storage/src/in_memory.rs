@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Policy, Storage, Value};
+use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Storage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
 use std::collections::HashMap;
 
@@ -44,18 +44,6 @@ impl<T: Send + Sync + TimeService> KVStorage for InMemoryStorageInternal<T> {
         true
     }
 
-    fn create(&mut self, key: &str, value: Value, _policy: &Policy) -> Result<(), Error> {
-        if self.data.contains_key(key) {
-            return Err(Error::KeyAlreadyExists(key.to_string()));
-        }
-
-        self.data.insert(
-            key.to_string(),
-            GetResponse::new(value, self.time_service.now()),
-        );
-        Ok(())
-    }
-
     fn get(&self, key: &str) -> Result<GetResponse, Error> {
         let response = self
             .data
@@ -81,9 +69,6 @@ impl<T: Send + Sync + TimeService> KVStorage for InMemoryStorageInternal<T> {
     }
 
     fn set(&mut self, key: &str, value: Value) -> Result<(), Error> {
-        if !self.data.contains_key(key) {
-            return Err(Error::KeyNotSet(key.to_string()));
-        }
         self.data.insert(
             key.to_string(),
             GetResponse::new(value, self.time_service.now()),

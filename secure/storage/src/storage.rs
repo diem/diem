@@ -23,10 +23,6 @@ impl KVStorage for BoxStorage {
         self.0.available()
     }
 
-    fn create(&mut self, key: &str, value: Value, policy: &Policy) -> Result<(), Error> {
-        self.0.create(key, value, policy)
-    }
-
     fn get(&self, key: &str) -> Result<GetResponse, Error> {
         self.0.get(key)
     }
