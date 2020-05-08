@@ -1185,6 +1185,7 @@
 <span id="1185">1185</span>
 <span id="1186">1186</span>
 <span id="1187">1187</span>
+<span id="1188">1188</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1943,6 +1944,7 @@
                     <span class="ident">Bytecode</span>::<span class="ident">MoveLoc</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="kw">let</span> <span class="ident">local</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">locals</span>.<span class="ident">move_loc</span>(<span class="kw-2">*</span><span class="ident">idx</span> <span class="kw">as</span> <span class="ident">usize</span>)<span class="question-mark">?</span>;
                         <span class="macro">gas</span><span class="macro">!</span>(<span class="ident">instr</span>: <span class="ident">context</span>, <span class="ident">interpreter</span>, <span class="ident">Opcodes</span>::<span class="ident">MOVE_LOC</span>, <span class="ident">local</span>.<span class="ident">size</span>())<span class="question-mark">?</span>;
+
                         <span class="ident">interpreter</span>.<span class="ident">operand_stack</span>.<span class="ident">push</span>(<span class="ident">local</span>)<span class="question-mark">?</span>;
                     }
                     <span class="ident">Bytecode</span>::<span class="ident">StLoc</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> {

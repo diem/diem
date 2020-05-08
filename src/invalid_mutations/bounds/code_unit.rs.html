@@ -402,6 +402,9 @@
 <span id="402">402</span>
 <span id="403">403</span>
 <span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -556,8 +559,11 @@
 
     <span class="kw">fn</span> <span class="ident">apply_one</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">idx</span>: <span class="ident">usize</span>, <span class="ident">mutations</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">CodeUnitBoundsMutation</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">VMStatus</span><span class="op">&gt;</span> {
         <span class="comment">// For this function def, find all the places where a bounds mutation can be applied.</span>
-        <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">function_defs</span>[<span class="ident">idx</span>].<span class="ident">code</span>.<span class="ident">as_mut</span>().<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">locals_len</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">signatures</span>[<span class="ident">code</span>.<span class="ident">locals</span>.<span class="ident">into_index</span>()].<span class="ident">len</span>();
+        <span class="kw">let</span> <span class="ident">func_def</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">function_defs</span>[<span class="ident">idx</span>];
+        <span class="kw">let</span> <span class="ident">func_handle</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module</span>.<span class="ident">function_handles</span>[<span class="ident">func_def</span>.<span class="ident">function</span>.<span class="ident">into_index</span>()];
+        <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="ident">func_def</span>.<span class="ident">code</span>.<span class="ident">as_mut</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">locals_len</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">signatures</span>[<span class="ident">func_handle</span>.<span class="ident">parameters</span>.<span class="ident">into_index</span>()].<span class="ident">len</span>()
+            <span class="op">+</span> <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">signatures</span>[<span class="ident">code</span>.<span class="ident">locals</span>.<span class="ident">into_index</span>()].<span class="ident">len</span>();
         <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">code</span>.<span class="ident">code</span>;
         <span class="kw">let</span> <span class="ident">code_len</span> <span class="op">=</span> <span class="ident">code</span>.<span class="ident">len</span>();
 

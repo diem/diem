@@ -1428,6 +1428,23 @@
 <span id="1428">1428</span>
 <span id="1429">1429</span>
 <span id="1430">1430</span>
+<span id="1431">1431</span>
+<span id="1432">1432</span>
+<span id="1433">1433</span>
+<span id="1434">1434</span>
+<span id="1435">1435</span>
+<span id="1436">1436</span>
+<span id="1437">1437</span>
+<span id="1438">1438</span>
+<span id="1439">1439</span>
+<span id="1440">1440</span>
+<span id="1441">1441</span>
+<span id="1442">1442</span>
+<span id="1443">1443</span>
+<span id="1444">1444</span>
+<span id="1445">1445</span>
+<span id="1446">1446</span>
+<span id="1447">1447</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2408,7 +2425,14 @@
         <span class="kw">let</span> <span class="ident">code</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Bytecode</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">compiled_script</span>.<span class="ident">code</span>.<span class="ident">code</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">parameters</span> <span class="op">=</span> <span class="ident">script</span>.<span class="ident">signature_at</span>(<span class="ident">compiled_script</span>.<span class="ident">parameters</span>).<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">return_</span> <span class="op">=</span> <span class="ident">Signature</span>(<span class="macro">vec</span><span class="macro">!</span>[]);
-        <span class="kw">let</span> <span class="ident">locals</span> <span class="op">=</span> <span class="ident">script</span>.<span class="ident">signature_at</span>(<span class="ident">compiled_script</span>.<span class="ident">code</span>.<span class="ident">locals</span>).<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">locals</span> <span class="op">=</span> <span class="ident">Signature</span>(
+            <span class="ident">parameters</span>
+                .<span class="number">0</span>
+                .<span class="ident">iter</span>()
+                .<span class="ident">chain</span>(<span class="ident">script</span>.<span class="ident">signature_at</span>(<span class="ident">compiled_script</span>.<span class="ident">code</span>.<span class="ident">locals</span>).<span class="number">0</span>.<span class="ident">iter</span>())
+                .<span class="ident">cloned</span>()
+                .<span class="ident">collect</span>(),
+        );
         <span class="kw">let</span> <span class="ident">type_parameters</span> <span class="op">=</span> <span class="ident">compiled_script</span>.<span class="ident">type_parameters</span>.<span class="ident">clone</span>();
         <span class="comment">// TODO: main does not have a name. Revisit.</span>
         <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;main&quot;</span>).<span class="ident">unwrap</span>();
@@ -2481,12 +2505,22 @@
             <span class="prelude-val">None</span>
         };
         <span class="kw">let</span> <span class="ident">scope</span> <span class="op">=</span> <span class="ident">Scope</span>::<span class="ident">Module</span>(<span class="ident">module_id</span>);
+        <span class="kw">let</span> <span class="ident">parameters</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">signature_at</span>(<span class="ident">handle</span>.<span class="ident">parameters</span>).<span class="ident">clone</span>();
         <span class="comment">// Native functions do not have a code unit</span>
         <span class="kw">let</span> (<span class="ident">code</span>, <span class="ident">locals</span>) <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">def</span>.<span class="ident">code</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">code</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">code</span>.<span class="ident">code</span>.<span class="ident">clone</span>(), <span class="ident">module</span>.<span class="ident">signature_at</span>(<span class="ident">code</span>.<span class="ident">locals</span>).<span class="ident">clone</span>()),
+            <span class="prelude-val">Some</span>(<span class="ident">code</span>) <span class="op">=</span><span class="op">&gt;</span> (
+                <span class="ident">code</span>.<span class="ident">code</span>.<span class="ident">clone</span>(),
+                <span class="ident">Signature</span>(
+                    <span class="ident">parameters</span>
+                        .<span class="number">0</span>
+                        .<span class="ident">iter</span>()
+                        .<span class="ident">chain</span>(<span class="ident">module</span>.<span class="ident">signature_at</span>(<span class="ident">code</span>.<span class="ident">locals</span>).<span class="number">0</span>.<span class="ident">iter</span>())
+                        .<span class="ident">cloned</span>()
+                        .<span class="ident">collect</span>(),
+                ),
+            ),
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> (<span class="macro">vec</span><span class="macro">!</span>[], <span class="ident">Signature</span>(<span class="macro">vec</span><span class="macro">!</span>[])),
         };
-        <span class="kw">let</span> <span class="ident">parameters</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">signature_at</span>(<span class="ident">handle</span>.<span class="ident">parameters</span>).<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">return_</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">signature_at</span>(<span class="ident">handle</span>.<span class="ident">return_</span>).<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">type_parameters</span> <span class="op">=</span> <span class="ident">handle</span>.<span class="ident">type_parameters</span>.<span class="ident">clone</span>();
         <span class="self">Self</span> {

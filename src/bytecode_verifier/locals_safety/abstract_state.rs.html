@@ -145,6 +145,9 @@
 <span id="145">145</span>
 <span id="146">146</span>
 <span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -183,7 +186,9 @@
 <span class="kw">impl</span> <span class="ident">AbstractState</span> {
     <span class="doccomment">/// create a new abstract state</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span>, <span class="ident">function_definition</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionDefinition</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">local_types</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">module</span>
+        <span class="kw">let</span> <span class="ident">func_handle</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">function_handle_at</span>(<span class="ident">function_definition</span>.<span class="ident">function</span>);
+        <span class="kw">let</span> <span class="ident">parameter_types</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">module</span>.<span class="ident">signature_at</span>(<span class="ident">func_handle</span>.<span class="ident">parameters</span>).<span class="number">0</span>;
+        <span class="kw">let</span> <span class="ident">additional_local_types</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">module</span>
             .<span class="ident">signature_at</span>(
                 <span class="ident">function_definition</span>
                     .<span class="ident">code</span>
@@ -192,15 +197,16 @@
                     .<span class="ident">locals</span>,
             )
             .<span class="number">0</span>;
-        <span class="kw">let</span> <span class="ident">func_handle</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">function_handle_at</span>(<span class="ident">function_definition</span>.<span class="ident">function</span>);
+        <span class="kw">let</span> <span class="ident">num_locals</span> <span class="op">=</span> <span class="ident">parameter_types</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="ident">additional_local_types</span>.<span class="ident">len</span>();
 
         <span class="kw">let</span> <span class="ident">num_args</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">signature_at</span>(<span class="ident">func_handle</span>.<span class="ident">parameters</span>).<span class="number">0</span>.<span class="ident">len</span>();
-        <span class="kw">let</span> <span class="ident">local_states</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">local_types</span>.<span class="ident">len</span>())
+        <span class="kw">let</span> <span class="ident">local_states</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">num_locals</span>)
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="kw">if</span> <span class="ident">i</span> <span class="op">&lt;</span> <span class="ident">num_args</span> { <span class="ident">Available</span> } <span class="kw">else</span> { <span class="ident">Unavailable</span> })
             .<span class="ident">collect</span>();
 
-        <span class="kw">let</span> <span class="ident">local_kinds</span> <span class="op">=</span> <span class="ident">local_types</span>
+        <span class="kw">let</span> <span class="ident">local_kinds</span> <span class="op">=</span> <span class="ident">parameter_types</span>
             .<span class="ident">iter</span>()
+            .<span class="ident">chain</span>(<span class="ident">additional_local_types</span>.<span class="ident">iter</span>())
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">st</span><span class="op">|</span> <span class="ident">kind</span>(<span class="ident">module</span>, <span class="ident">st</span>, <span class="kw-2">&amp;</span><span class="ident">func_handle</span>.<span class="ident">type_parameters</span>))
             .<span class="ident">collect</span>();
 
