@@ -88,6 +88,8 @@ pub enum SkipReason<'l> {
     NonUtf8,
     /// This extension was unsupported.
     UnsupportedExtension(Option<&'l str>),
+    /// The given file was unsupported by this linter.
+    UnsupportedFile(&'l Path),
     // TODO: Add more reasons.
 }
 
