@@ -29,6 +29,8 @@ pub enum MempoolSyncMsg {
     BroadcastTransactionsResponse {
         /// unique id of received broadcast request
         request_id: String,
+        /// whether this batch of txns should be re-broadcasted
+        retry: bool,
     },
 }
 

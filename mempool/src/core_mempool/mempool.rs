@@ -76,8 +76,8 @@ impl Mempool {
 
         if is_rejected {
             debug!(
-                "[Mempool] transaction is rejected: {}:{}",
-                sender, sequence_number
+                "[Mempool] transaction is rejected: {}:{} {}",
+                sender, sequence_number, current_seq_number
             );
             if sequence_number >= current_seq_number {
                 self.transactions

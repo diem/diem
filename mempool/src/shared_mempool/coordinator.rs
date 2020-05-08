@@ -142,8 +142,8 @@ pub(crate) async fn coordinator<V>(
                                             ))
                                             .await;
                                     }
-                                    MempoolSyncMsg::BroadcastTransactionsResponse{request_id} => {
-                                        tasks::process_broadcast_ack(&mempool, request_id, is_validator);
+                                    MempoolSyncMsg::BroadcastTransactionsResponse{request_id, retry} => {
+                                        tasks::process_broadcast_ack(&mempool, peer_manager.clone(), request_id, is_validator, retry, PeerNetworkId(network_id, peer_id));
                                         notify_subscribers(SharedMempoolNotification::ACK, &smp.subscribers);
                                     }
                                 };

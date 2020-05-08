@@ -154,6 +154,7 @@ impl TransactionStore {
                     .get_mut(&address)
                     .and_then(|txns| txns.remove(&sequence_number))
                 {
+                    debug!("[mempool] mempool full, evicting txn {}:{}", address, sequence_number);
                     self.index_remove(&txn);
                 }
             }
@@ -211,6 +212,7 @@ impl TransactionStore {
                 match txn.timeline_state {
                     TimelineState::Ready(_) => {}
                     _ => {
+//                        debug!("[mempool] process ready txn - adding to parking lot index");
                         self.parking_lot_index.insert(&txn);
                         parking_lot_txns += 1;
                     }
@@ -336,11 +338,13 @@ impl TransactionStore {
             ("gc.expiration_time_index", &mut self.expiration_time_index)
         };
         OP_COUNTERS.inc(index_name);
+//        debug!("[mempool] gc");
 
         for key in index.gc(now) {
             if let Some(txns) = self.transactions.get_mut(&key.address) {
                 // mark all following transactions as non-ready
                 for (_, t) in txns.range((Bound::Excluded(key.sequence_number), Bound::Unbounded)) {
+//                    debug!("[mempool] gc - adding to parking lot index {}:{}", t.get_sender(), t.get_sequence_number());
                     self.parking_lot_index.insert(&t);
                     self.priority_index.remove(&t);
                     self.timeline_index.remove(&t);

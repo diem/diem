@@ -12,6 +12,7 @@ use crate::{
     },
     CommitNotification, CommitResponse, CommittedTransaction, ConsensusRequest, ConsensusResponse,
     SubmissionStatus,
+    shared_mempool::peer_manager::PeerManager,
 };
 use anyhow::{ensure, format_err, Result};
 use futures::{channel::oneshot, stream::FuturesUnordered};
@@ -86,6 +87,8 @@ where
     if transactions.is_empty() {
         return;
     }
+
+    debug!("[mempool] sending batch {}:{} to {:?}", timeline_id, new_timeline_id, peer);
 
     let mut network_sender = smp
         .network_senders
@@ -170,14 +173,21 @@ pub(crate) async fn process_transaction_broadcast<V>(
     V: TransactionValidation,
 {
     let results = process_incoming_transactions(&smp, transactions, timeline_state).await;
-    log_txn_process_results(results, Some(peer.peer_id()));
+    log_txn_process_results(results.clone(), Some(peer.peer_id()));
+
+    let mut retry = false;
+    let retry_statuses = [MempoolStatusCode::MempoolIsFull, MempoolStatusCode::TooManyTransactions].iter().collect::<HashSet<_>>();
+    for (mempool_status, _vm_status) in results.iter() {
+        let should_single_retry = retry_statuses.contains(&mempool_status.code);
+        retry = retry || should_single_retry;
+    }
     // send back ACK
     let mut network_sender = smp
         .network_senders
         .get_mut(&peer.network_id())
         .expect("[shared mempool] missing network sender");
     if let Err(e) = send_mempool_sync_msg(
-        MempoolSyncMsg::BroadcastTransactionsResponse { request_id },
+        MempoolSyncMsg::BroadcastTransactionsResponse { request_id, retry },
         peer.peer_id(),
         &mut network_sender,
     ) {
@@ -310,21 +320,31 @@ fn log_txn_process_results(results: Vec<SubmissionStatus>, sender: Option<PeerId
 /// processes ACK from peer node regarding txn submission to that node
 pub(crate) fn process_broadcast_ack(
     mempool: &Mutex<CoreMempool>,
+    peer_manager: Arc<PeerManager>,
     request_id: String,
     is_validator: bool, // whether this node is a validator or not
+    retry: bool,
+    peer: PeerNetworkId,
 ) {
-    if is_validator {
-        return;
-    }
 
     match parse_request_id(request_id) {
         Ok((start_id, end_id)) => {
-            let mut mempool = mempool
-                .lock()
-                .expect("[shared mempool] failed to acquire mempool lock");
+            debug!("[mempool] ACK {}:{} from {:?}", start_id, end_id, peer);
+            if retry {
+                debug!("[mempool] resetting timeline id {}", start_id);
+                peer_manager.update_peer_broadcast(peer, start_id);
+            } else {
+                if is_validator {
+                    return;
+                }
 
-            for txn in mempool.timeline_range(start_id, end_id).iter() {
-                mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
+                let mut mempool = mempool
+                    .lock()
+                    .expect("[shared mempool] failed to acquire mempool lock");
+
+                for txn in mempool.timeline_range(start_id, end_id).iter() {
+                    mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
+                }
             }
         }
         Err(err) => warn!("[shared mempool] ACK with invalid request_id: {:?}", err),
@@ -338,6 +358,7 @@ pub(crate) async fn process_state_sync_request(
     mempool: Arc<Mutex<CoreMempool>>,
     req: CommitNotification,
 ) {
+    debug!("[mempool] state sync commit");
     commit_txns(&mempool, req.transactions, req.block_timestamp_usecs, false).await;
     // send back to callback
     if let Err(e) = req
@@ -378,6 +399,7 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
         }
         ConsensusRequest::RejectNotification(transactions, callback) => {
             // handle rejected txns
+            debug!("[mempool] consensus rejected txns {:?}", transactions.len());
             commit_txns(mempool, transactions, 0, true).await;
             (ConsensusResponse::CommitResponse(), callback)
         }

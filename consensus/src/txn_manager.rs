@@ -13,6 +13,7 @@ use libra_mempool::{
 use libra_types::transaction::{SignedTransaction, TransactionStatus};
 use std::time::Duration;
 use tokio::time::timeout;
+use libra_logger::prelude::*;
 
 /// Proxy interface to mempool
 #[derive(Clone)]
@@ -72,7 +73,8 @@ impl TxnManager for MempoolProxy {
     ) -> Result<()> {
         let mut rejected_txns = vec![];
         for (txn, status) in txns.iter().zip(compute_results.compute_status().iter()) {
-            if let TransactionStatus::Discard(_) = status {
+            if let TransactionStatus::Discard(vm_failure) = status {
+                debug!("[consensus] txn failed with vm error {:?} {}:{}", vm_failure, txn.sender(), txn.sequence_number());
                 rejected_txns.push(CommittedTransaction {
                     sender: txn.sender(),
                     sequence_number: txn.sequence_number(),
@@ -90,7 +92,7 @@ impl TxnManager for MempoolProxy {
         // send to shared mempool
         self.consensus_to_mempool_sender.clone().try_send(req)?;
 
-        if let Err(e) = timeout(Duration::from_secs(1), callback_rcv).await {
+        if let Err(e) = timeout(Duration::from_secs(5), callback_rcv).await {
             Err(format_err!("[consensus] txn manager did not receive ACK for commit notification sent to mempool on time: {:?}", e))
         } else {
             Ok(())
