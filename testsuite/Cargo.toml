@@ -12,7 +12,7 @@ edition = "2018"
 [dev-dependencies]
 num = "0.2.0"
 num-traits = "0.2"
-rust_decimal = "1.4.1"
+rust_decimal = "1.5.0"
 statistical = "1"
 workspace-builder = { path = "../common/workspace-builder", version = "0.1.0" }
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }

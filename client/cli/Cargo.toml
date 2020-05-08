@@ -16,7 +16,7 @@ tonic = "0.2"
 hex = "0.4.2"
 proptest = { version = "0.9.6", optional = true }
 rustyline = "6.1.2"
-rust_decimal = "1.4.1"
+rust_decimal = "1.5.0"
 num-traits = "0.2"
 reqwest = { version = "0.10.4", features = ["blocking", "json", "rustls-tls"], default-features = false }
 serde = { version = "1.0.106", features = ["derive"] }
