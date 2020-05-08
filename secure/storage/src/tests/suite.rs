@@ -15,19 +15,17 @@ use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Signature,
 /// tests cannot currently be run in parallel, as each test uses the same vault instance.
 const STORAGE_TESTS: &[fn(&mut dyn Storage)] = &[
     test_create_and_get_non_existent_version,
+    test_create_get_key_pair,
     test_create_rotate_and_check_key_pair,
     test_create_key_pair_and_perform_rotations,
     test_create_sign_rotate_sign,
-    test_create_get_and_test_key_pair,
-    test_create_get_set_unwrap,
-    test_create_key_pair_twice,
-    test_create_key_value_twice,
     test_ensure_storage_is_available,
-    test_get_set_non_existent,
+    test_get_non_existent,
+    test_get_set,
     test_get_uncreated_key_pair,
     test_hash_value,
     test_incremental_timestamp,
-    test_verify_incorrect_value_types_unwrap,
+    test_verify_incorrect_value_types,
 ];
 
 /// Storage data constants for testing purposes.
@@ -47,10 +45,7 @@ pub fn execute_all_storage_tests(storage: &mut dyn Storage) {
 
 /// This test tries to get and set non-existent keys in storage and asserts that the correct
 /// errors are returned on these operations.
-fn test_get_set_non_existent(storage: &mut dyn Storage) {
-    let crypto_value = Value::Ed25519PrivateKey(Ed25519PrivateKey::generate_for_testing());
-    let u64_value = Value::U64(10);
-
+fn test_get_non_existent(storage: &mut dyn Storage) {
     assert_eq!(
         storage.get(CRYPTO_KEY).unwrap_err(),
         Error::KeyNotSet(CRYPTO_KEY.to_string())
@@ -59,46 +54,33 @@ fn test_get_set_non_existent(storage: &mut dyn Storage) {
         storage.get(U64_KEY).unwrap_err(),
         Error::KeyNotSet(U64_KEY.to_string())
     );
-    assert_eq!(
-        storage.set(CRYPTO_KEY, crypto_value).unwrap_err(),
-        Error::KeyNotSet(CRYPTO_KEY.to_string())
-    );
-    assert_eq!(
-        storage.set(U64_KEY, u64_value).unwrap_err(),
-        Error::KeyNotSet(U64_KEY.to_string())
-    );
 }
 
-/// This test stores various key/value pairs in storage, updates them, retrieves the values and
-/// unwraps them to ensure the correct value types are returned.
-fn test_create_get_set_unwrap(storage: &mut dyn Storage) {
+/// This test stores various key/value pairs in storage, updates them, retrieves the values to
+/// ensure the correct value types are returned.
+fn test_get_set(storage: &mut dyn Storage) {
     let crypto_private_1 = Ed25519PrivateKey::generate_for_testing();
     let crypto_private_2 = Ed25519PrivateKey::generate_for_testing();
     let u64_1 = 10;
     let u64_2 = 647;
-    let policy = Policy::public();
 
+    storage.set(U64_KEY, Value::U64(u64_1)).unwrap();
     storage
-        .create_if_not_exists(U64_KEY, Value::U64(u64_1), &policy)
-        .unwrap();
-
-    storage
-        .create(
+        .set(
             CRYPTO_KEY,
             Value::Ed25519PrivateKey(crypto_private_1.clone()),
-            &policy,
         )
         .unwrap();
 
     assert_eq!(storage.get(U64_KEY).unwrap().value.u64().unwrap(), u64_1);
     assert_eq!(
-        &storage
+        storage
             .get(CRYPTO_KEY)
             .unwrap()
             .value
             .ed25519_private_key()
             .unwrap(),
-        &crypto_private_1
+        crypto_private_1
     );
 
     storage.set(U64_KEY, Value::U64(u64_2)).unwrap();
@@ -111,29 +93,24 @@ fn test_create_get_set_unwrap(storage: &mut dyn Storage) {
 
     assert_eq!(storage.get(U64_KEY).unwrap().value.u64().unwrap(), u64_2);
     assert_eq!(
-        &storage
+        storage
             .get(CRYPTO_KEY)
             .unwrap()
             .value
             .ed25519_private_key()
             .unwrap(),
-        &crypto_private_2
+        crypto_private_2
     );
 }
 
 /// This test stores different types of values into storage, retrieves them, and asserts
 /// that the value unwrap functions return an unexpected type error on an incorrect unwrap.
-fn test_verify_incorrect_value_types_unwrap(storage: &mut dyn Storage) {
+fn test_verify_incorrect_value_types(storage: &mut dyn Storage) {
     let crypto_value = Value::Ed25519PrivateKey(Ed25519PrivateKey::generate_for_testing());
     let u64_value = Value::U64(10);
-    let policy = Policy::public();
 
-    storage
-        .create_if_not_exists(U64_KEY, u64_value, &policy)
-        .unwrap();
-    storage
-        .create_if_not_exists(CRYPTO_KEY, crypto_value, &policy)
-        .unwrap();
+    storage.set(U64_KEY, u64_value).unwrap();
+    storage.set(CRYPTO_KEY, crypto_value).unwrap();
 
     assert_eq!(
         storage
@@ -150,46 +127,13 @@ fn test_verify_incorrect_value_types_unwrap(storage: &mut dyn Storage) {
     );
 }
 
-/// This test attempts to create a key/value pair twice, asserting that the second
-/// creation attempt fails and returns a key exists error.
-fn test_create_key_value_twice(storage: &mut dyn Storage) {
-    let u64_value = 10;
-    let policy = Policy::public();
-
-    assert_eq!(
-        storage.create(U64_KEY, Value::U64(u64_value), &policy),
-        Ok(())
-    );
-    match storage.create(U64_KEY, Value::U64(u64_value), &policy) {
-        Err(Error::KeyAlreadyExists(_)) => (/* Expected error code */),
-        _ => panic!("The second call to create() should have failed!"),
-    }
-}
-
 /// This test: (i) creates a new named test key pair; (ii) retrieves the public key for
 /// the created key pair; (iii) compares the public keys returned by the create call and the
 /// retrieval call.
-fn test_create_get_and_test_key_pair(storage: &mut dyn Storage) {
-    let public_key = storage
-        .create_key(CRYPTO_NAME, &Policy::public())
-        .expect("Failed to create a test Ed25519 key pair!");
-    let retrieved_public_key_response = storage
-        .get_public_key(CRYPTO_NAME)
-        .expect("Failed to fetch the test key pair!");
+fn test_create_get_key_pair(storage: &mut dyn Storage) {
+    let public_key = storage.create_key(CRYPTO_NAME, &Policy::public()).unwrap();
+    let retrieved_public_key_response = storage.get_public_key(CRYPTO_NAME).unwrap();
     assert_eq!(public_key, retrieved_public_key_response.public_key);
-}
-
-/// This test attempts to create two named key pairs using the same name, and asserts
-/// that the second creation call (i.e., the duplicate), fails.
-fn test_create_key_pair_twice(storage: &mut dyn Storage) {
-    let policy = Policy::public();
-    let _ = storage
-        .create_key(CRYPTO_NAME, &policy)
-        .expect("Failed to create a test Ed25519 key pair!");
-    assert!(
-        storage.create_key(CRYPTO_NAME, &policy).is_err(),
-        "The second call to generate_ed25519_key_pair() should have failed!"
-    );
 }
 
 /// This test tries to get the public key of a key pair that has not yet been created. As
@@ -206,10 +150,9 @@ fn test_get_uncreated_key_pair(storage: &mut dyn Storage) {
 fn test_hash_value(storage: &mut dyn Storage) {
     let hash_value_key = "HashValue";
     let hash_value_value = HashValue::random();
-    let policy = Policy::public();
 
     storage
-        .create(hash_value_key, Value::HashValue(hash_value_value), &policy)
+        .set(hash_value_key, Value::HashValue(hash_value_value))
         .unwrap();
     let out_value = storage
         .get(hash_value_key)
@@ -232,9 +175,7 @@ fn test_ensure_storage_is_available(storage: &mut dyn Storage) {
 /// and private keys. As such, these calls should fail.
 fn test_create_and_get_non_existent_version(storage: &mut dyn Storage) {
     // Create new named key pair
-    let _ = storage
-        .create_key(CRYPTO_NAME, &Policy::public())
-        .expect("Failed to create a test Ed25519 key pair!");
+    let _ = storage.create_key(CRYPTO_NAME, &Policy::public()).unwrap();
 
     // Get a non-existent version of the new key pair and verify failure
     let non_existent_public_key = Ed25519PrivateKey::generate_for_testing().public_key();
@@ -342,9 +283,8 @@ fn test_incremental_timestamp(storage: &mut dyn Storage) {
     let key = "timestamp_u64";
     let value0 = 442;
     let value1 = 450;
-    let policy = Policy::public();
 
-    storage.create(key, Value::U64(value0), &policy).unwrap();
+    storage.set(key, Value::U64(value0)).unwrap();
     let first = storage.get(key).unwrap();
     std::thread::sleep(std::time::Duration::from_secs(1));
     storage.set(key, Value::U64(value1)).unwrap();

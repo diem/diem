@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    tests::suite, vault::VaultStorage, Capability, CryptoStorage, Error, Identity, KVStorage,
-    Permission, Policy, Value,
+    tests::suite,
+    vault::{VaultEngine, VaultStorage},
+    Capability, CryptoStorage, Error, Identity, KVStorage, Permission, Policy, Value,
 };
 use libra_crypto::{HashValue, Signature};
 
@@ -58,12 +59,8 @@ fn execute_storage_tests_vault() {
 fn test_vault_namespace_reset() {
     let mut storage_1 = create_vault_with_namespace(Some(VAULT_NAMESPACE_1.into()));
     let mut storage_2 = create_vault_with_namespace(Some(VAULT_NAMESPACE_2.into()));
-    storage_1
-        .create(U64_KEY_1, Value::U64(U64_VALUE_1), &Policy::public())
-        .unwrap();
-    storage_2
-        .create(U64_KEY_1, Value::U64(U64_VALUE_1), &Policy::public())
-        .unwrap();
+    storage_1.set(U64_KEY_1, Value::U64(U64_VALUE_1)).unwrap();
+    storage_2.set(U64_KEY_1, Value::U64(U64_VALUE_1)).unwrap();
 
     // Verify resets do not occur across namespaces
     storage_1
@@ -81,18 +78,12 @@ fn test_vault_namespace_reset() {
 fn test_vault_no_namespace_reset() {
     let mut storage_1 = create_vault_with_namespace(Some(VAULT_NAMESPACE_1.into()));
     let mut storage_2 = create_vault_with_namespace(Some(VAULT_NAMESPACE_2.into()));
-    storage_1
-        .create(U64_KEY_1, Value::U64(U64_VALUE_1), &Policy::public())
-        .unwrap();
-    storage_2
-        .create(U64_KEY_2, Value::U64(U64_VALUE_2), &Policy::public())
-        .unwrap();
+    storage_1.set(U64_KEY_1, Value::U64(U64_VALUE_1)).unwrap();
+    storage_2.set(U64_KEY_2, Value::U64(U64_VALUE_2)).unwrap();
 
     // Create a VaultStorage without a namespace, reset the instance, and ensure all data is cleared
     // regardless of namespaces.
-    create_vault_with_namespace(None)
-        .reset_and_clear()
-        .expect("Failed to reset VaultStorage without namespace!");
+    create_vault_with_namespace(None).reset_and_clear().unwrap();
     assert!(storage_1.get(U64_KEY_1).is_err());
     assert!(storage_2.get(U64_KEY_2).is_err());
 }
@@ -153,10 +144,25 @@ fn test_vault_key_value_policies() {
 
     // Initialize data and policies
 
-    storage.create("anyone", Value::U64(1), &anyone).unwrap();
-    storage.create("root", Value::U64(2), &root).unwrap();
-    storage.create("partial", Value::U64(3), &partial).unwrap();
-    storage.create("full", Value::U64(4), &full).unwrap();
+    storage.set("anyone", Value::U64(1)).unwrap();
+    storage
+        .set_policies("anyone", &VaultEngine::KVSecrets, &anyone)
+        .unwrap();
+
+    storage.set("root", Value::U64(2)).unwrap();
+    storage
+        .set_policies("root", &VaultEngine::KVSecrets, &root)
+        .unwrap();
+
+    storage.set("partial", Value::U64(3)).unwrap();
+    storage
+        .set_policies("partial", &VaultEngine::KVSecrets, &partial)
+        .unwrap();
+
+    storage.set("full", Value::U64(4)).unwrap();
+    storage
+        .set_policies("full", &VaultEngine::KVSecrets, &full)
+        .unwrap();
 
     // Verify initial reading works correctly
 

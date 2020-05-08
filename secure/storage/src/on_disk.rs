@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Policy, Storage, Value};
+use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Storage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_temppath::TempPath;
 use std::{
@@ -78,18 +78,6 @@ impl<T: Send + Sync + TimeService> KVStorage for OnDiskStorageInternal<T> {
         true
     }
 
-    fn create(&mut self, key: &str, value: Value, _policy: &Policy) -> Result<(), Error> {
-        let mut data = self.read()?;
-        if data.contains_key(key) {
-            return Err(Error::KeyAlreadyExists(key.to_string()));
-        }
-        data.insert(
-            key.to_string(),
-            GetResponse::new(value, self.time_service.now()),
-        );
-        self.write(&data)
-    }
-
     fn get(&self, key: &str) -> Result<GetResponse, Error> {
         let mut data = self.read()?;
         data.remove(key)
@@ -98,9 +86,6 @@ impl<T: Send + Sync + TimeService> KVStorage for OnDiskStorageInternal<T> {
 
     fn set(&mut self, key: &str, value: Value) -> Result<(), Error> {
         let mut data = self.read()?;
-        if !data.contains_key(key) {
-            return Err(Error::KeyNotSet(key.to_string()));
-        }
         data.insert(
             key.to_string(),
             GetResponse::new(value, self.time_service.now()),

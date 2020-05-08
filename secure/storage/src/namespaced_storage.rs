@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Error, GetResponse, KVStorage, Policy, Value};
+use crate::{Error, GetResponse, KVStorage, Value};
 
 /// This provides a light wrapper around KV storages to support a namespace. That namespace is
 /// effectively prefixing all keys with then namespace value and "/" so a namespace of foo and a
@@ -15,10 +15,6 @@ pub struct NamespacedStorage<T> {
 impl<T: KVStorage> KVStorage for NamespacedStorage<T> {
     fn available(&self) -> bool {
         self.inner.available()
-    }
-
-    fn create(&mut self, key: &str, value: Value, policy: &Policy) -> Result<(), Error> {
-        self.inner.create(&self.ns_name(key), value, policy)
     }
 
     fn get(&self, key: &str) -> Result<GetResponse, Error> {
@@ -79,11 +75,9 @@ mod test {
         let storage = OnDiskStorage::new(path_buf);
         let mut nss1 = NamespacedStorage::new(storage, Some(ns1.into()));
 
-        let policy = Policy::public();
-
-        nss_default.create(key, Value::U64(0), &policy).unwrap();
-        nss0.create(key, Value::U64(1), &policy).unwrap();
-        nss1.create(key, Value::U64(2), &policy).unwrap();
+        nss_default.set(key, Value::U64(0)).unwrap();
+        nss0.set(key, Value::U64(1)).unwrap();
+        nss1.set(key, Value::U64(2)).unwrap();
 
         assert_eq!(nss_default.get(key).unwrap().value, Value::U64(0));
         assert_eq!(nss0.get(key).unwrap().value, Value::U64(1));
@@ -106,7 +100,7 @@ mod test {
         let storage = OnDiskStorage::new(path_buf);
         let another_nss = NamespacedStorage::new(storage, Some(ns.into()));
 
-        nss.create(key, Value::U64(1), &Policy::public()).unwrap();
+        nss.set(key, Value::U64(1)).unwrap();
         nss_default.get(key).unwrap_err();
         assert_eq!(nss.get(key).unwrap().value, Value::U64(1));
         assert_eq!(another_nss.get(key).unwrap().value, Value::U64(1));
