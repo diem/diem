@@ -47,7 +47,7 @@ struct Args {
     #[structopt(short = "b", long = "bytecode")]
     pub bytecode_file_path: String,
 
-    /// (Optional) Path to a trace file for the VM in order to print trace information in the
+    /// (Optional) Path to a coverage file for the VM in order to print trace information in the
     /// disassembled output.
     #[structopt(short = "c", long = "move-coverage-path")]
     pub code_coverage_path: Option<String>,
@@ -112,7 +112,7 @@ fn main() {
     let mut disassembler = Disassembler::new(source_mapping, disassembler_options);
 
     if let Some(file_path) = &args.code_coverage_path {
-        disassembler.add_coverage_map(CoverageMap::from_trace_file(file_path));
+        disassembler.add_coverage_map(CoverageMap::from_binary_file(file_path));
     }
 
     let dissassemble_string = disassembler.disassemble().expect("Unable to dissassemble");
