@@ -8,6 +8,6 @@ signing_private_key = "66dd107034b4582a2ef42c5e1ea475f2fea477a10a9f1d75b3635243b
 
 [test]
 auth_key = "837e3b2b2b32ee2543c24676ee66326431893204fa402143c11b26ce8a89ea1d"
-account_private_key ="f6b898412f4ab061943167c1e23efaa2ba98e345a093f0b06da13bffdbd4b2c7"
+operator_private_key ="f6b898412f4ab061943167c1e23efaa2ba98e345a093f0b06da13bffdbd4b2c7"
 consensus_private_key = "f2b916c8b1bf6123854d2fca5384f128199f7a1b2f847316481429b4b35238cc"
 initialize_storage = true

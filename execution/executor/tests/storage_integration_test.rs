@@ -114,7 +114,7 @@ fn test_reconfiguration() {
         .test
         .as_mut()
         .unwrap()
-        .account_keypair
+        .operator_keypair
         .as_mut()
         .unwrap();
     let validator_privkey = keys.take_private().unwrap();
@@ -207,7 +207,7 @@ fn test_change_publishing_option_to_custom() {
         .test
         .as_mut()
         .unwrap()
-        .account_keypair
+        .operator_keypair
         .as_mut()
         .unwrap();
     let validator_privkey = keys.take_private().unwrap();
@@ -383,7 +383,7 @@ fn test_extend_whitelist() {
         .test
         .as_mut()
         .unwrap()
-        .account_keypair
+        .operator_keypair
         .as_mut()
         .unwrap();
     let validator_privkey = keys.take_private().unwrap();

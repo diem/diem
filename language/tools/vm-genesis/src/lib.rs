@@ -410,7 +410,7 @@ pub fn validator_registrations(node_configs: &[NodeConfig]) -> Vec<ValidatorRegi
         .iter()
         .map(|n| {
             let test = n.test.as_ref().unwrap();
-            let account_key = test.account_keypair.as_ref().unwrap().public_key();
+            let account_key = test.operator_keypair.as_ref().unwrap().public_key();
             let consensus_key = test.consensus_keypair.as_ref().unwrap().public_key();
             let network = n.validator_network.as_ref().unwrap();
             let network_keypairs = network.network_keypairs.as_ref().unwrap();

@@ -346,7 +346,7 @@ fn setup_secure_storage(
     let mut sec_storage = InMemoryStorageInternal::new_with_time_service(time);
     let test_config = config.clone().test.unwrap();
 
-    let mut a_keypair = test_config.account_keypair.unwrap();
+    let mut a_keypair = test_config.operator_keypair.unwrap();
     let a_prikey = Value::Ed25519PrivateKey(a_keypair.take_private().unwrap());
 
     sec_storage
@@ -444,7 +444,11 @@ fn test_manual_rotation_on_chain() {
 
 fn verify_manual_rotation_on_chain<T: LibraInterface>(config: NodeConfig, mut node: Node<T>) {
     let test_config = config.test.unwrap();
-    let account_prikey = test_config.account_keypair.unwrap().take_private().unwrap();
+    let account_prikey = test_config
+        .operator_keypair
+        .unwrap()
+        .take_private()
+        .unwrap();
     let genesis_pubkey = test_config
         .consensus_keypair
         .unwrap()
