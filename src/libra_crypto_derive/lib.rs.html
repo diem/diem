@@ -372,6 +372,9 @@
 <span id="372">372</span>
 <span id="373">373</span>
 <span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -693,6 +696,9 @@
     }
 }
 
+<span class="comment">// There is a unit test for this logic in the crypto crate, at</span>
+<span class="comment">// libra_crypto::unit_tests::cryptohasher — you may have to modify it if you</span>
+<span class="comment">// edit the below.</span>
 <span class="attribute">#[<span class="ident">proc_macro_derive</span>(<span class="ident">CryptoHasher</span>, <span class="ident">attributes</span>(<span class="ident">CryptoHasherSalt</span>))]</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">hasher_dispatch</span>(<span class="ident">input</span>: <span class="ident">TokenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
     <span class="kw">let</span> <span class="ident">item</span> <span class="op">=</span> <span class="macro">parse_macro_input</span><span class="macro">!</span>(<span class="ident">input</span> <span class="kw">as</span> <span class="ident">DeriveInput</span>);
@@ -718,7 +724,7 @@
                 <span class="kw">let</span> <span class="ident">f_name</span> <span class="op">=</span> #<span class="ident">fn_name</span>;
 
                 #<span class="ident">hasher_name</span>(
-                    <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">DefaultHasher</span>::<span class="ident">new_with_salt</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="ident">f_name</span>, <span class="ident">mp</span>).<span class="ident">as_bytes</span>()))
+                    <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">DefaultHasher</span>::<span class="ident">new_with_salt</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="ident">mp</span>, <span class="ident">f_name</span>).<span class="ident">as_bytes</span>()))
             }
         }
 
