@@ -3955,6 +3955,19 @@
 <span id="3955">3955</span>
 <span id="3956">3956</span>
 <span id="3957">3957</span>
+<span id="3958">3958</span>
+<span id="3959">3959</span>
+<span id="3960">3960</span>
+<span id="3961">3961</span>
+<span id="3962">3962</span>
+<span id="3963">3963</span>
+<span id="3964">3964</span>
+<span id="3965">3965</span>
+<span id="3966">3966</span>
+<span id="3967">3967</span>
+<span id="3968">3968</span>
+<span id="3969">3969</span>
+<span id="3970">3970</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -4003,6 +4016,7 @@
 <span class="kw">use</span> <span class="ident">move_ir_types</span>::<span class="ident">location</span>::<span class="ident">Spanned</span>;
 <span class="kw">use</span> <span class="ident">move_lang</span>::<span class="ident">parser</span>::<span class="ident">ast</span>::<span class="ident">BinOp_</span>;
 <span class="kw">use</span> <span class="ident">regex</span>::<span class="ident">Regex</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fmt</span>, <span class="ident">fmt</span>::<span class="ident">Formatter</span>};
 
 <span class="comment">// =================================================================================================</span>
 <span class="doccomment">/// # Translator</span>
@@ -4667,6 +4681,20 @@
     <span class="ident">Function</span>(<span class="ident">QualifiedSymbol</span>),
     <span class="ident">FunctionCode</span>(<span class="ident">QualifiedSymbol</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">SpecInfo</span>),
     <span class="ident">Schema</span>(<span class="ident">QualifiedSymbol</span>),
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="kw">for</span> <span class="ident">SpecBlockContext</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
+        <span class="kw">use</span> <span class="ident">SpecBlockContext</span>::<span class="kw-2">*</span>;
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Module</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;module context&quot;</span>)<span class="question-mark">?</span>,
+            <span class="ident">Struct</span>(..) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;struct context&quot;</span>)<span class="question-mark">?</span>,
+            <span class="ident">Function</span>(..) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;function context&quot;</span>)<span class="question-mark">?</span>,
+            <span class="ident">FunctionCode</span>(..) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;code context&quot;</span>)<span class="question-mark">?</span>,
+            <span class="ident">Schema</span>(..) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;schema context&quot;</span>)<span class="question-mark">?</span>,
+        }
+        <span class="prelude-val">Ok</span>(())
+    }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;env</span>, <span class="lifetime">&#39;translator</span><span class="op">&gt;</span> <span class="ident">ModuleTranslator</span><span class="op">&lt;</span><span class="lifetime">&#39;env</span>, <span class="lifetime">&#39;translator</span><span class="op">&gt;</span> {
@@ -5352,7 +5380,7 @@
         <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="ident">SpecBlockContext</span>,
         <span class="ident">loc</span>: <span class="kw-2">&amp;</span><span class="ident">Loc</span>,
         <span class="ident">kind</span>: <span class="kw-2">&amp;</span><span class="ident">ConditionKind</span>,
-        <span class="ident">error_msg</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">detail</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="kw">use</span> <span class="ident">SpecBlockContext</span>::<span class="kw-2">*</span>;
         <span class="kw">let</span> <span class="ident">ok</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">context</span> {
@@ -5370,7 +5398,10 @@
             <span class="ident">Schema</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
         };
         <span class="kw">if</span> <span class="op">!</span><span class="ident">ok</span> {
-            <span class="self">self</span>.<span class="ident">parent</span>.<span class="ident">error</span>(<span class="ident">loc</span>, <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;`{}` {}&quot;</span>, <span class="ident">kind</span>, <span class="ident">error_msg</span>));
+            <span class="self">self</span>.<span class="ident">parent</span>.<span class="ident">error</span>(
+                <span class="ident">loc</span>,
+                <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;`{}` not allowed in {} {}&quot;</span>, <span class="ident">kind</span>, <span class="ident">context</span>, <span class="ident">detail</span>),
+            );
         }
         <span class="ident">ok</span>
     }
@@ -5451,7 +5482,7 @@
                 <span class="ident">kind</span>,
                 <span class="ident">exp</span>: <span class="ident">translated</span>,
             }],
-            <span class="string">&quot;not allowed in this context&quot;</span>,
+            <span class="string">&quot;&quot;</span>,
         );
     }
 
@@ -6158,12 +6189,7 @@
 
         <span class="comment">// Write the conditions to the context item.</span>
         <span class="comment">// TODO: merge pragma properties as well?</span>
-        <span class="self">self</span>.<span class="ident">add_conditions_to_context</span>(
-            <span class="ident">context</span>,
-            <span class="ident">loc</span>,
-            <span class="ident">spec</span>.<span class="ident">conditions</span>,
-            <span class="string">&quot;(included from schema) not allowed in this context&quot;</span>,
-        );
+        <span class="self">self</span>.<span class="ident">add_conditions_to_context</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">spec</span>.<span class="ident">conditions</span>, <span class="string">&quot;(included from schema)&quot;</span>);
     }
 
     <span class="doccomment">/// Analyzes a schema apply weaving operator.</span>

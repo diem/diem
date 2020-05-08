@@ -1182,6 +1182,23 @@
 <span id="1182">1182</span>
 <span id="1183">1183</span>
 <span id="1184">1184</span>
+<span id="1185">1185</span>
+<span id="1186">1186</span>
+<span id="1187">1187</span>
+<span id="1188">1188</span>
+<span id="1189">1189</span>
+<span id="1190">1190</span>
+<span id="1191">1191</span>
+<span id="1192">1192</span>
+<span id="1193">1193</span>
+<span id="1194">1194</span>
+<span id="1195">1195</span>
+<span id="1196">1196</span>
+<span id="1197">1197</span>
+<span id="1198">1198</span>
+<span id="1199">1199</span>
+<span id="1200">1200</span>
+<span id="1201">1201</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1194,6 +1211,9 @@
     <span class="ident">env</span>::{<span class="ident">FieldId</span>, <span class="ident">Loc</span>, <span class="ident">ModuleEnv</span>, <span class="ident">ModuleId</span>, <span class="ident">NodeId</span>, <span class="ident">SpecFunId</span>, <span class="ident">StructEnv</span>, <span class="ident">StructId</span>},
     <span class="ident">ty</span>::{<span class="ident">PrimitiveType</span>, <span class="ident">Type</span>},
 };
+
+<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_imports</span>)]</span>
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">boogie_helpers</span>::{
@@ -1518,19 +1538,33 @@
             <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>);
         }
 
-        <span class="comment">// Generate aborts_if</span>
-        <span class="comment">// abort_if P means function abort if P holds.</span>
-        <span class="comment">// multiple abort_if conditions are &quot;or&quot;ed. If no condition holds, function does not abort.</span>
+        <span class="comment">// Generate aborts_if. Logically, if we have abort conditions P1..Pn, we have</span>
+        <span class="comment">// (P1 || .. || Pn) &lt;==&gt; abort_flag. However, we generate different code to get</span>
+        <span class="comment">// better error positions.</span>
         <span class="kw">let</span> <span class="ident">aborts_if</span> <span class="op">=</span> <span class="ident">spec</span>.<span class="ident">filter_kind</span>(<span class="ident">ConditionKind</span>::<span class="ident">AbortsIf</span>).<span class="ident">collect_vec</span>();
         <span class="kw">if</span> <span class="op">!</span><span class="ident">aborts_if</span>.<span class="ident">is_empty</span>() {
-            <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">set_location</span>(<span class="kw-2">&amp;</span><span class="ident">aborts_if</span>[<span class="number">0</span>].<span class="ident">loc</span>);
-            <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;ensures (&quot;</span>);
-            <span class="self">self</span>.<span class="ident">translate_seq</span>(<span class="ident">aborts_if</span>.<span class="ident">iter</span>(), <span class="string">&quot; || &quot;</span>, <span class="op">|</span><span class="ident">c</span><span class="op">|</span> {
+            <span class="comment">// Emit `ensures P1 ==&gt; abort_flag; ... ensures PN ==&gt; abort_flag;`. This gives us</span>
+            <span class="comment">// good error positions which Pi is expected to cause failure but doesn&#39;t. (Boogie</span>
+            <span class="comment">// reports positions only back per entire ensures, not individual sub-expression.)</span>
+            <span class="kw">for</span> <span class="ident">c</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">aborts_if</span> {
+                <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">set_location</span>(<span class="kw-2">&amp;</span><span class="ident">c</span>.<span class="ident">loc</span>);
+                <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;ensures b#Boolean(old(&quot;</span>);
+                <span class="self">self</span>.<span class="ident">translate_exp</span>(<span class="kw-2">&amp;</span><span class="ident">c</span>.<span class="ident">exp</span>);
+                <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;)) ==&gt; $abort_flag;&quot;</span>)
+            }
+
+            <span class="comment">// Emit `ensures abort_flag =&gt; (P1 || .. || Pn)`. If the error</span>
+            <span class="comment">// is reported on this condition, we catch the case where the function aborts but no</span>
+            <span class="comment">// conditions covers it. We use as a position for the ensures the function itself,</span>
+            <span class="comment">// because reporting on (non-covering) aborts_if conditions is misleading.</span>
+            <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">set_location</span>(<span class="kw-2">&amp;</span><span class="ident">func_target</span>.<span class="ident">get_loc</span>());
+            <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;ensures $abort_flag ==&gt; (&quot;</span>);
+            <span class="self">self</span>.<span class="ident">translate_seq</span>(<span class="ident">aborts_if</span>.<span class="ident">iter</span>(), <span class="string">&quot;\n    || &quot;</span>, <span class="op">|</span><span class="ident">c</span><span class="op">|</span> {
                 <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;b#Boolean(old(&quot;</span>);
                 <span class="self">self</span>.<span class="ident">translate_exp_parenthesised</span>(<span class="kw-2">&amp;</span><span class="ident">c</span>.<span class="ident">exp</span>);
                 <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;))&quot;</span>)
             });
-            <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;) &lt;==&gt; $abort_flag;&quot;</span>);
+            <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;);&quot;</span>);
         }
 
         <span class="comment">// Generate ensures</span>
