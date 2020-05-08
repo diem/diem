@@ -36,7 +36,14 @@ impl From<&SecureBackend> for Box<dyn Storage> {
     fn from(backend: &SecureBackend) -> Self {
         match backend {
             SecureBackend::InMemoryStorage => Box::new(InMemoryStorage::new()),
-            SecureBackend::OnDiskStorage(config) => Box::new(OnDiskStorage::new(config.path())),
+            SecureBackend::OnDiskStorage(config) => {
+                let storage = OnDiskStorage::new(config.path());
+                if let Some(namespace) = &config.namespace {
+                    Box::new(NamespacedStorage::new(storage, namespace.clone()))
+                } else {
+                    Box::new(storage)
+                }
+            }
             SecureBackend::Vault(config) => Box::new(VaultStorage::new(
                 config.server.clone(),
                 config.token.clone(),

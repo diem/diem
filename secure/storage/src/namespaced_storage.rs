@@ -1,14 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Error, GetResponse, KVStorage, Value};
+use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Value};
 
 /// This provides a light wrapper around KV storages to support a namespace. That namespace is
 /// effectively prefixing all keys with then namespace value and "/" so a namespace of foo and a
 /// key of bar becomes "foo/bar". Without a namespace, the key would just be "bar". This matches
 /// how this library implements namespaces for Vault.
 pub struct NamespacedStorage<T> {
-    namespace: Option<String>,
+    namespace: String,
     inner: T,
 }
 
@@ -33,7 +33,7 @@ impl<T: KVStorage> KVStorage for NamespacedStorage<T> {
 }
 
 impl<T> NamespacedStorage<T> {
-    pub fn new(storage: T, namespace: Option<String>) -> Self {
+    pub fn new(storage: T, namespace: String) -> Self {
         NamespacedStorage {
             namespace,
             inner: storage,
@@ -41,17 +41,15 @@ impl<T> NamespacedStorage<T> {
     }
 
     fn ns_name(&self, key: &str) -> String {
-        if let Some(ns) = &self.namespace {
-            format!("{}/{}", ns, key)
-        } else {
-            key.into()
-        }
+        format!("{}/{}", self.namespace, key)
     }
 
-    pub fn namespace(&self) -> Option<String> {
-        self.namespace.clone()
+    pub fn namespace(&self) -> &str {
+        &self.namespace
     }
 }
+
+impl<T: KVStorage> CryptoKVStorage for NamespacedStorage<T> {}
 
 #[cfg(test)]
 mod test {
@@ -67,20 +65,19 @@ mod test {
 
         let path_buf = TempPath::new().path().to_path_buf();
 
-        let storage = OnDiskStorage::new(path_buf.clone());
-        let mut nss_default = NamespacedStorage::new(storage, None);
+        let mut default = OnDiskStorage::new(path_buf.clone());
 
         let storage = OnDiskStorage::new(path_buf.clone());
-        let mut nss0 = NamespacedStorage::new(storage, Some(ns0.into()));
+        let mut nss0 = NamespacedStorage::new(storage, ns0.into());
 
         let storage = OnDiskStorage::new(path_buf);
-        let mut nss1 = NamespacedStorage::new(storage, Some(ns1.into()));
+        let mut nss1 = NamespacedStorage::new(storage, ns1.into());
 
-        nss_default.set(key, Value::U64(0)).unwrap();
+        default.set(key, Value::U64(0)).unwrap();
         nss0.set(key, Value::U64(1)).unwrap();
         nss1.set(key, Value::U64(2)).unwrap();
 
-        assert_eq!(nss_default.get(key).unwrap().value, Value::U64(0));
+        assert_eq!(default.get(key).unwrap().value, Value::U64(0));
         assert_eq!(nss0.get(key).unwrap().value, Value::U64(1));
         assert_eq!(nss1.get(key).unwrap().value, Value::U64(2));
     }
@@ -92,17 +89,16 @@ mod test {
 
         let path_buf = TempPath::new().path().to_path_buf();
 
-        let storage = OnDiskStorage::new(path_buf.clone());
-        let nss_default = NamespacedStorage::new(storage, None);
+        let default = OnDiskStorage::new(path_buf.clone());
 
         let storage = OnDiskStorage::new(path_buf.clone());
-        let mut nss = NamespacedStorage::new(storage, Some(ns.into()));
+        let mut nss = NamespacedStorage::new(storage, ns.into());
 
         let storage = OnDiskStorage::new(path_buf);
-        let another_nss = NamespacedStorage::new(storage, Some(ns.into()));
+        let another_nss = NamespacedStorage::new(storage, ns.into());
 
         nss.set(key, Value::U64(1)).unwrap();
-        nss_default.get(key).unwrap_err();
+        default.get(key).unwrap_err();
         assert_eq!(nss.get(key).unwrap().value, Value::U64(1));
         assert_eq!(another_nss.get(key).unwrap().value, Value::U64(1));
     }
