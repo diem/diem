@@ -88,7 +88,7 @@
 //! }
 //! ```
 
-use anyhow::{ensure, Result};
+use anyhow::{ensure, Error, Result};
 use bytes::Bytes;
 use libra_nibble::Nibble;
 use mirai_annotations::*;
@@ -97,7 +97,7 @@ use once_cell::sync::Lazy;
 use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};
 use serde::{de, ser};
-use std::{self, convert::AsRef, fmt};
+use std::{self, convert::AsRef, fmt, str::FromStr};
 use tiny_keccak::{Hasher, Sha3};
 
 const LIBRA_HASH_SUFFIX: &[u8] = b"@@$$LIBRA$$@@";
@@ -357,6 +357,14 @@ impl fmt::Display for HashValue {
 impl From<HashValue> for Bytes {
     fn from(value: HashValue) -> Bytes {
         Bytes::copy_from_slice(value.hash.as_ref())
+    }
+}
+
+impl FromStr for HashValue {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        HashValue::from_hex(s)
     }
 }
 

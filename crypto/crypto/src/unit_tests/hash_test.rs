@@ -7,6 +7,7 @@ use libra_nibble::Nibble;
 use proptest::{collection::vec, prelude::*};
 use rand::{rngs::StdRng, SeedableRng};
 use serde::Serialize;
+use std::str::FromStr;
 
 #[derive(Serialize)]
 struct Foo(u32);
@@ -251,6 +252,12 @@ proptest! {
         let mut bytes: Vec<u8> = bitvec.into();
         bytes.reverse();
         let hash2 = HashValue::from_slice(&bytes).unwrap();
+        prop_assert_eq!(hash, hash2);
+    }
+
+    #[test]
+    fn test_hashvalue_to_str_roundtrip(hash in any::<HashValue>()) {
+        let hash2 = HashValue::from_str(&hash.to_hex()).unwrap();
         prop_assert_eq!(hash, hash2);
     }
 
