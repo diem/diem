@@ -31,6 +31,7 @@ impl KVStorage for BoxStorage {
         self.0.set(key, value)
     }
 
+    #[cfg(any(test, feature = "testing"))]
     fn reset_and_clear(&mut self) -> Result<(), Error> {
         self.0.reset_and_clear()
     }

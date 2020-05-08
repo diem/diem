@@ -26,6 +26,7 @@ impl<T: KVStorage> KVStorage for NamespacedStorage<T> {
     }
 
     /// Note: This is not a namespace function
+    #[cfg(any(test, feature = "testing"))]
     fn reset_and_clear(&mut self) -> Result<(), Error> {
         self.inner.reset_and_clear()
     }

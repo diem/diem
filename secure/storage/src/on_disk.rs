@@ -93,6 +93,7 @@ impl<T: Send + Sync + TimeService> KVStorage for OnDiskStorageInternal<T> {
         self.write(&data)
     }
 
+    #[cfg(any(test, feature = "testing"))]
     fn reset_and_clear(&mut self) -> Result<(), Error> {
         self.write(&HashMap::new())
     }
