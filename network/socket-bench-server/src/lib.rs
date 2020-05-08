@@ -10,6 +10,7 @@ use futures::{
     stream::{Stream, StreamExt},
 };
 use libra_crypto::test_utils::TEST_SEED;
+use libra_logger::error;
 use libra_network_address::NetworkAddress;
 use memsocket::MemorySocket;
 use netcore::{
@@ -96,22 +97,32 @@ pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseSocket<TcpSoc
 
 /// Server side handler for send throughput benchmark when the messages are sent
 /// over a simple stream (tcp or in-memory).
-pub async fn server_stream_handler<L, I, S, E>(mut server_listener: L)
+pub async fn server_stream_handler<L, I, S, E>(server_listener: L, executor: Handle)
 where
     L: Stream<Item = Result<(I, NetworkAddress), E>> + Unpin,
     I: Future<Output = Result<S, E>>,
-    S: AsyncRead + AsyncWrite + Unpin,
+    S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
     E: ::std::error::Error,
 {
     // Wait for next inbound connection
-    while let Some(Ok((f_stream, _client_addr))) = server_listener.next().await {
-        let stream = f_stream.await.unwrap();
-        let mut stream = Framed::new(IoCompat::new(stream), LengthDelimitedCodec::new());
+    server_listener
+        .for_each_concurrent(1024, |result| async {
+            match result {
+                Ok((f_stream, _)) => {
+                    let stream = f_stream.await.unwrap();
+                    let mut stream =
+                        Framed::new(IoCompat::new(stream), LengthDelimitedCodec::new());
 
-        // Drain all messages from the client.
-        while let Some(_) = stream.next().await {}
-        stream.close().await.unwrap();
-    }
+                    // Drain all messages from the client.
+                    executor.spawn(async move {
+                        while let Some(_) = stream.next().await {}
+                        stream.close().await.unwrap();
+                    });
+                }
+                Err(e) => error!("{:?}", e),
+            }
+        })
+        .await
 }
 
 pub fn start_stream_server<T, L, I, S, E>(
@@ -127,6 +138,6 @@ where
     E: ::std::error::Error + Send + Sync + 'static,
 {
     let (listener, server_addr) = executor.enter(move || transport.listen_on(listen_addr).unwrap());
-    executor.spawn(server_stream_handler(listener));
+    executor.spawn(server_stream_handler(listener, executor.clone()));
     server_addr
 }
