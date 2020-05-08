@@ -81,7 +81,6 @@
     <span class="ident">file_path</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="ident">Path</span>,
 }
 
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span> <span class="ident">FileContext</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">project_ctx</span>: <span class="ident">ProjectContext</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span>, <span class="ident">file_path</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="ident">Path</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
@@ -95,6 +94,7 @@
         <span class="self">self</span>.<span class="ident">project_ctx</span>
     }
 
+    <span class="doccomment">/// Returns the path of this file, relative to the root of the repository.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">file_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="ident">Path</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">file_path</span>
     }

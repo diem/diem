@@ -189,6 +189,8 @@
 <span id="189">189</span>
 <span id="190">190</span>
 <span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -280,6 +282,8 @@
     <span class="ident">NonUtf8</span>,
     <span class="doccomment">/// This extension was unsupported.</span>
     <span class="ident">UnsupportedExtension</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="ident">str</span><span class="op">&gt;</span>),
+    <span class="doccomment">/// The given file was unsupported by this linter.</span>
+    <span class="ident">UnsupportedFile</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="ident">Path</span>),
     <span class="comment">// TODO: Add more reasons.</span>
 }
 
