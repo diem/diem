@@ -41,6 +41,7 @@ sourcesIndex["libra_crypto"] = {"name":"","files":["ed25519.rs","error.rs","hash
 sourcesIndex["libra_crypto_derive"] = {"name":"","files":["hasher.rs","lib.rs","unions.rs"]};
 sourcesIndex["libra_dev"] = {"name":"","files":["account.rs","account_resource.rs","data.rs","error.rs","event.rs","lib.rs","transaction.rs"]};
 sourcesIndex["libra_fuzzer"] = {"name":"","dirs":[{"name":"fuzz_targets","files":["accumulator_merkle_proof.rs","compiled_module.rs","consensus_proposal.rs","inbound_rpc_protocol.rs","inner_signed_transaction.rs","json_rpc_service.rs","network_noise_initiator.rs","network_noise_responder.rs","signed_transaction.rs","sparse_merkle_proof.rs","vm_value.rs"]}],"files":["commands.rs","fuzz_targets.rs","lib.rs"]};
+sourcesIndex["libra_global_constants"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["libra_json_rpc"] = {"name":"","files":["counters.rs","fuzzing.rs","lib.rs","methods.rs","runtime.rs","util.rs"]};
 sourcesIndex["libra_json_rpc_client"] = {"name":"","files":["blocking.rs","client.rs","lib.rs","response.rs"]};
 sourcesIndex["libra_json_rpc_types"] = {"name":"","files":["errors.rs","lib.rs","views.rs"]};

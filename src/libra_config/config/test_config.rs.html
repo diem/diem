@@ -148,8 +148,8 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TestConfig</span> {
     <span class="kw">pub</span> <span class="ident">auth_key</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AuthenticationKey</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;account_private_key&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">account_keypair</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AccountKeyPair</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;operator_private_key&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">operator_keypair</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AccountKeyPair</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;consensus_private_key&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">consensus_keypair</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ConsensusKeyPair</span><span class="op">&gt;</span>,
     <span class="comment">// Used to initialize storage defaults in safety rules</span>
@@ -167,7 +167,7 @@
     <span class="kw">fn</span> <span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">auth_key</span>: <span class="self">self</span>.<span class="ident">auth_key</span>,
-            <span class="ident">account_keypair</span>: <span class="self">self</span>.<span class="ident">account_keypair</span>.<span class="ident">clone</span>(),
+            <span class="ident">operator_keypair</span>: <span class="self">self</span>.<span class="ident">operator_keypair</span>.<span class="ident">clone</span>(),
             <span class="ident">consensus_keypair</span>: <span class="self">self</span>.<span class="ident">consensus_keypair</span>.<span class="ident">clone</span>(),
             <span class="ident">initialize_storage</span>: <span class="self">self</span>.<span class="ident">initialize_storage</span>,
             <span class="ident">temp_dir</span>: <span class="prelude-val">None</span>,
@@ -178,7 +178,7 @@
 
 <span class="kw">impl</span> <span class="ident">PartialEq</span> <span class="kw">for</span> <span class="ident">TestConfig</span> {
     <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">account_keypair</span> <span class="op">=</span><span class="op">=</span> <span class="ident">other</span>.<span class="ident">account_keypair</span>
+        <span class="self">self</span>.<span class="ident">operator_keypair</span> <span class="op">=</span><span class="op">=</span> <span class="ident">other</span>.<span class="ident">operator_keypair</span>
             <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">auth_key</span> <span class="op">=</span><span class="op">=</span> <span class="ident">other</span>.<span class="ident">auth_key</span>
             <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">consensus_keypair</span> <span class="op">=</span><span class="op">=</span> <span class="ident">other</span>.<span class="ident">consensus_keypair</span>
             <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">initialize_storage</span> <span class="op">=</span><span class="op">=</span> <span class="ident">other</span>.<span class="ident">initialize_storage</span>
@@ -189,7 +189,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">open_module</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">auth_key</span>: <span class="prelude-val">None</span>,
-            <span class="ident">account_keypair</span>: <span class="prelude-val">None</span>,
+            <span class="ident">operator_keypair</span>: <span class="prelude-val">None</span>,
             <span class="ident">consensus_keypair</span>: <span class="prelude-val">None</span>,
             <span class="ident">initialize_storage</span>: <span class="bool-val">false</span>,
             <span class="ident">temp_dir</span>: <span class="prelude-val">None</span>,
@@ -202,7 +202,7 @@
         <span class="ident">temp_dir</span>.<span class="ident">create_as_dir</span>().<span class="ident">expect</span>(<span class="string">&quot;error creating tempdir&quot;</span>);
         <span class="self">Self</span> {
             <span class="ident">auth_key</span>: <span class="prelude-val">None</span>,
-            <span class="ident">account_keypair</span>: <span class="prelude-val">None</span>,
+            <span class="ident">operator_keypair</span>: <span class="prelude-val">None</span>,
             <span class="ident">consensus_keypair</span>: <span class="prelude-val">None</span>,
             <span class="ident">initialize_storage</span>: <span class="bool-val">false</span>,
             <span class="ident">temp_dir</span>: <span class="prelude-val">Some</span>(<span class="ident">temp_dir</span>),
@@ -213,7 +213,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">random_account_key</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">rng</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">StdRng</span>) {
         <span class="kw">let</span> <span class="ident">privkey</span> <span class="op">=</span> <span class="ident">Ed25519PrivateKey</span>::<span class="ident">generate</span>(<span class="ident">rng</span>);
         <span class="self">self</span>.<span class="ident">auth_key</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">AuthenticationKey</span>::<span class="ident">ed25519</span>(<span class="kw-2">&amp;</span><span class="ident">privkey</span>.<span class="ident">public_key</span>()));
-        <span class="self">self</span>.<span class="ident">account_keypair</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">AccountKeyPair</span>::<span class="ident">load</span>(<span class="ident">privkey</span>));
+        <span class="self">self</span>.<span class="ident">operator_keypair</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">AccountKeyPair</span>::<span class="ident">load</span>(<span class="ident">privkey</span>));
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">random_consensus_key</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">rng</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">StdRng</span>) {
@@ -235,7 +235,7 @@
     <span class="kw">fn</span> <span class="ident">verify_test_config_equality_using_keys</span>() {
         <span class="comment">// Create default test config without keys</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">test_config</span> <span class="op">=</span> <span class="ident">TestConfig</span>::<span class="ident">new_with_temp_dir</span>();
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">test_config</span>.<span class="ident">account_keypair</span>, <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">test_config</span>.<span class="ident">operator_keypair</span>, <span class="prelude-val">None</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">test_config</span>.<span class="ident">consensus_keypair</span>, <span class="prelude-val">None</span>);
 
         <span class="comment">// Clone the config and verify equality</span>
@@ -251,7 +251,7 @@
         <span class="macro">assert_ne</span><span class="macro">!</span>(<span class="ident">clone_test_config</span>, <span class="ident">test_config</span>);
 
         <span class="comment">// Copy keys across configs</span>
-        <span class="ident">clone_test_config</span>.<span class="ident">account_keypair</span> <span class="op">=</span> <span class="ident">test_config</span>.<span class="ident">account_keypair</span>.<span class="ident">clone</span>();
+        <span class="ident">clone_test_config</span>.<span class="ident">operator_keypair</span> <span class="op">=</span> <span class="ident">test_config</span>.<span class="ident">operator_keypair</span>.<span class="ident">clone</span>();
         <span class="ident">clone_test_config</span>.<span class="ident">consensus_keypair</span> <span class="op">=</span> <span class="ident">test_config</span>.<span class="ident">consensus_keypair</span>.<span class="ident">clone</span>();
         <span class="ident">clone_test_config</span>.<span class="ident">auth_key</span> <span class="op">=</span> <span class="ident">test_config</span>.<span class="ident">auth_key</span>;
 

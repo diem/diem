@@ -425,7 +425,7 @@
                 .<span class="ident">map</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> {
                     <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">c</span>.<span class="ident">validator_network</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>().<span class="ident">peer_id</span>;
                     <span class="kw">let</span> <span class="ident">account_keypair</span> <span class="op">=</span>
-                        <span class="ident">c</span>.<span class="ident">test</span>.<span class="ident">as_mut</span>().<span class="ident">unwrap</span>().<span class="ident">account_keypair</span>.<span class="ident">as_mut</span>().<span class="ident">unwrap</span>();
+                        <span class="ident">c</span>.<span class="ident">test</span>.<span class="ident">as_mut</span>().<span class="ident">unwrap</span>().<span class="ident">operator_keypair</span>.<span class="ident">as_mut</span>().<span class="ident">unwrap</span>();
                     <span class="kw">let</span> <span class="ident">privkey</span> <span class="op">=</span> <span class="ident">account_keypair</span>.<span class="ident">take_private</span>().<span class="ident">unwrap</span>();
                     (<span class="ident">peer_id</span>, <span class="ident">privkey</span>)
                 })
