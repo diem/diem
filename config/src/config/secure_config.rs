@@ -66,6 +66,10 @@ pub struct VaultConfig {
 pub struct OnDiskStorageConfig {
     // Required path for on disk storage
     pub path: PathBuf,
+    /// A namespace is an optional portion of the path to a key stored within OnDiskStorage. For
+    /// example, a key, S, without a namespace would be available in S, with a namespace, N, it
+    /// would be in N/S.
+    pub namespace: Option<String>,
     #[serde(skip)]
     data_dir: PathBuf,
 }
@@ -73,6 +77,7 @@ pub struct OnDiskStorageConfig {
 impl Default for OnDiskStorageConfig {
     fn default() -> Self {
         Self {
+            namespace: None,
             path: PathBuf::from("safety_rules.toml"),
             data_dir: PathBuf::from("/opt/libra/data/common"),
         }
