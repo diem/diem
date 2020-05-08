@@ -779,19 +779,6 @@
 <span id="779">779</span>
 <span id="780">780</span>
 <span id="781">781</span>
-<span id="782">782</span>
-<span id="783">783</span>
-<span id="784">784</span>
-<span id="785">785</span>
-<span id="786">786</span>
-<span id="787">787</span>
-<span id="788">788</span>
-<span id="789">789</span>
-<span id="790">790</span>
-<span id="791">791</span>
-<span id="792">792</span>
-<span id="793">793</span>
-<span id="794">794</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1525,19 +1512,6 @@
             <span class="kw">let</span> <span class="ident">struct_def</span> <span class="op">=</span> <span class="ident">verifier</span>.<span class="ident">module</span>().<span class="ident">struct_def_at</span>(<span class="ident">struct_inst</span>.<span class="ident">def</span>);
             <span class="kw">let</span> <span class="ident">type_args</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">verifier</span>.<span class="ident">module</span>().<span class="ident">signature_at</span>(<span class="ident">struct_inst</span>.<span class="ident">type_parameters</span>);
             <span class="ident">move_to</span>(<span class="ident">verifier</span>, <span class="ident">offset</span>, <span class="ident">struct_def</span>, <span class="ident">type_args</span>)<span class="question-mark">?</span>
-        }
-
-        <span class="ident">Bytecode</span>::<span class="ident">GetTxnGasUnitPrice</span>
-        <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnMaxGasUnits</span>
-        <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetGasRemaining</span>
-        <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnSequenceNumber</span>
-        <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnPublicKey</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(
-                <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_VERIFICATION_ERROR</span>).<span class="ident">with_message</span>(<span class="macro">format</span><span class="macro">!</span>(
-                    <span class="string">&quot;Bytecode {:?} is deprecated and will be removed soon&quot;</span>,
-                    <span class="ident">bytecode</span>
-                )),
-            );
         }
 
         <span class="ident">Bytecode</span>::<span class="ident">GetTxnSenderAddress</span> <span class="op">=</span><span class="op">&gt;</span> {

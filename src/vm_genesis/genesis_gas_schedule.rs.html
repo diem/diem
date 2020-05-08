@@ -144,11 +144,6 @@
 <span id="144">144</span>
 <span id="145">145</span>
 <span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -191,7 +186,6 @@
         (<span class="ident">Mul</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">41</span>, <span class="number">1</span>)),
         (<span class="ident">MoveLoc</span>(<span class="number">0</span>), <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">41</span>, <span class="number">1</span>)),
         (<span class="ident">And</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">49</span>, <span class="number">1</span>)),
-        (<span class="ident">GetTxnPublicKey</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">41</span>, <span class="number">1</span>)),
         (<span class="ident">Pop</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">27</span>, <span class="number">1</span>)),
         (<span class="ident">BitAnd</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">44</span>, <span class="number">1</span>)),
         (<span class="ident">ReadRef</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">51</span>, <span class="number">1</span>)),
@@ -248,7 +242,6 @@
         (<span class="ident">Or</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">43</span>, <span class="number">1</span>)),
         (<span class="ident">LdFalse</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">30</span>, <span class="number">1</span>)),
         (<span class="ident">LdTrue</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">29</span>, <span class="number">1</span>)),
-        (<span class="ident">GetTxnGasUnitPrice</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">29</span>, <span class="number">1</span>)),
         (<span class="ident">Mod</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">42</span>, <span class="number">1</span>)),
         (<span class="ident">BrFalse</span>(<span class="number">0</span>), <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">29</span>, <span class="number">1</span>)),
         (<span class="ident">Exists</span>(<span class="ident">StructDefinitionIndex</span>::<span class="ident">new</span>(<span class="number">0</span>)), <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">856</span>, <span class="number">1</span>)),
@@ -256,10 +249,7 @@
             <span class="ident">ExistsGeneric</span>(<span class="ident">StructDefInstantiationIndex</span>::<span class="ident">new</span>(<span class="number">0</span>)),
             <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">856</span>, <span class="number">1</span>),
         ),
-        (<span class="ident">GetGasRemaining</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">32</span>, <span class="number">1</span>)),
         (<span class="ident">BitOr</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">45</span>, <span class="number">1</span>)),
-        (<span class="ident">GetTxnMaxGasUnits</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">34</span>, <span class="number">1</span>)),
-        (<span class="ident">GetTxnSequenceNumber</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">29</span>, <span class="number">1</span>)),
         (<span class="ident">FreezeRef</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">10</span>, <span class="number">1</span>)),
         (
             <span class="ident">MutBorrowGlobal</span>(<span class="ident">StructDefinitionIndex</span>::<span class="ident">new</span>(<span class="number">0</span>)),

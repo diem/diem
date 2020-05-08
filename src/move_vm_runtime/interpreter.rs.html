@@ -1178,16 +1178,6 @@
 <span id="1178">1178</span>
 <span id="1179">1179</span>
 <span id="1180">1180</span>
-<span id="1181">1181</span>
-<span id="1182">1182</span>
-<span id="1183">1183</span>
-<span id="1184">1184</span>
-<span id="1185">1185</span>
-<span id="1186">1186</span>
-<span id="1187">1187</span>
-<span id="1188">1188</span>
-<span id="1189">1189</span>
-<span id="1190">1190</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1210,6 +1200,7 @@
     <span class="ident">gas_schedule</span>::<span class="ident">calculate_intrinsic_gas</span>,
     <span class="ident">interpreter_context</span>::<span class="ident">InterpreterContext</span>,
     <span class="ident">loaded_data</span>::{<span class="ident">runtime_types</span>::<span class="ident">Type</span>, <span class="ident">types</span>::<span class="ident">FatStructType</span>},
+    <span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>,
     <span class="ident">values</span>::{<span class="self">self</span>, <span class="ident">IntegerValue</span>, <span class="ident">Locals</span>, <span class="ident">Reference</span>, <span class="ident">Struct</span>, <span class="ident">StructRef</span>, <span class="ident">VMValueCast</span>, <span class="ident">Value</span>},
 };
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">cmp</span>::<span class="ident">min</span>, <span class="ident">collections</span>::<span class="ident">VecDeque</span>, <span class="ident">fmt</span>::<span class="ident">Write</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
@@ -1220,7 +1211,6 @@
         <span class="ident">StructDefinitionIndex</span>,
     },
     <span class="ident">file_format_common</span>::<span class="ident">Opcodes</span>,
-    <span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>,
 };
 
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">debug_write</span> {
@@ -2339,16 +2329,6 @@
                         <span class="macro">gas</span><span class="macro">!</span>(<span class="ident">const_instr</span>: <span class="ident">context</span>, <span class="ident">interpreter</span>, <span class="ident">Opcodes</span>::<span class="ident">NOT</span>)<span class="question-mark">?</span>;
                         <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="op">!</span><span class="ident">interpreter</span>.<span class="ident">operand_stack</span>.<span class="ident">pop_as</span>::<span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
                         <span class="ident">interpreter</span>.<span class="ident">operand_stack</span>.<span class="ident">push</span>(<span class="ident">Value</span>::<span class="ident">bool</span>(<span class="ident">value</span>))<span class="question-mark">?</span>;
-                    }
-                    <span class="ident">Bytecode</span>::<span class="ident">GetGasRemaining</span>
-                    <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnPublicKey</span>
-                    <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnSequenceNumber</span>
-                    <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnMaxGasUnits</span>
-                    <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnGasUnitPrice</span> <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">VERIFIER_INVARIANT_VIOLATION</span>)
-                            .<span class="ident">with_message</span>(
-                                <span class="string">&quot;This opcode is deprecated and will be removed soon&quot;</span>.<span class="ident">to_string</span>(),
-                            ));
                     }
                     <span class="ident">Bytecode</span>::<span class="ident">Nop</span> <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="macro">gas</span><span class="macro">!</span>(<span class="ident">const_instr</span>: <span class="ident">context</span>, <span class="ident">interpreter</span>, <span class="ident">Opcodes</span>::<span class="ident">NOP</span>)<span class="question-mark">?</span>;

@@ -160,6 +160,8 @@
 <span id="160">160</span>
 <span id="161">161</span>
 <span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -172,12 +174,14 @@
     <span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>},
 };
 <span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">gas_schedule</span>::<span class="ident">CostTable</span>, <span class="ident">identifier</span>::<span class="ident">IdentStr</span>};
-<span class="kw">use</span> <span class="ident">move_vm_types</span>::{<span class="ident">interpreter_context</span>::<span class="ident">InterpreterContext</span>, <span class="ident">values</span>::<span class="ident">Value</span>};
+<span class="kw">use</span> <span class="ident">move_vm_types</span>::{
+    <span class="ident">interpreter_context</span>::<span class="ident">InterpreterContext</span>, <span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>,
+    <span class="ident">values</span>::<span class="ident">Value</span>,
+};
 <span class="kw">use</span> <span class="ident">vm</span>::{
     <span class="ident">access</span>::<span class="ident">ModuleAccess</span>,
     <span class="ident">errors</span>::{<span class="ident">verification_error</span>, <span class="ident">vm_error</span>, <span class="ident">Location</span>, <span class="ident">VMResult</span>},
     <span class="ident">file_format</span>::<span class="ident">Signature</span>,
-    <span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>,
     <span class="ident">CompiledModule</span>, <span class="ident">IndexKind</span>,
 };
 

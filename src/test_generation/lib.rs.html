@@ -444,7 +444,6 @@
 <span id="444">444</span>
 <span id="445">445</span>
 <span id="446">446</span>
-<span id="447">447</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -475,7 +474,7 @@
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">language_storage</span>::<span class="ident">TypeTag</span>, <span class="ident">vm_error</span>::<span class="ident">StatusCode</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_vm</span>::<span class="ident">LibraVM</span>;
-<span class="kw">use</span> <span class="ident">move_vm_types</span>::<span class="ident">values</span>::<span class="ident">Value</span>;
+<span class="kw">use</span> <span class="ident">move_vm_types</span>::{<span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>, <span class="ident">values</span>::<span class="ident">Value</span>};
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">rngs</span>::<span class="ident">StdRng</span>, <span class="ident">Rng</span>, <span class="ident">SeedableRng</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fs</span>, <span class="ident">io</span>::<span class="ident">Write</span>, <span class="ident">panic</span>, <span class="ident">thread</span>};
 <span class="kw">use</span> <span class="ident">utils</span>::<span class="ident">module_generation</span>::<span class="ident">generate_module</span>;
@@ -486,7 +485,6 @@
         <span class="ident">CompiledModule</span>, <span class="ident">CompiledModuleMut</span>, <span class="ident">FunctionDefinitionIndex</span>, <span class="ident">Kind</span>, <span class="ident">SignatureToken</span>,
         <span class="ident">StructHandleIndex</span>,
     },
-    <span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>,
 };
 
 <span class="doccomment">/// This function calls the Bytecode verifier to test it</span>

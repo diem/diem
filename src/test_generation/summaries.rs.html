@@ -574,15 +574,6 @@
 <span id="574">574</span>
 <span id="575">575</span>
 <span id="576">576</span>
-<span id="577">577</span>
-<span id="578">578</span>
-<span id="579">579</span>
-<span id="580">580</span>
-<span id="581">581</span>
-<span id="582">582</span>
-<span id="583">583</span>
-<span id="584">584</span>
-<span id="585">585</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1156,15 +1147,6 @@
         },
         <span class="ident">Bytecode</span>::<span class="ident">Nop</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Summary</span> {
             <span class="ident">preconditions</span>: <span class="macro">vec</span><span class="macro">!</span>[],
-            <span class="ident">effects</span>: <span class="ident">Effects</span>::<span class="ident">NoTyParams</span>(<span class="macro">vec</span><span class="macro">!</span>[]),
-        },
-        <span class="comment">// XXX: Deprecated instructions, to remove</span>
-        <span class="ident">Bytecode</span>::<span class="ident">GetTxnGasUnitPrice</span>
-        <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnMaxGasUnits</span>
-        <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnSequenceNumber</span>
-        <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnPublicKey</span>
-        <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetGasRemaining</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Summary</span> {
-            <span class="ident">preconditions</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="macro">state_never</span><span class="macro">!</span>()],
             <span class="ident">effects</span>: <span class="ident">Effects</span>::<span class="ident">NoTyParams</span>(<span class="macro">vec</span><span class="macro">!</span>[]),
         },
     }

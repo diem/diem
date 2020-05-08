@@ -942,22 +942,6 @@
 <span id="942">942</span>
 <span id="943">943</span>
 <span id="944">944</span>
-<span id="945">945</span>
-<span id="946">946</span>
-<span id="947">947</span>
-<span id="948">948</span>
-<span id="949">949</span>
-<span id="950">950</span>
-<span id="951">951</span>
-<span id="952">952</span>
-<span id="953">953</span>
-<span id="954">954</span>
-<span id="955">955</span>
-<span id="956">956</span>
-<span id="957">957</span>
-<span id="958">958</span>
-<span id="959">959</span>
-<span id="960">960</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1175,23 +1159,7 @@
             (<span class="ident">StackEffect</span>::<span class="ident">Sub</span>, <span class="ident">BytecodeType</span>::<span class="ident">NoArg</span>(<span class="ident">Bytecode</span>::<span class="ident">Ge</span>)),
             (
                 <span class="ident">StackEffect</span>::<span class="ident">Add</span>,
-                <span class="ident">BytecodeType</span>::<span class="ident">NoArg</span>(<span class="ident">Bytecode</span>::<span class="ident">GetTxnGasUnitPrice</span>),
-            ),
-            (
-                <span class="ident">StackEffect</span>::<span class="ident">Add</span>,
-                <span class="ident">BytecodeType</span>::<span class="ident">NoArg</span>(<span class="ident">Bytecode</span>::<span class="ident">GetTxnMaxGasUnits</span>),
-            ),
-            (
-                <span class="ident">StackEffect</span>::<span class="ident">Add</span>,
-                <span class="ident">BytecodeType</span>::<span class="ident">NoArg</span>(<span class="ident">Bytecode</span>::<span class="ident">GetTxnSequenceNumber</span>),
-            ),
-            (
-                <span class="ident">StackEffect</span>::<span class="ident">Add</span>,
                 <span class="ident">BytecodeType</span>::<span class="ident">NoArg</span>(<span class="ident">Bytecode</span>::<span class="ident">GetTxnSenderAddress</span>),
-            ),
-            (
-                <span class="ident">StackEffect</span>::<span class="ident">Add</span>,
-                <span class="ident">BytecodeType</span>::<span class="ident">NoArg</span>(<span class="ident">Bytecode</span>::<span class="ident">GetTxnPublicKey</span>),
             ),
             (<span class="ident">StackEffect</span>::<span class="ident">Nop</span>, <span class="ident">BytecodeType</span>::<span class="ident">StructIndex</span>(<span class="ident">Bytecode</span>::<span class="ident">Pack</span>)),
             (

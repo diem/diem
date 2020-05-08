@@ -1352,16 +1352,6 @@
 <span id="1352">1352</span>
 <span id="1353">1353</span>
 <span id="1354">1354</span>
-<span id="1355">1355</span>
-<span id="1356">1356</span>
-<span id="1357">1357</span>
-<span id="1358">1358</span>
-<span id="1359">1359</span>
-<span id="1360">1360</span>
-<span id="1361">1361</span>
-<span id="1362">1362</span>
-<span id="1363">1363</span>
-<span id="1364">1364</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2489,9 +2479,6 @@
             <span class="ident">Opcodes</span>::<span class="ident">LE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">Le</span>,
             <span class="ident">Opcodes</span>::<span class="ident">GE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">Ge</span>,
             <span class="ident">Opcodes</span>::<span class="ident">ABORT</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">Abort</span>,
-            <span class="ident">Opcodes</span>::<span class="ident">GET_TXN_GAS_UNIT_PRICE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnGasUnitPrice</span>,
-            <span class="ident">Opcodes</span>::<span class="ident">GET_TXN_MAX_GAS_UNITS</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnMaxGasUnits</span>,
-            <span class="ident">Opcodes</span>::<span class="ident">GET_GAS_REMAINING</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">GetGasRemaining</span>,
             <span class="ident">Opcodes</span>::<span class="ident">GET_TXN_SENDER</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnSenderAddress</span>,
             <span class="ident">Opcodes</span>::<span class="ident">EXISTS</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
@@ -2533,8 +2520,6 @@
                 <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
                 <span class="ident">Bytecode</span>::<span class="ident">MoveToSenderGeneric</span>(<span class="ident">StructDefInstantiationIndex</span>(<span class="ident">idx</span>))
             }
-            <span class="ident">Opcodes</span>::<span class="ident">GET_TXN_SEQUENCE_NUMBER</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnSequenceNumber</span>,
-            <span class="ident">Opcodes</span>::<span class="ident">GET_TXN_PUBLIC_KEY</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnPublicKey</span>,
             <span class="ident">Opcodes</span>::<span class="ident">FREEZE_REF</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">FreezeRef</span>,
             <span class="ident">Opcodes</span>::<span class="ident">NOP</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">Nop</span>,
         };
@@ -2693,36 +2678,31 @@
             <span class="number">0x25</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">LE</span>),
             <span class="number">0x26</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">GE</span>),
             <span class="number">0x27</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">ABORT</span>),
-            <span class="number">0x28</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">GET_TXN_GAS_UNIT_PRICE</span>),
-            <span class="number">0x29</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">GET_TXN_MAX_GAS_UNITS</span>),
-            <span class="number">0x2A</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">GET_GAS_REMAINING</span>),
-            <span class="number">0x2B</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">GET_TXN_SENDER</span>),
-            <span class="number">0x2C</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">EXISTS</span>),
-            <span class="number">0x2D</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MUT_BORROW_GLOBAL</span>),
-            <span class="number">0x2E</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">IMM_BORROW_GLOBAL</span>),
-            <span class="number">0x2F</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_FROM</span>),
-            <span class="number">0x30</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_TO</span>),
-            <span class="number">0x31</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">GET_TXN_SEQUENCE_NUMBER</span>),
-            <span class="number">0x32</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">GET_TXN_PUBLIC_KEY</span>),
-            <span class="number">0x33</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">FREEZE_REF</span>),
-            <span class="number">0x34</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">SHL</span>),
-            <span class="number">0x35</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">SHR</span>),
-            <span class="number">0x36</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">LD_U8</span>),
-            <span class="number">0x37</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">LD_U128</span>),
-            <span class="number">0x38</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">CAST_U8</span>),
-            <span class="number">0x39</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">CAST_U64</span>),
-            <span class="number">0x3A</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">CAST_U128</span>),
-            <span class="number">0x3B</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MUT_BORROW_FIELD_GENERIC</span>),
-            <span class="number">0x3C</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">IMM_BORROW_FIELD_GENERIC</span>),
-            <span class="number">0x3D</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">CALL_GENERIC</span>),
-            <span class="number">0x3E</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">PACK_GENERIC</span>),
-            <span class="number">0x3F</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">UNPACK_GENERIC</span>),
-            <span class="number">0x40</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">EXISTS_GENERIC</span>),
-            <span class="number">0x41</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MUT_BORROW_GLOBAL_GENERIC</span>),
-            <span class="number">0x42</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">IMM_BORROW_GLOBAL_GENERIC</span>),
-            <span class="number">0x43</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_FROM_GENERIC</span>),
-            <span class="number">0x44</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_GENERIC</span>),
-            <span class="number">0x45</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">NOP</span>),
+            <span class="number">0x28</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">GET_TXN_SENDER</span>),
+            <span class="number">0x29</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">EXISTS</span>),
+            <span class="number">0x2A</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MUT_BORROW_GLOBAL</span>),
+            <span class="number">0x2B</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">IMM_BORROW_GLOBAL</span>),
+            <span class="number">0x2C</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_FROM</span>),
+            <span class="number">0x2D</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_TO</span>),
+            <span class="number">0x2E</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">FREEZE_REF</span>),
+            <span class="number">0x2F</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">SHL</span>),
+            <span class="number">0x30</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">SHR</span>),
+            <span class="number">0x31</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">LD_U8</span>),
+            <span class="number">0x32</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">LD_U128</span>),
+            <span class="number">0x33</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">CAST_U8</span>),
+            <span class="number">0x34</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">CAST_U64</span>),
+            <span class="number">0x35</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">CAST_U128</span>),
+            <span class="number">0x36</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MUT_BORROW_FIELD_GENERIC</span>),
+            <span class="number">0x37</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">IMM_BORROW_FIELD_GENERIC</span>),
+            <span class="number">0x38</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">CALL_GENERIC</span>),
+            <span class="number">0x39</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">PACK_GENERIC</span>),
+            <span class="number">0x3A</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">UNPACK_GENERIC</span>),
+            <span class="number">0x3B</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">EXISTS_GENERIC</span>),
+            <span class="number">0x3C</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MUT_BORROW_GLOBAL_GENERIC</span>),
+            <span class="number">0x3D</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">IMM_BORROW_GLOBAL_GENERIC</span>),
+            <span class="number">0x3E</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_FROM_GENERIC</span>),
+            <span class="number">0x3F</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_GENERIC</span>),
+            <span class="number">0x40</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">NOP</span>),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_OPCODE</span>)),
         }
     }

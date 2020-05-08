@@ -1214,11 +1214,6 @@
 <span id="1214">1214</span>
 <span id="1215">1215</span>
 <span id="1216">1216</span>
-<span id="1217">1217</span>
-<span id="1218">1218</span>
-<span id="1219">1219</span>
-<span id="1220">1220</span>
-<span id="1221">1221</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1912,9 +1907,6 @@
         <span class="ident">Bytecode</span>::<span class="ident">Le</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">Opcodes</span>::<span class="ident">LE</span> <span class="kw">as</span> <span class="ident">u8</span>),
         <span class="ident">Bytecode</span>::<span class="ident">Ge</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">Opcodes</span>::<span class="ident">GE</span> <span class="kw">as</span> <span class="ident">u8</span>),
         <span class="ident">Bytecode</span>::<span class="ident">Abort</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">Opcodes</span>::<span class="ident">ABORT</span> <span class="kw">as</span> <span class="ident">u8</span>),
-        <span class="ident">Bytecode</span>::<span class="ident">GetTxnGasUnitPrice</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">Opcodes</span>::<span class="ident">GET_TXN_GAS_UNIT_PRICE</span> <span class="kw">as</span> <span class="ident">u8</span>),
-        <span class="ident">Bytecode</span>::<span class="ident">GetTxnMaxGasUnits</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">Opcodes</span>::<span class="ident">GET_TXN_MAX_GAS_UNITS</span> <span class="kw">as</span> <span class="ident">u8</span>),
-        <span class="ident">Bytecode</span>::<span class="ident">GetGasRemaining</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">Opcodes</span>::<span class="ident">GET_GAS_REMAINING</span> <span class="kw">as</span> <span class="ident">u8</span>),
         <span class="ident">Bytecode</span>::<span class="ident">GetTxnSenderAddress</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">Opcodes</span>::<span class="ident">GET_TXN_SENDER</span> <span class="kw">as</span> <span class="ident">u8</span>),
         <span class="ident">Bytecode</span>::<span class="ident">Exists</span>(<span class="ident">class_idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">Opcodes</span>::<span class="ident">EXISTS</span> <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>;
@@ -1956,8 +1948,6 @@
             <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_GENERIC</span> <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>;
             <span class="ident">write_u16_as_uleb128</span>(<span class="ident">binary</span>, <span class="ident">class_idx</span>.<span class="number">0</span>)
         }
-        <span class="ident">Bytecode</span>::<span class="ident">GetTxnSequenceNumber</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">Opcodes</span>::<span class="ident">GET_TXN_SEQUENCE_NUMBER</span> <span class="kw">as</span> <span class="ident">u8</span>),
-        <span class="ident">Bytecode</span>::<span class="ident">GetTxnPublicKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">Opcodes</span>::<span class="ident">GET_TXN_PUBLIC_KEY</span> <span class="kw">as</span> <span class="ident">u8</span>),
         <span class="ident">Bytecode</span>::<span class="ident">Nop</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">Opcodes</span>::<span class="ident">NOP</span> <span class="kw">as</span> <span class="ident">u8</span>),
     };
     <span class="ident">res</span><span class="question-mark">?</span>;

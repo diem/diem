@@ -1904,42 +1904,6 @@
 <span id="1904">1904</span>
 <span id="1905">1905</span>
 <span id="1906">1906</span>
-<span id="1907">1907</span>
-<span id="1908">1908</span>
-<span id="1909">1909</span>
-<span id="1910">1910</span>
-<span id="1911">1911</span>
-<span id="1912">1912</span>
-<span id="1913">1913</span>
-<span id="1914">1914</span>
-<span id="1915">1915</span>
-<span id="1916">1916</span>
-<span id="1917">1917</span>
-<span id="1918">1918</span>
-<span id="1919">1919</span>
-<span id="1920">1920</span>
-<span id="1921">1921</span>
-<span id="1922">1922</span>
-<span id="1923">1923</span>
-<span id="1924">1924</span>
-<span id="1925">1925</span>
-<span id="1926">1926</span>
-<span id="1927">1927</span>
-<span id="1928">1928</span>
-<span id="1929">1929</span>
-<span id="1930">1930</span>
-<span id="1931">1931</span>
-<span id="1932">1932</span>
-<span id="1933">1933</span>
-<span id="1934">1934</span>
-<span id="1935">1935</span>
-<span id="1936">1936</span>
-<span id="1937">1937</span>
-<span id="1938">1938</span>
-<span id="1939">1939</span>
-<span id="1940">1940</span>
-<span id="1941">1941</span>
-<span id="1942">1942</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -3068,25 +3032,6 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```..., errorcode -&gt; ...```</span>
     <span class="ident">Abort</span>,
-    <span class="doccomment">/// Get gas unit price from the transaction and pushes it on the stack.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Stack transition:</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// ```... -&gt; ..., u64_value```</span>
-    <span class="ident">GetTxnGasUnitPrice</span>,
-    <span class="doccomment">/// Get max gas units set in the transaction and pushes it on the stack.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Stack transition:</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// ```... -&gt; ..., u64_value```</span>
-    <span class="ident">GetTxnMaxGasUnits</span>,
-    <span class="doccomment">/// Get remaining gas for the given transaction at the point of execution of this bytecode.</span>
-    <span class="doccomment">/// The result is pushed on the stack.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Stack transition:</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// ```... -&gt; ..., u64_value```</span>
-    <span class="ident">GetGasRemaining</span>,
     <span class="doccomment">/// Get the sender address from the transaction and pushes it on the stack.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Stack transition:</span>
@@ -3117,18 +3062,6 @@
     <span class="doccomment">/// ```..., value -&gt; ...```</span>
     <span class="ident">MoveToSender</span>(<span class="ident">StructDefinitionIndex</span>),
     <span class="ident">MoveToSenderGeneric</span>(<span class="ident">StructDefInstantiationIndex</span>),
-    <span class="doccomment">/// Get the sequence number submitted with the transaction and pushes it on the stack.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Stack transition:</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// ```... -&gt; ..., u64_value```</span>
-    <span class="ident">GetTxnSequenceNumber</span>,
-    <span class="doccomment">/// Get the public key of the sender from the transaction and pushes it on the stack.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Stack transition:</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// ```..., -&gt; ..., bytearray_value```</span>
-    <span class="ident">GetTxnPublicKey</span>,
     <span class="doccomment">/// Shift the (second top value) left (top value) bits and pushes the result on the stack.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Stack transition:</span>
@@ -3208,9 +3141,6 @@
             <span class="ident">Bytecode</span>::<span class="ident">Le</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Le&quot;</span>),
             <span class="ident">Bytecode</span>::<span class="ident">Ge</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Ge&quot;</span>),
             <span class="ident">Bytecode</span>::<span class="ident">Abort</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Abort&quot;</span>),
-            <span class="ident">Bytecode</span>::<span class="ident">GetTxnGasUnitPrice</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;GetTxnGasUnitPrice&quot;</span>),
-            <span class="ident">Bytecode</span>::<span class="ident">GetTxnMaxGasUnits</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;GetTxnMaxGasUnits&quot;</span>),
-            <span class="ident">Bytecode</span>::<span class="ident">GetGasRemaining</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;GetGasRemaining&quot;</span>),
             <span class="ident">Bytecode</span>::<span class="ident">GetTxnSenderAddress</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;GetTxnSenderAddress&quot;</span>),
             <span class="ident">Bytecode</span>::<span class="ident">Exists</span>(<span class="ident">a</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Exists({:?})&quot;</span>, <span class="ident">a</span>),
             <span class="ident">Bytecode</span>::<span class="ident">ExistsGeneric</span>(<span class="ident">a</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;ExistsGeneric({:?})&quot;</span>, <span class="ident">a</span>),
@@ -3218,8 +3148,6 @@
             <span class="ident">Bytecode</span>::<span class="ident">MoveFromGeneric</span>(<span class="ident">a</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;MoveFromGeneric({:?})&quot;</span>, <span class="ident">a</span>),
             <span class="ident">Bytecode</span>::<span class="ident">MoveToSender</span>(<span class="ident">a</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;MoveToSender({:?})&quot;</span>, <span class="ident">a</span>),
             <span class="ident">Bytecode</span>::<span class="ident">MoveToSenderGeneric</span>(<span class="ident">a</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;MoveToSenderGeneric({:?})&quot;</span>, <span class="ident">a</span>),
-            <span class="ident">Bytecode</span>::<span class="ident">GetTxnSequenceNumber</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;GetTxnSequenceNumber&quot;</span>),
-            <span class="ident">Bytecode</span>::<span class="ident">GetTxnPublicKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;GetTxnPublicKey&quot;</span>),
             <span class="ident">Bytecode</span>::<span class="ident">Nop</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Nop&quot;</span>),
         }
     }

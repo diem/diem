@@ -187,19 +187,6 @@
 <span id="187">187</span>
 <span id="188">188</span>
 <span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
-<span id="196">196</span>
-<span id="197">197</span>
-<span id="198">198</span>
-<span id="199">199</span>
-<span id="200">200</span>
-<span id="201">201</span>
-<span id="202">202</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -368,19 +355,6 @@
         <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">MoveToSender</span>(<span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">MoveToSenderGeneric</span>(<span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnSenderAddress</span> <span class="op">=</span><span class="op">&gt;</span> (),
-
-        <span class="ident">Bytecode</span>::<span class="ident">GetTxnGasUnitPrice</span>
-        <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnMaxGasUnits</span>
-        <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetGasRemaining</span>
-        <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnSequenceNumber</span>
-        <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnPublicKey</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(
-                <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_VERIFICATION_ERROR</span>).<span class="ident">with_message</span>(<span class="macro">format</span><span class="macro">!</span>(
-                    <span class="string">&quot;Bytecode {:?} is deprecated and will be removed soon&quot;</span>,
-                    <span class="ident">bytecode</span>
-                )),
-            );
-        }
     };
     <span class="prelude-val">Ok</span>(())
 }
