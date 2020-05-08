@@ -34,14 +34,12 @@ use move_vm_state::{
 use move_vm_types::{
     chain_state::ChainState,
     gas_schedule::{calculate_intrinsic_gas, zero_cost_schedule},
+    transaction_metadata::TransactionMetadata,
     values::Value,
 };
 use rayon::prelude::*;
 use std::{collections::HashSet, convert::TryFrom, sync::Arc};
-use vm::{
-    errors::{convert_prologue_runtime_error, VMResult},
-    transaction_metadata::TransactionMetadata,
-};
+use vm::errors::{convert_prologue_runtime_error, VMResult};
 
 #[derive(Clone)]
 /// A wrapper to make VMRuntime standalone and thread safe.

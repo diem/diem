@@ -165,19 +165,6 @@ fn execute_inner(state: &mut AbstractState, bytecode: &Bytecode, offset: usize) 
         | Bytecode::MoveToSender(_)
         | Bytecode::MoveToSenderGeneric(_)
         | Bytecode::GetTxnSenderAddress => (),
-
-        Bytecode::GetTxnGasUnitPrice
-        | Bytecode::GetTxnMaxGasUnits
-        | Bytecode::GetGasRemaining
-        | Bytecode::GetTxnSequenceNumber
-        | Bytecode::GetTxnPublicKey => {
-            return Err(
-                VMStatus::new(StatusCode::UNKNOWN_VERIFICATION_ERROR).with_message(format!(
-                    "Bytecode {:?} is deprecated and will be removed soon",
-                    bytecode
-                )),
-            );
-        }
     };
     Ok(())
 }

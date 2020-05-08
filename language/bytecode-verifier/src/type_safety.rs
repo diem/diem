@@ -732,19 +732,6 @@ fn verify_instr(
             move_to(verifier, offset, struct_def, type_args)?
         }
 
-        Bytecode::GetTxnGasUnitPrice
-        | Bytecode::GetTxnMaxGasUnits
-        | Bytecode::GetGasRemaining
-        | Bytecode::GetTxnSequenceNumber
-        | Bytecode::GetTxnPublicKey => {
-            return Err(
-                VMStatus::new(StatusCode::UNKNOWN_VERIFICATION_ERROR).with_message(format!(
-                    "Bytecode {:?} is deprecated and will be removed soon",
-                    bytecode
-                )),
-            );
-        }
-
         Bytecode::GetTxnSenderAddress => {
             verifier.stack.push(ST::Address);
         }

@@ -6,7 +6,7 @@ use libra_types::vm_error::{StatusCode, VMStatus};
 use libra_vm::LibraVM;
 use move_core_types::gas_schedule::{GasAlgebra, GasPrice, GasUnits};
 use move_vm_state::data_cache::BlockDataCache;
-use vm::transaction_metadata::TransactionMetadata;
+use move_vm_types::transaction_metadata::TransactionMetadata;
 
 #[test]
 fn failed_transaction_cleanup_test() {

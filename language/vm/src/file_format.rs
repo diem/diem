@@ -1125,25 +1125,6 @@ pub enum Bytecode {
     ///
     /// ```..., errorcode -> ...```
     Abort,
-    /// Get gas unit price from the transaction and pushes it on the stack.
-    ///
-    /// Stack transition:
-    ///
-    /// ```... -> ..., u64_value```
-    GetTxnGasUnitPrice,
-    /// Get max gas units set in the transaction and pushes it on the stack.
-    ///
-    /// Stack transition:
-    ///
-    /// ```... -> ..., u64_value```
-    GetTxnMaxGasUnits,
-    /// Get remaining gas for the given transaction at the point of execution of this bytecode.
-    /// The result is pushed on the stack.
-    ///
-    /// Stack transition:
-    ///
-    /// ```... -> ..., u64_value```
-    GetGasRemaining,
     /// Get the sender address from the transaction and pushes it on the stack.
     ///
     /// Stack transition:
@@ -1174,18 +1155,6 @@ pub enum Bytecode {
     /// ```..., value -> ...```
     MoveToSender(StructDefinitionIndex),
     MoveToSenderGeneric(StructDefInstantiationIndex),
-    /// Get the sequence number submitted with the transaction and pushes it on the stack.
-    ///
-    /// Stack transition:
-    ///
-    /// ```... -> ..., u64_value```
-    GetTxnSequenceNumber,
-    /// Get the public key of the sender from the transaction and pushes it on the stack.
-    ///
-    /// Stack transition:
-    ///
-    /// ```..., -> ..., bytearray_value```
-    GetTxnPublicKey,
     /// Shift the (second top value) left (top value) bits and pushes the result on the stack.
     ///
     /// Stack transition:
@@ -1265,9 +1234,6 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::Le => write!(f, "Le"),
             Bytecode::Ge => write!(f, "Ge"),
             Bytecode::Abort => write!(f, "Abort"),
-            Bytecode::GetTxnGasUnitPrice => write!(f, "GetTxnGasUnitPrice"),
-            Bytecode::GetTxnMaxGasUnits => write!(f, "GetTxnMaxGasUnits"),
-            Bytecode::GetGasRemaining => write!(f, "GetGasRemaining"),
             Bytecode::GetTxnSenderAddress => write!(f, "GetTxnSenderAddress"),
             Bytecode::Exists(a) => write!(f, "Exists({:?})", a),
             Bytecode::ExistsGeneric(a) => write!(f, "ExistsGeneric({:?})", a),
@@ -1275,8 +1241,6 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::MoveFromGeneric(a) => write!(f, "MoveFromGeneric({:?})", a),
             Bytecode::MoveToSender(a) => write!(f, "MoveToSender({:?})", a),
             Bytecode::MoveToSenderGeneric(a) => write!(f, "MoveToSenderGeneric({:?})", a),
-            Bytecode::GetTxnSequenceNumber => write!(f, "GetTxnSequenceNumber"),
-            Bytecode::GetTxnPublicKey => write!(f, "GetTxnPublicKey"),
             Bytecode::Nop => write!(f, "Nop"),
         }
     }

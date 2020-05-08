@@ -650,11 +650,7 @@ impl BytecodeGen {
             Le,
             Ge,
             Abort,
-            GetTxnGasUnitPrice,
-            GetTxnMaxGasUnits,
             GetTxnSenderAddress,
-            GetTxnSequenceNumber,
-            GetTxnPublicKey,
         ];
         select(JUST_BYTECODES)
     }
