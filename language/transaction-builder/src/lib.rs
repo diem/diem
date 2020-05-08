@@ -8,11 +8,11 @@ use libra_types::account_config;
 use libra_types::{
     account_address::AccountAddress,
     block_metadata::BlockMetadata,
-    language_storage::TypeTag,
     on_chain_config::{LibraVersion, VMPublishingOption},
     transaction::{authenticator::AuthenticationKey, Script, Transaction, TransactionArgument},
 };
 use mirai_annotations::*;
+use move_core_types::language_storage::TypeTag;
 use std::convert::TryFrom;
 use stdlib::transaction_scripts::StdlibScript;
 #[cfg(any(test, feature = "fuzzing"))]

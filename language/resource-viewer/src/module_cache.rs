@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::language_storage::ModuleId;
+use move_core_types::language_storage::ModuleId;
 use std::{cell::RefCell, collections::hash_map::HashMap, hash::Hash, rc::Rc};
 use vm::CompiledModule;
 

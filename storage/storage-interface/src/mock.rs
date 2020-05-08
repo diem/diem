@@ -15,10 +15,10 @@ use libra_types::{
     epoch_change::EpochChangeProof,
     event::{EventHandle, EventKey},
     ledger_info::LedgerInfoWithSignatures,
-    move_resource::MoveResource,
     proof::{AccumulatorConsistencyProof, SparseMerkleProof},
     transaction::{TransactionListWithProof, TransactionWithProof, Version},
 };
+use move_core_types::move_resource::MoveResource;
 use std::convert::TryFrom;
 
 /// This is a mock of the dbreader in tests.

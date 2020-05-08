@@ -5,11 +5,13 @@ use crate::data_cache::{RemoteCache, TransactionDataCache};
 use libra_types::{
     access_path::AccessPath,
     contract_event::ContractEvent,
-    language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
-use move_core_types::gas_schedule::{GasAlgebra, GasCarrier, GasUnits};
+use move_core_types::{
+    gas_schedule::{GasAlgebra, GasCarrier, GasUnits},
+    language_storage::ModuleId,
+};
 use move_vm_types::{
     chain_state::ChainState, loaded_data::types::FatStructType, values::GlobalValue,
 };

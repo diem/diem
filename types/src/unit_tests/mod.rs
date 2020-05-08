@@ -8,7 +8,6 @@ mod code_debug_fmt_test;
 mod contract_event_test;
 mod epoch_change_proto_conversion_test;
 mod get_with_proof_test;
-mod language_storage_test;
 mod ledger_info_proto_conversion_test;
 mod transaction_test;
 mod trusted_state_test;

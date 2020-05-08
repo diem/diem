@@ -4,12 +4,11 @@
 use crate::module_cache::ModuleCache;
 use anyhow::{anyhow, Result};
 use libra_state_view::StateView;
-use libra_types::{
-    access_path::AccessPath,
-    account_address::AccountAddress,
+use libra_types::{access_path::AccessPath, account_address::AccountAddress};
+use move_core_types::{
+    identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
 };
-use move_core_types::identifier::{IdentStr, Identifier};
 use move_vm_types::loaded_data::types::{FatStructType, FatType};
 use std::rc::Rc;
 use stdlib::{stdlib_modules, StdLibOptions};

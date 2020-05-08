@@ -1,9 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account_address::AccountAddress, move_resource::MoveResource};
+use crate::account_address::AccountAddress;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_network_address::RawNetworkAddress;
+use move_core_types::move_resource::MoveResource;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};

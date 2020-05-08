@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::errors::*;
-use libra_types::{
-    account_address::AccountAddress,
+use libra_types::account_address::AccountAddress;
+use move_core_types::{
+    identifier::Identifier,
     language_storage::{StructTag, TypeTag},
 };
-use move_core_types::identifier::Identifier;
 use std::iter::Peekable;
 
 #[derive(Eq, PartialEq, Debug)]

@@ -6,11 +6,13 @@ use crate::{
     account_address::AccountAddress,
     account_config::CORE_CODE_ADDRESS,
     event::{EventHandle, EventKey},
+};
+use anyhow::{format_err, Result};
+use move_core_types::{
+    identifier::Identifier,
     language_storage::{StructTag, TypeTag},
     move_resource::MoveResource,
 };
-use anyhow::{format_err, Result};
-use move_core_types::identifier::Identifier;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
 

@@ -3,3 +3,4 @@
 
 mod address_test;
 mod identifier_test;
+mod language_storage_test;

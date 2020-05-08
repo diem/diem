@@ -6,9 +6,7 @@ use crate::{
         BurnEvent, CancelBurnEvent, MintEvent, PreburnEvent, ReceivedPaymentEvent, SentPaymentEvent,
     },
     event::EventKey,
-    language_storage::TypeTag,
     ledger_info::LedgerInfo,
-    move_resource::MoveResource,
     proof::EventProof,
     transaction::Version,
 };
@@ -18,6 +16,7 @@ use libra_crypto::{
     HashValue,
 };
 use libra_crypto_derive::CryptoHasher;
+use move_core_types::{language_storage::TypeTag, move_resource::MoveResource};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};

@@ -6,8 +6,8 @@ use crate::{
     spec_language_ast::{Condition, Invariant, SyntheticDefinition},
 };
 use anyhow::Result;
-use libra_types::{account_address::AccountAddress, language_storage::ModuleId};
-use move_core_types::identifier::Identifier;
+use libra_types::account_address::AccountAddress;
+use move_core_types::{identifier::Identifier, language_storage::ModuleId};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{

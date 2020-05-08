@@ -7,11 +7,13 @@ use crate::{
         association_address, type_tag_for_currency_code, CORE_CODE_ADDRESS,
     },
     event::EventHandle,
+};
+use anyhow::Result;
+use move_core_types::{
+    identifier::{IdentStr, Identifier},
     language_storage::{ResourceKey, StructTag},
     move_resource::MoveResource,
 };
-use anyhow::Result;
-use move_core_types::identifier::{IdentStr, Identifier};
 use serde::{Deserialize, Serialize};
 
 /// Struct that represents a CurrencyInfo resource

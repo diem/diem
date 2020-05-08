@@ -4,10 +4,12 @@
 
 use libra_types::{
     account_address::AccountAddress,
-    language_storage::{StructTag, TypeTag},
     vm_error::{StatusCode, VMStatus},
 };
-use move_core_types::identifier::Identifier;
+use move_core_types::{
+    identifier::Identifier,
+    language_storage::{StructTag, TypeTag},
+};
 use std::fmt::Write;
 use vm::errors::VMResult;
 

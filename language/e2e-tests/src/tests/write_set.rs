@@ -9,13 +9,15 @@ use libra_types::{
     access_path::AccessPath,
     account_config::{lbr_type_tag, CORE_CODE_ADDRESS},
     contract_event::ContractEvent,
-    language_storage::{ResourceKey, StructTag},
     on_chain_config::new_epoch_event_key,
     transaction::{ChangeSet, TransactionPayload, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSetMut},
 };
-use move_core_types::identifier::Identifier;
+use move_core_types::{
+    identifier::Identifier,
+    language_storage::{ResourceKey, StructTag},
+};
 
 #[test]
 fn verify_and_execute_writeset() {

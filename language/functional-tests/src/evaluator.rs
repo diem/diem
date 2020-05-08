@@ -16,7 +16,6 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     block_metadata::BlockMetadata,
-    language_storage::ModuleId,
     on_chain_config::VMPublishingOption,
     transaction::{
         Module as TransactionModule, RawTransaction, Script as TransactionScript,
@@ -25,7 +24,10 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use mirai_annotations::checked_verify;
-use move_core_types::gas_schedule::{GasAlgebra, GasConstants};
+use move_core_types::{
+    gas_schedule::{GasAlgebra, GasConstants},
+    language_storage::ModuleId,
+};
 use std::{
     fmt::{self, Debug},
     str::FromStr,

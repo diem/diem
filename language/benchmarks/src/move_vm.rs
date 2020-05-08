@@ -5,12 +5,11 @@ use anyhow::Result;
 use bytecode_verifier::VerifiedModule;
 use criterion::Criterion;
 use libra_state_view::StateView;
-use libra_types::{
-    access_path::AccessPath, account_address::AccountAddress, language_storage::ModuleId,
-};
+use libra_types::{access_path::AccessPath, account_address::AccountAddress};
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::{IdentStr, Identifier},
+    language_storage::ModuleId,
 };
 use move_lang::{compiled_unit::CompiledUnit, shared::Address};
 use move_vm_runtime::MoveVM;

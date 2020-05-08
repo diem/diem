@@ -1,8 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account_config::constants::CORE_CODE_ADDRESS, language_storage::ModuleId};
-use move_core_types::identifier::{IdentStr, Identifier};
+use crate::account_config::constants::CORE_CODE_ADDRESS;
+use move_core_types::{
+    identifier::{IdentStr, Identifier},
+    language_storage::ModuleId,
+};
 use once_cell::sync::Lazy;
 
 static ACCOUNT_LIMITS_MODULE_NAME: Lazy<Identifier> =

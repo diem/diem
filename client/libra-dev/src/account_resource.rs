@@ -92,9 +92,9 @@ mod tests {
         use libra_types::{
             account_config::{AccountResource, BalanceResource},
             event::{EventHandle, EventKey},
-            move_resource::MoveResource,
             transaction::authenticator::AuthenticationKey,
         };
+        use move_core_types::move_resource::MoveResource;
         use std::collections::BTreeMap;
 
         let pubkey = Ed25519PrivateKey::generate_for_testing().public_key();

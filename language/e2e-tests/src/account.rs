@@ -14,15 +14,17 @@ use libra_types::{
         BalanceResource, ReceivedPaymentEvent, SentPaymentEvent, LBR_NAME,
     },
     event::EventHandle,
-    language_storage::{ResourceKey, StructTag, TypeTag},
-    move_resource::MoveResource,
     transaction::{
         authenticator::AuthenticationKey, RawTransaction, Script, SignedTransaction,
         TransactionArgument, TransactionPayload,
     },
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use move_core_types::identifier::{IdentStr, Identifier};
+use move_core_types::{
+    identifier::{IdentStr, Identifier},
+    language_storage::{ResourceKey, StructTag, TypeTag},
+    move_resource::MoveResource,
+};
 use move_vm_types::{
     loaded_data::types::{FatStructType, FatType},
     values::{Struct, Value},

@@ -16,8 +16,7 @@ use std::iter::DoubleEndedIterator;
 use crate::{access::ModuleAccess, file_format::*, SignatureTokenKind};
 use std::collections::BTreeSet;
 
-use libra_types::language_storage::ModuleId;
-use move_core_types::identifier::IdentStr;
+use move_core_types::{identifier::IdentStr, language_storage::ModuleId};
 use std::collections::BTreeMap;
 
 /// Represents a lazily evaluated abstraction over a module.

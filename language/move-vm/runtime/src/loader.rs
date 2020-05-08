@@ -10,10 +10,12 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
-    language_storage::{ModuleId, StructTag, TypeTag},
     vm_error::{StatusCode, VMStatus},
 };
-use move_core_types::identifier::{IdentStr, Identifier};
+use move_core_types::{
+    identifier::{IdentStr, Identifier},
+    language_storage::{ModuleId, StructTag, TypeTag},
+};
 use move_vm_types::{
     interpreter_context::InterpreterContext,
     loaded_data::{

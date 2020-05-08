@@ -11,14 +11,14 @@ use libra_types::{
     account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
     epoch_change::EpochChangeProof,
-    language_storage::TypeTag,
     ledger_info::LedgerInfoWithSignatures,
-    move_resource::MoveResource,
     proof::{AccountStateProof, AccumulatorConsistencyProof},
     transaction::{Transaction, TransactionArgument, TransactionPayload},
     vm_error::StatusCode,
 };
-use move_core_types::identifier::IdentStr;
+use move_core_types::{
+    identifier::IdentStr, language_storage::TypeTag, move_resource::MoveResource,
+};
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use transaction_builder::get_transaction_name;

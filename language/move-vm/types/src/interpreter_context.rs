@@ -10,10 +10,12 @@ use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     contract_event::ContractEvent,
-    language_storage::ModuleId,
     vm_error::{sub_status, StatusCode},
 };
-use move_core_types::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits};
+use move_core_types::{
+    gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits},
+    language_storage::ModuleId,
+};
 use vm::errors::*;
 
 /// The `InterpreterContext` context trait specifies the mutations that are allowed to the

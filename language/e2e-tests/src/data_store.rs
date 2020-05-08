@@ -8,11 +8,11 @@ use anyhow::Result;
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
-    language_storage::ModuleId,
     on_chain_config::ConfigStorage,
     transaction::ChangeSet,
     write_set::{WriteOp, WriteSet},
 };
+use move_core_types::language_storage::ModuleId;
 use move_vm_state::data_cache::RemoteCache;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;

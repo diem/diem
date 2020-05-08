@@ -13,7 +13,6 @@ use crate::{
     epoch_info::EpochInfo,
     event::{EventHandle, EventKey},
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
-    language_storage::{StructTag, TypeTag},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::ValidatorSet,
     proof::{AccumulatorConsistencyProof, TransactionListProof},
@@ -33,7 +32,7 @@ use libra_crypto::{
     HashValue,
 };
 use libra_proptest_helpers::Index;
-use move_core_types::identifier::Identifier;
+use move_core_types::{identifier::Identifier, language_storage::TypeTag};
 use proptest::{
     collection::{vec, SizeRange},
     option,
@@ -705,45 +704,6 @@ impl Arbitrary for EventHandle {
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         EventHandle::strategy_impl(any::<EventKey>()).boxed()
-    }
-}
-
-impl Arbitrary for TypeTag {
-    type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        use TypeTag::*;
-        let leaf = prop_oneof![
-            Just(Bool),
-            Just(U8),
-            Just(U64),
-            Just(U128),
-            Just(Address),
-            Just(Vector(Box::new(Bool))),
-        ];
-        leaf.prop_recursive(
-            8,  // levels deep
-            16, // max size
-            4,  // max number of items per collection
-            |inner| {
-                (
-                    any::<AccountAddress>(),
-                    any::<Identifier>(),
-                    any::<Identifier>(),
-                    vec(inner, 0..4),
-                )
-                    .prop_map(|(address, module, name, type_params)| {
-                        Struct(StructTag {
-                            address,
-                            module,
-                            name,
-                            type_params,
-                        })
-                    })
-            },
-        )
-        .boxed()
     }
 }
 

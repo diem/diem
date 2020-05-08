@@ -5,10 +5,10 @@ use crate::{
     account_address::AccountAddress,
     account_config::association_address,
     event::{EventHandle, EventKey},
-    move_resource::MoveResource,
 };
 use anyhow::Result;
 use libra_crypto::HashValue;
+use move_core_types::move_resource::MoveResource;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 

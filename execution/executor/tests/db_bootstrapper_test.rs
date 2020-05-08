@@ -27,7 +27,6 @@ use libra_types::{
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
-    move_resource::MoveResource,
     on_chain_config,
     on_chain_config::{config_address, ConfigurationResource, OnChainConfig, ValidatorSet},
     proof::SparseMerkleRangeProof,
@@ -41,6 +40,7 @@ use libra_types::{
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
+use move_core_types::move_resource::MoveResource;
 use rand::SeedableRng;
 use std::convert::TryFrom;
 use storage_interface::{DbReader, DbReaderWriter};

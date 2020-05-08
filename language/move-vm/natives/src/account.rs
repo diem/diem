@@ -5,9 +5,9 @@ use libra_types::{
     account_address::AccountAddress,
     account_config,
     account_config::{AccountResource, BalanceResource, CORE_CODE_ADDRESS},
-    move_resource::MoveResource,
     vm_error::{StatusCode, VMStatus},
 };
+use move_core_types::move_resource::MoveResource;
 use move_vm_types::{
     gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,

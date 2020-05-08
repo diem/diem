@@ -10,8 +10,8 @@ use libra_types::{
     account_config::{ReceivedPaymentEvent, SentPaymentEvent},
     contract_event::ContractEvent,
     event::EventKey,
-    language_storage::TypeTag,
 };
+use move_core_types::language_storage::TypeTag;
 use std::{convert::TryFrom, ffi::CString, ops::Deref, slice};
 
 const MAX_BUFFER_LENGTH: usize = 255;
@@ -180,9 +180,11 @@ fn test_libra_LibraEvent_from() {
         account_config::{from_currency_code_string, SentPaymentEvent, LBR_NAME},
         contract_event::ContractEvent,
         event::{EventHandle, EventKey},
+    };
+    use move_core_types::{
+        identifier::Identifier,
         language_storage::{StructTag, TypeTag::Struct},
     };
-    use move_core_types::identifier::Identifier;
     use std::ffi::CStr;
 
     let public_key = Ed25519PrivateKey::generate_for_testing().public_key();

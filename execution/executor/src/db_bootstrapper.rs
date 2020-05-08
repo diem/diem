@@ -15,12 +15,12 @@ use libra_types::{
     block_info::{BlockInfo, GENESIS_EPOCH, GENESIS_ROUND, GENESIS_TIMESTAMP_USECS},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     libra_timestamp::LibraTimestampResource,
-    move_resource::MoveResource,
     on_chain_config::{config_address, ConfigurationResource},
     transaction::Transaction,
     waypoint::Waypoint,
 };
 use libra_vm::VMExecutor;
+use move_core_types::move_resource::MoveResource;
 use std::collections::btree_map::BTreeMap;
 use storage_interface::{state_view::VerifiedStateView, DbReaderWriter, TreeState};
 
