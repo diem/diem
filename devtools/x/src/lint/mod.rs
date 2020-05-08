@@ -8,6 +8,7 @@ use x_lint::{prelude::*, LintEngineConfig};
 
 mod guppy;
 mod license;
+mod toml;
 mod whitespace;
 
 #[derive(Debug, StructOpt)]
@@ -33,6 +34,7 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
 
     let content_linters: &[&dyn ContentLinter] = &[
         &license::LicenseHeader,
+        &toml::RootToml,
         &whitespace::EofNewline,
         &whitespace::TrailingWhitespace,
     ];

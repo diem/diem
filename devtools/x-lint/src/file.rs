@@ -11,7 +11,6 @@ pub struct FileContext<'l> {
     file_path: &'l Path,
 }
 
-#[allow(dead_code)]
 impl<'l> FileContext<'l> {
     pub fn new(project_ctx: ProjectContext<'l>, file_path: &'l Path) -> Self {
         Self {
@@ -25,6 +24,7 @@ impl<'l> FileContext<'l> {
         self.project_ctx
     }
 
+    /// Returns the path of this file, relative to the root of the repository.
     pub fn file_path(&self) -> &'l Path {
         &self.file_path
     }
