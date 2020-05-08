@@ -14,6 +14,6 @@ error:  A postcondition might not hold on this return path.
     =     at tests/sources/functional/serialize_model.move:24:32: lcs_test1_incorrect
     =         s2 = <redacted>
     =     at tests/sources/functional/serialize_model.move:25:10: lcs_test1_incorrect
-    =         result_0 = <redacted>,
-    =         result_1 = <redacted>
+    =         result_1 = <redacted>,
+    =         result_2 = <redacted>
     =     at tests/sources/functional/serialize_model.move:21:5: lcs_test1_incorrect (exit)

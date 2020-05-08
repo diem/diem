@@ -1061,7 +1061,7 @@ impl LocalDescriptor {
         let n = func_target.get_local_count();
         let var_name = if self.var_idx >= n {
             if func_target.get_return_count() > 1 {
-                format!("result_{}", self.var_idx - n)
+                format!("result_{}", self.var_idx - n + 1)
             } else {
                 "result".to_string()
             }

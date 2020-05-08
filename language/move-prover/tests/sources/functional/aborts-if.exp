@@ -11,18 +11,22 @@ error:  A postcondition might not hold on this return path.
     =         _x = <redacted>,
     =         _y = <redacted>
 
-error:  A postcondition might not hold on this return path.
+error: abort not covered by any of the `aborts_if` clauses
 
-    ┌── tests/sources/functional/aborts-if.move:47:9 ───
+    ┌── tests/sources/functional/aborts-if.move:43:5 ───
     │
- 47 │         aborts_if x <= y;
-    │         ^^^^^^^^^^^^^^^^^
+ 43 │ ╭     fun abort4_incorrect(x: u64, y: u64) {
+ 44 │ │         if (x > y) abort 1
+ 45 │ │     }
+    │ ╰─────^
+    ·
+ 44 │         if (x > y) abort 1
+    │         ------------------ abort happened here
     │
     =     at tests/sources/functional/aborts-if.move:43:5: abort4_incorrect (entry)
-    =     at tests/sources/functional/aborts-if.move:44:9: abort4_incorrect
+    =     at tests/sources/functional/aborts-if.move:44:9: abort4_incorrect (ABORTED)
     =         x = <redacted>,
     =         y = <redacted>
-    =     at tests/sources/functional/aborts-if.move:43:5: abort4_incorrect (exit)
 
 error: abort not covered by any of the `aborts_if` clauses
 
