@@ -46,8 +46,9 @@ use futures::{
     executor::block_on,
     io::{AsyncRead, AsyncWrite},
     sink::{Sink, SinkExt},
-    stream::{self, Stream, StreamExt},
+    stream::{self, FuturesUnordered, Stream, StreamExt},
 };
+use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
 use netcore::{
     compat::IoCompat,
@@ -57,7 +58,7 @@ use socket_bench_server::{
     build_memsocket_noise_transport, build_tcp_noise_transport, start_stream_server, Args,
 };
 use std::{fmt::Debug, io, time::Duration};
-use tokio::runtime::Runtime;
+use tokio::runtime::{Builder, Runtime};
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 const KiB: usize = 1 << 10;
@@ -306,5 +307,99 @@ fn socket_bench(c: &mut Criterion) {
     c.bench("socket_send_throughput", bench);
 }
 
-criterion_group!(network_benches, socket_bench);
+/// Concurrently dial into server
+fn bench_client_connection<F, T, S>(
+    b: &mut Bencher,
+    concurrency: u64,
+    transport_func: F,
+    server_addr: NetworkAddress,
+) where
+    F: Fn() -> T,
+    T: Transport<Output = S> + Send + Sync + 'static,
+    S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
+{
+    let mut runtime = Builder::new()
+        .threaded_scheduler()
+        .core_threads(concurrency as usize)
+        .enable_all()
+        .build()
+        .unwrap();
+    b.iter_with_setup(
+        || {
+            let mut futures = vec![];
+            for _ in 0..concurrency {
+                let transport = transport_func();
+                let addr = server_addr.clone();
+                loop {
+                    if let Ok(fut) = transport.dial(addr.clone()) {
+                        futures.push(async move {
+                            match fut.await {
+                                Ok(_socket) => (),
+                                Err(e) => error!("Failed to upgrade {:?}", e),
+                            };
+                        });
+                        break;
+                    }
+                }
+            }
+            futures
+        },
+        |fut| {
+            let mut handles = FuturesUnordered::new();
+            for f in fut {
+                handles.push(runtime.spawn(f));
+            }
+            runtime.block_on(async move { while let Some(Ok(_)) = handles.next().await {} });
+        },
+    );
+}
+
+/// Measure the concurrent connection throughput of the servers, use with socket-bench-server.
+/// Note: This doesn't work on macos due to https://github.com/tokio-rs/mio/issues/1320
+/// Start server with: TCP_NOISE_ADDR=/ip6/::1/tcp/12345 cargo run --release -p socket-bench-server
+/// Then run the bench: TCP_NOISE_ADDR=/ip6/::1/tcp/12345 cargo x bench -p network noise_connections
+/// Example Output:
+/// connection_throughput/noise_connections/128
+///                         time:   [69.816 ms 70.666 ms 71.679 ms]
+///                         thrpt:  [1.7857 Kelem/s 1.8113 Kelem/s 1.8334 Kelem/s]
+///                  change:
+///                         time:   [-9.0403% -4.6666% -0.6491%] (p = 0.06 > 0.05)
+///                         thrpt:  [+0.6533% +4.8951% +9.9388%]
+fn connection_bench(c: &mut Criterion) {
+    ::libra_logger::Logger::new().environment_only(true).init();
+    let concurrency_param: Vec<u64> = vec![16, 32, 64, 128];
+    let args = Args::from_env();
+    let bench = if let Some(noise_addr) = args.tcp_noise_addr {
+        ParameterizedBenchmark::new(
+            "noise_connections",
+            move |b, concurrency| {
+                bench_client_connection(
+                    b,
+                    *concurrency,
+                    build_tcp_noise_transport,
+                    noise_addr.clone(),
+                )
+            },
+            concurrency_param,
+        )
+    } else if let Some(tcp_addr) = args.tcp_addr {
+        ParameterizedBenchmark::new(
+            "tcp_connections",
+            move |b, concurrency| {
+                bench_client_connection(b, *concurrency, TcpTransport::default, tcp_addr.clone())
+            },
+            concurrency_param,
+        )
+    } else {
+        panic!("Server addr not set");
+    }
+    .warm_up_time(Duration::from_secs(1))
+    .measurement_time(Duration::from_secs(10))
+    .sample_size(10)
+    .throughput(|concurrency| Throughput::Elements(*concurrency));
+
+    c.bench("connection_throughput", bench);
+}
+
+criterion_group!(network_benches, socket_bench, connection_bench);
 criterion_main!(network_benches);
