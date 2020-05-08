@@ -340,7 +340,7 @@
 
     <span class="doccomment">/// Compute the account address for this account&#39;s public key</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_address</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AccountAddress</span> {
-        <span class="ident">AccountAddress</span>::<span class="ident">from_public_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">get_public</span>())
+        <span class="ident">libra_types</span>::<span class="ident">account_address</span>::<span class="ident">from_public_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">get_public</span>())
     }
 
     <span class="doccomment">/// Compute the authentication key for this account&#39;s public key</span>

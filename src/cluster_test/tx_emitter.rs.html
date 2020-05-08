@@ -1350,7 +1350,7 @@
 <span class="kw">fn</span> <span class="ident">gen_random_account</span>(<span class="ident">rng</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">StdRng</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AccountData</span> {
     <span class="kw">let</span> <span class="ident">key_pair</span> <span class="op">=</span> <span class="ident">KeyPair</span>::<span class="ident">generate</span>(<span class="ident">rng</span>);
     <span class="ident">AccountData</span> {
-        <span class="ident">address</span>: <span class="ident">AccountAddress</span>::<span class="ident">from_public_key</span>(<span class="kw-2">&amp;</span><span class="ident">key_pair</span>.<span class="ident">public_key</span>),
+        <span class="ident">address</span>: <span class="ident">libra_types</span>::<span class="ident">account_address</span>::<span class="ident">from_public_key</span>(<span class="kw-2">&amp;</span><span class="ident">key_pair</span>.<span class="ident">public_key</span>),
         <span class="ident">key_pair</span>,
         <span class="ident">sequence_number</span>: <span class="number">0</span>,
     }

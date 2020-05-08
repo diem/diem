@@ -267,7 +267,7 @@
     <span class="ident">executor</span>::<span class="ident">FakeExecutor</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::{<span class="ident">ed25519</span>::<span class="ident">Ed25519PrivateKey</span>, <span class="ident">PrivateKey</span>, <span class="ident">Uniform</span>};
-<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>};
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">transaction</span>::{<span class="ident">authenticator</span>::<span class="ident">AuthenticationKey</span>, <span class="ident">SignedTransaction</span>};
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
 
 <span class="doccomment">/// The gas each transaction is configured to reserve. If the gas available in the account,</span>
@@ -503,7 +503,7 @@
     <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="ident">AccountData</span>::<span class="ident">new</span>(<span class="number">1_000_000</span>, <span class="number">10</span>);
     <span class="ident">executor</span>.<span class="ident">add_account_data</span>(<span class="kw-2">&amp;</span><span class="ident">sender</span>);
     <span class="kw">let</span> <span class="ident">pubkey</span> <span class="op">=</span> <span class="ident">Ed25519PrivateKey</span>::<span class="ident">generate_for_testing</span>().<span class="ident">public_key</span>();
-    <span class="kw">let</span> <span class="ident">new_key_hash</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">authentication_key</span>(<span class="kw-2">&amp;</span><span class="ident">pubkey</span>).<span class="ident">to_vec</span>();
+    <span class="kw">let</span> <span class="ident">new_key_hash</span> <span class="op">=</span> <span class="ident">AuthenticationKey</span>::<span class="ident">ed25519</span>(<span class="kw-2">&amp;</span><span class="ident">pubkey</span>).<span class="ident">to_vec</span>();
 
     <span class="kw">let</span> <span class="ident">txn</span> <span class="op">=</span> <span class="ident">rotate_key_txn</span>(<span class="ident">sender</span>.<span class="ident">account</span>(), <span class="ident">new_key_hash</span>, <span class="number">10</span>);
     <span class="ident">compute_gas_used</span>(<span class="ident">txn</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">executor</span>)

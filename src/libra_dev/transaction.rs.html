@@ -797,7 +797,7 @@
     <span class="ident">PrivateKey</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
+    <span class="ident">account_address</span>::{<span class="self">self</span>, <span class="ident">AccountAddress</span>},
     <span class="ident">account_config</span>::<span class="ident">lbr_type_tag</span>,
     <span class="ident">transaction</span>::{
         <span class="ident">authenticator</span>::<span class="ident">AuthenticationKey</span>, <span class="ident">helpers</span>::<span class="ident">TransactionSigner</span>, <span class="ident">RawTransaction</span>,
@@ -840,7 +840,7 @@
     };
 
     <span class="kw">let</span> <span class="ident">public_key</span> <span class="op">=</span> <span class="ident">private_key</span>.<span class="ident">public_key</span>();
-    <span class="kw">let</span> <span class="ident">sender_address</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">from_public_key</span>(<span class="kw-2">&amp;</span><span class="ident">public_key</span>);
+    <span class="kw">let</span> <span class="ident">sender_address</span> <span class="op">=</span> <span class="ident">account_address</span>::<span class="ident">from_public_key</span>(<span class="kw-2">&amp;</span><span class="ident">public_key</span>);
 
     <span class="kw">if</span> <span class="ident">receiver</span>.<span class="ident">is_null</span>() {
         <span class="ident">update_last_error</span>(<span class="string">&quot;receiver parameter must not be null.&quot;</span>.<span class="ident">to_string</span>());
@@ -1260,7 +1260,7 @@
         <span class="kw">let</span> <span class="ident">private_key_bytes</span> <span class="op">=</span> <span class="ident">private_key</span>.<span class="ident">to_bytes</span>();
 
         <span class="comment">// create transfer parameters</span>
-        <span class="kw">let</span> <span class="ident">sender_address</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">from_public_key</span>(<span class="kw-2">&amp;</span><span class="ident">public_key</span>);
+        <span class="kw">let</span> <span class="ident">sender_address</span> <span class="op">=</span> <span class="ident">account_address</span>::<span class="ident">from_public_key</span>(<span class="kw-2">&amp;</span><span class="ident">public_key</span>);
         <span class="kw">let</span> <span class="ident">receiver_auth_key</span> <span class="op">=</span> <span class="ident">AuthenticationKey</span>::<span class="ident">random</span>();
         <span class="kw">let</span> <span class="ident">sequence</span> <span class="op">=</span> <span class="number">0</span>;
         <span class="kw">let</span> <span class="ident">amount</span> <span class="op">=</span> <span class="number">100_000_000</span>;
@@ -1365,7 +1365,7 @@
         <span class="kw">let</span> <span class="ident">public_key</span> <span class="op">=</span> <span class="ident">private_key</span>.<span class="ident">public_key</span>();
 
         <span class="comment">// create transfer parameters</span>
-        <span class="kw">let</span> <span class="ident">sender_address</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">from_public_key</span>(<span class="kw-2">&amp;</span><span class="ident">public_key</span>);
+        <span class="kw">let</span> <span class="ident">sender_address</span> <span class="op">=</span> <span class="ident">account_address</span>::<span class="ident">from_public_key</span>(<span class="kw-2">&amp;</span><span class="ident">public_key</span>);
         <span class="kw">let</span> <span class="ident">receiver_auth_key</span> <span class="op">=</span> <span class="ident">AuthenticationKey</span>::<span class="ident">random</span>();
         <span class="kw">let</span> <span class="ident">sequence</span> <span class="op">=</span> <span class="number">0</span>;
         <span class="kw">let</span> <span class="ident">amount</span> <span class="op">=</span> <span class="number">100_000_000</span>;

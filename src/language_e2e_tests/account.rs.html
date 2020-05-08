@@ -1037,7 +1037,7 @@
     <span class="doccomment">/// Like with [`Account::new`], the account returned by this constructor is a purely logical</span>
     <span class="doccomment">/// entity.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_keypair</span>(<span class="ident">privkey</span>: <span class="ident">Ed25519PrivateKey</span>, <span class="ident">pubkey</span>: <span class="ident">Ed25519PublicKey</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">from_public_key</span>(<span class="kw-2">&amp;</span><span class="ident">pubkey</span>);
+        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">libra_types</span>::<span class="ident">account_address</span>::<span class="ident">from_public_key</span>(<span class="kw-2">&amp;</span><span class="ident">pubkey</span>);
         <span class="ident">Account</span> {
             <span class="ident">addr</span>,
             <span class="ident">privkey</span>,
@@ -1791,7 +1791,7 @@
         <span class="kw">let</span> <span class="ident">balance_currency_code</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">balance_currency_code</span>.<span class="ident">as_bytes</span>();
         <span class="kw">let</span> <span class="ident">account</span> <span class="op">=</span> <span class="ident">Value</span>::<span class="ident">struct_</span>(<span class="ident">Struct</span>::<span class="ident">pack</span>(<span class="macro">vec</span><span class="macro">!</span>[
             <span class="comment">// TODO: this needs to compute the auth key instead</span>
-            <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">AccountAddress</span>::<span class="ident">authentication_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">account</span>.<span class="ident">pubkey</span>).<span class="ident">to_vec</span>()),
+            <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">AuthenticationKey</span>::<span class="ident">ed25519</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">account</span>.<span class="ident">pubkey</span>).<span class="ident">to_vec</span>()),
             <span class="ident">Value</span>::<span class="ident">bool</span>(<span class="self">self</span>.<span class="ident">delegated_key_rotation_capability</span>),
             <span class="ident">Value</span>::<span class="ident">bool</span>(<span class="self">self</span>.<span class="ident">delegated_withdrawal_capability</span>),
             <span class="ident">Value</span>::<span class="ident">struct_</span>(<span class="ident">Struct</span>::<span class="ident">pack</span>(<span class="macro">vec</span><span class="macro">!</span>[

@@ -59,7 +59,6 @@
 <span id="59">59</span>
 <span id="60">60</span>
 <span id="61">61</span>
-<span id="62">62</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -75,8 +74,7 @@
 };
 <span class="kw">use</span> <span class="ident">libra_proptest_helpers</span>::<span class="ident">Index</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
-    <span class="ident">transaction</span>::{<span class="ident">SignedTransaction</span>, <span class="ident">TransactionStatus</span>},
+    <span class="ident">transaction</span>::{<span class="ident">authenticator</span>::<span class="ident">AuthenticationKey</span>, <span class="ident">SignedTransaction</span>, <span class="ident">TransactionStatus</span>},
     <span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>},
 };
 <span class="kw">use</span> <span class="ident">proptest</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
@@ -98,7 +96,7 @@
     ) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">SignedTransaction</span>, (<span class="ident">TransactionStatus</span>, <span class="ident">u64</span>)) {
         <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="ident">universe</span>.<span class="ident">pick</span>(<span class="self">self</span>.<span class="ident">sender</span>).<span class="number">1</span>;
 
-        <span class="kw">let</span> <span class="ident">key_hash</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">authentication_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">new_keypair</span>.<span class="ident">public_key</span>).<span class="ident">to_vec</span>();
+        <span class="kw">let</span> <span class="ident">key_hash</span> <span class="op">=</span> <span class="ident">AuthenticationKey</span>::<span class="ident">ed25519</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">new_keypair</span>.<span class="ident">public_key</span>).<span class="ident">to_vec</span>();
         <span class="kw">let</span> <span class="ident">txn</span> <span class="op">=</span> <span class="ident">rotate_key_txn</span>(<span class="ident">sender</span>.<span class="ident">account</span>(), <span class="ident">key_hash</span>, <span class="ident">sender</span>.<span class="ident">sequence_number</span>);
 
         <span class="comment">// This should work all the time except for if the balance is too low for gas.</span>
