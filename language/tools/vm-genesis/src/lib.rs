@@ -85,7 +85,8 @@ pub fn encode_genesis_change_set(
 
     // generate the genesis WriteSet
     create_and_initialize_main_accounts(&mut genesis_context, &public_key, &lbr_ty);
-    create_and_initialize_validator_and_discovery_set(&mut genesis_context, &validators, &lbr_ty);
+    create_and_initialize_validator_set(&mut genesis_context, &lbr_ty);
+    initialize_validators(&mut genesis_context, &validators, &lbr_ty);
     setup_libra_version(&mut genesis_context);
     setup_vm_config(&mut genesis_context, vm_publishing_option);
     reconfigure(&mut genesis_context);
@@ -226,39 +227,10 @@ fn create_and_initialize_main_accounts(
     );
 }
 
-/// Create and initialize validator and discovery set.
-fn create_and_initialize_validator_and_discovery_set(
-    genesis_context: &mut GenesisContext,
-    validators: &[ValidatorRegistration],
-    lbr_ty: &TypeTag,
-) {
-    create_and_initialize_validator_set(genesis_context, lbr_ty);
-    create_and_initialize_discovery_set(genesis_context, lbr_ty);
-    initialize_validators(genesis_context, &validators, lbr_ty);
-}
-
 /// Create and initialize the validator set.
 fn create_and_initialize_validator_set(context: &mut GenesisContext, _lbr_ty: &TypeTag) {
     context.set_sender(config_address());
     context.exec("LibraSystem", "initialize_validator_set", vec![], vec![]);
-}
-
-/// Create and initialize the discovery set.
-fn create_and_initialize_discovery_set(context: &mut GenesisContext, lbr_ty: &TypeTag) {
-    let discovery_set_address = account_config::discovery_set_address();
-    context.set_sender(discovery_set_address);
-
-    context.exec(
-        "LibraAccount",
-        "create_account",
-        vec![lbr_ty.clone()],
-        vec![
-            Value::address(discovery_set_address),
-            Value::vector_u8(discovery_set_address.to_vec()),
-        ],
-    );
-
-    context.exec("LibraSystem", "initialize_discovery_set", vec![], vec![]);
 }
 
 /// Initialize each validator.
@@ -291,7 +263,7 @@ fn initialize_validators(
         // Finally, add the account to the validator set
         context.exec(
             "LibraSystem",
-            "add_validator_no_discovery_event",
+            "add_validator",
             vec![],
             vec![Value::address(account)],
         );
@@ -343,18 +315,16 @@ fn reconfigure(context: &mut GenesisContext) {
     context.set_sender(account_config::association_address());
     context.exec("LibraTimestamp", "initialize", vec![], vec![]);
     context.exec("LibraConfig", "emit_reconfiguration_event", vec![], vec![]);
-    context.exec("LibraSystem", "emit_discovery_set_change", vec![], vec![]);
 }
 
 /// Verify the consistency of the genesis `WriteSet`
 fn verify_genesis_write_set(events: &[ContractEvent]) {
     // Sanity checks on emitted events:
-    // (1) The genesis tx should emit 2 events: a ValidatorSetChangeEvent, and a
-    // DiscoverySetChangeEvent.
+    // (1) The genesis tx should emit 1 event: a NewEpochEvent.
     assert_eq!(
         events.len(),
-        2,
-        "Genesis transaction should emit two events, but found {} events: {:?}",
+        1,
+        "Genesis transaction should emit one event, but found {} events: {:?}",
         events.len(),
         events,
     );

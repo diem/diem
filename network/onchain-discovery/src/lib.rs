@@ -85,7 +85,7 @@ fn storage_query_discovery_set(
     } else {
         Some(
             libra_db.get_account_state_with_proof(
-                account_config::discovery_set_address(), req_msg.known_version, latest_li.ledger_info().version()
+                account_config::validator_set_address(), req_msg.known_version, latest_li.ledger_info().version()
             ).with_context(|| {
                 format!("error getting discovery account state with proof from storage: request version: {}, ledger info version: {}",
                     req_msg.known_version, latest_li.ledger_info().version(),

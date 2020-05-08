@@ -17,7 +17,7 @@ use futures::{
 use libra_config::config::RoleType;
 use libra_logger::prelude::*;
 use libra_types::{
-    discovery_set::DiscoverySet,
+    on_chain_config::ValidatorSet,
     trusted_state::{TrustedState, TrustedStateChange},
     waypoint::Waypoint,
     PeerId,
@@ -298,9 +298,9 @@ where
         };
     }
 
-    async fn handle_new_discovery_set_event(&mut self, discovery_set: DiscoverySet) {
+    async fn handle_new_discovery_set_event(&mut self, validator_set: ValidatorSet) {
         let latest_discovery_set =
-            DiscoverySetInternal::from_discovery_set(self.role, discovery_set);
+            DiscoverySetInternal::from_validator_set(self.role, validator_set);
 
         let mut prev_discovery_set =
             mem::replace(&mut self.latest_discovery_set, latest_discovery_set.clone());

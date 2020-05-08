@@ -19,11 +19,6 @@ pub fn validator_set_address() -> AccountAddress {
     crate::on_chain_config::config_address()
 }
 
-pub fn discovery_set_address() -> AccountAddress {
-    AccountAddress::from_hex_literal("0xD15C0")
-        .expect("Parsing valid hex literal should always succeed")
-}
-
 pub fn burn_account_address() -> AccountAddress {
     AccountAddress::from_hex_literal("0xD1E")
         .expect("Parsing valid hex literal should always succeed")

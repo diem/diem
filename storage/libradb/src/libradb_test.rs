@@ -10,8 +10,7 @@ use jellyfish_merkle::node_type::{Node, NodeKey};
 use libra_crypto::hash::CryptoHash;
 use libra_temppath::TempPath;
 use libra_types::{
-    account_config::AccountResource, contract_event::ContractEvent,
-    discovery_set::DISCOVERY_SET_CHANGE_EVENT_PATH, ledger_info::LedgerInfo,
+    account_config::AccountResource, contract_event::ContractEvent, ledger_info::LedgerInfo,
     proof::SparseMerkleLeafNode, vm_error::StatusCode,
 };
 use proptest::prelude::*;
@@ -453,40 +452,6 @@ proptest! {
             .verify(ledger_info_with_sigs.ledger_info(), 0, non_existent_address)
             .unwrap();
         assert!(account_state_with_proof.blob.is_none());
-        assert!(events.is_empty());
-    }
-
-    #[test]
-    fn test_get_from_non_existent_event_stream(
-        (genesis_txn_to_commit, ledger_info_with_sigs) in arb_mock_genesis(),
-    ) {
-        let tmp_dir = TempPath::new();
-        let db = LibraDB::new_for_test(&tmp_dir);
-
-        let account = genesis_txn_to_commit
-            .transaction()
-            .as_signed_user_txn()
-            .unwrap()
-            .sender();
-
-        db.save_transactions(&[genesis_txn_to_commit], 0, Some(&ledger_info_with_sigs)).unwrap();
-
-        // The mock genesis txn is really just an ordinary user account, there is no
-        // DiscoverySetResource under it.
-        let (events, account_state_with_proof) = db
-            .get_events_by_query_path(
-                &AccessPath::new(account, DISCOVERY_SET_CHANGE_EVENT_PATH.to_vec()),
-                0,
-                true,
-                100,
-                0,
-            )
-            .unwrap();
-
-        account_state_with_proof
-            .verify(ledger_info_with_sigs.ledger_info(), 0, account)
-            .unwrap();
-        assert!(account_state_with_proof.blob.is_some());
         assert!(events.is_empty());
     }
 }

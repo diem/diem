@@ -1,14 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::account_address::AccountAddress;
+use crate::{account_address::AccountAddress, validator_config::ValidatorConfig};
 use anyhow::{Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_crypto::{ed25519::Ed25519PublicKey, traits::ValidCryptoMaterial, x25519};
 #[cfg(any(test, feature = "fuzzing"))]
+use libra_network_address::NetworkAddress;
+use libra_network_address::RawNetworkAddress;
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
+#[cfg(any(test, feature = "fuzzing"))]
+use std::str::FromStr;
 use std::{convert::TryFrom, fmt};
 
 /// After executing a special transaction indicates a change to the next epoch, consensus
@@ -25,13 +30,8 @@ pub struct ValidatorInfo {
     account_address: AccountAddress,
     // Voting power of this validator
     consensus_voting_power: u64,
-    // This key can validate messages sent from this validator
-    consensus_public_key: Ed25519PublicKey,
-    // This key can validate signed messages at the network layer
-    network_signing_public_key: Ed25519PublicKey,
-    // This key establishes the corresponding PrivateKey holder's eligibility to join the p2p
-    // network
-    network_identity_public_key: x25519::PublicKey,
+    // Validator config
+    config: ValidatorConfig,
 }
 
 impl fmt::Display for ValidatorInfo {
@@ -44,16 +44,12 @@ impl ValidatorInfo {
     pub fn new(
         account_address: AccountAddress,
         consensus_voting_power: u64,
-        consensus_public_key: Ed25519PublicKey,
-        network_signing_public_key: Ed25519PublicKey,
-        network_identity_public_key: x25519::PublicKey,
+        config: ValidatorConfig,
     ) -> Self {
         ValidatorInfo {
             account_address,
             consensus_voting_power,
-            consensus_public_key,
-            network_signing_public_key,
-            network_identity_public_key,
+            config,
         }
     }
 
@@ -63,16 +59,29 @@ impl ValidatorInfo {
         consensus_public_key: Ed25519PublicKey,
         consensus_voting_power: u64,
     ) -> Self {
-        let network_signing_public_key = Ed25519PrivateKey::generate_for_testing().public_key();
+        let validator_network_signing_public_key =
+            Ed25519PrivateKey::generate_for_testing().public_key();
         let private_key = x25519::PrivateKey::generate_for_testing();
-        let network_identity_public_key = private_key.public_key();
+        let validator_network_identity_public_key = private_key.public_key();
+        let network_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
+        let validator_network_address = RawNetworkAddress::try_from(&network_address).unwrap();
+
+        let private_key = x25519::PrivateKey::generate_for_testing();
+        let full_node_network_identity_public_key = private_key.public_key();
+        let full_node_network_address = RawNetworkAddress::try_from(&network_address).unwrap();
+        let config = ValidatorConfig::new(
+            consensus_public_key,
+            validator_network_signing_public_key,
+            validator_network_identity_public_key,
+            validator_network_address,
+            full_node_network_identity_public_key,
+            full_node_network_address,
+        );
 
         Self {
             account_address,
             consensus_voting_power,
-            consensus_public_key,
-            network_signing_public_key,
-            network_identity_public_key,
+            config,
         }
     }
 
@@ -84,7 +93,7 @@ impl ValidatorInfo {
 
     /// Returns the key for validating signed messages from this validator
     pub fn consensus_public_key(&self) -> &Ed25519PublicKey {
-        &self.consensus_public_key
+        &self.config.consensus_public_key
     }
 
     /// Returns the voting power for this validator
@@ -94,12 +103,17 @@ impl ValidatorInfo {
 
     /// Returns the key for validating signed messages at the network layers
     pub fn network_signing_public_key(&self) -> &Ed25519PublicKey {
-        &self.network_signing_public_key
+        &self.config.validator_network_signing_public_key
     }
 
     /// Returns the key that establishes a validator's identity in the p2p network
     pub fn network_identity_public_key(&self) -> x25519::PublicKey {
-        self.network_identity_public_key
+        self.config.validator_network_identity_public_key
+    }
+
+    /// Returns the validator's config
+    pub fn config(&self) -> &ValidatorConfig {
+        &self.config
     }
 }
 
@@ -110,28 +124,47 @@ impl TryFrom<crate::proto::types::ValidatorInfo> for ValidatorInfo {
         let account_address = AccountAddress::try_from(proto.account_address)?;
         let consensus_public_key = Ed25519PublicKey::try_from(&proto.consensus_public_key[..])?;
         let consensus_voting_power = proto.consensus_voting_power;
-        let network_signing_public_key =
-            Ed25519PublicKey::try_from(&proto.network_signing_public_key[..])?;
-        let network_identity_public_key =
-            x25519::PublicKey::try_from(&proto.network_identity_public_key[..])?;
-        Ok(Self::new(
-            account_address,
-            consensus_voting_power,
+
+        let validator_network_signing_public_key =
+            Ed25519PublicKey::try_from(&proto.validator_network_signing_public_key[..])?;
+        let validator_network_identity_public_key =
+            x25519::PublicKey::try_from(&proto.validator_network_identity_public_key[..])?;
+        let validator_network_address = RawNetworkAddress::new(proto.validator_network_address);
+        let full_node_network_identity_public_key =
+            x25519::PublicKey::try_from(&proto.full_node_network_identity_public_key[..])?;
+        let full_node_network_address = RawNetworkAddress::new(proto.full_node_network_address);
+
+        let config = ValidatorConfig::new(
             consensus_public_key,
-            network_signing_public_key,
-            network_identity_public_key,
-        ))
+            validator_network_signing_public_key,
+            validator_network_identity_public_key,
+            validator_network_address,
+            full_node_network_identity_public_key,
+            full_node_network_address,
+        );
+        Ok(Self::new(account_address, consensus_voting_power, config))
     }
 }
 
 impl From<ValidatorInfo> for crate::proto::types::ValidatorInfo {
     fn from(keys: ValidatorInfo) -> Self {
+        let config = &keys.config();
         Self {
             account_address: keys.account_address.to_vec(),
-            consensus_voting_power: keys.consensus_voting_power,
-            consensus_public_key: keys.consensus_public_key.to_bytes().to_vec(),
-            network_signing_public_key: keys.network_signing_public_key.to_bytes().to_vec(),
-            network_identity_public_key: keys.network_identity_public_key.to_bytes(),
+            consensus_voting_power: keys.consensus_voting_power(),
+            consensus_public_key: keys.consensus_public_key().to_bytes().to_vec(),
+            validator_network_signing_public_key: config
+                .validator_network_signing_public_key
+                .to_bytes()
+                .to_vec(),
+            validator_network_identity_public_key: config
+                .validator_network_identity_public_key
+                .to_bytes(),
+            validator_network_address: config.validator_network_address.as_ref().to_vec(),
+            full_node_network_identity_public_key: config
+                .full_node_network_identity_public_key
+                .to_bytes(),
+            full_node_network_address: config.full_node_network_address.as_ref().to_vec(),
         }
     }
 }

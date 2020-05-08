@@ -17,7 +17,6 @@ use libra_types::{
     account_state::AccountState,
     block_info::BlockInfo,
     block_metadata::{BlockMetadata, LibraBlockResource},
-    discovery_set::DiscoverySet,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     mempool_status::{MempoolStatus, MempoolStatusCode},
     on_chain_config::{ConfigurationResource, ValidatorSet},
@@ -127,15 +126,13 @@ impl<T: LibraInterface> LibraInterfaceTestHarness<T> {
         }
     }
 
-    /// Returns the discover set associated with the discovery set address.
-    fn retrieve_discovery_set(&self) -> Result<DiscoverySet, Error> {
-        let account = account_config::discovery_set_address();
+    /// Returns the validator set associated with the validator set address.
+    fn retrieve_validator_set(&self) -> Result<ValidatorSet, Error> {
+        let account = account_config::validator_set_address();
         let account_state = self.libra.retrieve_account_state(account)?;
         Ok(account_state
-            .get_discovery_set_resource()?
-            .ok_or_else(|| Error::DataDoesNotExist("DiscoverySetResource".into()))?
-            .discovery_set()
-            .clone())
+            .get_validator_set()?
+            .ok_or_else(|| Error::DataDoesNotExist("ValidatorSetResource".into()))?)
     }
 
     /// Returns the libra block resource associated with the association address.
@@ -420,9 +417,9 @@ fn test_ability_to_read_move_data() {
 
 fn verify_ability_to_read_move_data<T: LibraInterface>(node: Node<T>) {
     assert!(node.libra.last_reconfiguration().is_ok());
-    assert!(node.libra.retrieve_discovery_set().is_ok());
+    assert!(node.libra.retrieve_validator_set().is_ok());
     assert!(node.libra.retrieve_validator_config(node.account).is_ok());
-    assert!(node.libra.retrieve_discovery_set().is_ok());
+    assert!(node.libra.retrieve_validator_set().is_ok());
     assert!(node.libra.retrieve_validator_info(node.account).is_ok());
     assert!(node.libra.retrieve_libra_block_resource().is_ok());
 }
@@ -461,7 +458,7 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(config: NodeConfig, mut no
     let genesis_info = node.libra.retrieve_validator_info(node.account).unwrap();
 
     // Check on-chain consensus state matches the genesis state
-    assert_eq!(genesis_pubkey, genesis_config.consensus_pubkey);
+    assert_eq!(genesis_pubkey, genesis_config.consensus_public_key);
     assert_eq!(&genesis_pubkey, genesis_info.consensus_public_key());
     assert_eq!(&node.account, genesis_info.account_address());
 
@@ -483,7 +480,7 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(config: NodeConfig, mut no
 
     // Check on-chain consensus state has been rotated
     assert_ne!(new_pubkey, genesis_pubkey);
-    assert_eq!(new_pubkey, new_config.consensus_pubkey);
+    assert_eq!(new_pubkey, new_config.consensus_public_key);
     assert_eq!(&new_pubkey, new_info.consensus_public_key());
 }
 

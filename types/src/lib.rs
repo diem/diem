@@ -11,8 +11,6 @@ pub mod account_state_blob;
 pub mod block_info;
 pub mod block_metadata;
 pub mod contract_event;
-pub mod discovery_info;
-pub mod discovery_set;
 pub mod epoch_change;
 pub mod epoch_info;
 pub mod event;

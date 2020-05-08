@@ -19,7 +19,6 @@ main() {
 }
 
 // check: NewEpochEvent
-// check: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! new-transaction
@@ -49,7 +48,6 @@ main() {
 }
 
 // check: NewEpochEvent
-// check: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! block-prologue

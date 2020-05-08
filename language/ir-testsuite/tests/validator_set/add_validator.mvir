@@ -70,7 +70,6 @@ main() {
 }
 
 // check: NewEpochEvent
-// check: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! new-transaction

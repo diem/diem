@@ -44,7 +44,6 @@ main() {
 }
 
 // check: NewEpochEvent
-// check: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! new-transaction
@@ -52,12 +51,12 @@ main() {
 import 0x0.LibraSystem;
 import 0x0.ValidatorConfig;
 main() {
-    let info: LibraSystem.ValidatorInfo;
+    let info: ValidatorConfig.Config;
 
     assert(LibraSystem.is_validator({{alice}}), 70);
 
-    info = LibraSystem.get_validator_info({{vivian}});
-    assert(ValidatorConfig.get_consensus_pubkey(LibraSystem.get_validator_config(&info)) == h"beefbeef", 72);
+    info = LibraSystem.get_validator_config({{vivian}});
+    assert(ValidatorConfig.get_consensus_pubkey(&info) == h"beefbeef", 72);
 
     return;
 }
