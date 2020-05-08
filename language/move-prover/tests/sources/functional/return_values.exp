@@ -1,0 +1,36 @@
+Move prover returns: exiting with checking errors
+error: no matching declaration of `==`
+
+    ┌── tests/sources/functional/return_values.move:54:17 ───
+    │
+ 54 │         ensures result_1 == 1;
+    │                 ^^^^^^^^^^^^^
+    │
+    = outruled candidate `==(#0, #0): bool` (expected `bool` but found `u128` for argument 2)
+
+error: no matching declaration of `==`
+
+    ┌── tests/sources/functional/return_values.move:55:17 ───
+    │
+ 55 │         ensures result_2 == true;
+    │                 ^^^^^^^^^^^^^^^^
+    │
+    = outruled candidate `==(#0, #0): bool` (expected `u64` but found `bool` for argument 2)
+
+error: no matching declaration of `==`
+
+    ┌── tests/sources/functional/return_values.move:82:17 ───
+    │
+ 82 │         ensures result_1 == 1;
+    │                 ^^^^^^^^^^^^^
+    │
+    = outruled candidate `==(#0, #0): bool` (expected `bool` but found `u128` for argument 2)
+
+error: no matching declaration of `==`
+
+    ┌── tests/sources/functional/return_values.move:83:17 ───
+    │
+ 83 │         ensures result_2 == true;
+    │                 ^^^^^^^^^^^^^^^^
+    │
+    = outruled candidate `==(#0, #0): bool` (expected `u64` but found `bool` for argument 2)
