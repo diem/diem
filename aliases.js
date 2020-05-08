@@ -73,6 +73,7 @@ ALIASES["libra_workspace_hack"] = {};
 ALIASES["libradb"] = {};
 ALIASES["memsocket"] = {};
 ALIASES["move_core_types"] = {};
+ALIASES["move_coverage"] = {};
 ALIASES["move_ir_types"] = {};
 ALIASES["move_lang"] = {};
 ALIASES["move_prover"] = {};

@@ -1,1 +1,1 @@
-initSidebarItems({"macro":[["gas",""]],"struct":[["MoveVM",""]]});
+initSidebarItems({"macro":[["gas",""],["trace",""]],"struct":[["MoveVM",""]]});

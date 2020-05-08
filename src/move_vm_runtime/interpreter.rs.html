@@ -1186,6 +1186,8 @@
 <span id="1186">1186</span>
 <span id="1187">1187</span>
 <span id="1188">1188</span>
+<span id="1189">1189</span>
+<span id="1190">1190</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1194,6 +1196,7 @@
     <span class="ident">gas</span>,
     <span class="ident">loader</span>::{<span class="ident">Function</span>, <span class="ident">Loader</span>, <span class="ident">Resolver</span>},
     <span class="ident">native_functions</span>::<span class="ident">FunctionContext</span>,
+    <span class="ident">trace</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
@@ -1868,6 +1871,7 @@
         <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">function</span>.<span class="ident">code</span>();
         <span class="kw">loop</span> {
             <span class="kw">for</span> <span class="ident">instruction</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">code</span>[<span class="self">self</span>.<span class="ident">pc</span> <span class="kw">as</span> <span class="ident">usize</span>..] {
+                <span class="macro">trace</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">function</span>.<span class="ident">pretty_string</span>(), <span class="self">self</span>.<span class="ident">pc</span>, <span class="ident">instruction</span>);
                 <span class="self">self</span>.<span class="ident">pc</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
 
                 <span class="kw">match</span> <span class="ident">instruction</span> {
