@@ -474,7 +474,6 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     self.temp_count += 1;
                 }
                 arg_temp_indices.reverse();
-                return_temp_indices.reverse();
                 let callee_env = self.func_env.module_env.get_called_function(*idx);
                 self.code.push(mk_call(
                     Operation::Function(

@@ -1,36 +1,36 @@
-Move prover returns: exiting with checking errors
-error: no matching declaration of `==`
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/functional/return_values.move:54:17 ───
+    ┌── tests/sources/functional/return_values.move:16:9 ───
     │
- 54 │         ensures result_1 == 1;
-    │                 ^^^^^^^^^^^^^
+ 16 │         ensures result_1 == 2;
+    │         ^^^^^^^^^^^^^^^^^^^^^^
     │
-    = outruled candidate `==(#0, #0): bool` (expected `bool` but found `u128` for argument 2)
+    =     at tests/sources/functional/return_values.move:29:5: one_two_wrapper_incorrect (entry)
+    =     at tests/sources/functional/return_values.move:2:5: one_two (entry)
+    =     at tests/sources/functional/return_values.move:3:9: one_two
+    =         result_1 = <redacted>,
+    =         result_2 = <redacted>
+    =     at tests/sources/functional/return_values.move:2:5: one_two (exit)
+    =     at tests/sources/functional/return_values.move:30:9: one_two_wrapper_incorrect
+    =         result_1 = <redacted>,
+    =         result_2 = <redacted>
+    =     at tests/sources/functional/return_values.move:29:5: one_two_wrapper_incorrect (exit)
 
-error: no matching declaration of `==`
+error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/functional/return_values.move:55:17 ───
+    ┌── tests/sources/functional/return_values.move:59:9 ───
     │
- 55 │         ensures result_2 == true;
-    │                 ^^^^^^^^^^^^^^^^
+ 59 │         ensures false;
+    │         ^^^^^^^^^^^^^^
     │
-    = outruled candidate `==(#0, #0): bool` (expected `u64` but found `bool` for argument 2)
-
-error: no matching declaration of `==`
-
-    ┌── tests/sources/functional/return_values.move:82:17 ───
-    │
- 82 │         ensures result_1 == 1;
-    │                 ^^^^^^^^^^^^^
-    │
-    = outruled candidate `==(#0, #0): bool` (expected `bool` but found `u128` for argument 2)
-
-error: no matching declaration of `==`
-
-    ┌── tests/sources/functional/return_values.move:83:17 ───
-    │
- 83 │         ensures result_2 == true;
-    │                 ^^^^^^^^^^^^^^^^
-    │
-    = outruled candidate `==(#0, #0): bool` (expected `u64` but found `bool` for argument 2)
+    =     at tests/sources/functional/return_values.move:55:5: true_one_wrapper_incorrect (entry)
+    =     at tests/sources/functional/return_values.move:38:5: true_one (entry)
+    =     at tests/sources/functional/return_values.move:39:9: true_one
+    =         result_1 = <redacted>,
+    =         result_2 = <redacted>
+    =     at tests/sources/functional/return_values.move:38:5: true_one (exit)
+    =     at tests/sources/functional/return_values.move:56:9: true_one_wrapper_incorrect
+    =         result_1 = <redacted>,
+    =         result_2 = <redacted>
+    =     at tests/sources/functional/return_values.move:55:5: true_one_wrapper_incorrect (exit)
