@@ -1,11 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    account_address::AccountAddress, account_config::LIBRA_MODULE_NAME, move_resource::MoveResource,
-};
+use crate::{account_address::AccountAddress, account_config::LIBRA_MODULE_NAME};
 use anyhow::Result;
-use move_core_types::identifier::{IdentStr, Identifier};
+use move_core_types::{
+    identifier::{IdentStr, Identifier},
+    move_resource::MoveResource,
+};
 use serde::{Deserialize, Serialize};
 
 /// Struct that represents a CancelBurnEvent.

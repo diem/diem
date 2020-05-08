@@ -4,6 +4,8 @@
 use crate::{
     access_path::AccessPath,
     account_config::constants::{lbr_type_tag, ACCOUNT_MODULE_NAME, CORE_CODE_ADDRESS},
+};
+use move_core_types::{
     language_storage::{StructTag, TypeTag},
     move_resource::MoveResource,
 };

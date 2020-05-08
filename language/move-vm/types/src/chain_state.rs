@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{loaded_data::types::FatStructType, values::GlobalValue};
-use libra_types::{
-    access_path::AccessPath, contract_event::ContractEvent, language_storage::ModuleId,
+use libra_types::{access_path::AccessPath, contract_event::ContractEvent};
+use move_core_types::{
+    gas_schedule::{GasCarrier, GasUnits},
+    language_storage::ModuleId,
 };
-use move_core_types::gas_schedule::{GasCarrier, GasUnits};
 use vm::errors::VMResult;
 
 /// Trait that describes what Move bytecode runtime expects from the Libra blockchain.

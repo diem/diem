@@ -15,7 +15,6 @@ pub mod epoch_change;
 pub mod epoch_info;
 pub mod event;
 pub mod get_with_proof;
-pub mod language_storage;
 pub mod ledger_info;
 pub mod libra_timestamp;
 pub mod mempool_status;

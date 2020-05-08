@@ -12,8 +12,6 @@ use libra_types::{
     account_config::{association_address, validator_set_address},
     contract_event::ContractEvent,
     event::EventKey,
-    language_storage::TypeTag,
-    move_resource::MoveResource,
     on_chain_config::{
         config_address, new_epoch_event_key, ConfigurationResource, OnChainConfig, ValidatorSet,
     },
@@ -25,6 +23,7 @@ use libra_types::{
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use libra_vm::VMExecutor;
+use move_core_types::{language_storage::TypeTag, move_resource::MoveResource};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 

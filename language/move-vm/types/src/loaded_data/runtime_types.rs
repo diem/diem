@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_types::vm_error::{StatusCode, VMStatus};
-use move_core_types::identifier::Identifier;
+use move_core_types::{identifier::Identifier, language_storage::ModuleId};
 use vm::errors::VMResult;
 
 use crate::loaded_data::types::FatType;
-use libra_types::language_storage::ModuleId;
 use vm::file_format::{Kind, StructDefinitionIndex};
 
 #[derive(Debug, Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]

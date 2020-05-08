@@ -3,8 +3,11 @@
 
 use crate::runtime::VMRuntime;
 use bytecode_verifier::VerifiedModule;
-use libra_types::language_storage::{ModuleId, TypeTag};
-use move_core_types::{gas_schedule::CostTable, identifier::IdentStr};
+use move_core_types::{
+    gas_schedule::CostTable,
+    identifier::IdentStr,
+    language_storage::{ModuleId, TypeTag},
+};
 use move_vm_types::{
     chain_state::ChainState, transaction_metadata::TransactionMetadata, values::Value,
 };

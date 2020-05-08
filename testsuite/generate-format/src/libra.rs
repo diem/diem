@@ -7,7 +7,8 @@ use libra_crypto::{
     multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature},
     traits::{SigningKey, Uniform},
 };
-use libra_types::{contract_event, event, language_storage, transaction, write_set};
+use libra_types::{contract_event, event, transaction, write_set};
+use move_core_types::language_storage;
 use rand::{rngs::StdRng, SeedableRng};
 use serde_reflection::{Registry, Result, Samples, Tracer, TracerConfig};
 

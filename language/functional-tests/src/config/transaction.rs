@@ -8,10 +8,8 @@ use crate::{
     evaluator::Stage,
 };
 use language_e2e_tests::account::Account;
-use libra_types::{
-    language_storage::TypeTag,
-    transaction::{parse_as_transaction_argument, TransactionArgument},
-};
+use libra_types::transaction::{parse_as_transaction_argument, TransactionArgument};
+use move_core_types::language_storage::TypeTag;
 use std::{collections::BTreeSet, str::FromStr, time::Duration};
 
 /// A partially parsed transaction argument.

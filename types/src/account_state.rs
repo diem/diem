@@ -10,12 +10,11 @@ use crate::{
     block_metadata::{LibraBlockResource, NEW_BLOCK_EVENT_PATH},
     event::EventHandle,
     libra_timestamp::LibraTimestampResource,
-    move_resource::MoveResource,
     on_chain_config::{ConfigurationResource, OnChainConfig, ValidatorSet},
     validator_config::ValidatorConfigResource,
 };
 use anyhow::{bail, Error, Result};
-use move_core_types::identifier::Identifier;
+use move_core_types::{identifier::Identifier, move_resource::MoveResource};
 use serde::{de::DeserializeOwned, export::Formatter, Deserialize, Serialize};
 use std::{collections::btree_map::BTreeMap, convert::TryFrom, fmt};
 

@@ -34,6 +34,7 @@ libra-proptest-helpers = { path = "../common/proptest-helpers", optional = true 
 libra-types = { path = "../types", version = "0.1.0" }
 libra-temppath = { path = "../common/temppath", version = "0.1.0", optional = true }
 libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
+move-core-types = { path = "../language/move-core/types", version = "0.1.0" }
 storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
 
 [dev-dependencies]

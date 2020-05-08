@@ -32,11 +32,13 @@ use crate::{
 };
 use libra_types::{
     account_address::AccountAddress,
-    language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
 use mirai_annotations::*;
-use move_core_types::identifier::{IdentStr, Identifier};
+use move_core_types::{
+    identifier::{IdentStr, Identifier},
+    language_storage::ModuleId,
+};
 use num_variants::NumVariants;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};

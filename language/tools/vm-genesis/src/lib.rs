@@ -20,10 +20,10 @@ use libra_network_address::RawNetworkAddress;
 use libra_types::{
     account_config,
     contract_event::ContractEvent,
-    language_storage::{StructTag, TypeTag},
     on_chain_config::{config_address, new_epoch_event_key, VMPublishingOption},
     transaction::{authenticator::AuthenticationKey, ChangeSet, Script, Transaction},
 };
+use move_core_types::language_storage::{StructTag, TypeTag};
 use move_vm_state::data_cache::BlockDataCache;
 use move_vm_types::{chain_state::ChainState, loaded_data::types::FatStructType, values::Value};
 use once_cell::sync::Lazy;

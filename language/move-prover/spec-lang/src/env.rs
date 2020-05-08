@@ -18,7 +18,7 @@ use itertools::Itertools;
 use num::{BigUint, Num};
 
 use bytecode_source_map::source_map::SourceMap;
-use libra_types::{account_address::AccountAddress, language_storage};
+use move_core_types::{account_address::AccountAddress, language_storage};
 use move_vm_types::values::Value as VMValue;
 use vm::{
     access::ModuleAccess,

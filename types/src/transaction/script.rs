@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{language_storage::TypeTag, transaction::transaction_argument::TransactionArgument};
+use crate::transaction::transaction_argument::TransactionArgument;
+use move_core_types::language_storage::TypeTag;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

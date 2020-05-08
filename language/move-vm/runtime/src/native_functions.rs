@@ -4,9 +4,9 @@
 use crate::{interpreter::Interpreter, loader::Resolver};
 use libra_types::{
     access_path::AccessPath, account_address::AccountAddress, account_config::CORE_CODE_ADDRESS,
-    contract_event::ContractEvent, language_storage::ModuleId,
+    contract_event::ContractEvent,
 };
-use move_core_types::{gas_schedule::CostTable, identifier::IdentStr};
+use move_core_types::{gas_schedule::CostTable, identifier::IdentStr, language_storage::ModuleId};
 use move_vm_natives::{account, event, hash, lcs, signature};
 use move_vm_types::{
     interpreter_context::InterpreterContext,

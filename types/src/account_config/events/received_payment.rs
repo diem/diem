@@ -4,10 +4,12 @@
 use crate::{
     account_address::AccountAddress,
     account_config::{constants::ACCOUNT_MODULE_NAME, resources::AccountResource},
-    move_resource::MoveResource,
 };
 use anyhow::Result;
-use move_core_types::identifier::{IdentStr, Identifier};
+use move_core_types::{
+    identifier::{IdentStr, Identifier},
+    move_resource::MoveResource,
+};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 

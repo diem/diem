@@ -23,7 +23,6 @@ use libra_types::{
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::ContractEvent,
     event::EventKey,
-    language_storage::TypeTag,
     ledger_info::LedgerInfoWithSignatures,
     mempool_status::{MempoolStatus, MempoolStatusCode},
     proof::{SparseMerkleProof, TransactionAccumulatorProof},
@@ -32,6 +31,7 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use libradb::test_helper::arb_blocks_to_commit;
+use move_core_types::language_storage::TypeTag;
 use proptest::prelude::*;
 use std::{
     collections::{BTreeMap, HashMap},

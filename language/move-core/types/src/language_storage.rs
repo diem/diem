@@ -1,14 +1,21 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{access_path::AccessPath, account_address::AccountAddress};
+use crate::{
+    account_address::AccountAddress,
+    identifier::{IdentStr, Identifier},
+};
 use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
 use libra_crypto_derive::CryptoHasher;
-use move_core_types::identifier::{IdentStr, Identifier};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
+
+pub const CODE_TAG: u8 = 0;
+pub const RESOURCE_TAG: u8 = 1;
+
+pub const CORE_CODE_ADDRESS: AccountAddress = AccountAddress::DEFAULT;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
 pub enum TypeTag {
@@ -30,6 +37,16 @@ pub struct StructTag {
     pub name: Identifier,
     // TODO: rename to "type_args"
     pub type_params: Vec<TypeTag>,
+}
+
+impl StructTag {
+    pub fn access_vector(&self) -> Vec<u8> {
+        let mut key = vec![];
+        key.push(RESOURCE_TAG);
+
+        key.append(&mut self.hash().to_vec());
+        key
+    }
 }
 
 /// Represents the intitial key into global storage where we first index by the address, and then
@@ -80,11 +97,13 @@ impl ModuleId {
     pub fn address(&self) -> &AccountAddress {
         &self.address
     }
-}
 
-impl<'a> From<&'a ModuleId> for AccessPath {
-    fn from(module_id: &'a ModuleId) -> Self {
-        AccessPath::code_access_path(module_id)
+    pub fn access_vector(&self) -> Vec<u8> {
+        let mut key = vec![];
+        key.push(CODE_TAG);
+
+        key.append(&mut self.hash().to_vec());
+        key
     }
 }
 

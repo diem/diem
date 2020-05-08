@@ -1,11 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    account_config::constants::{coin_struct_name, from_currency_code_string, CORE_CODE_ADDRESS},
+use crate::account_config::constants::{
+    coin_struct_name, from_currency_code_string, CORE_CODE_ADDRESS,
+};
+use move_core_types::{
+    identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
 };
-use move_core_types::identifier::Identifier;
 use once_cell::sync::Lazy;
 
 pub const LBR_NAME: &str = "LBR";

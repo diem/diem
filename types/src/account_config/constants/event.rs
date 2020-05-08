@@ -1,11 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    account_config::constants::CORE_CODE_ADDRESS,
+use crate::account_config::constants::CORE_CODE_ADDRESS;
+use move_core_types::{
+    identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag},
 };
-use move_core_types::identifier::{IdentStr, Identifier};
 use once_cell::sync::Lazy;
 
 static EVENT_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("Event").unwrap());

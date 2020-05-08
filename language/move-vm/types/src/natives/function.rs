@@ -22,12 +22,12 @@ use crate::{
     values::{Struct, Value},
 };
 use libra_types::{
-    account_address::AccountAddress, contract_event::ContractEvent, language_storage::ModuleId,
-    vm_error::VMStatus,
+    account_address::AccountAddress, contract_event::ContractEvent, vm_error::VMStatus,
 };
 use move_core_types::{
     gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
     identifier::IdentStr,
+    language_storage::ModuleId,
 };
 use std::fmt::Write;
 use vm::errors::VMResult;

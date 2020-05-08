@@ -6,11 +6,11 @@ use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
-    language_storage::ModuleId,
     on_chain_config::ConfigStorage,
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
+use move_core_types::language_storage::ModuleId;
 use move_vm_types::{
     loaded_data::types::FatStructType,
     values::{GlobalValue, Struct, Value},

@@ -10,9 +10,9 @@ use anyhow::{anyhow, Result};
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath, account_address::AccountAddress, account_state::AccountState,
-    contract_event::ContractEvent, language_storage::StructTag,
+    contract_event::ContractEvent,
 };
-use move_core_types::identifier::Identifier;
+use move_core_types::{identifier::Identifier, language_storage::StructTag};
 use std::{
     collections::btree_map::BTreeMap,
     convert::TryFrom,

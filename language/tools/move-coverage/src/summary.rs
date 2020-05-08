@@ -4,8 +4,7 @@
 #![forbid(unsafe_code)]
 
 use crate::coverage_map::CoverageMap;
-use libra_types::language_storage::ModuleId;
-use move_core_types::identifier::Identifier;
+use move_core_types::{identifier::Identifier, language_storage::ModuleId};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
