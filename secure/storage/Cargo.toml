@@ -31,3 +31,4 @@ rand = "0.7.3"
 
 [features]
 fuzzing = ["libra-crypto/fuzzing"]
+testing = []
