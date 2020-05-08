@@ -97,6 +97,7 @@ members = [
     "secure/net",
     "secure/push-metrics",
     "secure/storage",
+    "secure/storage/github",
     "secure/storage/vault",
     "secure/time",
     "secure/transaction-scripts",

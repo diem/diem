@@ -2333,6 +2333,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-github-client"
+version = "0.1.0"
+dependencies = [
+ "base64 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-crypto 0.1.0",
+ "libra-workspace-hack 0.1.0",
+ "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.52 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.16 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ureq 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "libra-global-constants"
 version = "0.1.0"
 
@@ -2642,6 +2655,7 @@ dependencies = [
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-github-client 0.1.0",
  "libra-secure-time 0.1.0",
  "libra-temppath 0.1.0",
  "libra-types 0.1.0",
