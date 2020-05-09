@@ -36,7 +36,7 @@ use std::{
 pub(crate) struct Pruner {
     /// Other than the latest version, how many historical versions to keep being readable. For
     /// example, this being 0 means keep only the latest version.
-    num_historical_versions_to_keep: u64,
+    historical_versions_to_keep: u64,
     /// The worker thread handle, created upon Pruner instance construction and joined upon its
     /// destruction. It only becomes `None` after joined in `drop()`.
     worker_thread: Option<JoinHandle<()>>,
@@ -50,7 +50,7 @@ pub(crate) struct Pruner {
 
 impl Pruner {
     /// Creates a worker thread that waits on a channel for pruning commands.
-    pub fn new(db: Arc<DB>, num_historical_versions_to_keep: u64) -> Self {
+    pub fn new(db: Arc<DB>, historical_versions_to_keep: u64) -> Self {
         let (command_sender, command_receiver) = channel();
         let worker_progress = Arc::new(AtomicU64::new(0));
         let worker_progress_clone = Arc::clone(&worker_progress);
@@ -61,7 +61,7 @@ impl Pruner {
             .expect("Creating pruner thread should succeed.");
 
         Self {
-            num_historical_versions_to_keep,
+            historical_versions_to_keep,
             worker_thread: Some(worker_thread),
             command_sender: Mutex::new(command_sender),
             worker_progress,
@@ -70,8 +70,8 @@ impl Pruner {
 
     /// Sends pruning command to the worker thread when necessary.
     pub fn wake(&self, latest_version: Version) {
-        if latest_version > self.num_historical_versions_to_keep {
-            let least_readable_version = latest_version - self.num_historical_versions_to_keep;
+        if latest_version > self.historical_versions_to_keep {
+            let least_readable_version = latest_version - self.historical_versions_to_keep;
             self.command_sender
                 .lock()
                 .expect("command_sender to pruner thread should lock.")
@@ -88,8 +88,8 @@ impl Pruner {
     pub fn wake_and_wait(&self, latest_version: Version) -> Result<()> {
         self.wake(latest_version);
 
-        if latest_version > self.num_historical_versions_to_keep {
-            let least_readable_version = latest_version - self.num_historical_versions_to_keep;
+        if latest_version > self.historical_versions_to_keep {
+            let least_readable_version = latest_version - self.historical_versions_to_keep;
             // Assuming no big pruning chunks will be issued by a test.
             const TIMEOUT: Duration = Duration::from_secs(10);
             let end = Instant::now() + TIMEOUT;

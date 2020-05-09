@@ -47,12 +47,9 @@ fn test_pruner() {
     let value2 = AccountStateBlob::from(vec![0x03]);
 
     let tmp_dir = TempPath::new();
-    let db = LibraDB::new(&tmp_dir).db;
+    let db = LibraDB::new_for_test(&tmp_dir).db;
     let state_store = &StateStore::new(Arc::clone(&db));
-    let pruner = Pruner::new(
-        Arc::clone(&db),
-        0, /* num_historical_versions_to_keep */
-    );
+    let pruner = Pruner::new(Arc::clone(&db), 0 /* historical_versions_to_keep */);
 
     let _root0 = put_account_state_set(
         &db,
@@ -111,7 +108,7 @@ fn test_worker_quit_eagerly() {
     let value2 = AccountStateBlob::from(vec![0x03]);
 
     let tmp_dir = TempPath::new();
-    let db = LibraDB::new(&tmp_dir).db;
+    let db = LibraDB::new_for_test(&tmp_dir).db;
     let state_store = &StateStore::new(Arc::clone(&db));
 
     let _root0 = put_account_state_set(

@@ -20,6 +20,7 @@ tonic = "0.2"
 admission-control-proto = { path = "../admission-control/admission-control-proto", version = "0.1.0" }
 admission-control-service = { path = "../admission-control/admission-control-service", version = "0.1.0" }
 libra-config = { path = "../config", version = "0.1.0" }
+libradb = { path = "../storage/libradb", version = "0.1.0" }
 consensus = { path = "../consensus", version = "0.1.0" }
 crash-handler = { path = "../common/crash-handler", version = "0.1.0" }
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }

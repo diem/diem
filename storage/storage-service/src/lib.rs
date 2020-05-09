@@ -20,8 +20,8 @@ use libra_types::proto::types::{
     EpochChangeProof, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
 };
 use libradb::LibraDB;
-use std::{convert::TryFrom, path::Path, sync::Arc};
-use storage_interface::{DbReader, DbReaderWriter, DbWriter, Error, StartupInfo};
+use std::{convert::TryFrom, sync::Arc};
+use storage_interface::{DbReader, DbWriter, Error, StartupInfo};
 use storage_proto::proto::storage::{
     storage_server::{Storage, StorageServer},
     BackupAccountStateRequest, BackupAccountStateResponse, BackupTransactionInfoRequest,
@@ -48,24 +48,12 @@ pub fn start_simple_storage_service_with_db(
     storage_service.run(config)
 }
 
-/// Starts storage service according to config.
-pub fn start_simple_storage_service(config: &NodeConfig) -> JoinHandle<()> {
-    let storage_service = SimpleStorageService::new(&config.storage.dir());
-    storage_service.run(config)
-}
-
 #[derive(Clone)]
 pub struct SimpleStorageService {
     db: Arc<LibraDB>,
 }
 
 impl SimpleStorageService {
-    /// This opens a [`LibraDB`] at `path` and returns a [`StorageService`] instance serving it.
-    pub fn new(path: &impl AsRef<Path>) -> Self {
-        let db = Arc::new(LibraDB::new(path));
-        Self { db }
-    }
-
     fn handle_message(&self, input_message: Vec<u8>) -> Result<Vec<u8>, Error> {
         let input = lcs::from_bytes(&input_message)?;
         let output = match input {
@@ -123,19 +111,9 @@ impl SimpleStorageService {
     }
 }
 
-pub fn init_libra_db(config: &NodeConfig) -> (Arc<LibraDB>, DbReaderWriter) {
-    DbReaderWriter::wrap(LibraDB::new(&config.storage.dir()))
-}
-
 /// Starts storage service with a given LibraDB
 pub fn start_storage_service_with_db(config: &NodeConfig, libra_db: Arc<LibraDB>) -> Runtime {
     let storage_service = StorageService { db: libra_db };
-    start_storage_service_runtime(config, storage_service)
-}
-
-/// Starts storage service according to config.
-pub fn start_storage_service(config: &NodeConfig) -> Runtime {
-    let storage_service = StorageService::new(&config.storage.dir());
     start_storage_service_runtime(config, storage_service)
 }
 
@@ -176,14 +154,6 @@ fn start_storage_service_runtime(config: &NodeConfig, storage_service: StorageSe
 #[derive(Clone)]
 pub struct StorageService {
     db: Arc<LibraDB>,
-}
-
-impl StorageService {
-    /// This opens a [`LibraDB`] at `path` and returns a [`StorageService`] instance serving it.
-    pub fn new<P: AsRef<Path>>(path: &P) -> Self {
-        let db = Arc::new(LibraDB::new(path));
-        Self { db }
-    }
 }
 
 impl StorageService {

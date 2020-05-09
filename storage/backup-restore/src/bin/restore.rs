@@ -27,7 +27,12 @@ struct Opt {
 fn main() {
     let opt = Opt::from_args();
 
-    let libradb = LibraDB::new(&opt.db_dir);
+    let libradb = LibraDB::open(
+        &opt.db_dir,
+        false, /* read_only */
+        None,  /* pruner */
+    )
+    .expect("DB should open.");
 
     let stdin = std::io::stdin();
     let mut iter = stdin.lock().lines();

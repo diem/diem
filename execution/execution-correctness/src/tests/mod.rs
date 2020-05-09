@@ -10,11 +10,13 @@ mod thread;
 use executor::db_bootstrapper::bootstrap_db_if_empty;
 use libra_config::{config::NodeConfig, utils};
 use libra_vm::LibraVM;
+use libradb::LibraDB;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     thread::JoinHandle,
 };
-use storage_service::{init_libra_db, start_simple_storage_service_with_db};
+use storage_interface::DbReaderWriter;
+use storage_service::start_simple_storage_service_with_db;
 
 fn start_storage_service() -> (NodeConfig, JoinHandle<()>) {
     let (mut config, _genesis_key) = config_builder::test_config();
@@ -23,7 +25,7 @@ fn start_storage_service() -> (NodeConfig, JoinHandle<()>) {
 
     let server_port = utils::get_available_port();
     config.storage.simple_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
-    let (db, db_rw) = init_libra_db(&config);
+    let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
     bootstrap_db_if_empty::<LibraVM>(&db_rw, utils::get_genesis_txn(&config).unwrap()).unwrap();
     let handle = start_simple_storage_service_with_db(&config, db);
     (config, handle)

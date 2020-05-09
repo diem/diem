@@ -304,7 +304,7 @@ fn setup_node_using_test_mocks(config: &NodeConfig) -> Node<MockLibraInterface> 
 
 // Creates and returns a libra database and database reader/writer pair bootstrapped with genesis.
 fn setup_libra_db(config: &NodeConfig) -> (Arc<LibraDB>, DbReaderWriter) {
-    let (storage, db_rw) = DbReaderWriter::wrap(LibraDB::new(&config.storage.dir()));
+    let (storage, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
     db_bootstrapper::bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap())
         .expect("Failed to execute genesis");
 

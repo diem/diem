@@ -35,7 +35,7 @@ fn build_test_config() -> (NodeConfig, Ed25519PrivateKey) {
 }
 
 fn create_storage(config: &NodeConfig) -> DbReaderWriter {
-    let db = DbReaderWriter::new(LibraDB::new(config.storage.dir()));
+    let db = DbReaderWriter::new(LibraDB::new_for_test(config.storage.dir()));
     bootstrap_db_if_empty::<MockVM>(&db, get_genesis_txn(&config).unwrap())
         .expect("Db-bootstrapper should not fail.");
     db

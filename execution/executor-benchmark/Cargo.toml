@@ -19,14 +19,17 @@ config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 executor = { path = "../executor", version = "0.1.0" }
 executor-types = { path = "../executor-types", version = "0.1.0" }
 executor-utils = { path = "../executor-utils", version = "0.1.0" }
+libradb = { path = "../../storage/libradb", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
-storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
-transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 libra-vm= { path = "../../language/libra-vm", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+simple-storage-client = { path = "../../storage/simple-storage-client", version = "0.1.0" }
+storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
+storage-service = { path = "../../storage/storage-service", version = "0.1.0" }
+transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 
 [features]
 default = []

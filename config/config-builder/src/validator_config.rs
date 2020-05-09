@@ -225,7 +225,10 @@ impl ValidatorConfig {
 
         let waypoint = if self.build_waypoint {
             let path = TempPath::new();
-            let db_rw = DbReaderWriter::new(LibraDB::new(&path));
+            let db_rw = DbReaderWriter::new(LibraDB::open(
+                &path, false, /* readonly */
+                None,  /* pruner */
+            )?);
             Some(
                 db_bootstrapper::bootstrap_db_if_empty::<LibraVM>(&db_rw, &genesis)?
                     .ok_or_else(|| format_err!("Failed to bootstrap empty DB."))?,

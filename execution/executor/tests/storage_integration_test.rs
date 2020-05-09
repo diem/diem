@@ -38,7 +38,7 @@ use transaction_builder::{
 };
 
 fn create_db_and_executor(config: &NodeConfig) -> (DbReaderWriter, Executor<LibraVM>) {
-    let db = DbReaderWriter::new(LibraDB::new(config.storage.dir()));
+    let db = DbReaderWriter::new(LibraDB::new_for_test(config.storage.dir()));
     bootstrap_db_if_empty::<LibraVM>(&db, get_genesis_txn(config).unwrap()).unwrap();
     let executor = Executor::<LibraVM>::new(db.clone());
 

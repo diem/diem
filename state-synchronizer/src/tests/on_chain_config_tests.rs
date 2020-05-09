@@ -20,10 +20,12 @@ use libra_types::{
     transaction::authenticator::AuthenticationKey,
 };
 use libra_vm::LibraVM;
+use libradb::LibraDB;
 use std::sync::Arc;
 use stdlib::transaction_scripts::StdlibScript;
 use storage_client::SyncStorageClient;
-use storage_service::{init_libra_db, start_storage_service_with_db};
+use storage_interface::DbReaderWriter;
+use storage_service::start_storage_service_with_db;
 use subscription_service::ReconfigSubscription;
 use transaction_builder::{
     encode_block_prologue_script, encode_publishing_option_script,
@@ -39,7 +41,7 @@ fn test_on_chain_config_pub_sub() {
     let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe(subscribed_configs);
 
     let (mut config, genesis_key) = config_builder::test_config();
-    let (db, db_rw) = init_libra_db(&config);
+    let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
     let _storage = start_storage_service_with_db(&config, Arc::clone(&db));
     bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(&config).unwrap()).unwrap();
 

@@ -27,12 +27,12 @@ fn start_test_storage_with_client() -> (
 ) {
     let mut config = NodeConfig::random();
     let tmp_dir = libra_temppath::TempPath::new();
-    config.storage.dir = tmp_dir.path().to_path_buf();
 
     let server_port = utils::get_available_port();
     config.storage.simple_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
 
-    let storage_server_handle = start_simple_storage_service(&config);
+    let db = Arc::new(LibraDB::new_for_test(&tmp_dir));
+    let storage_server_handle = start_simple_storage_service_with_db(&config, db);
 
     let client = SimpleStorageClient::new(&config.storage.simple_address);
     (storage_server_handle, tmp_dir, client)
@@ -44,11 +44,10 @@ fn start_test_storage_with_read_write_client() -> (
     StorageReadServiceClient,
     StorageWriteServiceClient,
 ) {
-    let mut config = NodeConfig::random();
+    let config = NodeConfig::random();
     let tmp_dir = libra_temppath::TempPath::new();
-    config.storage.dir = tmp_dir.path().to_path_buf();
-
-    let storage_server_handle = start_storage_service(&config);
+    let db = Arc::new(LibraDB::new_for_test(&tmp_dir));
+    let storage_server_handle = start_storage_service_with_db(&config, db);
 
     let read_client = StorageReadServiceClient::new(&config.storage.address);
     let write_client = StorageWriteServiceClient::new(&config.storage.address);

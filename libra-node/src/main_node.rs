@@ -20,6 +20,7 @@ use libra_mempool::MEMPOOL_SUBSCRIBED_CONFIGS;
 use libra_metrics::metric_server;
 use libra_types::{on_chain_config::ON_CHAIN_CONFIG_REGISTRY, waypoint::Waypoint, PeerId};
 use libra_vm::LibraVM;
+use libradb::LibraDB;
 use network::validator_network::network_builder::{NetworkBuilder, TransportType};
 use onchain_discovery::{client::OnchainDiscovery, service::OnchainDiscoveryService};
 use simple_storage_client::SimpleStorageClient;
@@ -33,9 +34,7 @@ use std::{
     time::{Duration, Instant},
 };
 use storage_interface::{DbReader, DbReaderWriter};
-use storage_service::{
-    init_libra_db, start_simple_storage_service_with_db, start_storage_service_with_db,
-};
+use storage_service::{start_simple_storage_service_with_db, start_storage_service_with_db};
 use subscription_service::ReconfigSubscription;
 use tokio::{
     runtime::{Builder, Handle, Runtime},
@@ -231,7 +230,14 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         .expect("Building rayon global thread pool should work.");
 
     let mut instant = Instant::now();
-    let (libra_db, db_rw) = init_libra_db(&node_config);
+    let (libra_db, db_rw) = DbReaderWriter::wrap(
+        LibraDB::open(
+            &node_config.storage.dir(),
+            false, /* readonly */
+            Some(LibraDB::HISTORICAL_VERSIONS_TO_KEEP),
+        )
+        .expect("DB should open."),
+    );
     let _simple_storage_service =
         start_simple_storage_service_with_db(&node_config, Arc::clone(&libra_db));
 

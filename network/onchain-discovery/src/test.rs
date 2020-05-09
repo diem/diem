@@ -23,6 +23,7 @@ use libra_types::{
     PeerId,
 };
 use libra_vm::LibraVM;
+use libradb::LibraDB;
 use network::{
     connectivity_manager::ConnectivityRequest,
     peer_manager::{
@@ -36,8 +37,7 @@ use std::{
     collections::HashMap, convert::TryFrom, num::NonZeroUsize, str::FromStr, sync::Arc,
     time::Duration,
 };
-use storage_interface::DbReader;
-use storage_service::init_libra_db;
+use storage_interface::{DbReader, DbReaderWriter};
 use tokio::{
     runtime::{Handle, Runtime},
     task::JoinHandle,
@@ -168,12 +168,11 @@ fn gen_configs(count: usize) -> Vec<NodeConfig> {
 fn setup_storage_service_and_executor(
     config: &NodeConfig,
 ) -> (Arc<dyn DbReader>, Executor<LibraVM>, Waypoint) {
-    let (db_r, db_rw) = init_libra_db(config);
+    let (db_r, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
     let genesis_tx = config.execution.genesis.as_ref().unwrap();
     let waypoint = bootstrap_db_if_empty::<LibraVM>(&db_rw, genesis_tx)
         .expect("Db-bootstrapper should not fail.")
         .unwrap();
-
     let executor = Executor::new(db_rw);
 
     (db_r, executor, waypoint)

@@ -36,7 +36,7 @@ fn save(store: &EventStore, version: Version, events: &[ContractEvent]) -> HashV
 #[test]
 fn test_put_empty() {
     let tmp_dir = TempPath::new();
-    let db = LibraDB::new(&tmp_dir);
+    let db = LibraDB::new_for_test(&tmp_dir);
     let store = &db.event_store;
     let mut cs = ChangeSet::new();
     assert_eq!(
@@ -48,7 +48,7 @@ fn test_put_empty() {
 #[test]
 fn test_error_on_get_from_empty() {
     let tmp_dir = TempPath::new();
-    let db = LibraDB::new(&tmp_dir);
+    let db = LibraDB::new_for_test(&tmp_dir);
     let store = &db.event_store;
 
     assert!(store
@@ -62,7 +62,7 @@ proptest! {
     #[test]
     fn test_put_get_verify(events in vec(any::<ContractEvent>().no_shrink(), 1..100)) {
         let tmp_dir = TempPath::new();
-        let db = LibraDB::new(&tmp_dir);
+        let db = LibraDB::new_for_test(&tmp_dir);
         let store = &db.event_store;
 
         let root_hash = save(store, 100, &events);
@@ -94,7 +94,7 @@ proptest! {
     ) {
 
         let tmp_dir = TempPath::new();
-        let db = LibraDB::new(&tmp_dir);
+        let db = LibraDB::new_for_test(&tmp_dir);
         let store = &db.event_store;
         // Save 3 chunks at different versions
         save(store, 99 /*version*/, &events1);
@@ -186,7 +186,7 @@ proptest! {
 fn test_get_events_by_access_path_impl(event_batches: Vec<Vec<ContractEvent>>) {
     // Put into db.
     let tmp_dir = TempPath::new();
-    let db = LibraDB::new(&tmp_dir);
+    let db = LibraDB::new_for_test(&tmp_dir);
     let store = &db.event_store;
 
     let mut cs = ChangeSet::new();
