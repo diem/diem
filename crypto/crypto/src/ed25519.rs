@@ -89,6 +89,17 @@ impl Ed25519PrivateKey {
             Err(_) => Err(CryptoMaterialError::DeserializationError),
         }
     }
+
+    /// Private function aimed at minimizing code duplication between sign
+    /// methods of the SigningKey implementation. This should remain private.
+    fn sign_arbitrary_message(&self, message: &[u8]) -> Ed25519Signature {
+        let secret_key: &ed25519_dalek::SecretKey = &self.0;
+        let public_key: Ed25519PublicKey = self.into();
+        let expanded_secret_key: ed25519_dalek::ExpandedSecretKey =
+            ed25519_dalek::ExpandedSecretKey::from(secret_key);
+        let sig = expanded_secret_key.sign(message.as_ref(), &public_key.0);
+        Ed25519Signature(sig)
+    }
 }
 
 impl Ed25519PublicKey {
@@ -169,12 +180,12 @@ impl SigningKey for Ed25519PrivateKey {
     type SignatureMaterial = Ed25519Signature;
 
     fn sign_message(&self, message: &HashValue) -> Ed25519Signature {
-        let secret_key: &ed25519_dalek::SecretKey = &self.0;
-        let public_key: Ed25519PublicKey = self.into();
-        let expanded_secret_key: ed25519_dalek::ExpandedSecretKey =
-            ed25519_dalek::ExpandedSecretKey::from(secret_key);
-        let sig = expanded_secret_key.sign(message.as_ref(), &public_key.0);
-        Ed25519Signature(sig)
+        Ed25519PrivateKey::sign_arbitrary_message(&self, message.as_ref())
+    }
+
+    #[cfg(test)]
+    fn sign_arbitrary_message(&self, message: &[u8]) -> Ed25519Signature {
+        Ed25519PrivateKey::sign_arbitrary_message(self, message)
     }
 }
 

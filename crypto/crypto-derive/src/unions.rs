@@ -202,11 +202,15 @@ pub fn impl_enum_signingkey(
     let st: syn::Type = signature_type.parse().unwrap();
 
     let mut match_arms = quote! {};
+    let mut match_arms_arbitrary = quote! {};
     for variant in variants.variants.iter() {
         let variant_ident = &variant.ident;
 
         match_arms.extend(quote! {
             #name::#variant_ident(key) => Self::SignatureMaterial::#variant_ident(key.sign_message(message)),
+        });
+        match_arms_arbitrary.extend(quote! {
+            #name::#variant_ident(key) => Self::SignatureMaterial::#variant_ident(key.sign_arbitrary_message(message)),
         });
     }
     let res = quote! {
@@ -217,6 +221,13 @@ pub fn impl_enum_signingkey(
             fn sign_message(&self, message: &libra_crypto::HashValue) -> Self::SignatureMaterial {
                 match self {
                     #match_arms
+                }
+            }
+
+            #[cfg(test)]
+            fn sign_arbitrary_message(&self, message: &[u8]) -> Self::SignatureMaterial {
+                match self {
+                    #match_arms_arbitrary
                 }
             }
         }
