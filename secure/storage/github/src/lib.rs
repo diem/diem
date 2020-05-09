@@ -67,8 +67,14 @@ impl Client {
     }
 
     /// Delete a file from a GitHub repository
-    pub fn delete(&self, path: &str) -> Result<(), Error> {
-        let hash = self.get_sha(path)?;
+    pub fn delete_file(&self, path: &str) -> Result<(), Error> {
+        // Occasionally GitHub sends us back delayed results and the file is already deleted.
+        let hash = match self.get_sha(path) {
+            Ok(hash) => hash,
+            Err(Error::NotFound(_)) => return Ok(()),
+            Err(e) => return Err(e),
+        };
+
         let resp = self
             .upgrade_request(ureq::delete(&self.url(path)))
             .send_json(json!({ "message": "libra-secure", "sha": hash }));
@@ -79,13 +85,47 @@ impl Client {
         }
     }
 
+    /// Recursively delete all files, which as a by product will delete all folders
+    pub fn delete_directory(&self, path: &str) -> Result<(), Error> {
+        let files = self.get_directory(path)?;
+        for file in files {
+            if file.ends_with('/') {
+                self.delete_directory(&file[..file.len() - 1])?;
+                continue;
+            }
+            self.delete_file(&file)?;
+        }
+        Ok(())
+    }
+
+    /// Retrieve a list of branches, this is effectively a status check on the repository
+    pub fn get_branches(&self) -> Result<Vec<String>, Error> {
+        let url = format!("{}/repos/{}/{}/branches", URL, self.owner, self.repository);
+        let resp = self.upgrade_request(ureq::get(&url)).call();
+
+        match resp.status() {
+            200 => {
+                let resp = resp.into_string()?;
+                let branches: Vec<Branch> = serde_json::from_str(&resp)?;
+                Ok(branches.into_iter().map(|b| b.name).collect())
+            }
+            _ => Err(resp.into()),
+        }
+    }
+
     /// Retrieve the name of contents within a given directory, note, there are no such thing as
     /// empty directories in git.
     pub fn get_directory(&self, path: &str) -> Result<Vec<String>, Error> {
         Ok(self
             .get_internal(path)?
             .into_iter()
-            .map(|entry| entry.path)
+            .map(|entry| {
+                if entry.content_type == "dir" {
+                    entry.path + "/"
+                } else {
+                    entry.path
+                }
+            })
             .collect())
     }
 
@@ -97,7 +137,9 @@ impl Client {
                 .content
                 .as_ref()
                 .ok_or_else(|| Error::InternalError("No content found".into()))?;
-            Ok(content.trim().into())
+            // Apparently GitHub introduces newlines every 60 characters and at the end of content,
+            // this strips those characters out.
+            Ok(content.lines().collect::<Vec<_>>().join(""))
         } else {
             Err(Error::InternalError(format!(
                 "get mismatch, found {} entries",
@@ -155,7 +197,7 @@ impl Client {
 
                 Err(Error::SerializationError(resp))
             }
-            404 => Err(Error::NotFound(self.url(path))),
+            404 => Err(Error::NotFound(path.into())),
             _ => Err(resp.into()),
         }
     }
@@ -180,6 +222,11 @@ impl Client {
             URL, self.owner, self.repository, path
         )
     }
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct Branch {
+    name: String,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
@@ -232,8 +279,8 @@ mod tests {
         let value = std::str::from_utf8(&b64_value).unwrap();
         assert_eq!(value, value2);
 
-        // Verify delete
-        github.delete(path).unwrap();
+        // Verify delete_file
+        github.delete_file(path).unwrap();
         github.get_file(path).unwrap_err();
     }
 
@@ -266,7 +313,7 @@ mod tests {
         assert_eq!(value, value2);
 
         // Delete one of the directories
-        github.delete(path1).unwrap();
+        github.delete_file(path1).unwrap();
 
         // Verify one is good and the other is gone
         github.get_directory(path1_root).unwrap_err();
@@ -276,7 +323,43 @@ mod tests {
         assert_eq!(value, value2);
 
         // Cleanup the rest
-        github.delete(path2).unwrap();
+        github.delete_file(path2).unwrap();
         github.get_directory(path2_root).unwrap_err();
+    }
+
+    #[ignore]
+    #[test]
+    fn test_recursive_delete_file() {
+        let root = "root_dir";
+        let file0 = "root_dir/another_dir/another_dir/ok.txt";
+        let file1 = "root_dir/another_dir/ok.txt";
+        let value = "hello";
+        let value_encoded = base64::encode(&value);
+
+        let github = Client::new(OWNER.into(), REPOSITORY.into(), TOKEN.into());
+
+        github.put(file0, &value_encoded).unwrap();
+        github.put(file1, &value_encoded).unwrap();
+
+        let b64_value = base64::decode(github.get_file(file0).unwrap()).unwrap();
+        let rv = std::str::from_utf8(&b64_value).unwrap();
+        assert_eq!(value, rv);
+
+        let b64_value = base64::decode(github.get_file(file1).unwrap()).unwrap();
+        let rv = std::str::from_utf8(&b64_value).unwrap();
+        assert_eq!(value, rv);
+
+        github.delete_directory(root).unwrap();
+        github.get_file(file0).unwrap_err();
+        github.get_file(file1).unwrap_err();
+    }
+
+    #[ignore]
+    #[test]
+    fn test_branches() {
+        let github = Client::new(OWNER.into(), REPOSITORY.into(), TOKEN.into());
+        let branches = github.get_branches().unwrap();
+        assert!(!branches.is_empty());
+        assert!(branches.iter().any(|b| b == "master"));
     }
 }

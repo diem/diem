@@ -25,6 +25,12 @@ pub enum Error {
     KeyVersionNotFound(String),
 }
 
+impl From<base64::DecodeError> for Error {
+    fn from(error: base64::DecodeError) -> Self {
+        Self::SerializationError(format!("{}", error))
+    }
+}
+
 impl From<chrono::format::ParseError> for Error {
     fn from(error: chrono::format::ParseError) -> Self {
         Self::SerializationError(format!("{}", error))
@@ -66,6 +72,16 @@ impl From<libra_vault_client::Error> for Error {
         match error {
             libra_vault_client::Error::NotFound(_, key) => Self::KeyNotSet(key),
             libra_vault_client::Error::HttpError(403, _) => Self::PermissionDenied,
+            _ => Self::InternalError(format!("{}", error)),
+        }
+    }
+}
+
+impl From<libra_github_client::Error> for Error {
+    fn from(error: libra_github_client::Error) -> Self {
+        match error {
+            libra_github_client::Error::NotFound(key) => Self::KeyNotSet(key),
+            libra_github_client::Error::HttpError(403, _) => Self::PermissionDenied,
             _ => Self::InternalError(format!("{}", error)),
         }
     }
