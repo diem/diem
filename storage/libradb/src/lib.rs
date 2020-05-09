@@ -132,9 +132,6 @@ pub struct LibraDB {
 }
 
 impl LibraDB {
-    /// Config parameter for the pruner.
-    pub const HISTORICAL_VERSIONS_TO_KEEP: u64 = 1_000_000;
-
     pub fn open<P: AsRef<Path> + Clone>(
         db_root_path: P,
         readonly: bool,

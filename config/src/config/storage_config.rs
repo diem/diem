@@ -14,6 +14,8 @@ pub struct StorageConfig {
     pub simple_address: SocketAddr,
     pub dir: PathBuf,
     pub grpc_max_receive_len: Option<i32>,
+    // None means no pruning.
+    pub historical_versions_to_keep: Option<u64>,
     #[serde(skip)]
     data_dir: PathBuf,
 }
@@ -25,6 +27,7 @@ impl Default for StorageConfig {
             simple_address: "127.0.0.1:6666".parse().unwrap(),
             dir: PathBuf::from("libradb/db"),
             grpc_max_receive_len: Some(100_000_000),
+            historical_versions_to_keep: None,
             data_dir: PathBuf::from("/opt/libra/data/common"),
         }
     }
