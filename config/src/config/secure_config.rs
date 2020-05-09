@@ -93,7 +93,7 @@ impl Default for OnDiskStorageConfig {
     fn default() -> Self {
         Self {
             namespace: None,
-            path: PathBuf::from("safety_rules.toml"),
+            path: PathBuf::from("secure_storage.toml"),
             data_dir: PathBuf::from("/opt/libra/data/common"),
         }
     }
