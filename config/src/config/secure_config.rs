@@ -18,6 +18,12 @@ pub struct SecureConfig {
     pub key_manager: KeyManagerConfig,
 }
 
+impl SecureConfig {
+    pub fn set_data_dir(&mut self, data_dir: PathBuf) {
+        self.key_manager.set_data_dir(data_dir);
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct KeyManagerConfig {
@@ -37,6 +43,14 @@ impl Default for KeyManagerConfig {
             txn_expiration_secs: DEFAULT_TXN_EXPIRATION_SECS,
             json_rpc_endpoint: DEFAULT_JSON_RPC_ENDPOINT.into(),
             secure_backend: SecureBackend::InMemoryStorage,
+        }
+    }
+}
+
+impl KeyManagerConfig {
+    pub fn set_data_dir(&mut self, data_dir: PathBuf) {
+        if let SecureBackend::OnDiskStorage(backend) = &mut self.secure_backend {
+            backend.set_data_dir(data_dir);
         }
     }
 }

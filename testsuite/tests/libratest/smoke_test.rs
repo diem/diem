@@ -3,10 +3,13 @@
 
 use cli::client_proxy::ClientProxy;
 use debug_interface::{libra_trace, node_debug_service::parse_events, NodeDebugClient};
-use libra_config::config::{NodeConfig, RoleType, TestConfig};
+use libra_config::config::{NodeConfig, OnDiskStorageConfig, RoleType, SecureBackend, TestConfig};
 use libra_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, PrivateKey, SigningKey, Uniform};
+use libra_global_constants::{CONSENSUS_KEY, OPERATOR_KEY};
 use libra_json_rpc::views::{ScriptView, TransactionDataView};
+use libra_key_manager::libra_interface::{JsonRpcLibraInterface, LibraInterface};
 use libra_logger::prelude::*;
+use libra_secure_storage::{Policy, Storage, Value};
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
 use libra_types::{
@@ -17,11 +20,17 @@ use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::{
     collections::BTreeMap,
+    convert::TryInto,
     fs,
     io::{Result, Write},
     path::{Path, PathBuf},
+    process::{Command, Stdio},
     str::FromStr,
+    thread::sleep,
+    time::Duration,
 };
+
+const KEY_MANAGER_BIN: &str = "libra-key-manager";
 
 struct TestEnvironment {
     validator_swarm: LibraSwarm,
@@ -36,6 +45,8 @@ impl TestEnvironment {
         let mut template = NodeConfig::default();
         template.test = Some(TestConfig::open_module());
         template.state_sync.chunk_limit = 2;
+        template.consensus.safety_rules.backend =
+            SecureBackend::OnDiskStorage(OnDiskStorageConfig::default());
 
         let validator_swarm = LibraSwarm::configure_swarm(
             num_validators,
@@ -1173,4 +1184,75 @@ fn test_malformed_script() {
     client_proxy
         .mint_coins(&["mintb", "0", "10"], true)
         .unwrap();
+}
+
+#[test]
+fn test_key_manager_consensus_rotation() {
+    // Create and launch a local validator swarm of 2 nodes.
+    let mut swarm = TestEnvironment::new(2);
+    swarm.launch_swarm(RoleType::Validator);
+
+    // Create a node config for the key manager by modifying the first node config in the swarm.
+    // TODO(joshlind): see if we can refactor TestEnvironment to clean this up.
+    let config_path = swarm.validator_swarm.config.config_files.get(0).unwrap();
+    let mut config = NodeConfig::load(&config_path).unwrap();
+    let backend = config.consensus.safety_rules.backend.clone();
+    let json_rpc_endpoint = format!("http://127.0.0.1:{}", config.rpc.address.port());
+    config.secure.key_manager.secure_backend = backend.clone();
+    config.secure.key_manager.json_rpc_endpoint = json_rpc_endpoint.clone();
+    config.secure.key_manager.rotation_period_secs = 10;
+    config.secure.key_manager.sleep_period_secs = 10;
+    config.save(config_path).unwrap();
+
+    // Bootstrap secure storage by initializing the keys required by the key manager.
+    // TODO(joshlind): set these keys using config manager when initialization is supported.
+    let mut storage: Box<dyn Storage> = (&backend).try_into().unwrap();
+    storage
+        .create_key("consensus_previous", &Policy::default())
+        .unwrap();
+    let operator_private = config
+        .test
+        .unwrap()
+        .operator_keypair
+        .unwrap()
+        .take_private()
+        .unwrap();
+    storage
+        .set(OPERATOR_KEY, Value::Ed25519PrivateKey(operator_private))
+        .unwrap();
+
+    // Create a json-rpc connection to the blockchain and verify storage matches the on-chain state.
+    let libra_interface = JsonRpcLibraInterface::new(json_rpc_endpoint);
+    let account = config.validator_network.clone().unwrap().peer_id;
+    let current_consensus = storage.get_public_key(CONSENSUS_KEY).unwrap().public_key;
+    let validator_info = libra_interface.retrieve_validator_info(account).unwrap();
+    assert_eq!(&current_consensus, validator_info.consensus_public_key());
+
+    // Spawn the key manager and sleep until a rotation occurs.
+    // TODO(joshlind): support a dedicated key manager log (instead of just printing on failure).
+    let mut command = Command::new(workspace_builder::get_bin(KEY_MANAGER_BIN));
+    command
+        .current_dir(workspace_builder::workspace_root())
+        .arg(config_path)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    let key_manager = command.spawn().unwrap();
+    sleep(Duration::from_secs(20));
+
+    // Verify the consensus key has been rotated in secure storage and on-chain.
+    let rotated_consensus = storage.get_public_key(CONSENSUS_KEY).unwrap().public_key;
+    let validator_info = libra_interface.retrieve_validator_info(account).unwrap();
+    assert_eq!(&rotated_consensus, validator_info.consensus_public_key());
+    assert_ne!(current_consensus, rotated_consensus);
+
+    // Cause a failure (e.g., wipe storage) and verify the key manager exits with an error status.
+    storage.reset_and_clear().unwrap();
+    let output = key_manager.wait_with_output().unwrap();
+    if output.status.success() {
+        panic!(
+            "Key manager did not return an error as expected! Printing key manager output: {:?}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+    }
 }
