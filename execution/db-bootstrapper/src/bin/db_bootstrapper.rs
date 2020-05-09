@@ -35,8 +35,12 @@ fn main() -> Result<()> {
     let genesis_txn = load_genesis_txn(&opt.genesis_txn_file)
         .with_context(|| format_err!("Failed loading genesis txn."))?;
     let db = DbReaderWriter::new(
-        LibraDB::open(&opt.db_dir, false /* readonly */)
-            .with_context(|| format_err!("Failed to open DB."))?,
+        LibraDB::open(
+            &opt.db_dir,
+            false, /* readonly */
+            None,  /* pruner */
+        )
+        .with_context(|| format_err!("Failed to open DB."))?,
     );
 
     let tree_state = db

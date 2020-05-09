@@ -46,7 +46,7 @@ proptest! {
         batch2 in vec(any::<TransactionInfo>(), 1..100),
     ) {
         let tmp_dir = TempPath::new();
-        let db = LibraDB::new(&tmp_dir);
+        let db = LibraDB::new_for_test(&tmp_dir);
         let store = &db.ledger_store;
 
         // insert two batches of transaction infos
@@ -77,7 +77,7 @@ proptest! {
                 })
     ) {
         let tmp_dir = TempPath::new();
-        let db = LibraDB::new(&tmp_dir);
+        let db = LibraDB::new_for_test(&tmp_dir);
         let store = &db.ledger_store;
         save(store, 0, &infos);
 

@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use executor::Executor;
+use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_types::BlockExecutor;
-use executor_utils::create_storage_service_and_executor;
+use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     hash::{CryptoHash, HashValue},
@@ -20,9 +20,17 @@ use libra_types::{
     },
 };
 use libra_vm::LibraVM;
+use libradb::LibraDB;
 use rand::{rngs::StdRng, SeedableRng};
-use std::{collections::BTreeMap, convert::TryFrom, path::PathBuf, sync::mpsc};
-use storage_interface::DbReader;
+use simple_storage_client::SimpleStorageClient;
+use std::{
+    collections::BTreeMap,
+    convert::TryFrom,
+    path::PathBuf,
+    sync::{mpsc, Arc},
+};
+use storage_interface::{DbReader, DbReaderWriter};
+use storage_service::start_simple_storage_service_with_db;
 use transaction_builder::{encode_mint_script, encode_transfer_with_metadata_script};
 
 struct AccountData {
@@ -250,6 +258,18 @@ impl TransactionExecutor {
             );
         }
     }
+}
+
+fn create_storage_service_and_executor(
+    config: &NodeConfig,
+) -> (Arc<dyn DbReader>, Executor<LibraVM>) {
+    let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
+    bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap()).unwrap();
+
+    let _handle = start_simple_storage_service_with_db(config, db.clone());
+    let executor = Executor::new(SimpleStorageClient::new(&config.storage.simple_address).into());
+
+    (db, executor)
 }
 
 /// Runs the benchmark with given parameters.

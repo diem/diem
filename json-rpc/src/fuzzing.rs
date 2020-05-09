@@ -35,7 +35,7 @@ pub fn fuzzer(data: &[u8]) {
 
     // set up JSON RPC service
     let tmp_dir = TempPath::new();
-    let db = LibraDB::new(&tmp_dir);
+    let db = LibraDB::new_for_test(&tmp_dir);
     // initialize DB with baseline ledger info - otherwise server will fail on attempting to retrieve initial ledger info
     let (genesis_txn_to_commit, ledger_info_with_sigs) =
         ValueGenerator::new().generate(arb_mock_genesis());

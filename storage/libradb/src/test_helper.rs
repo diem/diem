@@ -19,7 +19,7 @@ fn to_blocks_to_commit(
     // Use temporary LibraDB and STORE LEVEL APIs to calculate hashes on a per transaction basis.
     // Result is used to test the batch PUBLIC API for saving everything, i.e. `save_transactions()`
     let tmp_dir = TempPath::new();
-    let db = LibraDB::new(&tmp_dir);
+    let db = LibraDB::new_for_test(&tmp_dir);
 
     let mut cur_ver = 0;
     let mut cur_txn_accu_hash = HashValue::zero();

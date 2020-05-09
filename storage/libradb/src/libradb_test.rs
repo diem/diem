@@ -32,7 +32,7 @@ fn verify_epochs(db: &LibraDB, ledger_infos_with_sigs: &[LedgerInfoWithSignature
 
 fn test_save_blocks_impl(input: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>) {
     let tmp_dir = TempPath::new();
-    let db = LibraDB::new(&tmp_dir);
+    let db = LibraDB::new_for_test(&tmp_dir);
 
     let num_batches = input.len();
     let mut cur_ver = 0;
@@ -84,7 +84,7 @@ fn test_save_blocks_impl(input: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSig
 
 fn test_sync_transactions_impl(input: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>) {
     let tmp_dir = TempPath::new();
-    let db = LibraDB::new(&tmp_dir);
+    let db = LibraDB::new_for_test(&tmp_dir);
 
     let num_batches = input.len();
     let mut cur_ver = 0;
@@ -396,7 +396,7 @@ fn test_get_first_seq_num_and_limit() {
 #[test]
 fn test_too_many_requested() {
     let tmp_dir = TempPath::new();
-    let db = LibraDB::new(&tmp_dir);
+    let db = LibraDB::new_for_test(&tmp_dir);
 
     assert!(db
         .update_to_latest_ledger(
@@ -432,7 +432,7 @@ proptest! {
         non_existent_address in any::<AccountAddress>(),
     ) {
         let tmp_dir = TempPath::new();
-        let db = LibraDB::new(&tmp_dir);
+        let db = LibraDB::new_for_test(&tmp_dir);
 
         db.save_transactions(&[genesis_txn_to_commit], 0, Some(&ledger_info_with_sigs)).unwrap();
         prop_assume!(
@@ -461,7 +461,7 @@ proptest! {
         (genesis_txn_to_commit, ledger_info_with_sigs) in arb_mock_genesis(),
     ) {
         let tmp_dir = TempPath::new();
-        let db = LibraDB::new(&tmp_dir);
+        let db = LibraDB::new_for_test(&tmp_dir);
 
         let account = genesis_txn_to_commit
             .transaction()
@@ -494,7 +494,7 @@ proptest! {
 #[test]
 fn test_get_latest_tree_state() {
     let tmp_dir = TempPath::new();
-    let db = LibraDB::new(&tmp_dir);
+    let db = LibraDB::new_for_test(&tmp_dir);
 
     // entirely emtpy db
     let empty = db.get_latest_tree_state().unwrap();

@@ -13,7 +13,7 @@ proptest! {
     #[test]
     fn test_get_transaction_iter(input in arb_blocks_to_commit()) {
         let tmp_dir = TempPath::new();
-        let db = LibraDB::new(&tmp_dir);
+        let db = LibraDB::new_for_test(&tmp_dir);
 
         let mut cur_ver = 0;
         for (txns_to_commit, ledger_info_with_sigs) in input.iter() {

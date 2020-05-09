@@ -23,7 +23,7 @@ fn bump_ledger_counters(
 #[test]
 fn test_inc_ledger_counters() {
     let tmp_dir = TempPath::new();
-    let db = LibraDB::new(&tmp_dir);
+    let db = LibraDB::new_for_test(&tmp_dir);
     let store = &db.system_store;
 
     // First batch, add to zeros.

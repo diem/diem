@@ -188,7 +188,7 @@ proptest! {
 }
 
 fn set_up(path: &impl AsRef<Path>, ledger_infos_with_sigs: &[LedgerInfoWithSignatures]) -> LibraDB {
-    let db = LibraDB::new(path);
+    let db = LibraDB::new_for_test(path);
     let store = &db.ledger_store;
 
     // Write LIs to DB.
