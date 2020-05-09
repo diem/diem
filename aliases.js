@@ -41,6 +41,7 @@ ALIASES["libra_crypto"] = {};
 ALIASES["libra_crypto_derive"] = {};
 ALIASES["libra_dev"] = {};
 ALIASES["libra_fuzzer"] = {};
+ALIASES["libra_github_client"] = {};
 ALIASES["libra_global_constants"] = {};
 ALIASES["libra_json_rpc"] = {};
 ALIASES["libra_json_rpc_client"] = {};
