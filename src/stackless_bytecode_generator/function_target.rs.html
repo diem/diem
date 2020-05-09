@@ -310,19 +310,38 @@
 <span id="310">310</span>
 <span id="311">311</span>
 <span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">annotations</span>::<span class="ident">Annotations</span>,
-    <span class="ident">lifetime_analysis</span>, <span class="ident">livevar_analysis</span>, <span class="ident">reaching_def_analysis</span>,
+    <span class="ident">borrow_analysis</span>, <span class="ident">lifetime_analysis</span>, <span class="ident">livevar_analysis</span>, <span class="ident">packref_analysis</span>, <span class="ident">reaching_def_analysis</span>,
     <span class="ident">stackless_bytecode</span>::{<span class="ident">AttrId</span>, <span class="ident">Bytecode</span>, <span class="ident">SpecBlockId</span>},
+    <span class="ident">writeback_analysis</span>,
 };
 <span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
 <span class="kw">use</span> <span class="ident">spec_lang</span>::{
     <span class="ident">ast</span>::<span class="ident">Spec</span>,
-    <span class="ident">env</span>::{<span class="ident">FunId</span>, <span class="ident">FunctionEnv</span>, <span class="ident">GlobalEnv</span>, <span class="ident">Loc</span>, <span class="ident">TypeParameter</span>},
+    <span class="ident">env</span>::{<span class="ident">FunId</span>, <span class="ident">FunctionEnv</span>, <span class="ident">GlobalEnv</span>, <span class="ident">Loc</span>, <span class="ident">ModuleEnv</span>, <span class="ident">StructId</span>, <span class="ident">TypeParameter</span>},
     <span class="ident">symbol</span>::{<span class="ident">Symbol</span>, <span class="ident">SymbolPool</span>},
     <span class="ident">ty</span>::{<span class="ident">Type</span>, <span class="ident">TypeDisplayContext</span>},
 };
@@ -348,6 +367,7 @@
     <span class="kw">pub</span> <span class="ident">code</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Bytecode</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">local_types</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">return_types</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">acquires_global_resources</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">StructId</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">locations</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">AttrId</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">annotations</span>: <span class="ident">Annotations</span>,
 
@@ -389,6 +409,11 @@
     <span class="doccomment">/// Shortcut for accessing the symbol pool.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">symbol_pool</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">SymbolPool</span> {
         <span class="self">self</span>.<span class="ident">func_env</span>.<span class="ident">module_env</span>.<span class="ident">symbol_pool</span>()
+    }
+
+    <span class="doccomment">/// Shortcut for accessing the module env of this function.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">module_env</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">ModuleEnv</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">func_env</span>.<span class="ident">module_env</span>
     }
 
     <span class="doccomment">/// Shortcut for accessing the global env of this function.</span>
@@ -514,6 +539,11 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_annotations</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Annotations</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data</span>.<span class="ident">annotations</span>
     }
+
+    <span class="doccomment">/// Gets acquired resources</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_acquires_global_resources</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span>[<span class="ident">StructId</span>] {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data</span>.<span class="ident">acquires_global_resources</span>
+    }
 }
 
 <span class="comment">// =================================================================================================</span>
@@ -537,6 +567,11 @@
     <span class="doccomment">/// new formatters relevant for tests.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">register_annotation_formatters_for_test</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="self">self</span>.<span class="ident">register_annotation_formatter</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">livevar_analysis</span>::<span class="ident">format_livevar_annotation</span>));
+        <span class="self">self</span>.<span class="ident">register_annotation_formatter</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">borrow_analysis</span>::<span class="ident">format_borrow_annotation</span>));
+        <span class="self">self</span>.<span class="ident">register_annotation_formatter</span>(<span class="ident">Box</span>::<span class="ident">new</span>(
+            <span class="ident">writeback_analysis</span>::<span class="ident">format_writeback_annotation</span>,
+        ));
+        <span class="self">self</span>.<span class="ident">register_annotation_formatter</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">packref_analysis</span>::<span class="ident">format_packref_annotation</span>));
         <span class="self">self</span>.<span class="ident">register_annotation_formatter</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">lifetime_analysis</span>::<span class="ident">format_lifetime_annotation</span>));
         <span class="self">self</span>.<span class="ident">register_annotation_formatter</span>(<span class="ident">Box</span>::<span class="ident">new</span>(
             <span class="ident">reaching_def_analysis</span>::<span class="ident">format_reaching_def_annotation</span>,
@@ -613,9 +648,10 @@
                 .<span class="ident">borrow</span>()
                 .<span class="ident">iter</span>()
                 .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> <span class="ident">f</span>(<span class="self">self</span>, <span class="ident">offset</span> <span class="kw">as</span> <span class="ident">CodeOffset</span>))
-                .<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>);
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;    // {}&quot;</span>, <span class="ident">s</span>))
+                .<span class="ident">join</span>(<span class="string">&quot;\n&quot;</span>);
             <span class="kw">if</span> <span class="op">!</span><span class="ident">annotations</span>.<span class="ident">is_empty</span>() {
-                <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;    // {}&quot;</span>, <span class="ident">annotations</span>)<span class="question-mark">?</span>;
+                <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">annotations</span>)<span class="question-mark">?</span>;
             }
             <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;    {}&quot;</span>, <span class="ident">code</span>.<span class="ident">display</span>(<span class="self">self</span>))<span class="question-mark">?</span>;
         }

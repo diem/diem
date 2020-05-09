@@ -1080,6 +1080,7 @@
 <span id="1080">1080</span>
 <span id="1081">1081</span>
 <span id="1082">1082</span>
+<span id="1083">1083</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1172,7 +1173,7 @@
         }
 
         <span class="comment">// Eliminate fall-through for non-branching instructions</span>
-        <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">mem</span>::<span class="ident">replace</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">code</span>, <span class="macro">vec</span><span class="macro">!</span>[]);
+        <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">mem</span>::<span class="ident">take</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">code</span>);
         <span class="kw">for</span> <span class="ident">bytecode</span> <span class="kw">in</span> <span class="ident">code</span>.<span class="ident">into_iter</span>() {
             <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Bytecode</span>::<span class="ident">Label</span>(<span class="ident">attr_id</span>, <span class="ident">label</span>) <span class="op">=</span> <span class="ident">bytecode</span> {
                 <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">code</span>.<span class="ident">is_empty</span>() <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">code</span>[<span class="self">self</span>.<span class="ident">code</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span>].<span class="ident">is_branch</span>() {
@@ -1186,6 +1187,7 @@
             <span class="ident">code</span>: <span class="self">self</span>.<span class="ident">code</span>,
             <span class="ident">local_types</span>: <span class="self">self</span>.<span class="ident">local_types</span>,
             <span class="ident">return_types</span>: <span class="self">self</span>.<span class="ident">func_env</span>.<span class="ident">get_return_types</span>(),
+            <span class="ident">acquires_global_resources</span>: <span class="self">self</span>.<span class="ident">func_env</span>.<span class="ident">get_acquires_global_resources</span>(),
             <span class="ident">locations</span>: <span class="self">self</span>.<span class="ident">location_table</span>,
             <span class="ident">annotations</span>: <span class="ident">Annotations</span>::<span class="ident">default</span>(),
             <span class="ident">given_spec_blocks</span>,

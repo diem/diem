@@ -418,6 +418,39 @@
 <span id="418">418</span>
 <span id="419">419</span>
 <span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -472,7 +505,6 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">field_borrows</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">Lbl</span>, <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">RefID</span>, <span class="ident">Loc</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
         <span class="kw">for</span> (<span class="ident">borrower</span>, <span class="ident">edges</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">borrowed_by</span>.<span class="number">0</span> {
             <span class="kw">let</span> <span class="ident">borrower</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">borrower</span>;
-            <span class="kw">let</span> <span class="ident">edges</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">BorrowEdge</span><span class="op">&lt;</span><span class="ident">Loc</span>, <span class="ident">Lbl</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">edges</span>;
             <span class="kw">for</span> <span class="ident">edge</span> <span class="kw">in</span> <span class="ident">edges</span> {
                 <span class="kw">match</span> <span class="ident">edge</span>.<span class="ident">path</span>.<span class="ident">get</span>(<span class="number">0</span>) {
                     <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">full_borrows</span>.<span class="ident">insert</span>(<span class="ident">borrower</span>, <span class="ident">edge</span>.<span class="ident">loc</span>),
@@ -484,6 +516,40 @@
             }
         }
         (<span class="ident">full_borrows</span>, <span class="ident">field_borrows</span>)
+    }
+
+    <span class="doccomment">/// Return the edges between parent and child</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">between_edges</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">parent</span>: <span class="ident">RefID</span>, <span class="ident">child</span>: <span class="ident">RefID</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Loc</span>, <span class="ident">Path</span><span class="op">&lt;</span><span class="ident">Lbl</span><span class="op">&gt;</span>, <span class="ident">bool</span>)<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">edges</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">parent</span>).<span class="ident">unwrap</span>().<span class="ident">borrowed_by</span>.<span class="number">0</span>[<span class="kw-2">&amp;</span><span class="ident">child</span>];
+        <span class="ident">edges</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">edge</span><span class="op">|</span> (<span class="ident">edge</span>.<span class="ident">loc</span>, <span class="ident">edge</span>.<span class="ident">path</span>.<span class="ident">clone</span>(), <span class="ident">edge</span>.<span class="ident">strong</span>))
+            .<span class="ident">collect</span>()
+    }
+
+    <span class="doccomment">/// Return the outgoing edges from id</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">out_edges</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">id</span>: <span class="ident">RefID</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Loc</span>, <span class="ident">Path</span><span class="op">&lt;</span><span class="ident">Lbl</span><span class="op">&gt;</span>, <span class="ident">bool</span>, <span class="ident">RefID</span>)<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">returned_edges</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+        <span class="kw">let</span> <span class="ident">borrowed_by</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">id</span>).<span class="ident">unwrap</span>().<span class="ident">borrowed_by</span>;
+        <span class="kw">for</span> (<span class="ident">borrower</span>, <span class="ident">edges</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">borrowed_by</span>.<span class="number">0</span> {
+            <span class="kw">let</span> <span class="ident">borrower</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">borrower</span>;
+            <span class="kw">for</span> <span class="ident">edge</span> <span class="kw">in</span> <span class="ident">edges</span> {
+                <span class="ident">returned_edges</span>.<span class="ident">push</span>((<span class="ident">edge</span>.<span class="ident">loc</span>, <span class="ident">edge</span>.<span class="ident">path</span>.<span class="ident">clone</span>(), <span class="ident">edge</span>.<span class="ident">strong</span>, <span class="ident">borrower</span>));
+            }
+        }
+        <span class="ident">returned_edges</span>
+    }
+
+    <span class="doccomment">/// Return the incoming edges into id</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">in_edges</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">id</span>: <span class="ident">RefID</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Loc</span>, <span class="ident">RefID</span>, <span class="ident">Path</span><span class="op">&lt;</span><span class="ident">Lbl</span><span class="op">&gt;</span>, <span class="ident">bool</span>)<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">returned_edges</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+        <span class="kw">let</span> <span class="ident">borrows_from</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">id</span>).<span class="ident">unwrap</span>().<span class="ident">borrows_from</span>;
+        <span class="kw">for</span> <span class="ident">src</span> <span class="kw">in</span> <span class="ident">borrows_from</span> {
+            <span class="kw">for</span> <span class="ident">edge</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">between_edges</span>(<span class="kw-2">*</span><span class="ident">src</span>, <span class="ident">id</span>) {
+                <span class="ident">returned_edges</span>.<span class="ident">push</span>((<span class="ident">edge</span>.<span class="number">0</span>, <span class="kw-2">*</span><span class="ident">src</span>, <span class="ident">edge</span>.<span class="number">1</span>, <span class="ident">edge</span>.<span class="number">2</span>));
+            }
+        }
+        <span class="ident">returned_edges</span>
     }
 
     <span class="comment">//**********************************************************************************************</span>

@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["format_packref_annotation","Format a packref annotation."]],"struct":[["PackrefAnalysis",""],["PackrefAnalysisProcessor",""],["PackrefAnnotation",""],["PackrefInstrumentation",""]]});

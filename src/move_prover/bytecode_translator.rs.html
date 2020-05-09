@@ -1899,6 +1899,7 @@
 <span id="1899">1899</span>
 <span id="1900">1900</span>
 <span id="1901">1901</span>
+<span id="1902">1902</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2742,6 +2743,7 @@
 
         <span class="comment">// Translate the bytecode instruction.</span>
         <span class="kw">match</span> <span class="ident">bytecode</span> {
+            <span class="ident">WriteBack</span>(..) <span class="op">|</span> <span class="ident">UnpackRef</span>(..) <span class="op">|</span> <span class="ident">PackRef</span>(..) <span class="op">|</span> <span class="ident">Splice</span>(..) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unimplemented</span><span class="macro">!</span>(),
             <span class="ident">SpecBlock</span>(<span class="kw">_</span>, <span class="ident">block_id</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="self">self</span>.<span class="ident">generate_function_spec_inside_impl</span>(<span class="ident">func_target</span>, <span class="kw-2">*</span><span class="ident">block_id</span>);
             }
