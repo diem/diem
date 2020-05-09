@@ -1080,7 +1080,6 @@
 <span id="1080">1080</span>
 <span id="1081">1081</span>
 <span id="1082">1082</span>
-<span id="1083">1083</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1559,7 +1558,6 @@
                     <span class="self">self</span>.<span class="ident">temp_count</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
                 }
                 <span class="ident">arg_temp_indices</span>.<span class="ident">reverse</span>();
-                <span class="ident">return_temp_indices</span>.<span class="ident">reverse</span>();
                 <span class="kw">let</span> <span class="ident">callee_env</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">func_env</span>.<span class="ident">module_env</span>.<span class="ident">get_called_function</span>(<span class="kw-2">*</span><span class="ident">idx</span>);
                 <span class="self">self</span>.<span class="ident">code</span>.<span class="ident">push</span>(<span class="ident">mk_call</span>(
                     <span class="ident">Operation</span>::<span class="ident">Function</span>(

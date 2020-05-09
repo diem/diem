@@ -2265,7 +2265,7 @@
         <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_count</span>();
         <span class="kw">let</span> <span class="ident">var_name</span> <span class="op">=</span> <span class="kw">if</span> <span class="self">self</span>.<span class="ident">var_idx</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">n</span> {
             <span class="kw">if</span> <span class="ident">func_target</span>.<span class="ident">get_return_count</span>() <span class="op">&gt;</span> <span class="number">1</span> {
-                <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;result_{}&quot;</span>, <span class="self">self</span>.<span class="ident">var_idx</span> <span class="op">-</span> <span class="ident">n</span>)
+                <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;result_{}&quot;</span>, <span class="self">self</span>.<span class="ident">var_idx</span> <span class="op">-</span> <span class="ident">n</span> <span class="op">+</span> <span class="number">1</span>)
             } <span class="kw">else</span> {
                 <span class="string">&quot;result&quot;</span>.<span class="ident">to_string</span>()
             }
