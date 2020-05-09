@@ -156,6 +156,7 @@ impl NodeConfig {
         self.base.data_dir = data_dir.clone();
         self.consensus.set_data_dir(data_dir.clone());
         self.metrics.set_data_dir(data_dir.clone());
+        self.secure.set_data_dir(data_dir.clone());
         self.storage.set_data_dir(data_dir);
     }
 
