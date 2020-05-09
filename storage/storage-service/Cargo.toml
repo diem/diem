@@ -39,5 +39,4 @@ storage-client = { path = "../storage-client", version = "0.1.0"}
 
 [features]
 default = []
-testing = ["libradb/fuzzing", "rand"]
 fuzzing = ["proptest", "libradb/fuzzing", "rand"]

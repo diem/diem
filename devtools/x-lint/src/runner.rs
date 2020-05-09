@@ -69,33 +69,33 @@ impl<'cfg> LintEngineConfig<'cfg> {
 #[derive(Debug)]
 pub struct LintEngine<'cfg> {
     config: LintEngineConfig<'cfg>,
-
+    project_ctx: ProjectContext<'cfg>,
     // Caches to allow results to live as long as the engine itself.
     files_stdout: OnceCell<Vec<u8>>,
 }
 
 impl<'cfg> LintEngine<'cfg> {
     pub fn new(config: LintEngineConfig<'cfg>) -> Self {
+        let project_ctx = ProjectContext::new(config.core);
         Self {
             config,
+            project_ctx,
             files_stdout: OnceCell::new(),
         }
     }
 
-    pub fn run(&self) -> Result<LintResults> {
+    pub fn run<'l>(&'l self) -> Result<LintResults<'l>> {
         let mut skipped = vec![];
         let mut messages = vec![];
 
         // TODO: add support for file linters.
 
-        let project_ctx = ProjectContext::new(self.config.core);
-
         // Run project linters.
         if !self.config.project_linters.is_empty() {
             for linter in self.config.project_linters {
-                let source = project_ctx.source(linter.name());
+                let source = self.project_ctx.source(linter.name());
                 let mut formatter = LintFormatter::new(source, &mut messages);
-                match linter.run(&project_ctx, &mut formatter)? {
+                match linter.run(&self.project_ctx, &mut formatter)? {
                     RunStatus::Executed => {
                         // Lint ran successfully.
                     }
@@ -113,11 +113,15 @@ impl<'cfg> LintEngine<'cfg> {
 
         // Run package linters.
         if !self.config.package_linters.is_empty() {
-            let package_graph = project_ctx.package_graph()?;
+            let package_graph = self.project_ctx.package_graph()?;
 
             for (workspace_path, metadata) in package_graph.workspace().members() {
-                let package_ctx =
-                    PackageContext::new(project_ctx, package_graph, workspace_path, metadata);
+                let package_ctx = PackageContext::new(
+                    &self.project_ctx,
+                    package_graph,
+                    workspace_path,
+                    metadata,
+                )?;
                 for linter in self.config.package_linters {
                     let source = package_ctx.source(linter.name());
                     let mut formatter = LintFormatter::new(source, &mut messages);
@@ -146,7 +150,7 @@ impl<'cfg> LintEngine<'cfg> {
 
             let file_ctxs = file_list
                 .iter()
-                .map(|path| FileContext::new(project_ctx, path));
+                .map(|path| FileContext::new(&self.project_ctx, path));
 
             for file_ctx in file_ctxs {
                 let linters_to_run = self

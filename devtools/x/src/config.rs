@@ -42,6 +42,8 @@ pub struct WorkspaceConfig {
     pub enforced_attributes: EnforcedAttributesConfig,
     /// Banned direct dependencies
     pub banned_direct_deps: HashMap<String, String>,
+    /// Overlay config in this workspace
+    pub overlay: OverlayConfig,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -51,6 +53,13 @@ pub struct EnforcedAttributesConfig {
     pub authors: Option<Vec<String>>,
     /// Ensure the `license` field of every workspace crate is set to this.
     pub license: Option<String>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub struct OverlayConfig {
+    /// A list of overlay feature names
+    pub features: Vec<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
