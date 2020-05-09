@@ -8,6 +8,11 @@
 module VerifyVector {
     use 0x0::Vector;
 
+    spec module {
+        pragma verify = true;
+    }
+
+
     fun verify_model_empty<Element>() : vector<Element> {
         Vector::empty<Element>() // inlining the built-in Boogie procedure
     }

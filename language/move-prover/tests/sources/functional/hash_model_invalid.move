@@ -2,6 +2,11 @@ module TestHash {
 
     use 0x0::Hash;
 
+    spec module {
+        pragma verify = true;
+    }
+
+
     // sha2 test
     fun hash_test1(v1: vector<u8>, v2: vector<u8>): (vector<u8>, vector<u8>)
     {

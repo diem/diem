@@ -1,6 +1,10 @@
 module TestDefines {
 
     spec module {
+        pragma verify = true;
+    }
+
+    spec module {
         define in_range(x: num, min: num, max: num): bool {
             x >= min && x <= max
         }

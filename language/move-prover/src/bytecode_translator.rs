@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use itertools::Itertools;
 #[allow(unused_imports)]
-use log::{debug, info, warn};
+use log::{debug, info, log, warn, Level};
 
 use spec_lang::{
     env::{GlobalEnv, Loc, ModuleEnv, StructEnv, TypeParameter},
@@ -123,7 +123,12 @@ impl<'env> ModuleTranslator<'env> {
 
     /// Translates this module.
     fn translate(&mut self) {
-        info!(
+        log!(
+            if self.module_env.is_in_dependency() {
+                Level::Debug
+            } else {
+                Level::Info
+            },
             "translating module {}",
             self.module_env
                 .get_name()
@@ -345,8 +350,8 @@ impl<'env> ModuleTranslator<'env> {
             self.writer.set_location(&func_env.get_loc());
             self.translate_function(&self.targets.get_target(&func_env));
         }
-        if num_fun > 0 {
-            info!(
+        if num_fun > 0 && !self.module_env.is_in_dependency() {
+            debug!(
                 "{} out of {} functions have (directly or indirectly) \
                  specifications in module `{}`",
                 num_fun_specified,

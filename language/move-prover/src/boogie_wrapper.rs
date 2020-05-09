@@ -94,33 +94,49 @@ pub enum TraceKind {
 impl<'env> BoogieWrapper<'env> {
     /// Calls boogie on the given file. On success, returns a struct representing the analyzed
     /// output of boogie.
-    pub fn call_boogie(&self, boogie_file: &str) -> anyhow::Result<BoogieOutput> {
+    pub fn call_boogie(
+        &self,
+        bench_repeat: usize,
+        boogie_file: &str,
+    ) -> anyhow::Result<BoogieOutput> {
         let args = self.options.get_boogie_command(boogie_file);
-        info!("calling boogie");
+        info!("running solver");
         debug!("command line: {}", args.iter().join(" "));
-        let output = Command::new(&args[0]).args(&args[1..]).output()?;
-        if !output.status.success() {
-            Err(anyhow!(
-                "boogie exited with status {:?}",
-                output.status.code()
-            ))
-        } else {
-            info!("analyzing boogie output");
-            let out = String::from_utf8_lossy(&output.stdout).to_string();
-            let mut errors = self.extract_verification_errors(&out);
-            errors.extend(self.extract_compilation_errors(&out));
-            Ok(BoogieOutput {
-                errors,
-                all_output: out,
-            })
+        for count in 0..bench_repeat {
+            let output = Command::new(&args[0]).args(&args[1..]).output()?;
+            if !output.status.success() {
+                return Err(anyhow!(
+                    "boogie exited with status {:?}",
+                    output.status.code()
+                ));
+            } else if count == bench_repeat - 1 {
+                if count > 0 {
+                    info!("run #{} done", count + 1);
+                }
+                debug!("analyzing boogie output");
+                let out = String::from_utf8_lossy(&output.stdout).to_string();
+                let mut errors = self.extract_verification_errors(&out);
+                errors.extend(self.extract_compilation_errors(&out));
+                return Ok(BoogieOutput {
+                    errors,
+                    all_output: out,
+                });
+            } else {
+                info!("run #{} done", count + 1);
+            }
         }
+        Err(anyhow!("--bench-repeat=0, prover not run!"))
     }
 
     /// Calls boogie and analyzes output.
-    pub fn call_boogie_and_verify_output(&self, boogie_file: &str) -> anyhow::Result<()> {
-        let BoogieOutput { errors, all_output } = self.call_boogie(boogie_file)?;
+    pub fn call_boogie_and_verify_output(
+        &self,
+        bench_repeat: usize,
+        boogie_file: &str,
+    ) -> anyhow::Result<()> {
+        let BoogieOutput { errors, all_output } = self.call_boogie(bench_repeat, boogie_file)?;
         let boogie_log_file = self.options.get_boogie_log_file(boogie_file);
-        info!("writing boogie log to {}", boogie_log_file);
+        debug!("writing boogie log to {}", boogie_log_file);
         fs::write(&boogie_log_file, &all_output)?;
 
         for error in &errors {

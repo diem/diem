@@ -1,29 +1,29 @@
 Move prover returns: exiting with boogie verification errors
 error: abort not covered by any of the `aborts_if` clauses
 
-    ┌── tests/sources/functional/schema_exp.move:20:5 ───
+    ┌── tests/sources/functional/schema_exp.move:25:5 ───
     │
- 20 │ ╭     fun bar_incorrect(c: bool) {
- 21 │ │         if (!c) abort(1);
- 22 │ │     }
+ 25 │ ╭     fun bar_incorrect(c: bool) {
+ 26 │ │         if (!c) abort(1);
+ 27 │ │     }
     │ ╰─────^
     ·
- 21 │         if (!c) abort(1);
+ 26 │         if (!c) abort(1);
     │         ---------------- abort happened here
     │
-    =     at tests/sources/functional/schema_exp.move:20:5: bar_incorrect (entry)
-    =     at tests/sources/functional/schema_exp.move:21:9: bar_incorrect (ABORTED)
+    =     at tests/sources/functional/schema_exp.move:25:5: bar_incorrect (entry)
+    =     at tests/sources/functional/schema_exp.move:26:9: bar_incorrect (ABORTED)
     =         c = <redacted>
 
 error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/functional/schema_exp.move:42:9 ───
+    ┌── tests/sources/functional/schema_exp.move:47:9 ───
     │
- 42 │         ensures result == i + 2;
+ 47 │         ensures result == i + 2;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/schema_exp.move:48:5: baz_incorrect (entry)
-    =     at tests/sources/functional/schema_exp.move:49:11: baz_incorrect
+    =     at tests/sources/functional/schema_exp.move:53:5: baz_incorrect (entry)
+    =     at tests/sources/functional/schema_exp.move:54:11: baz_incorrect
     =         i = <redacted>,
     =         result = <redacted>
-    =     at tests/sources/functional/schema_exp.move:48:5: baz_incorrect (exit)
+    =     at tests/sources/functional/schema_exp.move:53:5: baz_incorrect (exit)

@@ -1,5 +1,10 @@
 module TestInvariants {
 
+    spec module {
+        pragma verify = true;
+    }
+
+
     // General invariant checking.
 
     struct R {

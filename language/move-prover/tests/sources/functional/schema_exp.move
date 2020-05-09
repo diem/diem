@@ -1,5 +1,10 @@
 module TestSchemaExp {
 
+    spec module {
+        pragma verify = true;
+    }
+
+
     spec schema Aborts {
         aborts_if true;
     }

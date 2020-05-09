@@ -4,6 +4,11 @@
 module TestVector {
     use 0x0::Vector;
 
+    spec module {
+        pragma verify = true;
+    }
+
+
 
     // -----------------------------
     // Testing with concrete vectors

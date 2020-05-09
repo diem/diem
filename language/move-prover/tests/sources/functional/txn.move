@@ -3,6 +3,11 @@ address 0x0 {
 module TestTransaction {
     use 0x0::Transaction;
 
+    spec module {
+        pragma verify = true;
+    }
+
+
     resource struct T {
         value: u128,
     }

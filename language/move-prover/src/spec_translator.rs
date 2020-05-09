@@ -443,10 +443,10 @@ impl<'env> SpecTranslator<'env> {
     /// the struct is not mutated.
     fn translate_assume_well_formed(&self, struct_env: &StructEnv<'env>) {
         let emit_field_checks = |mode: WellFormedMode| {
-            emitln!(self.writer, "is#Vector($this)");
+            emitln!(self.writer, "$Vector_is_well_formed($this)");
             emitln!(
                 self.writer,
-                "  && $vlen($this) == {}",
+                "&& $vlen($this) == {}",
                 struct_env.get_fields().count()
             );
             for field in struct_env.get_fields() {

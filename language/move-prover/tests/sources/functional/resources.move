@@ -1,6 +1,11 @@
 module TestResources {
     use 0x0::Transaction;
 
+    spec module {
+        pragma verify = true;
+    }
+
+
     // ---------------
     // Simple resource
     // ---------------
@@ -9,7 +14,7 @@ module TestResources {
         x: u64
     }
 
-    fun create_resource() {
+    public fun create_resource() {
         move_to_sender<R>(R{x:1});
     }
     spec fun create_resource {
@@ -17,7 +22,7 @@ module TestResources {
         ensures exists<R>(sender());
     }
 
-    fun create_resource_incorrect() {
+    public fun create_resource_incorrect() {
         if(exists<R>(Transaction::sender())) {
             abort 1
         };
@@ -27,7 +32,7 @@ module TestResources {
      ensures exists<R>(sender());
     }
 
-    fun move_from_addr(a: address) acquires R {
+    public fun move_from_addr(a: address) acquires R {
         let r = move_from<R>(a);
         let R{x: _} = r;
     }
@@ -35,7 +40,7 @@ module TestResources {
         aborts_if !exists<R>(a);
     }
 
-    fun move_from_addr_to_sender(a: address) acquires R {
+    public fun move_from_addr_to_sender(a: address) acquires R {
         let r = move_from<R>(a);
         let R{x: x} = r;
         move_to_sender<R>(R{x: x});
@@ -49,7 +54,7 @@ module TestResources {
         ensures old(global<R>(a)) == global<R>(sender());
     }
 
-    fun move_from_addr_and_return(a: address): R acquires R {
+    public fun move_from_addr_and_return(a: address): R acquires R {
         let r = move_from<R>(a);
         let R{x: x} = r;
         R{x: x}
@@ -61,7 +66,7 @@ module TestResources {
         ensures result == old(global<R>(a));
     }
 
-    fun move_from_sender_and_return(): R acquires R {
+    public fun move_from_sender_and_return(): R acquires R {
         let r = move_from<R>(Transaction::sender());
         let R{x: x} = r;
         R{x: x}
@@ -72,7 +77,7 @@ module TestResources {
         ensures result == old(global<R>(sender()));
     }
 
-    fun move_from_sender_to_sender() acquires R {
+    public fun move_from_sender_to_sender() acquires R {
         let r = move_from<R>(Transaction::sender());
         let R{x: x} = r;
         move_to_sender<R>(R{x: x});
@@ -84,7 +89,7 @@ module TestResources {
         ensures old(global<R>(sender())) == global<R>(sender());
     }
 
-    fun borrow_global_mut_correct(a: address) acquires R {
+    public fun borrow_global_mut_correct(a: address) acquires R {
         let r = borrow_global_mut<R>(a);
         _ = r;
         let r2 = borrow_global_mut<R>(a);
@@ -114,7 +119,7 @@ module TestResources {
         b: B,
     }
 
-    fun identity(a: A, b: B, c: C): (A,B,C) {
+    public fun identity(a: A, b: B, c: C): (A,B,C) {
         (a, b, c)
     }
     spec fun identity {
@@ -124,7 +129,7 @@ module TestResources {
         ensures result_3 == c;
     }
 
-    fun pack_A(a: address, va: u64): A {
+    public fun pack_A(a: address, va: u64): A {
         A{ addr:a, val:va }
     }
     spec fun pack_A {
@@ -133,7 +138,7 @@ module TestResources {
         ensures result.val == va;
     }
 
-    fun pack_B(a: address, va: u64, vb: u64): B {
+    public fun pack_B(a: address, va: u64, vb: u64): B {
         let var_a = A{ addr: a, val: va };
         let var_b = B{ val: vb, a: var_a };
         var_b
@@ -145,7 +150,7 @@ module TestResources {
         ensures result.a.addr == a;
     }
 
-    fun pack_C(a: address, va: u64, vb: u64, vc: u64): C {
+    public fun pack_C(a: address, va: u64, vb: u64, vc: u64): C {
         let var_a = A{ addr: a, val: va };
         let var_b = B{ val: vb, a: var_a };
         let var_c = C{ val: vc, b: var_b };
@@ -159,7 +164,7 @@ module TestResources {
         ensures result.b.a.addr == a;
     }
 
-    fun unpack_A(a: address, va: u64): (address, u64) {
+    public fun unpack_A(a: address, va: u64): (address, u64) {
         let var_a = A{ addr:a, val:va };
         let A{addr: aa, val:v1} = var_a;
         (aa, v1)
@@ -170,7 +175,7 @@ module TestResources {
         ensures result_2 == va;
     }
 
-    fun unpack_B(a: address, va: u64, vb: u64): (address, u64, u64) {
+    public fun unpack_B(a: address, va: u64, vb: u64): (address, u64, u64) {
         let var_a = A{ addr: a, val: va };
         let var_b = B{ val: vb, a: var_a };
         let B{val: v2, a: A{ addr:aa, val: v1}} = var_b;
@@ -183,7 +188,7 @@ module TestResources {
         ensures result_3 == vb;
     }
 
-    fun unpack_C(a: address, va: u64, vb: u64, vc: u64): (address, u64, u64, u64) {
+    public fun unpack_C(a: address, va: u64, vb: u64, vc: u64): (address, u64, u64, u64) {
         let var_a = A{ addr: a, val: va };
         let var_b = B{ val: vb, a: var_a };
         let var_c = C{ val: vc, b: var_b };
@@ -198,7 +203,7 @@ module TestResources {
         ensures result_4 == vc;
     }
 
-    fun ref_A(a: address, b: bool): A {
+    public fun ref_A(a: address, b: bool): A {
         let var_a = if (b) A{ addr: a, val: 1 }
                     else A{ addr: a, val: 42 };
         let var_a_ref = &var_a;
@@ -217,7 +222,7 @@ module TestResources {
     // Packs in spec
     // ---------------
 
-    fun spec_pack_R(): R {
+    public fun spec_pack_R(): R {
         R{x: 7}
     }
     spec fun spec_pack_R {
@@ -226,7 +231,7 @@ module TestResources {
         ensures result == R{x: 7};
     }
 
-    fun spec_pack_A(): A {
+    public fun spec_pack_A(): A {
         A{ addr: Transaction::sender(), val: 7 }
     }
     spec fun spec_pack_A {
@@ -237,7 +242,7 @@ module TestResources {
         ensures result == A{ val: 7, addr: sender() };
     }
 
-    fun spec_pack_B(): B {
+    public fun spec_pack_B(): B {
         B{ val: 77, a: A{ addr: Transaction::sender(), val: 7 }}
     }
     spec fun spec_pack_B {

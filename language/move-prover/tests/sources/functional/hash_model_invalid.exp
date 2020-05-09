@@ -1,38 +1,38 @@
 Move prover returns: exiting with boogie verification errors
 error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/functional/hash_model_invalid.move:17:9 ───
+    ┌── tests/sources/functional/hash_model_invalid.move:22:9 ───
     │
- 17 │         ensures len(result_1) > 0 ==> result_1[0] < max_u8(); // should be <=
+ 22 │         ensures len(result_1) > 0 ==> result_1[0] < max_u8(); // should be <=
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/hash_model_invalid.move:6:5: hash_test1 (entry)
-    =     at tests/sources/functional/hash_model_invalid.move:8:24: hash_test1
+    =     at tests/sources/functional/hash_model_invalid.move:11:5: hash_test1 (entry)
+    =     at tests/sources/functional/hash_model_invalid.move:13:24: hash_test1
     =         v1 = <redacted>,
     =         v2 = <redacted>,
     =         h1 = <redacted>
-    =     at tests/sources/functional/hash_model_invalid.move:9:33: hash_test1
+    =     at tests/sources/functional/hash_model_invalid.move:14:33: hash_test1
     =         h2 = <redacted>
-    =     at tests/sources/functional/hash_model_invalid.move:10:10: hash_test1
+    =     at tests/sources/functional/hash_model_invalid.move:15:10: hash_test1
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
-    =     at tests/sources/functional/hash_model_invalid.move:6:5: hash_test1 (exit)
+    =     at tests/sources/functional/hash_model_invalid.move:11:5: hash_test1 (exit)
 
 error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/functional/hash_model_invalid.move:30:9 ───
+    ┌── tests/sources/functional/hash_model_invalid.move:35:9 ───
     │
- 30 │         ensures len(result_1) > 0 ==> result_1[0] < max_u8();
+ 35 │         ensures len(result_1) > 0 ==> result_1[0] < max_u8();
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/hash_model_invalid.move:21:5: hash_test2 (entry)
-    =     at tests/sources/functional/hash_model_invalid.move:23:24: hash_test2
+    =     at tests/sources/functional/hash_model_invalid.move:26:5: hash_test2 (entry)
+    =     at tests/sources/functional/hash_model_invalid.move:28:24: hash_test2
     =         v1 = <redacted>,
     =         v2 = <redacted>,
     =         h1 = <redacted>
-    =     at tests/sources/functional/hash_model_invalid.move:24:33: hash_test2
+    =     at tests/sources/functional/hash_model_invalid.move:29:33: hash_test2
     =         h2 = <redacted>
-    =     at tests/sources/functional/hash_model_invalid.move:25:10: hash_test2
+    =     at tests/sources/functional/hash_model_invalid.move:30:10: hash_test2
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
-    =     at tests/sources/functional/hash_model_invalid.move:21:5: hash_test2 (exit)
+    =     at tests/sources/functional/hash_model_invalid.move:26:5: hash_test2 (exit)

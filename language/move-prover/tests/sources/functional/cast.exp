@@ -1,32 +1,32 @@
 Move prover returns: exiting with boogie verification errors
 error: abort not covered by any of the `aborts_if` clauses
 
-    ┌── tests/sources/functional/cast.move:40:5 ───
+    ┌── tests/sources/functional/cast.move:44:5 ───
     │
- 40 │ ╭     fun aborting_u64_cast_incorrect(x: u128): u64 {
- 41 │ │         (x as u64)
- 42 │ │     }
+ 44 │ ╭     fun aborting_u64_cast_incorrect(x: u128): u64 {
+ 45 │ │         (x as u64)
+ 46 │ │     }
     │ ╰─────^
     ·
- 41 │         (x as u64)
+ 45 │         (x as u64)
     │         ---------- abort happened here
     │
-    =     at tests/sources/functional/cast.move:40:5: aborting_u64_cast_incorrect (entry)
-    =     at tests/sources/functional/cast.move:41:9: aborting_u64_cast_incorrect (ABORTED)
+    =     at tests/sources/functional/cast.move:44:5: aborting_u64_cast_incorrect (entry)
+    =     at tests/sources/functional/cast.move:45:9: aborting_u64_cast_incorrect (ABORTED)
     =         x = <redacted>
 
 error: abort not covered by any of the `aborts_if` clauses
 
-    ┌── tests/sources/functional/cast.move:26:5 ───
+    ┌── tests/sources/functional/cast.move:30:5 ───
     │
- 26 │ ╭     fun aborting_u8_cast_incorrect(x: u64): u8 {
- 27 │ │         (x as u8)
- 28 │ │     }
+ 30 │ ╭     fun aborting_u8_cast_incorrect(x: u64): u8 {
+ 31 │ │         (x as u8)
+ 32 │ │     }
     │ ╰─────^
     ·
- 27 │         (x as u8)
+ 31 │         (x as u8)
     │         --------- abort happened here
     │
-    =     at tests/sources/functional/cast.move:26:5: aborting_u8_cast_incorrect (entry)
-    =     at tests/sources/functional/cast.move:27:9: aborting_u8_cast_incorrect (ABORTED)
+    =     at tests/sources/functional/cast.move:30:5: aborting_u8_cast_incorrect (entry)
+    =     at tests/sources/functional/cast.move:31:9: aborting_u8_cast_incorrect (ABORTED)
     =         x = <redacted>

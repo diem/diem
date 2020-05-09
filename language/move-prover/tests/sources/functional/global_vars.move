@@ -1,4 +1,7 @@
 module TestGlobalVars {
+    spec module {
+        pragma verify = true;
+    }
 
     spec module {
         global sum_of_T: u64;
