@@ -185,10 +185,7 @@ impl PackageLinter for WorkspaceHack {
         out: &mut LintFormatter<'l, '_>,
     ) -> Result<RunStatus<'l>> {
         let package = ctx.metadata();
-        let pkg_graph = ctx
-            .project_ctx()
-            .package_graph()
-            .expect("can't find package graph");
+        let pkg_graph = ctx.package_graph();
         let workspace_hack_id = pkg_graph
             .workspace()
             .member_by_name("libra-workspace-hack")

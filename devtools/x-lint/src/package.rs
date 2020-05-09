@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{prelude::*, LintContext};
-use guppy::graph::PackageMetadata;
+use guppy::graph::{PackageGraph, PackageMetadata};
 use std::path::Path;
 
 /// Represents a linter that runs once per package.
@@ -18,6 +18,9 @@ pub trait PackageLinter: Linter {
 #[derive(Copy, Clone, Debug)]
 pub struct PackageContext<'l> {
     project_ctx: ProjectContext<'l>,
+    // PackageContext requires the package graph to be computed and available, though ProjectContext
+    // does not.
+    package_graph: &'l PackageGraph,
     workspace_path: &'l Path,
     metadata: PackageMetadata<'l>,
 }
@@ -25,19 +28,26 @@ pub struct PackageContext<'l> {
 impl<'l> PackageContext<'l> {
     pub fn new(
         project_ctx: ProjectContext<'l>,
+        package_graph: &'l PackageGraph,
         workspace_path: &'l Path,
         metadata: PackageMetadata<'l>,
     ) -> Self {
         Self {
             project_ctx,
+            package_graph,
             workspace_path,
             metadata,
         }
     }
 
-    /// Returns the project context
+    /// Returns the project context.
     pub fn project_ctx(&self) -> &ProjectContext<'l> {
         &self.project_ctx
+    }
+
+    /// Returns the package graph.
+    pub fn package_graph(&self) -> &'l PackageGraph {
+        self.package_graph
     }
 
     /// Returns the relative path for this package in the workspace.
