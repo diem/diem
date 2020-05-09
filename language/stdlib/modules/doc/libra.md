@@ -17,9 +17,9 @@
 -  [Struct `Preburn`](#0x0_Libra_Preburn)
 -  [Struct `AddCurrency`](#0x0_Libra_AddCurrency)
 -  [Function `initialize`](#0x0_Libra_initialize)
--  [Function `grant_mint_capability`](#0x0_Libra_grant_mint_capability)
--  [Function `grant_burn_capability`](#0x0_Libra_grant_burn_capability)
--  [Function `grant_burn_capability_for_sender`](#0x0_Libra_grant_burn_capability_for_sender)
+-  [Function `grant_mint_capability_to_association`](#0x0_Libra_grant_mint_capability_to_association)
+-  [Function `publish_mint_capability`](#0x0_Libra_publish_mint_capability)
+-  [Function `publish_burn_capability`](#0x0_Libra_publish_burn_capability)
 -  [Function `mint`](#0x0_Libra_mint)
 -  [Function `burn`](#0x0_Libra_burn)
 -  [Function `cancel_burn`](#0x0_Libra_cancel_burn)
@@ -32,7 +32,6 @@
 -  [Function `burn_with_resource_cap`](#0x0_Libra_burn_with_resource_cap)
 -  [Function `cancel_burn_with_capability`](#0x0_Libra_cancel_burn_with_capability)
 -  [Function `publish_preburn`](#0x0_Libra_publish_preburn)
--  [Function `publish_mint_capability`](#0x0_Libra_publish_mint_capability)
 -  [Function `remove_preburn`](#0x0_Libra_remove_preburn)
 -  [Function `destroy_preburn`](#0x0_Libra_destroy_preburn)
 -  [Function `remove_mint_capability`](#0x0_Libra_remove_mint_capability)
@@ -515,7 +514,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_initialize">initialize</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_initialize">initialize</a>(config_account: &signer)
 </code></pre>
 
 
@@ -524,11 +523,13 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_initialize">initialize</a>() {
-    <a href="association.md#0x0_Association_assert_sender_is_association">Association::assert_sender_is_association</a>();
-    Transaction::assert(Transaction::sender() == <a href="libra_configs.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>(), 0);
-    <b>let</b> cap = <a href="registered_currencies.md#0x0_RegisteredCurrencies_initialize">RegisteredCurrencies::initialize</a>();
-    move_to_sender(<a href="#0x0_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>{ cap })
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_initialize">initialize</a>(config_account: &signer) {
+    Transaction::assert(
+        <a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="libra_configs.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>(),
+        0
+    );
+    <b>let</b> cap = <a href="registered_currencies.md#0x0_RegisteredCurrencies_initialize">RegisteredCurrencies::initialize</a>(config_account);
+    move_to(config_account, <a href="#0x0_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>{ cap })
 }
 </code></pre>
 
@@ -536,13 +537,13 @@
 
 </details>
 
-<a name="0x0_Libra_grant_mint_capability"></a>
+<a name="0x0_Libra_grant_mint_capability_to_association"></a>
 
-## Function `grant_mint_capability`
+## Function `grant_mint_capability_to_association`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_grant_mint_capability">grant_mint_capability</a>&lt;CoinType&gt;(): <a href="#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_grant_mint_capability_to_association">grant_mint_capability_to_association</a>&lt;CoinType&gt;(association: &signer)
 </code></pre>
 
 
@@ -551,9 +552,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_grant_mint_capability">grant_mint_capability</a>&lt;CoinType&gt;(): <a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt; {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_grant_mint_capability_to_association">grant_mint_capability_to_association</a>&lt;CoinType&gt;(association: &signer) {
     <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;();
-    <a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt; { }
+    move_to(association, <a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;{})
 }
 </code></pre>
 
@@ -561,13 +562,13 @@
 
 </details>
 
-<a name="0x0_Libra_grant_burn_capability"></a>
+<a name="0x0_Libra_publish_mint_capability"></a>
 
-## Function `grant_burn_capability`
+## Function `publish_mint_capability`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_grant_burn_capability">grant_burn_capability</a>&lt;CoinType&gt;(): <a href="#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_mint_capability">publish_mint_capability</a>&lt;CoinType&gt;(account: &signer, cap: <a href="#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -576,9 +577,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_grant_burn_capability">grant_burn_capability</a>&lt;CoinType&gt;(): <a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt; {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_mint_capability">publish_mint_capability</a>&lt;CoinType&gt;(account: &signer, cap: <a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;) {
     <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;();
-    <a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt; { }
+    move_to(account, cap)
 }
 </code></pre>
 
@@ -586,13 +587,13 @@
 
 </details>
 
-<a name="0x0_Libra_grant_burn_capability_for_sender"></a>
+<a name="0x0_Libra_publish_burn_capability"></a>
 
-## Function `grant_burn_capability_for_sender`
+## Function `publish_burn_capability`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_grant_burn_capability_for_sender">grant_burn_capability_for_sender</a>&lt;CoinType&gt;()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_burn_capability">publish_burn_capability</a>&lt;CoinType&gt;(account: &signer, cap: <a href="#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -601,9 +602,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_grant_burn_capability_for_sender">grant_burn_capability_for_sender</a>&lt;CoinType&gt;() {
-    Transaction::assert(Transaction::sender() == 0xB1E55ED, 0);
-    move_to_sender(<a href="#0x0_Libra_grant_burn_capability">grant_burn_capability</a>&lt;CoinType&gt;());
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_burn_capability">publish_burn_capability</a>&lt;CoinType&gt;(account: &signer, cap: <a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;) {
+    <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;();
+    move_to(account, cap)
 }
 </code></pre>
 
@@ -1015,30 +1016,6 @@
 
 </details>
 
-<a name="0x0_Libra_publish_mint_capability"></a>
-
-## Function `publish_mint_capability`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_mint_capability">publish_mint_capability</a>&lt;Token&gt;(capability: <a href="#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;Token&gt;)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_mint_capability">publish_mint_capability</a>&lt;Token&gt;(capability: <a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;Token&gt;) {
-    move_to_sender(capability)
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x0_Libra_remove_preburn"></a>
 
 ## Function `remove_preburn`
@@ -1342,7 +1319,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_register_currency">register_currency</a>&lt;CoinType&gt;(to_lbr_exchange_rate: <a href="fixedpoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a>, is_synthetic: bool, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_register_currency">register_currency</a>&lt;CoinType&gt;(account: &signer, to_lbr_exchange_rate: <a href="fixedpoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a>, is_synthetic: bool, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;): (<a href="#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;, <a href="#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -1352,18 +1329,18 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_register_currency">register_currency</a>&lt;CoinType&gt;(
+    account: &signer,
     to_lbr_exchange_rate: <a href="fixedpoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a>,
     is_synthetic: bool,
     scaling_factor: u64,
     fractional_part: u64,
     currency_code: vector&lt;u8&gt;,
-) <b>acquires</b> <a href="#0x0_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a> {
+): (<a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;, <a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;)
+<b>acquires</b> <a href="#0x0_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a> {
     // And only callable by the designated currency address.
     Transaction::assert(<a href="association.md#0x0_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x0_Libra_AddCurrency">AddCurrency</a>&gt;(Transaction::sender()), 8);
 
-    move_to_sender(<a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;{});
-    move_to_sender(<a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;{});
-    move_to_sender(<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt; {
+    move_to(account, <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt; {
         total_value: 0,
         preburn_value: 0,
         to_lbr_exchange_rate,
@@ -1372,15 +1349,16 @@
         fractional_part,
         currency_code: <b>copy</b> currency_code,
         can_mint: <b>true</b>,
-        mint_events: <a href="event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_Libra_MintEvent">MintEvent</a>&gt;(),
-        burn_events: <a href="event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_Libra_BurnEvent">BurnEvent</a>&gt;(),
-        preburn_events: <a href="event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_Libra_PreburnEvent">PreburnEvent</a>&gt;(),
-        cancel_burn_events: <a href="event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_Libra_CancelBurnEvent">CancelBurnEvent</a>&gt;()
+        mint_events: <a href="event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_Libra_MintEvent">MintEvent</a>&gt;(account),
+        burn_events: <a href="event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_Libra_BurnEvent">BurnEvent</a>&gt;(account),
+        preburn_events: <a href="event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_Libra_PreburnEvent">PreburnEvent</a>&gt;(account),
+        cancel_burn_events: <a href="event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_Libra_CancelBurnEvent">CancelBurnEvent</a>&gt;(account)
     });
     <a href="registered_currencies.md#0x0_RegisteredCurrencies_add_currency_code">RegisteredCurrencies::add_currency_code</a>(
         currency_code,
         &borrow_global&lt;<a href="#0x0_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>&gt;(<a href="libra_configs.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>()).cap
-    )
+    );
+    (<a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;{}, <a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;{})
 }
 </code></pre>
 
@@ -1800,7 +1778,7 @@
 ### Function `register_currency`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_register_currency">register_currency</a>&lt;CoinType&gt;(to_lbr_exchange_rate: <a href="fixedpoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a>, is_synthetic: bool, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_register_currency">register_currency</a>&lt;CoinType&gt;(account: &signer, to_lbr_exchange_rate: <a href="fixedpoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a>, is_synthetic: bool, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;): (<a href="#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;, <a href="#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
 </code></pre>
 
 

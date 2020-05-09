@@ -88,9 +88,7 @@ pub fn encode_genesis_change_set(
 
     // generate the genesis WriteSet
     create_and_initialize_main_accounts(&mut genesis_context, &public_key, &lbr_ty);
-    create_and_initialize_validator_set(&mut genesis_context, &lbr_ty);
     initialize_validators(&mut genesis_context, &validators, &lbr_ty);
-    setup_libra_version(&mut genesis_context);
     setup_vm_config(&mut genesis_context, vm_publishing_option);
     reconfigure(&mut genesis_context);
 
@@ -132,79 +130,51 @@ fn create_and_initialize_main_accounts(
     public_key: &Ed25519PublicKey,
     lbr_ty: &TypeTag,
 ) {
-    let genesis_auth_key = AuthenticationKey::ed25519(public_key).to_vec();
+    let genesis_auth_key = AuthenticationKey::ed25519(public_key);
 
     let root_association_address = account_config::association_address();
     let tc_account_address = account_config::treasury_compliance_account_address();
     let fee_account_address = account_config::transaction_fee_address();
 
     context.set_sender(root_association_address);
-
     context.exec(
         GENESIS_MODULE_NAME,
-        "initialize_association",
-        vec![],
-        vec![Value::address(root_association_address)],
-    );
-
-    context.set_sender(config_address());
-    context.exec(GENESIS_MODULE_NAME, "initialize_config", vec![], vec![]);
-
-    context.set_sender(root_association_address);
-    context.exec(
-        "LibraConfig",
-        "grant_creator_privilege",
-        vec![],
-        vec![Value::address(config_address())],
-    );
-    context.set_sender(config_address());
-    context.exec("Libra", "initialize", vec![], vec![]);
-
-    context.set_sender(root_association_address);
-    context.exec(
-        GENESIS_MODULE_NAME,
-        "initialize_accounts",
+        "initialize",
         vec![],
         vec![
-            Value::address(root_association_address),
+            Value::transaction_argument_signer_reference(root_association_address),
+            Value::transaction_argument_signer_reference(config_address()),
             Value::address(tc_account_address),
-            Value::vector_u8(genesis_auth_key.clone()),
+            Value::vector_u8(AuthenticationKey::prefix(&genesis_auth_key).to_vec()), // TODO: different key here?
+            Value::vector_u8(genesis_auth_key.to_vec()),
         ],
     );
 
-    context.set_sender(tc_account_address);
-    context.exec(GENESIS_MODULE_NAME, "initalize_tc_account", vec![], vec![]);
-
-    context.set_sender(root_association_address);
-    context.exec(
-        GENESIS_MODULE_NAME,
-        "grant_tc_account",
-        vec![],
-        vec![Value::address(tc_account_address)],
-    );
-
-    context.set_sender(tc_account_address);
-    context.exec(
-        GENESIS_MODULE_NAME,
-        "grant_tc_capabilities_for_sender",
-        vec![],
-        vec![Value::vector_u8(genesis_auth_key.clone())],
-    );
-
-    context.set_sender(fee_account_address);
-    context.exec(
-        GENESIS_MODULE_NAME,
-        "initialize_txn_fee_account",
-        vec![],
-        vec![Value::vector_u8(genesis_auth_key.clone())],
-    );
-
+    // TODO: use signer to eliminate this
     context.set_sender(config_address());
     context.exec(
         "LibraAccount",
         "rotate_authentication_key",
         vec![],
-        vec![Value::vector_u8(genesis_auth_key)],
+        vec![Value::vector_u8(genesis_auth_key.to_vec())],
+    );
+
+    // TODO: use signer to eliminate this
+    context.set_sender(account_config::treasury_compliance_account_address());
+    context.exec(
+        "LibraAccount",
+        "rotate_authentication_key",
+        vec![],
+        vec![Value::vector_u8(genesis_auth_key.to_vec())],
+    );
+
+    // TODO: use signer to eliminate this
+    context.set_sender(fee_account_address);
+    context.exec(
+        GENESIS_MODULE_NAME,
+        "initialize_txn_fee_account",
+        vec![],
+        vec![Value::vector_u8(genesis_auth_key.to_vec())],
     );
 
     context.set_sender(root_association_address);
@@ -223,12 +193,6 @@ fn create_and_initialize_main_accounts(
             Value::u64(/* gas_units_remaining */ 0),
         ],
     );
-}
-
-/// Create and initialize the validator set.
-fn create_and_initialize_validator_set(context: &mut GenesisContext, _lbr_ty: &TypeTag) {
-    context.set_sender(config_address());
-    context.exec("LibraSystem", "initialize_validator_set", vec![], vec![]);
 }
 
 /// Initialize each validator.
@@ -281,13 +245,9 @@ fn setup_vm_config(context: &mut GenesisContext, publishing_option: VMPublishing
             Value::vector_u8(option_bytes),
             Value::vector_u8(INITIAL_GAS_SCHEDULE.0.clone()),
             Value::vector_u8(INITIAL_GAS_SCHEDULE.1.clone()),
+            Value::transaction_argument_signer_reference(config_address()),
         ],
     );
-}
-
-fn setup_libra_version(context: &mut GenesisContext) {
-    context.set_sender(config_address());
-    context.exec("LibraVersion", "initialize", vec![], vec![]);
 }
 
 fn remove_genesis(stdlib_modules: &[VerifiedModule]) -> impl Iterator<Item = &VerifiedModule> {
@@ -311,7 +271,6 @@ fn publish_stdlib(interpreter_context: &mut dyn DataStore, stdlib: &[VerifiedMod
 /// Trigger a reconfiguration. This emits an event that will be passed along to the storage layer.
 fn reconfigure(context: &mut GenesisContext) {
     context.set_sender(account_config::association_address());
-    context.exec("LibraTimestamp", "initialize", vec![], vec![]);
     context.exec("LibraConfig", "emit_reconfiguration_event", vec![], vec![]);
 }
 

@@ -6,6 +6,7 @@ module Libra {
     use 0x0::FixedPoint32;
     use 0x0::LibraConfig;
     use 0x0::RegisteredCurrencies;
+    use 0x0::Signer;
     use 0x0::Transaction;
     use 0x0::Vector;
 
@@ -122,39 +123,35 @@ module Libra {
     // Initialization and granting of privileges
     ///////////////////////////////////////////////////////////////////////////
 
-    // This can only be invoked by the Association address, and only a single time.
-    // Currently, it is invoked in the genesis transaction
-    public fun initialize() {
-        Association::assert_sender_is_association();
-        Transaction::assert(Transaction::sender() == LibraConfig::default_config_address(), 0);
-        let cap = RegisteredCurrencies::initialize();
-        move_to_sender(CurrencyRegistrationCapability{ cap })
+    // This is only invoked in the genesis transaction
+    public fun initialize(config_account: &signer) {
+        Transaction::assert(
+            Signer::address_of(config_account) == LibraConfig::default_config_address(),
+            0
+        );
+        let cap = RegisteredCurrencies::initialize(config_account);
+        move_to(config_account, CurrencyRegistrationCapability{ cap })
     }
 
-    // Returns a MintCapability for the `CoinType` currency. `CoinType`
-    // must be a registered currency type.
-    public fun grant_mint_capability<CoinType>(): MintCapability<CoinType> {
+
+    // TODO: temporary, we should ideally make MintCapability unique eventually...
+    public fun grant_mint_capability_to_association<CoinType>(association: &signer) {
         assert_assoc_and_currency<CoinType>();
-        MintCapability<CoinType> { }
+        move_to(association, MintCapability<CoinType>{})
     }
 
-    public fun grant_mint_capability_for_sender<CoinType>() {
-        Transaction::assert(Transaction::sender() == 0xB1E55ED, 0);
-        assert_is_coin<CoinType>();
-        move_to_sender(grant_mint_capability<CoinType>());
-    }
-
-    // Returns a `BurnCapability` for the `CoinType` currency. `CoinType`
+    // Publish the `MintCapability` `cap` for the `CoinType` currency under `account`. `CoinType`
     // must be a registered currency type.
-    public fun grant_burn_capability<CoinType>(): BurnCapability<CoinType> {
+    public fun publish_mint_capability<CoinType>(account: &signer, cap: MintCapability<CoinType>) {
         assert_assoc_and_currency<CoinType>();
-        BurnCapability<CoinType> { }
+        move_to(account, cap)
     }
 
-    public fun grant_burn_capability_for_sender<CoinType>() {
-        Transaction::assert(Transaction::sender() == 0xB1E55ED, 0);
-        assert_is_coin<CoinType>();
-        move_to_sender(grant_burn_capability<CoinType>());
+    // Publish the `BurnCapability` `cap` for the `CoinType` currency under `account`. `CoinType`
+    // must be a registered currency type.
+    public fun publish_burn_capability<CoinType>(account: &signer, cap: BurnCapability<CoinType>) {
+        assert_assoc_and_currency<CoinType>();
+        move_to(account, cap)
     }
 
     // Return `amount` coins.
@@ -351,11 +348,6 @@ module Libra {
         move_to_sender(preburn)
     }
 
-    // Publish `capability` under the sender's account
-    public fun publish_mint_capability<Token>(capability: MintCapability<Token>) {
-        move_to_sender(capability)
-    }
-
     // Remove and return the `Preburn` resource under the sender's account
     public fun remove_preburn<Token>(): Preburn<Token> acquires Preburn {
         move_from<Preburn<Token>>(Transaction::sender())
@@ -445,18 +437,18 @@ module Libra {
     // Register the type `CoinType` as a currency. Without this, a type
     // cannot be used as a coin/currency unit n Libra.
     public fun register_currency<CoinType>(
+        account: &signer,
         to_lbr_exchange_rate: FixedPoint32::T,
         is_synthetic: bool,
         scaling_factor: u64,
         fractional_part: u64,
         currency_code: vector<u8>,
-    ) acquires CurrencyRegistrationCapability {
+    ): (MintCapability<CoinType>, BurnCapability<CoinType>)
+    acquires CurrencyRegistrationCapability {
         // And only callable by the designated currency address.
         Transaction::assert(Association::has_privilege<AddCurrency>(Transaction::sender()), 8);
 
-        move_to_sender(MintCapability<CoinType>{});
-        move_to_sender(BurnCapability<CoinType>{});
-        move_to_sender(CurrencyInfo<CoinType> {
+        move_to(account, CurrencyInfo<CoinType> {
             total_value: 0,
             preburn_value: 0,
             to_lbr_exchange_rate,
@@ -465,15 +457,16 @@ module Libra {
             fractional_part,
             currency_code: copy currency_code,
             can_mint: true,
-            mint_events: Event::new_event_handle<MintEvent>(),
-            burn_events: Event::new_event_handle<BurnEvent>(),
-            preburn_events: Event::new_event_handle<PreburnEvent>(),
-            cancel_burn_events: Event::new_event_handle<CancelBurnEvent>()
+            mint_events: Event::new_event_handle<MintEvent>(account),
+            burn_events: Event::new_event_handle<BurnEvent>(account),
+            preburn_events: Event::new_event_handle<PreburnEvent>(account),
+            cancel_burn_events: Event::new_event_handle<CancelBurnEvent>(account)
         });
         RegisteredCurrencies::add_currency_code(
             currency_code,
             &borrow_global<CurrencyRegistrationCapability>(LibraConfig::default_config_address()).cap
-        )
+        );
+        (MintCapability<CoinType>{}, BurnCapability<CoinType>{})
     }
 
     // Return the total amount of currency minted of type `CoinType`

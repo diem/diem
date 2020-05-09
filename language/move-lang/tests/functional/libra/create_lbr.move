@@ -15,7 +15,7 @@ fun main() {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
 use 0x0::LibraAccount;
 use 0x0::Coin1;

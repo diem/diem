@@ -3,6 +3,7 @@ address 0x0 {
 module LibraSystem {
     use 0x0::LibraConfig;
     use 0x0::Transaction;
+    use 0x0::Signer;
     use 0x0::ValidatorConfig;
     use 0x0::Vector;
 
@@ -34,14 +35,17 @@ module LibraSystem {
     // This can only be invoked by the ValidatorSet address to instantiate
     // the resource under that address.
     // It can only be called a single time. Currently, it is invoked in the genesis transaction.
-    public fun initialize_validator_set() {
-        Transaction::assert(Transaction::sender() == LibraConfig::default_config_address(), 1);
+    public fun initialize_validator_set(config_account: &signer) {
+        Transaction::assert(Signer::address_of(config_account) == LibraConfig::default_config_address(), 1);
 
-        let cap = LibraConfig::publish_new_config_with_capability<T>(T {
-            scheme: 0,
-            validators: Vector::empty(),
-        });
-        move_to_sender(CapabilityHolder { cap })
+        let cap = LibraConfig::publish_new_config_with_capability<T>(
+            T {
+                scheme: 0,
+                validators: Vector::empty(),
+            },
+            config_account
+        );
+        move_to(config_account, CapabilityHolder { cap })
     }
 
     // This returns a copy of the current validator set.

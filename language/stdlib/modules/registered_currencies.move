@@ -1,9 +1,10 @@
 address 0x0 {
 
 module RegisteredCurrencies {
-    use 0x0::Vector;
-    use 0x0::Transaction;
     use 0x0::LibraConfig;
+    use 0x0::Signer;
+    use 0x0::Transaction;
+    use 0x0::Vector;
 
     // An on-chain config holding all of the currency codes for registered
     // currencies. Must be named "T" for an on-chain config.
@@ -16,12 +17,15 @@ module RegisteredCurrencies {
         cap: LibraConfig::ModifyConfigCapability<Self::T>,
     }
 
-    public fun initialize(): RegistrationCapability {
+    public fun initialize(config_account: &signer): RegistrationCapability {
         // enforce that this is only going to one specific address,
-        Transaction::assert(Transaction::sender() == singleton_address(), 0);
-        let cap = LibraConfig::publish_new_config_with_capability(empty());
+        Transaction::assert(
+            Signer::address_of(config_account) == LibraConfig::default_config_address(),
+            0
+        );
+        let cap = LibraConfig::publish_new_config_with_capability(empty(), config_account);
 
-        RegistrationCapability{ cap }
+        RegistrationCapability { cap }
     }
 
     fun empty(): T {
@@ -37,9 +41,6 @@ module RegisteredCurrencies {
         LibraConfig::set_with_capability(&cap.cap, config);
     }
 
-    fun singleton_address(): address {
-        LibraConfig::default_config_address()
-    }
 }
 
 }

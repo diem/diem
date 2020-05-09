@@ -2,19 +2,23 @@ address 0x0 {
 
 // The module for the account resource that governs every Libra account
 module LibraAccount {
-    use 0x0::AccountTrack;
-    use 0x0::AccountType;
+    use 0x0::AccountLimits;
     use 0x0::Association;
+    use 0x0::Coin1;
+    use 0x0::Coin2;
     use 0x0::Empty;
     use 0x0::Event;
     use 0x0::Hash;
     use 0x0::LBR;
     use 0x0::LCS;
     use 0x0::Libra;
+    use 0x0::LibraTimestamp;
     use 0x0::LibraTransactionTimeout;
     use 0x0::Signature;
+    use 0x0::Signer;
     use 0x0::Testnet;
     use 0x0::Transaction;
+    use 0x0::Unhosted;
     use 0x0::VASP;
     use 0x0::Vector;
 
@@ -36,6 +40,11 @@ module LibraAccount {
         sequence_number: u64,
         is_frozen: bool,
     }
+
+    // TODO: could also do T<AccountType> field inside LibraAccount::T (but makes revocation hard)
+    // TODO: can revoking a role just swap it for Empty?
+    // TODO: do we need separate scheme for revoking a role, or is freezing sufficient?
+    resource struct Role<RoleData: copyable> { role_data: RoleData }
 
     // A resource that holds the coins stored in this account
     resource struct Balance<Token> {
@@ -101,25 +110,101 @@ module LibraAccount {
     }
 
     resource struct AccountOperationsCapability {
-        tracking_cap: AccountTrack::CallingCapability,
-        event_creation_cap: Event::EventHandleGeneratorCreationCapability,
+        limits_cap: AccountLimits::CallingCapability,
         freeze_event_handle: Event::EventHandle<FreezeAccountEvent>,
         unfreeze_event_handle: Event::EventHandle<UnfreezeAccountEvent>,
     }
 
-    public fun initialize() {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 0);
-        move_to_sender(AccountOperationsCapability {
-            tracking_cap: AccountTrack::grant_calling_capability(),
-            event_creation_cap: Event::grant_event_handle_creation_operation(),
-            freeze_event_handle: Event::new_event_handle<FreezeAccountEvent>(),
-            unfreeze_event_handle: Event::new_event_handle<UnfreezeAccountEvent>(),
-        });
+    // Return true if `addr` is an account of type `AT`
+    public fun is<RoleData: copyable>(addr: address): bool {
+        ::exists<Role<RoleData>>(addr)
+    }
+
+    public fun is_unhosted(addr: address): bool {
+        is<Unhosted::T>(addr)
+    }
+
+    public fun is_parent_vasp(addr: address): bool {
+        is<VASP::ParentVASP>(addr)
+    }
+
+    public fun is_child_vasp(addr: address): bool {
+        is<VASP::ChildVASP>(addr)
+    }
+
+    public fun is_vasp(addr: address): bool {
+        is_parent_vasp(addr) || is_child_vasp(addr)
+    }
+
+    public fun parent_vasp_address(addr: address): address acquires Role {
+        if (is_parent_vasp(addr)) {
+            addr
+        } else if (is_child_vasp(addr)) {
+            let child_vasp = &borrow_global<Role<VASP::ChildVASP>>(addr).role_data;
+            VASP::child_parent_address(child_vasp)
+        } else { // wrong account type, abort
+            abort(88)
+        }
+    }
+
+    public fun compliance_public_key(addr: address): vector<u8> acquires Role {
+        let parent_vasp = &borrow_global<Role<VASP::ParentVASP>>(addr).role_data;
+        VASP::compliance_public_key(parent_vasp)
+    }
+
+    public fun expiration_date(addr: address): u64 acquires Role {
+        let parent_vasp = &borrow_global<Role<VASP::ParentVASP>>(addr).role_data;
+        VASP::expiration_date(parent_vasp)
+    }
+
+    public fun base_url(addr: address): vector<u8> acquires Role {
+        let parent_vasp = &borrow_global<Role<VASP::ParentVASP>>(addr).role_data;
+        VASP::base_url(parent_vasp)
+    }
+
+    public fun human_name(addr: address): vector<u8> acquires Role {
+        let parent_vasp = &borrow_global<Role<VASP::ParentVASP>>(addr).role_data;
+        VASP::human_name(parent_vasp)
+    }
+
+    public fun rotate_compliance_public_key(vasp: &signer, new_key: vector<u8>) acquires Role {
+        let parent_vasp =
+            &mut borrow_global_mut<Role<VASP::ParentVASP>>(Signer::address_of(vasp)).role_data;
+        VASP::rotate_compliance_public_key(parent_vasp, new_key)
+    }
+
+    // TODO: temporary, remove when VASP account feature in E2E tests works
+    public fun add_parent_vasp_role_from_association(
+        association: &signer,
+        addr: address,
+        human_name: vector<u8>,
+        base_url: vector<u8>,
+        compliance_public_key: vector<u8>,
+    ) {
+        Transaction::assert(exists(addr), 0);
+        Transaction::assert(Signer::address_of(association) == 0xA550C18, 0);
+        let role_data =
+            VASP::create_parent_vasp_credential(human_name, base_url, compliance_public_key);
+        let account = create_signer(addr);
+        move_to(&account, Role<VASP::ParentVASP> { role_data });
+        destroy_signer(account);
+    }
+
+    public fun initialize(association: &signer) {
+        Transaction::assert(Signer::address_of(association) == 0xA550C18, 0);
+        move_to(
+            association,
+            AccountOperationsCapability {
+                limits_cap: AccountLimits::grant_calling_capability(),
+                freeze_event_handle: Event::new_event_handle(association),
+                unfreeze_event_handle: Event::new_event_handle(association),
+            }
+        );
     }
 
     // Deposits the `to_deposit` coin into the `payee`'s account balance
     public fun deposit<Token>(payee: address, to_deposit: Libra::T<Token>)
-    acquires T, Balance, AccountOperationsCapability {
+    acquires T, Balance, AccountOperationsCapability, Role {
         // Since we don't have vector<u8> literals in the source language at
         // the moment.
         deposit_with_metadata(payee, to_deposit, x"", x"")
@@ -127,7 +212,7 @@ module LibraAccount {
 
     // Deposits the `to_deposit` coin into the sender's account balance
     public fun deposit_to_sender<Token>(to_deposit: Libra::T<Token>)
-    acquires T, Balance, AccountOperationsCapability {
+    acquires T, Balance, AccountOperationsCapability, Role {
         deposit(Transaction::sender(), to_deposit)
     }
 
@@ -137,7 +222,7 @@ module LibraAccount {
         to_deposit: Libra::T<Token>,
         metadata: vector<u8>,
         metadata_signature: vector<u8>
-    ) acquires T, Balance, AccountOperationsCapability {
+    ) acquires T, Balance, AccountOperationsCapability, Role {
         deposit_with_sender_and_metadata(
             payee,
             Transaction::sender(),
@@ -155,7 +240,7 @@ module LibraAccount {
         to_deposit: Libra::T<Token>,
         metadata: vector<u8>,
         metadata_signature: vector<u8>
-    ) acquires T, Balance, AccountOperationsCapability {
+    ) acquires T, Balance, AccountOperationsCapability, Role {
         // Check that the `to_deposit` coin is non-zero
         let deposit_value = Libra::value(&to_deposit);
         Transaction::assert(deposit_value > 0, 7);
@@ -167,7 +252,7 @@ module LibraAccount {
         let above_threshold =
             Libra::approx_lbr_for_value<Token>(deposit_value) >= travel_rule_limit;
         // travel rule only applies if the sender and recipient are both VASPs
-        let both_vasps = VASP::is_vasp(sender) && VASP::is_vasp(payee);
+        let both_vasps = is_vasp(sender) && is_vasp(payee);
         // Don't check the travel rule if we're on testnet and sender
         // doesn't specify a metadata signature
         let is_testnet_transfer = Testnet::is_testnet() && Vector::is_empty(&metadata_signature);
@@ -175,7 +260,7 @@ module LibraAccount {
             above_threshold &&
             both_vasps &&
             // travel rule does not apply for intra-VASP transactions
-            VASP::root_vasp_address(sender) != VASP::root_vasp_address(payee)
+            parent_vasp_address(sender) != parent_vasp_address(payee)
         ) {
             // sanity check of signature validity
             Transaction::assert(Vector::length(&metadata_signature) == 64, 9001);
@@ -190,7 +275,7 @@ module LibraAccount {
             Transaction::assert(
                 Signature::ed25519_verify(
                     metadata_signature,
-                    VASP::compliance_public_key(payee),
+                    compliance_public_key(payee),
                     message
                 ),
                 9002, // TODO: proper error code
@@ -199,14 +284,15 @@ module LibraAccount {
 
         // Ensure that this deposit is compliant with the account limits on
         // this account.
-        Transaction::assert(
-            AccountTrack::update_deposit_limits<Token>(
+        let _ = borrow_global<AccountOperationsCapability>(0xA550C18);
+        /*Transaction::assert(
+            AccountLimits::update_deposit_limits<Token>(
                 deposit_value,
                 payee,
-                &borrow_global<AccountOperationsCapability>(0xA550C18).tracking_cap
+                &borrow_global<AccountOperationsCapability>(0xA550C18).limits_cap
             ),
             9
-        );
+        );*/
 
         // Get the code symbol for this currency
         let currency_code = Libra::currency_code<Token>();
@@ -247,7 +333,7 @@ module LibraAccount {
     public fun mint_to_address<Token>(
         payee: address,
         amount: u64
-    ) acquires T, Balance, AccountOperationsCapability {
+    ) acquires T, Balance, AccountOperationsCapability, Role {
         // Mint and deposit the coin
         deposit(payee, Libra::mint<Token>(amount));
     }
@@ -258,7 +344,7 @@ module LibraAccount {
     public fun mint_lbr_to_address(
         payee: address,
         amount: u64
-    ) acquires T, Balance, AccountOperationsCapability {
+    ) acquires T, Balance, AccountOperationsCapability, Role {
         // Mint and deposit the coin
         deposit(payee, LBR::mint(amount));
     }
@@ -267,22 +353,26 @@ module LibraAccount {
     // Fails if the sender does not have a published MintCapability.
     public fun cancel_burn<Token>(
         preburn_address: address,
-    ) acquires T, Balance, AccountOperationsCapability {
+    ) acquires T, Balance, AccountOperationsCapability, Role {
         let to_return = Libra::cancel_burn<Token>(preburn_address);
         deposit(preburn_address, to_return)
     }
 
     // Helper to withdraw `amount` from the given account balance and return the withdrawn Libra::T<Token>
-    fun withdraw_from_balance<Token>(addr: address, balance: &mut Balance<Token>, amount: u64): Libra::T<Token>
-    acquires AccountOperationsCapability {
+    fun withdraw_from_balance<Token>(
+        _addr: address,
+        balance: &mut Balance<Token>,
+        amount: u64
+    ): Libra::T<Token> acquires AccountOperationsCapability {
         // Make sure that this withdrawal is compliant with the limits on
         // the account.
-        let can_withdraw = AccountTrack::update_withdrawal_limits<Token>(
+        let _  = borrow_global<AccountOperationsCapability>(0xA550C18);
+        /*let can_withdraw = AccountLimits::update_withdrawal_limits<Token>(
             amount,
             addr,
-            &borrow_global<AccountOperationsCapability>(0xA550C18).tracking_cap
+            &borrow_global<AccountOperationsCapability>(0xA550C18).limits_cap
         );
-        Transaction::assert(can_withdraw, 11);
+        Transaction::assert(can_withdraw, 11);*/
         Libra::withdraw(&mut balance.coin, amount)
     }
 
@@ -338,7 +428,7 @@ module LibraAccount {
         amount: u64,
         metadata: vector<u8>,
         metadata_signature: vector<u8>
-    ) acquires T, Balance, AccountOperationsCapability {
+    ) acquires T, Balance, AccountOperationsCapability, Role {
         deposit_with_sender_and_metadata<Token>(
             payee,
             *&cap.account_address,
@@ -356,7 +446,7 @@ module LibraAccount {
         amount: u64,
         metadata: vector<u8>,
         metadata_signature: vector<u8>
-    ) acquires T, Balance, AccountOperationsCapability {
+    ) acquires T, Balance, AccountOperationsCapability, Role {
         deposit_with_metadata<Token>(
             payee,
             withdraw_from_sender(amount),
@@ -371,7 +461,7 @@ module LibraAccount {
     public fun pay_from_sender<Token>(
         payee: address,
         amount: u64
-    ) acquires T, Balance, AccountOperationsCapability {
+    ) acquires T, Balance, AccountOperationsCapability, Role {
         pay_from_sender_with_metadata<Token>(payee, amount, x"", x"");
     }
 
@@ -430,73 +520,145 @@ module LibraAccount {
     // zero `Token` type coins, and authentication key `auth_key_prefix` | `fresh_address`.
     // Trying to create an account at address 0x0 will cause runtime failure as it is a
     // reserved address for the MoveVM.
-    public fun create_testnet_account<Token>(fresh_address: address, auth_key_prefix: vector<u8>)
-    acquires AccountOperationsCapability {
+    public fun create_testnet_account<Token>(
+        new_account_address: address,
+        auth_key_prefix: vector<u8>
+    ) {
         Transaction::assert(Testnet::is_testnet(), 10042);
-         let vasp_credential = VASP::create_root_vasp_credential(
-              // "testnet"
-              x"746573746E6574",
-              // "https://libra.org"
-              x"68747470733A2F2F6C696272612E6F72672F",
-              // An empty travel-rule key
-              x"00000000000000000000000000000000",
-         );
-         make_account<Token, VASP::RootVASP>(fresh_address, auth_key_prefix, vasp_credential);
+        let vasp_parent =
+            VASP::create_parent_vasp_credential(
+                // "testnet"
+                x"746573746E6574",
+                // "https://libra.org"
+                x"68747470733A2F2F6C696272612E6F72672F",
+                // An empty compliance key
+                x"00000000000000000000000000000000"
+            );
+        let new_account = create_signer(new_account_address);
+        Event::publish_generator(&new_account);
+        make_account<Token, VASP::ParentVASP>(new_account, auth_key_prefix, vasp_parent)
     }
 
-    // Creates a new `Empty` account at `fresh_address` with a balance of zero and authentication
-    // key `auth_key_prefix` | `fresh_address`.
-    // Creating an account at address 0x0 will cause runtime failure as it is a
-    // reserved address for the MoveVM.
-    public fun create_account<Token>(fresh_address: address, auth_key_prefix: vector<u8>)
-    acquires AccountOperationsCapability {
-        make_account<Token, Empty::T>(fresh_address, auth_key_prefix, Empty::create())
-    }
-
-    fun make_account<Token, AT: copyable>(
-        fresh_address: address,
+    /// Creates a new account with account type `Role` at `new_account_address` with a balance of
+    /// zero in `Token` and authentication key `auth_key_prefix` | `fresh_address`.
+    /// Aborts if there is already an account at `new_account_address`
+    /// Creating an account at address 0x0 will abort as it is a reserved address for the MoveVM.
+    fun make_account<Token, RoleData: copyable>(
+        new_account: signer,
         auth_key_prefix: vector<u8>,
-        account_metadata: AT
-    ) acquires AccountOperationsCapability {
-        let generator = Event::new_event_generator(
-            fresh_address,
-            &borrow_global<AccountOperationsCapability>(0xA550C18).event_creation_cap
-        );
+        role_data: RoleData,
+    ) {
+        // cannot create an account at the reserved address 0x0
+        Transaction::assert(Signer::address_of(&new_account) != 0x0, 0);
 
+        // (1) publish Account::T
         let authentication_key = auth_key_prefix;
-        Vector::append(&mut authentication_key, LCS::to_bytes(&fresh_address));
+        Vector::append(
+            &mut authentication_key, LCS::to_bytes(Signer::borrow_address(&new_account))
+        );
         Transaction::assert(Vector::length(&authentication_key) == 32, 12);
-
-        save_account<Token, AT>(
-            AccountType::create(fresh_address, account_metadata),
-            Balance<Token>{
-                coin: Libra::zero<Token>()
-            },
+        move_to(
+            &new_account,
             T {
                 authentication_key,
                 delegated_key_rotation_capability: false,
                 delegated_withdrawal_capability: false,
-                received_events: Event::new_event_handle_from_generator<ReceivedPaymentEvent>(&mut generator),
-                sent_events: Event::new_event_handle_from_generator<SentPaymentEvent>(&mut generator),
+                received_events: Event::new_event_handle<ReceivedPaymentEvent>(&new_account),
+                sent_events: Event::new_event_handle<SentPaymentEvent>(&new_account),
                 sequence_number: 0,
                 is_frozen: false,
-            },
-            generator,
-            fresh_address,
+            }
         );
+        // (2) publish Account::Role. it's the caller's job to publish resources with role-specific
+        //     configuration such as AccountLimits before calling this
+        move_to(&new_account, Role<RoleData> { role_data });
+        // (3) publish Balance resource(s)
+        move_to(&new_account, Balance<Token>{ coin: Libra::zero<Token>() });
+        // (4) TODO: publish account limits?
+
+        destroy_signer(new_account);
     }
 
-    // Save an account to a given address if the address does not have account resources yet
-    native fun save_account<Token, AT: copyable>(
-        account_type: AccountType::T<AT>,
-        balance: Balance<Token>,
-        account: Self::T,
-        event_generator: Event::EventHandleGenerator,
-        addr: address,
-    );
+    /// Create an account with the Empty role at `new_account_address` with authentication key
+    /// `auth_key_prefix` | `new_account_address`
+    // TODO: can we get rid of this? the main thing this does is create an account without an
+    // EventGenerator resource (which is just needed to avoid circular dep issues in gensis)
+    public fun create_genesis_account<Token>(
+        new_account_address: address,
+        auth_key_prefix: vector<u8>
+    ) {
+        Transaction::assert(LibraTimestamp::is_genesis(), 0);
+        let new_account = create_signer(new_account_address);
+        make_account<Token, Empty::T>(new_account, auth_key_prefix, Empty::create())
+    }
+
+    /// Create a treasury/compliance account at `new_account_address` with authentication key
+    /// `auth_key_prefix` | `new_account_address`
+    public fun create_treasury_compliance_account<Token>(
+        new_account_address: address,
+        auth_key_prefix: vector<u8>,
+        coin1_mint_cap: Libra::MintCapability<Coin1::T>,
+        coin1_burn_cap: Libra::BurnCapability<Coin1::T>,
+        coin2_mint_cap: Libra::MintCapability<Coin2::T>,
+        coin2_burn_cap: Libra::BurnCapability<Coin2::T>,
+    ) {
+        Association::assert_sender_is_root();
+        let new_account = create_signer(new_account_address);
+        Association::grant_association_address(&new_account);
+        Association::grant_privilege<FreezingPrivilege>(&new_account);
+        Libra::publish_mint_capability<Coin1::T>(&new_account, coin1_mint_cap);
+        Libra::publish_burn_capability<Coin1::T>(&new_account, coin1_burn_cap);
+        Libra::publish_mint_capability<Coin2::T>(&new_account, coin2_mint_cap);
+        Libra::publish_burn_capability<Coin2::T>(&new_account, coin2_burn_cap);
+
+        // TODO: add Association or TreasuryCompliance role instead of using Empty?
+        Event::publish_generator(&new_account);
+        make_account<Token, Empty::T>(new_account, auth_key_prefix, Empty::create())
+    }
+
+    /// Create an account with the ParentVASP role at `new_account_address` with authentication key
+    /// `auth_key_prefix` | `new_account_address`.
+    public fun create_parent_vasp_account<Token>(
+        new_account_address: address,
+        auth_key_prefix: vector<u8>,
+        human_name: vector<u8>,
+        base_url: vector<u8>,
+        compliance_public_key: vector<u8>,
+    ) {
+        Association::assert_sender_is_association();
+        let vasp_parent =
+            VASP::create_parent_vasp_credential(human_name, base_url, compliance_public_key);
+        let new_account = create_signer(new_account_address);
+        Event::publish_generator(&new_account);
+        make_account<Token, VASP::ParentVASP>(new_account, auth_key_prefix, vasp_parent)
+    }
+
+    /// Create an account with the ChildVASP role at `new_account_address` with authentication key
+    /// `auth_key_prefix` | `new_account_address`. This account will be a child of `creator`, which
+    /// must be a ParentVASP.
+    public fun create_child_vasp_account<Token>(
+        new_account_address: address,
+        auth_key_prefix: vector<u8>,
+        creator: &signer
+    ) {
+        let child_vasp = VASP::create_child_vasp(creator);
+        let new_account = create_signer(new_account_address);
+        Event::publish_generator(&new_account);
+        make_account<Token, VASP::ChildVASP>(new_account, auth_key_prefix, child_vasp)
+    }
+
+    public fun create_unhosted_account<Token>(
+        new_account_address: address,
+        auth_key_prefix: vector<u8>,
+    ) {
+        let unhosted = Unhosted::create();
+        let new_account = create_signer(new_account_address);
+        Event::publish_generator(&new_account);
+        make_account<Token, Unhosted::T>(new_account, auth_key_prefix, unhosted)
+    }
 
     native fun create_signer(addr: address): signer;
-    native fun destroy_signer(addr: address): signer;
+    native fun destroy_signer(sig: signer);
 
     // Helper to return the u64 value of the `balance` for `account`
     fun balance_for<Token>(balance: &Balance<Token>): u64 {

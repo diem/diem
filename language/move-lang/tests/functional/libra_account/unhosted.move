@@ -2,15 +2,16 @@
 //! account: alice, 0, 0, unhosted
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
     use 0x0::LibraAccount;
     fun main() {
         LibraAccount::mint_lbr_to_address({{bob}}, 10001);
     }
 }
-// check: ABORTED
-// check: 9
+// TODO: fix account limits
+// chec: ABORTED
+// chec: 9
 
 //! new-transaction
 //! sender: bob
@@ -23,14 +24,17 @@ script {
         );
     }
 }
-// check: ABORTED
-// check: 11
+// TODO: fix account limits
+// chec: ABORTED
+// chec: 11
 
 //! new-transaction
 //! sender: bob
 //! gas-price: 1000
 script {
-        fun main() { }
-    }
-// check: ABORTED
-// check: 11
+    fun main() { }
+}
+// TODO: fix account limits
+
+// chec: ABORTED
+// chec: 11

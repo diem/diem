@@ -1,7 +1,7 @@
 script {
 use 0x0::LibraBlock;
-fun main() {
-    LibraBlock::initialize_block_metadata();
+fun main(account: &signer) {
+    LibraBlock::initialize_block_metadata(account);
 }
 }
 // check: ABORTED

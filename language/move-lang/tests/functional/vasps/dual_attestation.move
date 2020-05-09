@@ -1,46 +1,23 @@
 // Register a sender and recipient VASP, check that applicable payments go through dual attestation
 // checks
 
-//! account: payer, 10000000, 0, empty
-//! account: child, 10000000, 0, empty
-//! account: payee, 10000000, 0, empty
+//! account: payer, 10000000, 0, vasp
+//! account: payee, 10000000, 0, vasp
 //! account: alice, 10000000, 0, unhosted
 //! account: bob,   10000000, 0, unhosted
 
-// payer applies to be a VASP
-//! sender: payer
-script {
-use 0x0::VASP;
-fun main() {
-    let pubkey = x"0000000d7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
-    VASP::apply_for_vasp_root_credential(x"AAA", x"BBB", pubkey);
-}
-}
-// check: EXECUTED
-
-// payee applies to be a VASP
-//! new-transaction
-//! sender: payee
-script {
-use 0x0::VASP;
-fun main() {
-    let pubkey = x"e14c7ddb7713c9c7315f337393f4261d1713a5f8c6c6e14c4986e616460251e6";
-    VASP::apply_for_vasp_root_credential(x"DDD", x"EEE", pubkey);
-}
-}
-// check: EXECUTED
-
-// Association approves both
+// Association sets compliance keys for bith payer and payee
 //! new-transaction
 //! sender: association
 script {
-use 0x0::Association;
-use 0x0::VASP;
-fun main() {
-    Association::apply_for_privilege<VASP::CreationPrivilege>();
-    Association::grant_privilege<VASP::CreationPrivilege>({{association}});
-    VASP::grant_vasp({{payer}});
-    VASP::grant_vasp({{payee}});
+use 0x0::LibraAccount;
+fun main(account: &signer) {
+    LibraAccount::add_parent_vasp_role_from_association(
+        account, {{payer}}, x"A", x"B", x"0000000d7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d"
+    );
+    LibraAccount::add_parent_vasp_role_from_association(
+        account, {{payee}}, x"C", x"D", x"e14c7ddb7713c9c7315f337393f4261d1713a5f8c6c6e14c4986e616460251e6"
+    );
 }
 }
 // check: EXECUTED
@@ -142,35 +119,15 @@ fun main() {
 // Test that intra-VASP transactions are not subject to dual attestation
 // First, we must do some setup by creating a child VASP for payer
 
-// payer allows child accounts
+// create a child VASP at AA
 //! new-transaction
 //! sender: payer
 script {
-use 0x0::VASP;
-fun main() {
-    VASP::allow_child_accounts();
-}
-}
-// check: EXECUTED
-
-// apply to be child of payer
-//! new-transaction
-//! sender: child
-script {
-use 0x0::VASP;
-fun main() {
-    VASP::apply_for_child_vasp_credential({{payer}});
-}
-}
-// check: EXECUTED
-
-// payer allows child accounts
-//! new-transaction
-//! sender: payer
-script {
-use 0x0::VASP;
-fun main() {
-    VASP::grant_child_account({{child}});
+use 0x0::LBR;
+use 0x0::LibraAccount;
+fun main(parent_vasp: &signer) {
+    let dummy_auth_key_prefix = x"00000000000000000000000000000000";
+    LibraAccount::create_child_vasp_account<LBR::T>(0xAA, dummy_auth_key_prefix, parent_vasp);
 }
 }
 // check: EXECUTED
@@ -185,25 +142,26 @@ fun main() {
     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
     let signature = x"";
 
-    LibraAccount::pay_from_sender_with_metadata<LBR::T>({{child}}, 1001, payment_id, signature);
+    LibraAccount::pay_from_sender_with_metadata<LBR::T>(0xAA, 1001, payment_id, signature);
 }
 }
 // check: EXECUTED
 
-// same thing, but from child -> parent
-//! new-transaction
-//! sender: child
-script {
-use 0x0::LBR;
-use 0x0::LibraAccount;
-fun main() {
-    let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
-    let signature = x"";
+// TODO: add E2E test feature to facilitate sending from child VASP
+// // same thing, but from child -> parent
+// //! new-transaction
+// //! sender: 0xAA
+// script {
+// use 0x0::LBR;
+// use 0x0::LibraAccount;
+// fun main() {
+//     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
+//     let signature = x"";
 
-    LibraAccount::pay_from_sender_with_metadata<LBR::T>({{payer}}, 1001, payment_id, signature);
-}
-}
-// check: EXECUTED
+//     LibraAccount::pay_from_sender_with_metadata<LBR::T>({{payer}}, 1001, payment_id, signature);
+// }
+// }
+// // chec: EXECUTED
 
 
 // check that unhosted wallet <-> VASP transactions do not require dual attestation
@@ -255,30 +213,30 @@ fun main() {
 }
 // check: EXECUTED
 
-// Association can rotate the compliance public key for an account
 //! new-transaction
-//! sender: association
+//! sender: payer
 script {
 use 0x0::Transaction;
-use 0x0::VASP;
-fun main() {
-    let old_pubkey = VASP::compliance_public_key({{payer}});
+use 0x0::LibraAccount;
+// rotate the compliance public key
+fun main(account: &signer) {
+    let old_pubkey = LibraAccount::compliance_public_key({{payer}});
     let new_pubkey = x"1111110d7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     Transaction::assert(&old_pubkey != &new_pubkey, 777);
-    VASP::rotate_compliance_public_key({{payer}}, copy new_pubkey);
-    Transaction::assert(VASP::compliance_public_key({{payer}}) == new_pubkey, 777);
+    LibraAccount::rotate_compliance_public_key(account, copy new_pubkey);
+    Transaction::assert(LibraAccount::compliance_public_key({{payer}}) == new_pubkey, 777);
 }
 }
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: payer
 script {
-use 0x0::VASP;
+use 0x0::LibraAccount;
 // Try to rotate to a (structurally) malformed compliance public key
-fun main() {
+fun main(account: &signer) {
     let new_pubkey = x"d7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
-    VASP::rotate_compliance_public_key({{payer}}, copy new_pubkey);
+    LibraAccount::rotate_compliance_public_key(account, copy new_pubkey);
 }
 }
 // check: ABORTED

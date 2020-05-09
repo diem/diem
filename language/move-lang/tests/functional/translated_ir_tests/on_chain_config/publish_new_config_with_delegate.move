@@ -9,17 +9,18 @@ module FooConfig {
         version: u64,
     }
 
-    public fun new(version: u64) {
-        LibraConfig::publish_new_config_with_delegate<T>(T { version: version }, {{alice}});
+    public fun new(version: u64, account: &signer) {
+        LibraConfig::publish_new_config_with_delegate<T>(T { version: version }, {{alice}}, account);
     }
 
     public fun claim() {
         LibraConfig::claim_delegated_modify_config<T>(LibraConfig::default_config_address());
     }
 
-    public fun set(version: u64) {
+    public fun set(version: u64, account: &signer) {
         LibraConfig::set(
-            T { version }
+            T { version },
+            account
         )
     }
 }
@@ -33,8 +34,8 @@ module FooConfig {
 // Publish a new config item.
 script {
 use {{alice}}::FooConfig;
-fun main() {
-    FooConfig::new(0);
+fun main(account: &signer) {
+    FooConfig::new(0, account);
 }
 }
 // check: EXECUTED
@@ -48,9 +49,9 @@ fun main() {
 // Update the value.
 script {
 use {{alice}}::FooConfig;
-fun main() {
+fun main(account: &signer) {
     FooConfig::claim();
-    FooConfig::set(0);
+    FooConfig::set(0, account);
 }
 }
 // Should trigger a reconfiguration
@@ -65,8 +66,8 @@ fun main() {
 //! sender: config
 script {
 use {{alice}}::FooConfig;
-fun main() {
-    FooConfig::set(0);
+fun main(account: &signer) {
+    FooConfig::set(0, account);
 }
 }
 // check: ABORT

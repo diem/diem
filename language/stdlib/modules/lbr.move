@@ -36,17 +36,16 @@ module LBR {
     // already be registered in order for this to succeed. The sender must
     // both be the correct address and have the correct permissions. These
     // restrictions are enforced in the Libra::register_currency function.
-    public fun initialize() {
+    public fun initialize(account: &signer) {
         // Register the LBR currency.
-        Libra::register_currency<T>(
+        let (mint_cap, burn_cap) = Libra::register_currency<T>(
+            account,
             FixedPoint32::create_from_rational(1, 1), // exchange rate to LBR
             true,    // is_synthetic
             1000000, // scaling_factor = 10^6
             1000,    // fractional_part = 10^3
             x"4C4252" // UTF8-encoded "LBR" as a hex string
         );
-        let mint_cap = Libra::remove_mint_capability();
-        let burn_cap = Libra::remove_burn_capability();
         let preburn_cap = Libra::new_preburn_with_capability(&burn_cap);
         let coin1 = ReserveComponent<Coin1::T> {
             ratio: FixedPoint32::create_from_rational(1, 2),
@@ -56,7 +55,7 @@ module LBR {
             ratio: FixedPoint32::create_from_rational(1, 2),
             backing: Libra::zero<Coin2::T>(),
         };
-        move_to_sender(Reserve{ mint_cap, burn_cap, preburn_cap, coin1, coin2});
+        move_to(account, Reserve { mint_cap, burn_cap, preburn_cap, coin1, coin2 });
     }
 
     // Given the constituent coins return as much LBR as possible, with any

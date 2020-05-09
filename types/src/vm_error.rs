@@ -432,7 +432,6 @@ pub enum StatusCode {
     CALL_STACK_OVERFLOW = 4021,
     NATIVE_FUNCTION_ERROR = 4022,
     GAS_SCHEDULE_ERROR = 4023,
-    CREATE_NULL_ACCOUNT = 4024,
 
     // A reserved status to represent an unknown vm status.
     UNKNOWN_STATUS = std::u64::MAX,
@@ -627,7 +626,6 @@ impl TryFrom<u64> for StatusCode {
             4021 => Ok(StatusCode::CALL_STACK_OVERFLOW),
             4022 => Ok(StatusCode::NATIVE_FUNCTION_ERROR),
             4023 => Ok(StatusCode::GAS_SCHEDULE_ERROR),
-            4024 => Ok(StatusCode::CREATE_NULL_ACCOUNT),
             std::u64::MAX => Ok(StatusCode::UNKNOWN_STATUS),
             _ => Err("invalid StatusCode"),
         }

@@ -82,7 +82,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraWriteSetManager_initialize">initialize</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraWriteSetManager_initialize">initialize</a>(sig: &signer)
 </code></pre>
 
 
@@ -91,13 +91,16 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraWriteSetManager_initialize">initialize</a>() {
-    Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraWriteSetManager_initialize">initialize</a>(sig: &signer) {
+    Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(sig) == 0xA550C18, 1);
 
-    move_to_sender&lt;<a href="#0x0_LibraWriteSetManager_T">T</a>&gt;(<a href="#0x0_LibraWriteSetManager_T">T</a> {
-        sequence_number: 0,
-        upgrade_events: <a href="event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_LibraWriteSetManager_UpgradeEvent">Self::UpgradeEvent</a>&gt;(),
-    });
+    move_to(
+        sig,
+        <a href="#0x0_LibraWriteSetManager_T">T</a> {
+            sequence_number: 0,
+            upgrade_events: <a href="event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_LibraWriteSetManager_UpgradeEvent">Self::UpgradeEvent</a>&gt;(sig),
+        }
+    );
 }
 </code></pre>
 

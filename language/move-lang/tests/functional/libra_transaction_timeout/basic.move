@@ -1,8 +1,8 @@
 //! new-transaction
 script {
     use 0x0::LibraTransactionTimeout;
-    fun main() {
-        LibraTransactionTimeout::initialize();
+    fun main(account: &signer) {
+        LibraTransactionTimeout::initialize(account);
     }
 }
 // check: ABORTED

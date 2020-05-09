@@ -15,7 +15,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(args: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, args: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -24,8 +24,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(args: vector&lt;u8&gt;) {
-    <a href="../../modules/doc/libra_vm_config.md#0x0_LibraVMConfig_set_publishing_option">LibraVMConfig::set_publishing_option</a>(args)
+<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, args: vector&lt;u8&gt;) {
+    <a href="../../modules/doc/libra_vm_config.md#0x0_LibraVMConfig_set_publishing_option">LibraVMConfig::set_publishing_option</a>(args, account)
 }
 </code></pre>
 

@@ -1113,6 +1113,19 @@ procedure {:inline 1} $LibraAccount_save_account(
     assert false;
 }
 
+procedure {:inline 1} $LibraAccount_create_signer(
+  addr: Value
+) returns (signer: Value) {
+  // TODO: implement
+  assert false;
+}
+
+procedure {:inline 1} $LibraAccount_destroy_signer(
+  signer: Value
+) {
+  return;
+}
+
 procedure {:inline 1} $LibraAccount_write_to_event_store(ta: TypeValue, guid: Value, count: Value, msg: Value) {
     // TODO: this is used in old library sources, remove it once those sources are not longer used in tests.
     // This function is modeled as a no-op because the actual side effect of this native function is not observable from the Move side.

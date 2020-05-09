@@ -3,8 +3,8 @@
 //! new-transaction
 script {
     use 0x0::LibraTimestamp;
-    fun main() {
-        LibraTimestamp::initialize();
+    fun main(account: &signer) {
+        LibraTimestamp::initialize(account);
     }
 }
 // check: ABORTED

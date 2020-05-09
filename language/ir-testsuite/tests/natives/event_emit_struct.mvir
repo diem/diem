@@ -3,9 +3,9 @@ module M {
 
     struct MyEvent { b: bool }
 
-    public emit_event() {
+    public emit_event(account: &signer) {
         let handle: Event.EventHandle<Self.MyEvent>;
-        handle = Event.new_event_handle<Self.MyEvent>();
+        handle = Event.new_event_handle<Self.MyEvent>(move(account));
         Event.emit_event<Self.MyEvent>(&mut handle, MyEvent{ b: true });
         Event.destroy_handle<Self.MyEvent>(move(handle));
         return;
@@ -16,8 +16,8 @@ module M {
 //! new-transaction
 import {{default}}.M;
 
-main() {
-    M.emit_event();
+main(account: &signer) {
+    M.emit_event(move(account));
     return;
 }
 

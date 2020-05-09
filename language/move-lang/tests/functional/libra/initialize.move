@@ -3,8 +3,8 @@
 script {
 use 0x0::Association;
 // init the association
-fun main() {
-    Association::initialize();
+fun main(account: &signer) {
+    Association::initialize(account);
 }
 }
 // check: CANNOT_WRITE_EXISTING_RESOURCE
@@ -13,8 +13,8 @@ fun main() {
 //! sender: config
 script {
 use 0x0::Libra;
-fun main() {
-    Libra::initialize();
+fun main(account: &signer) {
+    Libra::initialize(account);
 }
 }
 // check: CANNOT_WRITE_EXISTING_RESOURCE

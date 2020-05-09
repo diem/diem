@@ -63,7 +63,8 @@ module LibraVMConfig {
     public fun initialize(
         publishing_option: vector<u8>,
         instruction_schedule: vector<u8>,
-        native_schedule: vector<u8>
+        native_schedule: vector<u8>,
+        config_account: &signer
     ) {
         let gas_constants = GasConstants {
             global_memory_per_byte_cost: 8,
@@ -86,14 +87,15 @@ module LibraVMConfig {
                     native_schedule,
                     gas_constants,
                 }
-            }
+            },
+            config_account
         );
     }
 
-    public fun set_publishing_option(publishing_option: vector<u8>) {
+    public fun set_publishing_option(publishing_option: vector<u8>, account: &signer) {
         let current_config = LibraConfig::get<Self::T>();
         current_config.publishing_option = publishing_option;
-        LibraConfig::set<Self::T>(current_config);
+        LibraConfig::set<Self::T>(current_config, account);
     }
 }
 

@@ -184,7 +184,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVMConfig_initialize">initialize</a>(publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVMConfig_initialize">initialize</a>(publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, config_account: &signer)
 </code></pre>
 
 
@@ -196,7 +196,8 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVMConfig_initialize">initialize</a>(
     publishing_option: vector&lt;u8&gt;,
     instruction_schedule: vector&lt;u8&gt;,
-    native_schedule: vector&lt;u8&gt;
+    native_schedule: vector&lt;u8&gt;,
+    config_account: &signer
 ) {
     <b>let</b> gas_constants = <a href="#0x0_LibraVMConfig_GasConstants">GasConstants</a> {
         global_memory_per_byte_cost: 8,
@@ -219,7 +220,8 @@
                 native_schedule,
                 gas_constants,
             }
-        }
+        },
+        config_account
     );
 }
 </code></pre>
@@ -234,7 +236,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVMConfig_set_publishing_option">set_publishing_option</a>(publishing_option: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVMConfig_set_publishing_option">set_publishing_option</a>(publishing_option: vector&lt;u8&gt;, account: &signer)
 </code></pre>
 
 
@@ -243,10 +245,10 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVMConfig_set_publishing_option">set_publishing_option</a>(publishing_option: vector&lt;u8&gt;) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVMConfig_set_publishing_option">set_publishing_option</a>(publishing_option: vector&lt;u8&gt;, account: &signer) {
     <b>let</b> current_config = <a href="libra_configs.md#0x0_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x0_LibraVMConfig_T">Self::T</a>&gt;();
     current_config.publishing_option = publishing_option;
-    <a href="libra_configs.md#0x0_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x0_LibraVMConfig_T">Self::T</a>&gt;(current_config);
+    <a href="libra_configs.md#0x0_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x0_LibraVMConfig_T">Self::T</a>&gt;(current_config, account);
 }
 </code></pre>
 

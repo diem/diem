@@ -4,6 +4,7 @@ module LibraBlock {
     use 0x0::Event;
     use 0x0::LibraSystem;
     use 0x0::LibraTimestamp;
+    use 0x0::Signer;
     use 0x0::Transaction;
 
     resource struct BlockMetadata {
@@ -25,13 +26,13 @@ module LibraBlock {
 
     // This can only be invoked by the Association address, and only a single time.
     // Currently, it is invoked in the genesis transaction
-    public fun initialize_block_metadata() {
+    public fun initialize_block_metadata(account: &signer) {
       // Only callable by the Association address
-      Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+      Transaction::assert(Signer::address_of(account) == 0xA550C18, 1);
 
       move_to_sender<BlockMetadata>(BlockMetadata {
         height: 0,
-        new_block_events: Event::new_event_handle<Self::NewBlockEvent>(),
+        new_block_events: Event::new_event_handle<Self::NewBlockEvent>(account),
       });
     }
 
