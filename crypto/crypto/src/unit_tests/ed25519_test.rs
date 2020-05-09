@@ -16,7 +16,7 @@ use core::{
 };
 
 use crate::hash::HashValue;
-use proptest::prelude::*;
+use proptest::{collection::vec, prelude::*};
 
 proptest! {
     #[test]
@@ -81,6 +81,19 @@ proptest! {
         prop_assert_eq!(ED25519_SIGNATURE_LENGTH, serialized.len());
         let deserialized = Ed25519Signature::try_from(serialized).unwrap();
         prop_assert!(keypair.public_key.verify_signature(&hash, &deserialized).is_ok());
+    }
+
+    #[test]
+    fn test_signature_verification_from_arbitrary(
+        // this should be > 64 bits to go over the length of a default hash
+        msg in vec(proptest::num::u8::ANY, 1..128),
+        keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()
+    ) {
+        let signature = keypair.private_key.sign_arbitrary_message(&msg);
+        let serialized: &[u8] = &(signature.to_bytes());
+        prop_assert_eq!(ED25519_SIGNATURE_LENGTH, serialized.len());
+        let deserialized = Ed25519Signature::try_from(serialized).unwrap();
+        prop_assert!(deserialized.verify_arbitrary_msg(&msg, &keypair.public_key).is_ok());
     }
 
     // Check for canonical S.

@@ -122,6 +122,9 @@ pub trait SigningKey:
     /// Signs an input message.
     fn sign_message(&self, message: &HashValue) -> Self::SignatureMaterial;
 
+    #[cfg(test)]
+    fn sign_arbitrary_message(&self, message: &[u8]) -> Self::SignatureMaterial;
+
     /// Returns the associated verifying key
     fn verifying_key(&self) -> Self::VerifyingKeyMaterial {
         self.public_key()
