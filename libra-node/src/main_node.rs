@@ -234,7 +234,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         LibraDB::open(
             &node_config.storage.dir(),
             false, /* readonly */
-            Some(LibraDB::HISTORICAL_VERSIONS_TO_KEEP),
+            node_config.storage.prune_window,
         )
         .expect("DB should open."),
     );

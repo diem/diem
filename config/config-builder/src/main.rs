@@ -293,6 +293,8 @@ fn build_validator(args: ValidatorArgs) {
 
     let mut node_config = config_builder.build().expect("ConfigBuilder failed");
     node_config.set_data_dir(args.validator_common.data_dir);
+    // Aggressive setting for testnet (1~2 hours worth of history).
+    node_config.storage.prune_window = Some(500_000);
     save_config(node_config, &args.validator_common.output_dir);
 }
 
