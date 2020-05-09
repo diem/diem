@@ -17,32 +17,35 @@ pub trait PackageLinter: Linter {
 /// Lint context for an individual package.
 #[derive(Copy, Clone, Debug)]
 pub struct PackageContext<'l> {
-    project_ctx: ProjectContext<'l>,
+    project_ctx: &'l ProjectContext<'l>,
     // PackageContext requires the package graph to be computed and available, though ProjectContext
     // does not.
     package_graph: &'l PackageGraph,
     workspace_path: &'l Path,
     metadata: PackageMetadata<'l>,
+    is_default_member: bool,
 }
 
 impl<'l> PackageContext<'l> {
     pub fn new(
-        project_ctx: ProjectContext<'l>,
+        project_ctx: &'l ProjectContext<'l>,
         package_graph: &'l PackageGraph,
         workspace_path: &'l Path,
         metadata: PackageMetadata<'l>,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        let default_members = project_ctx.default_workspace_members()?;
+        Ok(Self {
             project_ctx,
             package_graph,
             workspace_path,
             metadata,
-        }
+            is_default_member: default_members.contains(metadata.id()),
+        })
     }
 
     /// Returns the project context.
-    pub fn project_ctx(&self) -> &ProjectContext<'l> {
-        &self.project_ctx
+    pub fn project_ctx(&self) -> &'l ProjectContext<'l> {
+        self.project_ctx
     }
 
     /// Returns the package graph.
@@ -58,6 +61,11 @@ impl<'l> PackageContext<'l> {
     /// Returns the metadata for this package.
     pub fn metadata(&self) -> &PackageMetadata<'l> {
         &self.metadata
+    }
+
+    /// Returns true if this is a default member of this workspace.
+    pub fn is_default_member(&self) -> bool {
+        self.is_default_member
     }
 }
 

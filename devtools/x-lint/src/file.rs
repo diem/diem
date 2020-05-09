@@ -7,12 +7,12 @@ use std::{ffi::OsStr, fs, io, path::Path};
 /// Contains information for a single file.
 #[derive(Clone, Debug)]
 pub struct FileContext<'l> {
-    project_ctx: ProjectContext<'l>,
+    project_ctx: &'l ProjectContext<'l>,
     file_path: &'l Path,
 }
 
 impl<'l> FileContext<'l> {
-    pub fn new(project_ctx: ProjectContext<'l>, file_path: &'l Path) -> Self {
+    pub fn new(project_ctx: &'l ProjectContext<'l>, file_path: &'l Path) -> Self {
         Self {
             project_ctx,
             file_path,
@@ -20,7 +20,7 @@ impl<'l> FileContext<'l> {
     }
 
     /// Returns the project context.
-    pub fn project_ctx(&self) -> ProjectContext<'l> {
+    pub fn project_ctx(&self) -> &'l ProjectContext<'l> {
         self.project_ctx
     }
 
