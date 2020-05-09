@@ -1,9 +1,9 @@
 import 0x0.LBR;
 
-main() {
+main(account: &signer) {
 
     // This will fail because the sender is not 0x0
-    LBR.initialize();
+    LBR.initialize(move(account));
 
     return;
 }

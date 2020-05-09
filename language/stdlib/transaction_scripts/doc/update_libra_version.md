@@ -15,7 +15,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(major: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, major: u64)
 </code></pre>
 
 
@@ -24,8 +24,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(major: u64) {
-    <a href="../../modules/doc/libra_version.md#0x0_LibraVersion_set">LibraVersion::set</a>(major)
+<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, major: u64) {
+    <a href="../../modules/doc/libra_version.md#0x0_LibraVersion_set">LibraVersion::set</a>(major, account)
 }
 </code></pre>
 

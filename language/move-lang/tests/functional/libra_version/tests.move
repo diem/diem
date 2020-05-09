@@ -1,8 +1,8 @@
 //! new-transaction
 script{
 use 0x0::LibraVersion;
-fun main() {
-    LibraVersion::initialize();
+fun main(account: &signer) {
+    LibraVersion::initialize(account);
 }
 }
 // check: ABORTED
@@ -11,8 +11,8 @@ fun main() {
 //! new-transaction
 script{
 use 0x0::LibraVersion;
-fun main() {
-    LibraVersion::set(0);
+fun main(account: &signer) {
+    LibraVersion::set(0, account);
 }
 }
 // check: ABORTED

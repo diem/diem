@@ -14,6 +14,7 @@ address 0x0 {
 /// ```
 
 module Association {
+    use 0x0::Signer;
     use 0x0::Transaction;
 
     /// The root account privilege. This is created at genesis and has
@@ -25,12 +26,12 @@ module Association {
     /// privileged than other association operations. This resource with the
     /// type representing that privilege is published under the privileged
     /// account.
-    resource struct PrivilegedCapability<Privilege> { is_certified: bool }
+    resource struct PrivilegedCapability<Privilege> { }
 
     /// A type tag to mark that this account is an association account.
     /// It cannot be used for more specific/privileged operations.
 
-    /// > DD: The presence of an instance of T at and address, with is_certified,
+    /// > DD: The presence of an instance of T at and address
     /// > means that the address is an association address. I suggest giving "T"
     /// > a more meaningful name (e.g., AssociationMember? AssociationPrivileges?)
     struct T { }
@@ -38,62 +39,42 @@ module Association {
     /// Initialization is called in genesis. It publishes the root resource
     /// under the root_address() address, marks it as a normal
     /// association account.
-    public fun initialize() {
-        let sender = Transaction::sender();
-        Transaction::assert(sender == root_address(), 1000);
-        move_to_sender(Root{ });
-        move_to_sender(PrivilegedCapability<T>{ is_certified: true });
+    public fun initialize(association: &signer) {
+        Transaction::assert(Signer::address_of(association) == root_address(), 1000);
+        move_to(association, Root{ });
+        move_to(association, PrivilegedCapability<T>{  });
     }
 
-    /// Publish a specific privilege under the sending account.
-    public fun apply_for_privilege<Privilege>() {
-        if (::exists<PrivilegedCapability<Privilege>>(Transaction::sender())) return;
-        move_to_sender(PrivilegedCapability<Privilege>{ is_certified: false });
-    }
-
-    /// Certify the privileged capability published under for_addr.
-    public fun grant_privilege<Privilege>(for_addr: address)
-    acquires PrivilegedCapability {
+    /// Certify the privileged capability published under `association`.
+    public fun grant_privilege<Privilege>(association: &signer) {
         assert_sender_is_root();
-        Transaction::assert(exists<PrivilegedCapability<Privilege>>(for_addr), 1003);
-        borrow_global_mut<PrivilegedCapability<Privilege>>(for_addr).is_certified = true;
+        move_to(association, PrivilegedCapability<Privilege>{ });
+    }
+
+    /// Grant the association privilege to `association`
+    public fun grant_association_address(association: &signer) {
+        grant_privilege<T>(association)
     }
 
     /// Return whether the `addr` has the specified `Privilege`.
-    public fun has_privilege<Privilege>(addr: address): bool
-    acquires PrivilegedCapability {
-        addr_is_association(addr) &&
-        exists<PrivilegedCapability<Privilege>>(addr) &&
-        borrow_global<PrivilegedCapability<Privilege>>(addr).is_certified
+    public fun has_privilege<Privilege>(addr: address): bool {
+        // TODO: figure out what to do with this
+        //addr_is_association(addr) &&
+        exists<PrivilegedCapability<Privilege>>(addr)
     }
 
     /// Remove the `Privilege` from the address at `addr`. The sender must
-    /// be the root association account. The `Privilege` need not be
-    /// certified.
-    /// > DD: Perhaps should not allow root to remove itself from Association?
+    /// be the root association account
+    // DD: Perhaps should not allow root to remove itself from Association?
     public fun remove_privilege<Privilege>(addr: address)
     acquires PrivilegedCapability {
         assert_sender_is_root();
         Transaction::assert(exists<PrivilegedCapability<Privilege>>(addr), 1004);
-        PrivilegedCapability<Privilege>{ is_certified: _ } = move_from<PrivilegedCapability<Privilege>>(addr);
-    }
-
-    /// Publishes an Association::PrivilegedCapability<T> under the sending
-    /// account.
-    public fun apply_for_association() {
-        apply_for_privilege<T>()
-    }
-
-    /// Certifies the Association::PrivilegedCapability<T> resource that is
-    /// published under `addr`.
-    public fun grant_association_address(addr: address)
-    acquires PrivilegedCapability {
-        grant_privilege<T>(addr)
+        PrivilegedCapability<Privilege>{ } = move_from<PrivilegedCapability<Privilege>>(addr);
     }
 
     /// Assert that the sender is an association account.
-    public fun assert_sender_is_association()
-    acquires PrivilegedCapability {
+    public fun assert_sender_is_association() {
         assert_addr_is_association(Transaction::sender())
     }
 
@@ -103,10 +84,8 @@ module Association {
     }
 
     /// Return whether the account at `addr` is an association account.
-    public fun addr_is_association(addr: address): bool
-    acquires PrivilegedCapability {
-        exists<PrivilegedCapability<T>>(addr) &&
-            borrow_global<PrivilegedCapability<T>>(addr).is_certified
+    public fun addr_is_association(addr: address): bool {
+        exists<PrivilegedCapability<T>>(addr)
     }
 
     /// The address at which the root account will be published.
@@ -115,8 +94,7 @@ module Association {
     }
 
     /// Assert that `addr` is an association account.
-    fun assert_addr_is_association(addr: address)
-    acquires PrivilegedCapability {
+    fun assert_addr_is_association(addr: address) {
         Transaction::assert(addr_is_association(addr), 1002);
     }
 
@@ -139,7 +117,6 @@ module Association {
         /// Helper which mirrors Move `Self::addr_is_association`.
         define spec_addr_is_association(addr: address): bool {
             exists<PrivilegedCapability<T>>(addr)
-            && global<PrivilegedCapability<T>>(addr).is_certified
         }
      }
 
@@ -192,34 +169,6 @@ module Association {
 
     // Switch documentation context back to module level.
     spec module {}
-
-    /// ## Authority to set is_certified Flag
-
-    /// Only `grant_*` functions can set the `is_certified` flag in
-    /// `PrivilegedCapability<Privilege>`. The logic must also take into account the
-    /// possibility that the `PrivilegedCapability<Privilege>` does not exist in the old
-    /// state, or, even if it did exist in the old state, it is deleted by
-    /// `Self::remove_privilege`.
-    /// > TODO: bug: the below schema creates a name clash if using `addr` as a quantified name if its inserted
-    /// > in a context.
-    spec schema OnlyGrantCanCertify<Privilege> {
-       ensures all(domain<address>(), |addr1| old(not_certified<Privilege>(addr1)) ==> not_certified<Privilege>(addr1));
-    }
-    spec module {
-        /// Helper to assert that if `PrivilegedCapability<Privilege>` exists, certification
-        /// status is false.
-        define not_certified<Privilege>(addr: address): bool {
-            exists<PrivilegedCapability<Privilege>>(addr) ==>
-                !global<PrivilegedCapability<Privilege>>(addr).is_certified
-        }
-    }
-    spec module {
-        /// By excepting only grant_*, we make sure only these two functions
-        /// can change the is_certified from true to false.
-        /// > TODO: Try deleting the association version to see if prover catches it.
-        apply OnlyGrantCanCertify<Privilege> to *<Privilege>
-            except grant_privilege, grant_association_address;
-    }
 
     /// ## Privilege Removal
 

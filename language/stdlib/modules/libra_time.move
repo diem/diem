@@ -1,6 +1,7 @@
 address 0x0 {
 
 module LibraTimestamp {
+    use 0x0::Signer;
     use 0x0::Transaction;
 
     // A singleton resource holding the current Unix time in microseconds
@@ -9,13 +10,13 @@ module LibraTimestamp {
     }
 
     // Initialize the global wall clock time resource.
-    public fun initialize() {
+    public fun initialize(association: &signer) {
         // Only callable by the Association address
-        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+        Transaction::assert(Signer::address_of(association) == 0xA550C18, 1);
 
         // TODO: Should the initialized value be passed in to genesis?
-        let timer = CurrentTimeMicroseconds {microseconds: 0};
-        move_to_sender<CurrentTimeMicroseconds>(timer);
+        let timer = CurrentTimeMicroseconds { microseconds: 0 };
+        move_to(association, timer);
     }
 
     // Update the wall clock time by consensus. Requires VM privilege and will be invoked during block prologue.
@@ -40,8 +41,8 @@ module LibraTimestamp {
     }
 
     // Helper function to determine if the blockchain is at genesis state.
-    public fun is_genesis(): bool {
-        !::exists<Self::CurrentTimeMicroseconds>(0xA550C18)
+    public fun is_genesis(): bool acquires CurrentTimeMicroseconds {
+        !::exists<CurrentTimeMicroseconds>(0xA550C18) || now_microseconds() == 0
     }
 }
 

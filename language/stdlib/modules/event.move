@@ -2,13 +2,8 @@ address 0x0 {
 
 module Event {
     use 0x0::LCS;
-    use 0x0::LibraTimestamp;
+    use 0x0::Signer;
     use 0x0::Vector;
-    use 0x0::Transaction;
-
-    // An operations capability restricting who can create an
-    // EventHandleGenerator.
-    resource struct EventHandleGeneratorCreationCapability {}
 
     // A resource representing the counter used to generate uniqueness under each account. There won't be destructor for
     // this resource to guarantee the uniqueness of the generated handle.
@@ -28,34 +23,8 @@ module Event {
         guid: vector<u8>,
     }
 
-    public fun grant_event_handle_creation_operation(): EventHandleGeneratorCreationCapability {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 0);
-        EventHandleGeneratorCreationCapability{}
-    }
-
-    public fun grant_event_generator() {
-        Transaction::assert(LibraTimestamp::is_genesis(), 0);
-        move_to_sender(EventHandleGenerator { counter: 0, addr: Transaction::sender() })
-    }
-
-    public fun new_event_generator(
-        addr: address,
-        _cap: &EventHandleGeneratorCreationCapability
-    ): EventHandleGenerator acquires EventHandleGenerator {
-        if (::exists<EventHandleGenerator>(addr) && LibraTimestamp::is_genesis()) {
-            // if the account already has an event handle generator, return it instead of creating
-            // a new one. the reason: it may have already been used to generate event handles and
-            // thus may have a nonzero `counter`.
-            // this should only happen during genesis bootstrapping, and only for the association
-            // account and the config account.
-            // TODO: see if we can eliminate this hack + the initialize() function
-            Transaction::assert(Transaction::sender() == 0xA550C18 || Transaction::sender() == 0xF1A95, 0);
-            Transaction::assert(addr == 0xA550C18 || addr == 0xF1A95, 0);
-
-            move_from<EventHandleGenerator>(addr)
-        } else {
-            EventHandleGenerator{ counter: 0, addr }
-        }
+    public fun publish_generator(account: &signer) {
+        move_to(account, EventHandleGenerator{ counter: 0, addr: Signer::address_of(account) })
     }
 
     // Derive a fresh unique id by using sender's EventHandleGenerator. The generated vector<u8> is indeed unique because it
@@ -74,17 +43,13 @@ module Event {
         count_bytes
     }
 
-    // Use EventHandleGenerator to generate a unique event handle that one can emit an event to.
-    public fun new_event_handle_from_generator<T: copyable>(event_generator: &mut EventHandleGenerator): EventHandle<T> {
-        EventHandle<T> {counter: 0, guid: fresh_guid(event_generator)}
-    }
-
-
-    // Use EventHandleGenerator to generate a unique event handle that one can emit an event to.
-    public fun new_event_handle<T: copyable>(): EventHandle<T>
+    // Use EventHandleGenerator to generate a unique event handle for `sig`
+    public fun new_event_handle<T: copyable>(account: &signer): EventHandle<T>
     acquires EventHandleGenerator {
-        let event_generator = borrow_global_mut<EventHandleGenerator>(Transaction::sender());
-        new_event_handle_from_generator(event_generator)
+        EventHandle<T> {
+            counter: 0,
+            guid: fresh_guid(borrow_global_mut<EventHandleGenerator>(Signer::address_of(account)))
+        }
     }
 
     // Emit an event with payload `msg` by using handle's key and counter. Will change the payload from vector<u8> to a

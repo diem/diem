@@ -1,8 +1,8 @@
 import 0x0.Event;
 
-main() {
+main(account: &signer) {
     let handle: Event.EventHandle<u64>;
-    handle = Event.new_event_handle<u64>();
+    handle = Event.new_event_handle<u64>(move(account));
     Event.emit_event<u64>(&mut handle, 42);
     Event.destroy_handle<u64>(move(handle));
     return;

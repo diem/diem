@@ -46,7 +46,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTransactionTimeout_initialize">initialize</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTransactionTimeout_initialize">initialize</a>(association: &signer)
 </code></pre>
 
 
@@ -55,12 +55,11 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTransactionTimeout_initialize">initialize</a>() {
-
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTransactionTimeout_initialize">initialize</a>(association: &signer) {
   // Only callable by the <a href="association.md#0x0_Association">Association</a> address
-  Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+  Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == 0xA550C18, 1);
   // Currently set <b>to</b> 1day.
-  move_to_sender&lt;<a href="#0x0_LibraTransactionTimeout_TTL">TTL</a>&gt;(<a href="#0x0_LibraTransactionTimeout_TTL">TTL</a> {duration_microseconds: 86400000000});
+  move_to(association, <a href="#0x0_LibraTransactionTimeout_TTL">TTL</a> {duration_microseconds: 86400000000});
 }
 </code></pre>
 

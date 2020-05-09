@@ -41,7 +41,6 @@ pub(crate) enum NativeFunction {
     VectorDestroyEmpty,
     VectorSwap,
     AccountWriteEvent,
-    AccountSaveAccount,
     DebugPrint,
     DebugPrintStackTrace,
     SignerBorrowAddress,
@@ -78,7 +77,6 @@ impl NativeFunction {
             (&CORE_CODE_ADDRESS, "Event", "write_to_event_store") => AccountWriteEvent,
             (&CORE_CODE_ADDRESS, "LibraAccount", "create_signer") => CreateSigner,
             (&CORE_CODE_ADDRESS, "LibraAccount", "destroy_signer") => DestroySigner,
-            (&CORE_CODE_ADDRESS, "LibraAccount", "save_account") => AccountSaveAccount,
             (&CORE_CODE_ADDRESS, "Debug", "print") => DebugPrint,
             (&CORE_CODE_ADDRESS, "Debug", "print_stack_trace") => DebugPrintStackTrace,
             (&CORE_CODE_ADDRESS, "Signer", "borrow_address") => SignerBorrowAddress,
@@ -111,7 +109,6 @@ impl NativeFunction {
             Self::VectorSwap => vector::native_swap(ctx, t, v),
             // natives that need the full API of `NativeContext`
             Self::AccountWriteEvent => event::native_emit_event(ctx, t, v),
-            Self::AccountSaveAccount => account::native_save_account(ctx, t, v),
             Self::LCSToBytes => lcs::native_to_bytes(ctx, t, v),
             Self::DebugPrint => debug::native_print(ctx, t, v),
             Self::DebugPrintStackTrace => debug::native_print_stack_trace(ctx, t, v),

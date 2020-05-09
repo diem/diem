@@ -1,8 +1,8 @@
 //! new-transaction
 script {
 use 0x0::LibraWriteSetManager;
-fun main() {
-    LibraWriteSetManager::initialize();
+fun main(account: &signer) {
+    LibraWriteSetManager::initialize(account);
 }
 }
 // check: ABORTED

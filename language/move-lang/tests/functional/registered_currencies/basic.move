@@ -3,16 +3,16 @@ module Holder {
     resource struct Holder {
         cap: RegisteredCurrencies::RegistrationCapability,
     }
-    public fun hold(cap: RegisteredCurrencies::RegistrationCapability) {
-        move_to_sender<Holder>(Holder { cap })
+    public fun hold(account: &signer, cap: RegisteredCurrencies::RegistrationCapability) {
+        move_to<Holder>(account, Holder { cap })
     }
 }
 //! new-transaction
 script {
     use {{default}}::Holder;
     use 0x0::RegisteredCurrencies;
-    fun main() {
-        Holder::hold(RegisteredCurrencies::initialize());
+    fun main(account: &signer) {
+        Holder::hold(account, RegisteredCurrencies::initialize(account));
     }
 }
 // check: ABORTED

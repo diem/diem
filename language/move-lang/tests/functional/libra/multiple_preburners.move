@@ -155,7 +155,7 @@ fun main() {
 
 // burn bob's funds, then alice's
 //! new-transaction
-//! sender: association
+//! sender: blessed
 //! max-gas: 1000000
 //! gas-price: 0
 script {
@@ -195,7 +195,7 @@ fun main() {
 
 // cancel Alice's request and return her funds
 //! new-transaction
-//! sender: association
+//! sender: blessed
 //! max-gas: 1000000
 //! gas-price: 0
 script {
@@ -215,7 +215,7 @@ fun main() {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 //! max-gas: 1000000
 script {
 use 0x0::Coin2;
@@ -261,7 +261,7 @@ fun main() {
 // check: 3
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 //! max-gas: 1000000
 script {
 use 0x0::Coin2;

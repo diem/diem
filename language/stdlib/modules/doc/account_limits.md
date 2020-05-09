@@ -5,13 +5,13 @@
 
 ### Table of Contents
 
--  [Struct `UpdateCapability`](#0x0_AccountLimits_UpdateCapability)
+-  [Struct `CallingCapability`](#0x0_AccountLimits_CallingCapability)
 -  [Struct `LimitsDefinition`](#0x0_AccountLimits_LimitsDefinition)
 -  [Struct `Window`](#0x0_AccountLimits_Window)
--  [Function `grant_account_tracking`](#0x0_AccountLimits_grant_account_tracking)
+-  [Function `grant_calling_capability`](#0x0_AccountLimits_grant_calling_capability)
 -  [Function `update_deposit_limits`](#0x0_AccountLimits_update_deposit_limits)
 -  [Function `update_withdrawal_limits`](#0x0_AccountLimits_update_withdrawal_limits)
--  [Function `create`](#0x0_AccountLimits_create)
+-  [Function `publish`](#0x0_AccountLimits_publish)
 -  [Function `publish_limits_definition`](#0x0_AccountLimits_publish_limits_definition)
 -  [Function `publish_unrestricted_limits`](#0x0_AccountLimits_publish_unrestricted_limits)
 -  [Function `unpublish_limits_definition`](#0x0_AccountLimits_unpublish_limits_definition)
@@ -22,16 +22,19 @@
 -  [Function `can_receive`](#0x0_AccountLimits_can_receive)
 -  [Function `can_withdraw`](#0x0_AccountLimits_can_withdraw)
 -  [Function `is_unrestricted`](#0x0_AccountLimits_is_unrestricted)
+-  [Function `limits_definition_address`](#0x0_AccountLimits_limits_definition_address)
+-  [Function `is_unlimited_account`](#0x0_AccountLimits_is_unlimited_account)
+-  [Function `current_time`](#0x0_AccountLimits_current_time)
 
 
 
-<a name="0x0_AccountLimits_UpdateCapability"></a>
+<a name="0x0_AccountLimits_CallingCapability"></a>
 
-## Struct `UpdateCapability`
+## Struct `CallingCapability`
 
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_AccountLimits_UpdateCapability">UpdateCapability</a>
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_AccountLimits_CallingCapability">CallingCapability</a>
 </code></pre>
 
 
@@ -115,7 +118,7 @@
 
 
 
-<pre><code><b>struct</b> <a href="#0x0_AccountLimits_Window">Window</a>
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_AccountLimits_Window">Window</a>
 </code></pre>
 
 
@@ -153,18 +156,25 @@
 <dd>
 
 </dd>
+<dt>
+
+<code>limits_definition: address</code>
+</dt>
+<dd>
+
+</dd>
 </dl>
 
 
 </details>
 
-<a name="0x0_AccountLimits_grant_account_tracking"></a>
+<a name="0x0_AccountLimits_grant_calling_capability"></a>
 
-## Function `grant_account_tracking`
+## Function `grant_calling_capability`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_grant_account_tracking">grant_account_tracking</a>(): <a href="#0x0_AccountLimits_UpdateCapability">AccountLimits::UpdateCapability</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_grant_calling_capability">grant_calling_capability</a>(): <a href="#0x0_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>
 </code></pre>
 
 
@@ -173,10 +183,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_grant_account_tracking">grant_account_tracking</a>(): <a href="#0x0_AccountLimits_UpdateCapability">UpdateCapability</a> {
-    // This address needs <b>to</b> match the singleton_addr in <a href="account_tracking.md#0x0_AccountTrack">AccountTrack</a>
-    Transaction::assert(Transaction::sender() == 0xA550C18, 2);
-    <a href="#0x0_AccountLimits_UpdateCapability">UpdateCapability</a>{}
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_grant_calling_capability">grant_calling_capability</a>(): <a href="#0x0_AccountLimits_CallingCapability">CallingCapability</a> {
+    Transaction::assert(Transaction::sender() == 0xA550C18, 3000);
+    <a href="#0x0_AccountLimits_CallingCapability">CallingCapability</a>{}
 }
 </code></pre>
 
@@ -190,7 +199,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_update_deposit_limits">update_deposit_limits</a>&lt;CoinType&gt;(amount: u64, receiving_limits_addr: address, receiving_window_info: &<b>mut</b> <a href="#0x0_AccountLimits_Window">AccountLimits::Window</a>, _cap: &<a href="#0x0_AccountLimits_UpdateCapability">AccountLimits::UpdateCapability</a>): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_update_deposit_limits">update_deposit_limits</a>&lt;CoinType&gt;(amount: u64, addr: address, _cap: &<a href="#0x0_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>): bool
 </code></pre>
 
 
@@ -201,15 +210,13 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_update_deposit_limits">update_deposit_limits</a>&lt;CoinType&gt;(
     amount: u64,
-    receiving_limits_addr: address,
-    receiving_window_info: &<b>mut</b> <a href="#0x0_AccountLimits_Window">Window</a>,
-    _cap: &<a href="#0x0_AccountLimits_UpdateCapability">UpdateCapability</a>
-): bool <b>acquires</b> <a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
+    addr: address,
+    _cap: &<a href="#0x0_AccountLimits_CallingCapability">CallingCapability</a>,
+): bool <b>acquires</b> <a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a>, <a href="#0x0_AccountLimits_Window">Window</a> {
     Transaction::assert(<a href="testnet.md#0x0_Testnet_is_testnet">0x0::Testnet::is_testnet</a>(), 10047);
     <a href="#0x0_AccountLimits_can_receive">can_receive</a>&lt;CoinType&gt;(
         amount,
-        receiving_window_info,
-        borrow_global&lt;<a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(receiving_limits_addr),
+        borrow_global_mut&lt;<a href="#0x0_AccountLimits_Window">Window</a>&gt;(addr),
     )
 }
 </code></pre>
@@ -224,7 +231,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_update_withdrawal_limits">update_withdrawal_limits</a>&lt;CoinType&gt;(amount: u64, limits_addr: address, account_window_info: &<b>mut</b> <a href="#0x0_AccountLimits_Window">AccountLimits::Window</a>, _cap: &<a href="#0x0_AccountLimits_UpdateCapability">AccountLimits::UpdateCapability</a>): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_update_withdrawal_limits">update_withdrawal_limits</a>&lt;CoinType&gt;(amount: u64, addr: address, _cap: &<a href="#0x0_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>): bool
 </code></pre>
 
 
@@ -235,15 +242,13 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_update_withdrawal_limits">update_withdrawal_limits</a>&lt;CoinType&gt;(
     amount: u64,
-    limits_addr: address,
-    account_window_info: &<b>mut</b> <a href="#0x0_AccountLimits_Window">Window</a>,
-    _cap: &<a href="#0x0_AccountLimits_UpdateCapability">UpdateCapability</a>
-): bool <b>acquires</b> <a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
+    addr: address,
+    _cap: &<a href="#0x0_AccountLimits_CallingCapability">CallingCapability</a>,
+): bool <b>acquires</b> <a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a>, <a href="#0x0_AccountLimits_Window">Window</a> {
     Transaction::assert(<a href="testnet.md#0x0_Testnet_is_testnet">0x0::Testnet::is_testnet</a>(), 10048);
     <a href="#0x0_AccountLimits_can_withdraw">can_withdraw</a>&lt;CoinType&gt;(
         amount,
-        account_window_info,
-        borrow_global&lt;<a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(limits_addr),
+        borrow_global_mut&lt;<a href="#0x0_AccountLimits_Window">Window</a>&gt;(addr),
     )
 }
 </code></pre>
@@ -252,13 +257,13 @@
 
 </details>
 
-<a name="0x0_AccountLimits_create"></a>
+<a name="0x0_AccountLimits_publish"></a>
 
-## Function `create`
+## Function `publish`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_create">create</a>(): <a href="#0x0_AccountLimits_Window">AccountLimits::Window</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_publish">publish</a>(to_limit: &signer)
 </code></pre>
 
 
@@ -267,13 +272,17 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_create">create</a>(): <a href="#0x0_AccountLimits_Window">Window</a> {
-    <a href="#0x0_AccountLimits_Window">Window</a> {
-        window_start: <a href="libra_time.md#0x0_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>(),
-        window_outflow: 0,
-        window_inflow: 0,
-        tracked_balance: 0,
-    }
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_publish">publish</a>(to_limit: &signer) {
+    move_to(
+        to_limit,
+        <a href="#0x0_AccountLimits_Window">Window</a> {
+            window_start: <a href="#0x0_AccountLimits_current_time">current_time</a>(),
+            window_outflow: 0,
+            window_inflow: 0,
+            tracked_balance: 0,
+            limits_definition: <a href="#0x0_AccountLimits_default_limits_addr">default_limits_addr</a>()
+        }
+    )
 }
 </code></pre>
 
@@ -483,7 +492,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_AccountLimits_can_receive">can_receive</a>&lt;CoinType&gt;(amount: u64, receiving: &<b>mut</b> <a href="#0x0_AccountLimits_Window">AccountLimits::Window</a>, limits_definition: &<a href="#0x0_AccountLimits_LimitsDefinition">AccountLimits::LimitsDefinition</a>): bool
+<pre><code><b>fun</b> <a href="#0x0_AccountLimits_can_receive">can_receive</a>&lt;CoinType&gt;(amount: u64, receiving: &<b>mut</b> <a href="#0x0_AccountLimits_Window">AccountLimits::Window</a>): bool
 </code></pre>
 
 
@@ -495,11 +504,11 @@
 <pre><code><b>fun</b> <a href="#0x0_AccountLimits_can_receive">can_receive</a>&lt;CoinType&gt;(
     amount: u64,
     receiving: &<b>mut</b> <a href="#0x0_AccountLimits_Window">Window</a>,
-    limits_definition: &<a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a>
-): bool {
-    Transaction::assert(limits_definition.is_certified, 1);
+): bool <b>acquires</b> <a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
+    <b>let</b> limits_definition = borrow_global_mut&lt;<a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(receiving.limits_definition);
     // If the limits ares unrestricted then no more work needs <b>to</b> be done
     <b>if</b> (<a href="#0x0_AccountLimits_is_unrestricted">is_unrestricted</a>(limits_definition)) <b>return</b> <b>true</b>;
+
     <a href="#0x0_AccountLimits_reset_window">reset_window</a>(receiving, limits_definition);
     // Check that the max inflow is OK
     <b>let</b> inflow_ok = receiving.window_inflow + amount &lt;= limits_definition.max_inflow;
@@ -524,7 +533,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_AccountLimits_can_withdraw">can_withdraw</a>&lt;CoinType&gt;(amount: u64, sending: &<b>mut</b> <a href="#0x0_AccountLimits_Window">AccountLimits::Window</a>, limits_definition: &<a href="#0x0_AccountLimits_LimitsDefinition">AccountLimits::LimitsDefinition</a>): bool
+<pre><code><b>fun</b> <a href="#0x0_AccountLimits_can_withdraw">can_withdraw</a>&lt;CoinType&gt;(amount: u64, sending: &<b>mut</b> <a href="#0x0_AccountLimits_Window">AccountLimits::Window</a>): bool
 </code></pre>
 
 
@@ -536,11 +545,11 @@
 <pre><code><b>fun</b> <a href="#0x0_AccountLimits_can_withdraw">can_withdraw</a>&lt;CoinType&gt;(
     amount: u64,
     sending: &<b>mut</b> <a href="#0x0_AccountLimits_Window">Window</a>,
-    limits_definition: &<a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a>
-): bool {
-    Transaction::assert(limits_definition.is_certified, 1);
+): bool <b>acquires</b> <a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
+    <b>let</b> limits_definition = borrow_global_mut&lt;<a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(sending.limits_definition);
     // If the limits are unrestricted then no more work is required
     <b>if</b> (<a href="#0x0_AccountLimits_is_unrestricted">is_unrestricted</a>(limits_definition)) <b>return</b> <b>true</b>;
+
     <a href="#0x0_AccountLimits_reset_window">reset_window</a>(sending, limits_definition);
     // Check max outlflow
     <b>let</b> outflow = sending.window_outflow + amount;
@@ -580,6 +589,78 @@
     limits_def.max_outflow == u64_max &&
     limits_def.max_holding == u64_max &&
     limits_def.time_period == u64_max
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_AccountLimits_limits_definition_address"></a>
+
+## Function `limits_definition_address`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_limits_definition_address">limits_definition_address</a>(addr: address): address
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_limits_definition_address">limits_definition_address</a>(addr: address): address <b>acquires</b> <a href="#0x0_AccountLimits_Window">Window</a> {
+    borrow_global&lt;<a href="#0x0_AccountLimits_Window">Window</a>&gt;(addr).limits_definition
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_AccountLimits_is_unlimited_account"></a>
+
+## Function `is_unlimited_account`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_is_unlimited_account">is_unlimited_account</a>(addr: address): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_is_unlimited_account">is_unlimited_account</a>(addr: address): bool <b>acquires</b> <a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
+    <a href="#0x0_AccountLimits_is_unrestricted">is_unrestricted</a>(borrow_global&lt;<a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(addr))
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_AccountLimits_current_time"></a>
+
+## Function `current_time`
+
+
+
+<pre><code><b>fun</b> <a href="#0x0_AccountLimits_current_time">current_time</a>(): u64
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="#0x0_AccountLimits_current_time">current_time</a>(): u64 {
+    <b>if</b> (<a href="libra_time.md#0x0_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>()) 0 <b>else</b> <a href="libra_time.md#0x0_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>()
 }
 </code></pre>
 

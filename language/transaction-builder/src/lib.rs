@@ -219,24 +219,6 @@ pub fn encode_create_account_script(
     )
 }
 
-/// Encode a program creating a fresh empty account at `account_address`. No (non-zero) balance can
-/// be held by this account. Fails if there is already an account at `account_address`.
-pub fn encode_create_empty_account_script(
-    token: TypeTag,
-    account_address: &AccountAddress,
-    auth_key_prefix: Vec<u8>,
-) -> Script {
-    validate_auth_key_prefix(&auth_key_prefix);
-    Script::new(
-        StdlibScript::CreateEmptyAccount.compiled_bytes().into_vec(),
-        vec![token],
-        vec![
-            TransactionArgument::Address(*account_address),
-            TransactionArgument::U8Vector(auth_key_prefix),
-        ],
-    )
-}
-
 encode_txn_script! {
     name: encode_publish_shared_ed25519_public_key_script,
     args: [public_key: Bytes],
@@ -421,70 +403,6 @@ encode_txn_script! {
 //...........................................................................
 
 encode_txn_script! {
-    name: encode_add_currency,
-    type_arg: type_,
-    args: [
-        exchange_rate_denom: U64,
-        exchange_rate_num: U64,
-        is_synthetic: Bool,
-        scaling_factor: U64,
-        fractional_part: U64,
-        currency_code: Bytes
-    ],
-    script: AddCurrency,
-    doc: "Add a new currency of type `type_` to the system with exchange rate given by\
-        `exchange_rate_denom/exchange_rate_num and with the specified scaling_factor, and\
-        fractional_part"
-}
-
-encode_txn_script! {
-    name: encode_apply_for_association_address,
-    args: [],
-    script: ApplyForAssociationAddress,
-    doc: "Applies for the sending account to be added to the set of association addresses encoded on-chain"
-}
-
-encode_txn_script! {
-    name: encode_apply_for_association_privilege,
-    type_arg: privilege,
-    args: [],
-    script: ApplyForAssociationPrivilege,
-    doc: "Applies for the sending account to have the association privilege given by `privilege` to the sending account"
-}
-
-encode_txn_script! {
-    name: encode_grant_association_address,
-    args: [addr: Address],
-    script: GrantAssociationAddress,
-    doc: "Grants the address at `addr` association privileges. `addr` must have previously applied\
-          for association privileges."
-}
-
-encode_txn_script! {
-    name: encode_remove_association_address,
-    args: [addr: Address],
-    script: RemoveAssociationAddress,
-    doc: "Removes the address at `addr` from the set of association addresses encoded on-chain."
-}
-
-encode_txn_script! {
-    name: encode_grant_association_privilege,
-    type_arg: privilege,
-    args: [addr: Address],
-    script: GrantAssociationPrivilege,
-    doc: "Grants the address at `addr` the specific privilege given by `privilege`. `addr` must\
-          have previously applied for the `privilege` privilege."
-}
-
-encode_txn_script! {
-    name: encode_remove_association_privilege,
-    type_arg: privilege,
-    args: [addr: Address],
-    script: RemoveAssociationPrivilege,
-    doc: "Removes the association privilege given by `privilege` from the account at `addr`."
-}
-
-encode_txn_script! {
     name: encode_update_exchange_rate,
     type_arg: currency,
     args: [new_exchange_rate_denominator: U64, new_exchange_rate_numerator: U64],
@@ -506,78 +424,20 @@ encode_txn_script! {
 //...........................................................................
 
 encode_txn_script! {
-    name: encode_apply_for_child_vasp_credential,
-    args: [root_vasp_address: Address],
-    script: ApplyForChildVaspCredential,
-    doc: "Applies for the sending account to be added as a child account for VAPS with root account\
-          at `root_vasp_address`."
+    name: create_parent_vasp_account,
+    args: [address: Address, auth_key_prefix: Bytes, human_name: Bytes, base_url: Bytes, compliance_public_key: Bytes],
+    script: CreateParentVaspAccount,
+    doc: "Create an account with the ParentVASP role at `address` with authentication key\
+          `auth_key_prefix` | `new_account_address`."
 }
 
 encode_txn_script! {
-    name: encode_apply_for_parent_capability,
-    args: [],
-    script: ApplyForParentCapability,
-    doc: "Applies for the sending account to be added as a parent account for a VASP. The sender\
-          must already be VASP account."
-}
-
-encode_txn_script! {
-    name: encode_apply_for_root_vasp,
-    args: [human_name: Bytes, base_url: Bytes, travel_rule_public_key: Bytes],
-    script: ApplyForRootVasp,
-    doc: "Applies for the sending account to be added as a root VASP account."
-}
-
-encode_txn_script! {
-    name: encode_allow_child_accounts,
-    args: [],
-    script: AllowChildAccounts,
-    doc: "Allows child accounts to be created for the calling account if it is a root VASP account."
-}
-
-encode_txn_script! {
-    name: encode_grant_child_account,
-    args: [child_address: Address],
-    script: GrantChildAccount,
-    doc: "Grants the account at `child_address` application to be a child account for the VASP that\
-          the sending account belongs to."
-}
-
-encode_txn_script! {
-    name: encode_recertify_child_account,
-    args: [child_address: Address],
-    script: RecertifyChildAccount,
-    doc: "Recertifies the child account at `child_address` if it has been previously decertified/removed"
-}
-
-encode_txn_script! {
-    name: encode_remove_child_account,
-    args: [child_address: Address],
-    script: RemoveChildAccount,
-    doc: "Removes the child account at `child_address`. It can be recertified in the future however."
-}
-
-encode_txn_script! {
-    name: encode_grant_parent_account,
-    args: [parent_address: Address],
-    script: GrantParentAccount,
-    doc: "Grants the account at `parent_address` application to be a parent account w.r.t. the root\
-          VASP at the sending account."
-}
-
-encode_txn_script! {
-    name: encode_grant_vasp_account,
-    args: [root_address: Address],
-    script: GrantVaspAccount,
-    doc: "Grants the account's application at `root_address` to be a root VASP account. The sending\
-          account must have the association privilege: VASP::CreationPrivilege."
-}
-
-encode_txn_script! {
-    name: encode_remove_parent_account,
-    args: [parent_address: Address],
-    script: RemoveParentAccount,
-    doc: "Removes the parent account at `parent_address`. It can be recertified in the future however."
+    name: create_child_vasp_account,
+    args: [address: Address, auth_key_prefix: Bytes],
+    script: CreateChildVaspAccount,
+    doc: "Create an account with the ChildVASP role at `address` with authentication key\
+          `auth_key_prefix` | `new_account_address`. This account will be a child of the\
+          transaction sender, which must be a ParentVASP."
 }
 
 encode_txn_script! {

@@ -10,10 +10,9 @@ module AccountLimits {
     use 0x0::LibraTimestamp;
     use 0x0::Association;
 
-    // A capability to allow calling mutator functions such as
-    // `update_sending_limits` and `update_withdrawal_limits` within this
-    // module.
-    resource struct UpdateCapability { }
+    // An operations capability that restricts callers of this module since
+    // the operations can mutate account states.
+    resource struct CallingCapability { }
 
     // A resource specifying the account limits. There is a default
     // `LimitsDefinition` resource for unhosted accounts published at
@@ -38,7 +37,7 @@ module AccountLimits {
 
     // A struct holding account transaction information for the time window
     // starting at `window_start`.
-    struct Window {
+    resource struct Window {
         // Time window start in microseconds
         window_start: u64,
         // The outflow during this time window
@@ -47,15 +46,15 @@ module AccountLimits {
         window_inflow: u64,
         // The balance that this account has held during this time period.
         tracked_balance: u64,
+        // address storing the LimitsDefinition resource that governs this window
+        limits_definition: address,
     }
 
-    // Return back a capability to allow calling the public mutation
-    // functions in this module. The caller must be the singleton_addr for
-    // the AccountTrack module.
-    public fun grant_account_tracking(): UpdateCapability {
-        // This address needs to match the singleton_addr in AccountTrack
-        Transaction::assert(Transaction::sender() == 0xA550C18, 2);
-        UpdateCapability{}
+    // Grant a capability to call this module. This does not necessarily
+    // need to be a unique capability.
+    public fun grant_calling_capability(): CallingCapability {
+        Transaction::assert(Transaction::sender() == 0xA550C18, 3000);
+        CallingCapability{}
     }
 
     // Determine if the depositing of `amount` of `CoinType` coins into an
@@ -63,15 +62,13 @@ module AccountLimits {
     // Returns false if this violates the limits. Effectful.
     public fun update_deposit_limits<CoinType>(
         amount: u64,
-        receiving_limits_addr: address,
-        receiving_window_info: &mut Window,
-        _cap: &UpdateCapability
-    ): bool acquires LimitsDefinition {
+        addr: address,
+        _cap: &CallingCapability,
+    ): bool acquires LimitsDefinition, Window {
         Transaction::assert(0x0::Testnet::is_testnet(), 10047);
         can_receive<CoinType>(
             amount,
-            receiving_window_info,
-            borrow_global<LimitsDefinition>(receiving_limits_addr),
+            borrow_global_mut<Window>(addr),
         )
     }
 
@@ -81,28 +78,30 @@ module AccountLimits {
     // not permissible. Effectful.
     public fun update_withdrawal_limits<CoinType>(
         amount: u64,
-        limits_addr: address,
-        account_window_info: &mut Window,
-        _cap: &UpdateCapability
-    ): bool acquires LimitsDefinition {
+        addr: address,
+        _cap: &CallingCapability,
+    ): bool acquires LimitsDefinition, Window {
         Transaction::assert(0x0::Testnet::is_testnet(), 10048);
         can_withdraw<CoinType>(
             amount,
-            account_window_info,
-            borrow_global<LimitsDefinition>(limits_addr),
+            borrow_global_mut<Window>(addr),
         )
     }
 
-    // All unhosted accounts will have this published in their account
-    // info. Root accounts for multi-account entities will hold this
-    // resource in their account information.
-    public fun create(): Window {
-        Window {
-            window_start: LibraTimestamp::now_microseconds(),
-            window_outflow: 0,
-            window_inflow: 0,
-            tracked_balance: 0,
-        }
+    // TODO: take limits_definition as input
+    // All unhosted accounts will have this published at the top level. Root accounts for
+    // multi-account entities will hold this resource in their account information.
+    public fun publish(to_limit: &signer) {
+        move_to(
+            to_limit,
+            Window {
+                window_start: current_time(),
+                window_outflow: 0,
+                window_inflow: 0,
+                tracked_balance: 0,
+                limits_definition: default_limits_addr()
+            }
+        )
     }
 
     // Anyone can publish a LimitsDefinition resource under their address. But
@@ -186,11 +185,11 @@ module AccountLimits {
     fun can_receive<CoinType>(
         amount: u64,
         receiving: &mut Window,
-        limits_definition: &LimitsDefinition
-    ): bool {
-        Transaction::assert(limits_definition.is_certified, 1);
+    ): bool acquires LimitsDefinition {
+        let limits_definition = borrow_global_mut<LimitsDefinition>(receiving.limits_definition);
         // If the limits ares unrestricted then no more work needs to be done
         if (is_unrestricted(limits_definition)) return true;
+
         reset_window(receiving, limits_definition);
         // Check that the max inflow is OK
         let inflow_ok = receiving.window_inflow + amount <= limits_definition.max_inflow;
@@ -210,11 +209,11 @@ module AccountLimits {
     fun can_withdraw<CoinType>(
         amount: u64,
         sending: &mut Window,
-        limits_definition: &LimitsDefinition
-    ): bool {
-        Transaction::assert(limits_definition.is_certified, 1);
+    ): bool acquires LimitsDefinition {
+        let limits_definition = borrow_global_mut<LimitsDefinition>(sending.limits_definition);
         // If the limits are unrestricted then no more work is required
         if (is_unrestricted(limits_definition)) return true;
+
         reset_window(sending, limits_definition);
         // Check max outlflow
         let outflow = sending.window_outflow + amount;
@@ -236,6 +235,18 @@ module AccountLimits {
         limits_def.max_outflow == u64_max &&
         limits_def.max_holding == u64_max &&
         limits_def.time_period == u64_max
+    }
+
+    public fun limits_definition_address(addr: address): address acquires Window {
+        borrow_global<Window>(addr).limits_definition
+    }
+
+    public fun is_unlimited_account(addr: address): bool acquires LimitsDefinition {
+        is_unrestricted(borrow_global<LimitsDefinition>(addr))
+    }
+
+    fun current_time(): u64 {
+        if (LibraTimestamp::is_genesis()) 0 else LibraTimestamp::now_microseconds()
     }
 }
 

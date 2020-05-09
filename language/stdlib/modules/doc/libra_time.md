@@ -47,7 +47,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTimestamp_initialize">initialize</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTimestamp_initialize">initialize</a>(association: &signer)
 </code></pre>
 
 
@@ -56,13 +56,13 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTimestamp_initialize">initialize</a>() {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTimestamp_initialize">initialize</a>(association: &signer) {
     // Only callable by the <a href="association.md#0x0_Association">Association</a> address
-    Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+    Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == 0xA550C18, 1);
 
     // TODO: Should the initialized value be passed in <b>to</b> genesis?
-    <b>let</b> timer = <a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {microseconds: 0};
-    move_to_sender&lt;<a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(timer);
+    <b>let</b> timer = <a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> { microseconds: 0 };
+    move_to(association, timer);
 }
 </code></pre>
 
@@ -144,8 +144,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTimestamp_is_genesis">is_genesis</a>(): bool {
-    !::exists&lt;<a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">Self::CurrentTimeMicroseconds</a>&gt;(0xA550C18)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTimestamp_is_genesis">is_genesis</a>(): bool <b>acquires</b> <a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
+    !::exists&lt;<a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(0xA550C18) || <a href="#0x0_LibraTimestamp_now_microseconds">now_microseconds</a>() == 0
 }
 </code></pre>
 

@@ -9,12 +9,10 @@
 -  [Struct `PrivilegedCapability`](#0x0_Association_PrivilegedCapability)
 -  [Struct `T`](#0x0_Association_T)
 -  [Function `initialize`](#0x0_Association_initialize)
--  [Function `apply_for_privilege`](#0x0_Association_apply_for_privilege)
 -  [Function `grant_privilege`](#0x0_Association_grant_privilege)
+-  [Function `grant_association_address`](#0x0_Association_grant_association_address)
 -  [Function `has_privilege`](#0x0_Association_has_privilege)
 -  [Function `remove_privilege`](#0x0_Association_remove_privilege)
--  [Function `apply_for_association`](#0x0_Association_apply_for_association)
--  [Function `grant_association_address`](#0x0_Association_grant_association_address)
 -  [Function `assert_sender_is_association`](#0x0_Association_assert_sender_is_association)
 -  [Function `assert_sender_is_root`](#0x0_Association_assert_sender_is_root)
 -  [Function `addr_is_association`](#0x0_Association_addr_is_association)
@@ -23,7 +21,6 @@
 -  [Specification](#0x0_Association_Specification)
     -  [Module Specification](#0x0_Association_@Module_Specification)
         -  [Management of Root marker](#0x0_Association_@Management_of_Root_marker)
-        -  [Authority to set is_certified Flag](#0x0_Association_@Authority_to_set_is_certified_Flag)
         -  [Privilege Removal](#0x0_Association_@Privilege_Removal)
         -  [Management of Association Privilege](#0x0_Association_@Management_of_Association_Privilege)
     -  [Function `initialize`](#0x0_Association_Specification_initialize)
@@ -99,7 +96,7 @@ account.
 <dl>
 <dt>
 
-<code>is_certified: bool</code>
+<code>dummy_field: bool</code>
 </dt>
 <dd>
 
@@ -115,7 +112,7 @@ account.
 
 A type tag to mark that this account is an association account.
 It cannot be used for more specific/privileged operations.
-> DD: The presence of an instance of T at and address, with is_certified,
+> DD: The presence of an instance of T at and address
 > means that the address is an association address. I suggest giving "T"
 > a more meaningful name (e.g., AssociationMember? AssociationPrivileges?)
 
@@ -151,7 +148,7 @@ under the root_address() address, marks it as a normal
 association account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_initialize">initialize</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_initialize">initialize</a>(association: &signer)
 </code></pre>
 
 
@@ -160,37 +157,10 @@ association account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_initialize">initialize</a>() {
-    <b>let</b> sender = Transaction::sender();
-    Transaction::assert(sender == <a href="#0x0_Association_root_address">root_address</a>(), 1000);
-    move_to_sender(<a href="#0x0_Association_Root">Root</a>{ });
-    move_to_sender(<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association_T">T</a>&gt;{ is_certified: <b>true</b> });
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x0_Association_apply_for_privilege"></a>
-
-## Function `apply_for_privilege`
-
-Publish a specific privilege under the sending account.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_apply_for_privilege">apply_for_privilege</a>&lt;Privilege&gt;()
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_apply_for_privilege">apply_for_privilege</a>&lt;Privilege&gt;() {
-    <b>if</b> (::exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(Transaction::sender())) <b>return</b>;
-    move_to_sender(<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;{ is_certified: <b>false</b> });
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_initialize">initialize</a>(association: &signer) {
+    Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == <a href="#0x0_Association_root_address">root_address</a>(), 1000);
+    move_to(association, <a href="#0x0_Association_Root">Root</a>{ });
+    move_to(association, <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association_T">T</a>&gt;{  });
 }
 </code></pre>
 
@@ -202,10 +172,11 @@ Publish a specific privilege under the sending account.
 
 ## Function `grant_privilege`
 
-Certify the privileged capability published under for_addr.
+Certify the privileged capability published under
+<code>association</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_privilege">grant_privilege</a>&lt;Privilege&gt;(for_addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_privilege">grant_privilege</a>&lt;Privilege&gt;(association: &signer)
 </code></pre>
 
 
@@ -214,11 +185,35 @@ Certify the privileged capability published under for_addr.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_privilege">grant_privilege</a>&lt;Privilege&gt;(for_addr: address)
-<b>acquires</b> <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_privilege">grant_privilege</a>&lt;Privilege&gt;(association: &signer) {
     <a href="#0x0_Association_assert_sender_is_root">assert_sender_is_root</a>();
-    Transaction::assert(exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(for_addr), 1003);
-    borrow_global_mut&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(for_addr).is_certified = <b>true</b>;
+    move_to(association, <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;{ });
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_Association_grant_association_address"></a>
+
+## Function `grant_association_address`
+
+Grant the association privilege to
+<code>association</code>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_association_address">grant_association_address</a>(association: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_association_address">grant_association_address</a>(association: &signer) {
+    <a href="#0x0_Association_grant_privilege">grant_privilege</a>&lt;<a href="#0x0_Association_T">T</a>&gt;(association)
 }
 </code></pre>
 
@@ -244,11 +239,10 @@ Return whether the
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_has_privilege">has_privilege</a>&lt;Privilege&gt;(addr: address): bool
-<b>acquires</b> <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a> {
-    <a href="#0x0_Association_addr_is_association">addr_is_association</a>(addr) &&
-    exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(addr) &&
-    borrow_global&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(addr).is_certified
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_has_privilege">has_privilege</a>&lt;Privilege&gt;(addr: address): bool {
+    // TODO: figure out what <b>to</b> do with this
+    //<a href="#0x0_Association_addr_is_association">addr_is_association</a>(addr) &&
+    exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(addr)
 }
 </code></pre>
 
@@ -263,10 +257,7 @@ Return whether the
 Remove the
 <code>Privilege</code> from the address at
 <code>addr</code>. The sender must
-be the root association account. The
-<code>Privilege</code> need not be
-certified.
-> DD: Perhaps should not allow root to remove itself from Association?
+be the root association account
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_remove_privilege">remove_privilege</a>&lt;Privilege&gt;(addr: address)
@@ -282,61 +273,7 @@ certified.
 <b>acquires</b> <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a> {
     <a href="#0x0_Association_assert_sender_is_root">assert_sender_is_root</a>();
     Transaction::assert(exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(addr), 1004);
-    <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;{ is_certified: _ } = move_from&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(addr);
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x0_Association_apply_for_association"></a>
-
-## Function `apply_for_association`
-
-Publishes an Association::PrivilegedCapability<T> under the sending
-account.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_apply_for_association">apply_for_association</a>()
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_apply_for_association">apply_for_association</a>() {
-    <a href="#0x0_Association_apply_for_privilege">apply_for_privilege</a>&lt;<a href="#0x0_Association_T">T</a>&gt;()
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x0_Association_grant_association_address"></a>
-
-## Function `grant_association_address`
-
-Certifies the Association::PrivilegedCapability<T> resource that is
-published under
-<code>addr</code>.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_association_address">grant_association_address</a>(addr: address)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_association_address">grant_association_address</a>(addr: address)
-<b>acquires</b> <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a> {
-    <a href="#0x0_Association_grant_privilege">grant_privilege</a>&lt;<a href="#0x0_Association_T">T</a>&gt;(addr)
+    <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;{ } = move_from&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(addr);
 }
 </code></pre>
 
@@ -360,8 +297,7 @@ Assert that the sender is an association account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_sender_is_association">assert_sender_is_association</a>()
-<b>acquires</b> <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_sender_is_association">assert_sender_is_association</a>() {
     <a href="#0x0_Association_assert_addr_is_association">assert_addr_is_association</a>(Transaction::sender())
 }
 </code></pre>
@@ -412,10 +348,8 @@ Return whether the account at
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_addr_is_association">addr_is_association</a>(addr: address): bool
-<b>acquires</b> <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a> {
-    exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association_T">T</a>&gt;&gt;(addr) &&
-        borrow_global&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association_T">T</a>&gt;&gt;(addr).is_certified
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_addr_is_association">addr_is_association</a>(addr: address): bool {
+    exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association_T">T</a>&gt;&gt;(addr)
 }
 </code></pre>
 
@@ -465,8 +399,7 @@ Assert that
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_Association_assert_addr_is_association">assert_addr_is_association</a>(addr: address)
-<b>acquires</b> <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a> {
+<pre><code><b>fun</b> <a href="#0x0_Association_assert_addr_is_association">assert_addr_is_association</a>(addr: address) {
     Transaction::assert(<a href="#0x0_Association_addr_is_association">addr_is_association</a>(addr), 1002);
 }
 </code></pre>
@@ -516,7 +449,6 @@ Helper which mirrors Move
 
 <pre><code><b>define</b> <a href="#0x0_Association_spec_addr_is_association">spec_addr_is_association</a>(addr: address): bool {
     exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association_T">T</a>&gt;&gt;(addr)
-    && <b>global</b>&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association_T">T</a>&gt;&gt;(addr).is_certified
 }
 </code></pre>
 
@@ -573,60 +505,6 @@ before the invariant is established.
     assert_addr_is_association, assert_sender_is_association;
 </code></pre>
 
-
-
-
-<a name="0x0_Association_@Authority_to_set_is_certified_Flag"></a>
-
-#### Authority to set is_certified Flag
-
-Only
-<code>grant_*</code> functions can set the
-<code>is_certified</code> flag in
-<code><a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;</code>. The logic must also take into account the
-possibility that the
-<code><a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;</code> does not exist in the old
-state, or, even if it did exist in the old state, it is deleted by
-<code><a href="#0x0_Association_remove_privilege">Self::remove_privilege</a></code>.
-> TODO: bug: the below schema creates a name clash if using
-<code>addr</code> as a quantified name if its inserted
-> in a context.
-
-
-<a name="0x0_Association_OnlyGrantCanCertify"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x0_Association_OnlyGrantCanCertify">OnlyGrantCanCertify</a>&lt;Privilege&gt; {
-    <b>ensures</b> all(domain&lt;address&gt;(), |addr1| <b>old</b>(<a href="#0x0_Association_not_certified">not_certified</a>&lt;Privilege&gt;(addr1)) ==&gt; <a href="#0x0_Association_not_certified">not_certified</a>&lt;Privilege&gt;(addr1));
-}
-</code></pre>
-
-
-
-Helper to assert that if
-<code><a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;</code> exists, certification
-status is false.
-
-
-<a name="0x0_Association_not_certified"></a>
-
-
-<pre><code><b>define</b> <a href="#0x0_Association_not_certified">not_certified</a>&lt;Privilege&gt;(addr: address): bool {
-    exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(addr) ==&gt;
-        !<b>global</b>&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(addr).is_certified
-}
-</code></pre>
-
-
-
-By excepting only grant_*, we make sure only these two functions
-can change the is_certified from true to false.
-> TODO: Try deleting the association version to see if prover catches it.
-
-
-<pre><code><b>apply</b> <a href="#0x0_Association_OnlyGrantCanCertify">OnlyGrantCanCertify</a>&lt;Privilege&gt; <b>to</b> *&lt;Privilege&gt;
-    <b>except</b> grant_privilege, grant_association_address;
-</code></pre>
 
 
 
@@ -702,7 +580,7 @@ except has_privilege, addr_is_association, assert_addr_is_association, assert_se
 ### Function `initialize`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_initialize">initialize</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_initialize">initialize</a>(association: &signer)
 </code></pre>
 
 

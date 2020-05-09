@@ -20,7 +20,7 @@ fun main() {
 // check: 1
 
 //! new-transaction
-//! sender: association
+//! sender: config
 script {
 use 0x0::LibraConfig;
 
@@ -33,7 +33,7 @@ fun main() {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: config
 // Cannot trigger two reconfiguration within the same block.
 script {
 use 0x0::LibraConfig;
@@ -51,7 +51,7 @@ fun main() {
 //! block-time: 3
 
 //! new-transaction
-//! sender: association
+//! sender: config
 script {
 use 0x0::LibraConfig;
 

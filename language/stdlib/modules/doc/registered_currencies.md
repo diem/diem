@@ -10,7 +10,6 @@
 -  [Function `initialize`](#0x0_RegisteredCurrencies_initialize)
 -  [Function `empty`](#0x0_RegisteredCurrencies_empty)
 -  [Function `add_currency_code`](#0x0_RegisteredCurrencies_add_currency_code)
--  [Function `singleton_address`](#0x0_RegisteredCurrencies_singleton_address)
 
 
 
@@ -76,7 +75,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_RegisteredCurrencies_initialize">initialize</a>(): <a href="#0x0_RegisteredCurrencies_RegistrationCapability">RegisteredCurrencies::RegistrationCapability</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_RegisteredCurrencies_initialize">initialize</a>(config_account: &signer): <a href="#0x0_RegisteredCurrencies_RegistrationCapability">RegisteredCurrencies::RegistrationCapability</a>
 </code></pre>
 
 
@@ -85,12 +84,15 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_RegisteredCurrencies_initialize">initialize</a>(): <a href="#0x0_RegisteredCurrencies_RegistrationCapability">RegistrationCapability</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_RegisteredCurrencies_initialize">initialize</a>(config_account: &signer): <a href="#0x0_RegisteredCurrencies_RegistrationCapability">RegistrationCapability</a> {
     // enforce that this is only going <b>to</b> one specific address,
-    Transaction::assert(Transaction::sender() == <a href="#0x0_RegisteredCurrencies_singleton_address">singleton_address</a>(), 0);
-    <b>let</b> cap = <a href="libra_configs.md#0x0_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>(<a href="#0x0_RegisteredCurrencies_empty">empty</a>());
+    Transaction::assert(
+        <a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="libra_configs.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>(),
+        0
+    );
+    <b>let</b> cap = <a href="libra_configs.md#0x0_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>(<a href="#0x0_RegisteredCurrencies_empty">empty</a>(), config_account);
 
-    <a href="#0x0_RegisteredCurrencies_RegistrationCapability">RegistrationCapability</a>{ cap }
+    <a href="#0x0_RegisteredCurrencies_RegistrationCapability">RegistrationCapability</a> { cap }
 }
 </code></pre>
 
@@ -144,30 +146,6 @@
     <b>let</b> config = <a href="libra_configs.md#0x0_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x0_RegisteredCurrencies_T">T</a>&gt;();
     <a href="vector.md#0x0_Vector_push_back">Vector::push_back</a>(&<b>mut</b> config.currency_codes, currency_code);
     <a href="libra_configs.md#0x0_LibraConfig_set_with_capability">LibraConfig::set_with_capability</a>(&cap.cap, config);
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x0_RegisteredCurrencies_singleton_address"></a>
-
-## Function `singleton_address`
-
-
-
-<pre><code><b>fun</b> <a href="#0x0_RegisteredCurrencies_singleton_address">singleton_address</a>(): address
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x0_RegisteredCurrencies_singleton_address">singleton_address</a>(): address {
-    <a href="libra_configs.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>()
 }
 </code></pre>
 

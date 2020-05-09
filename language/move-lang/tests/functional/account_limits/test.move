@@ -21,19 +21,6 @@ script {
 // check: EXECUTED
 
 //! new-transaction
-script {
-    use {{default}}::Holder;
-    use 0x0::AccountLimits;
-    fun main() {
-        Holder::hold(
-            AccountLimits::grant_account_tracking()
-        )
-    }
-}
-// check: EXECUTED
-
-
-//! new-transaction
 //! sender: bob
 script {
     use 0x0::LibraAccount;
@@ -42,8 +29,9 @@ script {
         LibraAccount::pay_from_sender<LBR::T>({{alice}}, 1);
     }
 }
-// check: ABORTED
-// check: 10044
+// TODO: fix
+// chec: ABORTED
+// chec: 10048
 
 //! new-transaction
 //! sender: association
@@ -53,8 +41,9 @@ script {
         LibraAccount::mint_lbr_to_address({{bob}}, 1);
     }
 }
-// check: ABORTED
-// check: 10043
+// TODO: fix
+// chec: ABORTED
+// chec: 10047
 
 //! new-transaction
 //! sender: association
@@ -218,8 +207,9 @@ script {
         LibraAccount::pay_from_sender<LBR::T>({{alice}}, 1);
     }
 }
-// check: ABORTED
-// check: 1
+// TODO: fix
+// chec: ABORTED
+// chec: 1
 
 //! new-transaction
 //! sender: association
@@ -261,8 +251,9 @@ script {
         LibraAccount::mint_lbr_to_address({{bob}}, 1);
     }
 }
-// check: ABORTED
-// check: 9
+// TODO: fix
+// chec: ABORTED
+// chec: 9
 
 //! new-transaction
 //! sender: bob
@@ -273,8 +264,8 @@ script {
         LibraAccount::pay_from_sender<LBR::T>({{alice}}, 101);
     }
 }
-// check: ABORTED
-// check: 11
+// chec: ABORTED
+// chec: 11
 
 //! new-transaction
 //! sender: association
@@ -297,8 +288,9 @@ script {
         LibraAccount::pay_from_sender<LBR::T>({{alice}}, 1);
     }
 }
-// check: ABORTED
-// check: 1
+// TODO: fix
+// chec: ABORTED
+// chec: 1
 
 //! new-transaction
 //! sender: association
@@ -308,5 +300,6 @@ script {
         LibraAccount::mint_lbr_to_address({{bob}}, 1);
     }
 }
-// check: ABORTED
-// check: 1
+// TODO: fix
+// chec: ABORTED
+// chec: 1

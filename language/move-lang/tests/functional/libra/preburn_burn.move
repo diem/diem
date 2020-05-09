@@ -4,9 +4,7 @@
 
 // create 100 Coin1's for the preburner. we can't do this using the //! account macro because it
 // doesn't increment the market cap appropriately
-//! sender: association
-//! max-gas: 1000000
-//! gas-price: 0
+//! sender: blessed
 script {
 use 0x0::Coin1;
 use 0x0::Libra;
@@ -23,8 +21,6 @@ fun main() {
 // register the sender as a preburn entity
 //! new-transaction
 //! sender: preburner
-//! max-gas: 1000000
-//! gas-price: 0
 //! gas-currency: Coin1
 script {
 use 0x0::Coin1;
@@ -39,8 +35,6 @@ fun main() {
 // perform a preburn
 //! new-transaction
 //! sender: preburner
-//! max-gas: 1000000
-//! gas-price: 0
 //! gas-currency: Coin1
 script {
 use 0x0::Coin1;
@@ -63,9 +57,7 @@ fun main() {
 
 // perform the burn from the Association account
 //! new-transaction
-//! sender: association
-//! max-gas: 1000000
-//! gas-price: 0
+//! sender: blessed
 script {
 use 0x0::Coin1;
 use 0x0::Libra;

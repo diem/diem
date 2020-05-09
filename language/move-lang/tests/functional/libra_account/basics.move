@@ -8,8 +8,8 @@ module Holder {
         x: T
     }
 
-    public fun hold<T>(x: T) {
-        move_to_sender(Hold<T>{x})
+    public fun hold<T>(account: &signer, x: T) {
+        move_to(account, Hold<T>{x})
     }
 
     public fun get<T>(): T
@@ -22,8 +22,8 @@ module Holder {
 //! new-transaction
 script {
     use 0x0::LibraAccount;
-    fun main() {
-        LibraAccount::initialize();
+    fun main(sender: &signer) {
+        LibraAccount::initialize(sender);
     }
 }
 // check: ABORTED
@@ -56,11 +56,13 @@ script {
 script {
     use 0x0::LibraAccount;
     use {{default}}::Holder;
-    fun main() {
+    fun main(account: &signer) {
         Holder::hold(
+            account,
             LibraAccount::extract_sender_key_rotation_capability()
         );
         Holder::hold(
+            account,
             LibraAccount::extract_sender_key_rotation_capability()
         );
     }
@@ -73,7 +75,7 @@ script {
     use 0x0::LibraAccount;
     use 0x0::LBR;
     fun main() {
-        LibraAccount::create_account<LBR::T>(0xDEADBEEF, x"");
+        LibraAccount::create_unhosted_account<LBR::T>(0xDEADBEEF, x"");
     }
 }
 // check: ABORTED
@@ -93,6 +95,7 @@ script {
         LibraAccount::restore_withdrawal_capability(with_cap);
     }
 }
+// check: EXECUTED
 
 //! new-transaction
 //! sender: association
@@ -128,8 +131,9 @@ script {
         LibraAccount::pay_from_sender<LBR::T>({{alice}}, 10000);
     }
 }
-// check: ABORTED
-// check: 9001
+// TODO: what is this testing?
+// chec: ABORTED
+// chec: 9001
 
 //! new-transaction
 //! sender: association

@@ -1,6 +1,7 @@
 address 0x0 {
 
 module LibraTransactionTimeout {
+  use 0x0::Signer;
   use 0x0::Transaction;
   use 0x0::LibraTimestamp;
 
@@ -9,12 +10,11 @@ module LibraTransactionTimeout {
     duration_microseconds: u64,
   }
 
-  public fun initialize() {
-
+  public fun initialize(association: &signer) {
     // Only callable by the Association address
-    Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+    Transaction::assert(Signer::address_of(association) == 0xA550C18, 1);
     // Currently set to 1day.
-    move_to_sender<TTL>(TTL {duration_microseconds: 86400000000});
+    move_to(association, TTL {duration_microseconds: 86400000000});
   }
 
   public fun set_timeout(new_duration: u64) acquires TTL {

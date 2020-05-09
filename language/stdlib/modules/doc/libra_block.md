@@ -104,7 +104,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraBlock_initialize_block_metadata">initialize_block_metadata</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraBlock_initialize_block_metadata">initialize_block_metadata</a>(account: &signer)
 </code></pre>
 
 
@@ -113,13 +113,13 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraBlock_initialize_block_metadata">initialize_block_metadata</a>() {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraBlock_initialize_block_metadata">initialize_block_metadata</a>(account: &signer) {
   // Only callable by the <a href="association.md#0x0_Association">Association</a> address
-  Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+  Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == 0xA550C18, 1);
 
   move_to_sender&lt;<a href="#0x0_LibraBlock_BlockMetadata">BlockMetadata</a>&gt;(<a href="#0x0_LibraBlock_BlockMetadata">BlockMetadata</a> {
     height: 0,
-    new_block_events: <a href="event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_LibraBlock_NewBlockEvent">Self::NewBlockEvent</a>&gt;(),
+    new_block_events: <a href="event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_LibraBlock_NewBlockEvent">Self::NewBlockEvent</a>&gt;(account),
   });
 }
 </code></pre>

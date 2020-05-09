@@ -63,7 +63,7 @@ fun main() {
 
 // perform three burns. order should match the preburns
 //! new-transaction
-//! sender: association
+//! sender: blessed
 //! max-gas: 1000000
 //! gas-price: 0
 script {

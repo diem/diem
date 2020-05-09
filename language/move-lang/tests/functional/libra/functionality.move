@@ -6,13 +6,13 @@ module BurnCapabilityHolder {
         cap: Libra::BurnCapability<Token>,
     }
 
-    public fun hold<Token>(cap: Libra::BurnCapability<Token>) {
-        move_to_sender(Holder<Token>{ cap })
+    public fun hold<Token>(account: &signer, cap: Libra::BurnCapability<Token>) {
+        move_to(account, Holder<Token>{ cap })
     }
 }
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
 use 0x0::Libra;
 use 0x0::Coin1;
@@ -57,7 +57,7 @@ fun main() {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
     use 0x0::Libra;
     use 0x0::Coin1;
@@ -112,27 +112,15 @@ script {
 //! sender: association
 script {
     use 0x0::Libra;
-    fun main()  {
-        Libra::initialize();
+    fun main(account: &signer)  {
+        Libra::initialize(account);
     }
 }
 // check: ABORTED
 // check: 0
 
 //! new-transaction
-//! sender: association
-script {
-    use 0x0::Libra;
-    use 0x0::Coin1;
-    fun main()  {
-        Libra::grant_burn_capability_for_sender<Coin1::T>();
-    }
-}
-// check: ABORTED
-// check: 0
-
-//! new-transaction
-//! sender: association
+//! sender: blessed
 script {
     use 0x0::LibraAccount;
     use 0x0::Coin1;
@@ -144,12 +132,13 @@ script {
 // check: 11
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
     use 0x0::Libra;
     use 0x0::Coin1;
-    fun main()  {
+    fun main(account:  &signer)  {
         Libra::publish_mint_capability(
+            account,
             Libra::remove_mint_capability<Coin1::T>()
         );
     }
@@ -157,13 +146,14 @@ script {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
     use 0x0::Libra;
     use 0x0::Coin1;
     use {{default}}::BurnCapabilityHolder;
-    fun main()  {
+    fun main(account: &signer)  {
         BurnCapabilityHolder::hold(
+            account,
             Libra::remove_burn_capability<Coin1::T>()
         );
     }

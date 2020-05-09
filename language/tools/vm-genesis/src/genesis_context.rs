@@ -32,7 +32,7 @@ use move_vm_types::{
     values::{GlobalValue, Value},
 };
 use std::collections::{btree_map::BTreeMap, HashMap};
-use vm::errors::VMResult;
+use vm::{access::ModuleAccess, errors::VMResult};
 
 /// A context that holds state for generating the genesis write set
 pub(crate) struct GenesisContext<'a> {
@@ -48,7 +48,9 @@ impl<'a> GenesisContext<'a> {
         let mut interpreter_context = GenesisDataCache::new(data_cache);
         for module in stdlib_modules {
             vm.cache_module(module.clone(), &mut interpreter_context)
-                .expect("Failure loading stdlib");
+                .unwrap_or_else(|_| {
+                    panic!("Failure loading stdlib module {}", module.as_inner().name())
+                });
         }
 
         Self {
@@ -103,7 +105,7 @@ impl<'a> GenesisContext<'a> {
                 &mut self.interpreter_context,
                 &self.txn_data,
             )
-            .unwrap()
+            .unwrap_or_else(|e| panic!("Error calling {}.{}: {}", module_name, function_name, e))
     }
 
     pub fn exec_script(&mut self, script: &Script) {

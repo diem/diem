@@ -5,8 +5,8 @@
 //! new-transaction
 script {
 use 0x0::LibraSystem;
-fun main() {
-    LibraSystem::initialize_validator_set();
+fun main(account: &signer) {
+    LibraSystem::initialize_validator_set(account);
 }
 }
 // check: ABORTED

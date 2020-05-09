@@ -4,6 +4,7 @@ module LibraWriteSetManager {
     use 0x0::LibraAccount;
     use 0x0::Event;
     use 0x0::Hash;
+    use 0x0::Signer;
     use 0x0::Transaction;
     use 0x0::LibraConfig;
 
@@ -16,13 +17,16 @@ module LibraWriteSetManager {
         writeset_payload: vector<u8>,
     }
 
-    public fun initialize() {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+    public fun initialize(sig: &signer) {
+        Transaction::assert(Signer::address_of(sig) == 0xA550C18, 1);
 
-        move_to_sender<T>(T {
-            sequence_number: 0,
-            upgrade_events: Event::new_event_handle<Self::UpgradeEvent>(),
-        });
+        move_to(
+            sig,
+            T {
+                sequence_number: 0,
+                upgrade_events: Event::new_event_handle<Self::UpgradeEvent>(sig),
+            }
+        );
     }
 
     fun prologue(

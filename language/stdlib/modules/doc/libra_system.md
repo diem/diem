@@ -163,7 +163,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_initialize_validator_set">initialize_validator_set</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_initialize_validator_set">initialize_validator_set</a>(config_account: &signer)
 </code></pre>
 
 
@@ -172,14 +172,17 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_initialize_validator_set">initialize_validator_set</a>() {
-    Transaction::assert(Transaction::sender() == <a href="libra_configs.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>(), 1);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_initialize_validator_set">initialize_validator_set</a>(config_account: &signer) {
+    Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="libra_configs.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>(), 1);
 
-    <b>let</b> cap = <a href="libra_configs.md#0x0_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>&lt;<a href="#0x0_LibraSystem_T">T</a>&gt;(<a href="#0x0_LibraSystem_T">T</a> {
-        scheme: 0,
-        validators: <a href="vector.md#0x0_Vector_empty">Vector::empty</a>(),
-    });
-    move_to_sender(<a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a> { cap })
+    <b>let</b> cap = <a href="libra_configs.md#0x0_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>&lt;<a href="#0x0_LibraSystem_T">T</a>&gt;(
+        <a href="#0x0_LibraSystem_T">T</a> {
+            scheme: 0,
+            validators: <a href="vector.md#0x0_Vector_empty">Vector::empty</a>(),
+        },
+        config_account
+    );
+    move_to(config_account, <a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a> { cap })
 }
 </code></pre>
 

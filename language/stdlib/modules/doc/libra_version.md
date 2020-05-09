@@ -45,7 +45,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVersion_initialize">initialize</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVersion_initialize">initialize</a>(account: &signer)
 </code></pre>
 
 
@@ -54,11 +54,12 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVersion_initialize">initialize</a>() {
-    Transaction::assert(Transaction::sender() == <a href="libra_configs.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>(), 1);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVersion_initialize">initialize</a>(account: &signer) {
+    Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="libra_configs.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>(), 1);
 
     <a href="libra_configs.md#0x0_LibraConfig_publish_new_config">LibraConfig::publish_new_config</a>&lt;<a href="#0x0_LibraVersion_T">Self::T</a>&gt;(
         <a href="#0x0_LibraVersion_T">T</a> { major: 1 },
+        account,
     );
 }
 </code></pre>
@@ -73,7 +74,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVersion_set">set</a>(major: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVersion_set">set</a>(major: u64, account: &signer)
 </code></pre>
 
 
@@ -82,7 +83,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVersion_set">set</a>(major: u64) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVersion_set">set</a>(major: u64, account: &signer) {
     <b>let</b> old_config = <a href="libra_configs.md#0x0_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x0_LibraVersion_T">Self::T</a>&gt;();
 
     Transaction::assert(
@@ -91,7 +92,8 @@
     );
 
     <a href="libra_configs.md#0x0_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x0_LibraVersion_T">Self::T</a>&gt;(
-        <a href="#0x0_LibraVersion_T">T</a> { major }
+        <a href="#0x0_LibraVersion_T">T</a> { major },
+        account
     );
 }
 </code></pre>

@@ -4,13 +4,13 @@ module ConfigHolder {
         cap: LibraConfig::ModifyConfigCapability<T>
     }
 
-    public fun hold<T>(cap: LibraConfig::ModifyConfigCapability<T>) {
-        move_to_sender(Holder<T>{ cap })
+    public fun hold<T>(account: &signer, cap: LibraConfig::ModifyConfigCapability<T>) {
+        move_to(account, Holder<T>{ cap })
     }
 
     public fun get<T>(): LibraConfig::ModifyConfigCapability<T>
     acquires Holder {
-        let Holder<T>{ cap } = move_from<Holder<T>>({{association}});
+        let Holder<T>{ cap } = move_from<Holder<T>>({{config}});
         cap
     }
 }
@@ -18,8 +18,8 @@ module ConfigHolder {
 //! new-transaction
 script {
     use 0x0::LibraConfig;
-    fun main() {
-        LibraConfig::initialize_configuration();
+    fun main(account: &signer) {
+        LibraConfig::initialize(account, account);
     }
 }
 // check: ABORTED
@@ -38,8 +38,8 @@ script {
 //! new-transaction
 script {
     use 0x0::LibraConfig;
-    fun main() {
-        LibraConfig::set(0);
+    fun main(account: &signer) {
+        LibraConfig::set(0, account);
     }
 }
 // check: ABORTED
@@ -49,9 +49,10 @@ script {
 script {
     use 0x0::LibraConfig;
     use {{default}}::ConfigHolder;
-    fun main() {
+    fun main(account: &signer) {
         ConfigHolder::hold(
-            LibraConfig::publish_new_config_with_capability(0)
+            account,
+            LibraConfig::publish_new_config_with_capability(0, account)
         );
     }
 }
@@ -59,35 +60,36 @@ script {
 // check: 1
 
 //! new-transaction
-//! sender: association
+//! sender: config
 script {
     use 0x0::LibraConfig;
     use {{default}}::ConfigHolder;
-    fun main() {
+    fun main(account: &signer) {
         ConfigHolder::hold(
-            LibraConfig::publish_new_config_with_capability<u64>(0)
+            account,
+            LibraConfig::publish_new_config_with_capability<u64>(0, account)
         );
     }
 }
+// check: EXECUTED
 
 //! new-transaction
 script {
     use 0x0::LibraConfig;
     use {{default}}::ConfigHolder;
-    fun main() {
+    fun main(account: &signer) {
         let cap = ConfigHolder::get<u64>();
         LibraConfig::set_with_capability(&cap, 0);
-        ConfigHolder::hold(cap);
+        ConfigHolder::hold(account, cap);
     }
 }
-// check: ABORTED
-// check: 24
+// check: EXECUTED
 
 //! new-transaction
 script {
     use 0x0::LibraConfig;
-    fun main() {
-        LibraConfig::publish_new_config(0)
+    fun main(account: &signer) {
+        LibraConfig::publish_new_config(0, account)
     }
 }
 // check: ABORTED
@@ -96,8 +98,8 @@ script {
 //! new-transaction
 script {
     use 0x0::LibraConfig;
-    fun main() {
-        LibraConfig::publish_new_config_with_delegate(0, {{association}})
+    fun main(account: &signer) {
+        LibraConfig::publish_new_config_with_delegate(0, {{config}}, account)
     }
 }
 // check: ABORTED
