@@ -523,7 +523,7 @@ fun simplified_pay_from_capability(
     };
 }
 spec fun simplified_pay_from_capability {
-    // TODO: this currently does not terminate if set to true. See above.
+    // TODO: this currently takes 30s to verify. It also produces an error which need to be investigated.
     pragma verify=false;
 
     // capability check

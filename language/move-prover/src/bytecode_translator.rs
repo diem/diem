@@ -189,21 +189,30 @@ impl<'env> ModuleTranslator<'env> {
             .enumerate()
             .map(|(i, _)| format!("$tv{}: TypeValue", i))
             .join(", ");
-        let mut type_args_for_ctor = String::from("EmptyTypeValueArray");
-        for i in 0..struct_env.get_type_parameters().len() {
-            type_args_for_ctor = format!("ExtendTypeValueArray({}, $tv{})", type_args_for_ctor, i);
+
+        let mut param_types = String::from("MapConstTypeValue(DefaultTypeValue)");
+        let type_param_count = struct_env.get_type_parameters().len();
+        for i in 0..type_param_count {
+            param_types = format!("{}[{} := $tv{}]", param_types, i, i);
         }
-        let mut field_types = String::from("EmptyTypeValueArray");
+        let type_param_array = format!("TypeValueArray({}, {})", param_types, type_param_count);
+        let mut field_types = String::from("MapConstTypeValue(DefaultTypeValue)");
         for field_env in struct_env.get_fields() {
             field_types = format!(
-                "ExtendTypeValueArray({}, {})",
+                "{}[{} := {}]",
                 field_types,
+                field_env.get_offset(),
                 boogie_type_value(self.module_env.env, &field_env.get_type())
             );
         }
+        let field_array = format!(
+            "TypeValueArray({}, {})",
+            field_types,
+            struct_env.get_field_count()
+        );
         let type_value = format!(
             "StructType({}, {}, {})",
-            struct_name, type_args_for_ctor, field_types
+            struct_name, type_param_array, field_array
         );
         if struct_name == "$LibraAccount_T" {
             // Special treatment of well-known resource LibraAccount_T. The type_value
@@ -264,22 +273,30 @@ impl<'env> ModuleTranslator<'env> {
             separate(vec![type_args_str.clone(), args_str.clone()], ", ")
         );
         self.writer.indent();
-        let mut fields_str = String::from("EmptyValueArray");
+        let mut ctor_expr = "MapConstValue(DefaultValue)".to_owned();
         for field_env in struct_env.get_fields() {
+            let field_param =
+                &format!("{}", field_env.get_name().display(struct_env.symbol_pool()));
             let type_check = boogie_well_formed_check(
                 self.module_env.env,
-                &format!("{}", field_env.get_name().display(struct_env.symbol_pool())),
+                field_param,
                 &field_env.get_type(),
                 WellFormedMode::Default,
             );
             emit!(self.writer, &type_check);
-            fields_str = format!(
-                "ExtendValueArray({}, {})",
-                fields_str,
-                field_env.get_name().display(struct_env.symbol_pool())
+            ctor_expr = format!(
+                "{}[{} := {}]",
+                ctor_expr,
+                field_env.get_offset(),
+                field_param
             );
         }
-        emitln!(self.writer, "$struct := Vector({});", fields_str);
+        emitln!(
+            self.writer,
+            "$struct := Vector(ValueArray({}, {}));",
+            ctor_expr,
+            struct_env.get_field_count()
+        );
 
         // Generate $DebugTrackLocal so we can see the constructed value before invariant
         // evaluation may abort.

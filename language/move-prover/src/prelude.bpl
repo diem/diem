@@ -84,6 +84,7 @@ function {:constructor} AddressType() : TypeValue;
 function {:constructor} StrType() : TypeValue;
 function {:constructor} VectorType(t: TypeValue) : TypeValue;
 function {:constructor} StructType(name: TypeName, ps: TypeValueArray, ts: TypeValueArray) : TypeValue;
+function {:constructor} AbstractType(num: int): TypeValue;
 function {:constructor} ErrorType() : TypeValue;
 const DefaultTypeValue: TypeValue;
 axiom DefaultTypeValue == ErrorType();
@@ -94,11 +95,6 @@ function {:constructor} TypeValueArray(v: [int]TypeValue, l: int): TypeValueArra
 const EmptyTypeValueArray: TypeValueArray;
 axiom l#TypeValueArray(EmptyTypeValueArray) == 0;
 axiom v#TypeValueArray(EmptyTypeValueArray) == MapConstTypeValue(DefaultTypeValue);
-
-function {:inline} ExtendTypeValueArray(ta: TypeValueArray, tv: TypeValue): TypeValueArray {
-    (var len := l#TypeValueArray(ta);
-     TypeValueArray(v#TypeValueArray(ta)[len := tv], len + 1))
-}
 
 
 // Values
@@ -129,7 +125,7 @@ function {:inline} $IsValidU8(v: Value): bool {
 
 function {:inline} $IsValidU8Vector(vec: Value): bool {
   $Vector_is_well_formed(vec)
-  && (forall i: int :: 0 <= i && i < $vlen(vec) ==> $IsValidU8($vmap(vec)[i]))
+  && (forall i: int :: {$vmap(vec)[i]} 0 <= i && i < $vlen(vec) ==> $IsValidU8($vmap(vec)[i]))
 }
 
 function {:inline} $IsValidU64(v: Value): bool {
@@ -786,7 +782,7 @@ function {:inline} $Vector_is_well_formed(v: Value): bool {
         (
             var l := l#ValueArray(va);
             0 <= l &&
-            (forall x: int :: x < 0 || x >= l ==> v#ValueArray(va)[x] == DefaultValue)
+            (forall x: int :: {v#ValueArray(va)[x]} x < 0 || x >= l ==> v#ValueArray(va)[x] == DefaultValue)
         )
     )
 }

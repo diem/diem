@@ -186,19 +186,15 @@ fn boogie_well_formed_expr_impl(
         Type::Vector(elem_ty) => {
             conds.push(format!("$Vector_is_well_formed({})", name));
             if !matches!(**elem_ty, Type::TypeParameter(..)) {
+                let nest_value = &format!("$vmap({})[$${}]", name, nest);
                 conds.push(format!(
-                    "(forall $${}: int :: $${} >= 0 && $${} < $vlen({}) ==> {})",
+                    "(forall $${}: int :: {{{}}} $${} >= 0 && $${} < $vlen({}) ==> {})",
                     nest,
+                    nest_value,
                     nest,
                     nest,
                     name,
-                    boogie_well_formed_expr_impl(
-                        env,
-                        &format!("$vmap({})[$${}]", name, nest),
-                        &elem_ty,
-                        mode,
-                        nest + 1
-                    )
+                    boogie_well_formed_expr_impl(env, nest_value, &elem_ty, mode, nest + 1)
                 ));
             }
         }

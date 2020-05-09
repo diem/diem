@@ -1128,6 +1128,11 @@ impl<'env> StructEnv<'env> {
             })
     }
 
+    /// Return the number of fields in the struct.
+    pub fn get_field_count(&self) -> usize {
+        self.data.field_data.len()
+    }
+
     /// Gets a field by its id.
     pub fn get_field(&'env self, id: FieldId) -> FieldEnv<'env> {
         let data = self.data.field_data.get(&id).expect("FieldId undefined");
