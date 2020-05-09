@@ -25,7 +25,7 @@ use libra_crypto::{
     PrivateKey,
 };
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_KEY};
-use libra_logger::info;
+use libra_logger::{error, info};
 use libra_secure_storage::Storage;
 use libra_secure_time::TimeService;
 use libra_types::{
@@ -65,7 +65,7 @@ pub enum Error {
     #[error("Data does not exist: {0}")]
     DataDoesNotExist(String),
     #[error(
-        "The libra_timestamp value on-chain isn't increasing. Last value: {0}, Current value: {0}:"
+        "The libra_timestamp value on-chain isn't increasing. Last value: {0}, Current value: {0}"
     )]
     LivenessError(u64, u64),
     #[error("Internal storage error: {0}")]
@@ -123,13 +123,24 @@ where
 
     /// Begins execution of the key manager by running an infinite loop where the key manager will
     /// periodically wake up, verify the state of the validator keys (e.g., the consensus key), and
-    /// initiate a key rotation when required. If something goes wrong, an error will be returned
-    /// by this method, upon which the key manager will flag the error and stop execution.
+    /// initiate a key rotation when required. If something goes wrong that we can't handle, an
+    /// error will be returned by this method, upon which the key manager will flag the error and
+    /// stop execution.
     pub fn execute(&mut self) -> Result<(), Error> {
         info!("The key manager has been created and is starting execution.");
         loop {
             info!("Checking the status of the keys.");
-            self.execute_once()?;
+            match self.execute_once() {
+                Ok(_) => {} // Expected case
+                Err(Error::LivenessError(last_value, current_value)) => {
+                    // Log the liveness error, but don't throw the error up the call stack.
+                    error!(
+                        "Encountered error, but still continuing to execute: {}",
+                        Error::LivenessError(last_value, current_value).to_string()
+                    );
+                }
+                Err(e) => return Err(e), // Unexpected error that we can't handle -- throw!
+            };
 
             info!("Going to sleep for {} seconds.", self.sleep_period_secs);
             COUNTERS.sleeps.inc();
