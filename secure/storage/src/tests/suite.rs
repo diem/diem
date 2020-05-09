@@ -16,7 +16,6 @@ use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Signature,
 const STORAGE_TESTS: &[fn(&mut dyn Storage)] = &[
     test_create_and_get_non_existent_version,
     test_create_get_key_pair,
-    test_create_rotate_and_check_key_pair,
     test_create_key_pair_and_perform_rotations,
     test_create_sign_rotate_sign,
     test_ensure_storage_is_available,
@@ -185,43 +184,6 @@ fn test_create_and_get_non_existent_version(storage: &mut dyn Storage) {
     );
 }
 
-/// This test creates a new key pair, performs a key rotation and ensures that the keys
-/// are correctly rotated in storage.
-fn test_create_rotate_and_check_key_pair(storage: &mut dyn Storage) {
-    // Create new key pair, fetch both public and private keys and verify relationship
-    let public_key = storage
-        .create_key(CRYPTO_NAME, &Policy::public())
-        .expect("Failed to create a test Ed25519 key pair!");
-    let private_key = storage
-        .export_private_key(CRYPTO_NAME)
-        .expect("Failed to get the private key for a key pair that should exist!");
-    assert_eq!(private_key.public_key(), public_key);
-
-    // Rotate key pair, fetch new public and private keys and verify relationship
-    let new_public_key = storage
-        .rotate_key(CRYPTO_NAME)
-        .expect("Failed to rotate a valid key pair!");
-    let new_private_key = storage
-        .export_private_key(CRYPTO_NAME)
-        .expect("Failed to get the private key for the rotated key pair!");
-    assert_eq!(new_private_key.public_key(), new_public_key);
-
-    // Check storage has updated the key pair references
-    assert_eq!(
-        storage
-            .get_public_key(CRYPTO_NAME)
-            .expect("Failed to get the public key!")
-            .public_key,
-        new_public_key
-    );
-    assert_eq!(
-        storage
-            .export_private_key_for_version(CRYPTO_NAME, public_key)
-            .expect("Failed to get the previous private key!"),
-        private_key
-    );
-}
-
 /// This test creates a new key pair and performs multiple key rotations, ensuring that
 /// storage updates key pair versions appropriately.
 fn test_create_key_pair_and_perform_rotations(storage: &mut dyn Storage) {
@@ -248,6 +210,8 @@ fn test_create_key_pair_and_perform_rotations(storage: &mut dyn Storage) {
                 .expect("Failed to get the previous private key!"),
             private_key
         );
+
+        assert_eq!(new_public_key, new_private_key.public_key());
 
         public_key = new_public_key;
         private_key = new_private_key;
