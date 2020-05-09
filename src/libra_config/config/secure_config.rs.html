@@ -92,19 +92,15 @@
 <span id="92">92</span>
 <span id="93">93</span>
 <span id="94">94</span>
-<span id="95">95</span>
-<span id="96">96</span>
-<span id="97">97</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">net</span>::<span class="ident">SocketAddr</span>, <span class="ident">path</span>::<span class="ident">PathBuf</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">PathBuf</span>;
 
 <span class="comment">// JSON RPC endpoint related defaults</span>
-<span class="kw">const</span> <span class="ident">DEFAULT_JSON_RPC_ADDR</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;127.0.0.1&quot;</span>;
-<span class="kw">const</span> <span class="ident">DEFAULT_JSON_RPC_PORT</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="number">8080</span>;
+<span class="kw">const</span> <span class="ident">DEFAULT_JSON_RPC_ENDPOINT</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;https://127.0.0.1:8080&quot;</span>;
 
 <span class="comment">// Key manager timing related defaults</span>
 <span class="kw">const</span> <span class="ident">DEFAULT_ROTATION_PERIOD_SECS</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">604_800</span>; <span class="comment">// 1 week</span>
@@ -124,20 +120,18 @@
     <span class="kw">pub</span> <span class="ident">sleep_period_secs</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">txn_expiration_secs</span>: <span class="ident">u64</span>,
 
-    <span class="kw">pub</span> <span class="ident">json_rpc_address</span>: <span class="ident">SocketAddr</span>,
+    <span class="kw">pub</span> <span class="ident">json_rpc_endpoint</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">secure_backend</span>: <span class="ident">SecureBackend</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">KeyManagerConfig</span> {
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KeyManagerConfig</span> {
         <span class="ident">KeyManagerConfig</span> {
-            <span class="ident">json_rpc_address</span>: <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="ident">DEFAULT_JSON_RPC_ADDR</span>, <span class="ident">DEFAULT_JSON_RPC_PORT</span>)
-                .<span class="ident">parse</span>()
-                .<span class="ident">unwrap</span>(),
-            <span class="ident">secure_backend</span>: <span class="ident">SecureBackend</span>::<span class="ident">InMemoryStorage</span>,
             <span class="ident">rotation_period_secs</span>: <span class="ident">DEFAULT_ROTATION_PERIOD_SECS</span>,
             <span class="ident">sleep_period_secs</span>: <span class="ident">DEFAULT_SLEEP_PERIOD_SECS</span>,
             <span class="ident">txn_expiration_secs</span>: <span class="ident">DEFAULT_TXN_EXPIRATION_SECS</span>,
+            <span class="ident">json_rpc_endpoint</span>: <span class="ident">DEFAULT_JSON_RPC_ENDPOINT</span>.<span class="ident">into</span>(),
+            <span class="ident">secure_backend</span>: <span class="ident">SecureBackend</span>::<span class="ident">InMemoryStorage</span>,
         }
     }
 }
