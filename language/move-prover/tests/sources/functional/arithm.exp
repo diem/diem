@@ -1,119 +1,119 @@
 Move prover returns: exiting with boogie verification errors
 error: abort not covered by any of the `aborts_if` clauses
 
-     ┌── tests/sources/functional/arithm.move:121:5 ───
+     ┌── tests/sources/functional/arithm.move:125:5 ───
      │
- 121 │ ╭     fun div_by_zero_u64_incorrect(x: u64, y: u64): u64 {
- 122 │ │         x / y
- 123 │ │     }
+ 125 │ ╭     fun div_by_zero_u64_incorrect(x: u64, y: u64): u64 {
+ 126 │ │         x / y
+ 127 │ │     }
      │ ╰─────^
      ·
- 122 │         x / y
+ 126 │         x / y
      │           - abort happened here
      │
-     =     at tests/sources/functional/arithm.move:121:5: div_by_zero_u64_incorrect (entry)
-     =     at tests/sources/functional/arithm.move:122:11: div_by_zero_u64_incorrect (ABORTED)
+     =     at tests/sources/functional/arithm.move:125:5: div_by_zero_u64_incorrect (entry)
+     =     at tests/sources/functional/arithm.move:126:11: div_by_zero_u64_incorrect (ABORTED)
      =         x = <redacted>,
      =         y = <redacted>
 
 error: abort not covered by any of the `aborts_if` clauses
 
-     ┌── tests/sources/functional/arithm.move:173:5 ───
+     ┌── tests/sources/functional/arithm.move:177:5 ───
      │
- 173 │ ╭     fun overflow_u128_add_incorrect(x: u128, y: u128): u128 {
- 174 │ │         x + y
- 175 │ │     }
+ 177 │ ╭     fun overflow_u128_add_incorrect(x: u128, y: u128): u128 {
+ 178 │ │         x + y
+ 179 │ │     }
      │ ╰─────^
      ·
- 174 │         x + y
+ 178 │         x + y
      │           - abort happened here
      │
-     =     at tests/sources/functional/arithm.move:173:5: overflow_u128_add_incorrect (entry)
-     =     at tests/sources/functional/arithm.move:174:11: overflow_u128_add_incorrect (ABORTED)
+     =     at tests/sources/functional/arithm.move:177:5: overflow_u128_add_incorrect (entry)
+     =     at tests/sources/functional/arithm.move:178:11: overflow_u128_add_incorrect (ABORTED)
      =         x = <redacted>,
      =         y = <redacted>
 
 error: abort not covered by any of the `aborts_if` clauses
 
-     ┌── tests/sources/functional/arithm.move:226:5 ───
+     ┌── tests/sources/functional/arithm.move:230:5 ───
      │
- 226 │ ╭     fun overflow_u128_mul_incorrect(x: u128, y: u128): u128 {
- 227 │ │         x * y
- 228 │ │     }
+ 230 │ ╭     fun overflow_u128_mul_incorrect(x: u128, y: u128): u128 {
+ 231 │ │         x * y
+ 232 │ │     }
      │ ╰─────^
      ·
- 227 │         x * y
+ 231 │         x * y
      │           - abort happened here
      │
-     =     at tests/sources/functional/arithm.move:226:5: overflow_u128_mul_incorrect (entry)
-     =     at tests/sources/functional/arithm.move:227:11: overflow_u128_mul_incorrect (ABORTED)
+     =     at tests/sources/functional/arithm.move:230:5: overflow_u128_mul_incorrect (entry)
+     =     at tests/sources/functional/arithm.move:231:11: overflow_u128_mul_incorrect (ABORTED)
      =         x = <redacted>,
      =         y = <redacted>
 
 error: abort not covered by any of the `aborts_if` clauses
 
-     ┌── tests/sources/functional/arithm.move:157:5 ───
+     ┌── tests/sources/functional/arithm.move:161:5 ───
      │
- 157 │ ╭     fun overflow_u64_add_incorrect(x: u64, y: u64): u64 {
- 158 │ │         x + y
- 159 │ │     }
+ 161 │ ╭     fun overflow_u64_add_incorrect(x: u64, y: u64): u64 {
+ 162 │ │         x + y
+ 163 │ │     }
      │ ╰─────^
      ·
- 158 │         x + y
+ 162 │         x + y
      │           - abort happened here
      │
-     =     at tests/sources/functional/arithm.move:157:5: overflow_u64_add_incorrect (entry)
-     =     at tests/sources/functional/arithm.move:158:11: overflow_u64_add_incorrect (ABORTED)
+     =     at tests/sources/functional/arithm.move:161:5: overflow_u64_add_incorrect (entry)
+     =     at tests/sources/functional/arithm.move:162:11: overflow_u64_add_incorrect (ABORTED)
      =         x = <redacted>,
      =         y = <redacted>
 
 error: abort not covered by any of the `aborts_if` clauses
 
-     ┌── tests/sources/functional/arithm.move:210:5 ───
+     ┌── tests/sources/functional/arithm.move:214:5 ───
      │
- 210 │ ╭     fun overflow_u64_mul_incorrect(x: u64, y: u64): u64 {
- 211 │ │         x * y
- 212 │ │     }
+ 214 │ ╭     fun overflow_u64_mul_incorrect(x: u64, y: u64): u64 {
+ 215 │ │         x * y
+ 216 │ │     }
      │ ╰─────^
      ·
- 211 │         x * y
+ 215 │         x * y
      │           - abort happened here
      │
-     =     at tests/sources/functional/arithm.move:210:5: overflow_u64_mul_incorrect (entry)
-     =     at tests/sources/functional/arithm.move:211:11: overflow_u64_mul_incorrect (ABORTED)
+     =     at tests/sources/functional/arithm.move:214:5: overflow_u64_mul_incorrect (entry)
+     =     at tests/sources/functional/arithm.move:215:11: overflow_u64_mul_incorrect (ABORTED)
      =         x = <redacted>,
      =         y = <redacted>
 
 error: abort not covered by any of the `aborts_if` clauses
 
-     ┌── tests/sources/functional/arithm.move:141:5 ───
+     ┌── tests/sources/functional/arithm.move:145:5 ───
      │
- 141 │ ╭     fun overflow_u8_add_incorrect(x: u8, y: u8): u8 {
- 142 │ │         x + y
- 143 │ │     }
+ 145 │ ╭     fun overflow_u8_add_incorrect(x: u8, y: u8): u8 {
+ 146 │ │         x + y
+ 147 │ │     }
      │ ╰─────^
      ·
- 142 │         x + y
+ 146 │         x + y
      │           - abort happened here
      │
-     =     at tests/sources/functional/arithm.move:141:5: overflow_u8_add_incorrect (entry)
-     =     at tests/sources/functional/arithm.move:142:11: overflow_u8_add_incorrect (ABORTED)
+     =     at tests/sources/functional/arithm.move:145:5: overflow_u8_add_incorrect (entry)
+     =     at tests/sources/functional/arithm.move:146:11: overflow_u8_add_incorrect (ABORTED)
      =         x = <redacted>,
      =         y = <redacted>
 
 error: abort not covered by any of the `aborts_if` clauses
 
-     ┌── tests/sources/functional/arithm.move:194:5 ───
+     ┌── tests/sources/functional/arithm.move:198:5 ───
      │
- 194 │ ╭     fun overflow_u8_mul_incorrect(x: u8, y: u8): u8 {
- 195 │ │         x * y
- 196 │ │     }
+ 198 │ ╭     fun overflow_u8_mul_incorrect(x: u8, y: u8): u8 {
+ 199 │ │         x * y
+ 200 │ │     }
      │ ╰─────^
      ·
- 195 │         x * y
+ 199 │         x * y
      │           - abort happened here
      │
-     =     at tests/sources/functional/arithm.move:194:5: overflow_u8_mul_incorrect (entry)
-     =     at tests/sources/functional/arithm.move:195:11: overflow_u8_mul_incorrect (ABORTED)
+     =     at tests/sources/functional/arithm.move:198:5: overflow_u8_mul_incorrect (entry)
+     =     at tests/sources/functional/arithm.move:199:11: overflow_u8_mul_incorrect (ABORTED)
      =         x = <redacted>,
      =         y = <redacted>

@@ -1,5 +1,9 @@
 module TestArithmetic {
 
+    spec module {
+        pragma verify = true;
+    }
+
     // --------------------------
     // Basic arithmetic operation
     // --------------------------

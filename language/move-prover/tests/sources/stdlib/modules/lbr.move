@@ -31,11 +31,7 @@ module LBR {
         // Does aborts_if P effectively imply requires !P?
         requires !Libra::token_is_registered<T>();
 
-        // FIXME:
-        // Another bug:
-        // Boogie reports:
-        // bug: output.bpl(3882,158): Error: undeclared identifier: $tv0
-        // include Libra::RegisterAbortsIf<T>;
+        include Libra::RegisterAbortsIf<T>;
     }
 }
 }

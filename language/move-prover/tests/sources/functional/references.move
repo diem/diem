@@ -1,6 +1,11 @@
 module TestReferences {
     use 0x0::Vector;
 
+    spec module {
+        pragma verify = true;
+    }
+
+
     // ------------------------
     // References as parameters
     // ------------------------

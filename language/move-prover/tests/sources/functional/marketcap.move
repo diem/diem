@@ -4,6 +4,11 @@ address 0x0 {
 module TestMarketCap {
 
     spec module {
+        pragma verify = true;
+    }
+
+
+    spec module {
         // SPEC: sum of values of all coins.
         global sum_of_coins: num;
 

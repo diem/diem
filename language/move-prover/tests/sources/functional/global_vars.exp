@@ -1,83 +1,83 @@
 Move prover returns: exiting with boogie verification errors
 error:  A postcondition might not hold on this return path.
 
-     ┌── tests/sources/functional/global_vars.move:116:9 ───
+     ┌── tests/sources/functional/global_vars.move:119:9 ───
      │
- 116 │         ensures sum_of_T == old(sum_of_T) + 2;
+ 119 │         ensures sum_of_T == old(sum_of_T) + 2;
      │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
-     =     at tests/sources/functional/global_vars.move:108:5: combi_incorrect (entry)
-     =     at tests/sources/functional/global_vars.move:110:13: combi_incorrect
-     =     at tests/sources/functional/global_vars.move:111:17: combi_incorrect
+     =     at tests/sources/functional/global_vars.move:111:5: combi_incorrect (entry)
+     =     at tests/sources/functional/global_vars.move:113:13: combi_incorrect
+     =     at tests/sources/functional/global_vars.move:114:17: combi_incorrect
      =         r = <redacted>,
      =         s = <redacted>
-     =     at tests/sources/functional/global_vars.move:112:15: combi_incorrect
+     =     at tests/sources/functional/global_vars.move:115:15: combi_incorrect
      =         s = <redacted>
-     =     at tests/sources/functional/global_vars.move:109:21: combi_incorrect
-     =     at tests/sources/functional/global_vars.move:108:5: combi_incorrect (exit)
+     =     at tests/sources/functional/global_vars.move:112:21: combi_incorrect
+     =     at tests/sources/functional/global_vars.move:111:5: combi_incorrect (exit)
 
 error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/functional/global_vars.move:32:9 ───
+    ┌── tests/sources/functional/global_vars.move:35:9 ───
     │
- 32 │         ensures sum_of_T == old(sum_of_T) + 1;
+ 35 │         ensures sum_of_T == old(sum_of_T) + 1;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/global_vars.move:28:5: pack_incorrect (entry)
-    =     at tests/sources/functional/global_vars.move:29:9: pack_incorrect
+    =     at tests/sources/functional/global_vars.move:31:5: pack_incorrect (entry)
+    =     at tests/sources/functional/global_vars.move:32:9: pack_incorrect
     =         result = <redacted>
-    =     at tests/sources/functional/global_vars.move:28:5: pack_incorrect (exit)
+    =     at tests/sources/functional/global_vars.move:31:5: pack_incorrect (exit)
 
 error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/functional/global_vars.move:55:9 ───
+    ┌── tests/sources/functional/global_vars.move:58:9 ───
     │
- 55 │         ensures sum_of_T == old(sum_of_T);
+ 58 │         ensures sum_of_T == old(sum_of_T);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/global_vars.move:50:5: unpack_incorrect (entry)
-    =     at tests/sources/functional/global_vars.move:51:19: unpack_incorrect
+    =     at tests/sources/functional/global_vars.move:53:5: unpack_incorrect (entry)
+    =     at tests/sources/functional/global_vars.move:54:19: unpack_incorrect
     =         t = <redacted>
-    =     at tests/sources/functional/global_vars.move:52:9: unpack_incorrect
+    =     at tests/sources/functional/global_vars.move:55:9: unpack_incorrect
     =         x = <redacted>
-    =     at tests/sources/functional/global_vars.move:50:5: unpack_incorrect (exit)
+    =     at tests/sources/functional/global_vars.move:53:5: unpack_incorrect (exit)
     =         result = <redacted>
 
 error:  A postcondition might not hold on this return path.
 
-     ┌── tests/sources/functional/global_vars.move:151:9 ───
+     ┌── tests/sources/functional/global_vars.move:154:9 ───
      │
- 151 │         ensures sum_of_S == old(sum_of_S) + 1;
+ 154 │         ensures sum_of_S == old(sum_of_S) + 1;
      │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
-     =     at tests/sources/functional/global_vars.move:144:5: update_S_incorrect (entry)
-     =     at tests/sources/functional/global_vars.move:145:13: update_S_incorrect
-     =     at tests/sources/functional/global_vars.move:146:17: update_S_incorrect
+     =     at tests/sources/functional/global_vars.move:147:5: update_S_incorrect (entry)
+     =     at tests/sources/functional/global_vars.move:148:13: update_S_incorrect
+     =     at tests/sources/functional/global_vars.move:149:17: update_S_incorrect
      =         r = <redacted>,
      =         s = <redacted>
-     =     at tests/sources/functional/global_vars.move:147:15: update_S_incorrect
+     =     at tests/sources/functional/global_vars.move:150:15: update_S_incorrect
      =         r = <redacted>
-     =     at tests/sources/functional/global_vars.move:148:9: update_S_incorrect
-     =     at tests/sources/functional/global_vars.move:144:5: update_S_incorrect (exit)
+     =     at tests/sources/functional/global_vars.move:151:9: update_S_incorrect
+     =     at tests/sources/functional/global_vars.move:147:5: update_S_incorrect (exit)
      =         result = <redacted>
 
 error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/functional/global_vars.move:89:9 ───
+    ┌── tests/sources/functional/global_vars.move:92:9 ───
     │
- 89 │         ensures sum_of_T == old(sum_of_T);
+ 92 │         ensures sum_of_T == old(sum_of_T);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/global_vars.move:82:5: update_incorrect (entry)
-    =     at tests/sources/functional/global_vars.move:83:13: update_incorrect
-    =     at tests/sources/functional/global_vars.move:84:37: update_incorrect
+    =     at tests/sources/functional/global_vars.move:85:5: update_incorrect (entry)
+    =     at tests/sources/functional/global_vars.move:86:13: update_incorrect
+    =     at tests/sources/functional/global_vars.move:87:37: update_incorrect
     =         t = <redacted>
-    =     at tests/sources/functional/global_vars.move:64:5: update_valid_still_mutating (entry)
-    =     at tests/sources/functional/global_vars.move:65:19: update_valid_still_mutating
+    =     at tests/sources/functional/global_vars.move:67:5: update_valid_still_mutating (entry)
+    =     at tests/sources/functional/global_vars.move:68:19: update_valid_still_mutating
     =         t = <redacted>,
     =         t = <redacted>
-    =     at tests/sources/functional/global_vars.move:64:5: update_valid_still_mutating (exit)
-    =     at tests/sources/functional/global_vars.move:84:9: update_incorrect
-    =     at tests/sources/functional/global_vars.move:85:9: update_incorrect
-    =     at tests/sources/functional/global_vars.move:82:5: update_incorrect (exit)
+    =     at tests/sources/functional/global_vars.move:67:5: update_valid_still_mutating (exit)
+    =     at tests/sources/functional/global_vars.move:87:9: update_incorrect
+    =     at tests/sources/functional/global_vars.move:88:9: update_incorrect
+    =     at tests/sources/functional/global_vars.move:85:5: update_incorrect (exit)
     =         result = <redacted>

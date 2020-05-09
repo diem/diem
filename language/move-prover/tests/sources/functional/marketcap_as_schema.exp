@@ -1,16 +1,16 @@
 Move prover returns: exiting with boogie verification errors
 error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/functional/marketcap_as_schema.move:11:9 ───
+    ┌── tests/sources/functional/marketcap_as_schema.move:16:9 ───
     │
- 11 │         invariant module global<MarketCap>(0xA550C18).total_value == sum_of_coins<X>;
+ 16 │         invariant module global<MarketCap>(0xA550C18).total_value == sum_of_coins<X>;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/marketcap_as_schema.move:54:6: deposit_invalid (entry)
-    =     at tests/sources/functional/marketcap_as_schema.move:55:18: deposit_invalid
+    =     at tests/sources/functional/marketcap_as_schema.move:59:6: deposit_invalid (entry)
+    =     at tests/sources/functional/marketcap_as_schema.move:60:18: deposit_invalid
     =         coin_ref = <redacted>,
     =         check = <redacted>,
     =         value = <redacted>
-    =     at tests/sources/functional/marketcap_as_schema.move:56:27: deposit_invalid
+    =     at tests/sources/functional/marketcap_as_schema.move:61:27: deposit_invalid
     =         coin_ref = <redacted>
-    =     at tests/sources/functional/marketcap_as_schema.move:54:6: deposit_invalid (exit)
+    =     at tests/sources/functional/marketcap_as_schema.move:59:6: deposit_invalid (exit)

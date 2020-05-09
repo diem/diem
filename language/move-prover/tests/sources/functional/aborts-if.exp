@@ -1,101 +1,97 @@
 Move prover returns: exiting with boogie verification errors
 error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/functional/aborts-if.move:31:9 ───
+    ┌── tests/sources/functional/aborts-if.move:35:9 ───
     │
- 31 │         aborts_if _x <= _y;
+ 35 │         aborts_if _x <= _y;
     │         ^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/aborts-if.move:28:5: abort2_incorrect (entry)
-    =     at tests/sources/functional/aborts-if.move:28:5: abort2_incorrect (exit)
+    =     at tests/sources/functional/aborts-if.move:32:5: abort2_incorrect (entry)
+    =     at tests/sources/functional/aborts-if.move:32:5: abort2_incorrect (exit)
     =         _x = <redacted>,
     =         _y = <redacted>
 
-error: abort not covered by any of the `aborts_if` clauses
+error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/functional/aborts-if.move:43:5 ───
+    ┌── tests/sources/functional/aborts-if.move:51:9 ───
     │
- 43 │ ╭     fun abort4_incorrect(x: u64, y: u64) {
- 44 │ │         if (x > y) abort 1
- 45 │ │     }
-    │ ╰─────^
-    ·
- 44 │         if (x > y) abort 1
-    │         ------------------ abort happened here
+ 51 │         aborts_if x <= y;
+    │         ^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/aborts-if.move:43:5: abort4_incorrect (entry)
-    =     at tests/sources/functional/aborts-if.move:44:9: abort4_incorrect (ABORTED)
+    =     at tests/sources/functional/aborts-if.move:47:5: abort4_incorrect (entry)
+    =     at tests/sources/functional/aborts-if.move:48:9: abort4_incorrect
     =         x = <redacted>,
     =         y = <redacted>
+    =     at tests/sources/functional/aborts-if.move:47:5: abort4_incorrect (exit)
 
 error: abort not covered by any of the `aborts_if` clauses
 
-    ┌── tests/sources/functional/aborts-if.move:51:5 ───
+    ┌── tests/sources/functional/aborts-if.move:55:5 ───
     │
- 51 │ ╭     fun abort5_incorrect(x: u64, y: u64) {
- 52 │ │         if (x <= y) abort 1
- 53 │ │     }
+ 55 │ ╭     fun abort5_incorrect(x: u64, y: u64) {
+ 56 │ │         if (x <= y) abort 1
+ 57 │ │     }
     │ ╰─────^
     ·
- 52 │         if (x <= y) abort 1
+ 56 │         if (x <= y) abort 1
     │         ------------------- abort happened here
     │
-    =     at tests/sources/functional/aborts-if.move:51:5: abort5_incorrect (entry)
-    =     at tests/sources/functional/aborts-if.move:52:9: abort5_incorrect (ABORTED)
+    =     at tests/sources/functional/aborts-if.move:55:5: abort5_incorrect (entry)
+    =     at tests/sources/functional/aborts-if.move:56:9: abort5_incorrect (ABORTED)
     =         x = <redacted>,
     =         y = <redacted>
 
 error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/functional/aborts-if.move:63:9 ───
+    ┌── tests/sources/functional/aborts-if.move:67:9 ───
     │
- 63 │         aborts_if x <= y;
+ 67 │         aborts_if x <= y;
     │         ^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/aborts-if.move:59:5: abort6_incorrect (entry)
-    =     at tests/sources/functional/aborts-if.move:60:9: abort6_incorrect
+    =     at tests/sources/functional/aborts-if.move:63:5: abort6_incorrect (entry)
+    =     at tests/sources/functional/aborts-if.move:64:9: abort6_incorrect
     =         x = <redacted>,
     =         y = <redacted>
-    =     at tests/sources/functional/aborts-if.move:59:5: abort6_incorrect (exit)
+    =     at tests/sources/functional/aborts-if.move:63:5: abort6_incorrect (exit)
 
 error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/functional/aborts-if.move:86:9 ───
+    ┌── tests/sources/functional/aborts-if.move:90:9 ───
     │
- 86 │         aborts_if x == y;
+ 90 │         aborts_if x == y;
     │         ^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/aborts-if.move:81:5: multi_abort2_incorrect (entry)
-    =     at tests/sources/functional/aborts-if.move:82:9: multi_abort2_incorrect
+    =     at tests/sources/functional/aborts-if.move:85:5: multi_abort2_incorrect (entry)
+    =     at tests/sources/functional/aborts-if.move:86:9: multi_abort2_incorrect
     =         x = <redacted>,
     =         y = <redacted>
-    =     at tests/sources/functional/aborts-if.move:81:5: multi_abort2_incorrect (exit)
+    =     at tests/sources/functional/aborts-if.move:85:5: multi_abort2_incorrect (exit)
 
 error: abort not covered by any of the `aborts_if` clauses
 
-    ┌── tests/sources/functional/aborts-if.move:90:5 ───
+    ┌── tests/sources/functional/aborts-if.move:94:5 ───
     │
- 90 │ ╭     fun multi_abort3_incorrect(_x: u64, _y: u64) {
- 91 │ │         abort 1
- 92 │ │     }
+ 94 │ ╭     fun multi_abort3_incorrect(_x: u64, _y: u64) {
+ 95 │ │         abort 1
+ 96 │ │     }
     │ ╰─────^
     ·
- 91 │         abort 1
+ 95 │         abort 1
     │         ------- abort happened here
     │
-    =     at tests/sources/functional/aborts-if.move:90:5: multi_abort3_incorrect (entry)
-    =     at tests/sources/functional/aborts-if.move:91:9: multi_abort3_incorrect (ABORTED)
+    =     at tests/sources/functional/aborts-if.move:94:5: multi_abort3_incorrect (entry)
+    =     at tests/sources/functional/aborts-if.move:95:9: multi_abort3_incorrect (ABORTED)
     =         _x = <redacted>,
     =         _y = <redacted>
 
 error:  A postcondition might not hold on this return path.
 
-     ┌── tests/sources/functional/aborts-if.move:114:9 ───
+     ┌── tests/sources/functional/aborts-if.move:118:9 ───
      │
- 114 │         aborts_if true;
+ 118 │         aborts_if true;
      │         ^^^^^^^^^^^^^^^
      │
-     =     at tests/sources/functional/aborts-if.move:108:5: multi_abort5_incorrect (entry)
-     =     at tests/sources/functional/aborts-if.move:109:9: multi_abort5_incorrect
+     =     at tests/sources/functional/aborts-if.move:112:5: multi_abort5_incorrect (entry)
+     =     at tests/sources/functional/aborts-if.move:113:9: multi_abort5_incorrect
      =         x = <redacted>
-     =     at tests/sources/functional/aborts-if.move:108:5: multi_abort5_incorrect (exit)
+     =     at tests/sources/functional/aborts-if.move:112:5: multi_abort5_incorrect (exit)

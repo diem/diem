@@ -9,11 +9,11 @@ error: abort not covered by any of the `aborts_if` clauses
    │ ╰─^
    │
    =     at tests/sources/functional/script_incorrect.move:5:1: main (entry)
-   =     at tests/sources/functional/script_provider.move:9:5: register (entry)
-   =     at tests/sources/functional/script_provider.move:10:9: register (ABORTED)
+   =     at tests/sources/functional/script_provider.move:14:5: register (entry)
+   =     at tests/sources/functional/script_provider.move:15:9: register (ABORTED)
 
-    ┌── tests/sources/functional/script_provider.move:10:9 ───
+    ┌── tests/sources/functional/script_provider.move:15:9 ───
     │
- 10 │         Transaction::assert(Transaction::sender() == 0x1, 1);
+ 15 │         Transaction::assert(Transaction::sender() == 0x1, 1);
     │         ---------------------------------------------------- abort happened here
     │

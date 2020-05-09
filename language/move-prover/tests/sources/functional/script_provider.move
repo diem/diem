@@ -4,6 +4,11 @@ address 0x0 {
 module ScriptProvider {
     use 0x0::Transaction;
 
+    spec module {
+        pragma verify = true;
+    }
+
+
     resource struct Info<T> {}
 
     public fun register<T>() {

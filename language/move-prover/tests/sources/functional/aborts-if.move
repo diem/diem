@@ -1,5 +1,9 @@
 module TestAbortsIf {
 
+    spec module {
+        pragma verify = true;
+    }
+
     // -------------------------
     // No `aborts_if` statements
     // -------------------------

@@ -2,6 +2,11 @@ module TestLCS {
 
     use 0x0::LCS;
 
+    spec module {
+        pragma verify = true;
+    }
+
+
     fun lcs_test1<Thing>(v1: &Thing, v2: &Thing): (vector<u8>, vector<u8>)
     {
         let s1 = LCS::to_bytes(v1);

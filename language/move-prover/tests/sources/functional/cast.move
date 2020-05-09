@@ -1,5 +1,9 @@
 module TestCast {
 
+    spec module {
+        pragma verify = true;
+    }
+
     // --------------
     // Type promotion
     // --------------

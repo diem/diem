@@ -1,6 +1,11 @@
 address 0x1 {
 module TestModuleInvariants {
 
+    spec module {
+        pragma verify = true;
+    }
+
+
     // Some structure.
     struct S {}
 

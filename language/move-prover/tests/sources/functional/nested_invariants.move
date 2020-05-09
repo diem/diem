@@ -1,5 +1,10 @@
 module TestNestedInvariants {
 
+    spec module {
+        pragma verify = true;
+    }
+
+
     // Tests scenarios for invariants with nested structs
 
     struct Nested {

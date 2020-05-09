@@ -2,6 +2,10 @@ module TestHash {
 
     use 0x0::Hash;
 
+    spec module {
+        pragma verify = true;
+    }
+
     // -----------
     // SHA-2 Tests
     // -----------

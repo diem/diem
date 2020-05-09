@@ -11,24 +11,22 @@ use libra_temppath::TempPath;
 use move_prover::{cli::Options, run_move_prover};
 use test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives, read_env_var};
 
-const STDLIB_FLAGS: &[&str] = &["--search_path=../stdlib/modules"];
-const STDLIB_FLAGS_UNVERIFIED: &[&str] = &["--search_path=../stdlib/modules", "--verify=none"];
-const LEGACY_STDLIB_FLAGS: &[&str] = &["--search_path=tests/sources/stdlib/modules"];
+const STDLIB_FLAGS: &[&str] = &["--search-path=../stdlib/modules"];
+const STDLIB_FLAGS_UNVERIFIED: &[&str] = &["--search-path=../stdlib/modules", "--verify=none"];
+const LEGACY_STDLIB_FLAGS: &[&str] = &["--search-path=tests/sources/stdlib/modules"];
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let no_boogie = read_env_var("BOOGIE_EXE").is_empty() || read_env_var("Z3_EXE").is_empty();
     let baseline_valid =
         !no_boogie || !extract_test_directives(path, "// no-boogie-test")?.is_empty();
-    let (mut flags, baseline_path) = get_flags(path)?;
-    if flags.iter().find(|a| a.contains("--verify")).is_none() {
-        flags.push("--verify=all".to_string());
-    }
+    let (flags, baseline_path) = get_flags(path)?;
     let mut args = vec!["mvp_test".to_string()];
     args.extend(flags);
+    args.push("--verbose=warn".to_owned());
     args.push(path.to_string_lossy().to_string());
 
     let mut options = Options::default();
-    options.initialize_from_args(&args);
+    options.initialize_from_args(&args)?;
     options.setup_logging_for_test();
     if no_boogie {
         options.generate_only = true;

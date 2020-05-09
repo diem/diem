@@ -8,10 +8,13 @@ use crate::{
     bytecode_translator::BoogieTranslator,
     cli::{Options, INLINE_PRELUDE},
     code_writer::CodeWriter,
+    prelude_template_helpers::StratificationHelper,
 };
 use anyhow::anyhow;
 use codespan_reporting::term::termcolor::WriteColor;
-use log::info;
+use handlebars::Handlebars;
+#[allow(unused_imports)]
+use log::{debug, info, warn};
 use regex::Regex;
 use spec_lang::{env::GlobalEnv, run_spec_lang_compiler};
 use stackless_bytecode_generator::{
@@ -25,6 +28,7 @@ use std::{
     fs::File,
     io::Read,
     path::{Path, PathBuf},
+    time::Instant,
 };
 
 #[macro_use]
@@ -34,6 +38,7 @@ mod boogie_helpers;
 mod boogie_wrapper;
 mod bytecode_translator;
 pub mod cli;
+mod prelude_template_helpers;
 mod spec_translator;
 
 // =================================================================================================
@@ -46,13 +51,14 @@ pub fn run_move_prover<W: WriteColor>(
     error_writer: &mut W,
     options: Options,
 ) -> anyhow::Result<()> {
+    let now = Instant::now();
     let sources = options.move_sources.clone();
     let mut deps = options.move_deps.clone();
     if !options.search_path.is_empty() {
         calculate_deps(&sources, &options.search_path, &mut deps)?;
     }
     let address = Some(options.account_address.as_ref());
-    info!("parsing and checking sources");
+    debug!("parsing and checking sources");
     let mut env: GlobalEnv = run_spec_lang_compiler(sources, deps, address)?;
     if env.has_errors() {
         env.report_errors(error_writer);
@@ -71,8 +77,9 @@ pub fn run_move_prover<W: WriteColor>(
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with boogie generation errors"));
     }
-    info!("writing boogie to {}", &options.output_path);
+    debug!("writing boogie to {}", &options.output_path);
     writer.process_result(|result| fs::write(&options.output_path, result))?;
+    let translator_elapsed = now.elapsed();
     if !options.generate_only {
         let boogie_file_id =
             writer.process_result(|result| env.add_source(&options.output_path, result, false));
@@ -83,7 +90,23 @@ pub fn run_move_prover<W: WriteColor>(
             options: &options,
             boogie_file_id,
         };
-        boogie.call_boogie_and_verify_output(&options.output_path)?;
+        boogie.call_boogie_and_verify_output(options.bench_repeat, &options.output_path)?;
+        let boogie_elapsed = now.elapsed();
+        if options.bench_repeat <= 1 {
+            info!(
+                "{:.3}s translator, {:.3}s solver",
+                translator_elapsed.as_secs_f64(),
+                (boogie_elapsed - translator_elapsed).as_secs_f64()
+            );
+        } else {
+            info!(
+                "{:.3}s translator, {:.3}s solver (average over {} solver runs)",
+                translator_elapsed.as_secs_f64(),
+                (boogie_elapsed - translator_elapsed).as_secs_f64() / (options.bench_repeat as f64),
+                options.bench_repeat
+            );
+        }
+
         if env.has_errors() {
             env.report_errors(error_writer);
             return Err(anyhow!("exiting with boogie verification errors"));
@@ -95,14 +118,22 @@ pub fn run_move_prover<W: WriteColor>(
 /// Adds the prelude to the generated output.
 fn add_prelude(options: &Options, writer: &CodeWriter) -> anyhow::Result<()> {
     emit!(writer, "\n// ** prelude from {}\n\n", &options.prelude_path);
-    if options.prelude_path == INLINE_PRELUDE {
-        info!("using inline prelude");
-        emitln!(writer, &String::from_utf8_lossy(DEFAULT_PRELUDE));
+    let content = if options.prelude_path == INLINE_PRELUDE {
+        debug!("using inline prelude");
+        String::from_utf8_lossy(DEFAULT_PRELUDE).to_string()
     } else {
-        info!("using prelude at {}", &options.prelude_path);
-        let content = fs::read_to_string(&options.prelude_path)?;
-        emitln!(writer, &content);
-    }
+        debug!("using prelude at {}", &options.prelude_path);
+        fs::read_to_string(&options.prelude_path)?
+    };
+    let mut handlebars = Handlebars::new();
+    handlebars.register_helper(
+        "stratified",
+        Box::new(StratificationHelper::new(
+            options.template_context.stratification_depth,
+        )),
+    );
+    let expanded_content = handlebars.render_template(&content, &options.template_context)?;
+    emitln!(writer, &expanded_content);
     Ok(())
 }
 

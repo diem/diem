@@ -1,6 +1,11 @@
 address 0x1 {
 module TestMutRefs {
 
+    spec module {
+        pragma verify = true;
+    }
+
+
     struct T { value: u64 }
 
     // Resource to track the sum of values in T
