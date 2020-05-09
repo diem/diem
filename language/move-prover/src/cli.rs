@@ -449,9 +449,15 @@ impl Options {
         }
         if self.use_array_theory {
             add(&["-useArrayTheory"]);
-        } else {
-            add(&["-proverOpt:O:smt.QI.EAGER_THRESHOLD=100"]);
         }
+        add(&["-proverOpt:O:smt.QI.EAGER_THRESHOLD=100"]);
+        add(&["-proverOpt:O:smt.QI.LAZY_THRESHOLD=100"]);
+        // TODO: see what we can make out of these flags.
+        //add(&["-proverOpt:O:smt.QI.PROFILE=true"]);
+        //add(&["-proverOpt:O:trace=true"]);
+        //add(&["-proverOpt:VERBOSITY=3"]);
+        //add(&["-proverOpt:C:-st"]);
+        //add(&["-proverLog:@PROC@.log"]);
         for f in &self.boogie_flags {
             add(&[f.as_str()]);
         }

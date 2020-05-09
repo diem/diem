@@ -383,6 +383,11 @@ impl<'env> SpecTranslator<'env> {
     pub fn assume_preconditions(&self) {
         emitln!(self.writer, "assume $ExistsTxnSenderAccount($m, $txn);");
         let func_target = self.function_target();
+        // Assume abstract types for type parameters.
+        for (i, _) in func_target.get_type_parameters().iter().enumerate() {
+            emitln!(self.writer, "assume is#AbstractType($tv{});", i);
+        }
+        // Assume requires.
         let requires = func_target
             .get_spec()
             .filter(|c| match c.kind {
