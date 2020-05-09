@@ -37,6 +37,18 @@ pub use crate::{
 impl From<&SecureBackend> for Box<dyn Storage> {
     fn from(backend: &SecureBackend) -> Self {
         match backend {
+            SecureBackend::GitHub(config) => {
+                let storage = GitHubStorage::new(
+                    config.owner.clone(),
+                    config.repository.clone(),
+                    config.token.clone(),
+                );
+                if let Some(namespace) = &config.namespace {
+                    Box::new(NamespacedStorage::new(storage, namespace.clone()))
+                } else {
+                    Box::new(storage)
+                }
+            }
             SecureBackend::InMemoryStorage => Box::new(InMemoryStorage::new()),
             SecureBackend::OnDiskStorage(config) => {
                 let storage = OnDiskStorage::new(config.path());

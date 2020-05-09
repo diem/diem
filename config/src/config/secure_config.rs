@@ -45,9 +45,24 @@ impl Default for KeyManagerConfig {
 #[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
 pub enum SecureBackend {
+    GitHub(GitHubConfig),
     InMemoryStorage,
     Vault(VaultConfig),
     OnDiskStorage(OnDiskStorageConfig),
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct GitHubConfig {
+    /// The owner or account that hosts a repository
+    pub owner: String,
+    /// The repository where storage will mount
+    pub repository: String,
+    /// The authorization token for accessing the repository
+    pub token: String,
+    /// A namespace is an optional portion of the path to a key stored within OnDiskStorage. For
+    /// example, a key, S, without a namespace would be available in S, with a namespace, N, it
+    /// would be in N/S.
+    pub namespace: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
