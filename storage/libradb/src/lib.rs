@@ -135,7 +135,7 @@ impl LibraDB {
     pub fn open<P: AsRef<Path> + Clone>(
         db_root_path: P,
         readonly: bool,
-        historical_versions_to_keep: Option<u64>,
+        prune_window: Option<u64>,
     ) -> Result<Self> {
         let column_families = vec![
             /* LedgerInfo CF = */ DEFAULT_CF_NAME,
@@ -174,7 +174,7 @@ impl LibraDB {
             state_store: Arc::new(StateStore::new(Arc::clone(&db))),
             transaction_store: Arc::new(TransactionStore::new(Arc::clone(&db))),
             system_store: SystemStore::new(Arc::clone(&db)),
-            pruner: historical_versions_to_keep.map(|n| Pruner::new(Arc::clone(&db), n)),
+            pruner: prune_window.map(|n| Pruner::new(Arc::clone(&db), n)),
         })
     }
 
