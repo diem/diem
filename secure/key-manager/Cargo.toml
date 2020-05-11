@@ -28,7 +28,7 @@ libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0"
 
 [dev-dependencies]
 anyhow = "1.0"
-futures = "0.3.0"
+futures = "0.3.5"
 rand = "0.7.3"
 tokio = { version = "0.2.13", features = ["full"] }
 

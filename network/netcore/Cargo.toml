@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 async-trait = "0.1"
 bytes = "0.5.4"
-futures = { version = "0.3.4"  }
+futures = { version = "0.3.5"  }
 pin-project = "0.4.16"
 tokio = { version = "0.2.13", features = ["full"] }
 

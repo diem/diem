@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures = "0.3.0"
+futures = "0.3.5"
 futures-semaphore = { path = "../futures-semaphore" }
 libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 tokio = { version = "0.2.13", features = ["full"] }
