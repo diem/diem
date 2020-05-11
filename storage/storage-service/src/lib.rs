@@ -9,9 +9,6 @@
 //! [`storage-client`](../storage-client/index.html) instead of via
 //! [`StorageClient`](../storage-proto/proto/storage_grpc/struct.StorageClient.html) directly.
 
-#[cfg(any(feature = "testing", feature = "fuzzing"))]
-pub mod mocks;
-
 use anyhow::Result;
 use futures::{channel::mpsc, sink::SinkExt};
 use libra_config::config::NodeConfig;
