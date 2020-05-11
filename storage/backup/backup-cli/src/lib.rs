@@ -3,11 +3,16 @@
 
 pub mod adapter;
 
-use crate::adapter::Adapter;
+use crate::adapter::{local_storage::LocalStorage, Adapter};
 use anyhow::Result;
-use futures::{stream, StreamExt};
+use byteorder::{LittleEndian, ReadBytesExt};
+use futures::{executor::block_on_stream, stream, StreamExt};
 use libra_crypto::HashValue;
-use libra_types::transaction::Version;
+use libra_types::{
+    account_state_blob::AccountStateBlob, proof::SparseMerkleRangeProof, transaction::Version,
+};
+use libradb::LibraDB;
+use std::{io::Read, path::Path};
 use storage_client::{StorageRead, StorageReadServiceClient};
 
 pub type FileHandle = String;
@@ -82,4 +87,146 @@ async fn get_proof_and_write(
         .write_new_file(stream::once(async move { proof_bytes }))
         .await?;
     Ok(file)
+}
+
+pub fn restore_account_state<P, I>(version: u64, root_hash: HashValue, db_dir: P, iter: I)
+where
+    P: AsRef<Path> + Clone,
+    I: Iterator<Item = Result<(FileHandle, FileHandle)>>,
+{
+    let libradb =
+        LibraDB::open(db_dir, false /* read_only */, None /* pruner */).expect("DB should open.");
+    let chunk_and_proofs = iter.map(|res| {
+        let (account_state_file, proof_file) = res.expect("Input iter yielded error.");
+        let accounts = read_account_state_chunk(account_state_file)
+            .expect("Failed to read account state file.");
+        let proof = read_proof(proof_file).expect("Failed to read proof file.");
+
+        (accounts, proof)
+    });
+
+    libradb
+        .restore_account_state(chunk_and_proofs, version, root_hash)
+        .expect("Failed to restore account state.");
+}
+
+fn read_account_state_chunk(file: FileHandle) -> Result<Vec<(HashValue, AccountStateBlob)>> {
+    let content = read_file(file)?;
+
+    let mut chunk = vec![];
+    let mut reader = std::io::Cursor::new(content);
+    loop {
+        let mut buf = [0u8; HashValue::LENGTH];
+        if reader.read_exact(&mut buf).is_err() {
+            break;
+        }
+        let key = HashValue::new(buf);
+
+        let len = reader.read_u32::<LittleEndian>()?;
+        let mut buf = vec![0u8; len as usize];
+        reader.read_exact(&mut buf)?;
+        let blob = AccountStateBlob::from(buf);
+
+        chunk.push((key, blob));
+    }
+
+    Ok(chunk)
+}
+
+fn read_proof(file: FileHandle) -> Result<SparseMerkleRangeProof> {
+    let content = read_file(file)?;
+    let proof = lcs::from_bytes(&content)?;
+    Ok(proof)
+}
+
+fn read_file(file: FileHandle) -> Result<Vec<u8>> {
+    let mut content = vec![];
+    for bytes_res in block_on_stream(LocalStorage::read_file_content(&file)) {
+        content.extend(bytes_res?);
+    }
+    Ok(content)
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        adapter::local_storage::LocalStorage, backup_account_state, restore_account_state,
+    };
+    use libra_config::config::NodeConfig;
+    use libra_proptest_helpers::ValueGenerator;
+    use libra_temppath::TempPath;
+    use libra_types::transaction::PRE_GENESIS_VERSION;
+    use libradb::{test_helper::arb_blocks_to_commit, LibraDB};
+    use std::sync::Arc;
+    use storage_client::StorageReadServiceClient;
+    use storage_interface::{DbReader, DbWriter};
+    use storage_service::start_storage_service_with_db;
+
+    fn tmp_db_empty() -> (TempPath, LibraDB) {
+        let tmpdir = TempPath::new();
+        let db = LibraDB::new_for_test(&tmpdir);
+
+        (tmpdir, db)
+    }
+
+    fn tmp_db_with_random_content() -> (TempPath, LibraDB) {
+        let (tmpdir, db) = tmp_db_empty();
+        let mut cur_ver = 0;
+        for (txns_to_commit, ledger_info_with_sigs) in
+            ValueGenerator::new().generate(arb_blocks_to_commit())
+        {
+            db.save_transactions(
+                &txns_to_commit,
+                cur_ver, /* first_version */
+                Some(&ledger_info_with_sigs),
+            )
+            .unwrap();
+            cur_ver += txns_to_commit.len() as u64;
+        }
+
+        (tmpdir, db)
+    }
+
+    #[test]
+    fn end_to_end() {
+        let (_src_db_dir, src_db) = tmp_db_with_random_content();
+        let src_db = Arc::new(src_db);
+        let (latest_version, state_root_hash) = src_db.get_latest_state_root().unwrap();
+        let tgt_db_dir = TempPath::new();
+        let backup_dir = TempPath::new();
+        backup_dir.create_as_dir().unwrap();
+        let adaptor = LocalStorage::new(backup_dir.path().to_path_buf());
+
+        let config = NodeConfig::random();
+        let mut rt = start_storage_service_with_db(&config, Arc::clone(&src_db));
+        let client = StorageReadServiceClient::new(&config.storage.address);
+        let handles = rt
+            .block_on(backup_account_state(
+                &client,
+                latest_version,
+                &adaptor,
+                1024 * 1024,
+            ))
+            .unwrap();
+
+        restore_account_state(
+            PRE_GENESIS_VERSION,
+            state_root_hash,
+            &tgt_db_dir,
+            handles.into_iter().map(Ok),
+        );
+        let tgt_db = LibraDB::open(
+            &tgt_db_dir,
+            true, /* readonly */
+            None, /* pruner */
+        )
+        .unwrap();
+        assert_eq!(
+            tgt_db
+                .get_latest_tree_state()
+                .unwrap()
+                .account_state_root_hash,
+            state_root_hash,
+        );
+    }
 }
