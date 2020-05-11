@@ -17,6 +17,7 @@ use libra_json_rpc_client::views::{AccountView, BlockMetadata, EventView, Transa
 use libra_logger::prelude::*;
 use libra_network_address::{NetworkAddress, RawNetworkAddress};
 use libra_temppath::TempPath;
+use libra_types::account_state::AccountState;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -39,6 +40,7 @@ use num_traits::{
     identities::Zero,
 };
 use reqwest::Url;
+use resource_viewer::{AnnotatedAccountStateBlob, MoveValueAnnotator, NullStateView};
 use rust_decimal::Decimal;
 use std::{
     collections::HashMap,
@@ -806,6 +808,19 @@ impl ClientProxy {
         self.get_account_state_and_update(account)
     }
 
+    /// Get the latest annotated account resources from validator.
+    pub fn get_latest_account_resources(
+        &mut self,
+        space_delim_strings: &[&str],
+    ) -> Result<(Option<AnnotatedAccountStateBlob>, Version)> {
+        ensure!(
+            space_delim_strings.len() == 2,
+            "Invalid number of arguments to get latest account state"
+        );
+        let (account, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        self.get_annotate_account_blob(account)
+    }
+
     /// Get committed txn by account and sequence number.
     pub fn get_committed_txn_by_acc_seq(
         &mut self,
@@ -1019,6 +1034,22 @@ impl ClientProxy {
     /// Test client's connection to validator with proof.
     pub fn test_trusted_connection(&mut self) -> Result<()> {
         self.client.get_state_proof()
+    }
+
+    fn get_annotate_account_blob(
+        &mut self,
+        address: AccountAddress,
+    ) -> Result<(Option<AnnotatedAccountStateBlob>, Version)> {
+        let (blob, ver) = self.client.get_account_state_blob(address)?;
+        if let Some(account_blob) = blob {
+            let state_view = NullStateView::default();
+            let annotator = MoveValueAnnotator::new(&state_view);
+            let annotate_blob =
+                annotator.view_account_state(&AccountState::try_from(&account_blob)?)?;
+            Ok((Some(annotate_blob), ver))
+        } else {
+            Ok((None, ver))
+        }
     }
 
     /// Get account state from validator and update status of account if it is cached locally.

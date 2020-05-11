@@ -38,6 +38,7 @@ libra-network-address = { path = "../../network/network-address", version = "0.1
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath/", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+resource-viewer = { path = "../../language/resource-viewer", version = "0.1.0" }
 stdlib = { path = "../../language/stdlib", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 

@@ -6,7 +6,10 @@ use anyhow::{bail, ensure, Result};
 use libra_json_rpc_client::{
     errors::JsonRpcError,
     get_response_from_batch,
-    views::{AccountView, BlockMetadata, BytesView, EventView, StateProofView, TransactionView},
+    views::{
+        AccountStateWithProofView, AccountView, BlockMetadata, BytesView, EventView,
+        StateProofView, TransactionView,
+    },
     JsonRpcBatch, JsonRpcClient, JsonRpcResponse, ResponseAsView,
 };
 use libra_logger::prelude::*;
@@ -14,6 +17,7 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
+    account_state_blob::AccountStateBlob,
     epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{SignedTransaction, Version},
@@ -128,6 +132,34 @@ impl LibraClient {
             }
             Err(e) => bail!(
                 "Failed to get account state for account address {} with error: {:?}",
+                account,
+                e
+            ),
+        }
+    }
+
+    pub fn get_account_state_blob(
+        &mut self,
+        account: AccountAddress,
+    ) -> Result<(Option<AccountStateBlob>, Version)> {
+        let mut batch = JsonRpcBatch::new();
+        batch.add_get_account_state_with_proof_request(account, None, None);
+        let responses = self.client.execute(batch)?;
+        match get_response_from_batch(0, &responses)? {
+            Ok(result) => {
+                let account_state_with_proof =
+                    AccountStateWithProofView::from_response(result.clone())?;
+                if let Some(bytes) = account_state_with_proof.blob {
+                    Ok((
+                        Some(lcs::from_bytes(&bytes.into_bytes()?)?),
+                        account_state_with_proof.version,
+                    ))
+                } else {
+                    Ok((None, account_state_with_proof.version))
+                }
+            }
+            Err(e) => bail!(
+                "Failed to get account state blob for account address {} with error: {:?}",
                 account,
                 e
             ),
