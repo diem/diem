@@ -37,6 +37,7 @@ const CFG_FULLNODE_SEED: &str = "26742674267426742674267426742674267426742674267
 
 const ERROR_NOT_FOUND: u16 = 404;
 
+#[derive(Clone)]
 pub struct ClusterSwarmKube {
     client: Client,
     node_map: Arc<Mutex<HashMap<InstanceConfig, Instance>>>,

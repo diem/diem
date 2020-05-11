@@ -6,6 +6,7 @@
 mod cpu_flamegraph;
 mod packet_loss_random_validators;
 mod performance_benchmark;
+mod performance_benchmark_packet_loss;
 mod performance_benchmark_three_region_simulation;
 mod reboot_random_validator;
 mod recovery_time;
@@ -16,6 +17,9 @@ pub use packet_loss_random_validators::{
     PacketLossRandomValidators, PacketLossRandomValidatorsParams,
 };
 pub use performance_benchmark::{PerformanceBenchmark, PerformanceBenchmarkParams};
+pub use performance_benchmark_packet_loss::{
+    PerformanceBenchmarkPacketLoss, PerformanceBenchmarkPacketLossParams,
+};
 pub use performance_benchmark_three_region_simulation::{
     PerformanceBenchmarkThreeRegionSimulation, PerformanceBenchmarkThreeRegionSimulationParams,
 };
@@ -112,6 +116,10 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
         f::<PacketLossRandomValidatorsParams>(),
     );
     known_experiments.insert("bench", f::<PerformanceBenchmarkParams>());
+    known_experiments.insert(
+        "bench_packet_loss",
+        f::<PerformanceBenchmarkPacketLossParams>(),
+    );
     known_experiments.insert(
         "bench_three_region",
         f::<PerformanceBenchmarkThreeRegionSimulationParams>(),
