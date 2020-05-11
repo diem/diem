@@ -218,6 +218,17 @@ impl Display for AnnotatedMoveStruct {
     }
 }
 
+impl Display for AnnotatedAccountStateBlob {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        writeln!(f, "{{")?;
+        for v in self.0.values() {
+            write!(f, "{}", v)?;
+            writeln!(f, ",")?;
+        }
+        writeln!(f, "}}")
+    }
+}
+
 #[derive(Default)]
 pub struct NullStateView();
 

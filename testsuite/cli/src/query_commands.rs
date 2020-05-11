@@ -24,6 +24,7 @@ impl Command for QueryCommand {
             Box::new(QueryCommandGetTxnByAccountSeq {}),
             Box::new(QueryCommandGetTxnByRange {}),
             Box::new(QueryCommandGetEvent {}),
+            Box::new(QueryCommandGetLatestAccountResources {}),
         ];
 
         subcommand_execute(&params[0], commands, client, &params[1..]);
@@ -106,6 +107,44 @@ impl Command for QueryCommandGetLatestAccountState {
                     .expect("Unable to parse account parameter"),
                 acc,
                 version,
+            ),
+            Err(e) => report_error("Error getting latest account state", e),
+        }
+    }
+}
+
+/// Command to query latest account state from validator.
+pub struct QueryCommandGetLatestAccountResources {}
+
+impl Command for QueryCommandGetLatestAccountResources {
+    fn get_aliases(&self) -> Vec<&'static str> {
+        vec!["account_resources", "ar"]
+    }
+    fn get_params_help(&self) -> &'static str {
+        "<account_ref_id>|<account_address>"
+    }
+    fn get_description(&self) -> &'static str {
+        "Get the latest annotated resources in an account"
+    }
+    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
+        println!(">> Getting latest account state");
+        match client.get_latest_account_resources(&params) {
+            Ok((Some(acc), version)) => println!(
+                "Latest account state is: \n \
+                 Account: {:#?}\n \
+                 State: {}\n \
+                 Blockchain Version: {}\n",
+                client
+                    .get_account_address_from_parameter(params[1])
+                    .expect("Unable to parse account parameter"),
+                acc,
+                version,
+            ),
+            Ok((None, _version)) => println!(
+                "No Account found for {:#?}",
+                client
+                    .get_account_address_from_parameter(params[1])
+                    .expect("Unable to parse account parameter")
             ),
             Err(e) => report_error("Error getting latest account state", e),
         }
