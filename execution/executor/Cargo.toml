@@ -38,7 +38,7 @@ config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 executor-utils = { path = "../executor-utils", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
-libradb = { path = "../../storage/libradb", version = "0.1.0" }
+libradb = { path = "../../storage/libradb", version = "0.1.0", features = ["fuzzing"] }
 stdlib = { path = "../../language/stdlib", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }

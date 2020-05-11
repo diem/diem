@@ -263,7 +263,14 @@ impl TransactionExecutor {
 fn create_storage_service_and_executor(
     config: &NodeConfig,
 ) -> (Arc<dyn DbReader>, Executor<LibraVM>) {
-    let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
+    let (db, db_rw) = DbReaderWriter::wrap(
+        LibraDB::open(
+            &config.storage.dir(),
+            false, /* readonly */
+            None,  /* pruner */
+        )
+        .expect("DB should open."),
+    );
     bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap()).unwrap();
 
     let _handle = start_simple_storage_service_with_db(config, db.clone());

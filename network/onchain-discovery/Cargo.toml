@@ -34,7 +34,7 @@ storage-interface = { path = "../../storage/storage-interface", version = "0.1.0
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 executor = { path = "../../execution/executor", version = "0.1.0" }
 libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
-libradb = { path = "../../storage/libradb", version = "0.1.0" }
+libradb = { path = "../../storage/libradb", version = "0.1.0", features = ["fuzzing"] }
 simple-storage-client = { path = "../../storage/simple-storage-client", version = "0.1.0" }
 storage-service = { path = "../../storage/storage-service", version = "0.1.0" }
 vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }
