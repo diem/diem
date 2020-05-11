@@ -1900,6 +1900,11 @@
 <span id="1900">1900</span>
 <span id="1901">1901</span>
 <span id="1902">1902</span>
+<span id="1903">1903</span>
+<span id="1904">1904</span>
+<span id="1905">1905</span>
+<span id="1906">1906</span>
+<span id="1907">1907</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1910,7 +1915,7 @@
 
 <span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_imports</span>)]</span>
-<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>, <span class="ident">log</span>, <span class="ident">warn</span>, <span class="ident">Level</span>};
 
 <span class="kw">use</span> <span class="ident">spec_lang</span>::{
     <span class="ident">env</span>::{<span class="ident">GlobalEnv</span>, <span class="ident">Loc</span>, <span class="ident">ModuleEnv</span>, <span class="ident">StructEnv</span>, <span class="ident">TypeParameter</span>},
@@ -2026,7 +2031,12 @@
 
     <span class="doccomment">/// Translates this module.</span>
     <span class="kw">fn</span> <span class="ident">translate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="macro">info</span><span class="macro">!</span>(
+        <span class="macro">log</span><span class="macro">!</span>(
+            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">is_in_dependency</span>() {
+                <span class="ident">Level</span>::<span class="ident">Debug</span>
+            } <span class="kw">else</span> {
+                <span class="ident">Level</span>::<span class="ident">Info</span>
+            },
             <span class="string">&quot;translating module {}&quot;</span>,
             <span class="self">self</span>.<span class="ident">module_env</span>
                 .<span class="ident">get_name</span>()
@@ -2248,8 +2258,8 @@
             <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">set_location</span>(<span class="kw-2">&amp;</span><span class="ident">func_env</span>.<span class="ident">get_loc</span>());
             <span class="self">self</span>.<span class="ident">translate_function</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">targets</span>.<span class="ident">get_target</span>(<span class="kw-2">&amp;</span><span class="ident">func_env</span>));
         }
-        <span class="kw">if</span> <span class="ident">num_fun</span> <span class="op">&gt;</span> <span class="number">0</span> {
-            <span class="macro">info</span><span class="macro">!</span>(
+        <span class="kw">if</span> <span class="ident">num_fun</span> <span class="op">&gt;</span> <span class="number">0</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">is_in_dependency</span>() {
+            <span class="macro">debug</span><span class="macro">!</span>(
                 <span class="string">&quot;{} out of {} functions have (directly or indirectly) \
                  specifications in module `{}`&quot;</span>,
                 <span class="ident">num_fun_specified</span>,
