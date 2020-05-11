@@ -268,6 +268,15 @@ encode_txn_script! {
 }
 
 encode_txn_script! {
+    name: encode_add_currency_to_account_script,
+    type_arg: currency,
+    args: [],
+    script: AddCurrencyToAccount,
+    doc: "Add the currency identified by the type `currency` to the sending accounts.\
+          Aborts if the account already holds a balance fo `currency` type."
+}
+
+encode_txn_script! {
     name: encode_register_preburner_script,
     type_arg: type_,
     args: [],
