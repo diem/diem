@@ -45,7 +45,7 @@ impl Default for ExecutionConfig {
         ExecutionConfig {
             genesis: None,
             genesis_file_location: PathBuf::new(),
-            service: ExecutionCorrectnessService::Local,
+            service: ExecutionCorrectnessService::Thread,
         }
     }
 }

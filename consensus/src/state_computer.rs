@@ -13,6 +13,7 @@ use libra_types::{
 };
 use state_synchronizer::StateSyncClient;
 use std::{
+    boxed::Box,
     convert::TryFrom,
     sync::{Arc, Mutex},
     time::{Duration, Instant},
@@ -21,14 +22,17 @@ use std::{
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
 pub struct ExecutionProxy {
-    executor: Mutex<Box<dyn BlockExecutor>>,
+    execution_correctness_client: Mutex<Box<dyn BlockExecutor + Send + Sync>>,
     synchronizer: Arc<StateSyncClient>,
 }
 
 impl ExecutionProxy {
-    pub fn new(executor: Box<dyn BlockExecutor>, synchronizer: Arc<StateSyncClient>) -> Self {
+    pub fn new(
+        execution_correctness_client: Box<dyn BlockExecutor + Send + Sync>,
+        synchronizer: Arc<StateSyncClient>,
+    ) -> Self {
         Self {
-            executor: Mutex::new(executor),
+            execution_correctness_client: Mutex::new(execution_correctness_client),
             synchronizer,
         }
     }
@@ -65,7 +69,7 @@ impl StateComputer for ExecutionProxy {
         );
 
         // TODO: figure out error handling for the prologue txn
-        self.executor
+        self.execution_correctness_client
             .lock()
             .unwrap()
             .execute_block(
@@ -102,7 +106,7 @@ impl StateComputer for ExecutionProxy {
         let pre_commit_instant = Instant::now();
 
         let (committed_txns, reconfig_events) = self
-            .executor
+            .execution_correctness_client
             .lock()
             .unwrap()
             .commit_blocks(block_ids, finality_proof)?;
@@ -128,7 +132,7 @@ impl StateComputer for ExecutionProxy {
         let res = self.synchronizer.sync_to(target).await;
         // Similarily, after the state synchronization, we have to reset the cache
         // of BlockExecutor to guarantee the latest committed state is up to date.
-        self.executor.lock().unwrap().reset()?;
+        self.execution_correctness_client.lock().unwrap().reset()?;
         res
     }
 }

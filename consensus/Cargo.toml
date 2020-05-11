@@ -31,6 +31,7 @@ channel = { path = "../common/channel", version = "0.1.0" }
 consensus-types = { path = "consensus-types", version = "0.1.0", default-features = false }
 crash-handler = { path = "../common/crash-handler", version = "0.1.0" }
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
+execution-correctness = { path = "../execution/execution-correctness", version = "0.1.0" }
 executor = { path = "../execution/executor", version = "0.1.0" }
 executor-types = { path = "../execution/executor-types", version = "0.1.0" }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
