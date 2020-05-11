@@ -24,6 +24,7 @@ const STAGED_TXN_SCRIPTS_DIR: Dir = include_dir!("staged/transaction_scripts");
 pub enum StdlibScript {
     AddValidator,
     AddCurrency,
+    AddCurrencyToAccount,
     AllowChildAccounts,
     ApplyForAssociationAddress,
     ApplyForAssociationPrivilege,
@@ -75,6 +76,7 @@ impl StdlibScript {
         vec![
             AddValidator,
             AddCurrency,
+            AddCurrencyToAccount,
             AllowChildAccounts,
             ApplyForAssociationAddress,
             ApplyForAssociationPrivilege,
@@ -204,6 +206,7 @@ impl fmt::Display for StdlibScript {
             match self {
                 AddValidator => "add_validator",
                 AddCurrency => "add_currency",
+                AddCurrencyToAccount => "add_currency_to_account",
                 AllowChildAccounts => "allow_child_accounts",
                 ApplyForAssociationAddress => "apply_for_association_address",
                 ApplyForAssociationPrivilege => "apply_for_association_privilege",
