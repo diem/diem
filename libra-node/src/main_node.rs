@@ -8,7 +8,7 @@ use debug_interface::{
     proto::node_debug_interface_server::NodeDebugInterfaceServer,
 };
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
-use executor_types::{BlockExecutor, ChunkExecutor};
+use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on, stream::StreamExt};
 use libra_config::{
     config::{DiscoveryMethod, NetworkConfig, NodeConfig, RoleType},
@@ -23,7 +23,6 @@ use libra_vm::LibraVM;
 use libradb::LibraDB;
 use network::validator_network::network_builder::{NetworkBuilder, TransportType};
 use onchain_discovery::{client::OnchainDiscovery, service::OnchainDiscoveryService};
-use simple_storage_client::SimpleStorageClient;
 use state_synchronizer::StateSynchronizer;
 use std::{
     boxed::Box,
@@ -57,12 +56,6 @@ pub struct LibraHandle {
 
 fn setup_chunk_executor(db: DbReaderWriter) -> Box<dyn ChunkExecutor> {
     Box::new(Executor::<LibraVM>::new(db))
-}
-
-fn setup_block_executor(config: &NodeConfig) -> Box<dyn BlockExecutor> {
-    Box::new(Executor::<LibraVM>::new(
-        SimpleStorageClient::new(&config.storage.simple_address).into(),
-    ))
 }
 
 fn setup_debug_interface(config: &NodeConfig) -> Runtime {
@@ -381,20 +374,12 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             .expect("State synchronizer initialization failure");
         debug!("State synchronizer initialization complete.");
 
-        instant = Instant::now();
-        let block_executor = setup_block_executor(&node_config);
-        debug!(
-            "BlockExecutor setup in {} ms",
-            instant.elapsed().as_millis()
-        );
-
         // Initialize and start consensus.
         instant = Instant::now();
         consensus_runtime = Some(start_consensus(
             node_config,
             consensus_network_sender,
             consensus_network_events,
-            block_executor,
             state_synchronizer.create_client(),
             consensus_to_mempool_sender,
             libra_db,

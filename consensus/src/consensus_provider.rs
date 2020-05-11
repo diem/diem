@@ -12,7 +12,7 @@ use crate::{
     util::time_service::ClockTimeService,
 };
 use channel::libra_channel;
-use executor_types::BlockExecutor;
+use execution_correctness::ExecutionCorrectnessManager;
 use futures::channel::mpsc;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
@@ -28,7 +28,6 @@ pub fn start_consensus(
     node_config: &mut NodeConfig,
     network_sender: ConsensusNetworkSender<Vec<SignedTransaction>>,
     network_events: ConsensusNetworkEvents<Vec<SignedTransaction>>,
-    executor: Box<dyn BlockExecutor>,
     state_sync_client: Arc<StateSyncClient>,
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
     libra_db: Arc<dyn DbReader>,
@@ -42,7 +41,11 @@ pub fn start_consensus(
         .expect("Failed to create Tokio runtime!");
     let storage = Arc::new(StorageWriteProxy::new(node_config, libra_db));
     let txn_manager = Box::new(MempoolProxy::new(consensus_to_mempool_sender));
-    let state_computer = Arc::new(ExecutionProxy::new(executor, state_sync_client));
+    let execution_correctness_manager = ExecutionCorrectnessManager::new(node_config);
+    let state_computer = Arc::new(ExecutionProxy::new(
+        execution_correctness_manager.client(),
+        state_sync_client,
+    ));
     let time_service = Arc::new(ClockTimeService::new(runtime.handle().clone()));
 
     let (timeout_sender, timeout_receiver) =

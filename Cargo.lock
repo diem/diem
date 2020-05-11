@@ -832,6 +832,7 @@ dependencies = [
  "consensus-types 0.1.0",
  "crash-handler 0.1.0",
  "debug-interface 0.1.0",
+ "execution-correctness 0.1.0",
  "executor 0.1.0",
  "executor-types 0.1.0",
  "futures 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
