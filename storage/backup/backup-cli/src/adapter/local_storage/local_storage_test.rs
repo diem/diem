@@ -3,6 +3,7 @@
 
 use super::*;
 use futures::executor::{block_on, block_on_stream};
+use libra_temppath::TempPath;
 use proptest::{collection::vec, prelude::*};
 
 proptest! {
@@ -10,7 +11,8 @@ proptest! {
 
     #[test]
     fn test_local_storage(contents in vec(vec(any::<u8>(), 1..1000), 1..10)) {
-        let tmpdir = tempfile::tempdir().unwrap();
+        let tmpdir = TempPath::new();
+        tmpdir.create_as_dir().unwrap();
         let adapter = LocalStorage::new(tmpdir.path().to_path_buf());
 
         let file_handles: Vec<_> = contents.iter().map(|content| {
