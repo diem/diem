@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-serde = { version = "1.0.106", features = ["rc"], default-features = false }
+serde = { version = "1.0.110", features = ["rc"], default-features = false }
 structopt = "0.3.14"
 thiserror = "1.0"
 toml = { version = "0.5.3", default-features = false }

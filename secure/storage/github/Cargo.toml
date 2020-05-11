@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-serde = { version = "1.0.99", features = ["derive"], default-features = false }
+serde = { version = "1.0.110", features = ["derive"], default-features = false }
 serde_json = "1.0.40"
 thiserror = "1.0"
 ureq = { version = "1.0.0", features = ["json"] }

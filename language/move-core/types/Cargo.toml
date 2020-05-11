@@ -18,7 +18,7 @@ proptest = { version = "0.9.6", default-features = false, optional = true }
 mirai-annotations = "1.8.0"
 proptest-derive = { version = "0.1.2", default-features = false, optional = true }
 ref-cast = "1.0"
-serde = { version = "1.0.106", default-features = false }
+serde = { version = "1.0.110", default-features = false }
 
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
