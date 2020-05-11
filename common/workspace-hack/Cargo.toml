@@ -16,7 +16,7 @@ log = { version = "0.4.8", features = ["serde", "std"] }
 memchr = { version = "2.3.3", features = ["std", "use_std"] }
 num-traits = { version = "0.2.11", features = ["std"] }
 petgraph = { version = "0.5.0", features = ["graphmap", "matrix_graph", "stable_graph"] }
-serde = { version = "1.0.96", features = ["derive", "rc"] }
+serde = { version = "1.0.110", features = ["derive", "rc"] }
 sha-1 = { version = "0.8.2", features = ["std"] }
 subtle = { version = "2.2.2", features = ["i128", "std"] }
 syn = { version = "1.0.19", features = ["clone-impls", "derive", "extra-traits", "fold", "full", "parsing", "printing", "proc-macro", "quote", "visit", "visit-mut"] }

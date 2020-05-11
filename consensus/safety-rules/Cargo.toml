@@ -23,7 +23,7 @@ libra-secure-storage = { path = "../../secure/storage", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-serde = { version = "1.0.106", default-features = false }
+serde = { version = "1.0.110", default-features = false }
 thiserror = "1.0"
 
 [dev-dependencies]

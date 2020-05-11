@@ -19,7 +19,7 @@ num-derive = "0.3.0"
 num-traits = "0.2"
 proptest = { version = "0.9.6", optional = true }
 proptest-derive = { version = "0.1.2", optional = true }
-serde = "1.0.106"
+serde = "1.0.110"
 thiserror = "1.0"
 
 accumulator = { path = "../accumulator", version = "0.1.0" }

@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 proptest = { version = "0.9.6", optional = true }
-serde = { version = "1.0.106", features = ["derive"] }
+serde = { version = "1.0.110", features = ["derive"] }
 
 [features]
 default = []

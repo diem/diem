@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 hex = "0.4.2"
-serde = { version = "1.0.106", default-features = false }
+serde = { version = "1.0.110", default-features = false }
 serde_json = "1.0.52"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }

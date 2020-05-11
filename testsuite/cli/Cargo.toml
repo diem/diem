@@ -19,7 +19,7 @@ rustyline = "6.1.2"
 rust_decimal = "1.5.0"
 num-traits = "0.2"
 reqwest = { version = "0.10.4", features = ["blocking", "json", "rustls-tls"], default-features = false }
-serde = { version = "1.0.106", features = ["derive"] }
+serde = { version = "1.0.110", features = ["derive"] }
 structopt = "0.3.14"
 ureq = { version = "1.0.0"}
 walkdir = "2.3.1"

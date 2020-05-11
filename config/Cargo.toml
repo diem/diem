@@ -14,7 +14,7 @@ anyhow = "1.0"
 get_if_addrs = { version = "0.5.3", default-features = false }
 mirai-annotations = "1.8.0"
 rand = "0.7.3"
-serde = { version = "1.0.106", features = ["rc"], default-features = false }
+serde = { version = "1.0.110", features = ["rc"], default-features = false }
 log = { version = "0.4.8", features = ["serde"] }
 thiserror = "1.0"
 toml = { version = "0.5.3", default-features = false }
