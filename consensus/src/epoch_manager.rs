@@ -17,7 +17,7 @@ use crate::{
     network_interface::{ConsensusMsg, ConsensusNetworkSender},
     persistent_liveness_storage::{LedgerRecoveryData, PersistentLivenessStorage, RecoveryData},
     state_replication::{StateComputer, TxnManager},
-    util::time_service::{ClockTimeService, TimeService},
+    util::time_service::TimeService,
 };
 use anyhow::anyhow;
 use channel::libra_channel;
@@ -72,7 +72,7 @@ impl<T: Payload> LivenessStorageData<T> {
 pub struct EpochManager<T> {
     author: Author,
     config: ConsensusConfig,
-    time_service: Arc<ClockTimeService>,
+    time_service: Arc<dyn TimeService>,
     self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
     network_sender: ConsensusNetworkSender<T>,
     timeout_sender: channel::Sender<Round>,
@@ -86,7 +86,7 @@ pub struct EpochManager<T> {
 impl<T: Payload> EpochManager<T> {
     pub fn new(
         node_config: &mut NodeConfig,
-        time_service: Arc<ClockTimeService>,
+        time_service: Arc<dyn TimeService>,
         self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
         network_sender: ConsensusNetworkSender<T>,
         timeout_sender: channel::Sender<Round>,
