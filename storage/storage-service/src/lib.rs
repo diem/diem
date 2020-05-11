@@ -34,7 +34,10 @@ use tokio::runtime::Runtime;
 
 use libra_secure_net::NetworkServer;
 use libra_types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof};
-use std::thread::{self, JoinHandle};
+use std::{
+    net::TcpStream,
+    thread::{self, JoinHandle},
+};
 
 /// Starts storage service with a given LibraDB
 pub fn start_simple_storage_service_with_db(
@@ -115,7 +118,7 @@ pub fn start_storage_service_with_db(config: &NodeConfig, libra_db: Arc<LibraDB>
 }
 
 fn start_storage_service_runtime(config: &NodeConfig, storage_service: StorageService) -> Runtime {
-    let mut rt = tokio::runtime::Builder::new()
+    let rt = tokio::runtime::Builder::new()
         .threaded_scheduler()
         .enable_all()
         .thread_name("tokio-storage")
@@ -128,14 +131,8 @@ fn start_storage_service_runtime(config: &NodeConfig, storage_service: StorageSe
             .serve(config.storage.address),
     );
 
-    let addr = format!("http://{}", config.storage.address);
     for _i in 0..100 {
-        if rt
-            .block_on(
-                storage_proto::proto::storage::storage_client::StorageClient::connect(addr.clone()),
-            )
-            .is_ok()
-        {
+        if TcpStream::connect(config.storage.address).is_ok() {
             return rt;
         }
         std::thread::sleep(std::time::Duration::from_millis(50));
