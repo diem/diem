@@ -309,10 +309,6 @@
 <span id="309">309</span>
 <span id="310">310</span>
 <span id="311">311</span>
-<span id="312">312</span>
-<span id="313">313</span>
-<span id="314">314</span>
-<span id="315">315</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -502,19 +498,15 @@
         <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">elem_ty</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$Vector_is_well_formed({})&quot;</span>, <span class="ident">name</span>));
             <span class="kw">if</span> <span class="op">!</span><span class="macro">matches</span><span class="macro">!</span>(<span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">elem_ty</span>, <span class="ident">Type</span>::<span class="ident">TypeParameter</span>(..)) {
+                <span class="kw">let</span> <span class="ident">nest_value</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$vmap({})[$${}]&quot;</span>, <span class="ident">name</span>, <span class="ident">nest</span>);
                 <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(
-                    <span class="string">&quot;(forall $${}: int :: $${} &gt;= 0 &amp;&amp; $${} &lt; $vlen({}) ==&gt; {})&quot;</span>,
+                    <span class="string">&quot;(forall $${}: int :: {{{}}} $${} &gt;= 0 &amp;&amp; $${} &lt; $vlen({}) ==&gt; {})&quot;</span>,
                     <span class="ident">nest</span>,
+                    <span class="ident">nest_value</span>,
                     <span class="ident">nest</span>,
                     <span class="ident">nest</span>,
                     <span class="ident">name</span>,
-                    <span class="ident">boogie_well_formed_expr_impl</span>(
-                        <span class="ident">env</span>,
-                        <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$vmap({})[$${}]&quot;</span>, <span class="ident">name</span>, <span class="ident">nest</span>),
-                        <span class="kw-2">&amp;</span><span class="ident">elem_ty</span>,
-                        <span class="ident">mode</span>,
-                        <span class="ident">nest</span> <span class="op">+</span> <span class="number">1</span>
-                    )
+                    <span class="ident">boogie_well_formed_expr_impl</span>(<span class="ident">env</span>, <span class="ident">nest_value</span>, <span class="kw-2">&amp;</span><span class="ident">elem_ty</span>, <span class="ident">mode</span>, <span class="ident">nest</span> <span class="op">+</span> <span class="number">1</span>)
                 ));
             }
         }

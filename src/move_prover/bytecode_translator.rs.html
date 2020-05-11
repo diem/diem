@@ -1905,6 +1905,23 @@
 <span id="1905">1905</span>
 <span id="1906">1906</span>
 <span id="1907">1907</span>
+<span id="1908">1908</span>
+<span id="1909">1909</span>
+<span id="1910">1910</span>
+<span id="1911">1911</span>
+<span id="1912">1912</span>
+<span id="1913">1913</span>
+<span id="1914">1914</span>
+<span id="1915">1915</span>
+<span id="1916">1916</span>
+<span id="1917">1917</span>
+<span id="1918">1918</span>
+<span id="1919">1919</span>
+<span id="1920">1920</span>
+<span id="1921">1921</span>
+<span id="1922">1922</span>
+<span id="1923">1923</span>
+<span id="1924">1924</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2097,21 +2114,30 @@
             .<span class="ident">enumerate</span>()
             .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">i</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$tv{}: TypeValue&quot;</span>, <span class="ident">i</span>))
             .<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">type_args_for_ctor</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;EmptyTypeValueArray&quot;</span>);
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">struct_env</span>.<span class="ident">get_type_parameters</span>().<span class="ident">len</span>() {
-            <span class="ident">type_args_for_ctor</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;ExtendTypeValueArray({}, $tv{})&quot;</span>, <span class="ident">type_args_for_ctor</span>, <span class="ident">i</span>);
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">param_types</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;MapConstTypeValue(DefaultTypeValue)&quot;</span>);
+        <span class="kw">let</span> <span class="ident">type_param_count</span> <span class="op">=</span> <span class="ident">struct_env</span>.<span class="ident">get_type_parameters</span>().<span class="ident">len</span>();
+        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">type_param_count</span> {
+            <span class="ident">param_types</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}[{} := $tv{}]&quot;</span>, <span class="ident">param_types</span>, <span class="ident">i</span>, <span class="ident">i</span>);
         }
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">field_types</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;EmptyTypeValueArray&quot;</span>);
+        <span class="kw">let</span> <span class="ident">type_param_array</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;TypeValueArray({}, {})&quot;</span>, <span class="ident">param_types</span>, <span class="ident">type_param_count</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">field_types</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;MapConstTypeValue(DefaultTypeValue)&quot;</span>);
         <span class="kw">for</span> <span class="ident">field_env</span> <span class="kw">in</span> <span class="ident">struct_env</span>.<span class="ident">get_fields</span>() {
             <span class="ident">field_types</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;ExtendTypeValueArray({}, {})&quot;</span>,
+                <span class="string">&quot;{}[{} := {}]&quot;</span>,
                 <span class="ident">field_types</span>,
+                <span class="ident">field_env</span>.<span class="ident">get_offset</span>(),
                 <span class="ident">boogie_type_value</span>(<span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">env</span>, <span class="kw-2">&amp;</span><span class="ident">field_env</span>.<span class="ident">get_type</span>())
             );
         }
+        <span class="kw">let</span> <span class="ident">field_array</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+            <span class="string">&quot;TypeValueArray({}, {})&quot;</span>,
+            <span class="ident">field_types</span>,
+            <span class="ident">struct_env</span>.<span class="ident">get_field_count</span>()
+        );
         <span class="kw">let</span> <span class="ident">type_value</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
             <span class="string">&quot;StructType({}, {}, {})&quot;</span>,
-            <span class="ident">struct_name</span>, <span class="ident">type_args_for_ctor</span>, <span class="ident">field_types</span>
+            <span class="ident">struct_name</span>, <span class="ident">type_param_array</span>, <span class="ident">field_array</span>
         );
         <span class="kw">if</span> <span class="ident">struct_name</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;$LibraAccount_T&quot;</span> {
             <span class="comment">// Special treatment of well-known resource LibraAccount_T. The type_value</span>
@@ -2172,22 +2198,30 @@
             <span class="ident">separate</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">type_args_str</span>.<span class="ident">clone</span>(), <span class="ident">args_str</span>.<span class="ident">clone</span>()], <span class="string">&quot;, &quot;</span>)
         );
         <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">indent</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">fields_str</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;EmptyValueArray&quot;</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctor_expr</span> <span class="op">=</span> <span class="string">&quot;MapConstValue(DefaultValue)&quot;</span>.<span class="ident">to_owned</span>();
         <span class="kw">for</span> <span class="ident">field_env</span> <span class="kw">in</span> <span class="ident">struct_env</span>.<span class="ident">get_fields</span>() {
+            <span class="kw">let</span> <span class="ident">field_param</span> <span class="op">=</span>
+                <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">field_env</span>.<span class="ident">get_name</span>().<span class="ident">display</span>(<span class="ident">struct_env</span>.<span class="ident">symbol_pool</span>()));
             <span class="kw">let</span> <span class="ident">type_check</span> <span class="op">=</span> <span class="ident">boogie_well_formed_check</span>(
                 <span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">env</span>,
-                <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">field_env</span>.<span class="ident">get_name</span>().<span class="ident">display</span>(<span class="ident">struct_env</span>.<span class="ident">symbol_pool</span>())),
+                <span class="ident">field_param</span>,
                 <span class="kw-2">&amp;</span><span class="ident">field_env</span>.<span class="ident">get_type</span>(),
                 <span class="ident">WellFormedMode</span>::<span class="ident">Default</span>,
             );
             <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="kw-2">&amp;</span><span class="ident">type_check</span>);
-            <span class="ident">fields_str</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;ExtendValueArray({}, {})&quot;</span>,
-                <span class="ident">fields_str</span>,
-                <span class="ident">field_env</span>.<span class="ident">get_name</span>().<span class="ident">display</span>(<span class="ident">struct_env</span>.<span class="ident">symbol_pool</span>())
+            <span class="ident">ctor_expr</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+                <span class="string">&quot;{}[{} := {}]&quot;</span>,
+                <span class="ident">ctor_expr</span>,
+                <span class="ident">field_env</span>.<span class="ident">get_offset</span>(),
+                <span class="ident">field_param</span>
             );
         }
-        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;$struct := Vector({});&quot;</span>, <span class="ident">fields_str</span>);
+        <span class="macro">emitln</span><span class="macro">!</span>(
+            <span class="self">self</span>.<span class="ident">writer</span>,
+            <span class="string">&quot;$struct := Vector(ValueArray({}, {}));&quot;</span>,
+            <span class="ident">ctor_expr</span>,
+            <span class="ident">struct_env</span>.<span class="ident">get_field_count</span>()
+        );
 
         <span class="comment">// Generate $DebugTrackLocal so we can see the constructed value before invariant</span>
         <span class="comment">// evaluation may abort.</span>
