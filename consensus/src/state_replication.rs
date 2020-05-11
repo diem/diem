@@ -22,11 +22,13 @@ pub trait TxnManager: Send + Sync {
     ) -> Result<Self::Payload>;
 
     /// Notifies TxnManager about the payload of the committed block including the state compute
-    /// result, which includes the specifics of what transactions succeeded and failed.
+    /// result, which includes the specifics of what transactions succeeded and failed, and the
+    /// timestamp of the committed block
     async fn commit_txns(
         &mut self,
         txns: &Self::Payload,
         compute_result: &StateComputeResult,
+        block_timestamp_usecs: u64,
     ) -> Result<()>;
 
     /// Bypass the trait object non-clonable limit.

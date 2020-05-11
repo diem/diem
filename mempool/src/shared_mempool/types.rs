@@ -128,9 +128,11 @@ pub enum ConsensusRequest {
         // callback to send response back to sender
         oneshot::Sender<Result<ConsensusResponse>>,
     ),
-    /// notifications about *rejected* committed txns
-    RejectNotification(
-        // committed transactions
+    /// notifications about commit
+    CommitNotification(
+        // timestamp of committed block
+        u64,
+        // *rejected* committed transactions
         Vec<CommittedTransaction>,
         // callback to send response back to sender
         oneshot::Sender<Result<ConsensusResponse>>,

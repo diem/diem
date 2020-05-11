@@ -640,11 +640,16 @@ impl<T: Payload> EventProcessor<T> {
             .block_store
             .execute_and_insert_block(proposed_block)
             .context("Failed to execute_and_insert the block")?;
-        // notify mempool about failed txn
+        // notify mempool about commit
         if let Some(payload) = executed_block.payload() {
             let compute_result = executed_block.compute_result();
-            if let Err(e) = self.txn_manager.commit_txns(payload, &compute_result).await {
-                error!("Failed to notify mempool of rejected txns: {:?}", e);
+            let block_timestamp_usecs = executed_block.timestamp_usecs();
+            if let Err(e) = self
+                .txn_manager
+                .commit_txns(payload, &compute_result, block_timestamp_usecs)
+                .await
+            {
+                error!("Failed to notify mempool of commit: {:?}", e);
             }
         }
         let block = executed_block.block();

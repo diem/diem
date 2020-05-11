@@ -376,9 +376,9 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
 
             (ConsensusResponse::GetBlockResponse(transactions), callback)
         }
-        ConsensusRequest::RejectNotification(transactions, callback) => {
+        ConsensusRequest::CommitNotification(block_timestamp_usecs, transactions, callback) => {
             // handle rejected txns
-            commit_txns(mempool, transactions, 0, true).await;
+            commit_txns(mempool, transactions, block_timestamp_usecs, true).await;
             (ConsensusResponse::CommitResponse(), callback)
         }
     };

@@ -73,6 +73,7 @@ impl TxnManager for MockTransactionManager {
         &mut self,
         txns: &Self::Payload,
         compute_results: &StateComputeResult,
+        block_timestamp_usecs: u64,
     ) -> Result<()> {
         if self.mempool_proxy.is_some() {
             let mock_compute_result = StateComputeResult::new(
@@ -87,7 +88,7 @@ impl TxnManager for MockTransactionManager {
                 .mempool_proxy
                 .as_mut()
                 .unwrap()
-                .commit_txns(&vec![], &mock_compute_result)
+                .commit_txns(&vec![], &mock_compute_result, block_timestamp_usecs)
                 .await
                 .is_ok());
         }

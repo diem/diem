@@ -69,6 +69,7 @@ impl TxnManager for MempoolProxy {
         &mut self,
         txns: &Self::Payload,
         compute_results: &StateComputeResult,
+        block_timestamp_usecs: u64,
     ) -> Result<()> {
         let mut rejected_txns = vec![];
         for (txn, status) in txns.iter().zip(compute_results.compute_status().iter()) {
@@ -80,12 +81,9 @@ impl TxnManager for MempoolProxy {
             }
         }
 
-        if rejected_txns.is_empty() {
-            return Ok(());
-        }
-
         let (callback, callback_rcv) = oneshot::channel();
-        let req = ConsensusRequest::RejectNotification(rejected_txns, callback);
+        let req =
+            ConsensusRequest::CommitNotification(block_timestamp_usecs, rejected_txns, callback);
 
         // send to shared mempool
         self.consensus_to_mempool_sender.clone().try_send(req)?;

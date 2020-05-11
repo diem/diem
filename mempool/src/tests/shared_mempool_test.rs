@@ -627,7 +627,7 @@ fn test_consensus_events_rejected_txns() {
         sequence_number: committed_txn.sequence_number(),
     }];
     let (callback, callback_rcv) = oneshot::channel();
-    let req = ConsensusRequest::RejectNotification(committed_txns, callback);
+    let req = ConsensusRequest::CommitNotification(0, committed_txns, callback);
     let mut consensus_sender = smp.consensus_sender.clone();
     block_on(async {
         assert!(consensus_sender.send(req).await.is_ok());
