@@ -4,16 +4,21 @@
 //! Interface between Mempool and Network layers.
 
 use crate::counters;
-use channel::message_queues::QueueStyle;
+use channel::{libra_channel, message_queues::QueueStyle};
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     error::NetworkError,
-    peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
+    peer_manager::{
+        conn_notifs_channel, ConnectionRequestSender, PeerManagerNotification,
+        PeerManagerRequestSender,
+    },
     protocols::network::{NetworkEvents, NetworkSender},
+    traits::FromPeerManagerAndConnectionRequestSenders,
     validator_network::network_builder::NetworkBuilder,
     ProtocolId,
 };
 use serde::{Deserialize, Serialize};
+use std::num::NonZeroUsize;
 
 /// Container for exchanging transactions with other Mempools
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -76,6 +81,30 @@ pub fn add_to_network(
     )
 }
 
+/// Constructs a network notification channel and a connection notification channel
+/// and returns a MempoolNetworkEvents along with the channel senders
+pub fn get_network_events(
+    max_broadcasts_per_peer: usize,
+) -> (
+    MempoolNetworkEvents,
+    ProtocolId,
+    libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
+    conn_notifs_channel::Sender,
+) {
+    let (network_notifs_tx, network_notifs_rx) = libra_channel::new(
+        QueueStyle::KLAST,
+        NonZeroUsize::new(max_broadcasts_per_peer).unwrap(),
+        Some(&counters::PENDING_MEMPOOL_NETWORK_EVENTS),
+    );
+    let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
+    (
+        MempoolNetworkEvents::new(network_notifs_rx, connection_notifs_rx),
+        ProtocolId::MempoolDirectSend,
+        network_notifs_tx,
+        connection_notifs_tx,
+    )
+}
+
 impl MempoolNetworkSender {
     /// Returns a Sender that only sends for the `MEMPOOL_DIRECT_SEND_PROTOCOL` ProtocolId.
     pub fn new(
@@ -96,5 +125,14 @@ impl MempoolNetworkSender {
     ) -> Result<(), NetworkError> {
         let protocol = ProtocolId::MempoolDirectSend;
         self.inner.send_to(recipient, protocol, message)
+    }
+}
+
+impl FromPeerManagerAndConnectionRequestSenders for MempoolNetworkSender {
+    fn from_peer_manager_and_connection_request_senders(
+        pm_reqs_tx: PeerManagerRequestSender,
+        connection_reqs_tx: ConnectionRequestSender,
+    ) -> Self {
+        Self::new(pm_reqs_tx, connection_reqs_tx)
     }
 }

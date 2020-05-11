@@ -45,12 +45,33 @@ impl ProtocolId {
             OnchainDiscoveryRpc => "OnchainDiscoveryRpc",
         }
     }
+
+    pub fn category(self) -> ProtocolCategory {
+        use ProtocolId::*;
+        use ProtocolCategory::*;
+        match self {
+            ConsensusRpc => RPC,
+            ConsensusDirectSend => DirectSend,
+            MempoolDirectSend => DirectSend,
+            StateSynchronizerDirectSend => DirectSend,
+            DiscoveryDirectSend => DirectSend,
+            HealthCheckerRpc => RPC,
+            IdentityDirectSend => DirectSend,
+            OnchainDiscoveryRpc => RPC,
+        }
+    }
 }
 
 impl fmt::Display for ProtocolId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.as_str())
     }
+}
+
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
+pub enum ProtocolCategory {
+    RPC,
+    DirectSend
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]

@@ -2,10 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Protobuf based interface between OnchainDiscovery and Network layers.
+use crate::client::OnchainDiscovery;
+use crate::service::OnchainDiscoveryService;
 use crate::types::{OnchainDiscoveryMsg, QueryDiscoverySetRequest, QueryDiscoverySetResponse};
 use channel::{libra_channel, message_queues::QueueStyle};
-use futures::{channel::mpsc, sink::SinkExt};
+use futures::{channel::mpsc, sink::SinkExt, stream::StreamExt};
+use libra_config::config::RoleType;
+use libra_types::waypoint::Waypoint;
 use libra_types::PeerId;
+use network::peer_manager::{ConnectionNotification, ConnectionRequest, PeerManagerRequest};
 use network::{
     connectivity_manager::ConnectivityRequest,
     peer_manager::{
@@ -13,10 +18,15 @@ use network::{
         PeerManagerRequestSender,
     },
     protocols::{network::NetworkSender, rpc::error::RpcError},
-    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
+    traits::FromPeerManagerConnectionConnectivityRequestSenders,
+    validator_network::network_builder::NETWORK_CHANNEL_SIZE,
     ProtocolId,
 };
+use std::num::NonZeroUsize;
+use std::sync::Arc;
 use std::time::Duration;
+use storage_interface::DbReader;
+use tokio::{runtime::Handle, time::interval};
 
 /// The interface from OnchainDiscovery to Networking layer.
 #[derive(Clone)]
@@ -68,34 +78,78 @@ impl OnchainDiscoveryNetworkSender {
     }
 }
 
-/// Construct OnchainDiscoveryNetworkSender/Events and register them with the
-/// given network builder.
-pub fn add_to_network(
-    network: &mut NetworkBuilder,
+impl FromPeerManagerConnectionConnectivityRequestSenders for OnchainDiscoveryNetworkSender {
+    fn from_peer_manager_connection_request_connection_manager_senders(
+        pm_reqs_tx: PeerManagerRequestSender,
+        connection_reqs_tx: ConnectionRequestSender,
+        connectivity_reqs_tx: channel::Sender<ConnectivityRequest>,
+    ) -> Self {
+        Self::new(pm_reqs_tx, connection_reqs_tx, connectivity_reqs_tx)
+    }
+}
+
+pub fn setup_onchain_discovery(
+    peer_id: PeerId,
+    role: RoleType,
+    libra_db: Arc<dyn DbReader>,
+    waypoint: Waypoint,
+    executor: &Handle,
+    connection_reqs_tx: libra_channel::Sender<PeerId, ConnectionRequest>,
+    pm_reqs_tx: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
+    connectivity_reqs_tx: channel::Sender<ConnectivityRequest>,
 ) -> (
-    OnchainDiscoveryNetworkSender,
-    libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
-    conn_notifs_channel::Receiver,
+    ProtocolId,
+    libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
+    libra_channel::Sender<PeerId, ConnectionNotification>,
 ) {
-    let (network_sender, network_receiver, conn_reqs_tx, conn_notifs_rx) = network
-        .add_protocol_handler(
-            vec![ProtocolId::OnchainDiscoveryRpc],
-            vec![],
-            QueueStyle::LIFO,
-            NETWORK_CHANNEL_SIZE,
-            // Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
-            // TODO(philiphayes): add a counter for onchain discovery
-            None,
-        );
+    // add_protocol_handler
+    let (network_notifs_tx, network_notifs_rx) = libra_channel::new(
+        QueueStyle::LIFO,
+        NonZeroUsize::new(NETWORK_CHANNEL_SIZE).unwrap(),
+        None,
+    );
+    let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
+
+    let network_tx = OnchainDiscoveryNetworkSender::from_channel_senders(
+        pm_reqs_tx,
+        connection_reqs_tx,
+        connectivity_reqs_tx,
+    );
+
+    // let (network_tx, network_notifs_rx, connection_notifs_rx) =
+    //     onchain_discovery::network_interface::add_to_network(network);
+
+    let outbound_rpc_timeout = Duration::from_secs(30);
+    let max_concurrent_inbound_queries = 8;
+
+    let onchain_discovery_service = OnchainDiscoveryService::new(
+        executor.clone(),
+        network_notifs_rx,
+        Arc::clone(&libra_db),
+        max_concurrent_inbound_queries,
+    );
+    executor.spawn(onchain_discovery_service.start());
+
+    let onchain_discovery = executor.enter(move || {
+        let peer_query_ticker = interval(Duration::from_secs(30)).fuse();
+        let storage_query_ticker = interval(Duration::from_secs(30)).fuse();
+
+        OnchainDiscovery::new(
+            peer_id,
+            role,
+            waypoint,
+            network_tx,
+            connection_notifs_rx,
+            libra_db,
+            peer_query_ticker,
+            storage_query_ticker,
+            outbound_rpc_timeout,
+        )
+    });
+    executor.spawn(onchain_discovery.start());
     (
-        OnchainDiscoveryNetworkSender::new(
-            network_sender,
-            conn_reqs_tx,
-            network
-                .conn_mgr_reqs_tx()
-                .expect("ConnecitivtyManager not enabled"),
-        ),
-        network_receiver,
-        conn_notifs_rx,
+        ProtocolId::OnchainDiscoveryRpc,
+        network_notifs_tx,
+        connection_notifs_tx,
     )
 }

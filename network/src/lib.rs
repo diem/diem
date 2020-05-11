@@ -12,13 +12,14 @@ pub use interface::NetworkProvider;
 
 pub mod common;
 pub mod connectivity_manager;
+pub mod counters;
 pub mod error;
 pub mod interface;
 pub mod peer_manager;
 pub mod protocols;
+pub mod traits;
 pub mod validator_network;
 
-mod counters;
 mod peer;
 mod sink;
 mod transport;
@@ -26,3 +27,4 @@ mod transport;
 pub type DisconnectReason = peer::DisconnectReason;
 pub type ConnectivityRequest = connectivity_manager::ConnectivityRequest;
 pub type ProtocolId = protocols::wire::handshake::v1::ProtocolId;
+pub type ProtocolCategory = protocols::wire::handshake::v1::ProtocolCategory;

@@ -37,6 +37,7 @@ use crate::{
     error::{NetworkError, NetworkErrorKind},
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{Event, NetworkEvents, NetworkSender},
+    traits::FromPeerManagerAndConnectionRequestSenders,
     validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
     NetworkPublicKeys, ProtocolId,
 };
@@ -124,6 +125,15 @@ impl DiscoveryNetworkSender {
     pub fn send_to(&mut self, peer: PeerId, msg: DiscoveryMsg) -> Result<(), NetworkError> {
         self.inner
             .send_to(peer, ProtocolId::DiscoveryDirectSend, msg)
+    }
+}
+
+impl FromPeerManagerAndConnectionRequestSenders for DiscoveryNetworkSender {
+    fn from_peer_manager_and_connection_request_senders(
+        pm_reqs_tx: PeerManagerRequestSender,
+        connection_reqs_tx: ConnectionRequestSender,
+    ) -> Self {
+        Self::new(pm_reqs_tx, connection_reqs_tx)
     }
 }
 

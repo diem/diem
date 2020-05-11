@@ -17,6 +17,21 @@
 //! - Make the policy for interpreting ping failures pluggable
 //! - Use successful inbound pings as a sign of remote note being healthy
 //! - Ping a peer only in periods of no application-level communication with the peer
+use std::{collections::HashMap, time::Duration};
+
+use bytes::Bytes;
+use futures::{
+    channel::oneshot,
+    stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
+};
+use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng};
+use serde::{Deserialize, Serialize};
+
+use channel::message_queues::QueueStyle;
+use libra_logger::prelude::*;
+use libra_security_logger::{security_log, SecurityEvent};
+use libra_types::PeerId;
+
 use crate::{
     counters,
     error::NetworkError,
@@ -25,21 +40,10 @@ use crate::{
         network::{Event, NetworkEvents, NetworkSender},
         rpc::error::RpcError,
     },
+    traits::FromPeerManagerAndConnectionRequestSenders,
     validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
     ProtocolId,
 };
-use bytes::Bytes;
-use channel::message_queues::QueueStyle;
-use futures::{
-    channel::oneshot,
-    stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
-};
-use libra_logger::prelude::*;
-use libra_security_logger::{security_log, SecurityEvent};
-use libra_types::PeerId;
-use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng};
-use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, time::Duration};
 
 #[cfg(test)]
 mod test;
@@ -111,6 +115,15 @@ impl HealthCheckerNetworkSender {
 
     pub async fn disconnect_peer(&mut self, peer_id: PeerId) -> Result<(), NetworkError> {
         self.inner.disconnect_peer(peer_id).await
+    }
+}
+
+impl FromPeerManagerAndConnectionRequestSenders for HealthCheckerNetworkSender {
+    fn from_peer_manager_and_connection_request_senders(
+        pm_reqs_tx: PeerManagerRequestSender,
+        connection_reqs_tx: ConnectionRequestSender,
+    ) -> Self {
+        Self::new(pm_reqs_tx, connection_reqs_tx)
     }
 }
 

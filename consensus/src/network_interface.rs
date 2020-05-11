@@ -4,7 +4,7 @@
 //! Interface between Consensus and Network layers.
 
 use crate::counters;
-use channel::message_queues::QueueStyle;
+use channel::{libra_channel, message_queues::QueueStyle};
 use consensus_types::{
     block_retrieval::{BlockRetrievalRequest, BlockRetrievalResponse},
     common::Payload,
@@ -19,16 +19,20 @@ use network::{
     common::NetworkPublicKeys,
     connectivity_manager::ConnectivityRequest,
     error::NetworkError,
-    peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
+    peer_manager::{
+        conn_notifs_channel, ConnectionRequestSender, PeerManagerNotification,
+        PeerManagerRequestSender,
+    },
     protocols::{
         network::{NetworkEvents, NetworkSender},
         rpc::error::RpcError,
     },
-    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
+    traits::FromPeerManagerConnectionConnectivityRequestSenders,
+    validator_network::network_builder::NETWORK_CHANNEL_SIZE,
     ProtocolId,
 };
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::{num::NonZeroUsize, time::Duration};
 
 /// Network type for consensus
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -76,29 +80,25 @@ pub struct ConsensusNetworkSender<T> {
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
 }
 
-/// Create a new Sender that only sends for the `CONSENSUS_DIRECT_SEND_PROTOCOL` and
-/// `CONSENSUS_RPC_PROTOCOL` ProtocolId and a Receiver (Events) that explicitly returns only said
-/// ProtocolId.
-pub fn add_to_network<T: Payload>(
-    network: &mut NetworkBuilder,
-) -> (ConsensusNetworkSender<T>, ConsensusNetworkEvents<T>) {
-    let (network_sender, network_receiver, connection_reqs_tx, connection_notifs_rx) = network
-        .add_protocol_handler(
-            vec![ProtocolId::ConsensusRpc],
-            vec![ProtocolId::ConsensusDirectSend],
-            QueueStyle::LIFO,
-            NETWORK_CHANNEL_SIZE,
-            Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
-        );
+/// Constructs a network notification channel and a connection notification channel
+/// and returns a ConsensusNetworkEvents along with the channel senders
+pub fn get_network_events<T: Payload>() -> (
+    ConsensusNetworkEvents<T>,
+    Vec<ProtocolId>,
+    libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
+    conn_notifs_channel::Sender,
+) {
+    let (network_notifs_tx, network_notifs_rx) = libra_channel::new(
+        QueueStyle::LIFO,
+        NonZeroUsize::new(NETWORK_CHANNEL_SIZE).unwrap(),
+        Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
+    );
+    let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
     (
-        ConsensusNetworkSender::new(
-            network_sender,
-            connection_reqs_tx,
-            network
-                .conn_mgr_reqs_tx()
-                .expect("ConnecitivtyManager not enabled"),
-        ),
-        ConsensusNetworkEvents::new(network_receiver, connection_notifs_rx),
+        ConsensusNetworkEvents::new(network_notifs_rx, connection_notifs_rx),
+        vec![ProtocolId::ConsensusRpc, ProtocolId::ConsensusDirectSend],
+        network_notifs_tx,
+        connection_notifs_tx,
     )
 }
 
@@ -175,5 +175,15 @@ impl<T: Payload> ConsensusNetworkSender<T> {
             ))
             .await?;
         Ok(())
+    }
+}
+
+impl<T: Payload> FromPeerManagerConnectionConnectivityRequestSenders for ConsensusNetworkSender<T> {
+    fn from_peer_manager_connection_request_connection_manager_senders(
+        pm_reqs_tx: PeerManagerRequestSender,
+        connection_reqs_tx: ConnectionRequestSender,
+        connectivity_reqs_tx: channel::Sender<ConnectivityRequest>,
+    ) -> Self {
+        Self::new(pm_reqs_tx, connection_reqs_tx, connectivity_reqs_tx)
     }
 }

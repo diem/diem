@@ -4,16 +4,21 @@
 //! Interface between StateSynchronizer and Network layers.
 
 use crate::{chunk_request::GetChunkRequest, chunk_response::GetChunkResponse, counters};
-use channel::message_queues::QueueStyle;
+use channel::{libra_channel, message_queues::QueueStyle};
 use libra_types::PeerId;
 use network::{
     error::NetworkError,
-    peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
+    peer_manager::{
+        conn_notifs_channel, ConnectionRequestSender, PeerManagerNotification,
+        PeerManagerRequestSender,
+    },
     protocols::network::{NetworkEvents, NetworkSender},
+    traits::FromPeerManagerAndConnectionRequestSenders,
     validator_network::network_builder::NetworkBuilder,
     ProtocolId,
 };
 use serde::{Deserialize, Serialize};
+use std::num::NonZeroUsize;
 
 /// StateSynchronizer network messages
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -60,6 +65,26 @@ pub fn add_to_network(
     )
 }
 
+pub fn get_network_events() -> (
+    StateSynchronizerEvents,
+    ProtocolId,
+    libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
+    conn_notifs_channel::Sender,
+) {
+    let (network_notifs_tx, network_notifs_rx) = libra_channel::new(
+        QueueStyle::LIFO,
+        NonZeroUsize::new(1).unwrap(),
+        Some(&counters::PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS),
+    );
+    let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
+    (
+        StateSynchronizerEvents::new(network_notifs_rx, connection_notifs_rx),
+        ProtocolId::StateSynchronizerDirectSend,
+        network_notifs_tx,
+        connection_notifs_tx,
+    )
+}
+
 impl StateSynchronizerSender {
     pub fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
@@ -77,5 +102,14 @@ impl StateSynchronizerSender {
     ) -> Result<(), NetworkError> {
         let protocol = ProtocolId::StateSynchronizerDirectSend;
         self.inner.send_to(recipient, protocol, message)
+    }
+}
+
+impl FromPeerManagerAndConnectionRequestSenders for StateSynchronizerSender {
+    fn from_peer_manager_and_connection_request_senders(
+        pm_reqs_tx: PeerManagerRequestSender,
+        connection_reqs_tx: ConnectionRequestSender,
+    ) -> Self {
+        Self::new(pm_reqs_tx, connection_reqs_tx)
     }
 }
