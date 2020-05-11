@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures = "0.3.0"
+futures = "0.3.5"
 tokio = { version = "0.2.13", features = ["time", "stream"] }
 pin-project = "0.4.16"
 futures-semaphore = { path = "../futures-semaphore" }

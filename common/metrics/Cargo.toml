@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-futures = "0.3.0"
+futures = "0.3.5"
 hyper = "0.13"
 libra-logger = { path = "../logger", version = "0.1.0" }
 libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }

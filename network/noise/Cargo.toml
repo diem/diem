@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures = "0.3.0"
+futures = "0.3.5"
 snow = { version = "0.6.1", features=["ring-accelerated"]}
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 netcore = { path = "../netcore", version = "0.1.0" }
