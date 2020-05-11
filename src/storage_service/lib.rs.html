@@ -516,36 +516,6 @@
 <span id="516">516</span>
 <span id="517">517</span>
 <span id="518">518</span>
-<span id="519">519</span>
-<span id="520">520</span>
-<span id="521">521</span>
-<span id="522">522</span>
-<span id="523">523</span>
-<span id="524">524</span>
-<span id="525">525</span>
-<span id="526">526</span>
-<span id="527">527</span>
-<span id="528">528</span>
-<span id="529">529</span>
-<span id="530">530</span>
-<span id="531">531</span>
-<span id="532">532</span>
-<span id="533">533</span>
-<span id="534">534</span>
-<span id="535">535</span>
-<span id="536">536</span>
-<span id="537">537</span>
-<span id="538">538</span>
-<span id="539">539</span>
-<span id="540">540</span>
-<span id="541">541</span>
-<span id="542">542</span>
-<span id="543">543</span>
-<span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
-<span id="547">547</span>
-<span id="548">548</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -569,8 +539,8 @@
     <span class="ident">EpochChangeProof</span>, <span class="ident">UpdateToLatestLedgerRequest</span>, <span class="ident">UpdateToLatestLedgerResponse</span>,
 };
 <span class="kw">use</span> <span class="ident">libradb</span>::<span class="ident">LibraDB</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">path</span>::<span class="ident">Path</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
-<span class="kw">use</span> <span class="ident">storage_interface</span>::{<span class="ident">DbReader</span>, <span class="ident">DbReaderWriter</span>, <span class="ident">DbWriter</span>, <span class="ident">Error</span>, <span class="ident">StartupInfo</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
+<span class="kw">use</span> <span class="ident">storage_interface</span>::{<span class="ident">DbReader</span>, <span class="ident">DbWriter</span>, <span class="ident">Error</span>, <span class="ident">StartupInfo</span>};
 <span class="kw">use</span> <span class="ident">storage_proto</span>::<span class="ident">proto</span>::<span class="ident">storage</span>::{
     <span class="ident">storage_server</span>::{<span class="ident">Storage</span>, <span class="ident">StorageServer</span>},
     <span class="ident">BackupAccountStateRequest</span>, <span class="ident">BackupAccountStateResponse</span>, <span class="ident">BackupTransactionInfoRequest</span>,
@@ -597,24 +567,12 @@
     <span class="ident">storage_service</span>.<span class="ident">run</span>(<span class="ident">config</span>)
 }
 
-<span class="doccomment">/// Starts storage service according to config.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_simple_storage_service</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">NodeConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">storage_service</span> <span class="op">=</span> <span class="ident">SimpleStorageService</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">storage</span>.<span class="ident">dir</span>());
-    <span class="ident">storage_service</span>.<span class="ident">run</span>(<span class="ident">config</span>)
-}
-
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SimpleStorageService</span> {
     <span class="ident">db</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LibraDB</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">SimpleStorageService</span> {
-    <span class="doccomment">/// This opens a [`LibraDB`] at `path` and returns a [`StorageService`] instance serving it.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">Path</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">db</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">LibraDB</span>::<span class="ident">new</span>(<span class="ident">path</span>));
-        <span class="self">Self</span> { <span class="ident">db</span> }
-    }
-
     <span class="kw">fn</span> <span class="ident">handle_message</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">input_message</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">input</span> <span class="op">=</span> <span class="ident">lcs</span>::<span class="ident">from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">input_message</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">input</span> {
@@ -672,19 +630,9 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">init_libra_db</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">NodeConfig</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LibraDB</span><span class="op">&gt;</span>, <span class="ident">DbReaderWriter</span>) {
-    <span class="ident">DbReaderWriter</span>::<span class="ident">wrap</span>(<span class="ident">LibraDB</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">storage</span>.<span class="ident">dir</span>()))
-}
-
 <span class="doccomment">/// Starts storage service with a given LibraDB</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_storage_service_with_db</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">NodeConfig</span>, <span class="ident">libra_db</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LibraDB</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Runtime</span> {
     <span class="kw">let</span> <span class="ident">storage_service</span> <span class="op">=</span> <span class="ident">StorageService</span> { <span class="ident">db</span>: <span class="ident">libra_db</span> };
-    <span class="ident">start_storage_service_runtime</span>(<span class="ident">config</span>, <span class="ident">storage_service</span>)
-}
-
-<span class="doccomment">/// Starts storage service according to config.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_storage_service</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">NodeConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Runtime</span> {
-    <span class="kw">let</span> <span class="ident">storage_service</span> <span class="op">=</span> <span class="ident">StorageService</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">storage</span>.<span class="ident">dir</span>());
     <span class="ident">start_storage_service_runtime</span>(<span class="ident">config</span>, <span class="ident">storage_service</span>)
 }
 
@@ -725,14 +673,6 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">StorageService</span> {
     <span class="ident">db</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">LibraDB</span><span class="op">&gt;</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">StorageService</span> {
-    <span class="doccomment">/// This opens a [`LibraDB`] at `path` and returns a [`StorageService`] instance serving it.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">Path</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">P</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">db</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">LibraDB</span>::<span class="ident">new</span>(<span class="ident">path</span>));
-        <span class="self">Self</span> { <span class="ident">db</span> }
-    }
 }
 
 <span class="kw">impl</span> <span class="ident">StorageService</span> {

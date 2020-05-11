@@ -144,7 +144,7 @@
 
     <span class="comment">// set up JSON RPC service</span>
     <span class="kw">let</span> <span class="ident">tmp_dir</span> <span class="op">=</span> <span class="ident">TempPath</span>::<span class="ident">new</span>();
-    <span class="kw">let</span> <span class="ident">db</span> <span class="op">=</span> <span class="ident">LibraDB</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_dir</span>);
+    <span class="kw">let</span> <span class="ident">db</span> <span class="op">=</span> <span class="ident">LibraDB</span>::<span class="ident">new_for_test</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_dir</span>);
     <span class="comment">// initialize DB with baseline ledger info - otherwise server will fail on attempting to retrieve initial ledger info</span>
     <span class="kw">let</span> (<span class="ident">genesis_txn_to_commit</span>, <span class="ident">ledger_info_with_sigs</span>) <span class="op">=</span>
         <span class="ident">ValueGenerator</span>::<span class="ident">new</span>().<span class="ident">generate</span>(<span class="ident">arb_mock_genesis</span>());

@@ -940,6 +940,19 @@
 <span id="940">940</span>
 <span id="941">941</span>
 <span id="942">942</span>
+<span id="943">943</span>
+<span id="944">944</span>
+<span id="945">945</span>
+<span id="946">946</span>
+<span id="947">947</span>
+<span id="948">948</span>
+<span id="949">949</span>
+<span id="950">950</span>
+<span id="951">951</span>
+<span id="952">952</span>
+<span id="953">953</span>
+<span id="954">954</span>
+<span id="955">955</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1071,14 +1084,15 @@
     <span class="ident">state_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">StateStore</span><span class="op">&gt;</span>,
     <span class="ident">event_store</span>: <span class="ident">EventStore</span>,
     <span class="ident">system_store</span>: <span class="ident">SystemStore</span>,
-    <span class="ident">pruner</span>: <span class="ident">Pruner</span>,
+    <span class="ident">pruner</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pruner</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">LibraDB</span> {
-    <span class="doccomment">/// Config parameter for the pruner.</span>
-    <span class="kw">const</span> <span class="ident">NUM_HISTORICAL_VERSIONS_TO_KEEP</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1_000_000</span>;
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">open</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">Path</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(<span class="ident">db_root_path</span>: <span class="ident">P</span>, <span class="ident">readonly</span>: <span class="ident">bool</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">open</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">Path</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(
+        <span class="ident">db_root_path</span>: <span class="ident">P</span>,
+        <span class="ident">readonly</span>: <span class="ident">bool</span>,
+        <span class="ident">prune_window</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">column_families</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[
             <span class="comment">/* LedgerInfo CF = */</span> <span class="ident">DEFAULT_CF_NAME</span>,
             <span class="ident">EPOCH_BY_VERSION_CF_NAME</span>,
@@ -1116,13 +1130,19 @@
             <span class="ident">state_store</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">StateStore</span>::<span class="ident">new</span>(<span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">db</span>))),
             <span class="ident">transaction_store</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">TransactionStore</span>::<span class="ident">new</span>(<span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">db</span>))),
             <span class="ident">system_store</span>: <span class="ident">SystemStore</span>::<span class="ident">new</span>(<span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">db</span>)),
-            <span class="ident">pruner</span>: <span class="ident">Pruner</span>::<span class="ident">new</span>(<span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">db</span>), <span class="self">Self</span>::<span class="ident">NUM_HISTORICAL_VERSIONS_TO_KEEP</span>),
+            <span class="ident">pruner</span>: <span class="ident">prune_window</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">n</span><span class="op">|</span> <span class="ident">Pruner</span>::<span class="ident">new</span>(<span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">db</span>), <span class="ident">n</span>)),
         })
     }
 
-    <span class="doccomment">/// This creates an empty LibraDB instance on disk or opens one if it already exists.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">Path</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(<span class="ident">db_root_path</span>: <span class="ident">P</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span>::<span class="ident">open</span>(<span class="ident">db_root_path</span>, <span class="bool-val">false</span>).<span class="ident">expect</span>(<span class="string">&quot;Unable to open LibraDB&quot;</span>)
+    <span class="doccomment">/// This opens db in non-readonly mode, without the pruner.</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_for_test</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">Path</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(<span class="ident">db_root_path</span>: <span class="ident">P</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span>::<span class="ident">open</span>(
+            <span class="ident">db_root_path</span>,
+            <span class="bool-val">false</span>, <span class="comment">/* readonly */</span>
+            <span class="prelude-val">None</span>,  <span class="comment">/* pruner */</span>
+        )
+        .<span class="ident">expect</span>(<span class="string">&quot;Unable to open LibraDB&quot;</span>)
     }
 
     <span class="comment">// ================================== Public API ==================================</span>
@@ -1549,6 +1569,12 @@
 
         <span class="prelude-val">Ok</span>(())
     }
+
+    <span class="kw">fn</span> <span class="ident">wake_pruner</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">latest_version</span>: <span class="ident">Version</span>) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">pruner</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">pruner</span>.<span class="ident">as_ref</span>() {
+            <span class="ident">pruner</span>.<span class="ident">wake</span>(<span class="ident">latest_version</span>)
+        }
+    }
 }
 
 <span class="kw">impl</span> <span class="ident">DbReader</span> <span class="kw">for</span> <span class="ident">LibraDB</span> {
@@ -1864,7 +1890,7 @@
                 .<span class="ident">expect</span>(<span class="string">&quot;Counters should be bumped with transactions being saved.&quot;</span>)
                 .<span class="ident">bump_op_counters</span>();
 
-            <span class="self">self</span>.<span class="ident">pruner</span>.<span class="ident">wake</span>(<span class="ident">last_version</span>);
+            <span class="self">self</span>.<span class="ident">wake_pruner</span>(<span class="ident">last_version</span>);
         }
 
         <span class="prelude-val">Ok</span>(())

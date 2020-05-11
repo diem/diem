@@ -394,7 +394,7 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">Pruner</span> {
     <span class="doccomment">/// Other than the latest version, how many historical versions to keep being readable. For</span>
     <span class="doccomment">/// example, this being 0 means keep only the latest version.</span>
-    <span class="ident">num_historical_versions_to_keep</span>: <span class="ident">u64</span>,
+    <span class="ident">historical_versions_to_keep</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// The worker thread handle, created upon Pruner instance construction and joined upon its</span>
     <span class="doccomment">/// destruction. It only becomes `None` after joined in `drop()`.</span>
     <span class="ident">worker_thread</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">JoinHandle</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>,
@@ -408,7 +408,7 @@
 
 <span class="kw">impl</span> <span class="ident">Pruner</span> {
     <span class="doccomment">/// Creates a worker thread that waits on a channel for pruning commands.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">db</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DB</span><span class="op">&gt;</span>, <span class="ident">num_historical_versions_to_keep</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">db</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DB</span><span class="op">&gt;</span>, <span class="ident">historical_versions_to_keep</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> (<span class="ident">command_sender</span>, <span class="ident">command_receiver</span>) <span class="op">=</span> <span class="ident">channel</span>();
         <span class="kw">let</span> <span class="ident">worker_progress</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">AtomicU64</span>::<span class="ident">new</span>(<span class="number">0</span>));
         <span class="kw">let</span> <span class="ident">worker_progress_clone</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">worker_progress</span>);
@@ -419,7 +419,7 @@
             .<span class="ident">expect</span>(<span class="string">&quot;Creating pruner thread should succeed.&quot;</span>);
 
         <span class="self">Self</span> {
-            <span class="ident">num_historical_versions_to_keep</span>,
+            <span class="ident">historical_versions_to_keep</span>,
             <span class="ident">worker_thread</span>: <span class="prelude-val">Some</span>(<span class="ident">worker_thread</span>),
             <span class="ident">command_sender</span>: <span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">command_sender</span>),
             <span class="ident">worker_progress</span>,
@@ -428,8 +428,8 @@
 
     <span class="doccomment">/// Sends pruning command to the worker thread when necessary.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">wake</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">latest_version</span>: <span class="ident">Version</span>) {
-        <span class="kw">if</span> <span class="ident">latest_version</span> <span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">num_historical_versions_to_keep</span> {
-            <span class="kw">let</span> <span class="ident">least_readable_version</span> <span class="op">=</span> <span class="ident">latest_version</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">num_historical_versions_to_keep</span>;
+        <span class="kw">if</span> <span class="ident">latest_version</span> <span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">historical_versions_to_keep</span> {
+            <span class="kw">let</span> <span class="ident">least_readable_version</span> <span class="op">=</span> <span class="ident">latest_version</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">historical_versions_to_keep</span>;
             <span class="self">self</span>.<span class="ident">command_sender</span>
                 .<span class="ident">lock</span>()
                 .<span class="ident">expect</span>(<span class="string">&quot;command_sender to pruner thread should lock.&quot;</span>)
@@ -446,8 +446,8 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">wake_and_wait</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">latest_version</span>: <span class="ident">Version</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">wake</span>(<span class="ident">latest_version</span>);
 
-        <span class="kw">if</span> <span class="ident">latest_version</span> <span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">num_historical_versions_to_keep</span> {
-            <span class="kw">let</span> <span class="ident">least_readable_version</span> <span class="op">=</span> <span class="ident">latest_version</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">num_historical_versions_to_keep</span>;
+        <span class="kw">if</span> <span class="ident">latest_version</span> <span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">historical_versions_to_keep</span> {
+            <span class="kw">let</span> <span class="ident">least_readable_version</span> <span class="op">=</span> <span class="ident">latest_version</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">historical_versions_to_keep</span>;
             <span class="comment">// Assuming no big pruning chunks will be issued by a test.</span>
             <span class="kw">const</span> <span class="ident">TIMEOUT</span>: <span class="ident">Duration</span> <span class="op">=</span> <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">10</span>);
             <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>() <span class="op">+</span> <span class="ident">TIMEOUT</span>;
