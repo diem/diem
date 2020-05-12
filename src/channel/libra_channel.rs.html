@@ -192,6 +192,9 @@
 <span id="192">192</span>
 <span id="193">193</span>
 <span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -204,7 +207,10 @@
 <span class="doccomment">//! Internally, it uses the `PerKeyQueue` to store messages</span>
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">message_queues</span>::{<span class="ident">PerKeyQueue</span>, <span class="ident">QueueStyle</span>};
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">ensure</span>, <span class="prelude-ty">Result</span>};
-<span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">async_await</span>::<span class="ident">FusedStream</span>, <span class="ident">channel</span>::<span class="ident">oneshot</span>, <span class="ident">stream</span>::<span class="ident">Stream</span>};
+<span class="kw">use</span> <span class="ident">futures</span>::{
+    <span class="ident">channel</span>::<span class="ident">oneshot</span>,
+    <span class="ident">stream</span>::{<span class="ident">FusedStream</span>, <span class="ident">Stream</span>},
+};
 <span class="kw">use</span> <span class="ident">libra_metrics</span>::<span class="ident">IntCounterVec</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">fmt</span>::{<span class="ident">Debug</span>, <span class="ident">Formatter</span>},
