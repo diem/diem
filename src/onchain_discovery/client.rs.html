@@ -424,7 +424,7 @@
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">RoleType</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">discovery_set</span>::<span class="ident">DiscoverySet</span>,
+    <span class="ident">on_chain_config</span>::<span class="ident">ValidatorSet</span>,
     <span class="ident">trusted_state</span>::{<span class="ident">TrustedState</span>, <span class="ident">TrustedStateChange</span>},
     <span class="ident">waypoint</span>::<span class="ident">Waypoint</span>,
     <span class="ident">PeerId</span>,
@@ -705,9 +705,9 @@
         };
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_new_discovery_set_event</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">discovery_set</span>: <span class="ident">DiscoverySet</span>) {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_new_discovery_set_event</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">validator_set</span>: <span class="ident">ValidatorSet</span>) {
         <span class="kw">let</span> <span class="ident">latest_discovery_set</span> <span class="op">=</span>
-            <span class="ident">DiscoverySetInternal</span>::<span class="ident">from_discovery_set</span>(<span class="self">self</span>.<span class="ident">role</span>, <span class="ident">discovery_set</span>);
+            <span class="ident">DiscoverySetInternal</span>::<span class="ident">from_validator_set</span>(<span class="self">self</span>.<span class="ident">role</span>, <span class="ident">validator_set</span>);
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prev_discovery_set</span> <span class="op">=</span>
             <span class="ident">mem</span>::<span class="ident">replace</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">latest_discovery_set</span>, <span class="ident">latest_discovery_set</span>.<span class="ident">clone</span>());

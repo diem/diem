@@ -400,36 +400,6 @@
 <span id="400">400</span>
 <span id="401">401</span>
 <span id="402">402</span>
-<span id="403">403</span>
-<span id="404">404</span>
-<span id="405">405</span>
-<span id="406">406</span>
-<span id="407">407</span>
-<span id="408">408</span>
-<span id="409">409</span>
-<span id="410">410</span>
-<span id="411">411</span>
-<span id="412">412</span>
-<span id="413">413</span>
-<span id="414">414</span>
-<span id="415">415</span>
-<span id="416">416</span>
-<span id="417">417</span>
-<span id="418">418</span>
-<span id="419">419</span>
-<span id="420">420</span>
-<span id="421">421</span>
-<span id="422">422</span>
-<span id="423">423</span>
-<span id="424">424</span>
-<span id="425">425</span>
-<span id="426">426</span>
-<span id="427">427</span>
-<span id="428">428</span>
-<span id="429">429</span>
-<span id="430">430</span>
-<span id="431">431</span>
-<span id="432">432</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -518,7 +488,8 @@
 
     <span class="comment">// generate the genesis WriteSet</span>
     <span class="ident">create_and_initialize_main_accounts</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">genesis_context</span>, <span class="kw-2">&amp;</span><span class="ident">public_key</span>, <span class="kw-2">&amp;</span><span class="ident">lbr_ty</span>);
-    <span class="ident">create_and_initialize_validator_and_discovery_set</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">genesis_context</span>, <span class="kw-2">&amp;</span><span class="ident">validators</span>, <span class="kw-2">&amp;</span><span class="ident">lbr_ty</span>);
+    <span class="ident">create_and_initialize_validator_set</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">genesis_context</span>, <span class="kw-2">&amp;</span><span class="ident">lbr_ty</span>);
+    <span class="ident">initialize_validators</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">genesis_context</span>, <span class="kw-2">&amp;</span><span class="ident">validators</span>, <span class="kw-2">&amp;</span><span class="ident">lbr_ty</span>);
     <span class="ident">setup_libra_version</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">genesis_context</span>);
     <span class="ident">setup_vm_config</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">genesis_context</span>, <span class="ident">vm_publishing_option</span>);
     <span class="ident">reconfigure</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">genesis_context</span>);
@@ -659,39 +630,10 @@
     );
 }
 
-<span class="doccomment">/// Create and initialize validator and discovery set.</span>
-<span class="kw">fn</span> <span class="ident">create_and_initialize_validator_and_discovery_set</span>(
-    <span class="ident">genesis_context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">GenesisContext</span>,
-    <span class="ident">validators</span>: <span class="kw-2">&amp;</span>[<span class="ident">ValidatorRegistration</span>],
-    <span class="ident">lbr_ty</span>: <span class="kw-2">&amp;</span><span class="ident">TypeTag</span>,
-) {
-    <span class="ident">create_and_initialize_validator_set</span>(<span class="ident">genesis_context</span>, <span class="ident">lbr_ty</span>);
-    <span class="ident">create_and_initialize_discovery_set</span>(<span class="ident">genesis_context</span>, <span class="ident">lbr_ty</span>);
-    <span class="ident">initialize_validators</span>(<span class="ident">genesis_context</span>, <span class="kw-2">&amp;</span><span class="ident">validators</span>, <span class="ident">lbr_ty</span>);
-}
-
 <span class="doccomment">/// Create and initialize the validator set.</span>
 <span class="kw">fn</span> <span class="ident">create_and_initialize_validator_set</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">GenesisContext</span>, <span class="ident">_lbr_ty</span>: <span class="kw-2">&amp;</span><span class="ident">TypeTag</span>) {
     <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">config_address</span>());
     <span class="ident">context</span>.<span class="ident">exec</span>(<span class="string">&quot;LibraSystem&quot;</span>, <span class="string">&quot;initialize_validator_set&quot;</span>, <span class="macro">vec</span><span class="macro">!</span>[], <span class="macro">vec</span><span class="macro">!</span>[]);
-}
-
-<span class="doccomment">/// Create and initialize the discovery set.</span>
-<span class="kw">fn</span> <span class="ident">create_and_initialize_discovery_set</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">GenesisContext</span>, <span class="ident">lbr_ty</span>: <span class="kw-2">&amp;</span><span class="ident">TypeTag</span>) {
-    <span class="kw">let</span> <span class="ident">discovery_set_address</span> <span class="op">=</span> <span class="ident">account_config</span>::<span class="ident">discovery_set_address</span>();
-    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">discovery_set_address</span>);
-
-    <span class="ident">context</span>.<span class="ident">exec</span>(
-        <span class="string">&quot;LibraAccount&quot;</span>,
-        <span class="string">&quot;create_account&quot;</span>,
-        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">lbr_ty</span>.<span class="ident">clone</span>()],
-        <span class="macro">vec</span><span class="macro">!</span>[
-            <span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">discovery_set_address</span>),
-            <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">discovery_set_address</span>.<span class="ident">to_vec</span>()),
-        ],
-    );
-
-    <span class="ident">context</span>.<span class="ident">exec</span>(<span class="string">&quot;LibraSystem&quot;</span>, <span class="string">&quot;initialize_discovery_set&quot;</span>, <span class="macro">vec</span><span class="macro">!</span>[], <span class="macro">vec</span><span class="macro">!</span>[]);
 }
 
 <span class="doccomment">/// Initialize each validator.</span>
@@ -724,7 +666,7 @@
         <span class="comment">// Finally, add the account to the validator set</span>
         <span class="ident">context</span>.<span class="ident">exec</span>(
             <span class="string">&quot;LibraSystem&quot;</span>,
-            <span class="string">&quot;add_validator_no_discovery_event&quot;</span>,
+            <span class="string">&quot;add_validator&quot;</span>,
             <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">account</span>)],
         );
@@ -776,18 +718,16 @@
     <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">account_config</span>::<span class="ident">association_address</span>());
     <span class="ident">context</span>.<span class="ident">exec</span>(<span class="string">&quot;LibraTimestamp&quot;</span>, <span class="string">&quot;initialize&quot;</span>, <span class="macro">vec</span><span class="macro">!</span>[], <span class="macro">vec</span><span class="macro">!</span>[]);
     <span class="ident">context</span>.<span class="ident">exec</span>(<span class="string">&quot;LibraConfig&quot;</span>, <span class="string">&quot;emit_reconfiguration_event&quot;</span>, <span class="macro">vec</span><span class="macro">!</span>[], <span class="macro">vec</span><span class="macro">!</span>[]);
-    <span class="ident">context</span>.<span class="ident">exec</span>(<span class="string">&quot;LibraSystem&quot;</span>, <span class="string">&quot;emit_discovery_set_change&quot;</span>, <span class="macro">vec</span><span class="macro">!</span>[], <span class="macro">vec</span><span class="macro">!</span>[]);
 }
 
 <span class="doccomment">/// Verify the consistency of the genesis `WriteSet`</span>
 <span class="kw">fn</span> <span class="ident">verify_genesis_write_set</span>(<span class="ident">events</span>: <span class="kw-2">&amp;</span>[<span class="ident">ContractEvent</span>]) {
     <span class="comment">// Sanity checks on emitted events:</span>
-    <span class="comment">// (1) The genesis tx should emit 2 events: a ValidatorSetChangeEvent, and a</span>
-    <span class="comment">// DiscoverySetChangeEvent.</span>
+    <span class="comment">// (1) The genesis tx should emit 1 event: a NewEpochEvent.</span>
     <span class="macro">assert_eq</span><span class="macro">!</span>(
         <span class="ident">events</span>.<span class="ident">len</span>(),
-        <span class="number">2</span>,
-        <span class="string">&quot;Genesis transaction should emit two events, but found {} events: {:?}&quot;</span>,
+        <span class="number">1</span>,
+        <span class="string">&quot;Genesis transaction should emit one event, but found {} events: {:?}&quot;</span>,
         <span class="ident">events</span>.<span class="ident">len</span>(),
         <span class="ident">events</span>,
     );

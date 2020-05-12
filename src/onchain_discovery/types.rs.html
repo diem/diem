@@ -194,6 +194,11 @@
 <span id="194">194</span>
 <span id="195">195</span>
 <span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -205,13 +210,14 @@
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_config</span>,
+    <span class="ident">account_state</span>::<span class="ident">AccountState</span>,
     <span class="ident">account_state_blob</span>::<span class="ident">AccountStateWithProof</span>,
-    <span class="ident">discovery_info</span>::<span class="ident">DiscoveryInfo</span>,
-    <span class="ident">discovery_set</span>::{<span class="ident">DiscoverySet</span>, <span class="ident">DiscoverySetResource</span>},
     <span class="ident">epoch_change</span>::<span class="ident">EpochChangeProof</span>,
     <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>,
+    <span class="ident">on_chain_config</span>::<span class="ident">ValidatorSet</span>,
     <span class="ident">proof</span>::<span class="ident">AccumulatorConsistencyProof</span>,
     <span class="ident">trusted_state</span>::{<span class="ident">TrustedState</span>, <span class="ident">TrustedStateChange</span>},
+    <span class="ident">validator_info</span>::<span class="ident">ValidatorInfo</span>,
     <span class="ident">PeerId</span>,
 };
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
@@ -224,7 +230,7 @@
     <span class="ident">QueryDiscoverySetResponse</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">QueryDiscoverySetResponse</span><span class="op">&gt;</span>),
 }
 
-<span class="doccomment">/// A request for another peer&#39;s latest discovery set and a validator change proof</span>
+<span class="doccomment">/// A request for another peer&#39;s latest validator set and a validator change proof</span>
 <span class="doccomment">/// to get the client up-to-date if they&#39;re behind.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">QueryDiscoverySetRequest</span> {
@@ -236,8 +242,8 @@
 <span class="doccomment">/// A response to a [`QueryDiscoverySetRequest`]. The server will include an</span>
 <span class="doccomment">/// epoch change proof if the client is behind.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// The discovery set only changes when there is a new epoch. To minimize</span>
-<span class="doccomment">/// wire overhead, the server will include the discovery set account&#39;s</span>
+<span class="doccomment">/// The validator set only changes when there is a new epoch. To minimize</span>
+<span class="doccomment">/// wire overhead, the server will include the validator set account&#39;s</span>
 <span class="doccomment">/// [`AccountStateWithProof`] _if and only if_ the server also presents a</span>
 <span class="doccomment">/// non-empty epoch change proof.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
@@ -250,30 +256,30 @@
 
 <span class="kw">impl</span> <span class="ident">QueryDiscoverySetResponse</span> {
     <span class="doccomment">/// Verify and ratchet the given trusted state, returning the verified trusted</span>
-    <span class="doccomment">/// state change and latest discovery set (if present).</span>
+    <span class="doccomment">/// state change and latest validator set (if present).</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// 1. Verify and ratchet trusted state using epoch changes and latest ledger info</span>
-    <span class="doccomment">/// 2. (If present) Verify discovery set account state proof</span>
-    <span class="doccomment">/// 3. (If present) Deserialize `DiscoverySet` from discovery resource in account blob</span>
+    <span class="doccomment">/// 2. (If present) Verify validator set account state proof</span>
+    <span class="doccomment">/// 3. (If present) Deserialize `ValidatorSet` from validator set resource in account blob</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_and_ratchet</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>,
         <span class="ident">req_msg</span>: <span class="kw-2">&amp;</span><span class="ident">QueryDiscoverySetRequest</span>,
         <span class="ident">trusted_state</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">TrustedState</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">TrustedStateChange</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">DiscoverySet</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">TrustedStateChange</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ValidatorSet</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
         <span class="comment">// TODO(philiphayes): how to deal with partial epoch change proofs?</span>
         <span class="comment">// should probably not return discovery set until at head?</span>
 
         <span class="kw">let</span> <span class="ident">has_epoch_change</span> <span class="op">=</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">epoch_change_proof</span>.<span class="ident">ledger_info_with_sigs</span>.<span class="ident">is_empty</span>();
-        <span class="kw">let</span> <span class="ident">has_discovery_set</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">account_state</span>.<span class="ident">is_some</span>();
+        <span class="kw">let</span> <span class="ident">has_validator_set</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">account_state</span>.<span class="ident">is_some</span>();
 
-        <span class="comment">// enforce property: epoch change &lt;==&gt; some discovery set in response</span>
+        <span class="comment">// enforce property: epoch change &lt;==&gt; some validator set in response</span>
         <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="ident">has_epoch_change</span> <span class="op">=</span><span class="op">=</span> <span class="ident">has_discovery_set</span>,
-            <span class="string">&quot;mismatch between epoch change and discovery set. \
-             has_epoch_change iff has_discovery_set: \
-             has_epoch_change: {}, has_discovery_set: {}&quot;</span>,
+            <span class="ident">has_epoch_change</span> <span class="op">=</span><span class="op">=</span> <span class="ident">has_validator_set</span>,
+            <span class="string">&quot;mismatch between epoch change and validator set. \
+             has_epoch_change iff has_validator_set: \
+             has_epoch_change: {}, has_validator_set: {}&quot;</span>,
             <span class="ident">has_epoch_change</span>,
-            <span class="ident">has_discovery_set</span>,
+            <span class="ident">has_validator_set</span>,
         );
 
         <span class="comment">// check response is not stale</span>
@@ -290,36 +296,36 @@
             .<span class="ident">verify_and_ratchet</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">latest_li</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">epoch_change_proof</span>)
             .<span class="ident">context</span>(<span class="string">&quot;failed to ratchet trusted_state&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// if the response contains the discovery set account, then verify</span>
-        <span class="comment">// account_state_proof and pull out the discovery set</span>
-        <span class="kw">let</span> <span class="ident">opt_discovery_set</span> <span class="op">=</span> <span class="self">self</span>
+        <span class="comment">// if the response contains the validator set account, then verify</span>
+        <span class="comment">// account_state_proof and pull out the validator set</span>
+        <span class="kw">let</span> <span class="ident">opt_validator_set</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">account_state</span>
             .<span class="ident">as_ref</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">account_state</span><span class="op">|</span> <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DiscoverySet</span><span class="op">&gt;</span> {
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">account_state</span><span class="op">|</span> <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ValidatorSet</span><span class="op">&gt;</span> {
                 <span class="ident">account_state</span>
                     .<span class="ident">verify</span>(
                         <span class="self">self</span>.<span class="ident">latest_li</span>.<span class="ident">ledger_info</span>(),
                         <span class="ident">ledger_version</span>,
-                        <span class="ident">account_config</span>::<span class="ident">discovery_set_address</span>(),
+                        <span class="ident">account_config</span>::<span class="ident">validator_set_address</span>(),
                     )
-                    .<span class="ident">context</span>(<span class="string">&quot;failed to verify account state proof for discovery set resource&quot;</span>)<span class="question-mark">?</span>;
+                    .<span class="ident">context</span>(<span class="string">&quot;failed to verify account state proof for validator set resource&quot;</span>)<span class="question-mark">?</span>;
 
                 <span class="kw">let</span> <span class="ident">blob</span> <span class="op">=</span> <span class="ident">account_state</span>
                     .<span class="ident">blob</span>
                     .<span class="ident">as_ref</span>()
-                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;discovery account blob cannot be missing&quot;</span>))<span class="question-mark">?</span>;
+                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;validator set account blob cannot be missing&quot;</span>))<span class="question-mark">?</span>;
 
-                <span class="kw">let</span> <span class="ident">discovery_set_resource</span> <span class="op">=</span> <span class="ident">DiscoverySetResource</span>::<span class="ident">try_from</span>(<span class="ident">blob</span>)
-                    .<span class="ident">context</span>(<span class="string">&quot;failed to deserialize discovery set resource&quot;</span>)<span class="question-mark">?</span>;
-
-                <span class="prelude-val">Ok</span>(<span class="ident">DiscoverySet</span>::<span class="ident">from</span>(<span class="ident">discovery_set_resource</span>))
+                <span class="kw">let</span> <span class="ident">validator_set</span> <span class="op">=</span> <span class="ident">AccountState</span>::<span class="ident">try_from</span>(<span class="ident">blob</span>)<span class="question-mark">?</span>
+                    .<span class="ident">get_validator_set</span>()<span class="question-mark">?</span>
+                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;validator set resource cannot be missing&quot;</span>))<span class="question-mark">?</span>;
+                <span class="prelude-val">Ok</span>(<span class="ident">validator_set</span>)
             })
             .<span class="ident">transpose</span>()<span class="question-mark">?</span>;
 
         <span class="comment">// TODO(philiphayes): do something with accumulator_proof?</span>
         <span class="comment">// self.query_res.accumulator_proof.</span>
 
-        <span class="prelude-val">Ok</span>((<span class="ident">trusted_state_change</span>, <span class="ident">opt_discovery_set</span>))
+        <span class="prelude-val">Ok</span>((<span class="ident">trusted_state_change</span>, <span class="ident">opt_validator_set</span>))
     }
 }
 
@@ -328,14 +334,14 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DiscoverySetInternal</span>(<span class="kw">pub</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">DiscoveryInfoInternal</span><span class="op">&gt;</span>);
 
 <span class="kw">impl</span> <span class="ident">DiscoverySetInternal</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_discovery_set</span>(<span class="ident">role_filter</span>: <span class="ident">RoleType</span>, <span class="ident">discovery_set</span>: <span class="ident">DiscoverySet</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_validator_set</span>(<span class="ident">role_filter</span>: <span class="ident">RoleType</span>, <span class="ident">validator_set</span>: <span class="ident">ValidatorSet</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span>(
-            <span class="ident">discovery_set</span>
+            <span class="ident">validator_set</span>
                 .<span class="ident">into_iter</span>()
-                .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">discovery_info</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">discovery_info</span>.<span class="ident">account_address</span>;
+                .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">validator_info</span><span class="op">|</span> {
+                    <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">validator_info</span>.<span class="ident">account_address</span>();
                     <span class="kw">let</span> <span class="ident">res_info</span> <span class="op">=</span>
-                        <span class="ident">DiscoveryInfoInternal</span>::<span class="ident">try_from_discovery_info</span>(<span class="ident">role_filter</span>, <span class="ident">discovery_info</span>);
+                        <span class="ident">DiscoveryInfoInternal</span>::<span class="ident">try_from_validator_info</span>(<span class="ident">role_filter</span>, <span class="ident">validator_info</span>);
 
                     <span class="comment">// ignore network addresses that fail to deserialize</span>
                     <span class="ident">res_info</span>
@@ -370,21 +376,25 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DiscoveryInfoInternal</span>(<span class="kw">pub</span> <span class="ident">x25519</span>::<span class="ident">PublicKey</span>, <span class="kw">pub</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span>);
 
 <span class="kw">impl</span> <span class="ident">DiscoveryInfoInternal</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_from_discovery_info</span>(
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_from_validator_info</span>(
         <span class="ident">role_filter</span>: <span class="ident">RoleType</span>,
-        <span class="ident">discovery_info</span>: <span class="ident">DiscoveryInfo</span>,
+        <span class="ident">validator_info</span>: <span class="ident">ValidatorInfo</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">info</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">role_filter</span> {
             <span class="ident">RoleType</span>::<span class="ident">Validator</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">Self</span>(
-                <span class="ident">discovery_info</span>.<span class="ident">validator_network_identity_pubkey</span>,
+                <span class="ident">validator_info</span>
+                    .<span class="ident">config</span>()
+                    .<span class="ident">validator_network_identity_public_key</span>,
                 <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">NetworkAddress</span>::<span class="ident">try_from</span>(
-                    <span class="kw-2">&amp;</span><span class="ident">discovery_info</span>.<span class="ident">validator_network_address</span>,
+                    <span class="kw-2">&amp;</span><span class="ident">validator_info</span>.<span class="ident">config</span>().<span class="ident">validator_network_address</span>,
                 )<span class="question-mark">?</span>],
             ),
             <span class="ident">RoleType</span>::<span class="ident">FullNode</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">Self</span>(
-                <span class="ident">discovery_info</span>.<span class="ident">fullnodes_network_identity_pubkey</span>,
+                <span class="ident">validator_info</span>
+                    .<span class="ident">config</span>()
+                    .<span class="ident">full_node_network_identity_public_key</span>,
                 <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">NetworkAddress</span>::<span class="ident">try_from</span>(
-                    <span class="kw-2">&amp;</span><span class="ident">discovery_info</span>.<span class="ident">fullnodes_network_address</span>,
+                    <span class="kw-2">&amp;</span><span class="ident">validator_info</span>.<span class="ident">config</span>().<span class="ident">full_node_network_address</span>,
                 )<span class="question-mark">?</span>],
             ),
         };

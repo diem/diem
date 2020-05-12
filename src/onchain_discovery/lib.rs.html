@@ -206,7 +206,7 @@
     } <span class="kw">else</span> {
         <span class="prelude-val">Some</span>(
             <span class="ident">libra_db</span>.<span class="ident">get_account_state_with_proof</span>(
-                <span class="ident">account_config</span>::<span class="ident">discovery_set_address</span>(), <span class="ident">req_msg</span>.<span class="ident">known_version</span>, <span class="ident">latest_li</span>.<span class="ident">ledger_info</span>().<span class="ident">version</span>()
+                <span class="ident">account_config</span>::<span class="ident">validator_set_address</span>(), <span class="ident">req_msg</span>.<span class="ident">known_version</span>, <span class="ident">latest_li</span>.<span class="ident">ledger_info</span>().<span class="ident">version</span>()
             ).<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> {
                 <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;error getting discovery account state with proof from storage: request version: {}, ledger info version: {}&quot;</span>,
                     <span class="ident">req_msg</span>.<span class="ident">known_version</span>, <span class="ident">latest_li</span>.<span class="ident">ledger_info</span>().<span class="ident">version</span>(),
