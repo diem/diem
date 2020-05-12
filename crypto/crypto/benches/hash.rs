@@ -19,7 +19,7 @@ impl CryptoHash for HashBencher {
     type Hasher = SparseMerkleInternalHasher;
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.write(self.0);
+        state.update(self.0);
         state.finish()
     }
 }

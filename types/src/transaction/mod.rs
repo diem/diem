@@ -290,7 +290,7 @@ impl CryptoHash for RawTransaction {
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.write(
+        state.update(
             lcs::to_bytes(self)
                 .expect("Failed to serialize RawTransaction")
                 .as_slice(),
@@ -723,7 +723,7 @@ impl CryptoHash for TransactionInfo {
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.write(&lcs::to_bytes(self).expect("Serialization should work."));
+        state.update(&lcs::to_bytes(self).expect("Serialization should work."));
         state.finish()
     }
 }
@@ -934,7 +934,7 @@ impl CryptoHash for Transaction {
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.write(&lcs::to_bytes(self).expect("Failed to serialize Transaction."));
+        state.update(&lcs::to_bytes(self).expect("Failed to serialize Transaction."));
         state.finish()
     }
 }

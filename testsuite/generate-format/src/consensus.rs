@@ -18,7 +18,7 @@ pub fn output_file() -> Option<&'static str> {
 /// Record sample values for crypto types used by consensus.
 fn trace_crypto_values(tracer: &mut Tracer, samples: &mut Samples) -> Result<()> {
     let mut hasher = TestOnlyHasher::default();
-    hasher.write(b"Test message");
+    hasher.update(b"Test message");
     let hashed_message = hasher.finish();
 
     let mut rng: StdRng = SeedableRng::from_seed([0; 32]);

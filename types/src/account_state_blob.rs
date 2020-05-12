@@ -122,7 +122,7 @@ impl CryptoHash for AccountStateBlob {
 
     fn hash(&self) -> HashValue {
         let mut hasher = Self::Hasher::default();
-        hasher.write(&self.blob);
+        hasher.update(&self.blob);
         hasher.finish()
     }
 }
@@ -226,7 +226,7 @@ mod tests {
 
     fn hash_blob(blob: &[u8]) -> HashValue {
         let mut hasher = AccountStateBlobHasher::default();
-        hasher.write(blob);
+        hasher.update(blob);
         hasher.finish()
     }
 

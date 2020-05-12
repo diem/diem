@@ -28,7 +28,7 @@
 //! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};
 //!
 //! let mut hasher = TestOnlyHasher::default();
-//! hasher.write("Test message".as_bytes());
+//! hasher.update("Test message".as_bytes());
 //! let hash_value = hasher.finish();
 //! ```
 //! The output is of type [`HashValue`], which can be used as an input for signing.
@@ -73,7 +73,7 @@
 //! # struct MyNewStructHasher;
 //! # impl CryptoHasher for MyNewStructHasher {
 //! #   fn finish(self) -> HashValue { unimplemented!() }
-//! #   fn write(&mut self, bytes: &[u8]) -> &mut Self { unimplemented!() }
+//! #   fn update(&mut self, bytes: &[u8]) -> &mut Self { unimplemented!() }
 //! # }
 //! struct MyNewStruct;
 //!
@@ -82,7 +82,7 @@
 //!
 //!     fn hash(&self) -> HashValue {
 //!         let mut state = Self::Hasher::default();
-//!         state.write(b"Struct serialized into bytes here");
+//!         state.update(b"Struct serialized into bytes here");
 //!         state.finish()
 //!     }
 //! }
@@ -436,11 +436,7 @@ pub trait CryptoHasher: Default {
     /// Finish constructing the [`HashValue`].
     fn finish(self) -> HashValue;
     /// Write bytes into the hasher.
-    fn write(&mut self, bytes: &[u8]) -> &mut Self;
-    /// Write a single byte into the hasher.
-    fn write_u8(&mut self, byte: u8) {
-        self.write(&[byte]);
-    }
+    fn update(&mut self, bytes: &[u8]) -> &mut Self;
 }
 
 /// Our preferred hashing schema, outputting [`HashValue`]s.
@@ -464,7 +460,7 @@ impl CryptoHasher for DefaultHasher {
         hasher
     }
 
-    fn write(&mut self, bytes: &[u8]) -> &mut Self {
+    fn update(&mut self, bytes: &[u8]) -> &mut Self {
         self.state.update(bytes);
         self
     }
@@ -518,8 +514,8 @@ macro_rules! define_hasher {
                 self.0.finish()
             }
 
-            fn write(&mut self, bytes: &[u8]) -> &mut Self {
-                self.0.write(bytes);
+            fn update(&mut self, bytes: &[u8]) -> &mut Self {
+                self.0.update(bytes);
                 self
             }
         }
@@ -613,7 +609,7 @@ impl<T: ser::Serialize + ?Sized> TestOnlyHash for T {
     fn test_only_hash(&self) -> HashValue {
         let bytes = lcs::to_bytes(self).expect("serialize failed during hash.");
         let mut hasher = TestOnlyHasher::default();
-        hasher.write(&bytes);
+        hasher.update(&bytes);
         hasher.finish()
     }
 }

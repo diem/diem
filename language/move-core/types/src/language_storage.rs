@@ -113,7 +113,7 @@ impl CryptoHash for ModuleId {
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.write(&lcs::to_bytes(self).unwrap());
+        state.update(&lcs::to_bytes(self).unwrap());
         state.finish()
     }
 }
@@ -123,7 +123,7 @@ impl CryptoHash for StructTag {
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.write(&lcs::to_bytes(self).unwrap());
+        state.update(&lcs::to_bytes(self).unwrap());
         state.finish()
     }
 }

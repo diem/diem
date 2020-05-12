@@ -70,7 +70,7 @@ impl CryptoHash for VoteData {
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.write(lcs::to_bytes(self).expect("Should serialize.").as_ref());
+        state.update(lcs::to_bytes(self).expect("Should serialize.").as_ref());
         state.finish()
     }
 }

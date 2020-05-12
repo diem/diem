@@ -133,7 +133,7 @@ impl CryptoHash for LedgerInfo {
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.write(&lcs::to_bytes(self).expect("Serialization should work."));
+        state.update(&lcs::to_bytes(self).expect("Serialization should work."));
         state.finish()
     }
 }
