@@ -48,6 +48,10 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
         }
     }
 
+    pub fn self_handle_idx(&self) -> ModuleHandleIndex {
+        self.as_inner().self_handle_idx()
+    }
+
     pub fn module_handles(
         &self,
     ) -> impl DoubleEndedIterator<Item = ModuleHandleView<'a, T>> + Send {
@@ -157,7 +161,7 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
         &self,
         function_handle: &FunctionHandle,
     ) -> BTreeSet<StructDefinitionIndex> {
-        if function_handle.module.0 != CompiledModule::IMPLEMENTED_MODULE_INDEX {
+        if function_handle.module != self.module.self_handle_idx() {
             return BTreeSet::new();
         }
 

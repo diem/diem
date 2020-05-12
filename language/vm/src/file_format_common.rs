@@ -54,6 +54,7 @@ pub enum TableType {
     FUNCTION_DEFS           = 0xC,
     FIELD_HANDLE            = 0xD,
     FIELD_INST              = 0xE,
+    MISC                    = 0xF,
 }
 
 /// Constants for signature blob values.

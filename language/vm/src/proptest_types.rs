@@ -307,6 +307,7 @@ impl CompiledModuleStrategyGen {
                     // Build a compiled module
                     CompiledModuleMut {
                         module_handles,
+                        self_module_handle_idx: ModuleHandleIndex(0),
                         struct_handles,
                         function_handles,
                         field_handles,

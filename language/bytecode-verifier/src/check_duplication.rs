@@ -6,17 +6,14 @@
 //! uniquely name the entry at that index. Additionally, the checker also verifies the
 //! following:
 //! - struct and field definitions are consistent
-//! - the handles in struct and function definitions point to IMPLEMENTED_MODULE_INDEX
-//! - all struct and function handles pointing to IMPLEMENTED_MODULE_INDEX have a definition
+//! - the handles in struct and function definitions point to the self module index
+//! - all struct and function handles pointing to the self module index have a definition
 use libra_types::vm_error::StatusCode;
 use std::{collections::HashSet, hash::Hash};
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, VMResult},
-    file_format::{
-        CompiledModule, FunctionHandleIndex, ModuleHandleIndex, StructFieldInformation,
-        StructHandleIndex,
-    },
+    file_format::{CompiledModule, FunctionHandleIndex, StructFieldInformation, StructHandleIndex},
     IndexKind,
 };
 
@@ -172,11 +169,9 @@ impl<'a> DuplicationChecker<'a> {
                 ));
             }
         }
-        // Check that each struct definition is pointing to the self module (handle with index
-        // IMPLEMENTED_MODULE_INDEX)
+        // Check that each struct definition is pointing to the self module
         if let Some(idx) = self.module.struct_defs().iter().position(|x| {
-            self.module.struct_handle_at(x.struct_handle).module
-                != ModuleHandleIndex::new(CompiledModule::IMPLEMENTED_MODULE_INDEX)
+            self.module.struct_handle_at(x.struct_handle).module != self.module.self_handle_idx()
         }) {
             return Err(verification_error(
                 IndexKind::StructDefinition,
@@ -184,11 +179,9 @@ impl<'a> DuplicationChecker<'a> {
                 StatusCode::INVALID_MODULE_HANDLE,
             ));
         }
-        // Check that each function definition is pointing to the self module (handle with index
-        // IMPLEMENTED_MODULE_INDEX)
+        // Check that each function definition is pointing to the self module
         if let Some(idx) = self.module.function_defs().iter().position(|x| {
-            self.module.function_handle_at(x.function).module
-                != ModuleHandleIndex::new(CompiledModule::IMPLEMENTED_MODULE_INDEX)
+            self.module.function_handle_at(x.function).module != self.module.self_handle_idx()
         }) {
             return Err(verification_error(
                 IndexKind::FunctionDefinition,
@@ -196,8 +189,7 @@ impl<'a> DuplicationChecker<'a> {
                 StatusCode::INVALID_MODULE_HANDLE,
             ));
         }
-        // Check that each struct handle in self module (handle index IMPLEMENTED_MODULE_INDEX) is
-        // implemented (has a declaration)
+        // Check that each struct handle in self module is implemented (has a declaration)
         let implemented_struct_handles: HashSet<StructHandleIndex> = self
             .module
             .struct_defs()
@@ -206,8 +198,7 @@ impl<'a> DuplicationChecker<'a> {
             .collect();
         if let Some(idx) = (0..self.module.struct_handles().len()).position(|x| {
             let y = StructHandleIndex::new(x as u16);
-            self.module.struct_handle_at(y).module
-                == ModuleHandleIndex::new(CompiledModule::IMPLEMENTED_MODULE_INDEX)
+            self.module.struct_handle_at(y).module == self.module.self_handle_idx()
                 && !implemented_struct_handles.contains(&y)
         }) {
             return Err(verification_error(
@@ -216,8 +207,7 @@ impl<'a> DuplicationChecker<'a> {
                 StatusCode::UNIMPLEMENTED_HANDLE,
             ));
         }
-        // Check that each function handle in self module (handle index IMPLEMENTED_MODULE_INDEX) is
-        // implemented (has a declaration)
+        // Check that each function handle in self module is implemented (has a declaration)
         let implemented_function_handles: HashSet<FunctionHandleIndex> = self
             .module
             .function_defs()
@@ -226,8 +216,7 @@ impl<'a> DuplicationChecker<'a> {
             .collect();
         if let Some(idx) = (0..self.module.function_handles().len()).position(|x| {
             let y = FunctionHandleIndex::new(x as u16);
-            self.module.function_handle_at(y).module
-                == ModuleHandleIndex::new(CompiledModule::IMPLEMENTED_MODULE_INDEX)
+            self.module.function_handle_at(y).module == self.module.self_handle_idx()
                 && !implemented_function_handles.contains(&y)
         }) {
             return Err(verification_error(

@@ -1229,12 +1229,8 @@ pub struct FieldInstantiation {
 //
 
 fn load_script_dependencies(binary: &dyn ScriptAccess) -> Vec<ModuleId> {
-    let self_module = binary.self_handle();
     let mut deps = vec![];
     for module in binary.module_handles() {
-        if module == self_module {
-            continue;
-        }
         deps.push(ModuleId::new(
             *binary.address_identifier_at(module.address),
             binary.identifier_at(module.name).to_owned(),
