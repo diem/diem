@@ -4,7 +4,9 @@
 // For some reason deriving `Arbitrary` results in clippy firing a `unit_arg` violation
 #![allow(clippy::unit_arg)]
 
-use libra_canonical_serialization::{from_bytes, to_bytes, Error, MAX_SEQUENCE_LENGTH};
+use libra_canonical_serialization::{
+    from_bytes, serialized_size, to_bytes, Error, MAX_SEQUENCE_LENGTH,
+};
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -20,6 +22,7 @@ where
     let bytes = to_bytes(&t).unwrap();
     let s: T = from_bytes(&bytes).unwrap();
     assert_eq!(t, s);
+    assert_eq!(bytes.len(), serialized_size(&t).unwrap());
 }
 
 // TODO deriving `Arbitrary` is currently broken for enum types
