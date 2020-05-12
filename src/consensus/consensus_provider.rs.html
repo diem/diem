@@ -68,6 +68,9 @@
 <span id="68">68</span>
 <span id="69">69</span>
 <span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -83,7 +86,7 @@
     <span class="ident">util</span>::<span class="ident">time_service</span>::<span class="ident">ClockTimeService</span>,
 };
 <span class="kw">use</span> <span class="ident">channel</span>::<span class="ident">libra_channel</span>;
-<span class="kw">use</span> <span class="ident">executor_types</span>::<span class="ident">BlockExecutor</span>;
+<span class="kw">use</span> <span class="ident">execution_correctness</span>::<span class="ident">ExecutionCorrectnessManager</span>;
 <span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">channel</span>::<span class="ident">mpsc</span>;
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">NodeConfig</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
@@ -99,7 +102,6 @@
     <span class="ident">node_config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">NodeConfig</span>,
     <span class="ident">network_sender</span>: <span class="ident">ConsensusNetworkSender</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SignedTransaction</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">network_events</span>: <span class="ident">ConsensusNetworkEvents</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SignedTransaction</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">executor</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">BlockExecutor</span><span class="op">&gt;</span>,
     <span class="ident">state_sync_client</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">StateSyncClient</span><span class="op">&gt;</span>,
     <span class="ident">consensus_to_mempool_sender</span>: <span class="ident">mpsc</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">ConsensusRequest</span><span class="op">&gt;</span>,
     <span class="ident">libra_db</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">DbReader</span><span class="op">&gt;</span>,
@@ -113,7 +115,11 @@
         .<span class="ident">expect</span>(<span class="string">&quot;Failed to create Tokio runtime!&quot;</span>);
     <span class="kw">let</span> <span class="ident">storage</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">StorageWriteProxy</span>::<span class="ident">new</span>(<span class="ident">node_config</span>, <span class="ident">libra_db</span>));
     <span class="kw">let</span> <span class="ident">txn_manager</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">MempoolProxy</span>::<span class="ident">new</span>(<span class="ident">consensus_to_mempool_sender</span>));
-    <span class="kw">let</span> <span class="ident">state_computer</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">ExecutionProxy</span>::<span class="ident">new</span>(<span class="ident">executor</span>, <span class="ident">state_sync_client</span>));
+    <span class="kw">let</span> <span class="ident">execution_correctness_manager</span> <span class="op">=</span> <span class="ident">ExecutionCorrectnessManager</span>::<span class="ident">new</span>(<span class="ident">node_config</span>);
+    <span class="kw">let</span> <span class="ident">state_computer</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">ExecutionProxy</span>::<span class="ident">new</span>(
+        <span class="ident">execution_correctness_manager</span>.<span class="ident">client</span>(),
+        <span class="ident">state_sync_client</span>,
+    ));
     <span class="kw">let</span> <span class="ident">time_service</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">ClockTimeService</span>::<span class="ident">new</span>(<span class="ident">runtime</span>.<span class="ident">handle</span>().<span class="ident">clone</span>()));
 
     <span class="kw">let</span> (<span class="ident">timeout_sender</span>, <span class="ident">timeout_receiver</span>) <span class="op">=</span>

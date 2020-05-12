@@ -410,21 +410,6 @@
 <span id="410">410</span>
 <span id="411">411</span>
 <span id="412">412</span>
-<span id="413">413</span>
-<span id="414">414</span>
-<span id="415">415</span>
-<span id="416">416</span>
-<span id="417">417</span>
-<span id="418">418</span>
-<span id="419">419</span>
-<span id="420">420</span>
-<span id="421">421</span>
-<span id="422">422</span>
-<span id="423">423</span>
-<span id="424">424</span>
-<span id="425">425</span>
-<span id="426">426</span>
-<span id="427">427</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -436,7 +421,7 @@
     <span class="ident">proto</span>::<span class="ident">node_debug_interface_server</span>::<span class="ident">NodeDebugInterfaceServer</span>,
 };
 <span class="kw">use</span> <span class="ident">executor</span>::{<span class="ident">db_bootstrapper</span>::<span class="ident">bootstrap_db_if_empty</span>, <span class="ident">Executor</span>};
-<span class="kw">use</span> <span class="ident">executor_types</span>::{<span class="ident">BlockExecutor</span>, <span class="ident">ChunkExecutor</span>};
+<span class="kw">use</span> <span class="ident">executor_types</span>::<span class="ident">ChunkExecutor</span>;
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">channel</span>::<span class="ident">mpsc</span>::<span class="ident">channel</span>, <span class="ident">executor</span>::<span class="ident">block_on</span>, <span class="ident">stream</span>::<span class="ident">StreamExt</span>};
 <span class="kw">use</span> <span class="ident">libra_config</span>::{
     <span class="ident">config</span>::{<span class="ident">DiscoveryMethod</span>, <span class="ident">NetworkConfig</span>, <span class="ident">NodeConfig</span>, <span class="ident">RoleType</span>},
@@ -451,7 +436,6 @@
 <span class="kw">use</span> <span class="ident">libradb</span>::<span class="ident">LibraDB</span>;
 <span class="kw">use</span> <span class="ident">network</span>::<span class="ident">validator_network</span>::<span class="ident">network_builder</span>::{<span class="ident">NetworkBuilder</span>, <span class="ident">TransportType</span>};
 <span class="kw">use</span> <span class="ident">onchain_discovery</span>::{<span class="ident">client</span>::<span class="ident">OnchainDiscovery</span>, <span class="ident">service</span>::<span class="ident">OnchainDiscoveryService</span>};
-<span class="kw">use</span> <span class="ident">simple_storage_client</span>::<span class="ident">SimpleStorageClient</span>;
 <span class="kw">use</span> <span class="ident">state_synchronizer</span>::<span class="ident">StateSynchronizer</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">boxed</span>::<span class="ident">Box</span>,
@@ -485,12 +469,6 @@
 
 <span class="kw">fn</span> <span class="ident">setup_chunk_executor</span>(<span class="ident">db</span>: <span class="ident">DbReaderWriter</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ChunkExecutor</span><span class="op">&gt;</span> {
     <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">Executor</span>::<span class="op">&lt;</span><span class="ident">LibraVM</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">db</span>))
-}
-
-<span class="kw">fn</span> <span class="ident">setup_block_executor</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">NodeConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">BlockExecutor</span><span class="op">&gt;</span> {
-    <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">Executor</span>::<span class="op">&lt;</span><span class="ident">LibraVM</span><span class="op">&gt;</span>::<span class="ident">new</span>(
-        <span class="ident">SimpleStorageClient</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">storage</span>.<span class="ident">simple_address</span>).<span class="ident">into</span>(),
-    ))
 }
 
 <span class="kw">fn</span> <span class="ident">setup_debug_interface</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">NodeConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Runtime</span> {
@@ -809,20 +787,12 @@
             .<span class="ident">expect</span>(<span class="string">&quot;State synchronizer initialization failure&quot;</span>);
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;State synchronizer initialization complete.&quot;</span>);
 
-        <span class="ident">instant</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
-        <span class="kw">let</span> <span class="ident">block_executor</span> <span class="op">=</span> <span class="ident">setup_block_executor</span>(<span class="kw-2">&amp;</span><span class="ident">node_config</span>);
-        <span class="macro">debug</span><span class="macro">!</span>(
-            <span class="string">&quot;BlockExecutor setup in {} ms&quot;</span>,
-            <span class="ident">instant</span>.<span class="ident">elapsed</span>().<span class="ident">as_millis</span>()
-        );
-
         <span class="comment">// Initialize and start consensus.</span>
         <span class="ident">instant</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
         <span class="ident">consensus_runtime</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">start_consensus</span>(
             <span class="ident">node_config</span>,
             <span class="ident">consensus_network_sender</span>,
             <span class="ident">consensus_network_events</span>,
-            <span class="ident">block_executor</span>,
             <span class="ident">state_synchronizer</span>.<span class="ident">create_client</span>(),
             <span class="ident">consensus_to_mempool_sender</span>,
             <span class="ident">libra_db</span>,

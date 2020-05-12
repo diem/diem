@@ -132,6 +132,10 @@
 <span id="132">132</span>
 <span id="133">133</span>
 <span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -148,6 +152,7 @@
 };
 <span class="kw">use</span> <span class="ident">state_synchronizer</span>::<span class="ident">StateSyncClient</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">boxed</span>::<span class="ident">Box</span>,
     <span class="ident">convert</span>::<span class="ident">TryFrom</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>},
     <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">Instant</span>},
@@ -156,14 +161,17 @@
 <span class="doccomment">/// Basic communication with the Execution module;</span>
 <span class="doccomment">/// implements StateComputer traits.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ExecutionProxy</span> {
-    <span class="ident">executor</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">BlockExecutor</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">execution_correctness_client</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">BlockExecutor</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">synchronizer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">StateSyncClient</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">ExecutionProxy</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">executor</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">BlockExecutor</span><span class="op">&gt;</span>, <span class="ident">synchronizer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">StateSyncClient</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">execution_correctness_client</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">BlockExecutor</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
+        <span class="ident">synchronizer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">StateSyncClient</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">executor</span>: <span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">executor</span>),
+            <span class="ident">execution_correctness_client</span>: <span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">execution_correctness_client</span>),
             <span class="ident">synchronizer</span>,
         }
     }
@@ -200,7 +208,7 @@
         );
 
         <span class="comment">// TODO: figure out error handling for the prologue txn</span>
-        <span class="self">self</span>.<span class="ident">executor</span>
+        <span class="self">self</span>.<span class="ident">execution_correctness_client</span>
             .<span class="ident">lock</span>()
             .<span class="ident">unwrap</span>()
             .<span class="ident">execute_block</span>(
@@ -237,7 +245,7 @@
         <span class="kw">let</span> <span class="ident">pre_commit_instant</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
 
         <span class="kw">let</span> (<span class="ident">committed_txns</span>, <span class="ident">reconfig_events</span>) <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">executor</span>
+            .<span class="ident">execution_correctness_client</span>
             .<span class="ident">lock</span>()
             .<span class="ident">unwrap</span>()
             .<span class="ident">commit_blocks</span>(<span class="ident">block_ids</span>, <span class="ident">finality_proof</span>)<span class="question-mark">?</span>;
@@ -263,7 +271,7 @@
         <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">synchronizer</span>.<span class="ident">sync_to</span>(<span class="ident">target</span>).<span class="kw">await</span>;
         <span class="comment">// Similarily, after the state synchronization, we have to reset the cache</span>
         <span class="comment">// of BlockExecutor to guarantee the latest committed state is up to date.</span>
-        <span class="self">self</span>.<span class="ident">executor</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">reset</span>()<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">execution_correctness_client</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">reset</span>()<span class="question-mark">?</span>;
         <span class="ident">res</span>
     }
 }
