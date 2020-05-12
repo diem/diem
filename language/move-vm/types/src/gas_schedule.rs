@@ -204,4 +204,5 @@ pub enum NativeCostIndex {
     DESTROY_EMPTY = 11,
     SWAP = 12,
     SAVE_ACCOUNT = 13,
+    ED25519_VALIDATE_KEY = 14,
 }

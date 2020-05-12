@@ -6,8 +6,8 @@ address 0x0 {
 module SharedEd25519PublicKey {
     use 0x0::Authenticator;
     use 0x0::LibraAccount;
+    use 0x0::Signature;
     use 0x0::Transaction;
-    use 0x0::Vector;
 
     // A resource that forces the account associated with `rotation_cap` to use a ed25519
     // authentication key derived from `key`
@@ -33,7 +33,11 @@ module SharedEd25519PublicKey {
     }
 
     fun rotate_key(shared_key: &mut T, new_public_key: vector<u8>) {
-        Transaction::assert(Vector::length(&new_public_key) == 32, 7000);
+        // Cryptographic check of public key validity
+        Transaction::assert(
+            Signature::ed25519_validate_pubkey(copy new_public_key),
+            9003, // TODO: proper error code
+        );
         LibraAccount::rotate_authentication_key_with_capability(
             &shared_key.rotation_cap,
             Authenticator::ed25519_authentication_key(copy new_public_key)

@@ -1053,6 +1053,10 @@ procedure {:inline 1} $Event_write_to_event_store(ta: TypeValue, guid: Value, co
 
 // TODO: implement the below methods
 
+procedure {:inline 1} $Signature_ed25519_validate_pubkey(public_key: Value) returns (res: Value) {
+    assert false; // $Signature_ed25519_validate_pubkey not implemented
+}
+
 procedure {:inline 1} $Signature_ed25519_verify(signature: Value, public_key: Value, message: Value) returns (res: Value) {
     assert false; // $Signature_ed25519_verify not implemented
 }

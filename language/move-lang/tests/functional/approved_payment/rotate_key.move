@@ -2,6 +2,7 @@
 
 //! account: alice
 //! account: bob
+//! account: charlie
 
 // setup: alice publishes an approved payment resource, then rotates the key
 
@@ -31,3 +32,19 @@ fun main() {
 }
 }
 // check: EXECUTED
+
+// charlie publishes an approved payment resource, then tries to rotate to an invalid key
+
+//! new-transaction
+//! sender: charlie
+script {
+use 0x0::ApprovedPayment;
+fun main() {
+    let pubkey = x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
+    ApprovedPayment::publish(pubkey);
+    // rotate to an invalid key
+    ApprovedPayment::rotate_sender_key(x"0000000000000000000000000000000000000000000000000000000000000000");
+}
+}
+// check: ABORTED
+// check: 9003

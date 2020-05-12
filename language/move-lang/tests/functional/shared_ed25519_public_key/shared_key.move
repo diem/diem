@@ -10,7 +10,8 @@ use 0x0::SharedEd25519PublicKey;
 use 0x0::Transaction;
 fun main() {
     let old_auth_key = LibraAccount::authentication_key({{default}});
-    let pubkey1 = x"0000000000000000000000000000000000000000000000000000000000000000";
+    // from RFC 8032
+    let pubkey1 = x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
     SharedEd25519PublicKey::publish(copy pubkey1);
     let new_auth_key = LibraAccount::authentication_key({{default}});
 
@@ -24,7 +25,8 @@ fun main() {
     Transaction::assert(copy new_auth_key != old_auth_key, 3003);
 
     // now rotate to another pubkey and redo the key-related checks
-    let pubkey2 = x"1000000000000000000000000000000000000000000000000000000000000000";
+    // from RFC 8032
+    let pubkey2 = x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
     SharedEd25519PublicKey::rotate_sender_key(copy pubkey2);
     Transaction::assert(SharedEd25519PublicKey::key({{default}}) == pubkey2, 3004);
     // make sure the auth key changed again
@@ -44,7 +46,21 @@ fun main() {
 }
 }
 // check: ABORTED
-// check: 7000
+// check: 9003
+
+// publishing a key with a bad length should fail
+//! new-transaction
+//! sender: alice
+script {
+use 0x0::SharedEd25519PublicKey;
+fun main() {
+    let invalid_pubkey = x"10003d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
+    SharedEd25519PublicKey::publish(invalid_pubkey)
+}
+}
+// check: ABORTED
+// check: 9003
+
 
 // rotating to a key with a bad length should fail
 //! new-transaction
@@ -52,7 +68,8 @@ fun main() {
 script {
 use 0x0::SharedEd25519PublicKey;
 fun main() {
-    let valid_pubkey =  x"0000000000000000000000000000000000000000000000000000000000000000";
+    // from RFC 8032
+    let valid_pubkey =  x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
     SharedEd25519PublicKey::publish(valid_pubkey);
     // now rotate to an invalid key
     let invalid_pubkey = x"10000";
@@ -60,4 +77,20 @@ fun main() {
 }
 }
 // check: ABORTED
-// check: 7000
+// check: 9003
+
+// rotating to a key with a good length but bad contents should fail
+//! new-transaction
+//! sender: alice
+script {
+use 0x0::SharedEd25519PublicKey;
+fun main() {
+    let valid_pubkey =  x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
+    SharedEd25519PublicKey::publish(valid_pubkey);
+    // now rotate to an invalid key
+    let invalid_pubkey = x"0000000000000000000000000000000000000000000000000000000000000000";
+    SharedEd25519PublicKey::rotate_sender_key(invalid_pubkey)
+}
+}
+// check: ABORTED
+// check: 9003
