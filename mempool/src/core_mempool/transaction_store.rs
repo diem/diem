@@ -99,6 +99,7 @@ impl TransactionStore {
         }
 
         if self.check_if_full() {
+            debug!("[mempool] full");
             return MempoolStatus::new(MempoolStatusCode::MempoolIsFull).with_message(format!(
                 "mempool size: {}, capacity: {}",
                 self.system_ttl_index.size(),
@@ -340,7 +341,7 @@ impl TransactionStore {
             ("gc.expiration_time_index", &mut self.expiration_time_index)
         };
         OP_COUNTERS.inc(index_name);
-//        debug!("[mempool] gc");
+        debug!("[mempool] gc {:?}", by_system_ttl);
 
         for key in index.gc(now) {
             if let Some(txns) = self.transactions.get_mut(&key.address) {
