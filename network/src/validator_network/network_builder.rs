@@ -82,11 +82,14 @@ pub enum TransportType {
 /// MempoolNetworkHandler and ConsensusNetworkHandler are constructed by calling
 /// [`NetworkBuilder::build`].  New instances of `NetworkBuilder` are obtained
 /// via [`NetworkBuilder::new`].
+// TODO(philiphayes): refactor NetworkBuilder and libra-node; current config is
+// pretty tangled.
 pub struct NetworkBuilder {
     executor: Handle,
     peer_id: PeerId,
-    addr: NetworkAddress,
     role: RoleType,
+    // TODO(philiphayes): better support multiple listening addrs
+    listen_address: Option<NetworkAddress>,
     advertised_address: Option<NetworkAddress>,
     seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
@@ -119,12 +122,7 @@ pub struct NetworkBuilder {
 
 impl NetworkBuilder {
     /// Return a new NetworkBuilder initialized with default configuration values.
-    pub fn new(
-        executor: Handle,
-        peer_id: PeerId,
-        addr: NetworkAddress,
-        role: RoleType,
-    ) -> NetworkBuilder {
+    pub fn new(executor: Handle, peer_id: PeerId, role: RoleType) -> NetworkBuilder {
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) = libra_channel::new(
             QueueStyle::FIFO,
@@ -140,8 +138,8 @@ impl NetworkBuilder {
         NetworkBuilder {
             executor,
             peer_id,
-            addr,
             role,
+            listen_address: None,
             advertised_address: None,
             seed_peers: HashMap::new(),
             trusted_peers: Arc::new(RwLock::new(HashMap::new())),
@@ -178,7 +176,13 @@ impl NetworkBuilder {
         self
     }
 
-    /// Set and address to advertise, if different from the listen address
+    /// Set an address to listen on
+    pub fn listen_address(&mut self, listen_address: NetworkAddress) -> &mut Self {
+        self.listen_address = Some(listen_address);
+        self
+    }
+
+    /// Set an address to advertise, if different from the listen address
     pub fn advertised_address(&mut self, advertised_address: NetworkAddress) -> &mut Self {
         self.advertised_address = Some(advertised_address);
         self
@@ -407,10 +411,14 @@ impl NetworkBuilder {
             self.signing_keypair.take().expect("Signing keys not set");
         // Get handles for network events and sender.
         let (discovery_network_tx, discovery_network_rx) = discovery::add_to_network(self);
-        let addrs = vec![self
+
+        let advertised_address = self
             .advertised_address
-            .clone()
-            .unwrap_or_else(|| self.addr.clone())];
+            .as_ref()
+            .or_else(|| self.listen_address.as_ref())
+            .expect("Either advertised_address or listen_address must be set to enable gossip discovery")
+            .clone();
+        let addrs = vec![advertised_address];
         let trusted_peers = self.trusted_peers.clone();
         let role = self.role;
         let discovery_interval_ms = self.discovery_interval_ms;
@@ -511,7 +519,9 @@ impl NetworkBuilder {
             transport,
             self.peer_id,
             self.role,
-            self.addr,
+            // TODO(philiphayes): peer manager should take `Vec<NetworkAddress>`
+            // (which could be empty, like in client use case)
+            self.listen_address.expect("listen_address must be set"),
             self.pm_reqs_rx,
             self.connection_reqs_rx,
             self.upstream_handlers,

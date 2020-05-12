@@ -385,15 +385,25 @@ pub fn validator_registrations(node_configs: &[NodeConfig]) -> Vec<ValidatorRegi
             let network = n.validator_network.as_ref().unwrap();
             let network_keypairs = network.network_keypairs.as_ref().unwrap();
             let signing_key = network_keypairs.signing_keypair.public_key();
-            let raw_advertised_address =
-                RawNetworkAddress::try_from(&network.advertised_address).unwrap();
+
+            let identity_key = network_keypairs.identity_keypair.public_key();
+            let handshake_version = network.handshake_version;
+
+            let advertised_address = network
+                .advertised_address
+                .clone()
+                .into_prod(identity_key, handshake_version);
+            let raw_advertised_address = RawNetworkAddress::try_from(&advertised_address).unwrap();
+
+            // TODO(philiphayes): do something with n.full_node_networks instead
+            // of ignoring them?
 
             let script = transaction_builder::encode_register_validator_script(
                 consensus_key.to_bytes().to_vec(),
                 signing_key.to_bytes().to_vec(),
-                network_keypairs.identity_keypair.public_key().to_bytes(),
+                identity_key.to_bytes(),
                 raw_advertised_address.clone().into(),
-                network_keypairs.identity_keypair.public_key().to_bytes(),
+                identity_key.to_bytes(),
                 raw_advertised_address.into(),
             );
             (account_key, script)

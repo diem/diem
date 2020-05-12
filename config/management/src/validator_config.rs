@@ -45,22 +45,35 @@ impl ValidatorConfig {
         let validator_network_key = x25519_from_storage(VALIDATOR_NETWORK_KEY, local.as_mut())?;
         let owner_key = ed25519_from_storage(OWNER_KEY, local.as_mut())?;
 
-        let fullnode_address = RawNetworkAddress::try_from(&self.fullnode_address)
-            .map_err(|e| Error::UnexpectedError(format!("(fullnode_address) {}", e)))?;
-        let validator_address = RawNetworkAddress::try_from(&self.validator_address)
-            .map_err(|e| Error::UnexpectedError(format!("(validator_address) {}", e)))?;
+        // append ln-noise-ik and ln-handshake protocols to base network addresses
+
+        let validator_address = self.validator_address.clone().into_prod(
+            validator_network_key.clone(),
+            crate::constants::GENESIS_HANDSHAKE_VERSION,
+        );
+        let raw_validator_address = RawNetworkAddress::try_from(&validator_address)
+            .map_err(|e| Error::UnexpectedError(format!("(raw_validator_address) {}", e)))?;
+
+        let fullnode_address = self.fullnode_address.clone().into_prod(
+            fullnode_network_key.clone(),
+            crate::constants::GENESIS_HANDSHAKE_VERSION,
+        );
+        let raw_fullnode_address = RawNetworkAddress::try_from(&fullnode_address)
+            .map_err(|e| Error::UnexpectedError(format!("(raw_fullnode_address) {}", e)))?;
 
         // Step 2) Generate transaction
 
         // TODO(davidiw): The signing key, parameter 2, will be deleted soon, so this is a
         // temporary hack to reduce over-engineering.
+        // TODO(philiphayes): remove network identity pubkey field from struct when
+        // transition complete
         let script = transaction_builder::encode_register_validator_script(
             consensus_key.to_bytes().to_vec(),
             owner_key.to_bytes().to_vec(),
             validator_network_key.to_bytes(),
-            validator_address.into(),
+            raw_validator_address.into(),
             fullnode_network_key.to_bytes(),
-            fullnode_address.into(),
+            raw_fullnode_address.into(),
         );
 
         let sender = self.owner_address;

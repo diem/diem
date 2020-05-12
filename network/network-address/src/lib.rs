@@ -13,6 +13,7 @@ use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
     convert::{Into, TryFrom},
     fmt,
+    iter::IntoIterator,
     net::{self, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     num,
     str::FromStr,
@@ -263,6 +264,11 @@ impl NetworkAddress {
         Self(protocols)
     }
 
+    // TODO(philiphayes): could return NonZeroUsize?
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
     pub fn as_slice(&self) -> &[Protocol] {
         self.0.as_slice()
     }
@@ -271,9 +277,36 @@ impl NetworkAddress {
         self.0.push(proto)
     }
 
+    pub fn extend_from_slice(&mut self, protos: &[Protocol]) {
+        self.0.extend_from_slice(protos)
+    }
+
+    /// Given base advertised `NetworkAddress`, append production protocols and
+    /// return the modified `NetworkAddress`.
+    ///
+    /// ### Example
+    ///
+    /// `/dns/example.com/tcp/6180` =>
+    /// `/dns/example.com/tcp/6180/ln-noise-ik/<network_pubkey>/ln-handshake/<handshake_version>`
+    // TODO(philiphayes): handshake version type
+    pub fn into_prod(mut self, network_pubkey: x25519::PublicKey, handshake_version: u8) -> Self {
+        self.push(Protocol::NoiseIk(network_pubkey));
+        self.push(Protocol::Handshake(handshake_version));
+        self
+    }
+
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn mock() -> Self {
         NetworkAddress::new(vec![Protocol::Memory(1234)])
+    }
+}
+
+impl IntoIterator for NetworkAddress {
+    type Item = Protocol;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 

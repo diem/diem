@@ -250,10 +250,10 @@ impl SynchronizerEnv {
         let mut network_builder = NetworkBuilder::new(
             self.runtime.handle().clone(),
             self.peer_ids[new_peer_idx],
-            addr,
             RoleType::Validator,
         );
         network_builder
+            .listen_address(addr)
             .signing_keypair((
                 self.network_signers[new_peer_idx].clone(),
                 self.public_keys[new_peer_idx]

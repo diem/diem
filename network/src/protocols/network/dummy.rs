@@ -9,6 +9,7 @@ use crate::{
     protocols::{
         network::{Event, NetworkEvents, NetworkSender},
         rpc::error::RpcError,
+        wire::handshake::v1::MessagingProtocolVersion,
     },
     validator_network::network_builder::{NetworkBuilder, TransportType, NETWORK_CHANNEL_SIZE},
     NetworkPublicKeys, ProtocolId,
@@ -84,8 +85,6 @@ impl DummyNetworkSender {
     }
 }
 
-const HOUR_IN_MS: u64 = 60 * 60 * 1000;
-
 pub struct DummyNetwork {
     pub runtime: Runtime,
     pub dialer_peer_id: PeerId,
@@ -98,10 +97,9 @@ pub struct DummyNetwork {
 
 /// The following sets up a 2 peer network and verifies connectivity.
 pub fn setup_network() -> DummyNetwork {
-    let any: NetworkAddress = "/ip4/127.0.0.1/tcp/0".parse().unwrap();
     let runtime = Runtime::new().unwrap();
-    let (dialer_peer_id, dialer_addr) = (PeerId::random(), any.clone());
-    let (listener_peer_id, listener_addr) = (PeerId::random(), any);
+    let dialer_peer_id = PeerId::random();
+    let listener_peer_id = PeerId::random();
 
     // Setup keys for dialer.
     let mut rng = StdRng::from_seed(TEST_SEED);
@@ -116,19 +114,28 @@ pub fn setup_network() -> DummyNetwork {
     let listener_identity_private_key = x25519::PrivateKey::generate(&mut rng);
     let listener_identity_public_key = listener_identity_private_key.public_key();
 
+    // Setup listen addresses
+    let base_addr: NetworkAddress = "/ip4/127.0.0.1/tcp/0".parse().unwrap();
+    let handshake_version = MessagingProtocolVersion::V1 as u8;
+    let dialer_addr = base_addr
+        .clone()
+        .into_prod(dialer_identity_public_key.clone(), handshake_version);
+    let listener_addr =
+        base_addr.into_prod(listener_identity_public_key.clone(), handshake_version);
+
     // Setup trusted peers.
     let trusted_peers: HashMap<_, _> = vec![
         (
             dialer_peer_id,
             NetworkPublicKeys {
-                signing_public_key: dialer_signing_public_key.clone(),
+                signing_public_key: dialer_signing_public_key,
                 identity_public_key: dialer_identity_public_key,
             },
         ),
         (
             listener_peer_id,
             NetworkPublicKeys {
-                signing_public_key: listener_signing_public_key.clone(),
+                signing_public_key: listener_signing_public_key,
                 identity_public_key: listener_identity_public_key,
             },
         ),
@@ -140,16 +147,13 @@ pub fn setup_network() -> DummyNetwork {
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
         listener_peer_id,
-        listener_addr,
         RoleType::Validator,
     );
     network_builder
         .transport(TransportType::TcpNoise(Some(listener_identity_private_key)))
+        .listen_address(listener_addr)
         .trusted_peers(trusted_peers.clone())
-        .signing_keypair((listener_signing_private_key, listener_signing_public_key))
-        .discovery_interval_ms(HOUR_IN_MS)
-        .add_connectivity_manager()
-        .add_gossip_discovery();
+        .add_connectivity_manager();
     let (listener_sender, mut listener_events) = add_to_network(&mut network_builder);
     let listen_addr = network_builder.build();
 
@@ -157,22 +161,19 @@ pub fn setup_network() -> DummyNetwork {
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
         dialer_peer_id,
-        dialer_addr,
         RoleType::Validator,
     );
     network_builder
         .transport(TransportType::TcpNoise(Some(dialer_identity_private_key)))
+        .listen_address(dialer_addr)
         .trusted_peers(trusted_peers)
-        .signing_keypair((dialer_signing_private_key, dialer_signing_public_key))
         .seed_peers(
             [(listener_peer_id, vec![listen_addr])]
                 .iter()
                 .cloned()
                 .collect(),
         )
-        .discovery_interval_ms(HOUR_IN_MS)
-        .add_connectivity_manager()
-        .add_gossip_discovery();
+        .add_connectivity_manager();
     let (dialer_sender, mut dialer_events) = add_to_network(&mut network_builder);
     let _dialer_addr = network_builder.build();
 
