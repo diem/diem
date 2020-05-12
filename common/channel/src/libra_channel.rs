@@ -9,7 +9,10 @@
 //! Internally, it uses the `PerKeyQueue` to store messages
 use crate::message_queues::{PerKeyQueue, QueueStyle};
 use anyhow::{ensure, Result};
-use futures::{async_await::FusedStream, channel::oneshot, stream::Stream};
+use futures::{
+    channel::oneshot,
+    stream::{FusedStream, Stream},
+};
 use libra_metrics::IntCounterVec;
 use std::{
     fmt::{Debug, Formatter},
