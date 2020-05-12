@@ -359,7 +359,7 @@ impl Signature for Ed25519Signature {
         self.0.to_bytes().to_vec()
     }
 
-    #[cfg(feature = "batch")]
+    #[cfg(target_endian = "little")]
     /// Batch signature verification as described in the original EdDSA article
     /// by Bernstein et al. "High-speed high-security signatures". Current implementation works for
     /// signatures on the same message and it checks for malleability.
