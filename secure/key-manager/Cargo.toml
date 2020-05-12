@@ -35,8 +35,11 @@ tokio = { version = "0.2.13", features = ["full"] }
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 executor = { path = "../../execution/executor", version = "0.1.0" }
 executor-types = { path = "../../execution/executor-types", version = "0.1.0" }
-libradb = { path = "../../storage/libradb", version = "0.1.0", features = ["fuzzing"] }
-libra-json-rpc = { path = "../../json-rpc", version = "0.1.0", features = ["fuzzing"] }
+libradb = { path = "../../storage/libradb", version = "0.1.0" }
+libra-json-rpc = { path = "../../json-rpc", version = "0.1.0" }
 libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
 storage-interface= { path = "../../storage/storage-interface", version = "0.1.0" }
 vm-validator = { path = "../../vm-validator", version = "0.1.0" }
+
+[features]
+fuzzing = ["libradb/fuzzing", "libra-json-rpc/fuzzing"]
