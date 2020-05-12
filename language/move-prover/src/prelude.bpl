@@ -1082,13 +1082,12 @@ axiom (forall v1,v2: Value :: IsEqual(v1, v2) ==> IsEqual($LCS_serialize_core(v1
 
 
 // This says that serialize is an injection
-axiom (forall v1, v2: Value :: IsEqual($LCS_serialize_core(v1), $LCS_serialize_core(v2))
+axiom (forall v1, v2: Value ::  IsEqual($LCS_serialize_core(v1), $LCS_serialize_core(v2))
            ==> IsEqual(v1, v2));
 
 // This says that serialize returns a non-empty vec<u8>
-axiom (forall v: Value :: ( var r := $LCS_serialize_core(v); $IsValidU8Vector(r) && $vlen(r) > 0 ) );
+axiom (forall v: Value :: ( var r := $LCS_serialize_core(v); $IsValidU8Vector(r) && $vlen(r) > 0 && $vlen(r) < {{serialize_bound}} ));
 
 procedure $LCS_to_bytes(ta: TypeValue, v: Value) returns (res: Value);
-ensures res == $LCS_serialize_core(v);
+ensures res == $LCS_serialize($m, $txn, ta, v);
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
-ensures $vlen(res) > 0;

@@ -94,26 +94,32 @@ pub struct Options {
     pub template_context: PreludeTemplateContext,
     /// How many times to call boogie on the verification problem. This is used for benchmarking.
     pub bench_repeat: usize,
+    /// Whether to produce an SMT file for each verification problem.
+    pub generate_smt: bool,
 }
 
 /// Options used for prelude template. See `prelude.bpl` for documentation.
 #[derive(Debug, Serialize)]
 pub struct PreludeTemplateContext {
+    pub array_theory: bool,
     pub native_equality: bool,
     pub type_requires: String,
     pub stratification_depth: usize,
     pub aggressive_func_inline: String,
     pub func_inline: String,
+    pub serialize_bound: usize,
 }
 
 impl Default for PreludeTemplateContext {
     fn default() -> Self {
         Self {
+            array_theory: false,
             native_equality: false,
             type_requires: "free requires".to_owned(),
             stratification_depth: 4,
             aggressive_func_inline: "".to_owned(),
             func_inline: "{:inline}".to_owned(),
+            serialize_bound: 4,
         }
     }
 }
@@ -142,6 +148,7 @@ impl Default for Options {
             verify_scope: VerificationScope::Public,
             template_context: PreludeTemplateContext::default(),
             bench_repeat: 1,
+            generate_smt: false,
         }
     }
 }
@@ -152,6 +159,11 @@ impl Options {
     // the program name.
     pub fn initialize_from_args(&mut self, args: &[String]) -> anyhow::Result<()> {
         // Clap definition of the command line interface.
+        let is_number = |s: String| {
+            s.parse::<usize>()
+                .map(|_| ())
+                .map_err(|_| "expected number".to_string())
+        };
         let cli = App::new("mvp")
             .version("0.1.0")
             .about("The Move Prover")
@@ -249,6 +261,7 @@ impl Options {
                     .value_name("BOOL")
                     .default_value("false")
                     .possible_values(&["true", "false"])
+                    .require_equals(true)
                     .help("whether to use native array theory. This implies --use-native-equality."),
             )
             .arg(
@@ -257,6 +270,7 @@ impl Options {
                     .value_name("BOOL")
                     .default_value("false")
                     .possible_values(&["true", "false"])
+                    .require_equals(true)
                     .help("whether to use native equality."),
             )
             .arg(
@@ -265,6 +279,7 @@ impl Options {
                     .value_name("BOOL")
                     .default_value("false")
                     .possible_values(&["true", "false"])
+                    .require_equals(true)
                     .help(
                         "whether to aggressively inline prelude functions",
                     ),
@@ -275,8 +290,21 @@ impl Options {
                     .value_name("BOOL")
                     .default_value("false")
                     .possible_values(&["true", "false"])
+                    .require_equals(true)
                     .help(
                         "whether prelude functions should require type correctness instead of assuming it",
+                    ),
+            )
+            .arg(
+                Arg::with_name("serialize-bound")
+                    .long("serialize-bound")
+                    .value_name("NUMBER")
+                    .default_value("4")
+                    .validator(is_number)
+                    .require_equals(true)
+                    .help(
+                        "a bound for the length of the result vector of LCS::to_bytes(). \
+                        Currently, solver runtime increases exponentially with the size of this value."
                     ),
             )
             .arg(
@@ -285,6 +313,7 @@ impl Options {
                     .takes_value(true)
                     .value_name("DEPTH")
                     .default_value("4")
+                    .validator(is_number)
                     .help(
                         "depth to which stratified functions in the prelude are expanded",
                     ),
@@ -295,8 +324,21 @@ impl Options {
                     .takes_value(true)
                     .value_name("COUNT")
                     .default_value("1")
+                    .validator(is_number)
                     .help(
                         "for benchmarking: how many times to call the solver on the verification problem",
+                    ),
+            )
+            .arg(
+                Arg::with_name("generate-smt")
+                    .long("generate-smt")
+                    .value_name("BOOL")
+                    .default_value("false")
+                    .possible_values(&["true", "false"])
+                    .require_equals(true)
+                    .help(
+                        "whether to generate an smtlib file for each verification problem.\
+                        This can be used to call the solver directly, for debugging",
                     ),
             )
             .arg(
@@ -391,6 +433,7 @@ impl Options {
         };
         if get_bool("use-array-theory")? {
             self.use_array_theory = true;
+            self.template_context.array_theory = true;
             self.template_context.native_equality = true;
         }
         self.template_context.native_equality = get_bool("use-native-equality")?;
@@ -404,8 +447,10 @@ impl Options {
         } else {
             self.template_context.type_requires = "free requires".to_owned();
         }
+        self.template_context.serialize_bound = get_int("serialize-bound")?;
         self.template_context.stratification_depth = get_int("stratification-depth")?;
         self.bench_repeat = get_int("bench-repeat")?;
+        self.generate_smt = get_bool("generate-smt")?;
         Ok(())
     }
 
@@ -457,7 +502,9 @@ impl Options {
         //add(&["-proverOpt:O:trace=true"]);
         //add(&["-proverOpt:VERBOSITY=3"]);
         //add(&["-proverOpt:C:-st"]);
-        //add(&["-proverLog:@PROC@.log"]);
+        if self.generate_smt {
+            add(&["-proverLog:@PROC@.smt"]);
+        }
         for f in &self.boogie_flags {
             add(&[f.as_str()]);
         }

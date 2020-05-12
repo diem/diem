@@ -72,7 +72,7 @@ module Test {
     }
     spec fun create {
         // To reproduce, put this to true.
-        pragma verify=false;
+        pragma verify=true;
 
         // The next two aborts_if and ensures are correct. However, if they are removed, verification terminates
         // with the expected result.
@@ -80,7 +80,8 @@ module Test {
         aborts_if exists<T>(sender());
         ensures eq_append(result, auth_key_prefix, LCS::serialize(fresh_address));
 
-        // These two ensures are wrong and should produce an error. Instead, the solver hangs.
+        // These two ensures are wrong and should produce an error. Instead, the solver hangs without binding
+        // serialization result size. To reproduce, set --serialize-bound=N with N a high value.
         ensures eq_append(global<T>(sender()).received_events.guid, LCS::serialize(2), LCS::serialize(fresh_address));
         ensures eq_append(global<T>(sender()).sent_events.guid, LCS::serialize(3), LCS::serialize(fresh_address));
 
