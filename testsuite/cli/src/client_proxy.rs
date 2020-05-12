@@ -17,13 +17,13 @@ use libra_json_rpc_client::views::{AccountView, BlockMetadata, EventView, Transa
 use libra_logger::prelude::*;
 use libra_network_address::{NetworkAddress, RawNetworkAddress};
 use libra_temppath::TempPath;
-use libra_types::account_state::AccountState;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{
         association_address, lbr_type_tag, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
     },
+    account_state::AccountState,
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config::VMPublishingOption,
     transaction::{
