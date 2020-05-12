@@ -65,6 +65,7 @@ impl Resolver {
             | SignatureToken::U64
             | SignatureToken::U128
             | SignatureToken::Address
+            | SignatureToken::Signer
             | SignatureToken::TypeParameter(_) => Ok(sig_token.clone()),
             SignatureToken::Vector(ty) => Ok(SignatureToken::Vector(Box::new(
                 self.import_signature_token(dependency, ty)?,

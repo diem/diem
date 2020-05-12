@@ -46,11 +46,13 @@ impl<'a> ResourceTransitiveChecker<'a> {
     /// Determines if the given signature token contains a nominal resource.
     /// More specifically, a signature token contains a nominal resource if
     ///   1) it is a type variable explicitly marked as resource kind.
-    ///   2) it is a struct that
+    ///   2) it is a signer, which is always a resource type
+    ///   3) it is a struct that
     ///       a) is marked as resource.
     ///       b) has a type actual which is a nominal resource.
     fn contains_nominal_resource(&self, token: &SignatureToken, type_parameters: &[Kind]) -> bool {
         match token {
+            SignatureToken::Signer => true,
             SignatureToken::Struct(sh_idx) => {
                 let sh = self.module.struct_handle_at(*sh_idx);
                 sh.is_nominal_resource

@@ -1,0 +1,8 @@
+module M {
+    t(s1: signer, s2: signer) {
+        s1 = move(s2);
+        return;
+    }
+}
+
+// check: STLOC_UNSAFE_TO_DESTROY_ERROR

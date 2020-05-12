@@ -103,7 +103,7 @@ impl<'a> StructDefGraphBuilder<'a> {
     ) -> VMResult<()> {
         use SignatureToken as T;
         Ok(match token {
-            T::Bool | T::U8 | T::U64 | T::U128 | T::Address | T::TypeParameter(_) => (),
+            T::Bool | T::U8 | T::U64 | T::U128 | T::Address | T::Signer | T::TypeParameter(_) => (),
             T::Reference(_) | T::MutableReference(_) => {
                 return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                     .with_message("Reference field when checking recursive structs".to_owned()))

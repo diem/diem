@@ -161,6 +161,7 @@ enum InferredType {
     U64,
     U128,
     Address,
+    Signer,
     Vector(Box<InferredType>),
     Struct(StructHandleIndex, Vec<InferredType>),
     Reference(Box<InferredType>),
@@ -181,6 +182,7 @@ impl InferredType {
             S::U64 => I::U64,
             S::U128 => I::U128,
             S::Address => I::Address,
+            S::Signer => I::Signer,
             S::Vector(s_inner) => I::Vector(Box::new(Self::from_signature_token_with_subst(
                 subst, s_inner,
             ))),
@@ -233,6 +235,7 @@ impl InferredType {
             InferredType::U64 => bail!("no struct type for U64"),
             InferredType::U128 => bail!("no struct type for U128"),
             InferredType::Address => bail!("no struct type for Address"),
+            InferredType::Signer => bail!("no struct type for Signer"),
             InferredType::Vector(_) => bail!("no struct type for vector"),
             InferredType::Reference(inner) | InferredType::MutableReference(inner) => {
                 inner.get_struct_handle()
@@ -251,6 +254,7 @@ impl InferredType {
             I::U64 => S::U64,
             I::U128 => S::U128,
             I::Address => S::Address,
+            I::Signer => S::Signer,
             I::Vector(inner) => S::Vector(Box::new(Self::to_signature_token(inner)?)),
             I::Struct(si, tys) if tys.is_empty() => S::Struct(*si),
             I::Struct(si, tys) => S::StructInstantiation(*si, Self::build_signature_tokens(tys)?),
@@ -641,6 +645,7 @@ fn compile_type(
 ) -> Result<SignatureToken> {
     Ok(match ty {
         Type::Address => SignatureToken::Address,
+        Type::Signer => SignatureToken::Signer,
         Type::U8 => SignatureToken::U8,
         Type::U64 => SignatureToken::U64,
         Type::U128 => SignatureToken::U128,

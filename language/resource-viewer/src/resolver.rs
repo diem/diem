@@ -59,6 +59,7 @@ impl<'a> Resolver<'a> {
     pub fn resolve_type(&self, type_tag: &TypeTag) -> Result<FatType> {
         Ok(match type_tag {
             TypeTag::Address => FatType::Address,
+            TypeTag::Signer => FatType::Signer,
             TypeTag::Bool => FatType::Bool,
             TypeTag::Struct(st) => FatType::Struct(Box::new(self.resolve_struct(st)?)),
             TypeTag::U8 => FatType::U8,
@@ -99,6 +100,7 @@ impl<'a> Resolver<'a> {
             SignatureToken::U64 => FatType::U64,
             SignatureToken::U128 => FatType::U128,
             SignatureToken::Address => FatType::Address,
+            SignatureToken::Signer => FatType::Signer,
             SignatureToken::Vector(ty) => {
                 FatType::Vector(Box::new(self.resolve_signature(module, ty)?))
             }

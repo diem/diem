@@ -357,6 +357,7 @@ pub(crate) fn substitute(token: &SignatureToken, tys: &[SignatureToken]) -> Sign
         U64 => U64,
         U128 => U128,
         Address => Address,
+        Signer => Signer,
         Vector(ty) => Vector(Box::new(substitute(ty, tys))),
         Struct(idx) => Struct(*idx),
         StructInstantiation(idx, type_params) => StructInstantiation(
@@ -380,6 +381,7 @@ pub fn kind(module: &impl ModuleAccess, ty: &SignatureToken, constraints: &[Kind
     match ty {
         // The primitive types & references have kind unrestricted.
         Bool | U8 | U64 | U128 | Address | Reference(_) | MutableReference(_) => Kind::Copyable,
+        Signer => Kind::Resource,
         TypeParameter(idx) => constraints[*idx as usize],
         Vector(ty) => kind(module, ty, constraints),
         Struct(idx) => {

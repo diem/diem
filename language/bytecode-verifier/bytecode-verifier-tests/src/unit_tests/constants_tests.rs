@@ -182,6 +182,10 @@ fn invalid_types() {
     invalid_type(SignatureToken::TypeParameter(0xFA), vec![0]);
     invalid_type(tvec(SignatureToken::TypeParameter(0)), vec![0]);
     invalid_type(tvec(SignatureToken::TypeParameter(0xAF)), vec![0]);
+
+    invalid_type(SignatureToken::Signer, vec![0]);
+    invalid_type(tvec(SignatureToken::Signer), vec![0]);
+
     // TODO cannot check structs are banned currently. This can be handled by IR and source lang
     // tests
     // invalid_type(SignatureToken::Struct(StructHandleIndex(0)), vec![0]);

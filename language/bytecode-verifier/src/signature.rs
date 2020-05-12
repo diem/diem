@@ -182,7 +182,7 @@ impl<'a> SignatureChecker<'a> {
     fn check_signature_token(&self, ty: &SignatureToken) -> VMResult<()> {
         use SignatureToken::*;
         match ty {
-            U8 | U64 | U128 | Bool | Address | Struct(_) | TypeParameter(_) => Ok(()),
+            U8 | U64 | U128 | Bool | Address | Signer | Struct(_) | TypeParameter(_) => Ok(()),
             Reference(_) | MutableReference(_) => {
                 // TODO: Prop tests expect us to NOT check the inner types.
                 // Revisit this once we rework prop tests.
@@ -240,6 +240,7 @@ pub(crate) fn kind(module: &CompiledModule, ty: &SignatureToken, constraints: &[
     match ty {
         // The primitive types & references have kind unrestricted.
         Bool | U8 | U64 | U128 | Address | Reference(_) | MutableReference(_) => Kind::Copyable,
+        Signer => Kind::Resource,
         TypeParameter(idx) => constraints[*idx as usize],
         Vector(ty) => kind(module, ty, constraints),
         Struct(idx) => {

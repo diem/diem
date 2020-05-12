@@ -1,0 +1,7 @@
+module M {
+    t(s: &signer): signer {
+        return *copy(s);
+    }
+}
+
+// check: READREF_RESOURCE_ERROR

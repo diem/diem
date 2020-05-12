@@ -165,11 +165,36 @@ impl ScriptAccess for VerifiedScript {
 
 /// This function checks the extra requirements on the signature of the main function of a script.
 pub fn verify_main_signature(script: &CompiledScript) -> VMResult<()> {
+    fn is_valid_arg_type(arg_type: &SignatureToken) -> bool {
+        use SignatureToken as S;
+        match arg_type {
+            S::Bool | S::U8 | S::U64 | S::U128 | S::Address => true,
+            S::Vector(inner) => match &**inner {
+                S::U8 => true,
+                S::Bool
+                | S::U64
+                | S::U128
+                | S::Address
+                | S::Signer
+                | S::Struct(_)
+                | S::Vector(_)
+                | S::StructInstantiation(_, _)
+                | S::Reference(_)
+                | S::MutableReference(_)
+                | S::TypeParameter(_) => false,
+            },
+            S::Signer
+            | S::Struct(_)
+            | S::StructInstantiation(_, _)
+            | S::Reference(_)
+            | S::MutableReference(_)
+            | S::TypeParameter(_) => false,
+        }
+    }
+
     let arguments = script.signature_at(script.as_inner().parameters);
     for arg_type in &arguments.0 {
-        if !(arg_type.is_primitive()
-            || *arg_type == SignatureToken::Vector(Box::new(SignatureToken::U8)))
-        {
+        if !is_valid_arg_type(arg_type) {
             return Err(VMStatus::new(StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE));
         }
     }

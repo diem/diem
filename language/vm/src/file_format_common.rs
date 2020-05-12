@@ -74,6 +74,7 @@ pub enum SerializedType {
     TYPE_PARAMETER          = 0x9,
     VECTOR                  = 0xA,
     STRUCT_INST             = 0xB,
+    SIGNER                  = 0xC,
 }
 
 #[rustfmt::skip]

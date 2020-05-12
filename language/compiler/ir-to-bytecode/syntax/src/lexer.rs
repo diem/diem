@@ -92,6 +92,7 @@ pub enum Tok {
     SpecReturn,
     /// Return statement in the Move language
     Return,
+    Signer,
     Struct,
     SucceedsIf,
     Synthetic,
@@ -447,6 +448,7 @@ fn get_name_token(name: &str) -> Tok {
         "resource" => Tok::Resource,
         "RET" => Tok::SpecReturn,
         "return" => Tok::Return,
+        "signer" => Tok::Signer,
         "struct" => Tok::Struct,
         "succeeds_if" => Tok::SucceedsIf,
         "synthetic" => Tok::Synthetic,

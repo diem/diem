@@ -882,6 +882,7 @@ impl<'env> ModuleEnv<'env> {
             SignatureToken::U64 => Type::Primitive(PrimitiveType::U64),
             SignatureToken::U128 => Type::Primitive(PrimitiveType::U128),
             SignatureToken::Address => Type::Primitive(PrimitiveType::Address),
+            SignatureToken::Signer => Type::Primitive(PrimitiveType::Signer),
             SignatureToken::Reference(t) => {
                 Type::Reference(false, Box::new(self.globalize_signature(&*t)))
             }

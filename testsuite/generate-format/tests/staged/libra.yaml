@@ -173,10 +173,12 @@ TypeTag:
     4:
       Address: UNIT
     5:
+      Signer: UNIT
+    6:
       Vector:
         NEWTYPE:
           TYPENAME: TypeTag
-    6:
+    7:
       Struct:
         NEWTYPE:
           TYPENAME: StructTag
