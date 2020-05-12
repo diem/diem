@@ -40,7 +40,7 @@ use libra_types::{
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use std::convert::{TryFrom, TryInto};
-use storage_interface::{StartupInfo, TreeState};
+use crate::{StartupInfo, TreeState};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]

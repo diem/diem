@@ -14,6 +14,8 @@ anyhow = "1.0"
 itertools = "0.9.0"
 serde = { version = "1.0.110", default-features = false }
 thiserror = "1.0"
+proptest = { version = "0.9.6", optional = true }
+proptest-derive = { version = "0.1.2", optional = true }
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
@@ -21,8 +23,14 @@ libra-secure-net = { path = "../../secure/net", version = "0.1.0" }
 libra-state-view = { path = "../../storage/state-view", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+proto-storage = {path = "../../libra-proto/storage", version = "0.1.0" }
 scratchpad = { path = "../scratchpad", version = "0.1.0" }
 
 [features]
 default = []
-fuzzing = ["libra-types/fuzzing"]
+fuzzing = ["proptest", "proptest-derive", "libra-crypto/fuzzing", "libra-types/fuzzing"]
+
+
+[dev-dependencies]
+proptest = "0.9.6"
+proptest-derive = "0.1.2"

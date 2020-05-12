@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+pub mod helpers;
+
 use anyhow::{format_err, Result};
 use itertools::Itertools;
 use libra_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};

@@ -18,9 +18,10 @@ libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-secure-net = { path = "../../secure/net", version = "0.1.0" }
 libra-state-view = { path = "../state-view", version = "0.1.0" }
 storage-interface = { path = "../storage-interface", version = "0.1.0" }
-storage-proto = { path = "../storage-proto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+proto-storage = { path = "../../libra-proto/storage", version = "0.1.0"}
+proto-types = { path = "../../libra-proto/types", version = "0.1.0"}
 tokio = { version = "0.2.13", features = ["full"] }
 
 [features]

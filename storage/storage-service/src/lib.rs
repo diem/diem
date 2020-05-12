@@ -16,13 +16,13 @@ use anyhow::Result;
 use futures::{channel::mpsc, sink::SinkExt};
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
-use libra_types::proto::types::{
+use proto_types::types::{
     EpochChangeProof, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
 };
 use libradb::LibraDB;
 use std::{convert::TryFrom, sync::Arc};
 use storage_interface::{DbReader, DbWriter, Error, StartupInfo};
-use storage_proto::proto::storage::{
+use proto_storage::storage::{
     storage_server::{Storage, StorageServer},
     BackupAccountStateRequest, BackupAccountStateResponse, BackupTransactionInfoRequest,
     BackupTransactionInfoResponse, BackupTransactionRequest, BackupTransactionResponse,
@@ -135,7 +135,7 @@ fn start_storage_service_runtime(config: &NodeConfig, storage_service: StorageSe
     for _i in 0..100 {
         if rt
             .block_on(
-                storage_proto::proto::storage::storage_client::StorageClient::connect(addr.clone()),
+                proto_storage::storage::storage_client::StorageClient::connect(addr.clone()),
             )
             .is_ok()
         {
@@ -181,7 +181,7 @@ impl StorageService {
         &self,
         req: GetTransactionsRequest,
     ) -> Result<GetTransactionsResponse> {
-        let rust_req = storage_proto::GetTransactionsRequest::try_from(req)?;
+        let rust_req = storage_interface::helpers::GetTransactionsRequest::try_from(req)?;
 
         let txn_list_with_proof = self.db.get_transactions(
             rust_req.start_version,
@@ -190,7 +190,7 @@ impl StorageService {
             rust_req.fetch_events,
         )?;
 
-        let rust_resp = storage_proto::GetTransactionsResponse::new(txn_list_with_proof);
+        let rust_resp = storage_interface::helpers::GetTransactionsResponse::new(txn_list_with_proof);
 
         Ok(rust_resp.into())
     }
@@ -200,7 +200,7 @@ impl StorageService {
         _req: GetLatestStateRootRequest,
     ) -> Result<GetLatestStateRootResponse> {
         let (version, state_root_hash) = self.db.get_latest_state_root()?;
-        let rust_resp = storage_proto::GetLatestStateRootResponse::new(version, state_root_hash);
+        let rust_resp = storage_interface::helpers::GetLatestStateRootResponse::new(version, state_root_hash);
         Ok(rust_resp.into())
     }
 
@@ -208,9 +208,9 @@ impl StorageService {
         &self,
         req: GetLatestAccountStateRequest,
     ) -> Result<GetLatestAccountStateResponse> {
-        let rust_req = storage_proto::GetLatestAccountStateRequest::try_from(req)?;
+        let rust_req = storage_interface::helpers::GetLatestAccountStateRequest::try_from(req)?;
         let account_state_blob = self.db.get_latest_account_state(rust_req.address)?;
-        let rust_resp = storage_proto::GetLatestAccountStateResponse::new(account_state_blob);
+        let rust_resp = storage_interface::helpers::GetLatestAccountStateResponse::new(account_state_blob);
         Ok(rust_resp.into())
     }
 
@@ -218,13 +218,13 @@ impl StorageService {
         &self,
         req: GetAccountStateWithProofByVersionRequest,
     ) -> Result<GetAccountStateWithProofByVersionResponse> {
-        let rust_req = storage_proto::GetAccountStateWithProofByVersionRequest::try_from(req)?;
+        let rust_req = storage_interface::helpers::GetAccountStateWithProofByVersionRequest::try_from(req)?;
 
         let (account_state_blob, sparse_merkle_proof) = self
             .db
             .get_account_state_with_proof_by_version(rust_req.address, rust_req.version)?;
 
-        let rust_resp = storage_proto::GetAccountStateWithProofByVersionResponse {
+        let rust_resp = storage_interface::helpers::GetAccountStateWithProofByVersionResponse {
             account_state_blob,
             sparse_merkle_proof,
         };
@@ -236,7 +236,7 @@ impl StorageService {
         &self,
         req: SaveTransactionsRequest,
     ) -> Result<SaveTransactionsResponse> {
-        let rust_req = storage_proto::SaveTransactionsRequest::try_from(req)?;
+        let rust_req = storage_interface::helpers::SaveTransactionsRequest::try_from(req)?;
         self.db.save_transactions(
             &rust_req.txns_to_commit,
             rust_req.first_version,
@@ -247,7 +247,7 @@ impl StorageService {
 
     fn get_startup_info_inner(&self) -> Result<GetStartupInfoResponse> {
         let info = self.db.get_startup_info()?;
-        let rust_resp = storage_proto::GetStartupInfoResponse { info };
+        let rust_resp = storage_interface::helpers::GetStartupInfoResponse { info };
         Ok(rust_resp.into())
     }
 
@@ -255,7 +255,7 @@ impl StorageService {
         &self,
         req: GetEpochChangeLedgerInfosRequest,
     ) -> Result<EpochChangeProof> {
-        let rust_req = storage_proto::GetEpochChangeLedgerInfosRequest::try_from(req)?;
+        let rust_req = storage_interface::helpers::GetEpochChangeLedgerInfosRequest::try_from(req)?;
         let (ledger_infos, more) = self
             .db
             .get_epoch_change_ledger_infos(rust_req.start_epoch, rust_req.end_epoch)?;
@@ -267,12 +267,12 @@ impl StorageService {
         &self,
         req: GetAccountStateRangeProofRequest,
     ) -> Result<GetAccountStateRangeProofResponse> {
-        let rust_req = storage_proto::GetAccountStateRangeProofRequest::try_from(req)?;
+        let rust_req = storage_interface::helpers::GetAccountStateRangeProofRequest::try_from(req)?;
         let proof = self
             .db
             .get_backup_handler()
             .get_account_state_range_proof(rust_req.rightmost_key, rust_req.version)?;
-        let rust_resp = storage_proto::GetAccountStateRangeProofResponse::new(proof);
+        let rust_resp = storage_interface::helpers::GetAccountStateRangeProofResponse::new(proof);
         Ok(rust_resp.into())
     }
 }
@@ -392,7 +392,7 @@ impl Storage for StorageService {
         let iter = iter.map(|res| match res {
             Ok((hash, blob)) => {
                 let resp: BackupAccountStateResponse =
-                    storage_proto::BackupAccountStateResponse::new(hash, blob).into();
+                    storage_interface::helpers::BackupAccountStateResponse::new(hash, blob).into();
                 Ok(resp)
             }
             Err(e) => Err(tonic::Status::new(tonic::Code::Internal, e.to_string())),
@@ -453,7 +453,7 @@ impl Storage for StorageService {
             let iter = iter.map(|res| match res {
                 Ok(transaction) => {
                     let resp: BackupTransactionResponse =
-                        storage_proto::BackupTransactionResponse { transaction }.into();
+                        storage_interface::helpers::BackupTransactionResponse { transaction }.into();
                     Ok(resp)
                 }
                 Err(e) => Err(tonic::Status::new(tonic::Code::Internal, e.to_string())),
@@ -499,7 +499,7 @@ impl Storage for StorageService {
             let iter = iter.map(|res| match res {
                 Ok(transaction_info) => {
                     let resp: BackupTransactionInfoResponse =
-                        storage_proto::BackupTransactionInfoResponse { transaction_info }.into();
+                        storage_interface::helpers::BackupTransactionInfoResponse { transaction_info }.into();
                     Ok(resp)
                 }
                 Err(e) => Err(tonic::Status::new(tonic::Code::Internal, e.to_string())),

@@ -7,11 +7,6 @@
 
 use crate::counters;
 use admission_control_proto::{
-    proto::admission_control::{
-        admission_control_server::{AdmissionControl, AdmissionControlServer},
-        submit_transaction_response::Status,
-        SubmitTransactionRequest, SubmitTransactionResponse,
-    },
     AdmissionControlStatus,
 };
 use anyhow::Result;
@@ -22,11 +17,17 @@ use libra_logger::prelude::*;
 use libra_mempool::MempoolClientSender;
 use libra_types::{
     mempool_status::MempoolStatusCode,
-    proto::types::{
-        MempoolStatus as MempoolStatusProto, SignedTransaction as SignedTransactionProto,
-        UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse, VmStatus as VmStatusProto,
-    },
+
     transaction::SignedTransaction,
+};
+use proto_admission_control::admission_control::{
+    admission_control_server::{AdmissionControl, AdmissionControlServer},
+    submit_transaction_response::Status,
+    SubmitTransactionRequest, SubmitTransactionResponse,
+};
+use proto_types::types::{
+    MempoolStatus as MempoolStatusProto, SignedTransaction as SignedTransactionProto,
+    UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse, VmStatus as VmStatusProto,
 };
 use std::{convert::TryFrom, sync::Arc};
 use storage_interface::DbReader;

@@ -116,7 +116,6 @@ members = [
     "storage/state-view",
     "storage/storage-client",
     "storage/storage-interface",
-    "storage/storage-proto",
     "storage/storage-service",
     "testsuite",
     "testsuite/cli",
