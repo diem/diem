@@ -6,6 +6,7 @@ pub mod adapter;
 use crate::adapter::{local_storage::LocalStorage, Adapter};
 use anyhow::Result;
 use byteorder::{LittleEndian, ReadBytesExt};
+use bytes::Bytes;
 use futures::{executor::block_on_stream, stream, StreamExt};
 use libra_crypto::HashValue;
 use libra_types::{
@@ -17,8 +18,37 @@ use storage_client::{StorageRead, StorageReadServiceClient};
 
 pub type FileHandle = String;
 
+pub struct BackupServiceClient {
+    port: u16,
+    client: reqwest::Client,
+}
+
+impl BackupServiceClient {
+    pub fn new(port: u16) -> Self {
+        Self {
+            port,
+            client: reqwest::Client::new(),
+        }
+    }
+
+    async fn get_account_range_proof(&self, key: HashValue, version: Version) -> Result<Bytes> {
+        Ok(self
+            .client
+            .get(&format!(
+                "http://localhost:{}/state_range_proof/{}/{:x}",
+                self.port, version, key,
+            ))
+            .send()
+            .await?
+            .error_for_status()?
+            .bytes()
+            .await?)
+    }
+}
+
 pub async fn backup_account_state(
     client: &StorageReadServiceClient,
+    backup_service_client: &BackupServiceClient,
     version: Version,
     adapter: &impl Adapter,
     max_chunk_size: usize,
@@ -52,7 +82,8 @@ pub async fn backup_account_state(
                 "Reached max_chunk_size. Asking proof for key: {:?}",
                 prev_key,
             );
-            let proof_file = get_proof_and_write(client, adapter, prev_key, version).await?;
+            let proof_file =
+                get_proof_and_write(backup_service_client, adapter, prev_key, version).await?;
             ret.push((account_state_file, proof_file));
             chunk = vec![];
         }
@@ -69,22 +100,23 @@ pub async fn backup_account_state(
 
     let prev_key = prev_key.expect("Should have at least one account.");
     println!("Asking proof for last key: {:x}", prev_key);
-    let proof_file = get_proof_and_write(client, adapter, prev_key, version).await?;
+    let proof_file = get_proof_and_write(backup_service_client, adapter, prev_key, version).await?;
     ret.push((account_state_file, proof_file));
 
     Ok(ret)
 }
 
 async fn get_proof_and_write(
-    client: &StorageReadServiceClient,
+    backup_service_client: &BackupServiceClient,
     adapter: &impl Adapter,
     key: HashValue,
     version: Version,
 ) -> Result<FileHandle> {
-    let proof = client.get_account_state_range_proof(key, version).await?;
-    let proof_bytes: Vec<u8> = lcs::to_bytes(&proof)?;
+    let proof_bytes = backup_service_client
+        .get_account_range_proof(key, version)
+        .await?;
     let file = adapter
-        .write_new_file(stream::once(async move { proof_bytes }))
+        .write_new_file(stream::once(async move { proof_bytes.to_vec() }))
         .await?;
     Ok(file)
 }
@@ -151,7 +183,9 @@ fn read_file(file: FileHandle) -> Result<Vec<u8>> {
 mod test {
     use crate::{
         adapter::local_storage::LocalStorage, backup_account_state, restore_account_state,
+        BackupServiceClient,
     };
+    use backup_service::start_backup_service;
     use libra_config::config::NodeConfig;
     use libra_proptest_helpers::ValueGenerator;
     use libra_temppath::TempPath;
@@ -198,11 +232,14 @@ mod test {
         let adaptor = LocalStorage::new(backup_dir.path().to_path_buf());
 
         let config = NodeConfig::random();
-        let mut rt = start_storage_service_with_db(&config, Arc::clone(&src_db));
+        let _rt = start_storage_service_with_db(&config, Arc::clone(&src_db));
+        let mut rt = start_backup_service(config.storage.backup_service_port, src_db);
+        let backup_service = BackupServiceClient::new(config.storage.backup_service_port);
         let client = StorageReadServiceClient::new(&config.storage.address);
         let handles = rt
             .block_on(backup_account_state(
                 &client,
+                &backup_service,
                 latest_version,
                 &adaptor,
                 1024 * 1024,
