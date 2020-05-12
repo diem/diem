@@ -29,8 +29,8 @@ executor = { path = "../execution/executor", version = "0.1.0" }
 storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 libra-vm = { path = "../language/libra-vm", version = "0.1.0" }
 transaction-builder = { path = "../language/transaction-builder", version = "0.1.0" }
-libradb = { path = "../storage/libradb", version = "0.1.0", features = ["fuzzing"] }
+libradb = { path = "../storage/libradb", version = "0.1.0" }
 
 [features]
 default = []
-fuzzing = ["libra-types/fuzzing", "libra-crypto/fuzzing"]
+fuzzing = ["libra-types/fuzzing", "libra-crypto/fuzzing", "libradb/fuzzing"]

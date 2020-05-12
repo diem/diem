@@ -28,7 +28,7 @@ thiserror = "1.0"
 [dev-dependencies]
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 executor-utils = { path = "../executor-utils", version = "0.1.0" }
-libradb = { path = "../../storage/libradb", version = "0.1.0", features = ["fuzzing"] }
+libradb = { path = "../../storage/libradb", version = "0.1.0" }
 storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
 storage-service = { path = "../../storage/storage-service", version = "0.1.0" }
 tempfile = "3.1.0"
@@ -37,5 +37,5 @@ workspace-builder = { path = "../../common/workspace-builder", version = "0.1.0"
 
 [features]
 default = []
-fuzzing = ["libra-config/fuzzing"]
+fuzzing = ["libra-config/fuzzing", "libradb/fuzzing"]
 testing = ["executor-utils/testing"]

@@ -13,4 +13,7 @@ edition = "2018"
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 proptest = "0.9.6"
 proptest-derive = "0.1.2"
-vm = { path = "../", version = "0.1.0", features = ["fuzzing"] }
+vm = { path = "../", version = "0.1.0" }
+
+[features]
+fuzzing = ["vm/fuzzing"]

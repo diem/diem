@@ -27,9 +27,12 @@ futures = "0.3.5"
 tokio = { version = "0.2.13", features = ["full"] }
 
 libra-config = { path = "../../config", version = "0.1.0" }
-libra-json-rpc = { path = "../../json-rpc", version = "0.1.0", features = ["fuzzing"] }
+libra-json-rpc = { path = "../../json-rpc", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
-libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+libra-types = { path = "../../types", version = "0.1.0" }
 libradb = { path = "../../storage/libradb", version = "0.1.0" }
 storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
 vm-validator = { path = "../../vm-validator", version = "0.1.0" }
+
+[features]
+fuzzing = ["libra-json-rpc/fuzzing", "libra-types/fuzzing"]
