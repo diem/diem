@@ -21,7 +21,7 @@ move-ir-types = { path = "../move-ir/types", version = "0.1.0" }
 
 # external dependencies
 anyhow = "1.0.*"
-clap = "2.33.0"
+clap = "2.33.1"
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"
 handlebars = "3.0.1"
