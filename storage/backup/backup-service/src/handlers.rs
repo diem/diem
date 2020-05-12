@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use libra_crypto::hash::HashValue;
 use libra_logger::prelude::*;
 use libra_types::transaction::Version;
@@ -16,6 +16,14 @@ fn get_state_range_proof(
 ) -> Result<Box<dyn Reply>> {
     let bytes = lcs::to_bytes(&backup_handler.get_account_state_range_proof(end_key, version)?)?;
     Ok(Box::new(bytes))
+}
+
+/// Return 500 on any error raised by the request handler.
+fn get_state_snapshot(
+    _backup_handler: &BackupHandler,
+    _version: Version,
+) -> Result<Box<dyn Reply>> {
+    bail!("unimplemented.")
 }
 
 /// Return 500 on any error raised by the request handler.
@@ -37,12 +45,24 @@ async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
 
 pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Reply,)> {
     // GET state_range_proof/<version>/<end_key>
+    let bh = backup_handler.clone();
     let state_range_proof = warp::path!(Version / HashValue)
-        .map(move |version, end_key| get_state_range_proof(&backup_handler, version, end_key))
+        .map(move |version, end_key| get_state_range_proof(&bh, version, end_key))
         .map(unwrap_or_500)
         .recover(handle_rejection);
 
-    warp::get()
+    // GET state_snapshot/<version>
+    let bh = backup_handler;
+    let state_snapshot = warp::path!(Version)
+        .map(move |version| get_state_snapshot(&bh, version))
+        .map(unwrap_or_500)
+        .recover(handle_rejection);
+
+    // Route by endpoint name.
+    let routes = warp::any()
         .and(warp::path("state_range_proof").and(state_range_proof))
-        .boxed()
+        .or(warp::path("state_snapshot").and(state_snapshot));
+
+    // Serve all routes for GET only.
+    warp::get().and(routes).boxed()
 }
