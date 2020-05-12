@@ -304,7 +304,8 @@ impl Options {
                     .require_equals(true)
                     .help(
                         "a bound for the length of the result vector of LCS::to_bytes(). \
-                        Currently, solver runtime increases exponentially with the size of this value."
+                        Currently, solver runtime increases exponentially with the size of this value. \
+                        Use 0 for no bound"
                     ),
             )
             .arg(
