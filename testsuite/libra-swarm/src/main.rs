@@ -88,13 +88,16 @@ fn main() {
     let faucet_key_file_path = &validator_swarm.config.faucet_key_path;
     let validator_config = NodeConfig::load(&validator_swarm.config.config_files[0]).unwrap();
     let waypoint = validator_config.base.waypoint.unwrap();
+
     println!("To run the Libra CLI client in a separate process and connect to the validator nodes you just spawned, use this command:");
+
     println!(
         "\tcargo run --bin cli -- -u {} -m {:?} --waypoint {}",
         format!("http://localhost:{}", validator_config.rpc.address.port()),
         faucet_key_file_path,
         waypoint,
     );
+
     let node_address_list = validator_swarm
         .config
         .config_files
@@ -105,11 +108,13 @@ fn main() {
         })
         .collect::<Vec<String>>()
         .join(",");
+
     println!("To run transaction generator run:");
     println!(
         "\tcargo run -p cluster-test -- --mint-file {:?} --swarm --peers {:?} --emit-tx --workers-per-ac 1",
         faucet_key_file_path, node_address_list,
     );
+
     if let Some(ref swarm) = full_node_swarm {
         let full_node_config = NodeConfig::load(&swarm.config.config_files[0]).unwrap();
         println!("To connect to the full nodes you just spawned, use this command:");
@@ -121,9 +126,10 @@ fn main() {
         );
     }
 
-    let tmp_mnemonic_file = TempPath::new();
-    tmp_mnemonic_file.create_as_file().unwrap();
     if args.start_client {
+        let tmp_mnemonic_file = TempPath::new();
+        tmp_mnemonic_file.create_as_file().unwrap();
+
         let port = validator_swarm.get_client_port(0);
         let client = client::InteractiveClient::new_with_inherit_io(
             port,
@@ -146,8 +152,10 @@ fn main() {
         rx.recv()
             .expect("failed to receive unit when handling CTRL-C");
     }
+
     if let Some(dir) = &args.config_dir {
         println!("Please manually cleanup {:?} after inspection", dir);
     }
+
     println!("Exit libra-swarm.");
 }

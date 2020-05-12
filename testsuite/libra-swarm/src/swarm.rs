@@ -244,26 +244,17 @@ impl LibraSwarm {
         for i in 0..num_launch_attempts {
             info!("Launch swarm attempt: {} of {}", i, num_launch_attempts);
 
-            let node_config = if let Some(template) = template.clone() {
-                template
-            } else {
-                NodeConfig::default()
-            };
-
             if let Ok(mut swarm) = Self::configure_swarm(
                 num_nodes,
                 role,
                 config_dir.clone(),
-                Some(node_config),
+                Some(template.as_ref().cloned().unwrap_or_default()),
                 upstream_config_dir.clone(),
             ) {
-                match swarm.launch_attempt(role, disable_logging) {
-                    Ok(_) => {
-                        return swarm;
-                    }
-                    Err(e) => {
-                        error!("Error launching swarm: {}", e);
-                    }
+                if let Err(e) = swarm.launch_attempt(role, disable_logging) {
+                    error!("Error launching swarm: {}", e);
+                } else {
+                    return swarm;
                 }
             }
         }
@@ -275,22 +266,19 @@ impl LibraSwarm {
     /// assumably due to previous launch failure, it will be removed.
     /// The directory for the last failed attempt won't be removed.
     fn setup_config_dir(config_dir: &Option<String>) -> LibraSwarmDir {
-        match config_dir {
-            Some(dir_str) => {
-                let path_buf = PathBuf::from_str(&dir_str).expect("unable to create config dir");
-                if path_buf.exists() {
-                    std::fs::remove_dir_all(dir_str).expect("unable to delete previous config dir");
-                }
-                std::fs::create_dir_all(dir_str).expect("unable to create config dir");
-                LibraSwarmDir::Persistent(path_buf)
+        if let Some(dir_str) = config_dir {
+            let path_buf = PathBuf::from_str(&dir_str).expect("unable to create config dir");
+            if path_buf.exists() {
+                std::fs::remove_dir_all(dir_str).expect("unable to delete previous config dir");
             }
-            None => {
-                let temp_dir = TempPath::new();
-                temp_dir
-                    .create_as_dir()
-                    .expect("unable to create temporary config dir");
-                LibraSwarmDir::Temporary(temp_dir)
-            }
+            std::fs::create_dir_all(dir_str).expect("unable to create config dir");
+            LibraSwarmDir::Persistent(path_buf)
+        } else {
+            let temp_dir = TempPath::new();
+            temp_dir
+                .create_as_dir()
+                .expect("unable to create temporary config dir");
+            LibraSwarmDir::Temporary(temp_dir)
         }
     }
 
@@ -470,32 +458,30 @@ impl LibraSwarm {
                 i + 1,
                 num_attempts
             );
+
             for (node, done) in self.nodes.values_mut().zip(done.iter_mut()) {
                 if *done {
                     continue;
                 }
 
-                match node.get_metric(last_committed_round_str) {
-                    Some(val) => {
-                        if val >= last_committed_round {
-                            println!(
-                                "\tNode {} is caught up with last committed round {}",
-                                node.node_id, val
-                            );
-                            *done = true;
-                        } else {
-                            println!(
-                                "\tNode {} is not caught up yet with last committed round {}",
-                                node.node_id, val
-                            );
-                        }
-                    }
-                    None => {
+                if let Some(val) = node.get_metric(last_committed_round_str) {
+                    if val >= last_committed_round {
                         println!(
-                            "\tNode {} last committed round unknown, assuming 0.",
-                            node.node_id
+                            "\tNode {} is caught up with last committed round {}",
+                            node.node_id, val
+                        );
+                        *done = true;
+                    } else {
+                        println!(
+                            "\tNode {} is not caught up yet with last committed round {}",
+                            node.node_id, val
                         );
                     }
+                } else {
+                    println!(
+                        "\tNode {} last committed round unknown, assuming 0.",
+                        node.node_id
+                    );
                 }
             }
 
