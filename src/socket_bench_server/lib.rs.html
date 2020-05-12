@@ -130,6 +130,22 @@
 <span id="130">130</span>
 <span id="131">131</span>
 <span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -143,6 +159,7 @@
     <span class="ident">stream</span>::{<span class="ident">Stream</span>, <span class="ident">StreamExt</span>},
 };
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">test_utils</span>::<span class="ident">TEST_SEED</span>;
+<span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
 <span class="kw">use</span> <span class="ident">memsocket</span>::<span class="ident">MemorySocket</span>;
 <span class="kw">use</span> <span class="ident">netcore</span>::{
@@ -229,22 +246,37 @@
 
 <span class="doccomment">/// Server side handler for send throughput benchmark when the messages are sent</span>
 <span class="doccomment">/// over a simple stream (tcp or in-memory).</span>
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">server_stream_handler</span><span class="op">&lt;</span><span class="ident">L</span>, <span class="ident">I</span>, <span class="ident">S</span>, <span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="ident">server_listener</span>: <span class="ident">L</span>)
+<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">server_stream_handler</span><span class="op">&lt;</span><span class="ident">L</span>, <span class="ident">I</span>, <span class="ident">S</span>, <span class="ident">E</span><span class="op">&gt;</span>(<span class="ident">server_listener</span>: <span class="ident">L</span>)
 <span class="kw">where</span>
     <span class="ident">L</span>: <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">I</span>, <span class="ident">NetworkAddress</span>), <span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Unpin</span>,
-    <span class="ident">I</span>: <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S</span>, <span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">S</span>: <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">AsyncWrite</span> <span class="op">+</span> <span class="ident">Unpin</span>,
-    <span class="ident">E</span>: ::<span class="ident">std</span>::<span class="ident">error</span>::<span class="ident">Error</span>,
+    <span class="ident">I</span>: <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S</span>, <span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+    <span class="ident">S</span>: <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">AsyncWrite</span> <span class="op">+</span> <span class="ident">Unpin</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+    <span class="ident">E</span>: ::<span class="ident">std</span>::<span class="ident">error</span>::<span class="ident">Error</span> <span class="op">+</span> <span class="ident">Send</span>,
 {
-    <span class="comment">// Wait for next inbound connection</span>
-    <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>((<span class="ident">f_stream</span>, <span class="ident">_client_addr</span>))) <span class="op">=</span> <span class="ident">server_listener</span>.<span class="ident">next</span>().<span class="kw">await</span> {
-        <span class="kw">let</span> <span class="ident">stream</span> <span class="op">=</span> <span class="ident">f_stream</span>.<span class="kw">await</span>.<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stream</span> <span class="op">=</span> <span class="ident">Framed</span>::<span class="ident">new</span>(<span class="ident">IoCompat</span>::<span class="ident">new</span>(<span class="ident">stream</span>), <span class="ident">LengthDelimitedCodec</span>::<span class="ident">new</span>());
+    <span class="comment">// Wait for next inbound connection, this simulated the TransportHandler</span>
+    <span class="comment">// which is single-threaded asynchronous accepting new connections.</span>
+    <span class="ident">server_listener</span>
+        .<span class="ident">for_each_concurrent</span>(<span class="prelude-val">None</span>, <span class="op">|</span><span class="ident">result</span><span class="op">|</span> <span class="kw">async</span> {
+            <span class="kw">match</span> <span class="ident">result</span> {
+                <span class="prelude-val">Ok</span>((<span class="ident">f_stream</span>, <span class="kw">_</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">match</span> <span class="ident">f_stream</span>.<span class="kw">await</span> {
+                        <span class="prelude-val">Ok</span>(<span class="ident">stream</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stream</span> <span class="op">=</span>
+                                <span class="ident">Framed</span>::<span class="ident">new</span>(<span class="ident">IoCompat</span>::<span class="ident">new</span>(<span class="ident">stream</span>), <span class="ident">LengthDelimitedCodec</span>::<span class="ident">new</span>());
 
-        <span class="comment">// Drain all messages from the client.</span>
-        <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span> <span class="ident">stream</span>.<span class="ident">next</span>().<span class="kw">await</span> {}
-        <span class="ident">stream</span>.<span class="ident">close</span>().<span class="kw">await</span>.<span class="ident">unwrap</span>();
-    }
+                            <span class="ident">tokio</span>::<span class="ident">task</span>::<span class="ident">spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
+                                <span class="comment">// Drain all messages from the client.</span>
+                                <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span> <span class="ident">stream</span>.<span class="ident">next</span>().<span class="kw">await</span> {}
+                                <span class="ident">stream</span>.<span class="ident">close</span>().<span class="kw">await</span>.<span class="ident">unwrap</span>();
+                            });
+                        }
+                        <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Connection upgrade failed {:?}&quot;</span>, <span class="ident">e</span>),
+                    };
+                }
+                <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Stream failed {:?}&quot;</span>, <span class="ident">e</span>),
+            }
+        })
+        .<span class="kw">await</span>
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_stream_server</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">L</span>, <span class="ident">I</span>, <span class="ident">S</span>, <span class="ident">E</span><span class="op">&gt;</span>(
