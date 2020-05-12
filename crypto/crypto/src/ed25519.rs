@@ -17,7 +17,7 @@
 //! use rand::{rngs::StdRng, SeedableRng};
 //!
 //! let mut hasher = TestOnlyHasher::default();
-//! hasher.write("Test message".as_bytes());
+//! hasher.update("Test message".as_bytes());
 //! let hashed_message = hasher.finish();
 //!
 //! let mut rng: StdRng = SeedableRng::from_seed([0; 32]);

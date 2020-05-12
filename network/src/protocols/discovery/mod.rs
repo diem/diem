@@ -608,6 +608,6 @@ fn handle_discovery_msg(
 
 fn get_hash(msg: &[u8]) -> HashValue {
     let mut hasher = DiscoveryMsgHasher::default();
-    hasher.write(msg);
+    hasher.update(msg);
     hasher.finish()
 }

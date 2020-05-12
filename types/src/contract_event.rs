@@ -205,7 +205,7 @@ impl CryptoHash for ContractEvent {
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.write(&lcs::to_bytes(self).expect("Failed to serialize."));
+        state.update(&lcs::to_bytes(self).expect("Failed to serialize."));
         state.finish()
     }
 }

@@ -366,8 +366,8 @@ pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
                 self.0.finish()
             }
 
-            fn write(&mut self, bytes: &[u8]) -> &mut Self {
-                self.0.write(bytes);
+            fn update(&mut self, bytes: &[u8]) -> &mut Self {
+                self.0.update(bytes);
                 self
             }
         }

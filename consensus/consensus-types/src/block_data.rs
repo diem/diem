@@ -206,7 +206,7 @@ where
     fn hash(&self) -> HashValue {
         let bytes = lcs::to_bytes(self).expect("BlockData serialization failed");
         let mut state = Self::Hasher::default();
-        state.write(bytes.as_ref());
+        state.update(bytes.as_ref());
         state.finish()
     }
 }
