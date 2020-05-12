@@ -258,11 +258,11 @@
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">errors</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">identifier</span>::<span class="ident">Identifier</span>,
     <span class="ident">language_storage</span>::{<span class="ident">StructTag</span>, <span class="ident">TypeTag</span>},
 };
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::<span class="ident">Identifier</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">iter</span>::<span class="ident">Peekable</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Debug</span>)]</span>

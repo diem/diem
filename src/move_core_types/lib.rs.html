@@ -8,6 +8,10 @@
 <span id="8"> 8</span>
 <span id="9"> 9</span>
 <span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -17,6 +21,10 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">account_address</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">gas_schedule</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">identifier</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">language_storage</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">move_resource</span>;
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">proptest_types</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">unit_tests</span>;
 </pre></div>

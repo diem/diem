@@ -247,9 +247,9 @@
 <span class="kw">use</span> <span class="ident">libra_state_view</span>::<span class="ident">StateView</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>, <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">account_state</span>::<span class="ident">AccountState</span>,
-    <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>, <span class="ident">language_storage</span>::<span class="ident">StructTag</span>,
+    <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>,
 };
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::<span class="ident">Identifier</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">identifier</span>::<span class="ident">Identifier</span>, <span class="ident">language_storage</span>::<span class="ident">StructTag</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">btree_map</span>::<span class="ident">BTreeMap</span>,
     <span class="ident">convert</span>::<span class="ident">TryFrom</span>,

@@ -1,1 +1,1 @@
-initSidebarItems({"trait":[["MoveResource",""],["MoveStorage",""]]});
+initSidebarItems({"trait":[["MoveStorage",""]]});

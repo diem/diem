@@ -258,9 +258,9 @@
         <span class="kw">use</span> <span class="ident">libra_types</span>::{
             <span class="ident">account_config</span>::{<span class="ident">AccountResource</span>, <span class="ident">BalanceResource</span>},
             <span class="ident">event</span>::{<span class="ident">EventHandle</span>, <span class="ident">EventKey</span>},
-            <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
             <span class="ident">transaction</span>::<span class="ident">authenticator</span>::<span class="ident">AuthenticationKey</span>,
         };
+        <span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">move_resource</span>::<span class="ident">MoveResource</span>;
         <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">BTreeMap</span>;
 
         <span class="kw">let</span> <span class="ident">pubkey</span> <span class="op">=</span> <span class="ident">Ed25519PrivateKey</span>::<span class="ident">generate_for_testing</span>().<span class="ident">public_key</span>();

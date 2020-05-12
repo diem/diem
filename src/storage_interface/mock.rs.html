@@ -167,10 +167,10 @@
     <span class="ident">epoch_change</span>::<span class="ident">EpochChangeProof</span>,
     <span class="ident">event</span>::{<span class="ident">EventHandle</span>, <span class="ident">EventKey</span>},
     <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>,
-    <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
     <span class="ident">proof</span>::{<span class="ident">AccumulatorConsistencyProof</span>, <span class="ident">SparseMerkleProof</span>},
     <span class="ident">transaction</span>::{<span class="ident">TransactionListWithProof</span>, <span class="ident">TransactionWithProof</span>, <span class="ident">Version</span>},
 };
+<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">move_resource</span>::<span class="ident">MoveResource</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">convert</span>::<span class="ident">TryFrom</span>;
 
 <span class="doccomment">/// This is a mock of the dbreader in tests.</span>

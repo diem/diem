@@ -41,15 +41,17 @@
 <span id="41">41</span>
 <span id="42">42</span>
 <span id="43">43</span>
+<span id="44">44</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">account_config</span>::<span class="ident">LIBRA_MODULE_NAME</span>, <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
-};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">account_config</span>::<span class="ident">LIBRA_MODULE_NAME</span>};
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>};
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>},
+    <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
+};
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
 <span class="doccomment">/// Struct that represents a BurnEvent.</span>

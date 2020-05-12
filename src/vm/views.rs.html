@@ -721,7 +721,6 @@
 <span id="721">721</span>
 <span id="722">722</span>
 <span id="723">723</span>
-<span id="724">724</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -741,8 +740,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">access</span>::<span class="ident">ModuleAccess</span>, <span class="ident">file_format</span>::<span class="kw-2">*</span>, <span class="ident">SignatureTokenKind</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">BTreeSet</span>;
 
-<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">language_storage</span>::<span class="ident">ModuleId</span>;
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::<span class="ident">IdentStr</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">identifier</span>::<span class="ident">IdentStr</span>, <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">BTreeMap</span>;
 
 <span class="doccomment">/// Represents a lazily evaluated abstraction over a module.</span>

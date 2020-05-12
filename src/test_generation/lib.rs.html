@@ -443,7 +443,6 @@
 <span id="443">443</span>
 <span id="444">444</span>
 <span id="445">445</span>
-<span id="446">446</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -470,10 +469,9 @@
 <span class="kw">use</span> <span class="ident">language_e2e_tests</span>::<span class="ident">executor</span>::<span class="ident">FakeExecutor</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">libra_state_view</span>::<span class="ident">StateView</span>;
-<span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">language_storage</span>::<span class="ident">TypeTag</span>, <span class="ident">vm_error</span>::<span class="ident">StatusCode</span>,
-};
+<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">vm_error</span>::<span class="ident">StatusCode</span>};
 <span class="kw">use</span> <span class="ident">libra_vm</span>::<span class="ident">LibraVM</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">language_storage</span>::<span class="ident">TypeTag</span>;
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::{<span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>, <span class="ident">values</span>::<span class="ident">Value</span>};
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">rngs</span>::<span class="ident">StdRng</span>, <span class="ident">Rng</span>, <span class="ident">SeedableRng</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fs</span>, <span class="ident">io</span>::<span class="ident">Write</span>, <span class="ident">panic</span>, <span class="ident">thread</span>};

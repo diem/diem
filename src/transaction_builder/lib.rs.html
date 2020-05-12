@@ -584,11 +584,11 @@
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">block_metadata</span>::<span class="ident">BlockMetadata</span>,
-    <span class="ident">language_storage</span>::<span class="ident">TypeTag</span>,
     <span class="ident">on_chain_config</span>::{<span class="ident">LibraVersion</span>, <span class="ident">VMPublishingOption</span>},
     <span class="ident">transaction</span>::{<span class="ident">authenticator</span>::<span class="ident">AuthenticationKey</span>, <span class="ident">Script</span>, <span class="ident">Transaction</span>, <span class="ident">TransactionArgument</span>},
 };
 <span class="kw">use</span> <span class="ident">mirai_annotations</span>::<span class="kw-2">*</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">language_storage</span>::<span class="ident">TypeTag</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">convert</span>::<span class="ident">TryFrom</span>;
 <span class="kw">use</span> <span class="ident">stdlib</span>::<span class="ident">transaction_scripts</span>::<span class="ident">StdlibScript</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>

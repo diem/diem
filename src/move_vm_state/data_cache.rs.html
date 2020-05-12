@@ -265,11 +265,11 @@
 <span class="kw">use</span> <span class="ident">libra_state_view</span>::<span class="ident">StateView</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
-    <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>,
     <span class="ident">on_chain_config</span>::<span class="ident">ConfigStorage</span>,
     <span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>},
     <span class="ident">write_set</span>::{<span class="ident">WriteOp</span>, <span class="ident">WriteSet</span>, <span class="ident">WriteSetMut</span>},
 };
+<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">language_storage</span>::<span class="ident">ModuleId</span>;
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::{
     <span class="ident">loaded_data</span>::<span class="ident">types</span>::<span class="ident">FatStructType</span>,
     <span class="ident">values</span>::{<span class="ident">GlobalValue</span>, <span class="ident">Struct</span>, <span class="ident">Value</span>},

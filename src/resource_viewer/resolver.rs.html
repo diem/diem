@@ -194,7 +194,6 @@
 <span id="194">194</span>
 <span id="195">195</span>
 <span id="196">196</span>
-<span id="197">197</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -202,12 +201,11 @@
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">module_cache</span>::<span class="ident">ModuleCache</span>;
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">libra_state_view</span>::<span class="ident">StateView</span>;
-<span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
-    <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
+<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">access_path</span>::<span class="ident">AccessPath</span>, <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>};
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>},
     <span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">StructTag</span>, <span class="ident">TypeTag</span>},
 };
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>};
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::<span class="ident">loaded_data</span>::<span class="ident">types</span>::{<span class="ident">FatStructType</span>, <span class="ident">FatType</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">rc</span>::<span class="ident">Rc</span>;
 <span class="kw">use</span> <span class="ident">stdlib</span>::{<span class="ident">stdlib_modules</span>, <span class="ident">StdLibOptions</span>};

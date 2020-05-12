@@ -354,7 +354,6 @@
 <span id="354">354</span>
 <span id="355">355</span>
 <span id="356">356</span>
-<span id="357">357</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -364,9 +363,7 @@
         <span class="ident">BurnEvent</span>, <span class="ident">CancelBurnEvent</span>, <span class="ident">MintEvent</span>, <span class="ident">PreburnEvent</span>, <span class="ident">ReceivedPaymentEvent</span>, <span class="ident">SentPaymentEvent</span>,
     },
     <span class="ident">event</span>::<span class="ident">EventKey</span>,
-    <span class="ident">language_storage</span>::<span class="ident">TypeTag</span>,
     <span class="ident">ledger_info</span>::<span class="ident">LedgerInfo</span>,
-    <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
     <span class="ident">proof</span>::<span class="ident">EventProof</span>,
     <span class="ident">transaction</span>::<span class="ident">Version</span>,
 };
@@ -376,6 +373,7 @@
     <span class="ident">HashValue</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_crypto_derive</span>::<span class="ident">CryptoHasher</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">language_storage</span>::<span class="ident">TypeTag</span>, <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>};
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
 <span class="kw">use</span> <span class="ident">proptest_derive</span>::<span class="ident">Arbitrary</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};

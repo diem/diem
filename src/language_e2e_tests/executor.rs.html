@@ -275,7 +275,6 @@
 <span id="275">275</span>
 <span id="276">276</span>
 <span id="277">277</span>
-<span id="278">278</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -294,7 +293,6 @@
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
     <span class="ident">account_config</span>::{<span class="ident">AccountResource</span>, <span class="ident">BalanceResource</span>},
     <span class="ident">block_metadata</span>::{<span class="ident">new_block_event_key</span>, <span class="ident">BlockMetadata</span>, <span class="ident">NewBlockEvent</span>},
-    <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>,
     <span class="ident">on_chain_config</span>::{<span class="ident">OnChainConfig</span>, <span class="ident">VMPublishingOption</span>, <span class="ident">ValidatorSet</span>},
     <span class="ident">transaction</span>::{
         <span class="ident">SignedTransaction</span>, <span class="ident">Transaction</span>, <span class="ident">TransactionOutput</span>, <span class="ident">TransactionStatus</span>, <span class="ident">VMValidatorResult</span>,
@@ -303,7 +301,7 @@
     <span class="ident">write_set</span>::<span class="ident">WriteSet</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_vm</span>::{<span class="ident">LibraVM</span>, <span class="ident">VMExecutor</span>, <span class="ident">VMValidator</span>};
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::<span class="ident">Identifier</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">identifier</span>::<span class="ident">Identifier</span>, <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>};
 <span class="kw">use</span> <span class="ident">stdlib</span>::{<span class="ident">stdlib_modules</span>, <span class="ident">transaction_scripts</span>::<span class="ident">StdlibScript</span>, <span class="ident">StdLibOptions</span>};
 <span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">CompiledModule</span>;
 <span class="kw">use</span> <span class="ident">vm_genesis</span>::<span class="ident">GENESIS_KEYPAIR</span>;

@@ -186,12 +186,12 @@
     <span class="ident">block_info</span>::{<span class="ident">BlockInfo</span>, <span class="ident">GENESIS_EPOCH</span>, <span class="ident">GENESIS_ROUND</span>, <span class="ident">GENESIS_TIMESTAMP_USECS</span>},
     <span class="ident">ledger_info</span>::{<span class="ident">LedgerInfo</span>, <span class="ident">LedgerInfoWithSignatures</span>},
     <span class="ident">libra_timestamp</span>::<span class="ident">LibraTimestampResource</span>,
-    <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
     <span class="ident">on_chain_config</span>::{<span class="ident">config_address</span>, <span class="ident">ConfigurationResource</span>},
     <span class="ident">transaction</span>::<span class="ident">Transaction</span>,
     <span class="ident">waypoint</span>::<span class="ident">Waypoint</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_vm</span>::<span class="ident">VMExecutor</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">move_resource</span>::<span class="ident">MoveResource</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">btree_map</span>::<span class="ident">BTreeMap</span>;
 <span class="kw">use</span> <span class="ident">storage_interface</span>::{<span class="ident">state_view</span>::<span class="ident">VerifiedStateView</span>, <span class="ident">DbReaderWriter</span>, <span class="ident">TreeState</span>};
 

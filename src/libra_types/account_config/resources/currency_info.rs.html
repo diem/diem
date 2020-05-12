@@ -80,6 +80,8 @@
 <span id="80">80</span>
 <span id="81">81</span>
 <span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -90,11 +92,13 @@
         <span class="ident">association_address</span>, <span class="ident">type_tag_for_currency_code</span>, <span class="ident">CORE_CODE_ADDRESS</span>,
     },
     <span class="ident">event</span>::<span class="ident">EventHandle</span>,
+};
+<span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>},
     <span class="ident">language_storage</span>::{<span class="ident">ResourceKey</span>, <span class="ident">StructTag</span>},
     <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
 };
-<span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
 <span class="doccomment">/// Struct that represents a CurrencyInfo resource</span>

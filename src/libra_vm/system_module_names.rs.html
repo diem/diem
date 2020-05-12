@@ -116,11 +116,11 @@
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 <span class="doccomment">//! Names of modules, functions, and types used by Libra System.</span>
 
-<span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">account_config</span>,
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">account_config</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">identifier</span>::<span class="ident">Identifier</span>,
     <span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">StructTag</span>, <span class="ident">TypeTag</span>},
 };
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::<span class="ident">Identifier</span>;
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
 
 <span class="comment">// Data to resolve basic account and transaction flow functions and structs</span>

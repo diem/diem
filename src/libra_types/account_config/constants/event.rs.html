@@ -41,11 +41,11 @@
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">account_config</span>::<span class="ident">constants</span>::<span class="ident">CORE_CODE_ADDRESS</span>,
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">account_config</span>::<span class="ident">constants</span>::<span class="ident">CORE_CODE_ADDRESS</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>},
     <span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">StructTag</span>},
 };
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>};
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
 
 <span class="kw">static</span> <span class="ident">EVENT_MODULE_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;Event&quot;</span>).<span class="ident">unwrap</span>());

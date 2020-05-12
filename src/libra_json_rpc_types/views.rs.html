@@ -497,14 +497,14 @@
     <span class="ident">account_state_blob</span>::<span class="ident">AccountStateWithProof</span>,
     <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>,
     <span class="ident">epoch_change</span>::<span class="ident">EpochChangeProof</span>,
-    <span class="ident">language_storage</span>::<span class="ident">TypeTag</span>,
     <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>,
-    <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
     <span class="ident">proof</span>::{<span class="ident">AccountStateProof</span>, <span class="ident">AccumulatorConsistencyProof</span>},
     <span class="ident">transaction</span>::{<span class="ident">Transaction</span>, <span class="ident">TransactionArgument</span>, <span class="ident">TransactionPayload</span>},
     <span class="ident">vm_error</span>::<span class="ident">StatusCode</span>,
 };
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::<span class="ident">IdentStr</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">identifier</span>::<span class="ident">IdentStr</span>, <span class="ident">language_storage</span>::<span class="ident">TypeTag</span>, <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
+};
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">convert</span>::<span class="ident">TryFrom</span>;
 <span class="kw">use</span> <span class="ident">transaction_builder</span>::<span class="ident">get_transaction_name</span>;

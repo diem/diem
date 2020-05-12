@@ -147,6 +147,8 @@
 <span id="147">147</span>
 <span id="148">148</span>
 <span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -160,10 +162,12 @@
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
     <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>,
-    <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>,
     <span class="ident">vm_error</span>::{<span class="ident">sub_status</span>, <span class="ident">StatusCode</span>},
 };
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">gas_schedule</span>::{<span class="ident">AbstractMemorySize</span>, <span class="ident">GasAlgebra</span>, <span class="ident">GasCarrier</span>, <span class="ident">GasUnits</span>};
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">gas_schedule</span>::{<span class="ident">AbstractMemorySize</span>, <span class="ident">GasAlgebra</span>, <span class="ident">GasCarrier</span>, <span class="ident">GasUnits</span>},
+    <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>,
+};
 <span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">errors</span>::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// The `InterpreterContext` context trait specifies the mutations that are allowed to the</span>

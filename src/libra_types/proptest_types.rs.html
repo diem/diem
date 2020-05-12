@@ -1046,46 +1046,6 @@
 <span id="1046">1046</span>
 <span id="1047">1047</span>
 <span id="1048">1048</span>
-<span id="1049">1049</span>
-<span id="1050">1050</span>
-<span id="1051">1051</span>
-<span id="1052">1052</span>
-<span id="1053">1053</span>
-<span id="1054">1054</span>
-<span id="1055">1055</span>
-<span id="1056">1056</span>
-<span id="1057">1057</span>
-<span id="1058">1058</span>
-<span id="1059">1059</span>
-<span id="1060">1060</span>
-<span id="1061">1061</span>
-<span id="1062">1062</span>
-<span id="1063">1063</span>
-<span id="1064">1064</span>
-<span id="1065">1065</span>
-<span id="1066">1066</span>
-<span id="1067">1067</span>
-<span id="1068">1068</span>
-<span id="1069">1069</span>
-<span id="1070">1070</span>
-<span id="1071">1071</span>
-<span id="1072">1072</span>
-<span id="1073">1073</span>
-<span id="1074">1074</span>
-<span id="1075">1075</span>
-<span id="1076">1076</span>
-<span id="1077">1077</span>
-<span id="1078">1078</span>
-<span id="1079">1079</span>
-<span id="1080">1080</span>
-<span id="1081">1081</span>
-<span id="1082">1082</span>
-<span id="1083">1083</span>
-<span id="1084">1084</span>
-<span id="1085">1085</span>
-<span id="1086">1086</span>
-<span id="1087">1087</span>
-<span id="1088">1088</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1102,7 +1062,6 @@
     <span class="ident">epoch_info</span>::<span class="ident">EpochInfo</span>,
     <span class="ident">event</span>::{<span class="ident">EventHandle</span>, <span class="ident">EventKey</span>},
     <span class="ident">get_with_proof</span>::{<span class="ident">ResponseItem</span>, <span class="ident">UpdateToLatestLedgerResponse</span>},
-    <span class="ident">language_storage</span>::{<span class="ident">StructTag</span>, <span class="ident">TypeTag</span>},
     <span class="ident">ledger_info</span>::{<span class="ident">LedgerInfo</span>, <span class="ident">LedgerInfoWithSignatures</span>},
     <span class="ident">on_chain_config</span>::<span class="ident">ValidatorSet</span>,
     <span class="ident">proof</span>::{<span class="ident">AccumulatorConsistencyProof</span>, <span class="ident">TransactionListProof</span>},
@@ -1122,7 +1081,7 @@
     <span class="ident">HashValue</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_proptest_helpers</span>::<span class="ident">Index</span>;
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::<span class="ident">Identifier</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">identifier</span>::<span class="ident">Identifier</span>, <span class="ident">language_storage</span>::<span class="ident">TypeTag</span>};
 <span class="kw">use</span> <span class="ident">proptest</span>::{
     <span class="ident">collection</span>::{<span class="ident">vec</span>, <span class="ident">SizeRange</span>},
     <span class="ident">option</span>,
@@ -1794,45 +1753,6 @@
 
     <span class="kw">fn</span> <span class="ident">arbitrary_with</span>(<span class="ident">_args</span>: <span class="self">Self</span>::<span class="ident">Parameters</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Strategy</span> {
         <span class="ident">EventHandle</span>::<span class="ident">strategy_impl</span>(<span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">EventKey</span><span class="op">&gt;</span>()).<span class="ident">boxed</span>()
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">Arbitrary</span> <span class="kw">for</span> <span class="ident">TypeTag</span> {
-    <span class="kw">type</span> <span class="ident">Parameters</span> <span class="op">=</span> ();
-    <span class="kw">type</span> <span class="ident">Strategy</span> <span class="op">=</span> <span class="ident">BoxedStrategy</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>;
-
-    <span class="kw">fn</span> <span class="ident">arbitrary_with</span>(<span class="ident">_args</span>: <span class="self">Self</span>::<span class="ident">Parameters</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Strategy</span> {
-        <span class="kw">use</span> <span class="ident">TypeTag</span>::<span class="kw-2">*</span>;
-        <span class="kw">let</span> <span class="ident">leaf</span> <span class="op">=</span> <span class="macro">prop_oneof</span><span class="macro">!</span>[
-            <span class="ident">Just</span>(<span class="ident">Bool</span>),
-            <span class="ident">Just</span>(<span class="ident">U8</span>),
-            <span class="ident">Just</span>(<span class="ident">U64</span>),
-            <span class="ident">Just</span>(<span class="ident">U128</span>),
-            <span class="ident">Just</span>(<span class="ident">Address</span>),
-            <span class="ident">Just</span>(<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">Bool</span>))),
-        ];
-        <span class="ident">leaf</span>.<span class="ident">prop_recursive</span>(
-            <span class="number">8</span>,  <span class="comment">// levels deep</span>
-            <span class="number">16</span>, <span class="comment">// max size</span>
-            <span class="number">4</span>,  <span class="comment">// max number of items per collection</span>
-            <span class="op">|</span><span class="ident">inner</span><span class="op">|</span> {
-                (
-                    <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span>(),
-                    <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span>(),
-                    <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span>(),
-                    <span class="ident">vec</span>(<span class="ident">inner</span>, <span class="number">0</span>..<span class="number">4</span>),
-                )
-                    .<span class="ident">prop_map</span>(<span class="op">|</span>(<span class="ident">address</span>, <span class="ident">module</span>, <span class="ident">name</span>, <span class="ident">type_params</span>)<span class="op">|</span> {
-                        <span class="ident">Struct</span>(<span class="ident">StructTag</span> {
-                            <span class="ident">address</span>,
-                            <span class="ident">module</span>,
-                            <span class="ident">name</span>,
-                            <span class="ident">type_params</span>,
-                        })
-                    })
-            },
-        )
-        .<span class="ident">boxed</span>()
     }
 }
 

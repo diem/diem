@@ -69,15 +69,17 @@
 <span id="69">69</span>
 <span id="70">70</span>
 <span id="71">71</span>
+<span id="72">72</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">loaded_data</span>::<span class="ident">types</span>::<span class="ident">FatStructType</span>, <span class="ident">values</span>::<span class="ident">GlobalValue</span>};
-<span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">access_path</span>::<span class="ident">AccessPath</span>, <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>, <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>,
+<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">access_path</span>::<span class="ident">AccessPath</span>, <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>};
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">gas_schedule</span>::{<span class="ident">GasCarrier</span>, <span class="ident">GasUnits</span>},
+    <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>,
 };
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">gas_schedule</span>::{<span class="ident">GasCarrier</span>, <span class="ident">GasUnits</span>};
 <span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">errors</span>::<span class="ident">VMResult</span>;
 
 <span class="doccomment">/// Trait that describes what Move bytecode runtime expects from the Libra blockchain.</span>

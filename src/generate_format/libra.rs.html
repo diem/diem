@@ -53,6 +53,7 @@
 <span id="53">53</span>
 <span id="54">54</span>
 <span id="55">55</span>
+<span id="56">56</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -63,7 +64,8 @@
     <span class="ident">multi_ed25519</span>::{<span class="ident">MultiEd25519PublicKey</span>, <span class="ident">MultiEd25519Signature</span>},
     <span class="ident">traits</span>::{<span class="ident">SigningKey</span>, <span class="ident">Uniform</span>},
 };
-<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">contract_event</span>, <span class="ident">event</span>, <span class="ident">language_storage</span>, <span class="ident">transaction</span>, <span class="ident">write_set</span>};
+<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">contract_event</span>, <span class="ident">event</span>, <span class="ident">transaction</span>, <span class="ident">write_set</span>};
+<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">language_storage</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">rngs</span>::<span class="ident">StdRng</span>, <span class="ident">SeedableRng</span>};
 <span class="kw">use</span> <span class="ident">serde_reflection</span>::{<span class="ident">Registry</span>, <span class="prelude-ty">Result</span>, <span class="ident">Samples</span>, <span class="ident">Tracer</span>, <span class="ident">TracerConfig</span>};
 

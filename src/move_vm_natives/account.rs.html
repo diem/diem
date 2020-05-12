@@ -75,9 +75,9 @@
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">account_config</span>,
     <span class="ident">account_config</span>::{<span class="ident">AccountResource</span>, <span class="ident">BalanceResource</span>, <span class="ident">CORE_CODE_ADDRESS</span>},
-    <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
     <span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>},
 };
+<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">move_resource</span>::<span class="ident">MoveResource</span>;
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::{
     <span class="ident">gas_schedule</span>::<span class="ident">NativeCostIndex</span>,
     <span class="ident">loaded_data</span>::<span class="ident">runtime_types</span>::<span class="ident">Type</span>,

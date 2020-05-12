@@ -93,14 +93,16 @@
 <span id="93">93</span>
 <span id="94">94</span>
 <span id="95">95</span>
+<span id="96">96</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">account_config</span>::<span class="ident">constants</span>::<span class="ident">ACCOUNT_MODULE_NAME</span>, <span class="ident">event</span>::<span class="ident">EventHandle</span>, <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">account_config</span>::<span class="ident">constants</span>::<span class="ident">ACCOUNT_MODULE_NAME</span>, <span class="ident">event</span>::<span class="ident">EventHandle</span>};
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>},
+    <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
 };
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>};
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
 <span class="kw">use</span> <span class="ident">proptest_derive</span>::<span class="ident">Arbitrary</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};

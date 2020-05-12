@@ -271,6 +271,9 @@
 <span id="271">271</span>
 <span id="272">272</span>
 <span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -278,8 +281,11 @@
 <span class="doccomment">//! Defines accessors for compiled modules.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">file_format</span>::<span class="kw-2">*</span>, <span class="ident">internals</span>::<span class="ident">ModuleIndex</span>};
-<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>};
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>};
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>},
+    <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>,
+};
 
 <span class="doccomment">/// Represents accessors for a compiled module.</span>
 <span class="doccomment">///</span>

@@ -78,14 +78,20 @@
 <span id="78">78</span>
 <span id="79">79</span>
 <span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">runtime</span>::<span class="ident">VMRuntime</span>;
 <span class="kw">use</span> <span class="ident">bytecode_verifier</span>::<span class="ident">VerifiedModule</span>;
-<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">TypeTag</span>};
-<span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">gas_schedule</span>::<span class="ident">CostTable</span>, <span class="ident">identifier</span>::<span class="ident">IdentStr</span>};
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">gas_schedule</span>::<span class="ident">CostTable</span>,
+    <span class="ident">identifier</span>::<span class="ident">IdentStr</span>,
+    <span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">TypeTag</span>},
+};
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::{
     <span class="ident">chain_state</span>::<span class="ident">ChainState</span>, <span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>, <span class="ident">values</span>::<span class="ident">Value</span>,
 };

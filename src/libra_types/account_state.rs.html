@@ -178,7 +178,6 @@
 <span id="178">178</span>
 <span id="179">179</span>
 <span id="180">180</span>
-<span id="181">181</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -192,12 +191,11 @@
     <span class="ident">block_metadata</span>::{<span class="ident">LibraBlockResource</span>, <span class="ident">NEW_BLOCK_EVENT_PATH</span>},
     <span class="ident">event</span>::<span class="ident">EventHandle</span>,
     <span class="ident">libra_timestamp</span>::<span class="ident">LibraTimestampResource</span>,
-    <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
     <span class="ident">on_chain_config</span>::{<span class="ident">ConfigurationResource</span>, <span class="ident">OnChainConfig</span>, <span class="ident">ValidatorSet</span>},
     <span class="ident">validator_config</span>::<span class="ident">ValidatorConfigResource</span>,
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">bail</span>, <span class="ident">Error</span>, <span class="prelude-ty">Result</span>};
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::<span class="ident">Identifier</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">identifier</span>::<span class="ident">Identifier</span>, <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">de</span>::<span class="ident">DeserializeOwned</span>, <span class="ident">export</span>::<span class="ident">Formatter</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">btree_map</span>::<span class="ident">BTreeMap</span>, <span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">fmt</span>};
 

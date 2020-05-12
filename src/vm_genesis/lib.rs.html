@@ -423,10 +423,10 @@
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_config</span>,
     <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>,
-    <span class="ident">language_storage</span>::{<span class="ident">StructTag</span>, <span class="ident">TypeTag</span>},
     <span class="ident">on_chain_config</span>::{<span class="ident">config_address</span>, <span class="ident">new_epoch_event_key</span>, <span class="ident">VMPublishingOption</span>},
     <span class="ident">transaction</span>::{<span class="ident">authenticator</span>::<span class="ident">AuthenticationKey</span>, <span class="ident">ChangeSet</span>, <span class="ident">Script</span>, <span class="ident">Transaction</span>},
 };
+<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">language_storage</span>::{<span class="ident">StructTag</span>, <span class="ident">TypeTag</span>};
 <span class="kw">use</span> <span class="ident">move_vm_state</span>::<span class="ident">data_cache</span>::<span class="ident">BlockDataCache</span>;
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::{<span class="ident">chain_state</span>::<span class="ident">ChainState</span>, <span class="ident">loaded_data</span>::<span class="ident">types</span>::<span class="ident">FatStructType</span>, <span class="ident">values</span>::<span class="ident">Value</span>};
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;

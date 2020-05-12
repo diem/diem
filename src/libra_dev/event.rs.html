@@ -253,6 +253,8 @@
 <span id="253">253</span>
 <span id="254">254</span>
 <span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -266,8 +268,8 @@
     <span class="ident">account_config</span>::{<span class="ident">ReceivedPaymentEvent</span>, <span class="ident">SentPaymentEvent</span>},
     <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>,
     <span class="ident">event</span>::<span class="ident">EventKey</span>,
-    <span class="ident">language_storage</span>::<span class="ident">TypeTag</span>,
 };
+<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">language_storage</span>::<span class="ident">TypeTag</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">ffi</span>::<span class="ident">CString</span>, <span class="ident">ops</span>::<span class="ident">Deref</span>, <span class="ident">slice</span>};
 
 <span class="kw">const</span> <span class="ident">MAX_BUFFER_LENGTH</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">255</span>;
@@ -436,9 +438,11 @@
         <span class="ident">account_config</span>::{<span class="ident">from_currency_code_string</span>, <span class="ident">SentPaymentEvent</span>, <span class="ident">LBR_NAME</span>},
         <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>,
         <span class="ident">event</span>::{<span class="ident">EventHandle</span>, <span class="ident">EventKey</span>},
+    };
+    <span class="kw">use</span> <span class="ident">move_core_types</span>::{
+        <span class="ident">identifier</span>::<span class="ident">Identifier</span>,
         <span class="ident">language_storage</span>::{<span class="ident">StructTag</span>, <span class="ident">TypeTag</span>::<span class="ident">Struct</span>},
     };
-    <span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::<span class="ident">Identifier</span>;
     <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ffi</span>::<span class="ident">CStr</span>;
 
     <span class="kw">let</span> <span class="ident">public_key</span> <span class="op">=</span> <span class="ident">Ed25519PrivateKey</span>::<span class="ident">generate_for_testing</span>().<span class="ident">public_key</span>();

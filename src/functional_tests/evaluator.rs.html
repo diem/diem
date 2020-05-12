@@ -597,6 +597,8 @@
 <span id="597">597</span>
 <span id="598">598</span>
 <span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -616,7 +618,6 @@
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">block_metadata</span>::<span class="ident">BlockMetadata</span>,
-    <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>,
     <span class="ident">on_chain_config</span>::<span class="ident">VMPublishingOption</span>,
     <span class="ident">transaction</span>::{
         <span class="ident">Module</span> <span class="kw">as</span> <span class="ident">TransactionModule</span>, <span class="ident">RawTransaction</span>, <span class="ident">Script</span> <span class="kw">as</span> <span class="ident">TransactionScript</span>,
@@ -625,7 +626,10 @@
     <span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>},
 };
 <span class="kw">use</span> <span class="ident">mirai_annotations</span>::<span class="ident">checked_verify</span>;
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">gas_schedule</span>::{<span class="ident">GasAlgebra</span>, <span class="ident">GasConstants</span>};
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">gas_schedule</span>::{<span class="ident">GasAlgebra</span>, <span class="ident">GasConstants</span>},
+    <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>,
+};
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">fmt</span>::{<span class="self">self</span>, <span class="ident">Debug</span>},
     <span class="ident">str</span>::<span class="ident">FromStr</span>,

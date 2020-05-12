@@ -29,7 +29,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>;
 
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">CORE_CODE_ADDRESS</span>: <span class="ident">AccountAddress</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">DEFAULT</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">language_storage</span>::<span class="ident">CORE_CODE_ADDRESS</span>;
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">association_address</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AccountAddress</span> {
     <span class="ident">AccountAddress</span>::<span class="ident">from_hex_literal</span>(<span class="string">&quot;0xA550C18&quot;</span>)

@@ -966,6 +966,8 @@
 <span id="966">966</span>
 <span id="967">967</span>
 <span id="968">968</span>
+<span id="969">969</span>
+<span id="970">970</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -983,15 +985,17 @@
         <span class="ident">BalanceResource</span>, <span class="ident">ReceivedPaymentEvent</span>, <span class="ident">SentPaymentEvent</span>, <span class="ident">LBR_NAME</span>,
     },
     <span class="ident">event</span>::<span class="ident">EventHandle</span>,
-    <span class="ident">language_storage</span>::{<span class="ident">ResourceKey</span>, <span class="ident">StructTag</span>, <span class="ident">TypeTag</span>},
-    <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
     <span class="ident">transaction</span>::{
         <span class="ident">authenticator</span>::<span class="ident">AuthenticationKey</span>, <span class="ident">RawTransaction</span>, <span class="ident">Script</span>, <span class="ident">SignedTransaction</span>,
         <span class="ident">TransactionArgument</span>, <span class="ident">TransactionPayload</span>,
     },
     <span class="ident">write_set</span>::{<span class="ident">WriteOp</span>, <span class="ident">WriteSet</span>, <span class="ident">WriteSetMut</span>},
 };
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>};
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>},
+    <span class="ident">language_storage</span>::{<span class="ident">ResourceKey</span>, <span class="ident">StructTag</span>, <span class="ident">TypeTag</span>},
+    <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
+};
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::{
     <span class="ident">loaded_data</span>::<span class="ident">types</span>::{<span class="ident">FatStructType</span>, <span class="ident">FatType</span>},
     <span class="ident">values</span>::{<span class="ident">Struct</span>, <span class="ident">Value</span>},

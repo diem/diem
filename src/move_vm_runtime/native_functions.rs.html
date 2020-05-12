@@ -176,9 +176,9 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">interpreter</span>::<span class="ident">Interpreter</span>, <span class="ident">loader</span>::<span class="ident">Resolver</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>, <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">account_config</span>::<span class="ident">CORE_CODE_ADDRESS</span>,
-    <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>, <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>,
+    <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>,
 };
-<span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">gas_schedule</span>::<span class="ident">CostTable</span>, <span class="ident">identifier</span>::<span class="ident">IdentStr</span>};
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">gas_schedule</span>::<span class="ident">CostTable</span>, <span class="ident">identifier</span>::<span class="ident">IdentStr</span>, <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>};
 <span class="kw">use</span> <span class="ident">move_vm_natives</span>::{<span class="ident">account</span>, <span class="ident">event</span>, <span class="ident">hash</span>, <span class="ident">lcs</span>, <span class="ident">signature</span>};
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::{
     <span class="ident">interpreter_context</span>::<span class="ident">InterpreterContext</span>,

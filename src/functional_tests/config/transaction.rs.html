@@ -242,8 +242,6 @@
 <span id="242">242</span>
 <span id="243">243</span>
 <span id="244">244</span>
-<span id="245">245</span>
-<span id="246">246</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -255,10 +253,8 @@
     <span class="ident">evaluator</span>::<span class="ident">Stage</span>,
 };
 <span class="kw">use</span> <span class="ident">language_e2e_tests</span>::<span class="ident">account</span>::<span class="ident">Account</span>;
-<span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">language_storage</span>::<span class="ident">TypeTag</span>,
-    <span class="ident">transaction</span>::{<span class="ident">parse_as_transaction_argument</span>, <span class="ident">TransactionArgument</span>},
-};
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">transaction</span>::{<span class="ident">parse_as_transaction_argument</span>, <span class="ident">TransactionArgument</span>};
+<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">language_storage</span>::<span class="ident">TypeTag</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">BTreeSet</span>, <span class="ident">str</span>::<span class="ident">FromStr</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
 
 <span class="doccomment">/// A partially parsed transaction argument.</span>

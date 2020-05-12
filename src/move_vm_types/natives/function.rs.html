@@ -137,12 +137,12 @@
     <span class="ident">values</span>::{<span class="ident">Struct</span>, <span class="ident">Value</span>},
 };
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>, <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>,
-    <span class="ident">vm_error</span>::<span class="ident">VMStatus</span>,
+    <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>, <span class="ident">vm_error</span>::<span class="ident">VMStatus</span>,
 };
 <span class="kw">use</span> <span class="ident">move_core_types</span>::{
     <span class="ident">gas_schedule</span>::{<span class="ident">AbstractMemorySize</span>, <span class="ident">CostTable</span>, <span class="ident">GasAlgebra</span>, <span class="ident">GasCarrier</span>, <span class="ident">GasUnits</span>},
     <span class="ident">identifier</span>::<span class="ident">IdentStr</span>,
+    <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>,
 };
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Write</span>;
 <span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">errors</span>::<span class="ident">VMResult</span>;

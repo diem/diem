@@ -176,6 +176,10 @@
 <span id="176">176</span>
 <span id="177">177</span>
 <span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -217,11 +221,13 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">account_config</span>::{<span class="ident">AccountResource</span>, <span class="ident">ACCOUNT_RECEIVED_EVENT_PATH</span>, <span class="ident">ACCOUNT_SENT_EVENT_PATH</span>},
-    <span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">ResourceKey</span>, <span class="ident">StructTag</span>},
-    <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">Error</span>, <span class="prelude-ty">Result</span>};
-<span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::{<span class="ident">CryptoHash</span>, <span class="ident">HashValue</span>};
+<span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">HashValue</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">ResourceKey</span>, <span class="ident">StructTag</span>, <span class="ident">CODE_TAG</span>, <span class="ident">RESOURCE_TAG</span>},
+    <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
+};
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
 <span class="kw">use</span> <span class="ident">proptest_derive</span>::<span class="ident">Arbitrary</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
@@ -238,8 +244,8 @@
 }
 
 <span class="kw">impl</span> <span class="ident">AccessPath</span> {
-    <span class="kw">const</span> <span class="ident">CODE_TAG</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="number">0</span>;
-    <span class="kw">const</span> <span class="ident">RESOURCE_TAG</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="number">1</span>;
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">CODE_TAG</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="number">0</span>;
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">RESOURCE_TAG</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="number">1</span>;
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">address</span>: <span class="ident">AccountAddress</span>, <span class="ident">path</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">AccessPath</span> { <span class="ident">address</span>, <span class="ident">path</span> }
@@ -270,11 +276,7 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">resource_access_vec</span>(<span class="ident">tag</span>: <span class="kw-2">&amp;</span><span class="ident">StructTag</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">key</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-        <span class="ident">key</span>.<span class="ident">push</span>(<span class="self">Self</span>::<span class="ident">RESOURCE_TAG</span>);
-
-        <span class="ident">key</span>.<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tag</span>.<span class="ident">hash</span>().<span class="ident">to_vec</span>());
-        <span class="ident">key</span>
+        <span class="ident">tag</span>.<span class="ident">access_vector</span>()
     }
 
     <span class="doccomment">/// Convert Accesses into a byte offset which would be used by the storage layer to resolve</span>
@@ -288,10 +290,7 @@
     }
 
     <span class="kw">fn</span> <span class="ident">code_access_path_vec</span>(<span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">root</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-        <span class="ident">root</span>.<span class="ident">push</span>(<span class="self">Self</span>::<span class="ident">CODE_TAG</span>);
-        <span class="ident">root</span>.<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">key</span>.<span class="ident">hash</span>().<span class="ident">to_vec</span>());
-        <span class="ident">root</span>
+        <span class="ident">key</span>.<span class="ident">access_vector</span>()
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">code_access_path</span>(<span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AccessPath</span> {
@@ -321,8 +320,8 @@
         } <span class="kw">else</span> {
             <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;AccessPath {{ address: {:x}, &quot;</span>, <span class="self">self</span>.<span class="ident">address</span>)<span class="question-mark">?</span>;
             <span class="kw">match</span> <span class="self">self</span>.<span class="ident">path</span>[<span class="number">0</span>] {
-                <span class="self">Self</span>::<span class="ident">RESOURCE_TAG</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;type: Resource, &quot;</span>)<span class="question-mark">?</span>,
-                <span class="self">Self</span>::<span class="ident">CODE_TAG</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;type: Module, &quot;</span>)<span class="question-mark">?</span>,
+                <span class="ident">RESOURCE_TAG</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;type: Resource, &quot;</span>)<span class="question-mark">?</span>,
+                <span class="ident">CODE_TAG</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;type: Module, &quot;</span>)<span class="question-mark">?</span>,
                 <span class="ident">tag</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;type: {:?}, &quot;</span>, <span class="ident">tag</span>)<span class="question-mark">?</span>,
             };
             <span class="macro">write</span><span class="macro">!</span>(
@@ -352,6 +351,15 @@
         <span class="self">Self</span> {
             <span class="ident">address</span>: <span class="ident">path</span>.<span class="ident">address</span>.<span class="ident">to_vec</span>(),
             <span class="ident">path</span>: <span class="ident">path</span>.<span class="ident">path</span>,
+        }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">ModuleId</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">AccessPath</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">id</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AccessPath</span> {
+        <span class="ident">AccessPath</span> {
+            <span class="ident">address</span>: <span class="kw-2">*</span><span class="ident">id</span>.<span class="ident">address</span>(),
+            <span class="ident">path</span>: <span class="ident">id</span>.<span class="ident">access_vector</span>(),
         }
     }
 }
