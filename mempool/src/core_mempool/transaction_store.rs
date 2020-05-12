@@ -147,19 +147,19 @@ impl TransactionStore {
     /// checks if Mempool is full
     /// If it's full, tries to free some space by evicting transactions from ParkingLot
     fn check_if_full(&mut self) -> bool {
-        if self.system_ttl_index.size() >= self.capacity {
-            // try to free some space in Mempool from ParkingLot
-            if let Some((address, sequence_number)) = self.parking_lot_index.pop() {
-                if let Some(txn) = self
-                    .transactions
-                    .get_mut(&address)
-                    .and_then(|txns| txns.remove(&sequence_number))
-                {
-                    debug!("[mempool] mempool full, evicting txn {}:{}", address, sequence_number);
-                    self.index_remove(&txn);
-                }
-            }
-        }
+//        if self.system_ttl_index.size() >= self.capacity {
+//            // try to free some space in Mempool from ParkingLot
+//            if let Some((address, sequence_number)) = self.parking_lot_index.pop() {
+//                if let Some(txn) = self
+//                    .transactions
+//                    .get_mut(&address)
+//                    .and_then(|txns| txns.remove(&sequence_number))
+//                {
+//                    debug!("[mempool] mempool full, evicting txn {}:{}", address, sequence_number);
+//                    self.index_remove(&txn);
+//                }
+//            }
+//        }
         self.system_ttl_index.size() >= self.capacity
     }
 

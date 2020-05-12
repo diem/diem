@@ -279,10 +279,10 @@ impl ParkingLotIndex {
         self.data.remove(&TxnPointer::from(txn));
     }
 
-    /// returns random "non-ready" transaction (with highest sequence number for that account)
-    pub(crate) fn pop(&mut self) -> Option<TxnPointer> {
-        self.data.iter().rev().next().cloned()
-    }
+//    /// returns random "non-ready" transaction (with highest sequence number for that account)
+//    pub(crate) fn pop(&mut self) -> Option<TxnPointer> {
+//        self.data.iter().rev().next().cloned()
+//    }
 
     pub(crate) fn size(&self) -> usize {
         self.data.len()
