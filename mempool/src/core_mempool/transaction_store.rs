@@ -204,6 +204,8 @@ impl TransactionStore {
                 if txn.timeline_state == TimelineState::NotReady {
                     self.timeline_index.insert(txn);
                 }
+                // TODO remove txn from parking lot index too!
+                self.parking_lot_index.remove(txn);
                 sequence_number += 1;
             }
 
