@@ -74,18 +74,23 @@ impl Transport for TcpTransport {
         &self,
         addr: NetworkAddress,
     ) -> Result<(Self::Listener, NetworkAddress), Self::Error> {
-        let socket_addr = multiaddr_to_socketaddr(&addr)?;
+        let (socket_addr, addr_suffix) = parse_socketaddr(&addr)?;
         let config = self.clone();
+
         let listener = ::std::net::TcpListener::bind(&socket_addr)?;
-        let local_addr = NetworkAddress::from(listener.local_addr()?);
         let listener = TcpListener::try_from(listener)?;
+
+        // append the addr_suffix so any trailing protocols get included in the
+        // actual listening adddress we return
+        let actual_addr =
+            NetworkAddress::from(listener.local_addr()?).extend_from_slice(addr_suffix);
 
         Ok((
             TcpListenerStream {
                 inner: listener,
                 config,
             },
-            local_addr,
+            actual_addr,
         ))
     }
 
@@ -193,36 +198,32 @@ impl AsyncWrite for TcpSocket {
     }
 }
 
-fn multiaddr_to_socketaddr(addr: &NetworkAddress) -> ::std::io::Result<SocketAddr> {
-    let mut iter = addr.as_slice().iter();
-    let proto1 = iter.next().ok_or_else(|| {
-        io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("Invalid NetworkAddress '{:?}'", addr),
-        )
-    })?;
-    let proto2 = iter.next().ok_or_else(|| {
-        io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("Invalid NetworkAddress '{:?}'", addr),
-        )
-    })?;
-
-    if iter.next().is_some() {
+/// parse the `NetworkAddress` into the `/ip4/<ip>/tcp/<port>` or
+/// `/ip6/<ip>/tcp/<port>` prefix and unparsed `&[Protocol]` suffix.
+fn parse_socketaddr<'a>(
+    addr: &'a NetworkAddress,
+) -> ::std::io::Result<(SocketAddr, &'a [Protocol])> {
+    if addr.len() < 2 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             format!("Invalid NetworkAddress '{:?}'", addr),
         ));
     }
 
-    match (proto1, proto2) {
-        (Protocol::Ip4(ip), Protocol::Tcp(port)) => Ok(SocketAddr::new((*ip).into(), *port)),
-        (Protocol::Ip6(ip), Protocol::Tcp(port)) => Ok(SocketAddr::new((*ip).into(), *port)),
-        _ => Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("Invalid NetworkAddress '{:?}'", addr),
-        )),
-    }
+    let (prefix, suffix) = addr.as_slice().split_at(2);
+
+    let socket_addr = match prefix {
+        [Protocol::Ip4(ip), Protocol::Tcp(port)] => SocketAddr::new((*ip).into(), *port),
+        [Protocol::Ip6(ip), Protocol::Tcp(port)] => SocketAddr::new((*ip).into(), *port),
+        _ => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("Invalid NetworkAddress '{:?}'", addr),
+            ))
+        }
+    };
+
+    Ok((socket_addr, suffix))
 }
 
 fn multiaddr_to_string(addr: &NetworkAddress) -> ::std::io::Result<String> {
@@ -239,13 +240,6 @@ fn multiaddr_to_string(addr: &NetworkAddress) -> ::std::io::Result<String> {
             format!("Invalid NetworkAddress '{:?}'", addr),
         )
     })?;
-
-    if iter.next().is_some() {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("Invalid NetworkAddress '{:?}'", addr),
-        ));
-    }
 
     match (proto1, proto2) {
         (Protocol::Ip4(ip), Protocol::Tcp(port)) => Ok(format!("{}:{}", ip, port)),

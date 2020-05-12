@@ -26,41 +26,33 @@ impl Transport for MemoryTransport {
         &self,
         addr: NetworkAddress,
     ) -> Result<(Self::Listener, NetworkAddress), Self::Error> {
-        let port = parse_addr(&addr)?;
+        let (port, addr_suffix) = addr.parse_memory_proto().ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Invalid NetworkAddress: '{}'", addr),
+            )
+        })?;
         let listener = MemoryListener::bind(port)?;
         let actual_port = listener.local_addr();
-        let actual_addr = NetworkAddress::from(Protocol::Memory(actual_port));
+
+        // append the addr_suffix so any trailing protocols get included in the
+        // actual listening adddress we return
+        let actual_addr =
+            NetworkAddress::from(Protocol::Memory(actual_port)).extend_from_slice(addr_suffix);
 
         Ok((Listener { inner: listener }, actual_addr))
     }
 
     fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
-        let port = parse_addr(&addr)?;
+        let (port, _addr_suffix) = addr.parse_memory_proto().ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Invalid NetworkAddress: '{}'", addr),
+            )
+        })?;
         let socket = MemorySocket::connect(port)?;
         Ok(future::ready(Ok(socket)))
     }
-}
-
-fn parse_addr(addr: &NetworkAddress) -> io::Result<u16> {
-    let mut iter = addr.as_slice().iter();
-
-    let port = if let Some(Protocol::Memory(port)) = iter.next() {
-        *port
-    } else {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("Invalid NetworkAddress '{:?}'", addr),
-        ));
-    };
-
-    if iter.next().is_some() {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("Invalid NetworkAddress '{:?}'", addr),
-        ));
-    }
-
-    Ok(port)
 }
 
 #[must_use = "streams do nothing unless polled"]

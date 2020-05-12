@@ -23,7 +23,7 @@ use libra_types::{
     validator_verifier::random_validator_verifier, waypoint::Waypoint,
 };
 use network::{
-    validator_network::network_builder::{NetworkBuilder, TransportType},
+    validator_network::network_builder::{AuthenticationMode, NetworkBuilder},
     NetworkPublicKeys,
 };
 use rand::{rngs::StdRng, SeedableRng};
@@ -250,19 +250,19 @@ impl SynchronizerEnv {
         let mut network_builder = NetworkBuilder::new(
             self.runtime.handle().clone(),
             self.peer_ids[new_peer_idx],
-            addr,
             RoleType::Validator,
+            addr,
         );
         network_builder
+            .authentication_mode(AuthenticationMode::Unauthenticated)
+            .trusted_peers(trusted_peers)
+            .seed_peers(seed_peers)
             .signing_keypair((
                 self.network_signers[new_peer_idx].clone(),
                 self.public_keys[new_peer_idx]
                     .network_signing_public_key()
                     .clone(),
             ))
-            .trusted_peers(trusted_peers)
-            .seed_peers(seed_peers)
-            .transport(TransportType::Memory)
             .add_connectivity_manager()
             .add_gossip_discovery();
 

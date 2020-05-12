@@ -145,6 +145,36 @@ fn identity_key_to_peer_id(
     None
 }
 
+/// temporary checks to make sure noise pubkeys are actually getting propagated correctly.
+// TODO(philiphayes): remove this after Transport refactor
+#[allow(dead_code)]
+fn expect_noise_pubkey(
+    addr: &NetworkAddress,
+    remote_static_key: &[u8],
+    origin: ConnectionOrigin,
+) -> Result<(), io::Error> {
+    if let ConnectionOrigin::Outbound = origin {
+        let expected_remote_static_key = addr.find_noise_proto().ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Invalid NetworkAddress, no NoiseIK protocol: '{}'", addr),
+            )
+        })?;
+
+        if remote_static_key != expected_remote_static_key.as_slice() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "remote static pubkey did not match expected: actual: {:?}, expected: {:?}",
+                    remote_static_key, expected_remote_static_key,
+                ),
+            ));
+        }
+    }
+
+    Ok(())
+}
+
 pub async fn perform_handshake<T: TSocket>(
     peer_id: PeerId,
     mut socket: T,
@@ -191,6 +221,10 @@ pub fn build_memory_noise_transport(
         .and_then(move |socket, _addr, origin| async move {
             let (remote_static_key, socket) =
                 noise_config.upgrade_connection(socket, origin).await?;
+
+            // TODO(philiphayes): reenable after seed peers are always fully rendered
+            // expect_noise_pubkey(&addr, remote_static_key.as_slice(), origin)?;
+
             if let Some(peer_id) = identity_key_to_peer_id(&trusted_peers, &remote_static_key) {
                 Ok((peer_id, socket))
             } else {
@@ -218,6 +252,10 @@ pub fn build_unauthenticated_memory_noise_transport(
             async move {
                 let (remote_static_key, socket) =
                     noise_config.upgrade_connection(socket, origin).await?;
+
+                // TODO(philiphayes): reenable after seed peers are always fully rendered
+                // expect_noise_pubkey(&addr, remote_static_key.as_slice(), origin)?;
+
                 // Generate PeerId from x25519::PublicKey.
                 // Note: This is inconsistent with current types because AccountAddress is derived
                 // from consensus key which is of type Ed25519PublicKey. Since AccountAddress does
@@ -269,6 +307,10 @@ pub fn build_tcp_noise_transport(
         .and_then(move |socket, _addr, origin| async move {
             let (remote_static_key, socket) =
                 noise_config.upgrade_connection(socket, origin).await?;
+
+            // TODO(philiphayes): reenable after seed peers are always fully rendered
+            // expect_noise_pubkey(&addr, remote_static_key.as_slice(), origin)?;
+
             if let Some(peer_id) = identity_key_to_peer_id(&trusted_peers, &remote_static_key) {
                 Ok((peer_id, socket))
             } else {
@@ -302,6 +344,10 @@ pub fn build_unauthenticated_tcp_noise_transport(
             async move {
                 let (remote_static_key, socket) =
                     noise_config.upgrade_connection(socket, origin).await?;
+
+                // TODO(philiphayes): reenable after seed peers are always fully rendered
+                // expect_noise_pubkey(&addr, remote_static_key.as_slice(), origin)?;
+
                 // Generate PeerId from x25519::PublicKey.
                 // Note: This is inconsistent with current types because AccountAddress is derived
                 // from consensus key which is of type Ed25519PublicKey. Since AccountAddress does

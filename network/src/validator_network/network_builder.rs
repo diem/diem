@@ -20,7 +20,7 @@ use crate::{
     protocols::{
         discovery::{self, Discovery},
         health_checker::{self, HealthChecker},
-        wire::handshake::v1::SupportedProtocols,
+        wire::handshake::v1::{MessagingProtocolVersion, SupportedProtocols},
     },
     transport,
     transport::*,
@@ -66,15 +66,39 @@ pub const MAX_CONCURRENT_NETWORK_REQS: usize = 100;
 pub const MAX_CONCURRENT_NETWORK_NOTIFS: usize = 100;
 pub const MAX_CONNECTION_DELAY_MS: u64 = 10 * 60 * 1000 /* 10 minutes */;
 
-/// The type of the transport layer, i.e., running on memory or TCP stream,
-/// with or without Noise encryption
-pub enum TransportType {
-    Memory,
-    MemoryNoise(Option<x25519::PrivateKey>),
-    PermissionlessMemoryNoise(Option<x25519::PrivateKey>),
-    Tcp,
-    TcpNoise(Option<x25519::PrivateKey>),
-    PermissionlessTcpNoise(Option<x25519::PrivateKey>),
+// TODO(philiphayes): remove when transport returns fully rendered network address
+pub const HANDSHAKE_VERSION: u8 = MessagingProtocolVersion::V1 as u8;
+
+#[derive(Debug)]
+pub enum AuthenticationMode {
+    /// Inbound and outbound connections are unauthenticated and unencrypted, using
+    /// a simple PeerId exchange protocol to share each peer's PeerId in-band.
+    /// This mode is obviously insecure and should never be used in production.
+    // TODO(philiphayes): remove? gate with cfg(test)? should never use this in prod.
+    Unauthenticated,
+    /// Inbound and outbound connections are secured with NoiseIK; however, only
+    /// clients/dialers will authenticate the servers/listeners. More specifically,
+    /// dialers will pin the connection to a specific, expected pubkey while
+    /// listeners will accept any inbound dialer's pubkey.
+    ServerOnly(x25519::PrivateKey),
+    /// Inbound and outbound connections are secured with NoiseIK. Both dialer and
+    /// listener will only accept connections that successfully authenticate to a
+    /// pubkey in their "trusted peers" set.
+    Mutual(x25519::PrivateKey),
+}
+
+/// Append the correct libranet protocols to the given base address, depending on
+/// the configured authentication mode.
+fn append_libranet_protocols(
+    addr: NetworkAddress,
+    auth_mode: &AuthenticationMode,
+) -> NetworkAddress {
+    match auth_mode {
+        AuthenticationMode::Unauthenticated => addr.append_test_protos(HANDSHAKE_VERSION),
+        AuthenticationMode::ServerOnly(key) | AuthenticationMode::Mutual(key) => {
+            addr.append_prod_protos(key.public_key(), HANDSHAKE_VERSION)
+        }
+    }
 }
 
 /// Build Network module with custom configuration values.
@@ -82,15 +106,18 @@ pub enum TransportType {
 /// MempoolNetworkHandler and ConsensusNetworkHandler are constructed by calling
 /// [`NetworkBuilder::build`].  New instances of `NetworkBuilder` are obtained
 /// via [`NetworkBuilder::new`].
+// TODO(philiphayes): refactor NetworkBuilder and libra-node; current config is
+// pretty tangled.
 pub struct NetworkBuilder {
     executor: Handle,
     peer_id: PeerId,
-    addr: NetworkAddress,
     role: RoleType,
+    // TODO(philiphayes): better support multiple listening addrs
+    listen_address: NetworkAddress,
     advertised_address: Option<NetworkAddress>,
     seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
-    transport: TransportType,
+    authentication_mode: Option<AuthenticationMode>,
     channel_size: usize,
     direct_send_protocols: Vec<ProtocolId>,
     rpc_protocols: Vec<ProtocolId>,
@@ -114,7 +141,6 @@ pub struct NetworkBuilder {
     max_concurrent_network_notifs: usize,
     max_connection_delay_ms: u64,
     signing_keypair: Option<(Ed25519PrivateKey, Ed25519PublicKey)>,
-    enable_remote_authentication: bool,
 }
 
 impl NetworkBuilder {
@@ -122,8 +148,8 @@ impl NetworkBuilder {
     pub fn new(
         executor: Handle,
         peer_id: PeerId,
-        addr: NetworkAddress,
         role: RoleType,
+        listen_address: NetworkAddress,
     ) -> NetworkBuilder {
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) = libra_channel::new(
@@ -140,11 +166,12 @@ impl NetworkBuilder {
         NetworkBuilder {
             executor,
             peer_id,
-            addr,
             role,
+            listen_address,
             advertised_address: None,
             seed_peers: HashMap::new(),
             trusted_peers: Arc::new(RwLock::new(HashMap::new())),
+            authentication_mode: None,
             channel_size: NETWORK_CHANNEL_SIZE,
             direct_send_protocols: vec![],
             rpc_protocols: vec![],
@@ -155,7 +182,6 @@ impl NetworkBuilder {
             connection_reqs_tx,
             connection_reqs_rx,
             conn_mgr_reqs_tx: None,
-            transport: TransportType::Memory,
             discovery_interval_ms: DISCOVERY_INTERVAL_MS,
             ping_interval_ms: PING_INTERVAL_MS,
             ping_timeout_ms: PING_TIMEOUT_MS,
@@ -168,17 +194,16 @@ impl NetworkBuilder {
             max_concurrent_network_notifs: MAX_CONCURRENT_NETWORK_NOTIFS,
             max_connection_delay_ms: MAX_CONNECTION_DELAY_MS,
             signing_keypair: None,
-            enable_remote_authentication: true,
         }
     }
 
-    /// Set transport type, i.e., Memory or Tcp transports.
-    pub fn transport(&mut self, transport: TransportType) -> &mut Self {
-        self.transport = transport;
+    /// Set network authentication mode.
+    pub fn authentication_mode(&mut self, authentication_mode: AuthenticationMode) -> &mut Self {
+        self.authentication_mode = Some(authentication_mode);
         self
     }
 
-    /// Set and address to advertise, if different from the listen address
+    /// Set an address to advertise, if different from the listen address
     pub fn advertised_address(&mut self, advertised_address: NetworkAddress) -> &mut Self {
         self.advertised_address = Some(advertised_address);
         self
@@ -285,15 +310,6 @@ impl NetworkBuilder {
         self
     }
 
-    /// Set the enable_remote_authentication flag to make the network operate with remote authentication.
-    pub fn enable_remote_authentication(
-        &mut self,
-        enable_remote_authentication: bool,
-    ) -> &mut Self {
-        self.enable_remote_authentication = enable_remote_authentication;
-        self
-    }
-
     pub fn conn_mgr_reqs_tx(&self) -> Option<channel::Sender<ConnectivityRequest>> {
         self.conn_mgr_reqs_tx.clone()
     }
@@ -396,9 +412,6 @@ impl NetworkBuilder {
     /// by exchanging the full set of known peer network addresses with connected
     /// peers as a network protocol.
     pub fn add_gossip_discovery(&mut self) -> &mut Self {
-        // Note: We use the `enable_remote_authentication` flag as a proxy for
-        // whether we need to run the discovery module or not. We should make this
-        // more explicit eventually.
         let peer_id = self.peer_id;
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
@@ -407,10 +420,29 @@ impl NetworkBuilder {
             self.signing_keypair.take().expect("Signing keys not set");
         // Get handles for network events and sender.
         let (discovery_network_tx, discovery_network_rx) = discovery::add_to_network(self);
-        let addrs = vec![self
+
+        // TODO(philiphayes): the current setup for gossip discovery doesn't work
+        // when we don't have an `advertised_address` set, since it uses the
+        // `listen_address`, which might not be bound to a port yet. For example,
+        // if our `listen_address` is "/ip6/::1/tcp/0" and `advertised_address` is
+        // `None`, then this will set our `advertised_address` to something like
+        // "/ip6/::1/tcp/0/ln-noise-ik/<pubkey>/ln-handshake/0", which is wrong
+        // since the actual bound port will be something > 0.
+
+        // TODO(philiphayes): in network_builder setup, only bind the channels.
+        // wait until PeerManager is running to actual setup gossip discovery.
+
+        let advertised_address = self
             .advertised_address
             .clone()
-            .unwrap_or_else(|| self.addr.clone())];
+            .unwrap_or_else(|| self.listen_address.clone());
+        let authentication_mode = self
+            .authentication_mode
+            .as_ref()
+            .expect("Authentication Mode not set");
+        let advertised_address = append_libranet_protocols(advertised_address, authentication_mode);
+
+        let addrs = vec![advertised_address];
         let trusted_peers = self.trusted_peers.clone();
         let role = self.role;
         let discovery_interval_ms = self.discovery_interval_ms;
@@ -455,48 +487,60 @@ impl NetworkBuilder {
     /// Create the configured transport and start PeerManager.
     /// Return the actual NetworkAddress over which this peer is listening.
     pub fn build(mut self) -> NetworkAddress {
+        use libra_network_address::Protocol::*;
+
         let peer_id = self.peer_id;
-        let supported_protocols = self.supported_protocols();
-        // Build network based on the transport type
+        let protos = self.supported_protocols();
+
         let trusted_peers = self.trusted_peers.clone();
-        match self.transport {
-            TransportType::Memory => {
-                self.build_with_transport(build_memory_transport(peer_id, supported_protocols))
-            }
-            TransportType::MemoryNoise(ref mut keys) => {
-                let keys = keys.take().expect("Identity keys not set");
-                self.build_with_transport(build_memory_noise_transport(
-                    keys,
-                    trusted_peers,
-                    supported_protocols,
-                ))
-            }
-            TransportType::PermissionlessMemoryNoise(ref mut keys) => {
-                let keys = keys.take().expect("Identity keys not set");
-                self.build_with_transport(build_unauthenticated_memory_noise_transport(
-                    keys,
-                    supported_protocols,
-                ))
-            }
-            TransportType::Tcp => {
-                self.build_with_transport(build_tcp_transport(peer_id, supported_protocols))
-            }
-            TransportType::TcpNoise(ref mut keys) => {
-                let keys = keys.take().expect("Identity keys not set");
-                self.build_with_transport(build_tcp_noise_transport(
-                    keys,
-                    trusted_peers,
-                    supported_protocols,
-                ))
-            }
-            TransportType::PermissionlessTcpNoise(ref mut keys) => {
-                let keys = keys.take().expect("Identity keys not set");
-                self.build_with_transport(build_unauthenticated_tcp_noise_transport(
-                    keys,
-                    supported_protocols,
-                ))
-            }
-        }
+        let authentication_mode = self
+            .authentication_mode
+            .take()
+            .expect("Authentication Mode not set");
+
+        // formatting the listen address here is a temporary hack until `transport.rs`
+        // gets refactored and returns the fully rendered listen_addr in
+        // `Transport::listen_on()`.
+
+        // would like to do this in `build_with_transport` but ownership is very
+        // tricky here since the private keys aren't cloneable and we don't have
+        // a safe key container yet...
+        let unbound_listen_addr = self.listen_address.clone();
+        let unbound_len = unbound_listen_addr.len();
+        let unbound_listen_addr =
+            append_libranet_protocols(unbound_listen_addr, &authentication_mode);
+
+        let bound_listen_addr = match self.listen_address.as_slice() {
+            [Ip4(_), Tcp(_)] | [Ip6(_), Tcp(_)] => match authentication_mode {
+                AuthenticationMode::Unauthenticated => {
+                    self.build_with_transport(build_tcp_transport(peer_id, protos))
+                }
+                AuthenticationMode::ServerOnly(key) => self
+                    .build_with_transport(build_unauthenticated_tcp_noise_transport(key, protos)),
+                AuthenticationMode::Mutual(key) => {
+                    self.build_with_transport(build_tcp_noise_transport(key, trusted_peers, protos))
+                }
+            },
+            [Memory(_)] => match authentication_mode {
+                AuthenticationMode::Unauthenticated => {
+                    self.build_with_transport(build_memory_transport(peer_id, protos))
+                }
+                AuthenticationMode::ServerOnly(key) => self.build_with_transport(
+                    build_unauthenticated_memory_noise_transport(key, protos),
+                ),
+                AuthenticationMode::Mutual(key) => self
+                    .build_with_transport(build_memory_noise_transport(key, trusted_peers, protos)),
+            },
+            _ => panic!(
+                "Unsupported listen_address: '{}', expected '/memory/<port>', \
+                 '/ip4/<addr>/tcp/<port>', or '/ip6/<addr>/tcp/<port>'.",
+                self.listen_address
+            ),
+        };
+
+        // do some surgery here...
+        let libranet_protos = &unbound_listen_addr.as_slice()[unbound_len..];
+        bound_listen_addr.extend_from_slice(libranet_protos)
     }
 
     /// Given a transport build and launch PeerManager.
@@ -511,7 +555,9 @@ impl NetworkBuilder {
             transport,
             self.peer_id,
             self.role,
-            self.addr,
+            // TODO(philiphayes): peer manager should take `Vec<NetworkAddress>`
+            // (which could be empty, like in client use case)
+            self.listen_address,
             self.pm_reqs_rx,
             self.connection_reqs_rx,
             self.upstream_handlers,
@@ -521,8 +567,10 @@ impl NetworkBuilder {
             self.channel_size,
         );
         let listen_addr = peer_mgr.listen_addr().clone();
+
         self.executor.spawn(peer_mgr.start());
         debug!("Started peer manager");
+
         listen_addr
     }
 }

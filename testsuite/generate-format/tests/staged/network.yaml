@@ -97,12 +97,14 @@ Protocol:
       Memory:
         NEWTYPE: U16
     7:
-      NoiseIk:
+      NoiseIK:
         NEWTYPE:
           TYPENAME: PublicKey
     8:
       Handshake:
         NEWTYPE: U8
+    9:
+      PeerIdExchange: UNIT
 ProtocolId:
   ENUM:
     0:
