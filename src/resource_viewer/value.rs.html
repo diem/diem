@@ -186,10 +186,6 @@
 <span id="186">186</span>
 <span id="187">187</span>
 <span id="188">188</span>
-<span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -301,11 +297,7 @@
     <span class="kw">where</span>
         <span class="ident">A</span>: <span class="ident">serde</span>::<span class="ident">de</span>::<span class="ident">SeqAccess</span><span class="op">&lt;</span><span class="lifetime">&#39;d</span><span class="op">&gt;</span>,
     {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">vals</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
-        <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">elem</span>) <span class="op">=</span> <span class="ident">seq</span>.<span class="ident">next_element_seed</span>(<span class="self">self</span>.<span class="number">0</span>)<span class="question-mark">?</span> {
-            <span class="ident">vals</span>.<span class="ident">push</span>(<span class="ident">elem</span>)
-        }
-        <span class="prelude-val">Ok</span>(<span class="ident">vals</span>)
+        <span class="prelude-val">Ok</span>(<span class="ident">seq</span>.<span class="ident">next_element_seed</span>(<span class="self">self</span>.<span class="number">0</span>)<span class="question-mark">?</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>())
     }
 }
 
@@ -324,10 +316,9 @@
     {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">val</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
         <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">field_type</span>) <span class="kw">in</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">elem</span>) <span class="op">=</span> <span class="ident">seq</span>.<span class="ident">next_element_seed</span>(<span class="ident">field_type</span>)<span class="question-mark">?</span> {
-                <span class="ident">val</span>.<span class="ident">push</span>(<span class="ident">elem</span>)
-            } <span class="kw">else</span> {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">A</span>::<span class="ident">Error</span>::<span class="ident">invalid_length</span>(<span class="ident">i</span>, <span class="kw-2">&amp;</span><span class="self">self</span>));
+            <span class="kw">match</span> <span class="ident">seq</span>.<span class="ident">next_element_seed</span>(<span class="ident">field_type</span>)<span class="question-mark">?</span> {
+                <span class="prelude-val">Some</span>(<span class="ident">elem</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">val</span>.<span class="ident">push</span>(<span class="ident">elem</span>),
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">A</span>::<span class="ident">Error</span>::<span class="ident">invalid_length</span>(<span class="ident">i</span>, <span class="kw-2">&amp;</span><span class="self">self</span>)),
             }
         }
         <span class="prelude-val">Ok</span>(<span class="ident">val</span>)
@@ -379,6 +370,7 @@
                     .<span class="ident">map</span>(<span class="ident">MoveTypeLayout</span>::<span class="ident">try_from</span>)
                     .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">AResult</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
             )),
+
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;Unexpected type: {:?}&quot;</span>, <span class="ident">ty</span>)),
         })
     }

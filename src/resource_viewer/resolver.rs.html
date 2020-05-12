@@ -191,9 +191,6 @@
 <span id="191">191</span>
 <span id="192">192</span>
 <span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
-<span id="196">196</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -357,20 +354,17 @@
             .<span class="ident">collect</span>();
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">struct_def</span>.<span class="ident">field_information</span> {
             <span class="ident">StructFieldInformation</span>::<span class="ident">Native</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;Unexpected Native Struct&quot;</span>)),
-            <span class="ident">StructFieldInformation</span>::<span class="ident">Declared</span>(<span class="ident">defs</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">fields</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-                <span class="kw">for</span> <span class="ident">field_def</span> <span class="kw">in</span> <span class="ident">defs</span>.<span class="ident">iter</span>() {
-                    <span class="ident">fields</span>.<span class="ident">push</span>(<span class="self">self</span>.<span class="ident">resolve_signature</span>(<span class="ident">module</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="ident">field_def</span>.<span class="ident">signature</span>.<span class="number">0</span>)<span class="question-mark">?</span>);
-                }
-                <span class="prelude-val">Ok</span>(<span class="ident">FatStructType</span> {
-                    <span class="ident">address</span>,
-                    <span class="ident">module</span>: <span class="ident">module_name</span>,
-                    <span class="ident">name</span>,
-                    <span class="ident">is_resource</span>,
-                    <span class="ident">ty_args</span>,
-                    <span class="ident">layout</span>: <span class="ident">fields</span>,
-                })
-            }
+            <span class="ident">StructFieldInformation</span>::<span class="ident">Declared</span>(<span class="ident">defs</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">FatStructType</span> {
+                <span class="ident">address</span>,
+                <span class="ident">module</span>: <span class="ident">module_name</span>,
+                <span class="ident">name</span>,
+                <span class="ident">is_resource</span>,
+                <span class="ident">ty_args</span>,
+                <span class="ident">layout</span>: <span class="ident">defs</span>
+                    .<span class="ident">iter</span>()
+                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">field_def</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">resolve_signature</span>(<span class="ident">module</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="ident">field_def</span>.<span class="ident">signature</span>.<span class="number">0</span>))
+                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
+            }),
         }
     }
 }
