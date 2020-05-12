@@ -1,0 +1,55 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/regression/performance_200511.move:85:9 ───
+    │
+ 85 │         ensures eq_append(global<T>(sender()).received_events.guid, LCS::serialize(2), LCS::serialize(fresh_address));
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/regression/performance_200511.move:59:5: create (entry)
+    =     at tests/sources/regression/performance_200511.move:60:13: create
+    =         fresh_address = <redacted>,
+    =         auth_key_prefix = <redacted>,
+    =         generator = <redacted>
+    =     at tests/sources/regression/performance_200511.move:61:34: create
+    =         authentication_key = <redacted>
+    =     at tests/sources/regression/performance_200511.move:62:24: create
+    =     at tests/sources/regression/performance_200511.move:63:37: create
+    =         $t4 = <redacted>
+    =     at tests/sources/regression/performance_200511.move:50:5: new_event_handle_impl (entry)
+    =     at tests/sources/regression/performance_200511.move:36:5: fresh_guid (entry)
+    =     at tests/sources/regression/performance_200511.move:37:33: fresh_guid
+    =         counter = <redacted>,
+    =         sender = <redacted>,
+    =         sender_bytes = <redacted>
+    =     at tests/sources/regression/performance_200511.move:38:42: fresh_guid
+    =         count_bytes = <redacted>
+    =     at tests/sources/regression/performance_200511.move:39:27: fresh_guid
+    =         counter = <redacted>
+    =     at tests/sources/regression/performance_200511.move:41:24: fresh_guid
+    =         counter = <redacted>
+    =     at tests/sources/regression/performance_200511.move:43:9: fresh_guid
+    =         result = <redacted>
+    =     at tests/sources/regression/performance_200511.move:36:5: fresh_guid (exit)
+    =     at tests/sources/regression/performance_200511.move:51:43: new_event_handle_impl
+    =         counter = <redacted>,
+    =         counter = <redacted>,
+    =         sender = <redacted>,
+    =         result = <redacted>
+    =     at tests/sources/regression/performance_200511.move:50:5: new_event_handle_impl (exit)
+    =     at tests/sources/regression/performance_200511.move:67:30: create
+    =     at tests/sources/regression/performance_200511.move:50:5: new_event_handle_impl (entry)
+    =     at tests/sources/regression/performance_200511.move:36:5: fresh_guid (entry)
+    =     at tests/sources/regression/performance_200511.move:37:33: fresh_guid
+    =     at tests/sources/regression/performance_200511.move:38:42: fresh_guid
+    =     at tests/sources/regression/performance_200511.move:39:27: fresh_guid
+    =     at tests/sources/regression/performance_200511.move:41:24: fresh_guid
+    =     at tests/sources/regression/performance_200511.move:43:9: fresh_guid
+    =     at tests/sources/regression/performance_200511.move:36:5: fresh_guid (exit)
+    =     at tests/sources/regression/performance_200511.move:51:43: new_event_handle_impl
+    =     at tests/sources/regression/performance_200511.move:50:5: new_event_handle_impl (exit)
+    =     at tests/sources/regression/performance_200511.move:68:26: create
+    =     at tests/sources/regression/performance_200511.move:66:9: create
+    =     at tests/sources/regression/performance_200511.move:71:9: create
+    =         result = <redacted>
+    =     at tests/sources/regression/performance_200511.move:59:5: create (exit)

@@ -11,6 +11,9 @@ use libra_temppath::TempPath;
 use move_prover::{cli::Options, run_move_prover};
 use test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives, read_env_var};
 
+#[allow(unused_imports)]
+use log::warn;
+
 const STDLIB_FLAGS: &[&str] = &["--search-path=../stdlib/modules"];
 const STDLIB_FLAGS_UNVERIFIED: &[&str] = &["--search-path=../stdlib/modules", "--verify=none"];
 const LEGACY_STDLIB_FLAGS: &[&str] = &["--search-path=tests/sources/stdlib/modules"];
