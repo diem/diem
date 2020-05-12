@@ -17,11 +17,14 @@ pub trait ModuleAccess: Sync {
     /// Returns the `CompiledModule` that will be used for accesses.
     fn as_module(&self) -> &CompiledModule;
 
+    fn self_handle_idx(&self) -> ModuleHandleIndex {
+        self.as_module().as_inner().self_module_handle_idx
+    }
+
     /// Returns the `ModuleHandle` for `self`.
     fn self_handle(&self) -> &ModuleHandle {
         assume_preconditions!(); // invariant
-        let handle =
-            self.module_handle_at(ModuleHandleIndex(CompiledModule::IMPLEMENTED_MODULE_INDEX));
+        let handle = self.module_handle_at(self.self_handle_idx());
         assumed_postcondition!(
             handle.address.into_index() < self.as_module().as_inner().address_identifiers.len()
         ); // invariant
@@ -188,11 +191,6 @@ pub trait ModuleAccess: Sync {
 pub trait ScriptAccess: Sync {
     /// Returns the `CompiledScript` that will be used for accesses.
     fn as_script(&self) -> &CompiledScript;
-
-    /// Returns the `ModuleHandle` for `self`.
-    fn self_handle(&self) -> &ModuleHandle {
-        self.module_handle_at(ModuleHandleIndex(CompiledModule::IMPLEMENTED_MODULE_INDEX))
-    }
 
     fn module_handle_at(&self, idx: ModuleHandleIndex) -> &ModuleHandle {
         &self.as_script().as_inner().module_handles[idx.into_index()]

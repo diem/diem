@@ -54,7 +54,7 @@ impl VMRuntime {
         if compiled_module.address() != &txn_data.sender {
             return Err(verification_error(
                 IndexKind::AddressIdentifier,
-                CompiledModule::IMPLEMENTED_MODULE_INDEX as usize,
+                compiled_module.self_handle_idx().0 as usize,
                 StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER,
             ));
         }

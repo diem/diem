@@ -16,13 +16,12 @@ use std::{clone::Clone, collections::HashMap, hash::Hash};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        self, AddressIdentifierIndex, CodeOffset, CompiledModule, Constant, ConstantPoolIndex,
-        FieldHandle, FieldHandleIndex, FieldInstantiation, FieldInstantiationIndex,
-        FunctionDefinitionIndex, FunctionHandle, FunctionHandleIndex, FunctionInstantiation,
-        FunctionInstantiationIndex, FunctionSignature, IdentifierIndex, Kind, ModuleHandle,
-        ModuleHandleIndex, Signature, SignatureIndex, SignatureToken, StructDefInstantiation,
-        StructDefInstantiationIndex, StructDefinitionIndex, StructHandle, StructHandleIndex,
-        TableIndex,
+        AddressIdentifierIndex, CodeOffset, Constant, ConstantPoolIndex, FieldHandle,
+        FieldHandleIndex, FieldInstantiation, FieldInstantiationIndex, FunctionDefinitionIndex,
+        FunctionHandle, FunctionHandleIndex, FunctionInstantiation, FunctionInstantiationIndex,
+        FunctionSignature, IdentifierIndex, Kind, ModuleHandle, ModuleHandleIndex, Signature,
+        SignatureIndex, SignatureToken, StructDefInstantiation, StructDefInstantiationIndex,
+        StructDefinitionIndex, StructHandle, StructHandleIndex, TableIndex,
     },
 };
 
@@ -240,7 +239,7 @@ impl<'a> Context<'a> {
                 Ok((ident, CompiledDependency::new(dep)?))
             })
             .collect::<Result<HashMap<_, _>>>()?;
-        let mut context = Self {
+        let context = Self {
             dependencies,
             aliases: HashMap::new(),
             modules: HashMap::new(),
@@ -261,22 +260,8 @@ impl<'a> Context<'a> {
             address_identifiers: HashMap::new(),
             constant_pool: HashMap::new(),
             current_function_index: FunctionDefinitionIndex::new(0),
-            source_map: SourceMap::new(current_module_opt.clone()),
+            source_map: SourceMap::new(current_module_opt),
         };
-        match current_module_opt {
-            Some(current_module) => {
-                let self_name = ModuleName::new(ModuleName::self_name().into());
-                context.declare_import(current_module, self_name)?;
-            }
-            None => {
-                // TODO needed due to the existence of  CompiledModule::IMPLEMENTED_MODULE_INDEX
-                // warning to clean this up when module indexes get cleane dup
-                let _ = CompiledModule::IMPLEMENTED_MODULE_INDEX;
-                let address = context.address_index(AccountAddress::DEFAULT)?;
-                let name = context.identifier_index(file_format::self_module_name().as_str())?;
-                get_or_add_item(&mut context.module_handles, ModuleHandle { address, name })?;
-            }
-        }
 
         Ok(context)
     }

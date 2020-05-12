@@ -462,8 +462,9 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         address,
         name: module.name,
     };
-    let mut context = Context::new(dependencies, Some(current_module))?;
+    let mut context = Context::new(dependencies, Some(current_module.clone()))?;
     let self_name = ModuleName::new(ModuleName::self_name().into());
+    let self_module_handle_idx = context.declare_import(current_module, self_name.clone())?;
     // Explicitly declare all imports as they will be included even if not used
     compile_imports(&mut context, Some(address), module.imports)?;
 
@@ -512,6 +513,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
     ) = context.materialize_pools();
     let compiled_module = CompiledModuleMut {
         module_handles,
+        self_module_handle_idx,
         struct_handles,
         function_handles,
         field_handles,

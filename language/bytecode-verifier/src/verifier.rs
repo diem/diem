@@ -235,7 +235,7 @@ fn verify_all_dependencies_provided(
 ) -> VMResult<()> {
     for (idx, module_handle_view) in module_view.module_handles().enumerate() {
         let module_id = module_handle_view.module_id();
-        if idx != CompiledModule::IMPLEMENTED_MODULE_INDEX as usize
+        if idx != module_view.self_handle_idx().0 as usize
             && !dependency_map.contains_key(&module_id)
         {
             return Err(verification_error(

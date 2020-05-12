@@ -65,6 +65,7 @@ fn no_verify_locals_good() {
             address: AddressIdentifierIndex(0),
             name: IdentifierIndex(0),
         }],
+        self_module_handle_idx: ModuleHandleIndex(0),
         struct_handles: vec![],
         signatures: vec![
             Signature(vec![Address]),
