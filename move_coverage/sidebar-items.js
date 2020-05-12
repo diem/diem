@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["coverage_map",""]]});
+initSidebarItems({"mod":[["coverage_map",""],["source_coverage",""],["summary",""]]});
