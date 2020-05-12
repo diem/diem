@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use admission_control_service::admission_control_service::AdmissionControlService;
+use backup_service::start_backup_service;
 use consensus::consensus_provider::start_consensus;
 use debug_interface::{
     node_debug_service::NodeDebugService,
@@ -52,6 +53,7 @@ pub struct LibraHandle {
     _consensus_runtime: Option<Runtime>,
     _storage: Runtime,
     _debug: Runtime,
+    _backup: Runtime,
 }
 
 fn setup_chunk_executor(db: DbReaderWriter) -> Box<dyn ChunkExecutor> {
@@ -233,6 +235,10 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     );
     let _simple_storage_service =
         start_simple_storage_service_with_db(&node_config, Arc::clone(&libra_db));
+    let backup_service = start_backup_service(
+        node_config.storage.backup_service_port,
+        Arc::clone(&libra_db),
+    );
 
     // Will be deprecated. Do not reference it anymore.
     let storage = start_storage_service_with_db(&node_config, Arc::clone(&libra_db));
@@ -408,5 +414,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         _consensus_runtime: consensus_runtime,
         _storage: storage,
         _debug: debug_if,
+        _backup: backup_service,
     }
 }
