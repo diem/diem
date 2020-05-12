@@ -278,6 +278,9 @@
 <span id="278">278</span>
 <span id="279">279</span>
 <span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -305,6 +308,7 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">StdlibScript</span> {
     <span class="ident">AddValidator</span>,
     <span class="ident">AddCurrency</span>,
+    <span class="ident">AddCurrencyToAccount</span>,
     <span class="ident">AllowChildAccounts</span>,
     <span class="ident">ApplyForAssociationAddress</span>,
     <span class="ident">ApplyForAssociationPrivilege</span>,
@@ -356,6 +360,7 @@
         <span class="macro">vec</span><span class="macro">!</span>[
             <span class="ident">AddValidator</span>,
             <span class="ident">AddCurrency</span>,
+            <span class="ident">AddCurrencyToAccount</span>,
             <span class="ident">AllowChildAccounts</span>,
             <span class="ident">ApplyForAssociationAddress</span>,
             <span class="ident">ApplyForAssociationPrivilege</span>,
@@ -485,6 +490,7 @@
             <span class="kw">match</span> <span class="self">self</span> {
                 <span class="ident">AddValidator</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;add_validator&quot;</span>,
                 <span class="ident">AddCurrency</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;add_currency&quot;</span>,
+                <span class="ident">AddCurrencyToAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;add_currency_to_account&quot;</span>,
                 <span class="ident">AllowChildAccounts</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;allow_child_accounts&quot;</span>,
                 <span class="ident">ApplyForAssociationAddress</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;apply_for_association_address&quot;</span>,
                 <span class="ident">ApplyForAssociationPrivilege</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;apply_for_association_privilege&quot;</span>,

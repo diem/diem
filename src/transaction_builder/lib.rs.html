@@ -564,6 +564,15 @@
 <span id="564">564</span>
 <span id="565">565</span>
 <span id="566">566</span>
+<span id="567">567</span>
+<span id="568">568</span>
+<span id="569">569</span>
+<span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
+<span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -832,6 +841,15 @@
     <span class="ident">script</span>: <span class="ident">RegisterApprovedPayment</span>,
     <span class="ident">doc</span>: <span class="string">&quot;Publish a newly created `ApprovedPayment` resource under the sender&#39;s account with approval key\
          `public_key`. Aborts if the sender already has a published `ApprovedPayment` resource.&quot;</span>
+}
+
+<span class="macro">encode_txn_script</span><span class="macro">!</span> {
+    <span class="ident">name</span>: <span class="ident">encode_add_currency_to_account_script</span>,
+    <span class="ident">type_arg</span>: <span class="ident">currency</span>,
+    <span class="ident">args</span>: [],
+    <span class="ident">script</span>: <span class="ident">AddCurrencyToAccount</span>,
+    <span class="ident">doc</span>: <span class="string">&quot;Add the currency identified by the type `currency` to the sending accounts.\
+          Aborts if the account already holds a balance fo `currency` type.&quot;</span>
 }
 
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {
