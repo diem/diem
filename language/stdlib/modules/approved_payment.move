@@ -66,6 +66,13 @@ module ApprovedPayment {
     // Rotate the key used to sign approved payments. This will invalidate any approved payments
     // that are currently in flight
     public fun rotate_key(approved_payment: &mut T, new_public_key: vector<u8>) {
+        // Cryptographic check of public key validity
+        Transaction::assert(
+            Signature::ed25519_validate_pubkey(
+                copy new_public_key
+            ),
+            9003, // TODO: proper error code
+        );
         approved_payment.public_key = new_public_key
     }
 
@@ -80,7 +87,12 @@ module ApprovedPayment {
     // `public_key`
     public fun publish(public_key: vector<u8>) {
         // Sanity check for key validity
-        Transaction::assert(Vector::length(&public_key) == 32, 9003); // TODO: proper error code
+        Transaction::assert(
+            Signature::ed25519_validate_pubkey(
+                copy public_key
+            ),
+            9003, // TODO: proper error code
+        );
         move_to_sender(T { public_key })
     }
 

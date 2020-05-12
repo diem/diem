@@ -41,6 +41,28 @@ const OVERSIZED_PUBLIC_KEY_SIZE_FAILURE: u64 = DEFAULT_ERROR_CODE + 8;
 /// Concatenated Ed25519 public keys should be a multiple of 32 bytes
 const INVALID_PUBLIC_KEY_SIZE_FAILURE: u64 = DEFAULT_ERROR_CODE + 9;
 
+pub fn native_ed25519_publickey_validation(
+    context: &impl NativeContext,
+    _ty_args: Vec<Type>,
+    mut arguments: VecDeque<Value>,
+) -> VMResult<NativeResult> {
+    debug_assert!(_ty_args.is_empty());
+    debug_assert!(arguments.len() == 1);
+
+    let key_bytes = pop_arg!(arguments, Vec<u8>);
+
+    let cost = native_gas(
+        context.cost_table(),
+        NativeCostIndex::ED25519_VALIDATE_KEY,
+        key_bytes.len(),
+    );
+
+    // This deserialization performs point-on-curve and small subgroup checks
+    let valid = ed25519::Ed25519PublicKey::try_from(&key_bytes[..]).is_ok();
+    let return_values = vec![Value::bool(valid)];
+    Ok(NativeResult::ok(cost, return_values))
+}
+
 pub fn native_ed25519_signature_verification(
     context: &impl NativeContext,
     _ty_args: Vec<Type>,

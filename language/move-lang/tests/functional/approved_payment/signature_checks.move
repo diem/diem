@@ -4,6 +4,7 @@
 
 //! account: alice
 //! account: bob
+//! account: charlie
 
 // setup: alice publishes an approved payment resource
 
@@ -15,7 +16,6 @@ fun main() {
     ApprovedPayment::publish(pubkey)
 }
 }
-
 // check: EXECUTED
 
 // offline: alice generates payment id 0, signs it, and sends ID + signature to bob
@@ -32,7 +32,6 @@ fun main() {
     ApprovedPayment::deposit_to_payee<LBR::T>({{alice}}, 1000, payment_id, signature);
 }
 }
-
 // check: EXECUTED
 
 // same as above, but with an invalid signature. should now abort
@@ -48,6 +47,46 @@ fun main() {
     ApprovedPayment::deposit_to_payee<LBR::T>({{alice}}, 1000, payment_id, signature);
 }
 }
-
 // check: ABORTED
 // check: 9002
+
+// charlie publishes an invalid approved payment resource (key too long)
+//! new-transaction
+//! sender: charlie
+script {
+use 0x0::ApprovedPayment;
+fun main() {
+    let pubkey = x"10000000000000000000000000000000000000000000000000000000000000000";
+    ApprovedPayment::publish(pubkey);
+}
+}
+// check: ABORTED
+// check: 9003
+
+
+// charlie publishes an invalid approved payment resource (key too short)
+//! new-transaction
+//! sender: charlie
+script {
+use 0x0::ApprovedPayment;
+fun main() {
+    let pubkey = x"100";
+    ApprovedPayment::publish(pubkey);
+}
+}
+// check: ABORTED
+// check: 9003
+
+// charlie publishes an invalid approved payment resource (correct length,
+// invalid key),
+//! new-transaction
+//! sender: charlie
+script {
+use 0x0::ApprovedPayment;
+fun main() {
+    let pubkey = x"0000000000000000000000000000000000000000000000000000000000000000";
+    ApprovedPayment::publish(pubkey);
+}
+}
+// check: ABORTED
+// check: 9003
