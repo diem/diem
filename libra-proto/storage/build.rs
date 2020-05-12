@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 fn main() {
-    let protos = ["src/proto/storage.proto"];
+    let protos = ["src/storage.proto"];
 
-    let includes = ["../../types/src/proto", "src/proto"];
+    let includes = ["../types/src", "src"];
 
     tonic_build::configure()
         .compile(&protos, &includes)

@@ -3,9 +3,10 @@
 
 use crate::{
     account_address::AccountAddress,
-    proto::types::SignedTransaction as ProtoSignedTransaction,
+
     transaction::{RawTransaction, SignedTransaction, TransactionPayload},
 };
+
 use anyhow::Result;
 use chrono::Utc;
 use libra_crypto::{
@@ -15,6 +16,7 @@ use libra_crypto::{
     traits::SigningKey,
     HashValue,
 };
+use proto_types::types::SignedTransaction as ProtoSignedTransaction;
 
 /// Used to get the digest of a set of signed transactions.  This is used by a validator
 /// to sign a block and to verify the signatures of other validators on a block

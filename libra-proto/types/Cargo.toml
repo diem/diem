@@ -1,0 +1,16 @@
+[package]
+name = "proto-types"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra admission control proto"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+prost = "0.6"
+
+[build-dependencies]
+prost-build = "0.6"

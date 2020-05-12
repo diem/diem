@@ -6,10 +6,6 @@
 use ::libra_types::proto::*;
 use tokio::runtime::{Builder, Runtime};
 
-pub mod admission_control {
-    tonic::include_proto!("admission_control");
-}
-
 pub use self::admission_control::{
     admission_control_client::AdmissionControlClient, AdmissionControlMsg,
     SubmitTransactionRequest, SubmitTransactionResponse,

@@ -160,15 +160,15 @@ impl fmt::Display for AccessPath {
     }
 }
 
-impl TryFrom<crate::proto::types::AccessPath> for AccessPath {
+impl TryFrom<::proto_types::types::AccessPath> for AccessPath {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::AccessPath) -> Result<Self> {
+    fn try_from(proto: ::proto_types::types::AccessPath) -> Result<Self> {
         Ok(AccessPath::new(proto.address.try_into()?, proto.path))
     }
 }
 
-impl From<AccessPath> for crate::proto::types::AccessPath {
+impl From<AccessPath> for ::proto_types::types::AccessPath {
     fn from(path: AccessPath) -> Self {
         Self {
             address: path.address.to_vec(),

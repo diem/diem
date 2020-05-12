@@ -169,19 +169,19 @@ impl<H> PartialEq for AccumulatorProof<H> {
 
 impl<H> Eq for AccumulatorProof<H> {}
 
-impl<H> TryFrom<crate::proto::types::AccumulatorProof> for AccumulatorProof<H>
+impl<H> TryFrom<::proto_types::types::AccumulatorProof> for AccumulatorProof<H>
 where
     H: CryptoHasher,
 {
     type Error = Error;
 
-    fn try_from(proto_proof: crate::proto::types::AccumulatorProof) -> Result<Self> {
+    fn try_from(proto_proof: ::proto_types::types::AccumulatorProof) -> Result<Self> {
         let siblings = from_proto_siblings(proto_proof.siblings, *ACCUMULATOR_PLACEHOLDER_HASH)?;
         Ok(AccumulatorProof::new(siblings))
     }
 }
 
-impl<H> From<AccumulatorProof<H>> for crate::proto::types::AccumulatorProof {
+impl<H> From<AccumulatorProof<H>> for ::proto_types::types::AccumulatorProof {
     fn from(proof: AccumulatorProof<H>) -> Self {
         let mut proto_proof = Self::default();
         proto_proof.siblings = into_proto_siblings(proof.siblings, *ACCUMULATOR_PLACEHOLDER_HASH);
@@ -321,10 +321,10 @@ impl SparseMerkleProof {
     }
 }
 
-impl TryFrom<crate::proto::types::SparseMerkleProof> for SparseMerkleProof {
+impl TryFrom<::proto_types::types::SparseMerkleProof> for SparseMerkleProof {
     type Error = Error;
 
-    fn try_from(proto_proof: crate::proto::types::SparseMerkleProof) -> Result<Self> {
+    fn try_from(proto_proof: ::proto_types::types::SparseMerkleProof) -> Result<Self> {
         let proto_leaf = proto_proof.leaf;
         let leaf = if proto_leaf.is_empty() {
             None
@@ -346,7 +346,7 @@ impl TryFrom<crate::proto::types::SparseMerkleProof> for SparseMerkleProof {
     }
 }
 
-impl From<SparseMerkleProof> for crate::proto::types::SparseMerkleProof {
+impl From<SparseMerkleProof> for ::proto_types::types::SparseMerkleProof {
     fn from(proof: SparseMerkleProof) -> Self {
         let mut proto_proof = Self::default();
         // If a leaf is present, we write the key and value hash as a single byte array of 64
@@ -387,10 +387,10 @@ impl AccumulatorConsistencyProof {
     }
 }
 
-impl TryFrom<crate::proto::types::AccumulatorConsistencyProof> for AccumulatorConsistencyProof {
+impl TryFrom<::proto_types::types::AccumulatorConsistencyProof> for AccumulatorConsistencyProof {
     type Error = Error;
 
-    fn try_from(proto_proof: crate::proto::types::AccumulatorConsistencyProof) -> Result<Self> {
+    fn try_from(proto_proof: ::proto_types::types::AccumulatorConsistencyProof) -> Result<Self> {
         let subtrees = proto_proof
             .subtrees
             .into_iter()
@@ -401,7 +401,7 @@ impl TryFrom<crate::proto::types::AccumulatorConsistencyProof> for AccumulatorCo
     }
 }
 
-impl From<AccumulatorConsistencyProof> for crate::proto::types::AccumulatorConsistencyProof {
+impl From<AccumulatorConsistencyProof> for ::proto_types::types::AccumulatorConsistencyProof {
     fn from(proof: AccumulatorConsistencyProof) -> Self {
         Self {
             subtrees: proof.subtrees.iter().map(HashValue::to_vec).collect(),
@@ -581,13 +581,13 @@ impl<H> PartialEq for AccumulatorRangeProof<H> {
 
 impl<H> Eq for AccumulatorRangeProof<H> {}
 
-impl<H> TryFrom<crate::proto::types::AccumulatorRangeProof> for AccumulatorRangeProof<H>
+impl<H> TryFrom<::proto_types::types::AccumulatorRangeProof> for AccumulatorRangeProof<H>
 where
     H: CryptoHasher,
 {
     type Error = Error;
 
-    fn try_from(proto_proof: crate::proto::types::AccumulatorRangeProof) -> Result<Self> {
+    fn try_from(proto_proof: ::proto_types::types::AccumulatorRangeProof) -> Result<Self> {
         let left_siblings =
             from_proto_siblings(proto_proof.left_siblings, *ACCUMULATOR_PLACEHOLDER_HASH)?;
         let right_siblings =
@@ -597,7 +597,7 @@ where
     }
 }
 
-impl<H> From<AccumulatorRangeProof<H>> for crate::proto::types::AccumulatorRangeProof {
+impl<H> From<AccumulatorRangeProof<H>> for ::proto_types::types::AccumulatorRangeProof {
     fn from(proof: AccumulatorRangeProof<H>) -> Self {
         let mut proto_proof = Self::default();
         proto_proof.left_siblings =
@@ -650,17 +650,17 @@ impl SparseMerkleRangeProof {
     }
 }
 
-impl TryFrom<crate::proto::types::SparseMerkleRangeProof> for SparseMerkleRangeProof {
+impl TryFrom<::proto_types::types::SparseMerkleRangeProof> for SparseMerkleRangeProof {
     type Error = Error;
 
-    fn try_from(proto_proof: crate::proto::types::SparseMerkleRangeProof) -> Result<Self> {
+    fn try_from(proto_proof: ::proto_types::types::SparseMerkleRangeProof) -> Result<Self> {
         let right_siblings =
             from_proto_siblings(proto_proof.right_siblings, *SPARSE_MERKLE_PLACEHOLDER_HASH)?;
         Ok(Self::new(right_siblings))
     }
 }
 
-impl From<SparseMerkleRangeProof> for crate::proto::types::SparseMerkleRangeProof {
+impl From<SparseMerkleRangeProof> for ::proto_types::types::SparseMerkleRangeProof {
     fn from(proof: SparseMerkleRangeProof) -> Self {
         let right_siblings =
             into_proto_siblings(proof.right_siblings, *SPARSE_MERKLE_PLACEHOLDER_HASH);
@@ -743,10 +743,10 @@ impl TransactionProof {
     }
 }
 
-impl TryFrom<crate::proto::types::TransactionProof> for TransactionProof {
+impl TryFrom<::proto_types::types::TransactionProof> for TransactionProof {
     type Error = Error;
 
-    fn try_from(proto_proof: crate::proto::types::TransactionProof) -> Result<Self> {
+    fn try_from(proto_proof: ::proto_types::types::TransactionProof) -> Result<Self> {
         let ledger_info_to_transaction_info_proof = proto_proof
             .ledger_info_to_transaction_info_proof
             .ok_or_else(|| format_err!("Missing ledger_info_to_transaction_info_proof"))?
@@ -763,7 +763,7 @@ impl TryFrom<crate::proto::types::TransactionProof> for TransactionProof {
     }
 }
 
-impl From<TransactionProof> for crate::proto::types::TransactionProof {
+impl From<TransactionProof> for ::proto_types::types::TransactionProof {
     fn from(proof: TransactionProof) -> Self {
         Self {
             ledger_info_to_transaction_info_proof: Some(
@@ -847,10 +847,10 @@ impl AccountStateProof {
     }
 }
 
-impl TryFrom<crate::proto::types::AccountStateProof> for AccountStateProof {
+impl TryFrom<::proto_types::types::AccountStateProof> for AccountStateProof {
     type Error = Error;
 
-    fn try_from(proto_proof: crate::proto::types::AccountStateProof) -> Result<Self> {
+    fn try_from(proto_proof: ::proto_types::types::AccountStateProof) -> Result<Self> {
         let ledger_info_to_transaction_info_proof = proto_proof
             .ledger_info_to_transaction_info_proof
             .ok_or_else(|| format_err!("Missing ledger_info_to_transaction_info_proof"))?
@@ -872,7 +872,7 @@ impl TryFrom<crate::proto::types::AccountStateProof> for AccountStateProof {
     }
 }
 
-impl From<AccountStateProof> for crate::proto::types::AccountStateProof {
+impl From<AccountStateProof> for ::proto_types::types::AccountStateProof {
     fn from(proof: AccountStateProof) -> Self {
         Self {
             ledger_info_to_transaction_info_proof: Some(
@@ -956,10 +956,10 @@ impl EventProof {
     }
 }
 
-impl TryFrom<crate::proto::types::EventProof> for EventProof {
+impl TryFrom<::proto_types::types::EventProof> for EventProof {
     type Error = Error;
 
-    fn try_from(proto_proof: crate::proto::types::EventProof) -> Result<Self> {
+    fn try_from(proto_proof: ::proto_types::types::EventProof) -> Result<Self> {
         let ledger_info_to_transaction_info_proof = proto_proof
             .ledger_info_to_transaction_info_proof
             .ok_or_else(|| format_err!("Missing ledger_info_to_transaction_info_proof"))?
@@ -981,7 +981,7 @@ impl TryFrom<crate::proto::types::EventProof> for EventProof {
     }
 }
 
-impl From<EventProof> for crate::proto::types::EventProof {
+impl From<EventProof> for ::proto_types::types::EventProof {
     fn from(proof: EventProof) -> Self {
         Self {
             ledger_info_to_transaction_info_proof: Some(
@@ -1075,10 +1075,10 @@ impl TransactionListProof {
     }
 }
 
-impl TryFrom<crate::proto::types::TransactionListProof> for TransactionListProof {
+impl TryFrom<::proto_types::types::TransactionListProof> for TransactionListProof {
     type Error = Error;
 
-    fn try_from(proto_proof: crate::proto::types::TransactionListProof) -> Result<Self> {
+    fn try_from(proto_proof: ::proto_types::types::TransactionListProof) -> Result<Self> {
         let ledger_info_to_transaction_infos_proof = proto_proof
             .ledger_info_to_transaction_infos_proof
             .ok_or_else(|| format_err!("Missing ledger_info_to_transaction_infos_proof"))?
@@ -1096,7 +1096,7 @@ impl TryFrom<crate::proto::types::TransactionListProof> for TransactionListProof
     }
 }
 
-impl From<TransactionListProof> for crate::proto::types::TransactionListProof {
+impl From<TransactionListProof> for ::proto_types::types::TransactionListProof {
     fn from(proof: TransactionListProof) -> Self {
         Self {
             ledger_info_to_transaction_infos_proof: Some(

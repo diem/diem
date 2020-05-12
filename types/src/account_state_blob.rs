@@ -67,15 +67,15 @@ impl From<Vec<u8>> for AccountStateBlob {
     }
 }
 
-impl TryFrom<crate::proto::types::AccountStateBlob> for AccountStateBlob {
+impl TryFrom<::proto_types::types::AccountStateBlob> for AccountStateBlob {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::AccountStateBlob) -> Result<Self> {
+    fn try_from(proto: ::proto_types::types::AccountStateBlob) -> Result<Self> {
         Ok(proto.blob.into())
     }
 }
 
-impl From<AccountStateBlob> for crate::proto::types::AccountStateBlob {
+impl From<AccountStateBlob> for ::proto_types::types::AccountStateBlob {
     fn from(blob: AccountStateBlob) -> Self {
         Self { blob: blob.blob }
     }
@@ -223,10 +223,10 @@ impl AccountStateWithProof {
     }
 }
 
-impl TryFrom<crate::proto::types::AccountStateWithProof> for AccountStateWithProof {
+impl TryFrom<::proto_types::types::AccountStateWithProof> for AccountStateWithProof {
     type Error = Error;
 
-    fn try_from(mut proto: crate::proto::types::AccountStateWithProof) -> Result<Self> {
+    fn try_from(mut proto: ::proto_types::types::AccountStateWithProof) -> Result<Self> {
         Ok(Self::new(
             proto.version,
             proto
@@ -242,7 +242,7 @@ impl TryFrom<crate::proto::types::AccountStateWithProof> for AccountStateWithPro
     }
 }
 
-impl From<AccountStateWithProof> for crate::proto::types::AccountStateWithProof {
+impl From<AccountStateWithProof> for ::proto_types::types::AccountStateWithProof {
     fn from(account: AccountStateWithProof) -> Self {
         Self {
             version: account.version,
@@ -268,7 +268,7 @@ mod tests {
     proptest! {
         #[test]
         fn account_state_blob_proto_roundtrip(account_state_blob in any::<AccountStateBlob>()) {
-            assert_protobuf_encode_decode::<crate::proto::types::AccountStateBlob, AccountStateBlob>(&account_state_blob);
+            assert_protobuf_encode_decode::<::proto_types::types::AccountStateBlob, AccountStateBlob>(&account_state_blob);
         }
 
         #[test]
@@ -278,7 +278,7 @@ mod tests {
 
         #[test]
         fn account_state_with_proof_proto_roundtrip(account_state_with_proof in any::<AccountStateWithProof>()) {
-            assert_protobuf_encode_decode::<crate::proto::types::AccountStateWithProof, AccountStateWithProof>(&account_state_with_proof);
+            assert_protobuf_encode_decode::<::proto_types::types::AccountStateWithProof, AccountStateWithProof>(&account_state_with_proof);
         }
 
         #[test]

@@ -3,8 +3,8 @@
 
 #![allow(bare_trait_objects)]
 
-use ::libra_types::proto::types;
+use ::proto_types::types;
 
-pub mod storage {
-    tonic::include_proto!("storage");
+pub mod admission_control {
+    tonic::include_proto!("admission_control");
 }

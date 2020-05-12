@@ -449,22 +449,22 @@ impl SignedTransaction {
     }
 }
 
-impl TryFrom<crate::proto::types::SignedTransaction> for SignedTransaction {
+impl TryFrom<::proto_types::types::SignedTransaction> for SignedTransaction {
     type Error = Error;
 
-    fn try_from(txn: crate::proto::types::SignedTransaction) -> Result<Self> {
+    fn try_from(txn: ::proto_types::types::SignedTransaction) -> Result<Self> {
         lcs::from_bytes(&txn.txn_bytes).map_err(Into::into)
     }
 }
 
-impl From<SignedTransaction> for crate::proto::types::SignedTransaction {
+impl From<SignedTransaction> for ::proto_types::types::SignedTransaction {
     fn from(txn: SignedTransaction) -> Self {
         let txn_bytes = lcs::to_bytes(&txn).expect("Unable to serialize SignedTransaction");
         Self { txn_bytes }
     }
 }
 
-impl From<SignatureCheckedTransaction> for crate::proto::types::SignedTransaction {
+impl From<SignatureCheckedTransaction> for ::proto_types::types::SignedTransaction {
     fn from(txn: SignatureCheckedTransaction) -> Self {
         txn.0.into()
     }
@@ -530,10 +530,10 @@ impl TransactionWithProof {
     }
 }
 
-impl TryFrom<crate::proto::types::TransactionWithProof> for TransactionWithProof {
+impl TryFrom<::proto_types::types::TransactionWithProof> for TransactionWithProof {
     type Error = Error;
 
-    fn try_from(mut proto: crate::proto::types::TransactionWithProof) -> Result<Self> {
+    fn try_from(mut proto: ::proto_types::types::TransactionWithProof) -> Result<Self> {
         let version = proto.version;
         let transaction = proto
             .transaction
@@ -563,7 +563,7 @@ impl TryFrom<crate::proto::types::TransactionWithProof> for TransactionWithProof
     }
 }
 
-impl From<TransactionWithProof> for crate::proto::types::TransactionWithProof {
+impl From<TransactionWithProof> for ::proto_types::types::TransactionWithProof {
     fn from(mut txn: TransactionWithProof) -> Self {
         Self {
             version: txn.version,
@@ -572,7 +572,7 @@ impl From<TransactionWithProof> for crate::proto::types::TransactionWithProof {
             events: txn
                 .events
                 .take()
-                .map(|list| crate::proto::types::EventsList {
+                .map(|list| ::proto_types::types::EventsList {
                     events: list.into_iter().map(ContractEvent::into).collect(),
                 }),
         }
@@ -718,10 +718,10 @@ impl TransactionOutput {
     }
 }
 
-impl TryFrom<crate::proto::types::TransactionInfo> for TransactionInfo {
+impl TryFrom<::proto_types::types::TransactionInfo> for TransactionInfo {
     type Error = Error;
 
-    fn try_from(proto_txn_info: crate::proto::types::TransactionInfo) -> Result<Self> {
+    fn try_from(proto_txn_info: ::proto_types::types::TransactionInfo) -> Result<Self> {
         let transaction_hash = HashValue::from_slice(&proto_txn_info.transaction_hash)?;
         let state_root_hash = HashValue::from_slice(&proto_txn_info.state_root_hash)?;
         let event_root_hash = HashValue::from_slice(&proto_txn_info.event_root_hash)?;
@@ -738,7 +738,7 @@ impl TryFrom<crate::proto::types::TransactionInfo> for TransactionInfo {
     }
 }
 
-impl From<TransactionInfo> for crate::proto::types::TransactionInfo {
+impl From<TransactionInfo> for ::proto_types::types::TransactionInfo {
     fn from(txn_info: TransactionInfo) -> Self {
         Self {
             transaction_hash: txn_info.transaction_hash.to_vec(),
@@ -887,10 +887,10 @@ impl TransactionToCommit {
     }
 }
 
-impl TryFrom<crate::proto::types::TransactionToCommit> for TransactionToCommit {
+impl TryFrom<::proto_types::types::TransactionToCommit> for TransactionToCommit {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::TransactionToCommit) -> Result<Self> {
+    fn try_from(proto: ::proto_types::types::TransactionToCommit) -> Result<Self> {
         let transaction = proto
             .transaction
             .ok_or_else(|| format_err!("Missing signed_transaction"))?
@@ -929,14 +929,14 @@ impl TryFrom<crate::proto::types::TransactionToCommit> for TransactionToCommit {
     }
 }
 
-impl From<TransactionToCommit> for crate::proto::types::TransactionToCommit {
+impl From<TransactionToCommit> for ::proto_types::types::TransactionToCommit {
     fn from(txn: TransactionToCommit) -> Self {
         Self {
             transaction: Some(txn.transaction.into()),
             account_states: txn
                 .account_states
                 .into_iter()
-                .map(|(address, blob)| crate::proto::types::AccountState {
+                .map(|(address, blob)| ::proto_types::types::AccountState {
                     address: address.as_ref().to_vec(),
                     blob: blob.into(),
                 })
@@ -1048,10 +1048,10 @@ impl TransactionListWithProof {
     }
 }
 
-impl TryFrom<crate::proto::types::TransactionListWithProof> for TransactionListWithProof {
+impl TryFrom<::proto_types::types::TransactionListWithProof> for TransactionListWithProof {
     type Error = Error;
 
-    fn try_from(mut proto: crate::proto::types::TransactionListWithProof) -> Result<Self> {
+    fn try_from(mut proto: ::proto_types::types::TransactionListWithProof) -> Result<Self> {
         let transactions = proto
             .transactions
             .into_iter()
@@ -1093,16 +1093,16 @@ impl TryFrom<crate::proto::types::TransactionListWithProof> for TransactionListW
     }
 }
 
-impl From<TransactionListWithProof> for crate::proto::types::TransactionListWithProof {
+impl From<TransactionListWithProof> for ::proto_types::types::TransactionListWithProof {
     fn from(txn: TransactionListWithProof) -> Self {
         let transactions = txn.transactions.into_iter().map(Into::into).collect();
 
         let events_for_versions =
             txn.events
-                .map(|all_events| crate::proto::types::EventsForVersions {
+                .map(|all_events| ::proto_types::types::EventsForVersions {
                     events_for_version: all_events
                         .into_iter()
-                        .map(|events_for_version| crate::proto::types::EventsList {
+                        .map(|events_for_version| ::proto_types::types::EventsList {
                             events: events_for_version
                                 .into_iter()
                                 .map(ContractEvent::into)
@@ -1174,15 +1174,15 @@ impl CryptoHash for Transaction {
     }
 }
 
-impl TryFrom<crate::proto::types::Transaction> for Transaction {
+impl TryFrom<::proto_types::types::Transaction> for Transaction {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::Transaction) -> Result<Self> {
+    fn try_from(proto: ::proto_types::types::Transaction) -> Result<Self> {
         lcs::from_bytes(&proto.transaction).map_err(Into::into)
     }
 }
 
-impl From<Transaction> for crate::proto::types::Transaction {
+impl From<Transaction> for ::proto_types::types::Transaction {
     fn from(txn: Transaction) -> Self {
         let bytes = lcs::to_bytes(&txn).expect("Serialization should not fail.");
         Self { transaction: bytes }

@@ -58,15 +58,15 @@ impl ValidatorSet {
     }
 }
 
-impl TryFrom<crate::proto::types::ValidatorSet> for ValidatorSet {
+impl TryFrom<::proto_types::types::ValidatorSet> for ValidatorSet {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::ValidatorSet) -> Result<Self> {
+    fn try_from(proto: ::proto_types::types::ValidatorSet) -> Result<Self> {
         Ok(lcs::from_bytes(&proto.bytes)?)
     }
 }
 
-impl From<ValidatorSet> for crate::proto::types::ValidatorSet {
+impl From<ValidatorSet> for ::proto_types::types::ValidatorSet {
     fn from(set: ValidatorSet) -> Self {
         Self {
             bytes: lcs::to_bytes(&set).expect("failed to serialize validator set"),

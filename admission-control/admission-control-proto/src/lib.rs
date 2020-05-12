@@ -3,8 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-pub mod proto;
-
 use anyhow::{format_err, Error, Result};
 use libra_logger::prelude::*;
 use libra_types::{mempool_status::MempoolStatus as LibraMempoolStatus, vm_error::VMStatus};
@@ -21,11 +19,11 @@ pub enum AdmissionControlStatus {
     Rejected(String),
 }
 
-impl TryFrom<crate::proto::admission_control::AdmissionControlStatus> for AdmissionControlStatus {
+impl TryFrom<::proto_admission_control::admission_control::AdmissionControlStatus> for AdmissionControlStatus {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::admission_control::AdmissionControlStatus) -> Result<Self> {
-        use crate::proto::admission_control::AdmissionControlStatusCode as ProtoStatusCode;
+    fn try_from(proto: ::proto_admission_control::admission_control::AdmissionControlStatus) -> Result<Self> {
+        use ::proto_admission_control::admission_control::AdmissionControlStatusCode as ProtoStatusCode;
         let ret = match proto.code() {
             ProtoStatusCode::Accepted => AdmissionControlStatus::Accepted,
             ProtoStatusCode::Blacklisted => {
@@ -41,9 +39,9 @@ impl TryFrom<crate::proto::admission_control::AdmissionControlStatus> for Admiss
     }
 }
 
-impl From<AdmissionControlStatus> for crate::proto::admission_control::AdmissionControlStatus {
+impl From<AdmissionControlStatus> for ::proto_admission_control::admission_control::AdmissionControlStatus {
     fn from(status: AdmissionControlStatus) -> Self {
-        use crate::proto::admission_control::AdmissionControlStatusCode as ProtoStatusCode;
+        use ::proto_admission_control::admission_control::AdmissionControlStatusCode as ProtoStatusCode;
         let mut admission_control_status = Self::default();
         match status {
             AdmissionControlStatus::Accepted => {
@@ -75,13 +73,13 @@ pub struct SubmitTransactionResponse {
     pub validator_id: Vec<u8>,
 }
 
-impl TryFrom<crate::proto::admission_control::SubmitTransactionResponse>
+impl TryFrom<::proto_admission_control::admission_control::SubmitTransactionResponse>
     for SubmitTransactionResponse
 {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::admission_control::SubmitTransactionResponse) -> Result<Self> {
-        use crate::proto::admission_control::submit_transaction_response::Status::*;
+    fn try_from(proto: ::proto_admission_control::admission_control::SubmitTransactionResponse) -> Result<Self> {
+        use ::proto_admission_control::admission_control::submit_transaction_response::Status::*;
 
         let validator_id = proto.validator_id;
         let status = proto.status.ok_or_else(|| format_err!("Missing status"))?;
@@ -100,10 +98,10 @@ impl TryFrom<crate::proto::admission_control::SubmitTransactionResponse>
 }
 
 impl From<SubmitTransactionResponse>
-    for crate::proto::admission_control::SubmitTransactionResponse
+    for ::proto_admission_control::admission_control::SubmitTransactionResponse
 {
     fn from(status: SubmitTransactionResponse) -> Self {
-        use crate::proto::admission_control::submit_transaction_response::Status::*;
+        use ::proto_admission_control::admission_control::submit_transaction_response::Status::*;
 
         let mut proto = Self::default();
         if let Some(ac_st) = status.ac_status {

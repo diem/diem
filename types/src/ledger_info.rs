@@ -130,10 +130,10 @@ impl LedgerInfo {
     }
 }
 
-impl TryFrom<crate::proto::types::LedgerInfo> for LedgerInfo {
+impl TryFrom<::proto_types::types::LedgerInfo> for LedgerInfo {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::LedgerInfo) -> Result<Self> {
+    fn try_from(proto: ::proto_types::types::LedgerInfo) -> Result<Self> {
         let version = proto.version;
         let transaction_accumulator_hash =
             HashValue::from_slice(&proto.transaction_accumulator_hash)?;
@@ -159,7 +159,7 @@ impl TryFrom<crate::proto::types::LedgerInfo> for LedgerInfo {
     }
 }
 
-impl From<LedgerInfo> for crate::proto::types::LedgerInfo {
+impl From<LedgerInfo> for ::proto_types::types::LedgerInfo {
     fn from(ledger_info: LedgerInfo) -> Self {
         Self {
             version: ledger_info.version(),
@@ -305,15 +305,15 @@ impl LedgerInfoWithV0 {
     }
 }
 
-impl TryFrom<crate::proto::types::LedgerInfoWithSignatures> for LedgerInfoWithSignatures {
+impl TryFrom<::proto_types::types::LedgerInfoWithSignatures> for LedgerInfoWithSignatures {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::LedgerInfoWithSignatures) -> Result<Self> {
+    fn try_from(proto: ::proto_types::types::LedgerInfoWithSignatures) -> Result<Self> {
         Ok(lcs::from_bytes(&proto.bytes)?)
     }
 }
 
-impl From<LedgerInfoWithSignatures> for crate::proto::types::LedgerInfoWithSignatures {
+impl From<LedgerInfoWithSignatures> for ::proto_types::types::LedgerInfoWithSignatures {
     fn from(ledger_info_with_sigs: LedgerInfoWithSignatures) -> Self {
         Self {
             bytes: lcs::to_bytes(&ledger_info_with_sigs).expect("failed to serialize ledger info"),

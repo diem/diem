@@ -25,8 +25,6 @@
 //! [`storage-client`](../storage-client/index.html) don't need to depending on the entire
 //! [`storage-service`](../storage-service/index.html).
 
-pub mod proto;
-
 use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::HashValue;
 use libra_types::{
@@ -60,10 +58,10 @@ impl GetLatestStateRootResponse {
     }
 }
 
-impl TryFrom<crate::proto::storage::GetLatestStateRootResponse> for GetLatestStateRootResponse {
+impl TryFrom<::proto_storage::storage::GetLatestStateRootResponse> for GetLatestStateRootResponse {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::GetLatestStateRootResponse) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::GetLatestStateRootResponse) -> Result<Self> {
         let version = proto.version;
         let state_root_hash = HashValue::from_slice(&proto.state_root_hash)?;
 
@@ -71,7 +69,7 @@ impl TryFrom<crate::proto::storage::GetLatestStateRootResponse> for GetLatestSta
     }
 }
 
-impl From<GetLatestStateRootResponse> for crate::proto::storage::GetLatestStateRootResponse {
+impl From<GetLatestStateRootResponse> for ::proto_storage::storage::GetLatestStateRootResponse {
     fn from(response: GetLatestStateRootResponse) -> Self {
         Self {
             version: response.version,
@@ -98,16 +96,16 @@ impl GetLatestAccountStateRequest {
     }
 }
 
-impl TryFrom<crate::proto::storage::GetLatestAccountStateRequest> for GetLatestAccountStateRequest {
+impl TryFrom<::proto_storage::storage::GetLatestAccountStateRequest> for GetLatestAccountStateRequest {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::GetLatestAccountStateRequest) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::GetLatestAccountStateRequest) -> Result<Self> {
         let address = AccountAddress::try_from(&proto.address[..])?;
         Ok(Self::new(address))
     }
 }
 
-impl From<GetLatestAccountStateRequest> for crate::proto::storage::GetLatestAccountStateRequest {
+impl From<GetLatestAccountStateRequest> for ::proto_storage::storage::GetLatestAccountStateRequest {
     fn from(request: GetLatestAccountStateRequest) -> Self {
         Self {
             address: request.address.into(),
@@ -127,12 +125,12 @@ impl GetLatestAccountStateResponse {
     }
 }
 
-impl TryFrom<crate::proto::storage::GetLatestAccountStateResponse>
+impl TryFrom<::proto_storage::storage::GetLatestAccountStateResponse>
     for GetLatestAccountStateResponse
 {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::GetLatestAccountStateResponse) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::GetLatestAccountStateResponse) -> Result<Self> {
         let account_state_blob = proto
             .account_state_blob
             .map(TryFrom::try_from)
@@ -141,7 +139,7 @@ impl TryFrom<crate::proto::storage::GetLatestAccountStateResponse>
     }
 }
 
-impl From<GetLatestAccountStateResponse> for crate::proto::storage::GetLatestAccountStateResponse {
+impl From<GetLatestAccountStateResponse> for ::proto_storage::storage::GetLatestAccountStateResponse {
     fn from(response: GetLatestAccountStateResponse) -> Self {
         Self {
             account_state_blob: response.account_state_blob.map(Into::into),
@@ -167,13 +165,13 @@ impl GetAccountStateWithProofByVersionRequest {
     }
 }
 
-impl TryFrom<crate::proto::storage::GetAccountStateWithProofByVersionRequest>
+impl TryFrom<::proto_storage::storage::GetAccountStateWithProofByVersionRequest>
     for GetAccountStateWithProofByVersionRequest
 {
     type Error = Error;
 
     fn try_from(
-        proto: crate::proto::storage::GetAccountStateWithProofByVersionRequest,
+        proto: ::proto_storage::storage::GetAccountStateWithProofByVersionRequest,
     ) -> Result<Self> {
         let address = AccountAddress::try_from(&proto.address[..])?;
         let version = proto.version;
@@ -183,7 +181,7 @@ impl TryFrom<crate::proto::storage::GetAccountStateWithProofByVersionRequest>
 }
 
 impl From<GetAccountStateWithProofByVersionRequest>
-    for crate::proto::storage::GetAccountStateWithProofByVersionRequest
+    for ::proto_storage::storage::GetAccountStateWithProofByVersionRequest
 {
     fn from(request: GetAccountStateWithProofByVersionRequest) -> Self {
         Self {
@@ -217,13 +215,13 @@ impl GetAccountStateWithProofByVersionResponse {
     }
 }
 
-impl TryFrom<crate::proto::storage::GetAccountStateWithProofByVersionResponse>
+impl TryFrom<::proto_storage::storage::GetAccountStateWithProofByVersionResponse>
     for GetAccountStateWithProofByVersionResponse
 {
     type Error = Error;
 
     fn try_from(
-        proto: crate::proto::storage::GetAccountStateWithProofByVersionResponse,
+        proto: ::proto_storage::storage::GetAccountStateWithProofByVersionResponse,
     ) -> Result<Self> {
         let account_state_blob = proto
             .account_state_blob
@@ -239,7 +237,7 @@ impl TryFrom<crate::proto::storage::GetAccountStateWithProofByVersionResponse>
 }
 
 impl From<GetAccountStateWithProofByVersionResponse>
-    for crate::proto::storage::GetAccountStateWithProofByVersionResponse
+    for ::proto_storage::storage::GetAccountStateWithProofByVersionResponse
 {
     fn from(response: GetAccountStateWithProofByVersionResponse) -> Self {
         Self {
@@ -273,12 +271,12 @@ impl GetAccountStateRangeProofRequest {
     }
 }
 
-impl TryFrom<crate::proto::storage::GetAccountStateRangeProofRequest>
+impl TryFrom<::proto_storage::storage::GetAccountStateRangeProofRequest>
     for GetAccountStateRangeProofRequest
 {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::GetAccountStateRangeProofRequest) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::GetAccountStateRangeProofRequest) -> Result<Self> {
         let rightmost_key = HashValue::from_slice(&proto.rightmost_key)?;
         let version = proto.version;
         Ok(Self::new(rightmost_key, version))
@@ -286,7 +284,7 @@ impl TryFrom<crate::proto::storage::GetAccountStateRangeProofRequest>
 }
 
 impl From<GetAccountStateRangeProofRequest>
-    for crate::proto::storage::GetAccountStateRangeProofRequest
+    for ::proto_storage::storage::GetAccountStateRangeProofRequest
 {
     fn from(request: GetAccountStateRangeProofRequest) -> Self {
         let rightmost_key = request.rightmost_key.to_vec();
@@ -311,12 +309,12 @@ impl GetAccountStateRangeProofResponse {
     }
 }
 
-impl TryFrom<crate::proto::storage::GetAccountStateRangeProofResponse>
+impl TryFrom<::proto_storage::storage::GetAccountStateRangeProofResponse>
     for GetAccountStateRangeProofResponse
 {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::GetAccountStateRangeProofResponse) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::GetAccountStateRangeProofResponse) -> Result<Self> {
         let proof = proto
             .proof
             .ok_or_else(|| format_err!("Missing proof."))?
@@ -326,7 +324,7 @@ impl TryFrom<crate::proto::storage::GetAccountStateRangeProofResponse>
 }
 
 impl From<GetAccountStateRangeProofResponse>
-    for crate::proto::storage::GetAccountStateRangeProofResponse
+    for ::proto_storage::storage::GetAccountStateRangeProofResponse
 {
     fn from(response: GetAccountStateRangeProofResponse) -> Self {
         let proof = Some(response.proof.into());
@@ -364,10 +362,10 @@ impl SaveTransactionsRequest {
     }
 }
 
-impl TryFrom<crate::proto::storage::SaveTransactionsRequest> for SaveTransactionsRequest {
+impl TryFrom<::proto_storage::storage::SaveTransactionsRequest> for SaveTransactionsRequest {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::SaveTransactionsRequest) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::SaveTransactionsRequest) -> Result<Self> {
         let txns_to_commit = proto
             .txns_to_commit
             .into_iter()
@@ -387,7 +385,7 @@ impl TryFrom<crate::proto::storage::SaveTransactionsRequest> for SaveTransaction
     }
 }
 
-impl From<SaveTransactionsRequest> for crate::proto::storage::SaveTransactionsRequest {
+impl From<SaveTransactionsRequest> for ::proto_storage::storage::SaveTransactionsRequest {
     fn from(request: SaveTransactionsRequest) -> Self {
         let txns_to_commit = request.txns_to_commit.into_iter().map(Into::into).collect();
         let first_version = request.first_version;
@@ -428,10 +426,10 @@ impl GetTransactionsRequest {
     }
 }
 
-impl TryFrom<crate::proto::storage::GetTransactionsRequest> for GetTransactionsRequest {
+impl TryFrom<::proto_storage::storage::GetTransactionsRequest> for GetTransactionsRequest {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::GetTransactionsRequest) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::GetTransactionsRequest) -> Result<Self> {
         Ok(GetTransactionsRequest {
             start_version: proto.start_version,
             batch_size: proto.batch_size,
@@ -441,7 +439,7 @@ impl TryFrom<crate::proto::storage::GetTransactionsRequest> for GetTransactionsR
     }
 }
 
-impl From<GetTransactionsRequest> for crate::proto::storage::GetTransactionsRequest {
+impl From<GetTransactionsRequest> for ::proto_storage::storage::GetTransactionsRequest {
     fn from(request: GetTransactionsRequest) -> Self {
         Self {
             start_version: request.start_version,
@@ -468,10 +466,10 @@ impl GetTransactionsResponse {
     }
 }
 
-impl TryFrom<crate::proto::storage::GetTransactionsResponse> for GetTransactionsResponse {
+impl TryFrom<::proto_storage::storage::GetTransactionsResponse> for GetTransactionsResponse {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::GetTransactionsResponse) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::GetTransactionsResponse) -> Result<Self> {
         Ok(GetTransactionsResponse {
             txn_list_with_proof: proto
                 .txn_list_with_proof
@@ -481,7 +479,7 @@ impl TryFrom<crate::proto::storage::GetTransactionsResponse> for GetTransactions
     }
 }
 
-impl From<GetTransactionsResponse> for crate::proto::storage::GetTransactionsResponse {
+impl From<GetTransactionsResponse> for ::proto_storage::storage::GetTransactionsResponse {
     fn from(response: GetTransactionsResponse) -> Self {
         Self {
             txn_list_with_proof: Some(response.txn_list_with_proof.into()),
@@ -489,10 +487,10 @@ impl From<GetTransactionsResponse> for crate::proto::storage::GetTransactionsRes
     }
 }
 
-impl TryFrom<crate::proto::storage::TreeState> for TreeState {
+impl TryFrom<::proto_storage::storage::TreeState> for TreeState {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::TreeState) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::TreeState) -> Result<Self> {
         let account_state_root_hash = HashValue::from_slice(&proto.account_state_root_hash[..])?;
         let ledger_frozen_subtree_hashes = proto
             .ledger_frozen_subtree_hashes
@@ -510,7 +508,7 @@ impl TryFrom<crate::proto::storage::TreeState> for TreeState {
     }
 }
 
-impl From<TreeState> for crate::proto::storage::TreeState {
+impl From<TreeState> for ::proto_storage::storage::TreeState {
     fn from(info: TreeState) -> Self {
         let account_state_root_hash = info.account_state_root_hash.to_vec();
         let ledger_frozen_subtree_hashes = info
@@ -528,10 +526,10 @@ impl From<TreeState> for crate::proto::storage::TreeState {
     }
 }
 
-impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
+impl TryFrom<::proto_storage::storage::StartupInfo> for StartupInfo {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::StartupInfo) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::StartupInfo) -> Result<Self> {
         let latest_ledger_info: LedgerInfoWithSignatures = proto
             .latest_ledger_info
             .ok_or_else(|| format_err!("Missing latest_ledger_info"))?
@@ -558,7 +556,7 @@ impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
     }
 }
 
-impl From<StartupInfo> for crate::proto::storage::StartupInfo {
+impl From<StartupInfo> for ::proto_storage::storage::StartupInfo {
     fn from(info: StartupInfo) -> Self {
         let latest_ledger_info = Some(info.latest_ledger_info.into());
         let latest_epoch_info =
@@ -581,17 +579,17 @@ pub struct GetStartupInfoResponse {
     pub info: Option<StartupInfo>,
 }
 
-impl TryFrom<crate::proto::storage::GetStartupInfoResponse> for GetStartupInfoResponse {
+impl TryFrom<::proto_storage::storage::GetStartupInfoResponse> for GetStartupInfoResponse {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::GetStartupInfoResponse) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::GetStartupInfoResponse) -> Result<Self> {
         let info = proto.info.map(StartupInfo::try_from).transpose()?;
 
         Ok(Self { info })
     }
 }
 
-impl From<GetStartupInfoResponse> for crate::proto::storage::GetStartupInfoResponse {
+impl From<GetStartupInfoResponse> for ::proto_storage::storage::GetStartupInfoResponse {
     fn from(response: GetStartupInfoResponse) -> Self {
         Self {
             info: response.info.map(Into::into),
@@ -617,12 +615,12 @@ impl GetEpochChangeLedgerInfosRequest {
     }
 }
 
-impl TryFrom<crate::proto::storage::GetEpochChangeLedgerInfosRequest>
+impl TryFrom<::proto_storage::storage::GetEpochChangeLedgerInfosRequest>
     for GetEpochChangeLedgerInfosRequest
 {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::GetEpochChangeLedgerInfosRequest) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::GetEpochChangeLedgerInfosRequest) -> Result<Self> {
         Ok(Self {
             start_epoch: proto.start_epoch,
             end_epoch: proto.end_epoch,
@@ -631,7 +629,7 @@ impl TryFrom<crate::proto::storage::GetEpochChangeLedgerInfosRequest>
 }
 
 impl From<GetEpochChangeLedgerInfosRequest>
-    for crate::proto::storage::GetEpochChangeLedgerInfosRequest
+    for ::proto_storage::storage::GetEpochChangeLedgerInfosRequest
 {
     fn from(request: GetEpochChangeLedgerInfosRequest) -> Self {
         Self {
@@ -656,17 +654,17 @@ impl BackupAccountStateRequest {
     }
 }
 
-impl TryFrom<crate::proto::storage::BackupAccountStateRequest> for BackupAccountStateRequest {
+impl TryFrom<::proto_storage::storage::BackupAccountStateRequest> for BackupAccountStateRequest {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::BackupAccountStateRequest) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::BackupAccountStateRequest) -> Result<Self> {
         Ok(Self {
             version: proto.version,
         })
     }
 }
 
-impl From<BackupAccountStateRequest> for crate::proto::storage::BackupAccountStateRequest {
+impl From<BackupAccountStateRequest> for ::proto_storage::storage::BackupAccountStateRequest {
     fn from(request: BackupAccountStateRequest) -> Self {
         Self {
             version: request.version,
@@ -695,10 +693,10 @@ impl BackupAccountStateResponse {
     }
 }
 
-impl TryFrom<crate::proto::storage::BackupAccountStateResponse> for BackupAccountStateResponse {
+impl TryFrom<::proto_storage::storage::BackupAccountStateResponse> for BackupAccountStateResponse {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::BackupAccountStateResponse) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::BackupAccountStateResponse) -> Result<Self> {
         let account_key = HashValue::from_slice(&proto.account_key[..])?;
         let account_state_blob = proto
             .account_state_blob
@@ -711,7 +709,7 @@ impl TryFrom<crate::proto::storage::BackupAccountStateResponse> for BackupAccoun
     }
 }
 
-impl From<BackupAccountStateResponse> for crate::proto::storage::BackupAccountStateResponse {
+impl From<BackupAccountStateResponse> for ::proto_storage::storage::BackupAccountStateResponse {
     fn from(response: BackupAccountStateResponse) -> Self {
         Self {
             account_key: response.account_key.to_vec(),
@@ -742,10 +740,10 @@ impl BackupTransactionRequest {
     }
 }
 
-impl TryFrom<crate::proto::storage::BackupTransactionRequest> for BackupTransactionRequest {
+impl TryFrom<::proto_storage::storage::BackupTransactionRequest> for BackupTransactionRequest {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::BackupTransactionRequest) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::BackupTransactionRequest) -> Result<Self> {
         Ok(Self {
             start_version: proto.start_version,
             num_transactions: proto.num_transactions,
@@ -753,7 +751,7 @@ impl TryFrom<crate::proto::storage::BackupTransactionRequest> for BackupTransact
     }
 }
 
-impl From<BackupTransactionRequest> for crate::proto::storage::BackupTransactionRequest {
+impl From<BackupTransactionRequest> for ::proto_storage::storage::BackupTransactionRequest {
     fn from(request: BackupTransactionRequest) -> Self {
         Self {
             start_version: request.start_version,
@@ -768,10 +766,10 @@ pub struct BackupTransactionResponse {
     pub transaction: Transaction,
 }
 
-impl TryFrom<crate::proto::storage::BackupTransactionResponse> for BackupTransactionResponse {
+impl TryFrom<::proto_storage::storage::BackupTransactionResponse> for BackupTransactionResponse {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::BackupTransactionResponse) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::BackupTransactionResponse) -> Result<Self> {
         Ok(Self {
             transaction: proto
                 .transaction
@@ -781,7 +779,7 @@ impl TryFrom<crate::proto::storage::BackupTransactionResponse> for BackupTransac
     }
 }
 
-impl From<BackupTransactionResponse> for crate::proto::storage::BackupTransactionResponse {
+impl From<BackupTransactionResponse> for ::proto_storage::storage::BackupTransactionResponse {
     fn from(response: BackupTransactionResponse) -> Self {
         Self {
             transaction: Some(response.transaction.into()),
@@ -805,10 +803,10 @@ impl BackupTransactionInfoRequest {
     }
 }
 
-impl TryFrom<crate::proto::storage::BackupTransactionInfoRequest> for BackupTransactionInfoRequest {
+impl TryFrom<::proto_storage::storage::BackupTransactionInfoRequest> for BackupTransactionInfoRequest {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::BackupTransactionInfoRequest) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::BackupTransactionInfoRequest) -> Result<Self> {
         Ok(Self {
             start_version: proto.start_version,
             num_transactions: proto.num_transactions,
@@ -816,7 +814,7 @@ impl TryFrom<crate::proto::storage::BackupTransactionInfoRequest> for BackupTran
     }
 }
 
-impl From<BackupTransactionInfoRequest> for crate::proto::storage::BackupTransactionInfoRequest {
+impl From<BackupTransactionInfoRequest> for ::proto_storage::storage::BackupTransactionInfoRequest {
     fn from(request: BackupTransactionInfoRequest) -> Self {
         Self {
             start_version: request.start_version,
@@ -831,12 +829,12 @@ pub struct BackupTransactionInfoResponse {
     pub transaction_info: TransactionInfo,
 }
 
-impl TryFrom<crate::proto::storage::BackupTransactionInfoResponse>
+impl TryFrom<::proto_storage::storage::BackupTransactionInfoResponse>
     for BackupTransactionInfoResponse
 {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::BackupTransactionInfoResponse) -> Result<Self> {
+    fn try_from(proto: ::proto_storage::storage::BackupTransactionInfoResponse) -> Result<Self> {
         Ok(Self {
             transaction_info: proto
                 .transaction_info
@@ -846,7 +844,7 @@ impl TryFrom<crate::proto::storage::BackupTransactionInfoResponse>
     }
 }
 
-impl From<BackupTransactionInfoResponse> for crate::proto::storage::BackupTransactionInfoResponse {
+impl From<BackupTransactionInfoResponse> for ::proto_storage::storage::BackupTransactionInfoResponse {
     fn from(response: BackupTransactionInfoResponse) -> Self {
         Self {
             transaction_info: Some(response.transaction_info.into()),

@@ -214,10 +214,10 @@ impl CryptoHash for ContractEvent {
     }
 }
 
-impl TryFrom<crate::proto::types::Event> for ContractEvent {
+impl TryFrom<::proto_types::types::Event> for ContractEvent {
     type Error = Error;
 
-    fn try_from(event: crate::proto::types::Event) -> Result<Self> {
+    fn try_from(event: ::proto_types::types::Event) -> Result<Self> {
         let key = EventKey::try_from(event.key.as_ref())?;
         let sequence_number = event.sequence_number;
         let type_tag = lcs::from_bytes(&event.type_tag)?;
@@ -226,7 +226,7 @@ impl TryFrom<crate::proto::types::Event> for ContractEvent {
     }
 }
 
-impl From<ContractEvent> for crate::proto::types::Event {
+impl From<ContractEvent> for ::proto_types::types::Event {
     fn from(event: ContractEvent) -> Self {
         Self {
             key: event.key.to_vec(),
@@ -326,10 +326,10 @@ impl EventWithProof {
     }
 }
 
-impl TryFrom<crate::proto::types::EventWithProof> for EventWithProof {
+impl TryFrom<::proto_types::types::EventWithProof> for EventWithProof {
     type Error = Error;
 
-    fn try_from(event: crate::proto::types::EventWithProof) -> Result<Self> {
+    fn try_from(event: ::proto_types::types::EventWithProof) -> Result<Self> {
         Ok(Self::new(
             event.transaction_version,
             event.event_index,
@@ -345,7 +345,7 @@ impl TryFrom<crate::proto::types::EventWithProof> for EventWithProof {
     }
 }
 
-impl From<EventWithProof> for crate::proto::types::EventWithProof {
+impl From<EventWithProof> for ::proto_types::types::EventWithProof {
     fn from(event: EventWithProof) -> Self {
         Self {
             transaction_version: event.transaction_version,

@@ -12,12 +12,6 @@ use crate::{
     epoch_change::EpochChangeProof,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::AccumulatorConsistencyProof,
-    proto::types::{
-        GetAccountStateRequest, GetAccountStateResponse,
-        GetAccountTransactionBySequenceNumberRequest,
-        GetAccountTransactionBySequenceNumberResponse, GetEventsByEventAccessPathRequest,
-        GetEventsByEventAccessPathResponse, GetTransactionsRequest, GetTransactionsResponse,
-    },
     transaction::{TransactionListWithProof, TransactionWithProof, Version},
     trusted_state::{TrustedState, TrustedStateChange},
 };
@@ -29,6 +23,12 @@ use std::{
     cmp,
     convert::{TryFrom, TryInto},
     mem,
+};
+
+use ::proto_types::types::{
+    GetAccountStateRequest, GetAccountStateResponse, GetAccountTransactionBySequenceNumberRequest,
+    GetAccountTransactionBySequenceNumberResponse, GetEventsByEventAccessPathRequest,
+    GetEventsByEventAccessPathResponse, GetTransactionsRequest, GetTransactionsResponse,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -47,10 +47,10 @@ impl UpdateToLatestLedgerRequest {
     }
 }
 
-impl TryFrom<crate::proto::types::UpdateToLatestLedgerRequest> for UpdateToLatestLedgerRequest {
+impl TryFrom<::proto_types::types::UpdateToLatestLedgerRequest> for UpdateToLatestLedgerRequest {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::UpdateToLatestLedgerRequest) -> Result<Self> {
+    fn try_from(proto: ::proto_types::types::UpdateToLatestLedgerRequest) -> Result<Self> {
         Ok(Self {
             client_known_version: proto.client_known_version,
             requested_items: proto
@@ -62,7 +62,7 @@ impl TryFrom<crate::proto::types::UpdateToLatestLedgerRequest> for UpdateToLates
     }
 }
 
-impl From<UpdateToLatestLedgerRequest> for crate::proto::types::UpdateToLatestLedgerRequest {
+impl From<UpdateToLatestLedgerRequest> for ::proto_types::types::UpdateToLatestLedgerRequest {
     fn from(request: UpdateToLatestLedgerRequest) -> Self {
         Self {
             client_known_version: request.client_known_version,
@@ -83,10 +83,10 @@ pub struct UpdateToLatestLedgerResponse {
     pub ledger_consistency_proof: AccumulatorConsistencyProof,
 }
 
-impl TryFrom<crate::proto::types::UpdateToLatestLedgerResponse> for UpdateToLatestLedgerResponse {
+impl TryFrom<::proto_types::types::UpdateToLatestLedgerResponse> for UpdateToLatestLedgerResponse {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::UpdateToLatestLedgerResponse) -> Result<Self> {
+    fn try_from(proto: ::proto_types::types::UpdateToLatestLedgerResponse) -> Result<Self> {
         let response_items = proto
             .response_items
             .into_iter()
@@ -114,7 +114,7 @@ impl TryFrom<crate::proto::types::UpdateToLatestLedgerResponse> for UpdateToLate
     }
 }
 
-impl From<UpdateToLatestLedgerResponse> for crate::proto::types::UpdateToLatestLedgerResponse {
+impl From<UpdateToLatestLedgerResponse> for ::proto_types::types::UpdateToLatestLedgerResponse {
     fn from(response: UpdateToLatestLedgerResponse) -> Self {
         let response_items = response
             .response_items
@@ -454,11 +454,11 @@ pub enum RequestItem {
     },
 }
 
-impl TryFrom<crate::proto::types::RequestItem> for RequestItem {
+impl TryFrom<::proto_types::types::RequestItem> for RequestItem {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::RequestItem) -> Result<Self> {
-        use crate::proto::types::request_item::RequestedItems::*;
+    fn try_from(proto: ::proto_types::types::RequestItem) -> Result<Self> {
+        use ::proto_types::types::request_item::RequestedItems::*;
 
         let item = proto
             .requested_items
@@ -513,9 +513,9 @@ impl TryFrom<crate::proto::types::RequestItem> for RequestItem {
     }
 }
 
-impl From<RequestItem> for crate::proto::types::RequestItem {
+impl From<RequestItem> for ::proto_types::types::RequestItem {
     fn from(request: RequestItem) -> Self {
-        use crate::proto::types::request_item::RequestedItems;
+        use ::proto_types::types::request_item::RequestedItems;
 
         let req = match request {
             RequestItem::GetAccountState { address } => {
@@ -630,11 +630,11 @@ impl ResponseItem {
     }
 }
 
-impl TryFrom<crate::proto::types::ResponseItem> for ResponseItem {
+impl TryFrom<::proto_types::types::ResponseItem> for ResponseItem {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::ResponseItem) -> Result<Self> {
-        use crate::proto::types::response_item::ResponseItems::*;
+    fn try_from(proto: ::proto_types::types::ResponseItem) -> Result<Self> {
+        use ::proto_types::types::response_item::ResponseItems::*;
 
         let item = proto
             .response_items
@@ -697,9 +697,9 @@ impl TryFrom<crate::proto::types::ResponseItem> for ResponseItem {
     }
 }
 
-impl From<ResponseItem> for crate::proto::types::ResponseItem {
+impl From<ResponseItem> for ::proto_types::types::ResponseItem {
     fn from(response: ResponseItem) -> Self {
-        use crate::proto::types::response_item::ResponseItems;
+        use ::proto_types::types::response_item::ResponseItems;
 
         let res = match response {
             ResponseItem::GetAccountState {

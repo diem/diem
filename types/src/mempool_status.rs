@@ -81,10 +81,10 @@ impl From<MempoolStatusCode> for u64 {
 ////***********************************
 //// Decoding/Encoding to Protobuffers
 ////***********************************
-impl TryFrom<crate::proto::types::MempoolStatus> for MempoolStatus {
+impl TryFrom<::proto_types::types::MempoolStatus> for MempoolStatus {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::MempoolStatus) -> Result<Self> {
+    fn try_from(proto: ::proto_types::types::MempoolStatus) -> Result<Self> {
         Ok(MempoolStatus::new(
             MempoolStatusCode::try_from(proto.code).unwrap_or(MempoolStatusCode::UnknownStatus),
         )
@@ -92,7 +92,7 @@ impl TryFrom<crate::proto::types::MempoolStatus> for MempoolStatus {
     }
 }
 
-impl From<MempoolStatus> for crate::proto::types::MempoolStatus {
+impl From<MempoolStatus> for ::proto_types::types::MempoolStatus {
     fn from(status: MempoolStatus) -> Self {
         let mut proto_status = Self::default();
         proto_status.code = status.code.into();

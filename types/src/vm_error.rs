@@ -201,10 +201,10 @@ impl VMStatus {
 //***********************************
 // Decoding/Encoding to Protobuffers
 //***********************************
-impl TryFrom<crate::proto::types::VmStatus> for VMStatus {
+impl TryFrom<::proto_types::types::VmStatus> for VMStatus {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::VmStatus) -> Result<Self> {
+    fn try_from(proto: ::proto_types::types::VmStatus) -> Result<Self> {
         let mut status = VMStatus::new(
             StatusCode::try_from(proto.major_status).unwrap_or(StatusCode::UNKNOWN_STATUS),
         );
@@ -221,7 +221,7 @@ impl TryFrom<crate::proto::types::VmStatus> for VMStatus {
     }
 }
 
-impl From<VMStatus> for crate::proto::types::VmStatus {
+impl From<VMStatus> for ::proto_types::types::VmStatus {
     fn from(status: VMStatus) -> Self {
         let mut proto_status = Self::default();
 

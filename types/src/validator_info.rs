@@ -103,10 +103,10 @@ impl ValidatorInfo {
     }
 }
 
-impl TryFrom<crate::proto::types::ValidatorInfo> for ValidatorInfo {
+impl TryFrom<::proto_types::types::ValidatorInfo> for ValidatorInfo {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::ValidatorInfo) -> Result<Self> {
+    fn try_from(proto: ::proto_types::types::ValidatorInfo) -> Result<Self> {
         let account_address = AccountAddress::try_from(proto.account_address)?;
         let consensus_public_key = Ed25519PublicKey::try_from(&proto.consensus_public_key[..])?;
         let consensus_voting_power = proto.consensus_voting_power;
@@ -124,7 +124,7 @@ impl TryFrom<crate::proto::types::ValidatorInfo> for ValidatorInfo {
     }
 }
 
-impl From<ValidatorInfo> for crate::proto::types::ValidatorInfo {
+impl From<ValidatorInfo> for ::proto_types::types::ValidatorInfo {
     fn from(keys: ValidatorInfo) -> Self {
         Self {
             account_address: keys.account_address.to_vec(),
