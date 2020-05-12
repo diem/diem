@@ -43,8 +43,13 @@ mod tests {
     use libra_temppath::TempPath;
     use reqwest::blocking::get;
 
+    /// 404 - endpoint not found
+    /// 400 - params not provided or failed parsing
+    /// 500 - endpoint handler raised error
+    ///
+    /// And failure on one endpoint doesn't result in warp::Rejection which makes it fallback to other matches.
     #[test]
-    fn error_codes() {
+    fn routing_and_error_codes() {
         let tmpdir = TempPath::new();
         let db = Arc::new(LibraDB::new_for_test(&tmpdir));
         let port = get_available_port();
@@ -65,6 +70,8 @@ mod tests {
         ))
         .unwrap();
         assert_eq!(resp.status(), 400);
+        let resp = get(&format!("http://127.0.0.1:{}/state_snapshot", port)).unwrap();
+        assert_eq!(resp.status(), 400);
 
         // Params fail to parse (HashValue)
         let resp = get(&format!("http://127.0.0.1:{}/state_range_proof/1/ff", port)).unwrap();
@@ -77,6 +84,8 @@ mod tests {
             HashValue::zero().to_hex()
         ))
         .unwrap();
+        assert_eq!(resp.status(), 500);
+        let resp = get(&format!("http://127.0.0.1:{}/state_snapshot/1", port,)).unwrap();
         assert_eq!(resp.status(), 500);
     }
 }
