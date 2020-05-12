@@ -71,7 +71,7 @@ cargo run --bin investigate -- -i artifacts/compiled_module/crash-5d7f403f
 The following command will run libfuzzer on the relevant target with your input:
 
 ```
-// build single fuzzer for target using instruction in the 'google oss-fuzz integration' section
+# build single fuzzer for target using instruction in the 'google oss-fuzz integration' section
 ./fuzzer input
 ```
 
@@ -86,7 +86,7 @@ See [Google OSS-Fuzz's documentation on reproducing bugs](https://google.github.
 To test coverage of our fuzzers you can run the following command with [grcov](https://github.com/mozilla/grcov):
 
 ```
-CORPUS_PATH=fuzz/corpus cargo xtest --html-cov-dir <some path for html output> -p libra-fuzzer -- coverage
+RUSTFLAGS='--cfg feature="fuzzing"' CORPUS_PATH=fuzz/corpus cargo xtest --html-cov-dir <some path for html output> -p libra-fuzzer -- coverage
 ```
 
 ### Google OSS-Fuzz Integration
