@@ -284,4 +284,4 @@ pub const MAX_SEQUENCE_LENGTH: usize = 1 << 31;
 
 pub use de::{from_bytes, from_bytes_seed};
 pub use error::{Error, Result};
-pub use ser::{is_human_readable, to_bytes};
+pub use ser::{is_human_readable, serialize_into, serialized_size, to_bytes};

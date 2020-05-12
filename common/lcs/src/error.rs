@@ -11,6 +11,8 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 pub enum Error {
     #[error("unexpected end of input")]
     Eof,
+    #[error("I/O error: {0}")]
+    Io(String),
     #[error("exceeded max sequence length")]
     ExceededMaxLen(usize),
     #[error("expected boolean")]
@@ -37,6 +39,12 @@ pub enum Error {
     NonCanonicalUleb128Encoding,
     #[error("ULEB128-encoded integer did not fit in the target size")]
     IntegerOverflowDuringUleb128Decoding,
+}
+
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Self {
+        Error::Io(err.to_string())
+    }
 }
 
 impl ser::Error for Error {

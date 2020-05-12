@@ -51,9 +51,42 @@ where
     T: ?Sized + Serialize,
 {
     let mut output = Vec::new();
-    let serializer = Serializer::new(&mut output);
-    value.serialize(serializer)?;
+    serialize_into(&mut output, value)?;
     Ok(output)
+}
+
+/// Same as `to_bytes` but write directly into an `std::io::Write` object.
+pub fn serialize_into<W, T>(write: &mut W, value: &T) -> Result<()>
+where
+    W: std::io::Write,
+    T: ?Sized + Serialize,
+{
+    let serializer = Serializer::new(write);
+    value.serialize(serializer)
+}
+
+struct WriteCounter(usize);
+
+impl std::io::Write for WriteCounter {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let len = buf.len();
+        self.0 += len;
+        Ok(len)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+/// Same as `to_bytes` but only return the size of the serialized bytes.
+pub fn serialized_size<T>(value: &T) -> Result<usize>
+where
+    T: ?Sized + Serialize,
+{
+    let mut counter = WriteCounter(0);
+    serialize_into(&mut counter, value)?;
+    Ok(counter.0)
 }
 
 pub fn is_human_readable() -> bool {
@@ -63,13 +96,16 @@ pub fn is_human_readable() -> bool {
 }
 
 /// Serialization implementation for LCS
-struct Serializer<'a> {
-    output: &'a mut Vec<u8>,
+struct Serializer<'a, W> {
+    output: &'a mut W,
 }
 
-impl<'a> Serializer<'a> {
+impl<'a, W> Serializer<'a, W>
+where
+    W: std::io::Write,
+{
     /// Creates a new `Serializer` which will emit LCS.
-    fn new(output: &'a mut Vec<u8>) -> Self {
+    fn new(output: &'a mut W) -> Self {
         Self { output }
     }
 
@@ -77,11 +113,11 @@ impl<'a> Serializer<'a> {
         while value >= 0x80 {
             // Write 7 (lowest) bits of data and set the 8th bit to 1.
             let byte = (value & 0x7f) as u8;
-            self.output.push(byte | 0x80);
+            self.output.write_all(&[byte | 0x80])?;
             value >>= 7;
         }
         // Write the remaining bits of data and set the highest bit to 0.
-        self.output.push(value as u8);
+        self.output.write_all(&[value as u8])?;
         Ok(())
     }
 
@@ -98,14 +134,17 @@ impl<'a> Serializer<'a> {
     }
 }
 
-impl<'a> ser::Serializer for Serializer<'a> {
+impl<'a, W> ser::Serializer for Serializer<'a, W>
+where
+    W: std::io::Write,
+{
     type Ok = ();
     type Error = Error;
     type SerializeSeq = Self;
     type SerializeTuple = Self;
     type SerializeTupleStruct = Self;
     type SerializeTupleVariant = Self;
-    type SerializeMap = MapSerializer<'a>;
+    type SerializeMap = MapSerializer<'a, W>;
     type SerializeStruct = Self;
     type SerializeStructVariant = Self;
 
@@ -134,27 +173,27 @@ impl<'a> ser::Serializer for Serializer<'a> {
     }
 
     fn serialize_u8(self, v: u8) -> Result<()> {
-        self.output.push(v);
+        self.output.write_all(&[v])?;
         Ok(())
     }
 
     fn serialize_u16(self, v: u16) -> Result<()> {
-        self.output.extend_from_slice(&v.to_le_bytes());
+        self.output.write_all(&v.to_le_bytes())?;
         Ok(())
     }
 
     fn serialize_u32(self, v: u32) -> Result<()> {
-        self.output.extend_from_slice(&v.to_le_bytes());
+        self.output.write_all(&v.to_le_bytes())?;
         Ok(())
     }
 
     fn serialize_u64(self, v: u64) -> Result<()> {
-        self.output.extend_from_slice(&v.to_le_bytes());
+        self.output.write_all(&v.to_le_bytes())?;
         Ok(())
     }
 
     fn serialize_u128(self, v: u128) -> Result<()> {
-        self.output.extend_from_slice(&v.to_le_bytes());
+        self.output.write_all(&v.to_le_bytes())?;
         Ok(())
     }
 
@@ -178,7 +217,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
     // Serialize a byte array as an array of bytes.
     fn serialize_bytes(mut self, v: &[u8]) -> Result<()> {
         self.output_seq_len(v.len())?;
-        self.output.extend_from_slice(v);
+        self.output.write_all(v)?;
         Ok(())
     }
 
@@ -192,7 +231,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
     where
         T: ?Sized + Serialize,
     {
-        self.output.push(1);
+        self.output.write_all(&[1])?;
         value.serialize(self)
     }
 
@@ -296,7 +335,10 @@ impl<'a> ser::Serializer for Serializer<'a> {
     }
 }
 
-impl<'a> ser::SerializeSeq for Serializer<'a> {
+impl<'a, W> ser::SerializeSeq for Serializer<'a, W>
+where
+    W: std::io::Write,
+{
     type Ok = ();
     type Error = Error;
 
@@ -312,7 +354,10 @@ impl<'a> ser::SerializeSeq for Serializer<'a> {
     }
 }
 
-impl<'a> ser::SerializeTuple for Serializer<'a> {
+impl<'a, W> ser::SerializeTuple for Serializer<'a, W>
+where
+    W: std::io::Write,
+{
     type Ok = ();
     type Error = Error;
 
@@ -328,7 +373,10 @@ impl<'a> ser::SerializeTuple for Serializer<'a> {
     }
 }
 
-impl<'a> ser::SerializeTupleStruct for Serializer<'a> {
+impl<'a, W> ser::SerializeTupleStruct for Serializer<'a, W>
+where
+    W: std::io::Write,
+{
     type Ok = ();
     type Error = Error;
 
@@ -344,7 +392,10 @@ impl<'a> ser::SerializeTupleStruct for Serializer<'a> {
     }
 }
 
-impl<'a> ser::SerializeTupleVariant for Serializer<'a> {
+impl<'a, W> ser::SerializeTupleVariant for Serializer<'a, W>
+where
+    W: std::io::Write,
+{
     type Ok = ();
     type Error = Error;
 
@@ -361,23 +412,26 @@ impl<'a> ser::SerializeTupleVariant for Serializer<'a> {
 }
 
 #[doc(hidden)]
-struct MapSerializer<'a> {
-    ser: Serializer<'a>,
+struct MapSerializer<'a, W> {
+    serializer: Serializer<'a, W>,
     entries: Vec<(Vec<u8>, Vec<u8>)>,
     next_key: Option<Vec<u8>>,
 }
 
-impl<'a> MapSerializer<'a> {
-    fn new(ser: Serializer<'a>) -> Self {
+impl<'a, W> MapSerializer<'a, W> {
+    fn new(serializer: Serializer<'a, W>) -> Self {
         MapSerializer {
-            ser,
+            serializer,
             entries: Vec::new(),
             next_key: None,
         }
     }
 }
 
-impl<'a> ser::SerializeMap for MapSerializer<'a> {
+impl<'a, W> ser::SerializeMap for MapSerializer<'a, W>
+where
+    W: std::io::Write,
+{
     type Ok = ();
     type Error = Error;
 
@@ -404,13 +458,10 @@ impl<'a> ser::SerializeMap for MapSerializer<'a> {
                 let mut output = Vec::new();
                 value.serialize(Serializer::new(&mut output))?;
                 self.entries.push((key, output));
+                Ok(())
             }
-            None => {
-                return Err(Error::ExpectedMapKey);
-            }
+            None => Err(Error::ExpectedMapKey),
         }
-
-        Ok(())
     }
 
     fn end(mut self) -> Result<()> {
@@ -421,18 +472,21 @@ impl<'a> ser::SerializeMap for MapSerializer<'a> {
         self.entries.dedup_by(|e1, e2| e1.0.eq(&e2.0));
 
         let len = self.entries.len();
-        self.ser.output_seq_len(len)?;
+        self.serializer.output_seq_len(len)?;
 
-        for (key, value) in self.entries {
-            self.ser.output.extend(key.into_iter());
-            self.ser.output.extend(value.into_iter());
+        for (key, value) in &self.entries {
+            self.serializer.output.write_all(key)?;
+            self.serializer.output.write_all(value)?;
         }
 
         Ok(())
     }
 }
 
-impl<'a> ser::SerializeStruct for Serializer<'a> {
+impl<'a, W> ser::SerializeStruct for Serializer<'a, W>
+where
+    W: std::io::Write,
+{
     type Ok = ();
     type Error = Error;
 
@@ -448,7 +502,10 @@ impl<'a> ser::SerializeStruct for Serializer<'a> {
     }
 }
 
-impl<'a> ser::SerializeStructVariant for Serializer<'a> {
+impl<'a, W> ser::SerializeStructVariant for Serializer<'a, W>
+where
+    W: std::io::Write,
+{
     type Ok = ();
     type Error = Error;
 

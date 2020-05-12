@@ -525,8 +525,8 @@ impl<'de, 'a> de::EnumAccess<'de> for &'a mut Deserializer<'de> {
         V: DeserializeSeed<'de>,
     {
         let variant_index = self.parse_u32_from_uleb128()?;
-        let value = seed.deserialize(variant_index.into_deserializer())?;
-        Ok((value, self))
+        let result: Result<V::Value> = seed.deserialize(variant_index.into_deserializer());
+        Ok((result?, self))
     }
 }
 
