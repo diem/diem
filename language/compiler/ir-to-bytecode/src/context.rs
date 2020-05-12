@@ -656,6 +656,7 @@ impl<'a> Context<'a> {
             | x @ SignatureToken::U64
             | x @ SignatureToken::U128
             | x @ SignatureToken::Address
+            | x @ SignatureToken::Signer
             | x @ SignatureToken::TypeParameter(_) => x,
             SignatureToken::Vector(inner) => {
                 let correct_inner = self.reindex_signature_token(dep, *inner)?;

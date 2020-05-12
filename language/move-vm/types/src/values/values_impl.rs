@@ -47,6 +47,7 @@ enum ValueImpl {
     U128(u128),
     Bool(bool),
     Address(AccountAddress),
+    Signer(AccountAddress),
 
     Container(Rc<RefCell<Container>>),
 
@@ -318,6 +319,8 @@ impl ValueImpl {
             U128(x) => U128(*x),
             Bool(x) => Bool(*x),
             Address(x) => Address(*x),
+            // TODO copying resource?
+            Signer(x) => Signer(*x),
 
             ContainerRef(r) => ContainerRef(r.copy_value()),
             IndexedRef(r) => IndexedRef(r.copy_value()),
@@ -397,6 +400,7 @@ impl ValueImpl {
             (U128(l), U128(r)) => l == r,
             (Bool(l), Bool(r)) => l == r,
             (Address(l), Address(r)) => l == r,
+            (Signer(l), Signer(r)) => l == r,
 
             (Container(l), Container(r)) => l.borrow().equals(&*r.borrow())?,
 
@@ -710,7 +714,8 @@ impl Locals {
                 | ValueImpl::U64(_)
                 | ValueImpl::U128(_)
                 | ValueImpl::Bool(_)
-                | ValueImpl::Address(_) => Ok(Value(ValueImpl::IndexedRef(IndexedRef {
+                | ValueImpl::Address(_)
+                | ValueImpl::Signer(_) => Ok(Value(ValueImpl::IndexedRef(IndexedRef {
                     container_ref: ContainerRef::Local(Rc::clone(&self.0)),
                     idx,
                 }))),
@@ -834,6 +839,10 @@ impl Value {
 
     pub fn address(x: AccountAddress) -> Self {
         Self(ValueImpl::Address(x))
+    }
+
+    pub fn signer(x: AccountAddress) -> Self {
+        Self(ValueImpl::Signer(x))
     }
 
     pub fn struct_(s: Struct) -> Self {
@@ -1377,6 +1386,7 @@ pub mod vector {
             | (Type::U128, Container::U128(_))
             | (Type::Bool, Container::Bool(_))
             | (Type::Address, Container::General(_))
+            | (Type::Signer, Container::General(_))
             | (Type::Vector(_), Container::General(_))
             | (Type::Struct(_), Container::General(_)) => Ok(()),
             (Type::StructInstantiation(_, _), Container::General(_)) => Ok(()),
@@ -1391,6 +1401,7 @@ pub mod vector {
             | (Type::U128, _)
             | (Type::Bool, _)
             | (Type::Address, _)
+            | (Type::Signer, _)
             | (Type::Vector(_), _)
             | (Type::Struct(_), _)
             | (Type::StructInstantiation(_, _), _) => Err(VMStatus::new(
@@ -1419,9 +1430,11 @@ pub mod vector {
             Type::U128 => Container::U128(vec![]),
             Type::Bool => Container::Bool(vec![]),
 
-            Type::Address | Type::Vector(_) | Type::Struct(_) | Type::StructInstantiation(_, _) => {
-                Container::General(vec![])
-            }
+            Type::Address
+            | Type::Signer
+            | Type::Vector(_)
+            | Type::Struct(_)
+            | Type::StructInstantiation(_, _) => Container::General(vec![]),
 
             Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
                 return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
@@ -1682,7 +1695,7 @@ impl ValueImpl {
 
         match self {
             Invalid | U8(_) | U64(_) | U128(_) | Bool(_) => CONST_SIZE,
-            Address(_) => AbstractMemorySize::new(AccountAddress::LENGTH as u64),
+            Address(_) | Signer(_) => AbstractMemorySize::new(AccountAddress::LENGTH as u64),
             ContainerRef(r) => r.size(),
             IndexedRef(r) => r.size(),
             // TODO: in case the borrow fails the VM will panic.
@@ -1822,6 +1835,7 @@ impl Display for ValueImpl {
             Self::U128(x) => write!(f, "U128({})", x),
             Self::Bool(x) => write!(f, "{}", x),
             Self::Address(addr) => write!(f, "Address({})", addr.short_str()),
+            Self::Signer(addr) => write!(f, "Signer({})", addr.short_str()),
 
             Self::Container(r) => write!(f, "Container({})", &*r.borrow()),
 
@@ -2226,6 +2240,7 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, FatType, ValueImpl> {
             (FatType::U128, ValueImpl::U128(x)) => serializer.serialize_u128(*x),
             (FatType::Bool, ValueImpl::Bool(x)) => serializer.serialize_bool(*x),
             (FatType::Address, ValueImpl::Address(x)) => x.serialize(serializer),
+            (FatType::Signer, ValueImpl::Signer(x)) => x.serialize(serializer),
 
             (FatType::Struct(ty), ValueImpl::Container(r)) => {
                 let r = r.borrow();
@@ -2306,6 +2321,7 @@ impl<'d> serde::de::DeserializeSeed<'d> for &FatType {
             FatType::U64 => u64::deserialize(deserializer).map(Value::u64),
             FatType::U128 => u128::deserialize(deserializer).map(Value::u128),
             FatType::Address => AccountAddress::deserialize(deserializer).map(Value::address),
+            FatType::Signer => AccountAddress::deserialize(deserializer).map(Value::signer),
 
             FatType::Struct(ty) => Ok(Value::struct_(ty.deserialize(deserializer)?)),
 
@@ -2411,6 +2427,7 @@ impl Value {
             S::U64 => T::U64,
             S::U128 => T::U128,
             S::Address => T::Address,
+            S::Signer => T::Signer,
             S::Vector(inner) => T::Vector(Box::new(Self::constant_sig_token_to_type(inner)?)),
             // Not yet supported
             S::Struct(_) | S::StructInstantiation(_, _) => return None,
@@ -2450,6 +2467,7 @@ pub mod prop {
             FatType::U128 => any::<u128>().prop_map(Value::u128).boxed(),
             FatType::Bool => any::<bool>().prop_map(Value::bool).boxed(),
             FatType::Address => any::<AccountAddress>().prop_map(Value::address).boxed(),
+            FatType::Signer => any::<AccountAddress>().prop_map(Value::signer).boxed(),
 
             FatType::Vector(layout) => match &**layout {
                 FatType::U8 => vec(any::<u8>(), 0..10)

@@ -1,0 +1,17 @@
+module M {
+    t(s: signer) {
+        move_to_sender<signer>(move(s));
+        return;
+    }
+}
+// check: ParserError: Invalid Token
+
+//! new-transaction
+module M {
+    resource R { s: signer }
+    t(s: signer) {
+        move_to_sender<R>(move(s));
+        return;
+    }
+}
+// check: MOVETOSENDER_TYPE_MISMATCH_ERROR

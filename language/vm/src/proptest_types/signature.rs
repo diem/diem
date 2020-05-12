@@ -56,6 +56,7 @@ pub enum SignatureTokenGen {
     U64,
     U128,
     Address,
+    Signer,
     TypeParameter(PropIndex),
 
     // Composite signature tokens.
@@ -94,7 +95,7 @@ impl SignatureTokenGen {
     pub fn owned_non_struct_strategy() -> impl Strategy<Value = Self> {
         use SignatureTokenGen::*;
 
-        static OWNED_NON_STRUCTS: &[SignatureTokenGen] = &[Bool, U8, U64, U128, Address];
+        static OWNED_NON_STRUCTS: &[SignatureTokenGen] = &[Bool, U8, U64, U128, Address, Signer];
 
         select(OWNED_NON_STRUCTS)
     }
@@ -127,6 +128,7 @@ impl SignatureTokenGen {
             U64 => SignatureToken::U64,
             U128 => SignatureToken::U128,
             Address => SignatureToken::Address,
+            Signer => SignatureToken::Signer,
             Struct(idx) => {
                 if struct_handles_len == 0 {
                     // we are asked to create a type of a struct that cannot exist

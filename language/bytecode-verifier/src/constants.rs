@@ -39,7 +39,8 @@ impl<'a> ConstantsChecker<'a> {
         match type_ {
             S::Bool | S::U8 | S::U64 | S::U128 | S::Address => Ok(()),
             S::Vector(inner) => self.verify_constant_type(idx, inner),
-            S::Struct(_)
+            S::Signer
+            | S::Struct(_)
             | S::StructInstantiation(_, _)
             | S::Reference(_)
             | S::MutableReference(_)

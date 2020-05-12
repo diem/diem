@@ -324,6 +324,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             SignatureToken::U64 => "u64".to_string(),
             SignatureToken::U128 => "u128".to_string(),
             SignatureToken::Address => "address".to_string(),
+            SignatureToken::Signer => "signer".to_string(),
             SignatureToken::Struct(struct_handle_idx) => self
                 .source_mapper
                 .bytecode

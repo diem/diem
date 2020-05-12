@@ -1,0 +1,20 @@
+module M {
+    struct S<T> { s: T }
+    t(s: signer): Self.S<signer> {
+        let x: Self.S<signer>;
+        x = S<signer> { s: move(s) };
+        return *&x;
+    }
+}
+// check: READREF_RESOURCE_ERROR
+
+//! new-transaction
+module M {
+    struct S<T> { s: T }
+    t(s: signer): signer {
+        let x: Self.S<signer>;
+        x = S<signer> { s: move(s) };
+        return *(&(&x).s);
+    }
+}
+// check: READREF_RESOURCE_ERROR

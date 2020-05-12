@@ -49,7 +49,7 @@ fn is_valid_type(ty: &FatType) -> bool {
     use FatType::*;
 
     match ty {
-        Bool | U8 | U64 | U128 | Address => true,
+        Bool | U8 | U64 | U128 | Address | Signer => true,
 
         Reference(_) | MutableReference(_) | TyParam(_) => false,
 

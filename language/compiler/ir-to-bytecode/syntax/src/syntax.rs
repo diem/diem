@@ -1149,6 +1149,7 @@ fn parse_kind<'input>(tokens: &mut Lexer<'input>) -> Result<Kind, ParseError<Loc
 
 // Type: Type = {
 //     "address" => Type::Address,
+//     "signer" => Type::Signer,
 //     "u64" => Type::U64,
 //     "bool" => Type::Bool,
 //     "bytearray" => Type::ByteArray,
@@ -1163,6 +1164,10 @@ fn parse_type<'input>(tokens: &mut Lexer<'input>) -> Result<Type, ParseError<Loc
         Tok::Address => {
             tokens.advance()?;
             Type::Address
+        }
+        Tok::Signer => {
+            tokens.advance()?;
+            Type::Signer
         }
         Tok::U8 => {
             tokens.advance()?;

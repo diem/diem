@@ -171,6 +171,8 @@ pub enum Kind {
 pub enum Type {
     /// `address`
     Address,
+    /// `signer`
+    Signer,
     /// `u8`
     U8,
     /// `u64`
@@ -1486,6 +1488,7 @@ impl fmt::Display for Type {
             Type::U128 => write!(f, "u128"),
             Type::Bool => write!(f, "bool"),
             Type::Address => write!(f, "address"),
+            Type::Signer => write!(f, "signer"),
             Type::Vector(ty) => write!(f, "vector<{}>", ty),
             Type::Struct(ident, tys) => write!(f, "{}{}", ident, format_type_actuals(tys)),
             Type::Reference(is_mutable, t) => {

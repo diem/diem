@@ -41,6 +41,7 @@ pub enum PrimitiveType {
     U64,
     U128,
     Address,
+    Signer,
 
     // Types only appearing in specifications
     Num,
@@ -515,6 +516,7 @@ impl fmt::Display for PrimitiveType {
             U64 => f.write_str("u64"),
             U128 => f.write_str("u128"),
             Address => f.write_str("address"),
+            Signer => f.write_str("signer"),
             Range => f.write_str("range"),
             Num => f.write_str("num"),
         }

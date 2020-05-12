@@ -24,6 +24,7 @@ pub enum TypeTag {
     U64,
     U128,
     Address,
+    Signer,
     Vector(Box<TypeTag>),
     Struct(StructTag),
 }
@@ -157,6 +158,7 @@ impl Display for TypeTag {
             TypeTag::U64 => write!(f, "U64"),
             TypeTag::U128 => write!(f, "U128"),
             TypeTag::Address => write!(f, "Address"),
+            TypeTag::Signer => write!(f, "Signer"),
             TypeTag::Bool => write!(f, "Bool"),
         }
     }

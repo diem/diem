@@ -546,6 +546,8 @@ pub enum SignatureToken {
     U128,
     /// Address, a 16 bytes immutable type.
     Address,
+    /// Signer, a 16 bytes immutable type representing the capability to publish at an address
+    Signer,
     /// Vector
     Vector(Box<SignatureToken>),
     /// MOVE user type, resource or copyable
@@ -584,7 +586,7 @@ impl<'a> Iterator for SignatureTokenPreorderTraversalIter<'a> {
                         self.stack.extend(inner_toks.iter().rev())
                     }
 
-                    Bool | Address | U8 | U64 | U128 | Struct(_) | TypeParameter(_) => (),
+                    Signer | Bool | Address | U8 | U64 | U128 | Struct(_) | TypeParameter(_) => (),
                 }
                 Some(tok)
             }
@@ -635,6 +637,7 @@ impl std::fmt::Debug for SignatureToken {
             SignatureToken::U64 => write!(f, "U64"),
             SignatureToken::U128 => write!(f, "U128"),
             SignatureToken::Address => write!(f, "Address"),
+            SignatureToken::Signer => write!(f, "Signer"),
             SignatureToken::Vector(boxed) => write!(f, "Vector({:?})", boxed),
             SignatureToken::Struct(idx) => write!(f, "Struct({:?})", idx),
             SignatureToken::StructInstantiation(idx, types) => {
@@ -663,26 +666,13 @@ impl SignatureToken {
             | U64
             | U128
             | Address
+            | Signer
             | Struct(_)
             | StructInstantiation(_, _)
             | Vector(_) => SignatureTokenKind::Value,
             // TODO: This is a temporary hack to please the verifier. SignatureTokenKind will soon
             // be completely removed. `SignatureTokenView::kind()` should be used instead.
             TypeParameter(_) => SignatureTokenKind::Value,
-        }
-    }
-
-    /// Returns `true` if the `SignatureToken` is a primitive type.
-    pub fn is_primitive(&self) -> bool {
-        use SignatureToken::*;
-        match self {
-            Bool | U8 | U64 | U128 | Address => true,
-            Struct(_)
-            | StructInstantiation(_, _)
-            | Reference(_)
-            | Vector(_)
-            | MutableReference(_)
-            | TypeParameter(_) => false,
         }
     }
 
@@ -693,6 +683,7 @@ impl SignatureToken {
             U8 | U64 | U128 => true,
             Bool
             | Address
+            | Signer
             | Vector(_)
             | Struct(_)
             | StructInstantiation(_, _)

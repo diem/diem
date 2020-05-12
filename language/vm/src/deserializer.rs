@@ -765,6 +765,7 @@ fn load_signature_token(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<Signat
                 S::U64 => T::Saturated(SignatureToken::U64),
                 S::U128 => T::Saturated(SignatureToken::U128),
                 S::ADDRESS => T::Saturated(SignatureToken::Address),
+                S::SIGNER => T::Saturated(SignatureToken::Signer),
                 S::VECTOR => T::Vector,
                 S::REFERENCE => T::Reference,
                 S::MUTABLE_REFERENCE => T::MutableReference,
@@ -1263,6 +1264,7 @@ impl SerializedType {
             0x9 => Ok(SerializedType::TYPE_PARAMETER),
             0xA => Ok(SerializedType::VECTOR),
             0xB => Ok(SerializedType::STRUCT_INST),
+            0xC => Ok(SerializedType::SIGNER),
             _ => Err(VMStatus::new(StatusCode::UNKNOWN_SERIALIZED_TYPE)),
         }
     }
