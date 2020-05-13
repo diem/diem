@@ -1117,7 +1117,7 @@ axiom (forall v1, v2: Value ::  IsEqual($LCS_serialize_core(v1), $LCS_serialize_
 {{#if (eq serialize_bound 0)}}
 axiom (forall v: Value :: ( var r := $LCS_serialize_core(v); $IsValidU8Vector(r) && $vlen(r) > 0 ));
 {{else}}
-axiom (forall v: Value :: ( var r := $LCS_serialize_core(v); $IsValidU8Vector(r) && $vlen(r) > 0 && $vlen(r) < {{serialize_bound}} ));
+axiom (forall v: Value :: ( var r := $LCS_serialize_core(v); $IsValidU8Vector(r) && $vlen(r) > 0 && $vlen(r) <= {{serialize_bound}} ));
 {{/if}}
 
 procedure $LCS_to_bytes(ta: TypeValue, v: Value) returns (res: Value);
