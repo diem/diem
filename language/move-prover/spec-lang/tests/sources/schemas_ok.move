@@ -43,7 +43,7 @@ module M {
 
     spec schema InvariantIsEqual<T> {
         x: T;
-        invariant update x == old(x);
+        // invariant update x == old(x);
     }
     struct S<X> { x: X }
     spec struct S {

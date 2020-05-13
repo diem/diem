@@ -16,7 +16,7 @@ module TestInvariants {
         invariant greater_one(x);
 
         // When we update via a reference, the new value must be smaller or equal the old one.
-        invariant update x <= old(x) && tautology();
+        // invariant update x <= old(x) && tautology();
     }
 
     spec module {

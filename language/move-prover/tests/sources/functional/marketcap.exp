@@ -6,11 +6,11 @@ error:  A postcondition might not hold on this return path.
  16 │         invariant global<MarketCap>(0xA550C18).total_value == sum_of_coins;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/marketcap.move:49:6: deposit_invalid (entry)
-    =     at tests/sources/functional/marketcap.move:50:18: deposit_invalid
+    =     at tests/sources/functional/marketcap.move:48:6: deposit_invalid (entry)
+    =     at tests/sources/functional/marketcap.move:49:18: deposit_invalid
     =         coin_ref = <redacted>,
     =         check = <redacted>,
     =         value = <redacted>
-    =     at tests/sources/functional/marketcap.move:51:27: deposit_invalid
+    =     at tests/sources/functional/marketcap.move:50:27: deposit_invalid
     =         coin_ref = <redacted>
-    =     at tests/sources/functional/marketcap.move:49:6: deposit_invalid (exit)
+    =     at tests/sources/functional/marketcap.move:48:6: deposit_invalid (exit)

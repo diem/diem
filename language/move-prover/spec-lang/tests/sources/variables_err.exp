@@ -1,27 +1,3 @@
-error: spec global `M::ticks` undeclared
-
-    ┌── tests/sources/variables_err.move:11:22 ───
-    │
- 11 │     invariant update ticks = tick + 1;
-    │                      ^^^^^
-    │
-
-error: assignment only allowed in spec var updates
-
-    ┌── tests/sources/variables_err.move:11:22 ───
-    │
- 11 │     invariant update ticks = tick + 1;
-    │                      ^^^^^^^^^^^^^^^^
-    │
-
-error: expected `num` but found `bool` in expression
-
-    ┌── tests/sources/variables_err.move:14:29 ───
-    │
- 14 │     invariant update tick = false;
-    │                             ^^^^^
-    │
-
 error: assignment only allowed in spec var updates
 
     ┌── tests/sources/variables_err.move:17:15 ───

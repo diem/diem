@@ -10,7 +10,7 @@ module M {
     // Old expression in data invariant
     invariant old(x) > 0;
     // Nested old expression.
-    invariant update old(old(x)) > 0;
+    // invariant update old(old(x)) > 0;
     // Direct dependency from global state
     invariant exists<S>(0x0);
     invariant global<S>(0x0).x == x;

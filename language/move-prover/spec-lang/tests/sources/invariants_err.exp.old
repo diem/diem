@@ -14,6 +14,14 @@ error: `old(..)` expression not allowed in this context
     │               ^^^^^^
     │
 
+error: `old(..old(..)..)` not allowed
+
+    ┌── tests/sources/invariants_err.move:13:26 ───
+    │
+ 13 │     invariant update old(old(x)) > 0;
+    │                          ^^^^^^
+    │
+
 error: data invariants cannot depend on global state (directly or indirectly uses a global spec var or resource storage).
 
     ┌── tests/sources/invariants_err.move:15:5 ───
