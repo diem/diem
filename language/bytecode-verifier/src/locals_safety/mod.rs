@@ -164,6 +164,8 @@ fn execute_inner(state: &mut AbstractState, bytecode: &Bytecode, offset: usize) 
         | Bytecode::MoveFromGeneric(_)
         | Bytecode::MoveToSender(_)
         | Bytecode::MoveToSenderGeneric(_)
+        | Bytecode::MoveTo(_)
+        | Bytecode::MoveToGeneric(_)
         | Bytecode::GetTxnSenderAddress => (),
     };
     Ok(())

@@ -322,7 +322,7 @@ fn move_from(
     Ok(())
 }
 
-fn move_to(
+fn move_to_sender(
     verifier: &mut TypeSafetyChecker,
     offset: usize,
     struct_def: &StructDefinition,
@@ -344,6 +344,40 @@ fn move_to(
         ))
     } else {
         Ok(())
+    }
+}
+
+fn move_to(
+    verifier: &mut TypeSafetyChecker,
+    offset: usize,
+    struct_def: &StructDefinition,
+    type_args: &Signature,
+) -> VMResult<()> {
+    if !StructDefinitionView::new(verifier.module(), struct_def).is_nominal_resource() {
+        return Err(err_at_offset(StatusCode::MOVETO_NO_RESOURCE_ERROR, offset));
+    }
+
+    let struct_type = materialize_type(struct_def.struct_handle, type_args);
+    let resource_operand = verifier.stack.pop().unwrap();
+    let signer_reference_operand = verifier.stack.pop().unwrap();
+    if resource_operand != struct_type {
+        return Err(err_at_offset(
+            StatusCode::MOVETO_TYPE_MISMATCH_ERROR,
+            offset,
+        ));
+    }
+    match signer_reference_operand {
+        ST::Reference(inner) => match *inner {
+            ST::Signer => Ok(()),
+            _ => Err(err_at_offset(
+                StatusCode::MOVETO_TYPE_MISMATCH_ERROR,
+                offset,
+            )),
+        },
+        _ => Err(err_at_offset(
+            StatusCode::MOVETO_TYPE_MISMATCH_ERROR,
+            offset,
+        )),
     }
 }
 
@@ -722,10 +756,22 @@ fn verify_instr(
 
         Bytecode::MoveToSender(idx) => {
             let struct_def = verifier.module().struct_def_at(*idx);
-            move_to(verifier, offset, struct_def, &Signature(vec![]))?
+            move_to_sender(verifier, offset, struct_def, &Signature(vec![]))?
         }
 
         Bytecode::MoveToSenderGeneric(idx) => {
+            let struct_inst = verifier.module().struct_instantiation_at(*idx);
+            let struct_def = verifier.module().struct_def_at(struct_inst.def);
+            let type_args = &verifier.module().signature_at(struct_inst.type_parameters);
+            move_to_sender(verifier, offset, struct_def, type_args)?
+        }
+
+        Bytecode::MoveTo(idx) => {
+            let struct_def = verifier.module().struct_def_at(*idx);
+            move_to(verifier, offset, struct_def, &Signature(vec![]))?
+        }
+
+        Bytecode::MoveToGeneric(idx) => {
             let struct_inst = verifier.module().struct_instantiation_at(*idx);
             let struct_def = verifier.module().struct_def_at(struct_inst.def);
             let type_args = &verifier.module().signature_at(struct_inst.type_parameters);

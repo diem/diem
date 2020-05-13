@@ -25,6 +25,16 @@ pub(crate) static INITIAL_GAS_SCHEDULE: Lazy<(Vec<u8>, Vec<u8>)> = Lazy::new(|| 
             MoveToSenderGeneric(StructDefInstantiationIndex::new(0)),
             GasCost::new(774, 1),
         ),
+        (
+            MoveTo(StructDefinitionIndex::new(0)),
+            /* MoveToSender + ReadRef == 774 + 51 == 825 */
+            GasCost::new(825, 1),
+        ),
+        (
+            MoveToGeneric(StructDefInstantiationIndex::new(0)),
+            /* MoveToSender + ReadRef == 774 + 51 == 825 */
+            GasCost::new(825, 1),
+        ),
         (GetTxnSenderAddress, GasCost::new(30, 1)),
         (
             MoveFrom(StructDefinitionIndex::new(0)),

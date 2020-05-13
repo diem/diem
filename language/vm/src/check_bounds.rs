@@ -296,7 +296,7 @@ impl<'a> BoundsChecker<'a> {
                     }
                 }
                 Pack(idx) | Unpack(idx) | Exists(idx) | ImmBorrowGlobal(idx)
-                | MutBorrowGlobal(idx) | MoveFrom(idx) | MoveToSender(idx) => {
+                | MutBorrowGlobal(idx) | MoveFrom(idx) | MoveToSender(idx) | MoveTo(idx) => {
                     check_code_unit_bounds_impl(&self.module.struct_defs, bytecode_offset, *idx)?
                 }
                 PackGeneric(idx)
@@ -305,6 +305,7 @@ impl<'a> BoundsChecker<'a> {
                 | ImmBorrowGlobalGeneric(idx)
                 | MutBorrowGlobalGeneric(idx)
                 | MoveFromGeneric(idx)
+                | MoveToGeneric(idx)
                 | MoveToSenderGeneric(idx) => {
                     check_code_unit_bounds_impl(
                         &self.module.struct_def_instantiations,

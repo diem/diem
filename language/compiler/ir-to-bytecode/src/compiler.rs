@@ -1550,6 +1550,24 @@ fn compile_call(
                     function_frame.push()?;
                     vec_deque![]
                 }
+                Builtin::MoveTo(name, tys) => {
+                    let tokens = Signature(compile_types(
+                        context,
+                        function_frame.type_parameters(),
+                        &tys,
+                    )?);
+                    let type_actuals_id = context.signature_index(tokens)?;
+                    let def_idx = context.struct_definition_index(&name)?;
+                    if tys.is_empty() {
+                        push_instr!(call.loc, Bytecode::MoveTo(def_idx));
+                    } else {
+                        let si_idx =
+                            context.struct_instantiation_index(def_idx, type_actuals_id)?;
+                        push_instr!(call.loc, Bytecode::MoveToGeneric(si_idx));
+                    }
+                    function_frame.push()?;
+                    vec_deque![]
+                }
                 Builtin::Freeze => {
                     push_instr!(call.loc, Bytecode::FreezeRef);
                     function_frame.pop()?; // pop mut ref

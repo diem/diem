@@ -439,6 +439,8 @@ enum BytecodeGen {
     MoveFromGeneric(PropIndex),
     MoveToSender(PropIndex),
     MoveToSenderGeneric(PropIndex),
+    MoveTo(PropIndex),
+    MoveToGeneric(PropIndex),
     BrTrue(PropIndex),
     BrFalse(PropIndex),
     Branch(PropIndex),
@@ -478,6 +480,8 @@ impl BytecodeGen {
             any::<PropIndex>().prop_map(MoveFromGeneric),
             any::<PropIndex>().prop_map(MoveToSender),
             any::<PropIndex>().prop_map(MoveToSenderGeneric),
+            any::<PropIndex>().prop_map(MoveTo),
+            any::<PropIndex>().prop_map(MoveToGeneric),
             any::<PropIndex>().prop_map(BrTrue),
             any::<PropIndex>().prop_map(BrFalse),
             any::<PropIndex>().prop_map(Branch),
@@ -561,6 +565,10 @@ impl BytecodeGen {
                 idx.index(state.struct_defs_len) as TableIndex,
             )),
             BytecodeGen::MoveToSenderGeneric(_idx) => return None,
+            BytecodeGen::MoveTo(idx) => Bytecode::MoveTo(StructDefinitionIndex(
+                idx.index(state.struct_defs_len) as TableIndex,
+            )),
+            BytecodeGen::MoveToGeneric(_idx) => return None,
             BytecodeGen::BrTrue(idx) => {
                 if code_len == 0 {
                     return None;

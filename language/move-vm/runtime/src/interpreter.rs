@@ -390,6 +390,22 @@ impl<'txn> Interpreter<'txn> {
         Ok(size)
     }
 
+    /// MoveTo opcode.
+    fn move_to(
+        resource: Struct,
+    ) -> impl FnOnce(
+        &mut Interpreter,
+        &mut dyn InterpreterContext,
+        AccessPath,
+        &FatStructType,
+    ) -> VMResult<AbstractMemorySize<GasCarrier>> {
+        |_interpreter, context, ap, struct_ty| {
+            let size = resource.size();
+            context.move_resource_to(&ap, struct_ty, resource)?;
+            Ok(size)
+        }
+    }
+
     /// MoveToSender opcode.
     fn move_to_sender(
         &mut self,
@@ -1126,7 +1142,7 @@ impl Frame {
                             *sd_idx,
                             Interpreter::move_to_sender,
                         )?;
-                        gas!(instr: context, interpreter, Opcodes::MOVE_TO, size)?;
+                        gas!(instr: context, interpreter, Opcodes::MOVE_TO_SENDER, size)?;
                     }
                     Bytecode::MoveToSenderGeneric(si_idx) => {
                         let addr = interpreter.txn_data.sender();
@@ -1137,6 +1153,38 @@ impl Frame {
                             *si_idx,
                             self,
                             Interpreter::move_to_sender,
+                        )?;
+                        gas!(
+                            instr: context,
+                            interpreter,
+                            Opcodes::MOVE_TO_SENDER_GENERIC,
+                            size
+                        )?;
+                    }
+                    Bytecode::MoveTo(sd_idx) => {
+                        let resource = interpreter.operand_stack.pop_as::<Struct>()?;
+                        let signer_reference = interpreter.operand_stack.pop_as::<Reference>()?;
+                        let addr = signer_reference.read_ref()?.value_as::<AccountAddress>()?;
+                        let size = interpreter.global_data_op(
+                            resolver,
+                            context,
+                            addr,
+                            *sd_idx,
+                            Interpreter::move_to(resource),
+                        )?;
+                        gas!(instr: context, interpreter, Opcodes::MOVE_TO, size)?;
+                    }
+                    Bytecode::MoveToGeneric(si_idx) => {
+                        let resource = interpreter.operand_stack.pop_as::<Struct>()?;
+                        let signer_reference = interpreter.operand_stack.pop_as::<Reference>()?;
+                        let addr = signer_reference.read_ref()?.value_as::<AccountAddress>()?;
+                        let size = interpreter.global_data_op_generic(
+                            resolver,
+                            context,
+                            addr,
+                            *si_idx,
+                            self,
+                            Interpreter::move_to(resource),
                         )?;
                         gas!(instr: context, interpreter, Opcodes::MOVE_TO_GENERIC, size)?;
                     }

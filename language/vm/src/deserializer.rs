@@ -1175,13 +1175,21 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
                 let idx = read_uleb_u16_internal(cursor)?;
                 Bytecode::MoveFromGeneric(StructDefInstantiationIndex(idx))
             }
-            Opcodes::MOVE_TO => {
+            Opcodes::MOVE_TO_SENDER => {
                 let idx = read_uleb_u16_internal(cursor)?;
                 Bytecode::MoveToSender(StructDefinitionIndex(idx))
             }
-            Opcodes::MOVE_TO_GENERIC => {
+            Opcodes::MOVE_TO_SENDER_GENERIC => {
                 let idx = read_uleb_u16_internal(cursor)?;
                 Bytecode::MoveToSenderGeneric(StructDefInstantiationIndex(idx))
+            }
+            Opcodes::MOVE_TO => {
+                let idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::MoveTo(StructDefinitionIndex(idx))
+            }
+            Opcodes::MOVE_TO_GENERIC => {
+                let idx = read_uleb_u16_internal(cursor)?;
+                Bytecode::MoveToGeneric(StructDefInstantiationIndex(idx))
             }
             Opcodes::FREEZE_REF => Bytecode::FreezeRef,
             Opcodes::NOP => Bytecode::Nop,
@@ -1348,7 +1356,7 @@ impl Opcodes {
             0x2A => Ok(Opcodes::MUT_BORROW_GLOBAL),
             0x2B => Ok(Opcodes::IMM_BORROW_GLOBAL),
             0x2C => Ok(Opcodes::MOVE_FROM),
-            0x2D => Ok(Opcodes::MOVE_TO),
+            0x2D => Ok(Opcodes::MOVE_TO_SENDER),
             0x2E => Ok(Opcodes::FREEZE_REF),
             0x2F => Ok(Opcodes::SHL),
             0x30 => Ok(Opcodes::SHR),
@@ -1366,8 +1374,10 @@ impl Opcodes {
             0x3C => Ok(Opcodes::MUT_BORROW_GLOBAL_GENERIC),
             0x3D => Ok(Opcodes::IMM_BORROW_GLOBAL_GENERIC),
             0x3E => Ok(Opcodes::MOVE_FROM_GENERIC),
-            0x3F => Ok(Opcodes::MOVE_TO_GENERIC),
+            0x3F => Ok(Opcodes::MOVE_TO_SENDER_GENERIC),
             0x40 => Ok(Opcodes::NOP),
+            0x41 => Ok(Opcodes::MOVE_TO),
+            0x42 => Ok(Opcodes::MOVE_TO_GENERIC),
             _ => Err(VMStatus::new(StatusCode::UNKNOWN_OPCODE)),
         }
     }

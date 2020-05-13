@@ -710,6 +710,10 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
             write_u16_as_uleb128(binary, class_idx.0)
         }
         Bytecode::MoveToSender(class_idx) => {
+            binary.push(Opcodes::MOVE_TO_SENDER as u8)?;
+            write_u16_as_uleb128(binary, class_idx.0)
+        }
+        Bytecode::MoveTo(class_idx) => {
             binary.push(Opcodes::MOVE_TO as u8)?;
             write_u16_as_uleb128(binary, class_idx.0)
         }
@@ -730,6 +734,10 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
             write_u16_as_uleb128(binary, class_idx.0)
         }
         Bytecode::MoveToSenderGeneric(class_idx) => {
+            binary.push(Opcodes::MOVE_TO_SENDER_GENERIC as u8)?;
+            write_u16_as_uleb128(binary, class_idx.0)
+        }
+        Bytecode::MoveToGeneric(class_idx) => {
             binary.push(Opcodes::MOVE_TO_GENERIC as u8)?;
             write_u16_as_uleb128(binary, class_idx.0)
         }

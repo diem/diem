@@ -358,6 +358,8 @@ pub enum Builtin {
     MoveFrom(StructName, Vec<Type>),
     /// Publish an instantiated struct object into sender's account.
     MoveToSender(StructName, Vec<Type>),
+    /// Publish an instantiated struct object into signer's (signer is the first arg) account.
+    MoveTo(StructName, Vec<Type>),
 
     /// Convert a mutable reference into an immutable one
     Freeze,
@@ -1524,6 +1526,7 @@ impl fmt::Display for Builtin {
             Builtin::MoveToSender(t, tys) => {
                 write!(f, "move_to_sender<{}{}>", t, format_type_actuals(tys))
             }
+            Builtin::MoveTo(t, tys) => write!(f, "move_to<{}{}>", t, format_type_actuals(tys)),
             Builtin::Freeze => write!(f, "freeze"),
             Builtin::ToU8 => write!(f, "to_u8"),
             Builtin::ToU64 => write!(f, "to_u64"),

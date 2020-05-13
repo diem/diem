@@ -329,6 +329,20 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                         StructDefInstantiationIndex,
                         MoveToSenderGeneric
                     ),
+                    MoveTo(_) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        MoveTo
+                    ),
+                    MoveToGeneric(_) => struct_bytecode!(
+                        struct_inst_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefInstantiationIndex,
+                        MoveToGeneric
+                    ),
                     BrTrue(_) => code_bytecode!(code_len, bytecode_idx, offset, BrTrue),
                     BrFalse(_) => code_bytecode!(code_len, bytecode_idx, offset, BrFalse),
                     Branch(_) => code_bytecode!(code_len, bytecode_idx, offset, Branch),
@@ -385,6 +399,8 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
         | MoveFromGeneric(_)
         | MoveToSender(_)
         | MoveToSenderGeneric(_)
+        | MoveTo(_)
+        | MoveToGeneric(_)
         | BrTrue(_)
         | BrFalse(_)
         | Branch(_)

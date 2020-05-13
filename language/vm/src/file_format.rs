@@ -1148,6 +1148,15 @@ pub enum Bytecode {
     /// ```..., value -> ...```
     MoveToSender(StructDefinitionIndex),
     MoveToSenderGeneric(StructDefInstantiationIndex),
+    /// Move the instance at the top of the stack to the address of the `Signer` on the stack below
+    /// it
+    /// Abort execution if an object of type StructDefinitionIndex already exists in address.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., signer_value, value -> ...```
+    MoveTo(StructDefinitionIndex),
+    MoveToGeneric(StructDefInstantiationIndex),
     /// Shift the (second top value) left (top value) bits and pushes the result on the stack.
     ///
     /// Stack transition:
@@ -1234,6 +1243,8 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::MoveFromGeneric(a) => write!(f, "MoveFromGeneric({:?})", a),
             Bytecode::MoveToSender(a) => write!(f, "MoveToSender({:?})", a),
             Bytecode::MoveToSenderGeneric(a) => write!(f, "MoveToSenderGeneric({:?})", a),
+            Bytecode::MoveTo(a) => write!(f, "MoveTo({:?})", a),
+            Bytecode::MoveToGeneric(a) => write!(f, "MoveToGeneric({:?})", a),
             Bytecode::Nop => write!(f, "Nop"),
         }
     }
