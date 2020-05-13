@@ -14,7 +14,7 @@ libra-types = { path = "../../types", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
-libc = "0.2.69"
+libc = "0.2.70"
 move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
 static_assertions = "1.0.0"
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
