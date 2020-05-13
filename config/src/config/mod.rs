@@ -238,6 +238,11 @@ impl NodeConfig {
         self.debug_interface.randomize_ports();
         self.storage.randomize_ports();
         self.rpc.randomize_ports();
+
+        if let Some(network) = self.validator_network.as_mut() {
+            network.listen_address = crate::utils::get_available_port_in_multiaddr(true);
+            network.advertised_address = network.listen_address.clone();
+        }
     }
 
     pub fn random() -> Self {
