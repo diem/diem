@@ -2824,10 +2824,8 @@ dependencies = [
 name = "libra-vm"
 version = "0.1.0"
 dependencies = [
- "bytecode-verifier 0.1.0",
  "debug-interface 0.1.0",
  "libra-canonical-serialization 0.1.0",
- "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-logger 0.1.0",
  "libra-metrics 0.1.0",
