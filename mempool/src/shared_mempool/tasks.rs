@@ -37,6 +37,7 @@ use std::{
 };
 use tokio::runtime::Handle;
 use vm_validator::vm_validator::{get_account_sequence_number, TransactionValidation};
+use std::convert::TryInto;
 
 // ============================== //
 //  broadcast_coordinator tasks  //
@@ -176,10 +177,14 @@ pub(crate) async fn process_transaction_broadcast<V>(
     log_txn_process_results(results.clone(), Some(peer.peer_id()));
 
     let mut retry = false;
-    let retry_statuses = [MempoolStatusCode::MempoolIsFull, MempoolStatusCode::TooManyTransactions].iter().collect::<HashSet<_>>();
-    for (mempool_status, _vm_status) in results.iter() {
-        let should_single_retry = retry_statuses.contains(&mempool_status.code);
-        retry = retry || should_single_retry;
+    let retry_statuses = [MempoolStatusCode::MempoolIsFull].iter().collect::<HashSet<_>>();
+    let mut retry_index = results.len().try_into().expect("failed to convert to u64");
+    for (idx, (mempool_status, _vm_status)) in results.iter().enumerate() {
+        if retry_statuses.contains(&mempool_status.code) {
+            retry = true;
+            retry_index = idx.try_into().expect("failed to convert retry index to u64");
+            break;
+        }
     }
     // send back ACK
     let mut network_sender = smp
@@ -187,7 +192,7 @@ pub(crate) async fn process_transaction_broadcast<V>(
         .get_mut(&peer.network_id())
         .expect("[shared mempool] missing network sender");
     if let Err(e) = send_mempool_sync_msg(
-        MempoolSyncMsg::BroadcastTransactionsResponse { request_id, retry },
+        MempoolSyncMsg::BroadcastTransactionsResponse { request_id, retry, retry_index },
         peer.peer_id(),
         &mut network_sender,
     ) {
@@ -272,7 +277,10 @@ where
                             timeline_state,
                             is_governance_txn,
                         );
-                        statuses.push((mempool_status, None));
+                        statuses.push((mempool_status.clone(), None));
+                        if mempool_status.code == MempoolStatusCode::MempoolIsFull {
+                            break;
+                        }
                     }
                     Some(validation_status) => {
                         statuses.push((
@@ -324,6 +332,7 @@ pub(crate) fn process_broadcast_ack(
     request_id: String,
     is_validator: bool, // whether this node is a validator or not
     retry: bool,
+    retry_index: u64,
     peer: PeerNetworkId,
 ) {
 
@@ -331,8 +340,9 @@ pub(crate) fn process_broadcast_ack(
         Ok((start_id, end_id)) => {
             debug!("[mempool] ACK {}:{} from {:?}", start_id, end_id, peer);
             if retry {
-                debug!("[mempool] resetting timeline id {}", start_id);
-                peer_manager.update_peer_broadcast(peer, start_id);
+                let rebroadcast_timeline_id = start_id + retry_index;
+                debug!("[mempool] resetting timeline id {}", rebroadcast_timeline_id);
+                peer_manager.update_peer_broadcast(peer, rebroadcast_timeline_id);
             } else {
                 if is_validator {
                     return;

@@ -31,6 +31,8 @@ pub enum MempoolSyncMsg {
         request_id: String,
         /// whether this batch of txns should be re-broadcasted
         retry: bool,
+        /// earliest index of first txn in batch to retry (index is zero-indexed)
+        retry_index: u64,
     },
 }
 
