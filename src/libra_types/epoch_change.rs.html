@@ -273,40 +273,6 @@
 <span id="273">273</span>
 <span id="274">274</span>
 <span id="275">275</span>
-<span id="276">276</span>
-<span id="277">277</span>
-<span id="278">278</span>
-<span id="279">279</span>
-<span id="280">280</span>
-<span id="281">281</span>
-<span id="282">282</span>
-<span id="283">283</span>
-<span id="284">284</span>
-<span id="285">285</span>
-<span id="286">286</span>
-<span id="287">287</span>
-<span id="288">288</span>
-<span id="289">289</span>
-<span id="290">290</span>
-<span id="291">291</span>
-<span id="292">292</span>
-<span id="293">293</span>
-<span id="294">294</span>
-<span id="295">295</span>
-<span id="296">296</span>
-<span id="297">297</span>
-<span id="298">298</span>
-<span id="299">299</span>
-<span id="300">300</span>
-<span id="301">301</span>
-<span id="302">302</span>
-<span id="303">303</span>
-<span id="304">304</span>
-<span id="305">305</span>
-<span id="306">306</span>
-<span id="307">307</span>
-<span id="308">308</span>
-<span id="309">309</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -314,14 +280,11 @@
 <span class="attribute">#![<span class="ident">forbid</span>(<span class="ident">unsafe_code</span>)]</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">ledger_info</span>::{<span class="ident">LedgerInfo</span>, <span class="ident">LedgerInfoWithSignatures</span>};
-<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">ensure</span>, <span class="ident">format_err</span>, <span class="ident">Error</span>, <span class="prelude-ty">Result</span>};
+<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">ensure</span>, <span class="ident">format_err</span>, <span class="prelude-ty">Result</span>};
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
 <span class="kw">use</span> <span class="ident">proptest</span>::{<span class="ident">collection</span>::<span class="ident">vec</span>, <span class="ident">prelude</span>::<span class="kw-2">*</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">convert</span>::{<span class="ident">TryFrom</span>, <span class="ident">TryInto</span>},
-    <span class="ident">fmt</span>::<span class="ident">Debug</span>,
-};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span>;
 
 <span class="doccomment">/// The verification of the epoch change proof starts with verifier that is trusted by the</span>
 <span class="doccomment">/// client: could be either a waypoint (upon startup) or a known epoch info.</span>
@@ -428,37 +391,6 @@
         }
 
         <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">ledger_info_with_sigs</span>.<span class="ident">last</span>().<span class="ident">unwrap</span>())
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">EpochChangeProof</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EpochChangeProof</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">Error</span>;
-
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">proto</span>: <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">EpochChangeProof</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">ledger_info_with_sigs</span> <span class="op">=</span> <span class="ident">proto</span>
-            .<span class="ident">ledger_info_with_sigs</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="ident">TryInto</span>::<span class="ident">try_into</span>)
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">more</span> <span class="op">=</span> <span class="ident">proto</span>.<span class="ident">more</span>;
-
-        <span class="prelude-val">Ok</span>(<span class="ident">EpochChangeProof</span> {
-            <span class="ident">ledger_info_with_sigs</span>,
-            <span class="ident">more</span>,
-        })
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">EpochChangeProof</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">EpochChangeProof</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">change</span>: <span class="ident">EpochChangeProof</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">ledger_info_with_sigs</span>: <span class="ident">change</span>
-                .<span class="ident">ledger_info_with_sigs</span>
-                .<span class="ident">into_iter</span>()
-                .<span class="ident">map</span>(<span class="ident">Into</span>::<span class="ident">into</span>)
-                .<span class="ident">collect</span>(),
-            <span class="ident">more</span>: <span class="ident">change</span>.<span class="ident">more</span>,
-        }
     }
 }
 

@@ -252,51 +252,6 @@
 <span id="252">252</span>
 <span id="253">253</span>
 <span id="254">254</span>
-<span id="255">255</span>
-<span id="256">256</span>
-<span id="257">257</span>
-<span id="258">258</span>
-<span id="259">259</span>
-<span id="260">260</span>
-<span id="261">261</span>
-<span id="262">262</span>
-<span id="263">263</span>
-<span id="264">264</span>
-<span id="265">265</span>
-<span id="266">266</span>
-<span id="267">267</span>
-<span id="268">268</span>
-<span id="269">269</span>
-<span id="270">270</span>
-<span id="271">271</span>
-<span id="272">272</span>
-<span id="273">273</span>
-<span id="274">274</span>
-<span id="275">275</span>
-<span id="276">276</span>
-<span id="277">277</span>
-<span id="278">278</span>
-<span id="279">279</span>
-<span id="280">280</span>
-<span id="281">281</span>
-<span id="282">282</span>
-<span id="283">283</span>
-<span id="284">284</span>
-<span id="285">285</span>
-<span id="286">286</span>
-<span id="287">287</span>
-<span id="288">288</span>
-<span id="289">289</span>
-<span id="290">290</span>
-<span id="291">291</span>
-<span id="292">292</span>
-<span id="293">293</span>
-<span id="294">294</span>
-<span id="295">295</span>
-<span id="296">296</span>
-<span id="297">297</span>
-<span id="298">298</span>
-<span id="299">299</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -310,7 +265,7 @@
     <span class="ident">proof</span>::<span class="ident">AccountStateProof</span>,
     <span class="ident">transaction</span>::<span class="ident">Version</span>,
 };
-<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">ensure</span>, <span class="ident">format_err</span>, <span class="ident">Error</span>, <span class="prelude-ty">Result</span>};
+<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">ensure</span>, <span class="ident">Error</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::{
     <span class="ident">hash</span>::{<span class="ident">CryptoHash</span>, <span class="ident">CryptoHasher</span>},
     <span class="ident">HashValue</span>,
@@ -321,14 +276,17 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
 <span class="kw">use</span> <span class="ident">proptest_derive</span>::<span class="ident">Arbitrary</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">convert</span>::{<span class="ident">TryFrom</span>, <span class="ident">TryInto</span>},
-    <span class="ident">fmt</span>,
-};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">fmt</span>};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">CryptoHasher</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AccountStateBlob</span> {
     <span class="ident">blob</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">AccountStateBlob</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">blob</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">blob</span>
+    }
 }
 
 <span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">AccountStateBlob</span> {
@@ -355,29 +313,21 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">AccountStateBlob</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">account_state_blob</span>: <span class="kw-2">&amp;</span><span class="ident">AccountStateBlob</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+        <span class="ident">account_state_blob</span>.<span class="ident">blob</span>.<span class="ident">clone</span>()
+    }
+}
+
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">AccountStateBlob</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">account_state_blob</span>: <span class="ident">AccountStateBlob</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="ident">account_state_blob</span>.<span class="ident">blob</span>
+        <span class="self">Self</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="ident">account_state_blob</span>)
     }
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">AccountStateBlob</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">blob</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AccountStateBlob</span> {
         <span class="ident">AccountStateBlob</span> { <span class="ident">blob</span> }
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">AccountStateBlob</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">AccountStateBlob</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">Error</span>;
-
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">proto</span>: <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">AccountStateBlob</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">proto</span>.<span class="ident">blob</span>.<span class="ident">into</span>())
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">AccountStateBlob</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">AccountStateBlob</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">blob</span>: <span class="ident">AccountStateBlob</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">blob</span>: <span class="ident">blob</span>.<span class="ident">blob</span> }
     }
 }
 
@@ -523,40 +473,10 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">AccountStateWithProof</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">AccountStateWithProof</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">Error</span>;
-
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="kw-2">mut</span> <span class="ident">proto</span>: <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">AccountStateWithProof</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span>::<span class="ident">new</span>(
-            <span class="ident">proto</span>.<span class="ident">version</span>,
-            <span class="ident">proto</span>
-                .<span class="ident">blob</span>
-                .<span class="ident">take</span>()
-                .<span class="ident">map</span>(<span class="ident">AccountStateBlob</span>::<span class="ident">try_from</span>)
-                .<span class="ident">transpose</span>()<span class="question-mark">?</span>,
-            <span class="ident">proto</span>
-                .<span class="ident">proof</span>
-                .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Missing proof&quot;</span>))<span class="question-mark">?</span>
-                .<span class="ident">try_into</span>()<span class="question-mark">?</span>,
-        ))
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">AccountStateWithProof</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">AccountStateWithProof</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">account</span>: <span class="ident">AccountStateWithProof</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">version</span>: <span class="ident">account</span>.<span class="ident">version</span>,
-            <span class="ident">blob</span>: <span class="ident">account</span>.<span class="ident">blob</span>.<span class="ident">map</span>(<span class="ident">Into</span>::<span class="ident">into</span>),
-            <span class="ident">proof</span>: <span class="prelude-val">Some</span>(<span class="ident">account</span>.<span class="ident">proof</span>.<span class="ident">into</span>()),
-        }
-    }
-}
-
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
     <span class="kw">use</span> <span class="ident">lcs</span>::<span class="ident">test_helpers</span>::<span class="ident">assert_canonical_encode_decode</span>;
-    <span class="kw">use</span> <span class="ident">libra_prost_ext</span>::<span class="ident">test_helpers</span>::<span class="ident">assert_protobuf_encode_decode</span>;
     <span class="kw">use</span> <span class="ident">proptest</span>::<span class="ident">collection</span>::<span class="ident">vec</span>;
 
     <span class="kw">fn</span> <span class="ident">hash_blob</span>(<span class="ident">blob</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
@@ -567,18 +487,8 @@
 
     <span class="macro">proptest</span><span class="macro">!</span> {
         <span class="attribute">#[<span class="ident">test</span>]</span>
-        <span class="kw">fn</span> <span class="ident">account_state_blob_proto_roundtrip</span>(<span class="ident">account_state_blob</span> <span class="kw">in</span> <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">AccountStateBlob</span><span class="op">&gt;</span>()) {
-            <span class="ident">assert_protobuf_encode_decode</span>::<span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">AccountStateBlob</span>, <span class="ident">AccountStateBlob</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">account_state_blob</span>);
-        }
-
-        <span class="attribute">#[<span class="ident">test</span>]</span>
         <span class="kw">fn</span> <span class="ident">account_state_blob_hash</span>(<span class="ident">blob</span> <span class="kw">in</span> <span class="ident">vec</span>(<span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>(), <span class="number">1</span>..<span class="number">100</span>)) {
             <span class="macro">prop_assert_eq</span><span class="macro">!</span>(<span class="ident">hash_blob</span>(<span class="kw-2">&amp;</span><span class="ident">blob</span>), <span class="ident">AccountStateBlob</span>::<span class="ident">from</span>(<span class="ident">blob</span>).<span class="ident">hash</span>());
-        }
-
-        <span class="attribute">#[<span class="ident">test</span>]</span>
-        <span class="kw">fn</span> <span class="ident">account_state_with_proof_proto_roundtrip</span>(<span class="ident">account_state_with_proof</span> <span class="kw">in</span> <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">AccountStateWithProof</span><span class="op">&gt;</span>()) {
-            <span class="ident">assert_protobuf_encode_decode</span>::<span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">AccountStateWithProof</span>, <span class="ident">AccountStateWithProof</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">account_state_with_proof</span>);
         }
 
         <span class="attribute">#[<span class="ident">test</span>]</span>

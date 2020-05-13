@@ -4,13 +4,11 @@
 <span id="4">4</span>
 <span id="5">5</span>
 <span id="6">6</span>
-<span id="7">7</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
-<span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">proof</span>::<span class="ident">SparseMerkleProof</span>, <span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">SparseMerkleProof</span> <span class="kw">as</span> <span class="ident">ProtoSparseMerkleProof</span>,
-};
+<span class="kw">use</span> <span class="ident">grpc_types</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">SparseMerkleProof</span> <span class="kw">as</span> <span class="ident">ProtoSparseMerkleProof</span>;
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">proof</span>::<span class="ident">SparseMerkleProof</span>;
 
 <span class="macro">proto_fuzz_target</span><span class="macro">!</span>(<span class="ident">SparseMerkleProofTarget</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SparseMerkleProof</span>, <span class="ident">ProtoSparseMerkleProof</span>);
 </pre></div>

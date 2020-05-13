@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["create_unsigned_txn",""],["create_user_txn","Craft a transaction request."],["get_signed_transactions_digest","Used to get the digest of a set of signed transactions.  This is used by a validator to sign a block and to verify the signatures of other validators on a block"]],"trait":[["TransactionSigner",""]]});
+initSidebarItems({"fn":[["create_unsigned_txn",""],["create_user_txn","Craft a transaction request."]],"trait":[["TransactionSigner",""]]});

@@ -4,14 +4,12 @@
 <span id="4">4</span>
 <span id="5">5</span>
 <span id="6">6</span>
-<span id="7">7</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">SignedTransaction</span> <span class="kw">as</span> <span class="ident">ProtoSignedTransaction</span>, <span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>,
-};
+<span class="kw">use</span> <span class="ident">grpc_types</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">SignedTransaction</span> <span class="kw">as</span> <span class="ident">ProtoSignedTransaction</span>;
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>;
 <span class="macro">proto_fuzz_target</span><span class="macro">!</span>(<span class="ident">SignedTransactionTarget</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SignedTransaction</span>, <span class="ident">ProtoSignedTransaction</span>);
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "libra_fuzzer";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

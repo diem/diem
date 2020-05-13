@@ -524,11 +524,11 @@
 
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">channel</span>::<span class="ident">mpsc</span>, <span class="ident">sink</span>::<span class="ident">SinkExt</span>};
-<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">NodeConfig</span>;
-<span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">proto</span>::<span class="ident">types</span>::{
+<span class="kw">use</span> <span class="ident">grpc_types</span>::<span class="ident">proto</span>::<span class="ident">types</span>::{
     <span class="ident">EpochChangeProof</span>, <span class="ident">UpdateToLatestLedgerRequest</span>, <span class="ident">UpdateToLatestLedgerResponse</span>,
 };
+<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">NodeConfig</span>;
+<span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libradb</span>::<span class="ident">LibraDB</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
 <span class="kw">use</span> <span class="ident">storage_interface</span>::{<span class="ident">DbReader</span>, <span class="ident">DbWriter</span>, <span class="ident">Error</span>, <span class="ident">StartupInfo</span>};

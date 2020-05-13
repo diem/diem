@@ -177,9 +177,6 @@
 <span id="177">177</span>
 <span id="178">178</span>
 <span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
-<span id="182">182</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -200,17 +197,14 @@
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">debug_interface</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">channel</span>::<span class="ident">oneshot</span>, <span class="ident">SinkExt</span>};
+<span class="kw">use</span> <span class="ident">grpc_types</span>::<span class="ident">proto</span>::<span class="ident">types</span>::{
+    <span class="ident">MempoolStatus</span> <span class="kw">as</span> <span class="ident">MempoolStatusProto</span>, <span class="ident">SignedTransaction</span> <span class="kw">as</span> <span class="ident">SignedTransactionProto</span>,
+    <span class="ident">UpdateToLatestLedgerRequest</span>, <span class="ident">UpdateToLatestLedgerResponse</span>, <span class="ident">VmStatus</span> <span class="kw">as</span> <span class="ident">VmStatusProto</span>,
+};
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">NodeConfig</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_mempool</span>::<span class="ident">MempoolClientSender</span>;
-<span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">mempool_status</span>::<span class="ident">MempoolStatusCode</span>,
-    <span class="ident">proto</span>::<span class="ident">types</span>::{
-        <span class="ident">MempoolStatus</span> <span class="kw">as</span> <span class="ident">MempoolStatusProto</span>, <span class="ident">SignedTransaction</span> <span class="kw">as</span> <span class="ident">SignedTransactionProto</span>,
-        <span class="ident">UpdateToLatestLedgerRequest</span>, <span class="ident">UpdateToLatestLedgerResponse</span>, <span class="ident">VmStatus</span> <span class="kw">as</span> <span class="ident">VmStatusProto</span>,
-    },
-    <span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>,
-};
+<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">mempool_status</span>::<span class="ident">MempoolStatusCode</span>, <span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
 <span class="kw">use</span> <span class="ident">storage_interface</span>::<span class="ident">DbReader</span>;
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::{<span class="ident">Builder</span>, <span class="ident">Runtime</span>};

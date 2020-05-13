@@ -471,7 +471,7 @@
 
     <span class="kw">let</span> <span class="ident">event</span> <span class="op">=</span> <span class="ident">ContractEvent</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">event_key</span>, <span class="ident">sequence_number</span>, <span class="ident">type_tag</span>, <span class="ident">event_data_bytes</span>);
 
-    <span class="kw">let</span> <span class="ident">proto_txn</span> <span class="op">=</span> <span class="ident">libra_types</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">Event</span>::<span class="ident">from</span>(<span class="ident">event</span>);
+    <span class="kw">let</span> <span class="ident">proto_txn</span> <span class="op">=</span> <span class="ident">grpc_types</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">Event</span>::<span class="ident">from</span>(<span class="ident">event</span>);
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">libra_event</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">LibraEvent</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">null_mut</span>();
     <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">unsafe</span> {
