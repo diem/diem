@@ -131,8 +131,8 @@ data "template_file" "user_data" {
   vars = {
     persistent          = var.persist_libra_data
     ecs_cluster         = aws_ecs_cluster.testnet.name
-    host_log_path       = "/data/libra/libra.log"
-    host_structlog_path = "/data/libra/libra_structlog.log"
+    host_log_path       = "libra.log"
+    host_structlog_path = "libra_structlog.log"
     enable_logrotate    = var.log_to_file || var.enable_logstash
   }
 }
