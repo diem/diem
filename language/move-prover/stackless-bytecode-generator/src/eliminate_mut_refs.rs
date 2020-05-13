@@ -33,6 +33,9 @@ impl FunctionTargetProcessor for EliminateMutRefsProcessor {
         func_env: &FunctionEnv<'_>,
         mut data: FunctionTargetData,
     ) -> FunctionTargetData {
+        if func_env.is_native() {
+            return data;
+        }
         let local_types = &mut data.local_types;
         let return_types = &mut data.return_types;
 
@@ -45,6 +48,7 @@ impl FunctionTargetProcessor for EliminateMutRefsProcessor {
                 let ty = local_types[idx].clone();
                 ref_param_proxy_map.insert(idx, local_types.len());
                 local_types.push(ty.clone());
+                data.ref_param_map.insert(idx, return_types.len());
                 return_types.push(EliminateMutRefs::transform_type(ty));
             }
         }

@@ -273,21 +273,62 @@ function {:inline} $ReadValue(p: Path, v: Value): Value {
 // Generate stratified $UpdateValue for the depth of {{stratification_depth}}.
 
 {{#stratified}}
-function {{aggressive_func_inline}} $UpdateValue_{{@this_suffix}}(p: Path, v: Value, new_v: Value): Value {
-    if ({{@this_level}} == size#Path(p)) then
+function {{aggressive_func_inline}} $UpdateValue_{{@this_suffix}}(p: Path, offset: int, v: Value, new_v: Value): Value {
+    (var poffset := offset + {{@this_level}};
+    if (poffset == size#Path(p)) then
         new_v
     else
-        $update_vector(v, path_index_at(p, {{@this_level}}),
-                       $UpdateValue_{{@next_suffix}}(p, $vmap(v)[path_index_at(p, {{@this_level}})], new_v))
+        $update_vector(v, path_index_at(p, poffset),
+                       $UpdateValue_{{@next_suffix}}(p, offset, $vmap(v)[path_index_at(p, poffset)], new_v)))
 }
 {{else}}
-function {:inline} $UpdateValue_{{@this_suffix}}(p: Path, v: Value, new_v: Value): Value {
+function {:inline} $UpdateValue_{{@this_suffix}}(p: Path, offset: int, v: Value, new_v: Value): Value {
     new_v
 }
 {{/stratified}}
 
-function {:inline} $UpdateValue(p: Path, v: Value, new_v: Value): Value {
-    $UpdateValue_stratified(p, v, new_v)
+function {:inline} $UpdateValue(p: Path, offset: int, v: Value, new_v: Value): Value {
+    $UpdateValue_stratified(p, offset, v, new_v)
+}
+
+// Generate stratified $IsPathPrefix for the depth of {{stratification_depth}}.
+
+{{#stratified}}
+function {{aggressive_func_inline}} $IsPathPrefix_{{@this_suffix}}(p1: Path, p2: Path): bool {
+    if ({{@this_level}} == size#Path(p1)) then
+        true
+    else if (p#Path(p1)[{{@this_level}}] == p#Path(p2)[{{@this_level}}]) then
+        $IsPathPrefix_{{@next_suffix}}(p1, p2)
+    else
+        false
+}
+{{else}}
+function {:inline} $IsPathPrefix_{{@this_suffix}}(p1: Path, p2: Path): bool {
+    true
+}
+{{/stratified}}
+
+function {:inline} $IsPathPrefix(p1: Path, p2: Path): bool {
+    $IsPathPrefix_stratified(p1, p2)
+}
+
+// Generate stratified $ConcatPath for the depth of {{stratification_depth}}.
+
+{{#stratified}}
+function {{aggressive_func_inline}} $ConcatPath_{{@this_suffix}}(p1: Path, p2: Path): Path {
+    if ({{@this_level}} == size#Path(p2)) then
+        p1
+    else
+        $ConcatPath_{{@next_suffix}}(Path(p#Path(p1)[size#Path(p1) := p#Path(p2)[{{@this_level}}]], size#Path(p1) + 1), p2)
+}
+{{else}}
+function {:inline} $ConcatPath_{{@this_suffix}}(p1: Path, p2: Path): Path {
+    p1
+}
+{{/stratified}}
+
+function {:inline} $ConcatPath(p1: Path, p2: Path): Path {
+    $ConcatPath_stratified(p1, p2)
 }
 
 // Vector related functions on values
@@ -374,7 +415,7 @@ function {:constructor} Local(i: int): Location;
 function {:constructor} Param(i: int): Location;
 
 type {:datatype} Reference;
-function {:constructor} Reference(l: Location, p: Path): Reference;
+function {:constructor} Reference(l: Location, p: Path, v: Value): Reference;
 const DefaultReference: Reference;
 
 type {:datatype} Memory;
@@ -387,21 +428,10 @@ const EmptyMemory: Memory;
 axiom domain#Memory(EmptyMemory) == ConstMemoryDomain(false);
 axiom contents#Memory(EmptyMemory) == ConstMemoryContent(DefaultValue);
 
-var $m : Memory;
-var $local_counter : int;
+var $m: Memory;
 var $abort_flag: bool;
 
-function {:inline} $GetLocal(m: Memory, idx: int): Value {
-   contents#Memory(m)[Local(idx)]
-}
-
-function {:inline} $UpdateLocal(m: Memory, idx: int, v: Value): Memory {
-    Memory(domain#Memory(m)[Local(idx) := true], contents#Memory(m)[Local(idx) := v])
-}
-
 procedure {:inline 1} $InitVerification() {
-  // Set local counter to 0
-  $local_counter := 0;
   // Set abort_flag to false
   $abort_flag := false;
 }
@@ -419,11 +449,6 @@ function {:inline} $ResourceExists(m: Memory, resource: TypeValue, address: Valu
     Boolean($ResourceExistsRaw(m, resource, a#Address(address)))
 }
 
-// Obtains reference to the given resource.
-function {:inline} $GetResourceReference(resource: TypeValue, addr: int): Reference {
-    Reference(Global(resource, addr), EmptyPath)
-}
-
 // Obtains value of given resource.
 function {:inline} $ResourceValue(m: Memory, resource: TypeValue, address: Value): Value {
   contents#Memory(m)[Global(resource, a#Address(address))]
@@ -435,8 +460,8 @@ function {:inline} $SelectField(val: Value, field: FieldName): Value {
 }
 
 // Dereferences a reference.
-function {:inline} $Dereference(m: Memory, ref: Reference): Value {
-    $ReadValue(p#Reference(ref), contents#Memory(m)[l#Reference(ref)])
+function {:inline} $Dereference(ref: Reference): Value {
+    v#Reference(ref)
 }
 
 // Check whether sender account exists.
@@ -503,12 +528,12 @@ procedure {:inline 1} $BorrowGlobal(address: Value, ta: TypeValue) returns (dst:
         $abort_flag := true;
         return;
     }
-    dst := Reference(l, EmptyPath);
+    dst := Reference(l, EmptyPath, contents#Memory($m)[l]);
 }
 
-procedure {:inline 1} $BorrowLoc(l: int) returns (dst: Reference)
+procedure {:inline 1} $BorrowLoc(l: int, v: Value) returns (dst: Reference)
 {
-    dst := Reference(Local(l), EmptyPath);
+    dst := Reference(Local(l), EmptyPath, v);
 }
 
 procedure {:inline 1} $BorrowField(src: Reference, f: FieldName) returns (dst: Reference)
@@ -519,7 +544,7 @@ procedure {:inline 1} $BorrowField(src: Reference, f: FieldName) returns (dst: R
     p := p#Reference(src);
     size := size#Path(p);
     p := Path(p#Path(p)[size := f], size+1);
-    dst := Reference(l#Reference(src), p);
+    dst := Reference(l#Reference(src), p, $vmap(v#Reference(src))[f]);
 }
 
 procedure {:inline 1} $GetGlobal(address: Value, ta: TypeValue) returns (dst: Value)
@@ -544,20 +569,14 @@ procedure {:inline 1} $GetFieldFromValue(src: Value, f: FieldName) returns (dst:
     dst := $vmap(src)[f];
 }
 
-procedure {:inline 1} $WriteRef(to: Reference, new_v: Value)
+procedure {:inline 1} $WriteRef(to: Reference, new_v: Value) returns (to': Reference)
 {
-    var l: Location;
-    var v: Value;
-
-    l := l#Reference(to);
-    v := contents#Memory($m)[l];
-    v := $UpdateValue(p#Reference(to), v, new_v);
-    $m := Memory(domain#Memory($m), contents#Memory($m)[l := v]);
+    to' := Reference(l#Reference(to), p#Reference(to), new_v);
 }
 
 procedure {:inline 1} $ReadRef(from: Reference) returns (v: Value)
 {
-    v := $ReadValue(p#Reference(from), contents#Memory($m)[l#Reference(from)]);
+    v := v#Reference(from);
 }
 
 procedure {:inline 1} $CopyOrMoveRef(local: Reference) returns (dst: Reference)
@@ -570,9 +589,46 @@ procedure {:inline 1} $CopyOrMoveValue(local: Value) returns (dst: Value)
     dst := local;
 }
 
-procedure {:inline 1} $FreezeRef(src: Reference) returns (dst: Reference)
+procedure {:inline 1} WritebackToGlobal(src: Reference)
 {
-    dst := src;
+    var l: Location;
+    var v: Value;
+
+    l := l#Reference(src);
+    if (is#Global(l)) {
+        v := $UpdateValue(p#Reference(src), 0, contents#Memory($m)[l], v#Reference(src));
+        $m := Memory(domain#Memory($m), contents#Memory($m)[l := v]);
+    }
+}
+
+procedure {:inline 1} WritebackToValue(src: Reference, idx: int, vdst: Value) returns (vdst': Value)
+{
+    if (l#Reference(src) == Local(idx)) {
+        vdst' := $UpdateValue(p#Reference(src), 0, vdst, v#Reference(src));
+    } else {
+        vdst' := vdst;
+    }
+}
+
+procedure {:inline 1} WritebackToReference(src: Reference, dst: Reference) returns (dst': Reference)
+{
+    var srcPath, dstPath: Path;
+
+    srcPath := p#Reference(src);
+    dstPath := p#Reference(dst);
+    if (l#Reference(dst) == l#Reference(src) && size#Path(dstPath) <= size#Path(srcPath) && $IsPathPrefix(dstPath, srcPath)) {
+        dst' := Reference(
+                    l#Reference(dst),
+                    dstPath,
+                    $UpdateValue(srcPath, size#Path(dstPath), v#Reference(dst), v#Reference(src)));
+    } else {
+        dst' := dst;
+    }
+}
+
+procedure {:inline 1} Splice1(idx1: int, src1:Reference, dst: Reference) returns (dst': Reference) {
+    assume l#Reference(dst) == Local(idx1);
+    dst' := Reference(l#Reference(dst), $ConcatPath(p#Reference(src1), p#Reference(dst)), v#Reference(dst));
 }
 
 procedure {:inline 1} $CastU8(src: Value) returns (dst: Value)
@@ -794,17 +850,13 @@ procedure {:inline 1} $Vector_is_empty(ta: TypeValue, v: Value) returns (b: Valu
     b := Boolean($vlen(v) == 0);
 }
 
-procedure {:inline 1} $Vector_push_back(ta: TypeValue, r: Reference, val: Value) {
-    var v: Value;
-    v := $Dereference($m, r);
+procedure {:inline 1} $Vector_push_back(ta: TypeValue, v: Value, val: Value) returns (v': Value) {
     assume is#Vector(v);
-    call $WriteRef(r, $push_back_vector(v, val));
+    v' := $push_back_vector(v, val);
 }
 
-procedure {:inline 1} $Vector_pop_back(ta: TypeValue, r: Reference) returns (e: Value) {
-    var v: Value;
+procedure {:inline 1} $Vector_pop_back(ta: TypeValue, v: Value) returns (e: Value, v': Value) {
     var len: int;
-    v := $Dereference($m, r);
     assume is#Vector(v);
     len := $vlen(v);
     if (len == 0) {
@@ -812,22 +864,18 @@ procedure {:inline 1} $Vector_pop_back(ta: TypeValue, r: Reference) returns (e: 
         return;
     }
     e := $vmap(v)[len-1];
-    call $WriteRef(r, $pop_back_vector(v));
+    v' := $pop_back_vector(v);
 }
 
-procedure {:inline 1} $Vector_append(ta: TypeValue, r: Reference, other: Value) {
-    var v: Value;
-    v := $Dereference($m, r);
+procedure {:inline 1} $Vector_append(ta: TypeValue, v: Value, other: Value) returns (v': Value) {
     assume is#Vector(v);
     assume is#Vector(other);
-    call $WriteRef(r, $append_vector(v, other));
+    v' := $append_vector(v, other);
 }
 
-procedure {:inline 1} $Vector_reverse(ta: TypeValue, r: Reference) {
-    var v: Value;
-    v := $Dereference($m, r);
+procedure {:inline 1} $Vector_reverse(ta: TypeValue, v: Value) returns (v': Value) {
     assume is#Vector(v);
-    call $WriteRef(r, $reverse_vector(v));
+    v' := $reverse_vector(v);
 }
 
 procedure {:inline 1} $Vector_length(ta: TypeValue, v: Value) returns (l: Value) {
@@ -848,26 +896,19 @@ procedure {:inline 1} $Vector_borrow(ta: TypeValue, src: Value, i: Value) return
     dst := $vmap(src)[i_ind];
 }
 
-procedure {:inline 1} $Vector_borrow_mut(ta: TypeValue, src: Reference, index: Value) returns (dst: Reference)
+procedure {:inline 1} $Vector_borrow_mut(ta: TypeValue, v: Value, index: Value) returns (dst: Reference, v': Value)
 {{type_requires}} is#Integer(index);
 {
-    var p: Path;
-    var size: int;
     var i_ind: int;
-    var v: Value;
 
     i_ind := i#Integer(index);
-    v := $Dereference($m, src);
     assume is#Vector(v);
     if (i_ind < 0 || i_ind >= $vlen(v)) {
         $abort_flag := true;
         return;
     }
-
-    p := p#Reference(src);
-    size := size#Path(p);
-    p := Path(p#Path(p)[size := i_ind], size+1);
-    dst := Reference(l#Reference(src), p);
+    dst := Reference(Local(0), Path(p#Path(EmptyPath)[0 := i_ind], 1), $vmap(v)[i_ind]);
+    v' := v;
 }
 
 procedure {:inline 1} $Vector_destroy_empty(ta: TypeValue, v: Value) {
@@ -876,60 +917,51 @@ procedure {:inline 1} $Vector_destroy_empty(ta: TypeValue, v: Value) {
     }
 }
 
-procedure {:inline 1} $Vector_swap(ta: TypeValue, src: Reference, i: Value, j: Value)
+procedure {:inline 1} $Vector_swap(ta: TypeValue, v: Value, i: Value, j: Value) returns (v': Value)
 {{type_requires}} is#Integer(i) && is#Integer(j);
 {
     var i_ind: int;
     var j_ind: int;
-    var v: Value;
+    assume is#Vector(v);
     i_ind := i#Integer(i);
     j_ind := i#Integer(j);
-    v := $Dereference($m, src);
-    assume is#Vector(v);
     if (i_ind >= $vlen(v) || j_ind >= $vlen(v) || i_ind < 0 || j_ind < 0) {
         $abort_flag := true;
         return;
     }
-    v := $swap_vector(v, i_ind, j_ind);
-    call $WriteRef(src, v);
+    v' := $swap_vector(v, i_ind, j_ind);
 }
 
-procedure {:inline 1} $Vector_remove(ta: TypeValue, r: Reference, i: Value) returns (e: Value)
+procedure {:inline 1} $Vector_remove(ta: TypeValue, v: Value, i: Value) returns (e: Value, v': Value)
 {{type_requires}} is#Integer(i);
 {
     var i_ind: int;
-    var v: Value;
 
-    i_ind := i#Integer(i);
-
-    v := $Dereference($m, r);
     assume is#Vector(v);
+    i_ind := i#Integer(i);
     if (i_ind < 0 || i_ind >= $vlen(v)) {
         $abort_flag := true;
         return;
     }
     e := $vmap(v)[i_ind];
-    call $WriteRef(r, $remove_vector(v, i_ind));
+    v' := $remove_vector(v, i_ind);
 }
 
-procedure {:inline 1} $Vector_swap_remove(ta: TypeValue, r: Reference, i: Value) returns (e: Value)
+procedure {:inline 1} $Vector_swap_remove(ta: TypeValue, v: Value, i: Value) returns (e: Value, v': Value)
 {{type_requires}} is#Integer(i);
 {
     var i_ind: int;
-    var v: Value;
     var len: int;
 
-    i_ind := i#Integer(i);
-
-    v := $Dereference($m, r);
     assume is#Vector(v);
+    i_ind := i#Integer(i);
     len := $vlen(v);
     if (i_ind < 0 || i_ind >= len) {
         $abort_flag := true;
         return;
     }
     e := $vmap(v)[i_ind];
-    call $WriteRef(r, $pop_back_vector($swap_vector(v, i_ind, len-1)));
+    v' := $pop_back_vector($swap_vector(v, i_ind, len-1));
 }
 
 procedure {:inline 1} $Vector_contains(ta: TypeValue, v: Value, e: Value) returns (res: Value)  {

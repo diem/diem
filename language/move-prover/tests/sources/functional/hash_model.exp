@@ -8,8 +8,6 @@ error:  A postcondition might not hold on this return path.
     │
     =     at tests/sources/functional/hash_model.move:39:5: hash_test1_incorrect (entry)
     =     at tests/sources/functional/hash_model.move:41:24: hash_test1_incorrect
-    =         v1 = <redacted>,
-    =         v2 = <redacted>,
     =         h1 = <redacted>
     =     at tests/sources/functional/hash_model.move:42:33: hash_test1_incorrect
     =         h2 = <redacted>
@@ -27,8 +25,6 @@ error:  A postcondition might not hold on this return path.
     │
     =     at tests/sources/functional/hash_model.move:82:5: hash_test2_incorrect (entry)
     =     at tests/sources/functional/hash_model.move:84:24: hash_test2_incorrect
-    =         v1 = <redacted>,
-    =         v2 = <redacted>,
     =         h1 = <redacted>
     =     at tests/sources/functional/hash_model.move:85:33: hash_test2_incorrect
     =         h2 = <redacted>

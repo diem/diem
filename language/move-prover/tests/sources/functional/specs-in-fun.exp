@@ -8,8 +8,6 @@ error:  This assertion might not hold.
     │
     =     at tests/sources/functional/specs-in-fun.move:42:5: simple1_incorrect (entry)
     =     at tests/sources/functional/specs-in-fun.move:43:9: simple1_incorrect
-    =         x = <redacted>,
-    =         y = <redacted>
 
 error:  This assertion might not hold.
 
@@ -20,7 +18,6 @@ error:  This assertion might not hold.
     │
     =     at tests/sources/functional/specs-in-fun.move:49:5: simple2_incorrect (entry)
     =     at tests/sources/functional/specs-in-fun.move:51:15: simple2_incorrect
-    =         x = <redacted>,
     =         y = <redacted>
     =     at tests/sources/functional/specs-in-fun.move:53:13: simple2_incorrect
 
@@ -42,7 +39,5 @@ error:  This assertion might not hold.
     │
     =     at tests/sources/functional/specs-in-fun.move:64:5: simple4_incorrect (entry)
     =     at tests/sources/functional/specs-in-fun.move:66:15: simple4_incorrect
-    =         x = <redacted>,
-    =         y = <redacted>,
     =         z = <redacted>
     =     at tests/sources/functional/specs-in-fun.move:68:13: simple4_incorrect

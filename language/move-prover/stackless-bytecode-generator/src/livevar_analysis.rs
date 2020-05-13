@@ -173,10 +173,12 @@ impl<'a> LiveVarAnalysis<'a> {
                 }
                 Bytecode::Assign(attr_id, dest, _, _) => {
                     let annotation_at = &annotations[&(code_offset as CodeOffset)];
-                    if annotation_at.after.contains(&dest) {
-                        transformed_code.push(bytecode);
-                    } else {
+                    if self.func_target.get_local_type(dest).is_reference()
+                        && !annotation_at.after.contains(&dest)
+                    {
                         transformed_code.push(Bytecode::Nop(attr_id));
+                    } else {
+                        transformed_code.push(bytecode);
                     }
                 }
                 _ => {

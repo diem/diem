@@ -1,0 +1,288 @@
+============ initial translation from Move ================
+
+fun TestNestedInvariants::mutate() {
+    var o: TestNestedInvariants::Outer
+    var r: &mut TestNestedInvariants::Outer
+    var $t2: u64
+    var $t3: u64
+    var $t4: TestNestedInvariants::Nested
+    var $t5: TestNestedInvariants::Outer
+    var $t6: &mut TestNestedInvariants::Outer
+    var $t7: u64
+    var $t8: &mut TestNestedInvariants::Outer
+    var $t9: &mut u64
+    var $t10: u64
+    var $t11: &mut TestNestedInvariants::Outer
+    var $t12: &mut TestNestedInvariants::Nested
+    var $t13: &mut u64
+    $t2 := 3
+    $t3 := 2
+    $t4 := pack TestNestedInvariants::Nested($t3)
+    $t5 := pack TestNestedInvariants::Outer($t2, $t4)
+    o := $t5
+    $t6 := borrow_local(o)
+    r := $t6
+    $t7 := 2
+    $t8 := copy(r)
+    $t9 := borrow_field<TestNestedInvariants::Outer>.y($t8)
+    write_ref($t9, $t7)
+    $t10 := 1
+    $t11 := move(r)
+    $t12 := borrow_field<TestNestedInvariants::Outer>.n($t11)
+    $t13 := borrow_field<TestNestedInvariants::Nested>.x($t12)
+    write_ref($t13, $t10)
+    return ()
+}
+
+
+fun TestNestedInvariants::mutate_inner_data_invariant_invalid() {
+    var o: TestNestedInvariants::Outer
+    var r: &mut TestNestedInvariants::Outer
+    var $t2: u64
+    var $t3: u64
+    var $t4: TestNestedInvariants::Nested
+    var $t5: TestNestedInvariants::Outer
+    var $t6: &mut TestNestedInvariants::Outer
+    var $t7: u64
+    var $t8: &mut TestNestedInvariants::Outer
+    var $t9: &mut TestNestedInvariants::Nested
+    var $t10: &mut u64
+    $t2 := 3
+    $t3 := 2
+    $t4 := pack TestNestedInvariants::Nested($t3)
+    $t5 := pack TestNestedInvariants::Outer($t2, $t4)
+    o := $t5
+    $t6 := borrow_local(o)
+    r := $t6
+    $t7 := 0
+    $t8 := move(r)
+    $t9 := borrow_field<TestNestedInvariants::Outer>.n($t8)
+    $t10 := borrow_field<TestNestedInvariants::Nested>.x($t9)
+    write_ref($t10, $t7)
+    return ()
+}
+
+
+fun TestNestedInvariants::mutate_outer_data_invariant_invalid() {
+    var o: TestNestedInvariants::Outer
+    var r: &mut TestNestedInvariants::Outer
+    var $t2: u64
+    var $t3: u64
+    var $t4: TestNestedInvariants::Nested
+    var $t5: TestNestedInvariants::Outer
+    var $t6: &mut TestNestedInvariants::Outer
+    var $t7: u64
+    var $t8: &mut TestNestedInvariants::Outer
+    var $t9: &mut u64
+    $t2 := 3
+    $t3 := 2
+    $t4 := pack TestNestedInvariants::Nested($t3)
+    $t5 := pack TestNestedInvariants::Outer($t2, $t4)
+    o := $t5
+    $t6 := borrow_local(o)
+    r := $t6
+    $t7 := 2
+    $t8 := move(r)
+    $t9 := borrow_field<TestNestedInvariants::Outer>.y($t8)
+    write_ref($t9, $t7)
+    return ()
+}
+
+
+fun TestNestedInvariants::new(): TestNestedInvariants::Outer {
+    var $t0: u64
+    var $t1: u64
+    var $t2: TestNestedInvariants::Nested
+    var $t3: TestNestedInvariants::Outer
+    $t0 := 3
+    $t1 := 2
+    $t2 := pack TestNestedInvariants::Nested($t1)
+    $t3 := pack TestNestedInvariants::Outer($t0, $t2)
+    return $t3
+}
+
+
+fun TestNestedInvariants::new_inner_data_invariant_invalid(): TestNestedInvariants::Outer {
+    var $t0: u64
+    var $t1: u64
+    var $t2: TestNestedInvariants::Nested
+    var $t3: TestNestedInvariants::Outer
+    $t0 := 2
+    $t1 := 0
+    $t2 := pack TestNestedInvariants::Nested($t1)
+    $t3 := pack TestNestedInvariants::Outer($t0, $t2)
+    return $t3
+}
+
+
+fun TestNestedInvariants::new_outer_data_invariant_invalid(): TestNestedInvariants::Outer {
+    var $t0: u64
+    var $t1: u64
+    var $t2: TestNestedInvariants::Nested
+    var $t3: TestNestedInvariants::Outer
+    $t0 := 2
+    $t1 := 2
+    $t2 := pack TestNestedInvariants::Nested($t1)
+    $t3 := pack TestNestedInvariants::Outer($t0, $t2)
+    return $t3
+}
+
+============ after pipeline `writeback` ================
+
+fun TestNestedInvariants::mutate() {
+    var o: TestNestedInvariants::Outer
+    var r: &mut TestNestedInvariants::Outer
+    var $t2: u64
+    var $t3: u64
+    var $t4: TestNestedInvariants::Nested
+    var $t5: TestNestedInvariants::Outer
+    var $t6: &mut TestNestedInvariants::Outer
+    var $t7: u64
+    var $t8: &mut TestNestedInvariants::Outer
+    var $t9: &mut u64
+    var $t10: u64
+    var $t11: &mut TestNestedInvariants::Outer
+    var $t12: &mut TestNestedInvariants::Nested
+    var $t13: &mut u64
+    $t2 := 3
+    $t3 := 2
+    $t4 := pack TestNestedInvariants::Nested($t3)
+    $t5 := pack TestNestedInvariants::Outer($t2, $t4)
+    o := $t5
+    $t6 := borrow_local(o)
+    // live_refs: $t6 borrowed_by: LocalRoot(o) -> {Reference($t6)} borrows_from: Reference($t6) -> {LocalRoot(o)}
+    r := $t6
+    // live_refs: r borrowed_by: LocalRoot(o) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(o)}
+    $t7 := 2
+    // live_refs: r borrowed_by: LocalRoot(o) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(o)}
+    $t8 := copy(r)
+    // live_refs: r, $t8 borrowed_by: LocalRoot(o) -> {Reference(r)}, Reference(r) -> {Reference($t8)} borrows_from: Reference(r) -> {LocalRoot(o)}, Reference($t8) -> {Reference(r)}
+    // Reference(r) <- $t8
+    $t9 := borrow_field<TestNestedInvariants::Outer>.y($t8)
+    // live_refs: r, $t9 borrowed_by: LocalRoot(o) -> {Reference(r)}, Reference(r) -> {Reference($t9)}, Reference($t8) -> {Reference($t9)} borrows_from: Reference(r) -> {LocalRoot(o)}, Reference($t9) -> {Reference(r), Reference($t8)}
+    // Reference(r) <- $t9, Reference($t8) <- $t9
+    write_ref($t9, $t7)
+    // live_refs: r borrowed_by: LocalRoot(o) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(o)}
+    $t10 := 1
+    // live_refs: r borrowed_by: LocalRoot(o) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(o)}
+    $t11 := move(r)
+    // live_refs: $t11 borrowed_by: LocalRoot(o) -> {Reference($t11)} borrows_from: Reference($t11) -> {LocalRoot(o)}
+    // LocalRoot(o) <- $t11
+    $t12 := borrow_field<TestNestedInvariants::Outer>.n($t11)
+    // live_refs: $t12 borrowed_by: LocalRoot(o) -> {Reference($t12)}, Reference($t11) -> {Reference($t12)} borrows_from: Reference($t12) -> {LocalRoot(o), Reference($t11)}
+    // LocalRoot(o) <- $t12, Reference($t11) <- $t12
+    $t13 := borrow_field<TestNestedInvariants::Nested>.x($t12)
+    // live_refs: $t13 borrowed_by: LocalRoot(o) -> {Reference($t13)}, Reference($t11) -> {Reference($t12)}, Reference($t12) -> {Reference($t13)} borrows_from: Reference($t12) -> {Reference($t11)}, Reference($t13) -> {LocalRoot(o), Reference($t12)}
+    // LocalRoot(o) <- $t13, Reference($t12) <- $t13, Reference($t11) <- $t12
+    write_ref($t13, $t10)
+    return ()
+}
+
+
+fun TestNestedInvariants::mutate_inner_data_invariant_invalid() {
+    var o: TestNestedInvariants::Outer
+    var r: &mut TestNestedInvariants::Outer
+    var $t2: u64
+    var $t3: u64
+    var $t4: TestNestedInvariants::Nested
+    var $t5: TestNestedInvariants::Outer
+    var $t6: &mut TestNestedInvariants::Outer
+    var $t7: u64
+    var $t8: &mut TestNestedInvariants::Outer
+    var $t9: &mut TestNestedInvariants::Nested
+    var $t10: &mut u64
+    $t2 := 3
+    $t3 := 2
+    $t4 := pack TestNestedInvariants::Nested($t3)
+    $t5 := pack TestNestedInvariants::Outer($t2, $t4)
+    o := $t5
+    $t6 := borrow_local(o)
+    // live_refs: $t6 borrowed_by: LocalRoot(o) -> {Reference($t6)} borrows_from: Reference($t6) -> {LocalRoot(o)}
+    r := $t6
+    // live_refs: r borrowed_by: LocalRoot(o) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(o)}
+    $t7 := 0
+    // live_refs: r borrowed_by: LocalRoot(o) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(o)}
+    $t8 := move(r)
+    // live_refs: $t8 borrowed_by: LocalRoot(o) -> {Reference($t8)} borrows_from: Reference($t8) -> {LocalRoot(o)}
+    // LocalRoot(o) <- $t8
+    $t9 := borrow_field<TestNestedInvariants::Outer>.n($t8)
+    // live_refs: $t9 borrowed_by: LocalRoot(o) -> {Reference($t9)}, Reference($t8) -> {Reference($t9)} borrows_from: Reference($t9) -> {LocalRoot(o), Reference($t8)}
+    // LocalRoot(o) <- $t9, Reference($t8) <- $t9
+    $t10 := borrow_field<TestNestedInvariants::Nested>.x($t9)
+    // live_refs: $t10 borrowed_by: LocalRoot(o) -> {Reference($t10)}, Reference($t8) -> {Reference($t9)}, Reference($t9) -> {Reference($t10)} borrows_from: Reference($t9) -> {Reference($t8)}, Reference($t10) -> {LocalRoot(o), Reference($t9)}
+    // LocalRoot(o) <- $t10, Reference($t9) <- $t10, Reference($t8) <- $t9
+    write_ref($t10, $t7)
+    return ()
+}
+
+
+fun TestNestedInvariants::mutate_outer_data_invariant_invalid() {
+    var o: TestNestedInvariants::Outer
+    var r: &mut TestNestedInvariants::Outer
+    var $t2: u64
+    var $t3: u64
+    var $t4: TestNestedInvariants::Nested
+    var $t5: TestNestedInvariants::Outer
+    var $t6: &mut TestNestedInvariants::Outer
+    var $t7: u64
+    var $t8: &mut TestNestedInvariants::Outer
+    var $t9: &mut u64
+    $t2 := 3
+    $t3 := 2
+    $t4 := pack TestNestedInvariants::Nested($t3)
+    $t5 := pack TestNestedInvariants::Outer($t2, $t4)
+    o := $t5
+    $t6 := borrow_local(o)
+    // live_refs: $t6 borrowed_by: LocalRoot(o) -> {Reference($t6)} borrows_from: Reference($t6) -> {LocalRoot(o)}
+    r := $t6
+    // live_refs: r borrowed_by: LocalRoot(o) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(o)}
+    $t7 := 2
+    // live_refs: r borrowed_by: LocalRoot(o) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(o)}
+    $t8 := move(r)
+    // live_refs: $t8 borrowed_by: LocalRoot(o) -> {Reference($t8)} borrows_from: Reference($t8) -> {LocalRoot(o)}
+    // LocalRoot(o) <- $t8
+    $t9 := borrow_field<TestNestedInvariants::Outer>.y($t8)
+    // live_refs: $t9 borrowed_by: LocalRoot(o) -> {Reference($t9)}, Reference($t8) -> {Reference($t9)} borrows_from: Reference($t9) -> {LocalRoot(o), Reference($t8)}
+    // LocalRoot(o) <- $t9, Reference($t8) <- $t9
+    write_ref($t9, $t7)
+    return ()
+}
+
+
+fun TestNestedInvariants::new(): TestNestedInvariants::Outer {
+    var $t0: u64
+    var $t1: u64
+    var $t2: TestNestedInvariants::Nested
+    var $t3: TestNestedInvariants::Outer
+    $t0 := 3
+    $t1 := 2
+    $t2 := pack TestNestedInvariants::Nested($t1)
+    $t3 := pack TestNestedInvariants::Outer($t0, $t2)
+    return $t3
+}
+
+
+fun TestNestedInvariants::new_inner_data_invariant_invalid(): TestNestedInvariants::Outer {
+    var $t0: u64
+    var $t1: u64
+    var $t2: TestNestedInvariants::Nested
+    var $t3: TestNestedInvariants::Outer
+    $t0 := 2
+    $t1 := 0
+    $t2 := pack TestNestedInvariants::Nested($t1)
+    $t3 := pack TestNestedInvariants::Outer($t0, $t2)
+    return $t3
+}
+
+
+fun TestNestedInvariants::new_outer_data_invariant_invalid(): TestNestedInvariants::Outer {
+    var $t0: u64
+    var $t1: u64
+    var $t2: TestNestedInvariants::Nested
+    var $t3: TestNestedInvariants::Outer
+    $t0 := 2
+    $t1 := 2
+    $t2 := pack TestNestedInvariants::Nested($t1)
+    $t3 := pack TestNestedInvariants::Outer($t0, $t2)
+    return $t3
+}

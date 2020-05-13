@@ -31,6 +31,9 @@ impl FunctionTargetProcessor for WritebackAnalysisProcessor {
         func_env: &FunctionEnv<'_>,
         mut data: FunctionTargetData,
     ) -> FunctionTargetData {
+        if func_env.is_native() {
+            return data;
+        }
         let func_target = FunctionTarget::new(func_env, &data);
         let mut writeback_analysis = WritebackAnalysis::new(&func_target, &data.code);
         let mut new_code = BTreeMap::new();
@@ -96,14 +99,15 @@ impl<'a> WritebackAnalysis<'a> {
         visited: &mut BTreeSet<TempIndex>,
         dfs_order: &mut Vec<TempIndex>,
     ) {
+        if visited.contains(&idx) {
+            return;
+        }
         visited.insert(idx);
         let node = BorrowNode::Reference(idx);
         if borrows_from.contains_key(&node) {
             for n in &borrows_from[&node] {
                 if let BorrowNode::Reference(next_idx) = n {
-                    if !visited.contains(next_idx) {
-                        Self::visit(*next_idx, borrows_from, visited, dfs_order);
-                    }
+                    Self::visit(*next_idx, borrows_from, visited, dfs_order);
                 }
             }
         }
@@ -117,22 +121,33 @@ impl<'a> WritebackAnalysis<'a> {
     }
 
     fn writeback_bytecodes(&mut self, before: &BorrowInfo, after: &BorrowInfo) -> Vec<Bytecode> {
-        let mut instrumented_bytecodes = vec![];
-        // add writebacks (youngest first) for all references that are live before but not after
+        let before_refs = before.all_refs();
+        let after_refs = after.all_refs();
+        let writeback_refs: BTreeSet<TempIndex> = before_refs
+            .into_iter()
+            .filter(|idx| {
+                !after_refs.contains(idx)
+                    || before.live_refs.contains(idx) && !after.live_refs.contains(idx)
+            })
+            .collect();
         let mut visited = BTreeSet::new();
         let mut dfs_order = vec![];
-        for idx in before.live_refs.difference(&after.live_refs) {
+        for idx in &writeback_refs {
             Self::visit(*idx, &before.borrows_from, &mut visited, &mut dfs_order);
         }
-        for idx in dfs_order {
-            if before.live_refs.contains(&idx) && !after.live_refs.contains(&idx) {
+        // add writebacks (youngest first)
+        let mut instrumented_bytecodes = vec![];
+        for idx in dfs_order.into_iter().rev() {
+            if writeback_refs.contains(&idx) {
                 let node = BorrowNode::Reference(idx);
-                for n in &before.borrows_from[&node] {
-                    instrumented_bytecodes.push(Bytecode::WriteBack(
-                        self.new_attr_id(),
-                        n.clone(),
-                        idx,
-                    ));
+                if let Some(borrows_from) = before.borrows_from.get(&node) {
+                    for n in borrows_from {
+                        instrumented_bytecodes.push(Bytecode::WriteBack(
+                            self.new_attr_id(),
+                            n.clone(),
+                            idx,
+                        ));
+                    }
                 }
             }
         }

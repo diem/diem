@@ -47,7 +47,7 @@ impl StacklessControlFlowGraph {
             entry_block_ids: blocks
                 .iter()
                 .map(|(block_id, block)| {
-                    if code[block.upper as usize].is_return() {
+                    if code[block.upper as usize].is_exit() {
                         Some(*block_id)
                     } else {
                         None

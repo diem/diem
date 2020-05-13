@@ -13,8 +13,6 @@ error: abort not covered by any of the `aborts_if` clauses
      │
      =     at tests/sources/functional/arithm.move:125:5: div_by_zero_u64_incorrect (entry)
      =     at tests/sources/functional/arithm.move:126:11: div_by_zero_u64_incorrect (ABORTED)
-     =         x = <redacted>,
-     =         y = <redacted>
 
 error: abort not covered by any of the `aborts_if` clauses
 
@@ -30,8 +28,6 @@ error: abort not covered by any of the `aborts_if` clauses
      │
      =     at tests/sources/functional/arithm.move:177:5: overflow_u128_add_incorrect (entry)
      =     at tests/sources/functional/arithm.move:178:11: overflow_u128_add_incorrect (ABORTED)
-     =         x = <redacted>,
-     =         y = <redacted>
 
 error: abort not covered by any of the `aborts_if` clauses
 
@@ -47,8 +43,6 @@ error: abort not covered by any of the `aborts_if` clauses
      │
      =     at tests/sources/functional/arithm.move:230:5: overflow_u128_mul_incorrect (entry)
      =     at tests/sources/functional/arithm.move:231:11: overflow_u128_mul_incorrect (ABORTED)
-     =         x = <redacted>,
-     =         y = <redacted>
 
 error: abort not covered by any of the `aborts_if` clauses
 
@@ -64,8 +58,6 @@ error: abort not covered by any of the `aborts_if` clauses
      │
      =     at tests/sources/functional/arithm.move:161:5: overflow_u64_add_incorrect (entry)
      =     at tests/sources/functional/arithm.move:162:11: overflow_u64_add_incorrect (ABORTED)
-     =         x = <redacted>,
-     =         y = <redacted>
 
 error: abort not covered by any of the `aborts_if` clauses
 
@@ -81,8 +73,6 @@ error: abort not covered by any of the `aborts_if` clauses
      │
      =     at tests/sources/functional/arithm.move:214:5: overflow_u64_mul_incorrect (entry)
      =     at tests/sources/functional/arithm.move:215:11: overflow_u64_mul_incorrect (ABORTED)
-     =         x = <redacted>,
-     =         y = <redacted>
 
 error: abort not covered by any of the `aborts_if` clauses
 
@@ -98,8 +88,6 @@ error: abort not covered by any of the `aborts_if` clauses
      │
      =     at tests/sources/functional/arithm.move:145:5: overflow_u8_add_incorrect (entry)
      =     at tests/sources/functional/arithm.move:146:11: overflow_u8_add_incorrect (ABORTED)
-     =         x = <redacted>,
-     =         y = <redacted>
 
 error: abort not covered by any of the `aborts_if` clauses
 
@@ -115,5 +103,3 @@ error: abort not covered by any of the `aborts_if` clauses
      │
      =     at tests/sources/functional/arithm.move:198:5: overflow_u8_mul_incorrect (entry)
      =     at tests/sources/functional/arithm.move:199:11: overflow_u8_mul_incorrect (ABORTED)
-     =         x = <redacted>,
-     =         y = <redacted>

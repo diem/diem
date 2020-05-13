@@ -35,7 +35,6 @@ error:  This assertion might not hold.
      │
      =     at tests/sources/functional/invariants.move:153:5: lifetime_invalid_S_branching (entry)
      =     at tests/sources/functional/invariants.move:154:11: lifetime_invalid_S_branching
-     =         cond = <redacted>
      =     at tests/sources/functional/invariants.move:155:21: lifetime_invalid_S_branching
      =         a = <redacted>,
      =         b = <redacted>

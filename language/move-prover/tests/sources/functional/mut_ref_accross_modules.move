@@ -75,22 +75,22 @@ module TestMutRefs {
         r.sum = r.sum - 1;
     }
 
-    // For a public function, the data invariant for a mut ref is expected to hold.
+    // TODO: This function should verify because the data invariant for a mut ref is expected to hold. Currently, it verifies but for the wrong reason: the resource invariant is assumed on the inout value modeling x.
     public fun data_invariant(x: &mut T) {
         spec {
             assert x.value > 0;
         }
     }
 
-    // For a private function, the data invariant for a mut ref is not expected to hold.
+    // TODO: This function should fail because the data invariant for a mut ref is not expected to hold. Currently, it verifies because the resource invariant is assumed on the inout value modeling x.
     fun private_data_invariant_invalid(x: &mut T) {
         spec {
             assert x.value > 0;
         }
     }
 
-    // The next function should succeed because calling a public function from a private one maintains module
-    // invariants.
+    // The next function should succeed because calling a public function from a private one maintains module invariants.
+    // TODO: This function fails because PackRef(r) is called just before increment(r).
     fun private_to_public_caller(r: &mut T) acquires TSum {
         // Before call to public increment, data invariants and module invariant must hold.
         // Here we assume them, and force spec_sum to start with a zero value.
@@ -111,7 +111,7 @@ module TestMutRefs {
          increment(r);
      }
 
-     // The next function fails because the data invariant does not hold.
+     // TODO: This function should fail because the data invariant does not hold at the call to increment. But, currently it does not fail since there is no data invariant assertion at the call to increment (due to my changes?).
      fun private_to_public_caller_invalid_data_invariant() acquires TSum {
          // Before call to public new(), assume module invariant.
          spec {

@@ -13,7 +13,6 @@ error: abort not covered by any of the `aborts_if` clauses
     │
     =     at tests/sources/functional/schema_exp.move:25:5: bar_incorrect (entry)
     =     at tests/sources/functional/schema_exp.move:26:9: bar_incorrect (ABORTED)
-    =         c = <redacted>
 
 error:  A postcondition might not hold on this return path.
 
@@ -24,6 +23,5 @@ error:  A postcondition might not hold on this return path.
     │
     =     at tests/sources/functional/schema_exp.move:53:5: baz_incorrect (entry)
     =     at tests/sources/functional/schema_exp.move:54:11: baz_incorrect
-    =         i = <redacted>,
     =         result = <redacted>
     =     at tests/sources/functional/schema_exp.move:53:5: baz_incorrect (exit)

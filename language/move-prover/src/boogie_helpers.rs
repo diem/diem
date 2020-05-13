@@ -224,7 +224,7 @@ fn boogie_well_formed_expr_impl(
             };
             conds.push(boogie_well_formed_expr_impl(
                 env,
-                &format!("$Dereference($m, {})", name),
+                &format!("$Dereference({})", name),
                 rtype,
                 mode,
                 nest + 1,
@@ -300,10 +300,6 @@ pub fn boogie_global_declarator(
     } else {
         format!("{} : Value", name)
     }
-}
-
-pub fn boogie_var_before_borrow(idx: usize) -> String {
-    format!("$before_borrow_{}", idx)
 }
 
 pub fn boogie_byte_blob(val: &[u8]) -> String {

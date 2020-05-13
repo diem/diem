@@ -13,7 +13,7 @@ error:  A postcondition might not hold on this return path.
      =         s = <redacted>
      =     at tests/sources/functional/global_vars.move:114:15: combi_incorrect
      =         s = <redacted>
-     =     at tests/sources/functional/global_vars.move:111:21: combi_incorrect
+     =     at tests/sources/functional/global_vars.move:110:5: combi_incorrect
      =     at tests/sources/functional/global_vars.move:110:5: combi_incorrect (exit)
 
 error:  A postcondition might not hold on this return path.
@@ -37,7 +37,6 @@ error:  A postcondition might not hold on this return path.
     │
     =     at tests/sources/functional/global_vars.move:52:5: unpack_incorrect (entry)
     =     at tests/sources/functional/global_vars.move:53:19: unpack_incorrect
-    =         t = <redacted>
     =     at tests/sources/functional/global_vars.move:54:9: unpack_incorrect
     =         x = <redacted>
     =     at tests/sources/functional/global_vars.move:52:5: unpack_incorrect (exit)
@@ -57,9 +56,10 @@ error:  A postcondition might not hold on this return path.
      =         s = <redacted>
      =     at tests/sources/functional/global_vars.move:149:15: update_S_incorrect
      =         r = <redacted>
+     =     at tests/sources/functional/global_vars.move:146:5: update_S_incorrect
+     =         result = <redacted>
      =     at tests/sources/functional/global_vars.move:150:9: update_S_incorrect
      =     at tests/sources/functional/global_vars.move:146:5: update_S_incorrect (exit)
-     =         result = <redacted>
 
 error:  A postcondition might not hold on this return path.
 
@@ -74,9 +74,8 @@ error:  A postcondition might not hold on this return path.
     =         t = <redacted>
     =     at tests/sources/functional/global_vars.move:66:5: update_valid_still_mutating (entry)
     =     at tests/sources/functional/global_vars.move:67:19: update_valid_still_mutating
-    =         t = <redacted>,
-    =         t = <redacted>
     =     at tests/sources/functional/global_vars.move:66:5: update_valid_still_mutating (exit)
+    =         result = <redacted>
     =     at tests/sources/functional/global_vars.move:87:9: update_incorrect
     =     at tests/sources/functional/global_vars.move:84:5: update_incorrect (exit)
     =         result = <redacted>

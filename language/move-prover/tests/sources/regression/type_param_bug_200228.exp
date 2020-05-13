@@ -8,6 +8,5 @@ error:  A postcondition might not hold on this return path.
     │
     =     at tests/sources/regression/type_param_bug_200228.move:6:3: type_param_bug (entry)
     =     at tests/sources/regression/type_param_bug_200228.move:7:5: type_param_bug
-    =         addr = <redacted>,
     =         result = <redacted>
     =     at tests/sources/regression/type_param_bug_200228.move:6:3: type_param_bug (exit)
