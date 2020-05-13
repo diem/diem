@@ -306,7 +306,7 @@ impl UDPStructLog {
     /// Creates new UDPStructLog and starts async thread to send results
     pub fn start_new(udp_address: String) -> io::Result<Self> {
         let (sender, receiver) = mpsc::sync_channel(1_024);
-        let socket = UdpSocket::bind(udp_address.clone()).expect("couldn't bind to address");
+        let socket = UdpSocket::bind("0.0.0.0:0").expect("couldn't bind to address");
         let sink_thread = UDPStructLogThread {
             receiver,
             socket,
@@ -343,15 +343,22 @@ impl UDPStructLogThread {
                 }
                 Ok(json) => json,
             };
-            match self
-                .socket
-                .send_to(json.to_string().as_bytes(), self.udp_address.clone())
+            match self.socket.connect(self.udp_address.clone())
             {
                 Ok(_) => {
-                    continue;
+                    match self.socket.send(json.to_string().as_bytes())
+                    {
+                        Ok(_) => {
+                            println!("message sent");
+                        }
+                        Err(e) => {
+                            println!("Error while sending data to socket: {}", e);
+                            break;
+                        }
+                    }
                 }
                 Err(e) => {
-                    println!("Error while sending data to socket: {}", e);
+                    println!("Error connect to UDP address: {}", e);
                     break;
                 }
             }
