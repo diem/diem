@@ -62,7 +62,7 @@ impl BackupHandler {
     pub fn get_account_iter(
         &self,
         version: Version,
-    ) -> Result<Box<dyn Iterator<Item = Result<(HashValue, AccountStateBlob)>> + Send>> {
+    ) -> Result<Box<dyn Iterator<Item = Result<(HashValue, AccountStateBlob)>> + Send + Sync>> {
         let iterator = JellyfishMerkleIterator::new(
             Arc::clone(&self.state_store),
             version,

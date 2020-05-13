@@ -6,7 +6,7 @@ use crate::{
     FileHandle,
 };
 use anyhow::Result;
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{BigEndian, ReadBytesExt};
 use futures::executor::block_on_stream;
 use libra_crypto::HashValue;
 use libra_types::{account_state_blob::AccountStateBlob, proof::SparseMerkleRangeProof};
@@ -40,21 +40,16 @@ fn read_account_state_chunk(file: FileHandle) -> Result<Vec<(HashValue, AccountS
     let mut chunk = vec![];
     let mut reader = std::io::Cursor::new(content);
     loop {
-        let mut buf = [0u8; HashValue::LENGTH];
-        if reader.read_exact(&mut buf).is_err() {
-            break;
-        }
-        let key = HashValue::new(buf);
+        let record_size = match reader.read_u32::<BigEndian>() {
+            Ok(n) => n as usize,
+            Err(_) => return Ok(chunk),
+        };
 
-        let len = reader.read_u32::<LittleEndian>()?;
-        let mut buf = vec![0u8; len as usize];
-        reader.read_exact(&mut buf)?;
-        let blob = AccountStateBlob::from(buf);
-
+        let mut record_buf = vec![0u8; record_size];
+        reader.read_exact(&mut record_buf)?;
+        let (key, blob): (HashValue, AccountStateBlob) = lcs::from_bytes(&record_buf)?;
         chunk.push((key, blob));
     }
-
-    Ok(chunk)
 }
 
 fn read_proof(file: FileHandle) -> Result<SparseMerkleRangeProof> {

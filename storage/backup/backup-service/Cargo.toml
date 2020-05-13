@@ -10,7 +10,10 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+bytes = "0.5.3"
 futures = "0.3.5"
+hyper = "0.13"
+serde = { version = "1.0.110", default-features = false }
 tokio = { version = "0.2", features=["full"]}
 warp = "0.2.2"
 
