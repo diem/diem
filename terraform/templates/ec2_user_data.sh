@@ -13,6 +13,9 @@ if [ -e /dev/nvme1n1 ]; then
 	mkdir /data
 	mount /data
 
+	export log_path="/data/libra/${host_log_path}"
+	export structlog_path="/data/libra/${host_structlog_path}"
+
 	# non-persistent storage is managed by Docker under data-root
 	if ! ${persistent} ; then
 		cat >> /etc/fstab <<-EOF
@@ -20,6 +23,8 @@ if [ -e /dev/nvme1n1 ]; then
 		EOF
 		mkdir -p /var/lib/docker/volumes
 		mount /var/lib/docker/volumes
+		export log_path="/data/*/_data/${host_log_path}"
+		export structlog_path="/data/*/_data/${host_structlog_path}"
 
 		# give some helptul tips
 		cat > /data/README <<-EOF
@@ -52,7 +57,7 @@ EOF
 {% if enable_logrotate %}
 cat > /etc/logrotate.d/libra <<EOF
 hourly
-${host_log_path} {
+${log_path} {
 	maxsize 500M
 	rotate 100
 	compress
@@ -60,7 +65,7 @@ ${host_log_path} {
 	copytruncate
 }
 
-${host_structlog_path} {
+${structlog_path} {
 	maxsize 500M
 	rotate 100
 	compress
