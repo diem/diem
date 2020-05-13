@@ -4,12 +4,12 @@
 use crate::runtime::VMRuntime;
 use bytecode_verifier::VerifiedModule;
 use move_core_types::{
-    gas_schedule::CostTable,
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
 };
 use move_vm_types::{
-    chain_state::ChainState, transaction_metadata::TransactionMetadata, values::Value,
+    data_store::DataStore, gas_schedule::CostStrategy, transaction_metadata::TransactionMetadata,
+    values::Value,
 };
 use vm::errors::VMResult;
 
@@ -24,55 +24,56 @@ impl MoveVM {
         }
     }
 
-    pub fn execute_function<S: ChainState>(
+    pub fn execute_function(
         &self,
         module: &ModuleId,
         function_name: &IdentStr,
-        gas_schedule: &CostTable,
-        chain_state: &mut S,
-        txn_data: &TransactionMetadata,
         ty_args: Vec<TypeTag>,
         args: Vec<Value>,
+        cost_strategy: &mut CostStrategy,
+        data_store: &mut dyn DataStore,
+        txn_data: &TransactionMetadata,
     ) -> VMResult<()> {
         self.runtime.execute_function(
-            chain_state,
-            txn_data,
-            gas_schedule,
             module,
             function_name,
             ty_args,
             args,
+            cost_strategy,
+            data_store,
+            txn_data,
         )
     }
 
-    pub fn execute_script<S: ChainState>(
+    pub fn execute_script(
         &self,
         script: Vec<u8>,
-        gas_schedule: &CostTable,
-        chain_state: &mut S,
-        txn_data: &TransactionMetadata,
         ty_args: Vec<TypeTag>,
         args: Vec<Value>,
-    ) -> VMResult<()> {
-        self.runtime
-            .execute_script(chain_state, txn_data, gas_schedule, script, ty_args, args)
-    }
-
-    pub fn publish_module<S: ChainState>(
-        &self,
-        module: Vec<u8>,
-        chain_state: &mut S,
+        cost_strategy: &mut CostStrategy,
+        data_store: &mut dyn DataStore,
         txn_data: &TransactionMetadata,
     ) -> VMResult<()> {
-        self.runtime.publish_module(module, chain_state, txn_data)
+        self.runtime
+            .execute_script(script, ty_args, args, cost_strategy, data_store, txn_data)
     }
 
-    pub fn cache_module<S: ChainState>(
+    pub fn publish_module(
+        &self,
+        module: Vec<u8>,
+        data_store: &mut dyn DataStore,
+        txn_data: &TransactionMetadata,
+    ) -> VMResult<()> {
+        self.runtime
+            .publish_module(module, data_store, &txn_data.sender)
+    }
+
+    pub fn cache_module(
         &self,
         module: VerifiedModule,
-        chain_state: &mut S,
+        data_store: &mut dyn DataStore,
     ) -> VMResult<()> {
-        self.runtime.cache_module(module, chain_state)
+        self.runtime.cache_module(module, data_store)
     }
 }
 

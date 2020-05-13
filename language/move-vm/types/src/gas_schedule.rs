@@ -6,20 +6,116 @@
 //! It is important to note that the cost schedule defined in this file does not track hashing
 //! operations or other native operations; the cost of each native operation will be returned by the
 //! native function itself.
-use libra_types::transaction::MAX_TRANSACTION_SIZE_IN_BYTES;
+use libra_types::{
+    transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
+    vm_error::{StatusCode, VMStatus},
+};
 use mirai_annotations::*;
 use move_core_types::gas_schedule::{
     words_in, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasConstants, GasCost,
     GasUnits,
 };
 use vm::{
+    errors::VMResult,
     file_format::{
         Bytecode, ConstantPoolIndex, FieldHandleIndex, FieldInstantiationIndex,
         FunctionHandleIndex, FunctionInstantiationIndex, StructDefInstantiationIndex,
         StructDefinitionIndex, NUMBER_OF_NATIVE_FUNCTIONS,
     },
-    file_format_common::instruction_key,
+    file_format_common::{instruction_key, Opcodes},
 };
+
+/// The Move VM implementation for gas charging.
+///
+/// Initialize with a `CostTable` and the gas provided to the transaction.
+/// Provide all the proper guarantees about gas charging in the Move VM.
+///
+/// Every client must use an instance of this type to interact with the Move VM.
+pub struct CostStrategy<'a> {
+    cost_table: &'a CostTable,
+    gas_left: GasUnits<GasCarrier>,
+    charge: bool,
+}
+
+impl<'a> CostStrategy<'a> {
+    /// A transaction `CostStrategy`. Charge for every operation and fails once there
+    /// is no more gas to pay for operations.
+    ///
+    /// This is the instantiation the must be used when execution a user script.
+    pub fn transaction(cost_table: &'a CostTable, gas_left: GasUnits<GasCarrier>) -> Self {
+        Self {
+            cost_table,
+            gas_left,
+            charge: true,
+        }
+    }
+
+    /// A system `CostStrategy` does not charge for operations.
+    ///
+    /// It should be used by clients in very specific cases and when executing system
+    /// code that does not have to charge the user.
+    pub fn system(cost_table: &'a CostTable, gas_left: GasUnits<GasCarrier>) -> Self {
+        Self {
+            cost_table,
+            gas_left,
+            charge: false,
+        }
+    }
+
+    /// Return the `CostTable` behind this `CostStrategy`.
+    pub fn cost_table(&self) -> &CostTable {
+        self.cost_table
+    }
+
+    /// Return the gas left.
+    pub fn remaining_gas(&self) -> GasUnits<GasCarrier> {
+        self.gas_left
+    }
+
+    /// Charge a given amount of gas and fail if not enough gas units are left.
+    pub fn deduct_gas(&mut self, amount: GasUnits<GasCarrier>) -> VMResult<()> {
+        if !self.charge {
+            return Ok(());
+        }
+        if self
+            .gas_left
+            .app(&amount, |curr_gas, gas_amt| curr_gas >= gas_amt)
+        {
+            self.gas_left = self.gas_left.sub(amount);
+            Ok(())
+        } else {
+            // Zero out the internal gas state
+            self.gas_left = GasUnits::new(0);
+            Err(VMStatus::new(StatusCode::OUT_OF_GAS))
+        }
+    }
+
+    /// Charge an instruction over data with a given size and fail if not enough gas units are left.
+    pub fn charge_instr_with_size(
+        &mut self,
+        opcode: Opcodes,
+        size: AbstractMemorySize<GasCarrier>,
+    ) -> VMResult<()> {
+        self.deduct_gas(
+            self.cost_table
+                .instruction_cost(opcode as u8)
+                .total()
+                .mul(size),
+        )
+    }
+
+    /// Charge an instruction and fail if not enough gas units are left.
+    pub fn charge_instr(&mut self, opcode: Opcodes) -> VMResult<()> {
+        self.deduct_gas(self.cost_table.instruction_cost(opcode as u8).total())
+    }
+
+    /// Charge gas related to the overall size of a transaction and fail if not enough
+    /// gas units are left.
+    pub fn charge_intrinsic_gas(&mut self, size: AbstractMemorySize<GasCarrier>) -> VMResult<()> {
+        let cost = calculate_intrinsic_gas(size, &self.cost_table.gas_constants);
+        self.deduct_gas(cost)
+    }
+}
 
 pub fn new_from_instructions(
     mut instrs: Vec<(Bytecode, GasCost)>,

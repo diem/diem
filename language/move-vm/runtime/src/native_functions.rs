@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{interpreter::Interpreter, loader::Resolver};
+use crate::{data_operations::move_resource_to, interpreter::Interpreter, loader::Resolver};
 use libra_types::{
     access_path::AccessPath, account_address::AccountAddress, account_config::CORE_CODE_ADDRESS,
     contract_event::ContractEvent,
@@ -9,7 +9,8 @@ use libra_types::{
 use move_core_types::{gas_schedule::CostTable, identifier::IdentStr, language_storage::ModuleId};
 use move_vm_natives::{account, event, hash, lcs, signature};
 use move_vm_types::{
-    interpreter_context::InterpreterContext,
+    data_store::DataStore,
+    gas_schedule::CostStrategy,
     loaded_data::{runtime_types::Type, types::FatType},
     natives::function::{NativeContext, NativeResult},
     values::{debug, vector, Struct, Value},
@@ -114,19 +115,22 @@ impl NativeFunction {
 
 pub(crate) struct FunctionContext<'a, 'txn> {
     interpreter: &'a mut Interpreter<'txn>,
-    interpreter_context: &'a mut dyn InterpreterContext,
+    data_store: &'a mut dyn DataStore,
+    cost_strategy: &'a CostStrategy<'a>,
     resolver: &'a Resolver<'a>,
 }
 
 impl<'a, 'txn> FunctionContext<'a, 'txn> {
     pub(crate) fn new(
         interpreter: &'a mut Interpreter<'txn>,
-        context: &'a mut dyn InterpreterContext,
+        data_store: &'a mut dyn DataStore,
+        cost_strategy: &'a mut CostStrategy,
         resolver: &'a Resolver<'a>,
     ) -> FunctionContext<'a, 'txn> {
         FunctionContext {
             interpreter,
-            interpreter_context: context,
+            data_store,
+            cost_strategy,
             resolver,
         }
     }
@@ -139,7 +143,7 @@ impl<'a, 'txn> NativeContext for FunctionContext<'a, 'txn> {
     }
 
     fn cost_table(&self) -> &CostTable {
-        self.interpreter.gas_schedule()
+        self.cost_strategy.cost_table()
     }
 
     fn save_under_address(
@@ -150,19 +154,20 @@ impl<'a, 'txn> NativeContext for FunctionContext<'a, 'txn> {
         resource_to_save: Struct,
         account_address: AccountAddress,
     ) -> VMResult<()> {
-        let libra_type = self.resolver.get_libra_type_info(
-            module_id,
-            struct_name,
-            ty_args,
-            self.interpreter_context,
-        )?;
+        let libra_type =
+            self.resolver
+                .get_libra_type_info(module_id, struct_name, ty_args, self.data_store)?;
         let ap = AccessPath::new(account_address, libra_type.resource_key().to_vec());
-        self.interpreter_context
-            .move_resource_to(&ap, libra_type.fat_type(), resource_to_save)
+        move_resource_to(
+            self.data_store,
+            &ap,
+            libra_type.fat_type(),
+            resource_to_save,
+        )
     }
 
     fn save_event(&mut self, event: ContractEvent) -> VMResult<()> {
-        Ok(self.interpreter_context.push_event(event))
+        Ok(self.data_store.emit_event(event))
     }
 
     fn convert_to_fat_types(&self, types: Vec<Type>) -> VMResult<Vec<FatType>> {

@@ -23,9 +23,9 @@ use libra_types::{
     on_chain_config::{config_address, new_epoch_event_key, VMPublishingOption},
     transaction::{authenticator::AuthenticationKey, ChangeSet, Script, Transaction},
 };
+use libra_vm::data_cache::StateViewCache;
 use move_core_types::language_storage::{StructTag, TypeTag};
-use move_vm_state::data_cache::BlockDataCache;
-use move_vm_types::{chain_state::ChainState, loaded_data::types::FatStructType, values::Value};
+use move_vm_types::{data_store::DataStore, loaded_data::types::FatStructType, values::Value};
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use std::{collections::btree_map::BTreeMap, convert::TryFrom};
@@ -75,7 +75,7 @@ pub fn encode_genesis_change_set(
         let module_id = module.self_id();
         state_view.add_module(&module_id, &module);
     }
-    let data_cache = BlockDataCache::new(&state_view);
+    let data_cache = StateViewCache::new(&state_view);
 
     let mut genesis_context = GenesisContext::new(&data_cache, stdlib_modules);
 
@@ -297,7 +297,7 @@ fn remove_genesis(stdlib_modules: &[VerifiedModule]) -> impl Iterator<Item = &Ve
 }
 
 /// Publish the standard library.
-fn publish_stdlib(interpreter_context: &mut dyn ChainState, stdlib: &[VerifiedModule]) {
+fn publish_stdlib(interpreter_context: &mut dyn DataStore, stdlib: &[VerifiedModule]) {
     for module in remove_genesis(stdlib) {
         assert!(module.self_id().name().as_str() != GENESIS_MODULE_NAME);
         let mut module_vec = vec![];
