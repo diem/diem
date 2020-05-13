@@ -6,15 +6,14 @@ use bytecode_verifier::VerifiedModule;
 use libra_logger::prelude::*;
 use libra_types::vm_error::{StatusCode, VMStatus};
 use move_core_types::{
-    gas_schedule::CostTable,
+    account_address::AccountAddress,
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
 };
 use move_vm_types::{
-    interpreter_context::InterpreterContext, transaction_metadata::TransactionMetadata,
+    data_store::DataStore, gas_schedule::CostStrategy, transaction_metadata::TransactionMetadata,
     values::Value,
 };
-
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, vm_error, Location, VMResult},
@@ -28,7 +27,7 @@ pub(crate) struct VMRuntime {
 }
 
 impl VMRuntime {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         VMRuntime {
             loader: Loader::new(),
         }
@@ -37,8 +36,8 @@ impl VMRuntime {
     pub(crate) fn publish_module(
         &self,
         module: Vec<u8>,
-        context: &mut dyn InterpreterContext,
-        txn_data: &TransactionMetadata,
+        data_store: &mut dyn DataStore,
+        sender: &AccountAddress,
     ) -> VMResult<()> {
         let compiled_module = match CompiledModule::deserialize(&module) {
             Ok(module) => module,
@@ -51,7 +50,7 @@ impl VMRuntime {
         // Make sure the module's self address matches the transaction sender. The self address is
         // where the module will actually be published. If we did not check this, the sender could
         // publish a module under anyone's account.
-        if compiled_module.address() != &txn_data.sender {
+        if compiled_module.address() != sender {
             return Err(verification_error(
                 IndexKind::AddressIdentifier,
                 compiled_module.self_handle_idx().0 as usize,
@@ -62,7 +61,7 @@ impl VMRuntime {
         // Make sure that there is not already a module with this name published
         // under the transaction sender's account.
         let module_id = compiled_module.self_id();
-        if context.exists_module(&module_id) {
+        if data_store.exists_module(&module_id) {
             return Err(vm_error(
                 Location::default(),
                 StatusCode::DUPLICATE_MODULE_NAME,
@@ -71,17 +70,17 @@ impl VMRuntime {
 
         let verified_module = VerifiedModule::new(compiled_module).map_err(|(_, e)| e)?;
         Loader::check_natives(&verified_module)?;
-        context.publish_module(module_id, module)
+        data_store.publish_module(module_id, module)
     }
 
-    pub fn execute_script(
+    pub(crate) fn execute_script(
         &self,
-        context: &mut dyn InterpreterContext,
-        txn_data: &TransactionMetadata,
-        gas_schedule: &CostTable,
         script: Vec<u8>,
         ty_args: Vec<TypeTag>,
         mut args: Vec<Value>,
+        cost_strategy: &mut CostStrategy,
+        data_store: &mut dyn DataStore,
+        txn_data: &TransactionMetadata,
     ) -> VMResult<()> {
         fn is_signer_reference(s: &SignatureToken) -> bool {
             use SignatureToken as S;
@@ -93,9 +92,9 @@ impl VMRuntime {
 
         let mut type_params = vec![];
         for ty in &ty_args {
-            type_params.push(self.loader.load_type(ty, context)?);
+            type_params.push(self.loader.load_type(ty, data_store)?);
         }
-        let main = self.loader.load_script(&script, context)?;
+        let main = self.loader.load_script(&script, data_store)?;
 
         self.loader
             .verify_ty_args(main.type_parameters(), &type_params)?;
@@ -109,31 +108,33 @@ impl VMRuntime {
         verify_args(main.parameters(), &args)?;
 
         Interpreter::entrypoint(
-            context,
+            data_store,
             &self.loader,
             txn_data,
-            gas_schedule,
+            cost_strategy,
             main,
             type_params,
             args,
         )
     }
 
-    pub fn execute_function(
+    pub(crate) fn execute_function(
         &self,
-        context: &mut dyn InterpreterContext,
-        txn_data: &TransactionMetadata,
-        gas_schedule: &CostTable,
         module: &ModuleId,
         function_name: &IdentStr,
         ty_args: Vec<TypeTag>,
         args: Vec<Value>,
+        cost_strategy: &mut CostStrategy,
+        data_store: &mut dyn DataStore,
+        txn_data: &TransactionMetadata,
     ) -> VMResult<()> {
         let mut type_params = vec![];
         for ty in &ty_args {
-            type_params.push(self.loader.load_type(ty, context)?);
+            type_params.push(self.loader.load_type(ty, data_store)?);
         }
-        let func = self.loader.load_function(function_name, module, context)?;
+        let func = self
+            .loader
+            .load_function(function_name, module, data_store)?;
 
         self.loader
             .verify_ty_args(func.type_parameters(), &type_params)?;
@@ -141,22 +142,22 @@ impl VMRuntime {
         //verify_args(func.parameters(), &args)?;
 
         Interpreter::entrypoint(
-            context,
+            data_store,
             &self.loader,
             txn_data,
-            gas_schedule,
+            cost_strategy,
             func,
             type_params,
             args,
         )
     }
 
-    pub fn cache_module(
+    pub(crate) fn cache_module(
         &self,
         module: VerifiedModule,
-        context: &mut dyn InterpreterContext,
+        data_store: &mut dyn DataStore,
     ) -> VMResult<()> {
-        self.loader.cache_module(module, context)
+        self.loader.cache_module(module, data_store)
     }
 }
 

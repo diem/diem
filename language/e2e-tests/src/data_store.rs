@@ -13,7 +13,7 @@ use libra_types::{
     write_set::{WriteOp, WriteSet},
 };
 use move_core_types::language_storage::ModuleId;
-use move_vm_state::data_cache::RemoteCache;
+use move_vm_runtime::data_cache::RemoteCache;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use stdlib::StdLibOptions;

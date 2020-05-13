@@ -21,7 +21,6 @@ libra-state-view = { path = "../../storage/state-view", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 move-core-types = { path = "../move-core/types", version = "0.1.0" }
-move-vm-state = { path = "../move-vm/state", version = "0.1.0" }
 move-vm-types = { path = "../move-vm/types", version = "0.1.0", features = ["debug_module"] }
 move-vm-runtime = { path = "../move-vm/runtime", version = "0.1.0", features = ["debug_module"] }
 transaction-builder = { path = "../transaction-builder", version = "0.1.0", features = ["fuzzing"]}

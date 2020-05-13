@@ -104,6 +104,7 @@
 extern crate mirai_annotations;
 #[macro_use]
 mod counters;
+pub mod data_cache;
 
 #[cfg(feature = "mirai-contracts")]
 pub mod foreign_contracts;

@@ -26,7 +26,9 @@ use libra_state_view::StateView;
 use libra_types::{account_address::AccountAddress, vm_error::StatusCode};
 use libra_vm::LibraVM;
 use move_core_types::language_storage::TypeTag;
-use move_vm_types::{transaction_metadata::TransactionMetadata, values::Value};
+use move_vm_types::{
+    gas_schedule::CostStrategy, transaction_metadata::TransactionMetadata, values::Value,
+};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{fs, io::Write, panic, thread};
 use utils::module_generation::generate_module;
@@ -74,21 +76,21 @@ fn run_vm(module: VerifiedModule) -> VMResult<()> {
 
     let executor = FakeExecutor::from_genesis_file();
     execute_function_in_module(
-        executor.get_state_view(),
         module,
         entry_idx,
         vec![],
         main_args,
+        executor.get_state_view(),
     )
 }
 
 /// Execute the first function in a module
 fn execute_function_in_module(
-    state_view: &dyn StateView,
     module: VerifiedModule,
     idx: FunctionDefinitionIndex,
     ty_args: Vec<TypeTag>,
     args: Vec<Value>,
+    state_view: &dyn StateView,
 ) -> VMResult<()> {
     let module_id = module.as_inner().self_id();
     let entry_name = {
@@ -105,16 +107,18 @@ fn execute_function_in_module(
 
         let gas_schedule = internals.gas_schedule()?;
         let txn_data = TransactionMetadata::default();
-        internals.with_txn_context(&txn_data, state_view, |mut txn_context| {
+        internals.with_txn_data_cache(state_view, |mut txn_context| {
+            let mut cost_strategy =
+                CostStrategy::transaction(gas_schedule, txn_data.max_gas_amount());
             move_vm.cache_module(module.clone(), &mut txn_context)?;
             move_vm.execute_function(
                 &module_id,
                 &entry_name,
-                gas_schedule,
-                &mut txn_context,
-                &txn_data,
                 ty_args,
                 args,
+                &mut cost_strategy,
+                &mut txn_context,
+                &txn_data,
             )
         })
     }

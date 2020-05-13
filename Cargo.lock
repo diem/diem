@@ -2207,7 +2207,6 @@ dependencies = [
  "move-core-types 0.1.0",
  "move-lang 0.0.1",
  "move-vm-runtime 0.1.0",
- "move-vm-state 0.1.0",
  "move-vm-types 0.1.0",
  "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
  "vm 0.1.0",
@@ -2231,7 +2230,6 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "move-core-types 0.1.0",
  "move-vm-runtime 0.1.0",
- "move-vm-state 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
@@ -2920,7 +2918,6 @@ dependencies = [
  "mirai-annotations 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "move-core-types 0.1.0",
  "move-vm-runtime 0.1.0",
- "move-vm-state 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
@@ -3344,23 +3341,9 @@ dependencies = [
  "mirai-annotations 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "move-core-types 0.1.0",
  "move-vm-natives 0.1.0",
- "move-vm-state 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
- "vm 0.1.0",
-]
-
-[[package]]
-name = "move-vm-state"
-version = "0.1.0"
-dependencies = [
- "libra-logger 0.1.0",
- "libra-state-view 0.1.0",
- "libra-types 0.1.0",
- "libra-workspace-hack 0.1.0",
- "move-core-types 0.1.0",
- "move-vm-types 0.1.0",
  "vm 0.1.0",
 ]
 
@@ -6217,7 +6200,6 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "move-core-types 0.1.0",
  "move-vm-runtime 0.1.0",
- "move-vm-state 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",

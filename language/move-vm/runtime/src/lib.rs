@@ -12,13 +12,12 @@
 #[macro_use]
 extern crate mirai_annotations;
 
-mod gas_meter;
+pub mod data_cache;
+mod data_operations;
 mod interpreter;
 mod loader;
-mod move_vm;
+pub mod move_vm;
 mod native_functions;
 mod runtime;
 #[macro_use]
 mod tracing;
-
-pub use move_vm::*;

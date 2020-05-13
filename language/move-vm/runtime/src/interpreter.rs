@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    gas,
+    data_operations::{borrow_global, move_resource_from, move_resource_to, resource_exists},
     loader::{Function, Loader, Resolver},
     native_functions::FunctionContext,
     trace,
@@ -14,10 +14,10 @@ use libra_types::{
     transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
     vm_error::{StatusCode, StatusType, VMStatus},
 };
-use move_core_types::gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier};
+use move_core_types::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier};
 use move_vm_types::{
-    gas_schedule::calculate_intrinsic_gas,
-    interpreter_context::InterpreterContext,
+    data_store::DataStore,
+    gas_schedule::CostStrategy,
     loaded_data::{runtime_types::Type, types::FatStructType},
     transaction_metadata::TransactionMetadata,
     values::{self, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value},
@@ -65,17 +65,16 @@ pub(crate) struct Interpreter<'txn> {
     /// Transaction data to resolve special bytecodes (e.g. GetTxnSequenceNumber, GetTxnPublicKey,
     /// GetTxnSenderAddress, ...)
     txn_data: &'txn TransactionMetadata,
-    gas_schedule: &'txn CostTable,
 }
 
 impl<'txn> Interpreter<'txn> {
     /// Entrypoint into the interpreter. All external calls need to be routed through this
     /// function.
     pub(crate) fn entrypoint(
-        context: &mut dyn InterpreterContext,
+        data_store: &mut dyn DataStore,
         loader: &Loader,
         txn_data: &'txn TransactionMetadata,
-        gas_schedule: &'txn CostTable,
+        cost_strategy: &mut CostStrategy,
         function: Arc<Function>,
         ty_args: Vec<Type>,
         args: Vec<Value>,
@@ -90,41 +89,34 @@ impl<'txn> Interpreter<'txn> {
         assume!(txn_size.get() <= (MAX_TRANSACTION_SIZE_IN_BYTES as u64));
         // We count the intrinsic cost of the transaction here, since that needs to also cover the
         // setup of the function.
-        let mut interp = Self::new(txn_data, gas_schedule);
-        gas!(
-            consume: context,
-            calculate_intrinsic_gas(txn_size, &gas_schedule.gas_constants)
-        )?;
-        interp.execute(loader, context, function, ty_args, args)
+        let mut interp = Self::new(txn_data);
+        cost_strategy.charge_intrinsic_gas(txn_size)?;
+        interp.execute(loader, data_store, cost_strategy, function, ty_args, args)
     }
 
     /// Create a new instance of an `Interpreter` in the context of a transaction with a
     /// given module cache and gas schedule.
-    fn new(txn_data: &'txn TransactionMetadata, gas_schedule: &'txn CostTable) -> Self {
+    fn new(txn_data: &'txn TransactionMetadata) -> Self {
         Interpreter {
             operand_stack: Stack::new(),
             call_stack: CallStack::new(),
-            gas_schedule,
             txn_data,
         }
-    }
-
-    pub(crate) fn gas_schedule(&self) -> &CostTable {
-        self.gas_schedule
     }
 
     /// Internal execution entry point.
     fn execute(
         &mut self,
         loader: &Loader,
-        context: &mut dyn InterpreterContext,
+        data_store: &mut dyn DataStore,
+        cost_strategy: &mut CostStrategy,
         function: Arc<Function>,
         ty_args: Vec<Type>,
         args: Vec<Value>,
     ) -> VMResult<()> {
         // No unwinding of the call stack and value stack need to be done here -- the context will
         // take care of that.
-        self.execute_main(loader, context, function, ty_args, args)
+        self.execute_main(loader, data_store, cost_strategy, function, ty_args, args)
     }
 
     /// Main loop for the execution of a function.
@@ -138,7 +130,8 @@ impl<'txn> Interpreter<'txn> {
     fn execute_main(
         &mut self,
         loader: &Loader,
-        context: &mut dyn InterpreterContext,
+        data_store: &mut dyn DataStore,
+        cost_strategy: &mut CostStrategy,
         function: Arc<Function>,
         ty_args: Vec<Type>,
         args: Vec<Value>,
@@ -151,9 +144,10 @@ impl<'txn> Interpreter<'txn> {
         let mut current_frame = Frame::new(function, ty_args, locals);
         loop {
             let resolver = current_frame.resolver(loader);
-            let exit_code = current_frame //self
-                .execute_code(&resolver, self, context)
-                .or_else(|err| Err(self.maybe_core_dump(err, &current_frame)))?;
+            let exit_code =
+                current_frame //self
+                    .execute_code(&resolver, self, data_store, cost_strategy)
+                    .or_else(|err| Err(self.maybe_core_dump(err, &current_frame)))?;
             match exit_code {
                 ExitCode::Return => {
                     if let Some(frame) = self.call_stack.pop() {
@@ -163,15 +157,13 @@ impl<'txn> Interpreter<'txn> {
                     }
                 }
                 ExitCode::Call(fh_idx) => {
-                    gas!(
-                        instr: context,
-                        self,
+                    cost_strategy.charge_instr_with_size(
                         Opcodes::CALL,
-                        AbstractMemorySize::new(1 as GasCarrier)
+                        AbstractMemorySize::new(1 as GasCarrier),
                     )?;
                     let func = resolver.function_at(fh_idx);
                     if func.is_native() {
-                        self.call_native(&resolver, context, func, vec![])?;
+                        self.call_native(&resolver, data_store, cost_strategy, func, vec![])?;
                         continue;
                     }
                     // TODO: when a native function is executed, the current frame has not yet
@@ -187,16 +179,14 @@ impl<'txn> Interpreter<'txn> {
                 }
                 ExitCode::CallGeneric(idx) => {
                     let func_inst = resolver.function_instantiation_at(idx);
-                    gas!(
-                        instr: context,
-                        self,
+                    cost_strategy.charge_instr_with_size(
                         Opcodes::CALL_GENERIC,
-                        AbstractMemorySize::new((func_inst.instantiation_size() + 1) as GasCarrier)
+                        AbstractMemorySize::new((func_inst.instantiation_size() + 1) as GasCarrier),
                     )?;
                     let func = loader.function_at(func_inst.handle());
                     let ty_args = func_inst.materialize(current_frame.ty_args())?;
                     if func.is_native() {
-                        self.call_native(&resolver, context, func, ty_args)?;
+                        self.call_native(&resolver, data_store, cost_strategy, func, ty_args)?;
                         continue;
                     }
                     // TODO: when a native function is executed, the current frame has not yet
@@ -232,7 +222,8 @@ impl<'txn> Interpreter<'txn> {
     fn call_native(
         &mut self,
         resolver: &Resolver,
-        context: &mut dyn InterpreterContext,
+        data_store: &mut dyn DataStore,
+        cost_strategy: &mut CostStrategy,
         function: Arc<Function>,
         ty_args: Vec<Type>,
     ) -> VMResult<()> {
@@ -241,10 +232,10 @@ impl<'txn> Interpreter<'txn> {
         for _ in 0..expected_args {
             arguments.push_front(self.operand_stack.pop()?);
         }
-        let mut native_context = FunctionContext::new(self, context, resolver);
+        let mut native_context = FunctionContext::new(self, data_store, cost_strategy, resolver);
         let native_function = function.get_native()?;
         let result = native_function.dispatch(&mut native_context, ty_args, arguments)?;
-        gas!(consume: context, result.cost)?;
+        cost_strategy.deduct_gas(result.cost)?;
         result.result.and_then(|values| {
             for value in values {
                 self.operand_stack.push(value)?;
@@ -295,7 +286,7 @@ impl<'txn> Interpreter<'txn> {
     fn global_data_op<F>(
         &mut self,
         resolver: &Resolver,
-        context: &mut dyn InterpreterContext,
+        data_store: &mut dyn DataStore,
         address: AccountAddress,
         idx: StructDefinitionIndex,
         op: F,
@@ -303,7 +294,7 @@ impl<'txn> Interpreter<'txn> {
     where
         F: FnOnce(
             &mut Self,
-            &mut dyn InterpreterContext,
+            &mut dyn DataStore,
             AccessPath,
             &FatStructType,
         ) -> VMResult<AbstractMemorySize<GasCarrier>>,
@@ -313,16 +304,16 @@ impl<'txn> Interpreter<'txn> {
             &struct_type.module,
             struct_type.name.as_ident_str(),
             &[],
-            context,
+            data_store,
         )?;
         let ap = AccessPath::new(address, libra_type.resource_key().to_vec());
-        op(self, context, ap, libra_type.fat_type())
+        op(self, data_store, ap, libra_type.fat_type())
     }
 
     fn global_data_op_generic<F>(
         &mut self,
         resolver: &Resolver,
-        context: &mut dyn InterpreterContext,
+        data_store: &mut dyn DataStore,
         address: AccountAddress,
         idx: StructDefInstantiationIndex,
         frame: &Frame,
@@ -331,7 +322,7 @@ impl<'txn> Interpreter<'txn> {
     where
         F: FnOnce(
             &mut Self,
-            &mut dyn InterpreterContext,
+            &mut dyn DataStore,
             AccessPath,
             &FatStructType,
         ) -> VMResult<AbstractMemorySize<GasCarrier>>,
@@ -346,20 +337,20 @@ impl<'txn> Interpreter<'txn> {
             &struct_type.module,
             struct_type.name.as_ident_str(),
             &instantiation,
-            context,
+            data_store,
         )?;
         let ap = AccessPath::new(address, libra_type.resource_key().to_vec());
-        op(self, context, ap, libra_type.fat_type())
+        op(self, data_store, ap, libra_type.fat_type())
     }
 
     /// BorrowGlobal (mutable and not) opcode.
     fn borrow_global(
         &mut self,
-        context: &mut dyn InterpreterContext,
+        data_store: &mut dyn DataStore,
         ap: AccessPath,
         struct_ty: &FatStructType,
     ) -> VMResult<AbstractMemorySize<GasCarrier>> {
-        let g = context.borrow_global(&ap, struct_ty)?;
+        let g = borrow_global(data_store, &ap, struct_ty)?;
         let size = g.size();
         self.operand_stack.push(g.borrow_global()?)?;
         Ok(size)
@@ -368,11 +359,11 @@ impl<'txn> Interpreter<'txn> {
     /// Exists opcode.
     fn exists(
         &mut self,
-        context: &mut dyn InterpreterContext,
+        data_store: &mut dyn DataStore,
         ap: AccessPath,
         struct_ty: &FatStructType,
     ) -> VMResult<AbstractMemorySize<GasCarrier>> {
-        let (exists, mem_size) = context.resource_exists(&ap, struct_ty)?;
+        let (exists, mem_size) = resource_exists(data_store, &ap, struct_ty)?;
         self.operand_stack.push(Value::bool(exists))?;
         Ok(mem_size)
     }
@@ -380,11 +371,11 @@ impl<'txn> Interpreter<'txn> {
     /// MoveFrom opcode.
     fn move_from(
         &mut self,
-        context: &mut dyn InterpreterContext,
+        data_store: &mut dyn DataStore,
         ap: AccessPath,
         struct_ty: &FatStructType,
     ) -> VMResult<AbstractMemorySize<GasCarrier>> {
-        let resource = context.move_resource_from(&ap, struct_ty)?;
+        let resource = move_resource_from(data_store, &ap, struct_ty)?;
         let size = resource.size();
         self.operand_stack.push(resource)?;
         Ok(size)
@@ -395,13 +386,13 @@ impl<'txn> Interpreter<'txn> {
         resource: Struct,
     ) -> impl FnOnce(
         &mut Interpreter,
-        &mut dyn InterpreterContext,
+        &mut dyn DataStore,
         AccessPath,
         &FatStructType,
     ) -> VMResult<AbstractMemorySize<GasCarrier>> {
-        |_interpreter, context, ap, struct_ty| {
+        |_interpreter, data_store, ap, struct_ty| {
             let size = resource.size();
-            context.move_resource_to(&ap, struct_ty, resource)?;
+            move_resource_to(data_store, &ap, struct_ty, resource)?;
             Ok(size)
         }
     }
@@ -409,13 +400,13 @@ impl<'txn> Interpreter<'txn> {
     /// MoveToSender opcode.
     fn move_to_sender(
         &mut self,
-        context: &mut dyn InterpreterContext,
+        data_store: &mut dyn DataStore,
         ap: AccessPath,
         struct_ty: &FatStructType,
     ) -> VMResult<AbstractMemorySize<GasCarrier>> {
         let resource = self.operand_stack.pop_as::<Struct>()?;
         let size = resource.size();
-        context.move_resource_to(&ap, struct_ty, resource)?;
+        move_resource_to(data_store, &ap, struct_ty, resource)?;
         Ok(size)
     }
 
@@ -691,7 +682,8 @@ impl Frame {
         &mut self,
         resolver: &Resolver,
         interpreter: &mut Interpreter,
-        context: &mut dyn InterpreterContext,
+        data_store: &mut dyn DataStore,
+        cost_strategy: &mut CostStrategy,
     ) -> VMResult<ExitCode> {
         let code = self.function.code();
         loop {
@@ -701,51 +693,49 @@ impl Frame {
 
                 match instruction {
                     Bytecode::Pop => {
-                        gas!(const_instr: context, interpreter, Opcodes::POP)?;
+                        cost_strategy.charge_instr(Opcodes::POP)?;
                         interpreter.operand_stack.pop()?;
                     }
                     Bytecode::Ret => {
-                        gas!(const_instr: context, interpreter, Opcodes::RET)?;
+                        cost_strategy.charge_instr(Opcodes::RET)?;
                         return Ok(ExitCode::Return);
                     }
                     Bytecode::BrTrue(offset) => {
-                        gas!(const_instr: context, interpreter, Opcodes::BR_TRUE)?;
+                        cost_strategy.charge_instr(Opcodes::BR_TRUE)?;
                         if interpreter.operand_stack.pop_as::<bool>()? {
                             self.pc = *offset;
                             break;
                         }
                     }
                     Bytecode::BrFalse(offset) => {
-                        gas!(const_instr: context, interpreter, Opcodes::BR_FALSE)?;
+                        cost_strategy.charge_instr(Opcodes::BR_FALSE)?;
                         if !interpreter.operand_stack.pop_as::<bool>()? {
                             self.pc = *offset;
                             break;
                         }
                     }
                     Bytecode::Branch(offset) => {
-                        gas!(const_instr: context, interpreter, Opcodes::BRANCH)?;
+                        cost_strategy.charge_instr(Opcodes::BRANCH)?;
                         self.pc = *offset;
                         break;
                     }
                     Bytecode::LdU8(int_const) => {
-                        gas!(const_instr: context, interpreter, Opcodes::LD_U8)?;
+                        cost_strategy.charge_instr(Opcodes::LD_U8)?;
                         interpreter.operand_stack.push(Value::u8(*int_const))?;
                     }
                     Bytecode::LdU64(int_const) => {
-                        gas!(const_instr: context, interpreter, Opcodes::LD_U64)?;
+                        cost_strategy.charge_instr(Opcodes::LD_U64)?;
                         interpreter.operand_stack.push(Value::u64(*int_const))?;
                     }
                     Bytecode::LdU128(int_const) => {
-                        gas!(const_instr: context, interpreter, Opcodes::LD_U128)?;
+                        cost_strategy.charge_instr(Opcodes::LD_U128)?;
                         interpreter.operand_stack.push(Value::u128(*int_const))?;
                     }
                     Bytecode::LdConst(idx) => {
                         let constant = resolver.constant_at(*idx);
-                        gas!(
-                            instr: context,
-                            interpreter,
+                        cost_strategy.charge_instr_with_size(
                             Opcodes::LD_CONST,
-                            AbstractMemorySize::new(constant.data.len() as GasCarrier)
+                            AbstractMemorySize::new(constant.data.len() as GasCarrier),
                         )?;
                         interpreter.operand_stack.push(
                             Value::deserialize_constant(constant).ok_or_else(|| {
@@ -758,32 +748,28 @@ impl Frame {
                         )?
                     }
                     Bytecode::LdTrue => {
-                        gas!(const_instr: context, interpreter, Opcodes::LD_TRUE)?;
+                        cost_strategy.charge_instr(Opcodes::LD_TRUE)?;
                         interpreter.operand_stack.push(Value::bool(true))?;
                     }
                     Bytecode::LdFalse => {
-                        gas!(const_instr: context, interpreter, Opcodes::LD_FALSE)?;
+                        cost_strategy.charge_instr(Opcodes::LD_FALSE)?;
                         interpreter.operand_stack.push(Value::bool(false))?;
                     }
                     Bytecode::CopyLoc(idx) => {
                         let local = self.locals.copy_loc(*idx as usize)?;
-                        gas!(instr: context, interpreter, Opcodes::COPY_LOC, local.size())?;
+                        cost_strategy.charge_instr_with_size(Opcodes::COPY_LOC, local.size())?;
                         interpreter.operand_stack.push(local)?;
                     }
                     Bytecode::MoveLoc(idx) => {
                         let local = self.locals.move_loc(*idx as usize)?;
-                        gas!(instr: context, interpreter, Opcodes::MOVE_LOC, local.size())?;
+                        cost_strategy.charge_instr_with_size(Opcodes::MOVE_LOC, local.size())?;
 
                         interpreter.operand_stack.push(local)?;
                     }
                     Bytecode::StLoc(idx) => {
                         let value_to_store = interpreter.operand_stack.pop()?;
-                        gas!(
-                            instr: context,
-                            interpreter,
-                            Opcodes::ST_LOC,
-                            value_to_store.size()
-                        )?;
+                        cost_strategy
+                            .charge_instr_with_size(Opcodes::ST_LOC, value_to_store.size())?;
                         self.locals.store_loc(*idx as usize, value_to_store)?;
                     }
                     Bytecode::Call(idx) => {
@@ -797,7 +783,7 @@ impl Frame {
                             Bytecode::MutBorrowLoc(_) => Opcodes::MUT_BORROW_LOC,
                             _ => Opcodes::IMM_BORROW_LOC,
                         };
-                        gas!(const_instr: context, interpreter, opcode)?;
+                        cost_strategy.charge_instr(opcode)?;
                         interpreter
                             .operand_stack
                             .push(self.locals.borrow_loc(*idx as usize)?)?;
@@ -807,7 +793,7 @@ impl Frame {
                             Bytecode::MutBorrowField(_) => Opcodes::MUT_BORROW_FIELD,
                             _ => Opcodes::IMM_BORROW_FIELD,
                         };
-                        gas!(const_instr: context, interpreter, opcode)?;
+                        cost_strategy.charge_instr(opcode)?;
 
                         let reference = interpreter.operand_stack.pop_as::<StructRef>()?;
                         let offset = resolver.field_offset(*fh_idx);
@@ -820,7 +806,7 @@ impl Frame {
                             Bytecode::MutBorrowField(_) => Opcodes::MUT_BORROW_FIELD_GENERIC,
                             _ => Opcodes::IMM_BORROW_FIELD_GENERIC,
                         };
-                        gas!(const_instr: context, interpreter, opcode)?;
+                        cost_strategy.charge_instr(opcode)?;
 
                         let reference = interpreter.operand_stack.pop_as::<StructRef>()?;
                         let offset = resolver.field_instantiation_offset(*fi_idx);
@@ -834,7 +820,7 @@ impl Frame {
                             AbstractMemorySize::new(GasCarrier::from(field_count)),
                             |acc, v| acc.add(v.size()),
                         );
-                        gas!(instr: context, interpreter, Opcodes::PACK, size)?;
+                        cost_strategy.charge_instr_with_size(Opcodes::PACK, size)?;
                         interpreter
                             .operand_stack
                             .push(Value::struct_(Struct::pack(args)))?;
@@ -846,7 +832,7 @@ impl Frame {
                             AbstractMemorySize::new(GasCarrier::from(field_count)),
                             |acc, v| acc.add(v.size()),
                         );
-                        gas!(instr: context, interpreter, Opcodes::PACK, size)?;
+                        cost_strategy.charge_instr_with_size(Opcodes::PACK_GENERIC, size)?;
                         interpreter
                             .operand_stack
                             .push(Value::struct_(Struct::pack(args)))?;
@@ -854,75 +840,62 @@ impl Frame {
                     Bytecode::Unpack(sd_idx) => {
                         let field_count = resolver.field_count(*sd_idx);
                         let struct_ = interpreter.operand_stack.pop_as::<Struct>()?;
-                        gas!(
-                            instr: context,
-                            interpreter,
+                        cost_strategy.charge_instr_with_size(
                             Opcodes::UNPACK,
-                            AbstractMemorySize::new(GasCarrier::from(field_count))
+                            AbstractMemorySize::new(GasCarrier::from(field_count)),
                         )?;
                         // TODO: Whether or not we want this gas metering in the loop is
                         // questionable.  However, if we don't have it in the loop we could wind up
                         // doing a fair bit of work before charging for it.
                         for value in struct_.unpack()? {
-                            gas!(instr: context, interpreter, Opcodes::UNPACK, value.size())?;
+                            cost_strategy.charge_instr_with_size(Opcodes::UNPACK, value.size())?;
                             interpreter.operand_stack.push(value)?;
                         }
                     }
                     Bytecode::UnpackGeneric(si_idx) => {
                         let field_count = resolver.field_instantiation_count(*si_idx);
                         let struct_ = interpreter.operand_stack.pop_as::<Struct>()?;
-                        gas!(
-                            instr: context,
-                            interpreter,
+                        cost_strategy.charge_instr_with_size(
                             Opcodes::UNPACK_GENERIC,
-                            AbstractMemorySize::new(GasCarrier::from(field_count))
+                            AbstractMemorySize::new(GasCarrier::from(field_count)),
                         )?;
                         // TODO: Whether or not we want this gas metering in the loop is
                         // questionable.  However, if we don't have it in the loop we could wind up
                         // doing a fair bit of work before charging for it.
                         for value in struct_.unpack()? {
-                            gas!(
-                                instr: context,
-                                interpreter,
-                                Opcodes::UNPACK_GENERIC,
-                                value.size()
-                            )?;
+                            cost_strategy
+                                .charge_instr_with_size(Opcodes::UNPACK_GENERIC, value.size())?;
                             interpreter.operand_stack.push(value)?;
                         }
                     }
                     Bytecode::ReadRef => {
                         let reference = interpreter.operand_stack.pop_as::<Reference>()?;
                         let value = reference.read_ref()?;
-                        gas!(instr: context, interpreter, Opcodes::READ_REF, value.size())?;
+                        cost_strategy.charge_instr_with_size(Opcodes::READ_REF, value.size())?;
                         interpreter.operand_stack.push(value)?;
                     }
                     Bytecode::WriteRef => {
                         let reference = interpreter.operand_stack.pop_as::<Reference>()?;
                         let value = interpreter.operand_stack.pop()?;
-                        gas!(
-                            instr: context,
-                            interpreter,
-                            Opcodes::WRITE_REF,
-                            value.size()
-                        )?;
+                        cost_strategy.charge_instr_with_size(Opcodes::WRITE_REF, value.size())?;
                         reference.write_ref(value)?;
                     }
                     Bytecode::CastU8 => {
-                        gas!(const_instr: context, interpreter, Opcodes::CAST_U8)?;
+                        cost_strategy.charge_instr(Opcodes::CAST_U8)?;
                         let integer_value = interpreter.operand_stack.pop_as::<IntegerValue>()?;
                         interpreter
                             .operand_stack
                             .push(Value::u8(integer_value.cast_u8()?))?;
                     }
                     Bytecode::CastU64 => {
-                        gas!(const_instr: context, interpreter, Opcodes::CAST_U64)?;
+                        cost_strategy.charge_instr(Opcodes::CAST_U64)?;
                         let integer_value = interpreter.operand_stack.pop_as::<IntegerValue>()?;
                         interpreter
                             .operand_stack
                             .push(Value::u64(integer_value.cast_u64()?))?;
                     }
                     Bytecode::CastU128 => {
-                        gas!(const_instr: context, interpreter, Opcodes::CAST_U128)?;
+                        cost_strategy.charge_instr(Opcodes::CAST_U128)?;
                         let integer_value = interpreter.operand_stack.pop_as::<IntegerValue>()?;
                         interpreter
                             .operand_stack
@@ -930,39 +903,39 @@ impl Frame {
                     }
                     // Arithmetic Operations
                     Bytecode::Add => {
-                        gas!(const_instr: context, interpreter, Opcodes::ADD)?;
+                        cost_strategy.charge_instr(Opcodes::ADD)?;
                         interpreter.binop_int(IntegerValue::add_checked)?
                     }
                     Bytecode::Sub => {
-                        gas!(const_instr: context, interpreter, Opcodes::SUB)?;
+                        cost_strategy.charge_instr(Opcodes::SUB)?;
                         interpreter.binop_int(IntegerValue::sub_checked)?
                     }
                     Bytecode::Mul => {
-                        gas!(const_instr: context, interpreter, Opcodes::MUL)?;
+                        cost_strategy.charge_instr(Opcodes::MUL)?;
                         interpreter.binop_int(IntegerValue::mul_checked)?
                     }
                     Bytecode::Mod => {
-                        gas!(const_instr: context, interpreter, Opcodes::MOD)?;
+                        cost_strategy.charge_instr(Opcodes::MOD)?;
                         interpreter.binop_int(IntegerValue::rem_checked)?
                     }
                     Bytecode::Div => {
-                        gas!(const_instr: context, interpreter, Opcodes::DIV)?;
+                        cost_strategy.charge_instr(Opcodes::DIV)?;
                         interpreter.binop_int(IntegerValue::div_checked)?
                     }
                     Bytecode::BitOr => {
-                        gas!(const_instr: context, interpreter, Opcodes::BIT_OR)?;
+                        cost_strategy.charge_instr(Opcodes::BIT_OR)?;
                         interpreter.binop_int(IntegerValue::bit_or)?
                     }
                     Bytecode::BitAnd => {
-                        gas!(const_instr: context, interpreter, Opcodes::BIT_AND)?;
+                        cost_strategy.charge_instr(Opcodes::BIT_AND)?;
                         interpreter.binop_int(IntegerValue::bit_and)?
                     }
                     Bytecode::Xor => {
-                        gas!(const_instr: context, interpreter, Opcodes::XOR)?;
+                        cost_strategy.charge_instr(Opcodes::XOR)?;
                         interpreter.binop_int(IntegerValue::bit_xor)?
                     }
                     Bytecode::Shl => {
-                        gas!(const_instr: context, interpreter, Opcodes::SHL)?;
+                        cost_strategy.charge_instr(Opcodes::SHL)?;
                         let rhs = interpreter.operand_stack.pop_as::<u8>()?;
                         let lhs = interpreter.operand_stack.pop_as::<IntegerValue>()?;
                         interpreter
@@ -970,7 +943,7 @@ impl Frame {
                             .push(lhs.shl_checked(rhs)?.into_value())?;
                     }
                     Bytecode::Shr => {
-                        gas!(const_instr: context, interpreter, Opcodes::SHR)?;
+                        cost_strategy.charge_instr(Opcodes::SHR)?;
                         let rhs = interpreter.operand_stack.pop_as::<u8>()?;
                         let lhs = interpreter.operand_stack.pop_as::<IntegerValue>()?;
                         interpreter
@@ -978,31 +951,31 @@ impl Frame {
                             .push(lhs.shr_checked(rhs)?.into_value())?;
                     }
                     Bytecode::Or => {
-                        gas!(const_instr: context, interpreter, Opcodes::OR)?;
+                        cost_strategy.charge_instr(Opcodes::OR)?;
                         interpreter.binop_bool(|l, r| Ok(l || r))?
                     }
                     Bytecode::And => {
-                        gas!(const_instr: context, interpreter, Opcodes::AND)?;
+                        cost_strategy.charge_instr(Opcodes::AND)?;
                         interpreter.binop_bool(|l, r| Ok(l && r))?
                     }
                     Bytecode::Lt => {
-                        gas!(const_instr: context, interpreter, Opcodes::LT)?;
+                        cost_strategy.charge_instr(Opcodes::LT)?;
                         interpreter.binop_bool(IntegerValue::lt)?
                     }
                     Bytecode::Gt => {
-                        gas!(const_instr: context, interpreter, Opcodes::GT)?;
+                        cost_strategy.charge_instr(Opcodes::GT)?;
                         interpreter.binop_bool(IntegerValue::gt)?
                     }
                     Bytecode::Le => {
-                        gas!(const_instr: context, interpreter, Opcodes::LE)?;
+                        cost_strategy.charge_instr(Opcodes::LE)?;
                         interpreter.binop_bool(IntegerValue::le)?
                     }
                     Bytecode::Ge => {
-                        gas!(const_instr: context, interpreter, Opcodes::GE)?;
+                        cost_strategy.charge_instr(Opcodes::GE)?;
                         interpreter.binop_bool(IntegerValue::ge)?
                     }
                     Bytecode::Abort => {
-                        gas!(const_instr: context, interpreter, Opcodes::ABORT)?;
+                        cost_strategy.charge_instr(Opcodes::ABORT)?;
                         let error_code = interpreter.operand_stack.pop_as::<u64>()?;
                         return Err(VMStatus::new(StatusCode::ABORTED)
                             .with_sub_status(error_code)
@@ -1015,12 +988,8 @@ impl Frame {
                     Bytecode::Eq => {
                         let lhs = interpreter.operand_stack.pop()?;
                         let rhs = interpreter.operand_stack.pop()?;
-                        gas!(
-                            instr: context,
-                            interpreter,
-                            Opcodes::EQ,
-                            lhs.size().add(rhs.size())
-                        )?;
+                        cost_strategy
+                            .charge_instr_with_size(Opcodes::EQ, lhs.size().add(rhs.size()))?;
                         interpreter
                             .operand_stack
                             .push(Value::bool(lhs.equals(&rhs)?))?;
@@ -1028,18 +997,14 @@ impl Frame {
                     Bytecode::Neq => {
                         let lhs = interpreter.operand_stack.pop()?;
                         let rhs = interpreter.operand_stack.pop()?;
-                        gas!(
-                            instr: context,
-                            interpreter,
-                            Opcodes::NEQ,
-                            lhs.size().add(rhs.size())
-                        )?;
+                        cost_strategy
+                            .charge_instr_with_size(Opcodes::NEQ, lhs.size().add(rhs.size()))?;
                         interpreter
                             .operand_stack
                             .push(Value::bool(!lhs.equals(&rhs)?))?;
                     }
                     Bytecode::GetTxnSenderAddress => {
-                        gas!(const_instr: context, interpreter, Opcodes::GET_TXN_SENDER)?;
+                        cost_strategy.charge_instr(Opcodes::GET_TXN_SENDER)?;
                         interpreter
                             .operand_stack
                             .push(Value::address(interpreter.txn_data.sender()))?;
@@ -1048,77 +1013,68 @@ impl Frame {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
                         let size = interpreter.global_data_op(
                             resolver,
-                            context,
+                            data_store,
                             addr,
                             *sd_idx,
                             Interpreter::borrow_global,
                         )?;
-                        gas!(
-                            instr: context,
-                            interpreter,
-                            Opcodes::MUT_BORROW_GLOBAL,
-                            size
-                        )?;
+                        cost_strategy.charge_instr_with_size(Opcodes::MUT_BORROW_GLOBAL, size)?;
                     }
                     Bytecode::MutBorrowGlobalGeneric(si_idx)
                     | Bytecode::ImmBorrowGlobalGeneric(si_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
                         let size = interpreter.global_data_op_generic(
                             resolver,
-                            context,
+                            data_store,
                             addr,
                             *si_idx,
                             self,
                             Interpreter::borrow_global,
                         )?;
-                        gas!(
-                            instr: context,
-                            interpreter,
-                            Opcodes::MUT_BORROW_GLOBAL_GENERIC,
-                            size
-                        )?;
+                        cost_strategy
+                            .charge_instr_with_size(Opcodes::MUT_BORROW_GLOBAL_GENERIC, size)?;
                     }
                     Bytecode::Exists(sd_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
                         let size = interpreter.global_data_op(
                             resolver,
-                            context,
+                            data_store,
                             addr,
                             *sd_idx,
                             Interpreter::exists,
                         )?;
-                        gas!(instr: context, interpreter, Opcodes::EXISTS, size)?;
+                        cost_strategy.charge_instr_with_size(Opcodes::EXISTS, size)?;
                     }
                     Bytecode::ExistsGeneric(si_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
                         let size = interpreter.global_data_op_generic(
                             resolver,
-                            context,
+                            data_store,
                             addr,
                             *si_idx,
                             self,
                             Interpreter::exists,
                         )?;
-                        gas!(instr: context, interpreter, Opcodes::EXISTS_GENERIC, size)?;
+                        cost_strategy.charge_instr_with_size(Opcodes::EXISTS_GENERIC, size)?;
                     }
                     Bytecode::MoveFrom(sd_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
                         let size = interpreter.global_data_op(
                             resolver,
-                            context,
+                            data_store,
                             addr,
                             *sd_idx,
                             Interpreter::move_from,
                         )?;
                         // TODO: Have this calculate before pulling in the data based upon
                         // the size of the data that we are about to read in.
-                        gas!(instr: context, interpreter, Opcodes::MOVE_FROM, size)?;
+                        cost_strategy.charge_instr_with_size(Opcodes::MOVE_FROM, size)?;
                     }
                     Bytecode::MoveFromGeneric(si_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
                         let size = interpreter.global_data_op_generic(
                             resolver,
-                            context,
+                            data_store,
                             addr,
                             *si_idx,
                             self,
@@ -1126,40 +1082,31 @@ impl Frame {
                         )?;
                         // TODO: Have this calculate before pulling in the data based upon
                         // the size of the data that we are about to read in.
-                        gas!(
-                            instr: context,
-                            interpreter,
-                            Opcodes::MOVE_FROM_GENERIC,
-                            size
-                        )?;
+                        cost_strategy.charge_instr_with_size(Opcodes::MOVE_FROM_GENERIC, size)?;
                     }
                     Bytecode::MoveToSender(sd_idx) => {
                         let addr = interpreter.txn_data.sender();
                         let size = interpreter.global_data_op(
                             resolver,
-                            context,
+                            data_store,
                             addr,
                             *sd_idx,
                             Interpreter::move_to_sender,
                         )?;
-                        gas!(instr: context, interpreter, Opcodes::MOVE_TO_SENDER, size)?;
+                        cost_strategy.charge_instr_with_size(Opcodes::MOVE_TO_SENDER, size)?;
                     }
                     Bytecode::MoveToSenderGeneric(si_idx) => {
                         let addr = interpreter.txn_data.sender();
                         let size = interpreter.global_data_op_generic(
                             resolver,
-                            context,
+                            data_store,
                             addr,
                             *si_idx,
                             self,
                             Interpreter::move_to_sender,
                         )?;
-                        gas!(
-                            instr: context,
-                            interpreter,
-                            Opcodes::MOVE_TO_SENDER_GENERIC,
-                            size
-                        )?;
+                        cost_strategy
+                            .charge_instr_with_size(Opcodes::MOVE_TO_SENDER_GENERIC, size)?;
                     }
                     Bytecode::MoveTo(sd_idx) => {
                         let resource = interpreter.operand_stack.pop_as::<Struct>()?;
@@ -1171,12 +1118,12 @@ impl Frame {
                             .value_as::<AccountAddress>()?;
                         let size = interpreter.global_data_op(
                             resolver,
-                            context,
+                            data_store,
                             addr,
                             *sd_idx,
                             Interpreter::move_to(resource),
                         )?;
-                        gas!(instr: context, interpreter, Opcodes::MOVE_TO, size)?;
+                        cost_strategy.charge_instr_with_size(Opcodes::MOVE_TO, size)?;
                     }
                     Bytecode::MoveToGeneric(si_idx) => {
                         let resource = interpreter.operand_stack.pop_as::<Struct>()?;
@@ -1188,25 +1135,25 @@ impl Frame {
                             .value_as::<AccountAddress>()?;
                         let size = interpreter.global_data_op_generic(
                             resolver,
-                            context,
+                            data_store,
                             addr,
                             *si_idx,
                             self,
                             Interpreter::move_to(resource),
                         )?;
-                        gas!(instr: context, interpreter, Opcodes::MOVE_TO_GENERIC, size)?;
+                        cost_strategy.charge_instr_with_size(Opcodes::MOVE_TO_GENERIC, size)?;
                     }
                     Bytecode::FreezeRef => {
                         // FreezeRef should just be a null op as we don't distinguish between mut
                         // and immut ref at runtime.
                     }
                     Bytecode::Not => {
-                        gas!(const_instr: context, interpreter, Opcodes::NOT)?;
+                        cost_strategy.charge_instr(Opcodes::NOT)?;
                         let value = !interpreter.operand_stack.pop_as::<bool>()?;
                         interpreter.operand_stack.push(Value::bool(value))?;
                     }
                     Bytecode::Nop => {
-                        gas!(const_instr: context, interpreter, Opcodes::NOP)?;
+                        cost_strategy.charge_instr(Opcodes::NOP)?;
                     }
                 }
             }

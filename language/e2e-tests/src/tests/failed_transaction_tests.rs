@@ -7,10 +7,9 @@ use crate::{
     executor::FakeExecutor,
 };
 use libra_types::vm_error::{StatusCode, VMStatus};
-use libra_vm::LibraVM;
+use libra_vm::{data_cache::StateViewCache, LibraVM};
 use move_core_types::gas_schedule::{GasAlgebra, GasPrice, GasUnits};
-use move_vm_state::data_cache::BlockDataCache;
-use move_vm_types::transaction_metadata::TransactionMetadata;
+use move_vm_types::{gas_schedule::zero_cost_schedule, transaction_metadata::TransactionMetadata};
 
 #[test]
 fn failed_transaction_cleanup_test() {
@@ -19,7 +18,7 @@ fn failed_transaction_cleanup_test() {
     fake_executor.add_account_data(&sender);
 
     let mut libra_vm = LibraVM::new();
-    let mut data_cache = BlockDataCache::new(fake_executor.get_state_view());
+    let mut data_cache = StateViewCache::new(fake_executor.get_state_view());
     libra_vm.load_configs(fake_executor.get_state_view());
 
     let mut txn_data = TransactionMetadata::default();
@@ -27,11 +26,13 @@ fn failed_transaction_cleanup_test() {
     txn_data.max_gas_amount = GasUnits::new(100_000);
     txn_data.gas_unit_price = GasPrice::new(2);
 
+    let gas_schedule = zero_cost_schedule();
     let gas_left = GasUnits::new(10_000);
 
     // TYPE_MISMATCH should be kept and charged.
     let out1 = libra_vm.failed_transaction_cleanup(
         VMStatus::new(StatusCode::TYPE_MISMATCH),
+        &gas_schedule,
         gas_left,
         &txn_data,
         &mut data_cache,
@@ -48,6 +49,7 @@ fn failed_transaction_cleanup_test() {
     // OUT_OF_BOUNDS_INDEX should be discarded and not charged.
     let out2 = libra_vm.failed_transaction_cleanup(
         VMStatus::new(StatusCode::OUT_OF_BOUNDS_INDEX),
+        &gas_schedule,
         gas_left,
         &txn_data,
         &mut data_cache,
