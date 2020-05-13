@@ -1,13 +1,21 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, Result};
+use anyhow::Result;
+use bytes::Bytes;
+use futures::stream;
+use hyper::Body;
 use libra_crypto::hash::HashValue;
 use libra_logger::prelude::*;
 use libra_types::transaction::Version;
 use libradb::backup::BackupHandler;
+use serde::Serialize;
 use std::convert::Infallible;
-use warp::{filters::BoxedFilter, reply::Reply, Filter, Rejection};
+use warp::{
+    filters::BoxedFilter,
+    reply::{Reply, Response},
+    Filter, Rejection,
+};
 
 fn get_state_range_proof(
     backup_handler: &BackupHandler,
@@ -18,12 +26,31 @@ fn get_state_range_proof(
     Ok(Box::new(bytes))
 }
 
-/// Return 500 on any error raised by the request handler.
-fn get_state_snapshot(
-    _backup_handler: &BackupHandler,
-    _version: Version,
-) -> Result<Box<dyn Reply>> {
-    bail!("unimplemented.")
+fn get_state_snapshot(backup_handler: &BackupHandler, version: Version) -> Result<Box<dyn Reply>> {
+    backup_handler
+        .get_account_iter(version)
+        .map(size_prefixed_lcs_bytes_stream)
+}
+
+fn size_prefixed_lcs_bytes_stream<I, R>(iter: I) -> Box<dyn Reply>
+where
+    I: Iterator<Item = Result<R>> + Send + Sync + 'static,
+    R: Serialize,
+{
+    let iter = iter
+        .map(|res| {
+            let record = res?;
+            let record_bytes = lcs::to_bytes(&record)?;
+            let size_bytes = (record_bytes.len() as u32).to_be_bytes();
+
+            Ok((Bytes::from(size_bytes.to_vec()), Bytes::from(record_bytes)))
+        })
+        .map(|res: Result<(Bytes, Bytes)>| match res {
+            Ok((size_bytes, record_bytes)) => vec![Ok(size_bytes), Ok(record_bytes)],
+            Err(e) => vec![Err(e)],
+        })
+        .flatten();
+    Box::new(Response::new(Body::wrap_stream(stream::iter(iter))))
 }
 
 /// Return 500 on any error raised by the request handler.

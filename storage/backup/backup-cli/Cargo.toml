@@ -17,9 +17,10 @@ futures = "0.3.0"
 hex = "0.4.2"
 itertools = "0.9"
 rand = "0.7.3"
-reqwest = "0.10.4"
+reqwest = { version = "0.10.4", features = ["stream"], default-features = false }
 structopt = "0.3"
 tokio = "0.2"
+tokio-util = { version = "0.3", features = ["compat"]}
 
 lcs = { path = "../../../common/lcs", package = "libra-canonical-serialization", version = "0.1.0" }
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
