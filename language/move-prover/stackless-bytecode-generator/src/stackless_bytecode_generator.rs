@@ -1027,6 +1027,11 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 ));
             }
 
+            MoveBytecode::MoveTo(_) => unimplemented!("Not yet supported instruction: MoveTo"),
+            MoveBytecode::MoveToGeneric(_) => {
+                unimplemented!("Not yet supported instruction: MoveToGeneric")
+            }
+
             MoveBytecode::GetTxnSenderAddress => {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);

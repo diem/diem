@@ -392,6 +392,7 @@ fn parse_qualified_function_name<'input>(
         | Tok::GetTxnSender
         | Tok::MoveFrom
         | Tok::MoveToSender
+        | Tok::MoveTo
         | Tok::Freeze
         | Tok::ToU8
         | Tok::ToU64
@@ -530,6 +531,7 @@ fn parse_call_or_term_<'input>(
         | Tok::GetTxnSender
         | Tok::MoveFrom
         | Tok::MoveToSender
+        | Tok::MoveTo
         | Tok::Freeze
         | Tok::DotNameValue
         | Tok::ToU8
@@ -744,6 +746,12 @@ fn parse_builtin<'input>(
             consume_end_of_generics(tokens)?;
             Ok(Builtin::MoveToSender(StructName::new(name), type_actuals))
         }
+        Tok::MoveTo => {
+            tokens.advance()?;
+            let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
+            consume_end_of_generics(tokens)?;
+            Ok(Builtin::MoveTo(StructName::new(name), type_actuals))
+        }
         Tok::Freeze => {
             tokens.advance()?;
             Ok(Builtin::Freeze)
@@ -923,6 +931,7 @@ fn parse_cmd_<'input>(tokens: &mut Lexer<'input>) -> Result<Cmd_, ParseError<Loc
         | Tok::GetTxnSender
         | Tok::MoveFrom
         | Tok::MoveToSender
+        | Tok::MoveTo
         | Tok::Freeze
         | Tok::DotNameValue
         | Tok::ToU8

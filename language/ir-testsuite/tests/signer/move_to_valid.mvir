@@ -1,0 +1,23 @@
+module M {
+    resource R { f: bool }
+    t0(s: &signer, r: Self.R) {
+        move_to<R>(copy(s), move(r));
+        (copy(s));
+        (R { f: false });
+        (move_to<R>());
+        return;
+    }
+}
+
+//! new-transaction
+
+module N {
+    resource R<T> { f: T }
+    t0<T>(s: &signer, r: Self.R<T>) {
+        move_to<R<T>>(copy(s), move(r));
+        (copy(s));
+        (R<bool> { f: false });
+        (move_to<R<bool>>());
+        return;
+    }
+}

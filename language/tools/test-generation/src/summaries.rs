@@ -517,6 +517,24 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
             ],
             effects: Effects::NoTyParams(vec![state_stack_pop!()]),
         },
+        Bytecode::MoveTo(i) => Summary {
+            preconditions: vec![
+                state_stack_has_reference!(1, Mutability::Immutable),
+                state_struct_is_resource!(i),
+                state_stack_has_struct!(i),
+                state_memory_safe!(None),
+            ],
+            effects: Effects::NoTyParams(vec![state_stack_pop!(), state_stack_pop!()]),
+        },
+        Bytecode::MoveToGeneric(i) => Summary {
+            preconditions: vec![
+                state_stack_has_reference!(1, Mutability::Immutable),
+                state_struct_inst_is_resource!(i),
+                state_stack_has_struct_inst!(i),
+                state_memory_safe!(None),
+            ],
+            effects: Effects::NoTyParams(vec![state_stack_pop!(), state_stack_pop!()]),
+        },
         Bytecode::Call(i) => Summary {
             preconditions: vec![state_stack_satisfies_function_signature!(i)],
             effects: Effects::NoTyParams(vec![

@@ -259,6 +259,12 @@ fn execute_inner(
         | Bytecode::MoveToSenderGeneric(_) => {
             checked_verify!(verifier.stack.pop().unwrap().is_value());
         }
+        Bytecode::MoveTo(_) | Bytecode::MoveToGeneric(_) => {
+            // resource value
+            checked_verify!(verifier.stack.pop().unwrap().is_value());
+            // signer reference
+            state.release_value(verifier.stack.pop().unwrap());
+        }
 
         Bytecode::LdTrue | Bytecode::LdFalse => {
             verifier.stack.push(state.value_for(&SignatureToken::Bool))

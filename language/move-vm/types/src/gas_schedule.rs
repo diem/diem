@@ -68,6 +68,11 @@ pub fn zero_cost_schedule() -> CostTable {
             MoveToSenderGeneric(StructDefInstantiationIndex::new(0)),
             GasCost::new(0, 0),
         ),
+        (MoveTo(StructDefinitionIndex::new(0)), GasCost::new(0, 0)),
+        (
+            MoveToGeneric(StructDefInstantiationIndex::new(0)),
+            GasCost::new(0, 0),
+        ),
         (GetTxnSenderAddress, GasCost::new(0, 0)),
         (MoveFrom(StructDefinitionIndex::new(0)), GasCost::new(0, 0)),
         (

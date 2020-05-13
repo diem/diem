@@ -353,6 +353,8 @@ pub enum StatusCode {
     INVALID_LOOP_CONTINUE = 1087,
     UNSAFE_RET_UNUSED_RESOURCES = 1088,
     TOO_MANY_LOCALS = 1089,
+    MOVETO_TYPE_MISMATCH_ERROR = 1090,
+    MOVETO_NO_RESOURCE_ERROR = 1091,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

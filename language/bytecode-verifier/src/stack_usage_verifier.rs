@@ -143,8 +143,8 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::Le
             | Bytecode::Ge => (2, 1),
 
-            // WriteRef pops twice but does not push
-            Bytecode::WriteRef => (2, 0),
+            // MoveTo and WriteRef pop twice but do not push
+            Bytecode::MoveTo(_) | Bytecode::MoveToGeneric(_) | Bytecode::WriteRef => (2, 0),
 
             // Branch and Nop neither pops nor pushes
             Bytecode::Branch(_) | Bytecode::Nop => (0, 0),

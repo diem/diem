@@ -155,7 +155,7 @@ pub enum Opcodes {
     MUT_BORROW_GLOBAL           = 0x2A,
     IMM_BORROW_GLOBAL           = 0x2B,
     MOVE_FROM                   = 0x2C,
-    MOVE_TO                     = 0x2D,
+    MOVE_TO_SENDER              = 0x2D,
     FREEZE_REF                  = 0x2E,
     SHL                         = 0x2F,
     SHR                         = 0x30,
@@ -173,8 +173,10 @@ pub enum Opcodes {
     MUT_BORROW_GLOBAL_GENERIC   = 0x3C,
     IMM_BORROW_GLOBAL_GENERIC   = 0x3D,
     MOVE_FROM_GENERIC           = 0x3E,
-    MOVE_TO_GENERIC             = 0x3F,
+    MOVE_TO_SENDER_GENERIC      = 0x3F,
     NOP                         = 0x40,
+    MOVE_TO                     = 0x41,
+    MOVE_TO_GENERIC             = 0x42,
 }
 
 /// Upper limit on the binary size
@@ -412,9 +414,11 @@ pub fn instruction_key(instruction: &Bytecode) -> u8 {
         ExistsGeneric(_) => Opcodes::EXISTS_GENERIC,
         MoveFrom(_) => Opcodes::MOVE_FROM,
         MoveFromGeneric(_) => Opcodes::MOVE_FROM_GENERIC,
-        MoveToSender(_) => Opcodes::MOVE_TO,
-        MoveToSenderGeneric(_) => Opcodes::MOVE_TO_GENERIC,
+        MoveToSender(_) => Opcodes::MOVE_TO_SENDER,
+        MoveToSenderGeneric(_) => Opcodes::MOVE_TO_SENDER_GENERIC,
         Nop => Opcodes::NOP,
+        MoveTo(_) => Opcodes::MOVE_TO,
+        MoveToGeneric(_) => Opcodes::MOVE_TO_GENERIC,
     };
     opcode as u8
 }
