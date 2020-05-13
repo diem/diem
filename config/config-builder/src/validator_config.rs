@@ -165,12 +165,12 @@ impl ValidatorConfig {
     }
 
     pub fn build_set(&self) -> Result<Vec<NodeConfig>> {
-        let (configs, _) = self.build_common(false, false)?;
+        let (configs, _) = self.build_common(false)?;
         Ok(configs)
     }
 
     pub fn build_faucet_client(&self) -> Result<(Ed25519PrivateKey, Waypoint)> {
-        let (configs, faucet_key) = self.build_common(false, false)?;
+        let (configs, faucet_key) = self.build_common(false)?;
         Ok((
             faucet_key,
             configs[0]
@@ -182,8 +182,7 @@ impl ValidatorConfig {
 
     pub fn build_common(
         &self,
-        randomize_service_ports: bool,
-        randomize_libranet_ports: bool,
+        randomize_ports: bool,
     ) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
         ensure!(self.nodes > 0, Error::NonZeroNetwork);
         ensure!(
@@ -195,13 +194,8 @@ impl ValidatorConfig {
         );
 
         let (faucet_key, config_seed) = self.build_faucet_key();
-        let generator::ValidatorSwarm { mut nodes, .. } = generator::validator_swarm(
-            &self.template,
-            self.nodes,
-            config_seed,
-            randomize_service_ports,
-            randomize_libranet_ports,
-        );
+        let generator::ValidatorSwarm { mut nodes, .. } =
+            generator::validator_swarm(&self.template, self.nodes, config_seed, randomize_ports);
 
         ensure!(
             nodes.len() == self.nodes,
@@ -290,7 +284,7 @@ impl ValidatorConfig {
 
 impl BuildSwarm for ValidatorConfig {
     fn build_swarm(&self) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
-        self.build_common(true, true)
+        self.build_common(true)
     }
 }
 
