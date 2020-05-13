@@ -721,6 +721,10 @@
 <span id="721">721</span>
 <span id="722">722</span>
 <span id="723">723</span>
+<span id="724">724</span>
+<span id="725">725</span>
+<span id="726">726</span>
+<span id="727">727</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -769,6 +773,10 @@
             <span class="ident">name_to_function_definition_view</span>,
             <span class="ident">name_to_struct_definition_view</span>,
         }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">self_handle_idx</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ModuleHandleIndex</span> {
+        <span class="self">self</span>.<span class="ident">as_inner</span>().<span class="ident">self_handle_idx</span>()
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">module_handles</span>(
@@ -880,7 +888,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">function_handle</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionHandle</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructDefinitionIndex</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="ident">function_handle</span>.<span class="ident">module</span>.<span class="number">0</span> <span class="op">!</span><span class="op">=</span> <span class="ident">CompiledModule</span>::<span class="ident">IMPLEMENTED_MODULE_INDEX</span> {
+        <span class="kw">if</span> <span class="ident">function_handle</span>.<span class="ident">module</span> <span class="op">!</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">self_handle_idx</span>() {
             <span class="kw">return</span> <span class="ident">BTreeSet</span>::<span class="ident">new</span>();
         }
 

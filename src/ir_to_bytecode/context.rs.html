@@ -778,21 +778,6 @@
 <span id="778">778</span>
 <span id="779">779</span>
 <span id="780">780</span>
-<span id="781">781</span>
-<span id="782">782</span>
-<span id="783">783</span>
-<span id="784">784</span>
-<span id="785">785</span>
-<span id="786">786</span>
-<span id="787">787</span>
-<span id="788">788</span>
-<span id="789">789</span>
-<span id="790">790</span>
-<span id="791">791</span>
-<span id="792">792</span>
-<span id="793">793</span>
-<span id="794">794</span>
-<span id="795">795</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -812,13 +797,12 @@
 <span class="kw">use</span> <span class="ident">vm</span>::{
     <span class="ident">access</span>::<span class="ident">ModuleAccess</span>,
     <span class="ident">file_format</span>::{
-        <span class="self">self</span>, <span class="ident">AddressIdentifierIndex</span>, <span class="ident">CodeOffset</span>, <span class="ident">CompiledModule</span>, <span class="ident">Constant</span>, <span class="ident">ConstantPoolIndex</span>,
-        <span class="ident">FieldHandle</span>, <span class="ident">FieldHandleIndex</span>, <span class="ident">FieldInstantiation</span>, <span class="ident">FieldInstantiationIndex</span>,
-        <span class="ident">FunctionDefinitionIndex</span>, <span class="ident">FunctionHandle</span>, <span class="ident">FunctionHandleIndex</span>, <span class="ident">FunctionInstantiation</span>,
-        <span class="ident">FunctionInstantiationIndex</span>, <span class="ident">FunctionSignature</span>, <span class="ident">IdentifierIndex</span>, <span class="ident">Kind</span>, <span class="ident">ModuleHandle</span>,
-        <span class="ident">ModuleHandleIndex</span>, <span class="ident">Signature</span>, <span class="ident">SignatureIndex</span>, <span class="ident">SignatureToken</span>, <span class="ident">StructDefInstantiation</span>,
-        <span class="ident">StructDefInstantiationIndex</span>, <span class="ident">StructDefinitionIndex</span>, <span class="ident">StructHandle</span>, <span class="ident">StructHandleIndex</span>,
-        <span class="ident">TableIndex</span>,
+        <span class="ident">AddressIdentifierIndex</span>, <span class="ident">CodeOffset</span>, <span class="ident">Constant</span>, <span class="ident">ConstantPoolIndex</span>, <span class="ident">FieldHandle</span>,
+        <span class="ident">FieldHandleIndex</span>, <span class="ident">FieldInstantiation</span>, <span class="ident">FieldInstantiationIndex</span>, <span class="ident">FunctionDefinitionIndex</span>,
+        <span class="ident">FunctionHandle</span>, <span class="ident">FunctionHandleIndex</span>, <span class="ident">FunctionInstantiation</span>, <span class="ident">FunctionInstantiationIndex</span>,
+        <span class="ident">FunctionSignature</span>, <span class="ident">IdentifierIndex</span>, <span class="ident">Kind</span>, <span class="ident">ModuleHandle</span>, <span class="ident">ModuleHandleIndex</span>, <span class="ident">Signature</span>,
+        <span class="ident">SignatureIndex</span>, <span class="ident">SignatureToken</span>, <span class="ident">StructDefInstantiation</span>, <span class="ident">StructDefInstantiationIndex</span>,
+        <span class="ident">StructDefinitionIndex</span>, <span class="ident">StructHandle</span>, <span class="ident">StructHandleIndex</span>, <span class="ident">TableIndex</span>,
     },
 };
 
@@ -1036,7 +1020,7 @@
                 <span class="prelude-val">Ok</span>((<span class="ident">ident</span>, <span class="ident">CompiledDependency</span>::<span class="ident">new</span>(<span class="ident">dep</span>)<span class="question-mark">?</span>))
             })
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">context</span> <span class="op">=</span> <span class="self">Self</span> {
             <span class="ident">dependencies</span>,
             <span class="ident">aliases</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
             <span class="ident">modules</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
@@ -1057,22 +1041,8 @@
             <span class="ident">address_identifiers</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
             <span class="ident">constant_pool</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
             <span class="ident">current_function_index</span>: <span class="ident">FunctionDefinitionIndex</span>::<span class="ident">new</span>(<span class="number">0</span>),
-            <span class="ident">source_map</span>: <span class="ident">SourceMap</span>::<span class="ident">new</span>(<span class="ident">current_module_opt</span>.<span class="ident">clone</span>()),
+            <span class="ident">source_map</span>: <span class="ident">SourceMap</span>::<span class="ident">new</span>(<span class="ident">current_module_opt</span>),
         };
-        <span class="kw">match</span> <span class="ident">current_module_opt</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">current_module</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">self_name</span> <span class="op">=</span> <span class="ident">ModuleName</span>::<span class="ident">new</span>(<span class="ident">ModuleName</span>::<span class="ident">self_name</span>().<span class="ident">into</span>());
-                <span class="ident">context</span>.<span class="ident">declare_import</span>(<span class="ident">current_module</span>, <span class="ident">self_name</span>)<span class="question-mark">?</span>;
-            }
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="comment">// TODO needed due to the existence of  CompiledModule::IMPLEMENTED_MODULE_INDEX</span>
-                <span class="comment">// warning to clean this up when module indexes get cleane dup</span>
-                <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">CompiledModule</span>::<span class="ident">IMPLEMENTED_MODULE_INDEX</span>;
-                <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">address_index</span>(<span class="ident">AccountAddress</span>::<span class="ident">DEFAULT</span>)<span class="question-mark">?</span>;
-                <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">identifier_index</span>(<span class="ident">file_format</span>::<span class="ident">self_module_name</span>().<span class="ident">as_str</span>())<span class="question-mark">?</span>;
-                <span class="ident">get_or_add_item</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>.<span class="ident">module_handles</span>, <span class="ident">ModuleHandle</span> { <span class="ident">address</span>, <span class="ident">name</span> })<span class="question-mark">?</span>;
-            }
-        }
 
         <span class="prelude-val">Ok</span>(<span class="ident">context</span>)
     }

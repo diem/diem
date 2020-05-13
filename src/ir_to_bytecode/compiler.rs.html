@@ -1924,6 +1924,8 @@
 <span id="1924">1924</span>
 <span id="1925">1925</span>
 <span id="1926">1926</span>
+<span id="1927">1927</span>
+<span id="1928">1928</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2389,8 +2391,9 @@
         <span class="ident">address</span>,
         <span class="ident">name</span>: <span class="ident">module</span>.<span class="ident">name</span>,
     };
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">Context</span>::<span class="ident">new</span>(<span class="ident">dependencies</span>, <span class="prelude-val">Some</span>(<span class="ident">current_module</span>))<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">Context</span>::<span class="ident">new</span>(<span class="ident">dependencies</span>, <span class="prelude-val">Some</span>(<span class="ident">current_module</span>.<span class="ident">clone</span>()))<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">self_name</span> <span class="op">=</span> <span class="ident">ModuleName</span>::<span class="ident">new</span>(<span class="ident">ModuleName</span>::<span class="ident">self_name</span>().<span class="ident">into</span>());
+    <span class="kw">let</span> <span class="ident">self_module_handle_idx</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">declare_import</span>(<span class="ident">current_module</span>, <span class="ident">self_name</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
     <span class="comment">// Explicitly declare all imports as they will be included even if not used</span>
     <span class="ident">compile_imports</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>, <span class="prelude-val">Some</span>(<span class="ident">address</span>), <span class="ident">module</span>.<span class="ident">imports</span>)<span class="question-mark">?</span>;
 
@@ -2439,6 +2442,7 @@
     ) <span class="op">=</span> <span class="ident">context</span>.<span class="ident">materialize_pools</span>();
     <span class="kw">let</span> <span class="ident">compiled_module</span> <span class="op">=</span> <span class="ident">CompiledModuleMut</span> {
         <span class="ident">module_handles</span>,
+        <span class="ident">self_module_handle_idx</span>,
         <span class="ident">struct_handles</span>,
         <span class="ident">function_handles</span>,
         <span class="ident">field_handles</span>,

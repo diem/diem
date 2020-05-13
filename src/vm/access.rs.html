@@ -272,8 +272,6 @@
 <span id="272">272</span>
 <span id="273">273</span>
 <span id="274">274</span>
-<span id="275">275</span>
-<span id="276">276</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -294,11 +292,14 @@
     <span class="doccomment">/// Returns the `CompiledModule` that will be used for accesses.</span>
     <span class="kw">fn</span> <span class="ident">as_module</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span>;
 
+    <span class="kw">fn</span> <span class="ident">self_handle_idx</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ModuleHandleIndex</span> {
+        <span class="self">self</span>.<span class="ident">as_module</span>().<span class="ident">as_inner</span>().<span class="ident">self_module_handle_idx</span>
+    }
+
     <span class="doccomment">/// Returns the `ModuleHandle` for `self`.</span>
     <span class="kw">fn</span> <span class="ident">self_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">ModuleHandle</span> {
         <span class="macro">assume_preconditions</span><span class="macro">!</span>(); <span class="comment">// invariant</span>
-        <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span>
-            <span class="self">self</span>.<span class="ident">module_handle_at</span>(<span class="ident">ModuleHandleIndex</span>(<span class="ident">CompiledModule</span>::<span class="ident">IMPLEMENTED_MODULE_INDEX</span>));
+        <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">module_handle_at</span>(<span class="self">self</span>.<span class="ident">self_handle_idx</span>());
         <span class="macro">assumed_postcondition</span><span class="macro">!</span>(
             <span class="ident">handle</span>.<span class="ident">address</span>.<span class="ident">into_index</span>() <span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">as_module</span>().<span class="ident">as_inner</span>().<span class="ident">address_identifiers</span>.<span class="ident">len</span>()
         ); <span class="comment">// invariant</span>
@@ -465,11 +466,6 @@
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ScriptAccess</span>: <span class="ident">Sync</span> {
     <span class="doccomment">/// Returns the `CompiledScript` that will be used for accesses.</span>
     <span class="kw">fn</span> <span class="ident">as_script</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">CompiledScript</span>;
-
-    <span class="doccomment">/// Returns the `ModuleHandle` for `self`.</span>
-    <span class="kw">fn</span> <span class="ident">self_handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">ModuleHandle</span> {
-        <span class="self">self</span>.<span class="ident">module_handle_at</span>(<span class="ident">ModuleHandleIndex</span>(<span class="ident">CompiledModule</span>::<span class="ident">IMPLEMENTED_MODULE_INDEX</span>))
-    }
 
     <span class="kw">fn</span> <span class="ident">module_handle_at</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">idx</span>: <span class="ident">ModuleHandleIndex</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">ModuleHandle</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">as_script</span>().<span class="ident">as_inner</span>().<span class="ident">module_handles</span>[<span class="ident">idx</span>.<span class="ident">into_index</span>()]

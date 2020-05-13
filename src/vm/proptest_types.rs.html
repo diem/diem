@@ -492,6 +492,7 @@
 <span id="492">492</span>
 <span id="493">493</span>
 <span id="494">494</span>
+<span id="495">495</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -802,6 +803,7 @@
                     <span class="comment">// Build a compiled module</span>
                     <span class="ident">CompiledModuleMut</span> {
                         <span class="ident">module_handles</span>,
+                        <span class="ident">self_module_handle_idx</span>: <span class="ident">ModuleHandleIndex</span>(<span class="number">0</span>),
                         <span class="ident">struct_handles</span>,
                         <span class="ident">function_handles</span>,
                         <span class="ident">field_handles</span>,

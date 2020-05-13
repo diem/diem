@@ -1443,10 +1443,6 @@
 <span id="1443">1443</span>
 <span id="1444">1444</span>
 <span id="1445">1445</span>
-<span id="1446">1446</span>
-<span id="1447">1447</span>
-<span id="1448">1448</span>
-<span id="1449">1449</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2681,12 +2677,8 @@
 <span class="comment">//</span>
 
 <span class="kw">fn</span> <span class="ident">load_script_dependencies</span>(<span class="ident">binary</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">ScriptAccess</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ModuleId</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">self_module</span> <span class="op">=</span> <span class="ident">binary</span>.<span class="ident">self_handle</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">deps</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
     <span class="kw">for</span> <span class="ident">module</span> <span class="kw">in</span> <span class="ident">binary</span>.<span class="ident">module_handles</span>() {
-        <span class="kw">if</span> <span class="ident">module</span> <span class="op">=</span><span class="op">=</span> <span class="ident">self_module</span> {
-            <span class="kw">continue</span>;
-        }
         <span class="ident">deps</span>.<span class="ident">push</span>(<span class="ident">ModuleId</span>::<span class="ident">new</span>(
             <span class="kw-2">*</span><span class="ident">binary</span>.<span class="ident">address_identifier_at</span>(<span class="ident">module</span>.<span class="ident">address</span>),
             <span class="ident">binary</span>.<span class="ident">identifier_at</span>(<span class="ident">module</span>.<span class="ident">name</span>).<span class="ident">to_owned</span>(),

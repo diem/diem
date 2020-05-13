@@ -1906,6 +1906,11 @@
 <span id="1906">1906</span>
 <span id="1907">1907</span>
 <span id="1908">1908</span>
+<span id="1909">1909</span>
+<span id="1910">1910</span>
+<span id="1911">1911</span>
+<span id="1912">1912</span>
+<span id="1913">1913</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -3293,7 +3298,7 @@
     <span class="ident">added_dummy_sig</span>: <span class="ident">bool</span>,
     <span class="comment">// If the &lt;SELF&gt; identifier was added.</span>
     <span class="ident">added_self_ident</span>: <span class="ident">bool</span>,
-    <span class="comment">// If a dummy self module handle was added.</span>
+    <span class="comment">// If a self module handle was added.</span>
     <span class="ident">added_self_module_handle</span>: <span class="ident">bool</span>,
 }
 
@@ -3335,34 +3340,35 @@
             }
         };
 
-        <span class="comment">// Use the first module handle as the self module handle. Create one if none exists.</span>
-        <span class="comment">//</span>
-        <span class="comment">// Note: this correctly handles scripts with either a proper self module handle or no module</span>
-        <span class="comment">// handles at all. For scripts whose first module handle is used to refer to external modules,</span>
-        <span class="comment">// the verifier may complain about not being able to find implementations for functioins.</span>
-        <span class="comment">//</span>
-        <span class="comment">// This is because the verifier always considers the first handle self, and it would be very</span>
-        <span class="comment">// tricky for us to fix this during conversion. (We don&#39;t want to shift the indices.)</span>
-        <span class="comment">//</span>
-        <span class="comment">// This will no longer be an issue once we remove script/module conversion so this won&#39;t be fixed.</span>
-        <span class="kw">let</span> (<span class="ident">added_self_module_handle</span>, <span class="ident">added_dummy_addr</span>, <span class="ident">self_module_handle_idx</span>) <span class="op">=</span>
-            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">module_handles</span>.<span class="ident">is_empty</span>() {
-                <span class="comment">// Grab an arbitratry address. Create one if none exists.</span>
-                <span class="kw">let</span> <span class="ident">added_dummy_addr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">address_identifiers</span>.<span class="ident">is_empty</span>();
-                <span class="kw">if</span> <span class="ident">added_dummy_addr</span> {
-                    <span class="self">self</span>.<span class="ident">address_identifiers</span>
-                        .<span class="ident">push</span>(<span class="ident">AccountAddress</span>::<span class="ident">new</span>([<span class="number">0xff</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>]));
+        <span class="comment">// Add a dummy adress if none exists.</span>
+        <span class="kw">let</span> <span class="ident">dummy_addr</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">new</span>([<span class="number">0xff</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>]);
+        <span class="kw">let</span> (<span class="ident">added_dummy_addr</span>, <span class="ident">dummy_addr_idx</span>) <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>
+            .<span class="ident">address_identifiers</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">position</span>(<span class="op">|</span><span class="ident">addr</span><span class="op">|</span> <span class="ident">addr</span> <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">dummy_addr</span>)
+        {
+            <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="bool-val">false</span>, <span class="ident">AddressIdentifierIndex</span>::<span class="ident">new</span>(<span class="ident">idx</span> <span class="kw">as</span> <span class="ident">u16</span>)),
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="ident">AddressIdentifierIndex</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">address_identifiers</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u16</span>);
+                <span class="self">self</span>.<span class="ident">address_identifiers</span>.<span class="ident">push</span>(<span class="ident">dummy_addr</span>);
+                (<span class="bool-val">true</span>, <span class="ident">idx</span>)
+            }
+        };
+
+        <span class="comment">// Add a self module handle.</span>
+        <span class="kw">let</span> (<span class="ident">added_self_module_handle</span>, <span class="ident">self_module_handle_idx</span>) <span class="op">=</span>
+            <span class="kw">match</span> <span class="self">self</span>.<span class="ident">module_handles</span>.<span class="ident">iter</span>().<span class="ident">position</span>(<span class="op">|</span><span class="ident">handle</span><span class="op">|</span> {
+                <span class="ident">handle</span>.<span class="ident">address</span> <span class="op">=</span><span class="op">=</span> <span class="ident">dummy_addr_idx</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">handle</span>.<span class="ident">name</span> <span class="op">=</span><span class="op">=</span> <span class="ident">self_ident_idx</span>
+            }) {
+                <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="bool-val">false</span>, <span class="ident">ModuleHandleIndex</span>::<span class="ident">new</span>(<span class="ident">idx</span> <span class="kw">as</span> <span class="ident">u16</span>)),
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="ident">ModuleHandleIndex</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">module_handles</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u16</span>);
+                    <span class="self">self</span>.<span class="ident">module_handles</span>.<span class="ident">push</span>(<span class="ident">ModuleHandle</span> {
+                        <span class="ident">address</span>: <span class="ident">dummy_addr_idx</span>,
+                        <span class="ident">name</span>: <span class="ident">self_ident_idx</span>,
+                    });
+                    (<span class="bool-val">true</span>, <span class="ident">idx</span>)
                 }
-                <span class="kw">let</span> <span class="ident">addr_idx</span> <span class="op">=</span> <span class="ident">AddressIdentifierIndex</span>::<span class="ident">new</span>(<span class="number">0</span>);
-                <span class="kw">let</span> <span class="ident">self_module_handle_idx</span> <span class="op">=</span>
-                    <span class="ident">ModuleHandleIndex</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">module_handles</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u16</span>);
-                <span class="self">self</span>.<span class="ident">module_handles</span>.<span class="ident">push</span>(<span class="ident">ModuleHandle</span> {
-                    <span class="ident">address</span>: <span class="ident">addr_idx</span>,
-                    <span class="ident">name</span>: <span class="ident">self_ident_idx</span>,
-                });
-                (<span class="bool-val">true</span>, <span class="ident">added_dummy_addr</span>, <span class="ident">self_module_handle_idx</span>)
-            } <span class="kw">else</span> {
-                (<span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="ident">ModuleHandleIndex</span>::<span class="ident">new</span>(<span class="number">0</span> <span class="kw">as</span> <span class="ident">u16</span>))
             };
 
         <span class="comment">// Find the index to the empty signature [].</span>
@@ -3404,6 +3410,7 @@
 
         <span class="kw">let</span> <span class="ident">m</span> <span class="op">=</span> <span class="ident">CompiledModuleMut</span> {
             <span class="ident">module_handles</span>: <span class="self">self</span>.<span class="ident">module_handles</span>,
+            <span class="ident">self_module_handle_idx</span>,
             <span class="ident">struct_handles</span>: <span class="self">self</span>.<span class="ident">struct_handles</span>,
             <span class="ident">function_handles</span>: <span class="self">self</span>.<span class="ident">function_handles</span>,
             <span class="ident">field_handles</span>: <span class="macro">vec</span><span class="macro">!</span>[],
@@ -3439,8 +3446,10 @@
 <span class="doccomment">/// the bounds checker.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CompiledModuleMut</span> {
-    <span class="doccomment">/// Handles to external modules and self at position 0.</span>
+    <span class="doccomment">/// Handles to external modules and self.</span>
     <span class="kw">pub</span> <span class="ident">module_handles</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ModuleHandle</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Handle to self.</span>
+    <span class="kw">pub</span> <span class="ident">self_module_handle_idx</span>: <span class="ident">ModuleHandleIndex</span>,
     <span class="doccomment">/// Handles to external and internal types.</span>
     <span class="kw">pub</span> <span class="ident">struct_handles</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">StructHandle</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Handles to external and internal functions.</span>
@@ -3538,6 +3547,7 @@
                 <span class="ident">vec</span>(<span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">StructHandle</span><span class="op">&gt;</span>(), <span class="number">0</span>..<span class="op">=</span><span class="ident">size</span>),
                 <span class="ident">vec</span>(<span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">FunctionHandle</span><span class="op">&gt;</span>(), <span class="number">0</span>..<span class="op">=</span><span class="ident">size</span>),
             ),
+            <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">ModuleHandleIndex</span><span class="op">&gt;</span>(),
             <span class="ident">vec</span>(<span class="ident">any_with</span>::<span class="op">&lt;</span><span class="ident">Signature</span><span class="op">&gt;</span>(<span class="ident">size</span>), <span class="number">0</span>..<span class="op">=</span><span class="ident">size</span>),
             (
                 <span class="ident">vec</span>(<span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span>(), <span class="number">0</span>..<span class="op">=</span><span class="ident">size</span>),
@@ -3551,6 +3561,7 @@
             .<span class="ident">prop_map</span>(
                 <span class="op">|</span>(
                     (<span class="ident">module_handles</span>, <span class="ident">struct_handles</span>, <span class="ident">function_handles</span>),
+                    <span class="ident">self_module_handle_idx</span>,
                     <span class="ident">signatures</span>,
                     (<span class="ident">identifiers</span>, <span class="ident">address_identifiers</span>),
                     (<span class="ident">struct_defs</span>, <span class="ident">function_defs</span>),
@@ -3560,6 +3571,7 @@
                         <span class="ident">module_handles</span>,
                         <span class="ident">struct_handles</span>,
                         <span class="ident">function_handles</span>,
+                        <span class="ident">self_module_handle_idx</span>,
                         <span class="ident">field_handles</span>: <span class="macro">vec</span><span class="macro">!</span>[],
                         <span class="ident">struct_def_instantiations</span>: <span class="macro">vec</span><span class="macro">!</span>[],
                         <span class="ident">function_instantiations</span>: <span class="macro">vec</span><span class="macro">!</span>[],
@@ -3612,9 +3624,6 @@
 }
 
 <span class="kw">impl</span> <span class="ident">CompiledModule</span> {
-    <span class="doccomment">/// By convention, the index of the module being implemented is 0.</span>
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">IMPLEMENTED_MODULE_INDEX</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="number">0</span>;
-
     <span class="doccomment">/// Returns a reference to the inner `CompiledModuleMut`.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_inner</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">CompiledModuleMut</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
@@ -3704,6 +3713,7 @@
             <span class="ident">address</span>: <span class="ident">AddressIdentifierIndex</span>(<span class="number">0</span>),
             <span class="ident">name</span>: <span class="ident">IdentifierIndex</span>(<span class="number">0</span>),
         }],
+        <span class="ident">self_module_handle_idx</span>: <span class="ident">ModuleHandleIndex</span>(<span class="number">0</span>),
         <span class="ident">identifiers</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">self_module_name</span>().<span class="ident">to_owned</span>()],
         <span class="ident">address_identifiers</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">AccountAddress</span>::<span class="ident">default</span>()],
         <span class="ident">constant_pool</span>: <span class="macro">vec</span><span class="macro">!</span>[],

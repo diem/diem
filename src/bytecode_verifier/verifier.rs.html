@@ -589,7 +589,7 @@
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">module_handle_view</span>) <span class="kw">in</span> <span class="ident">module_view</span>.<span class="ident">module_handles</span>().<span class="ident">enumerate</span>() {
         <span class="kw">let</span> <span class="ident">module_id</span> <span class="op">=</span> <span class="ident">module_handle_view</span>.<span class="ident">module_id</span>();
-        <span class="kw">if</span> <span class="ident">idx</span> <span class="op">!</span><span class="op">=</span> <span class="ident">CompiledModule</span>::<span class="ident">IMPLEMENTED_MODULE_INDEX</span> <span class="kw">as</span> <span class="ident">usize</span>
+        <span class="kw">if</span> <span class="ident">idx</span> <span class="op">!</span><span class="op">=</span> <span class="ident">module_view</span>.<span class="ident">self_handle_idx</span>().<span class="number">0</span> <span class="kw">as</span> <span class="ident">usize</span>
             <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">dependency_map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">module_id</span>)
         {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(
