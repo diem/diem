@@ -39,6 +39,9 @@ struct Args {
     /// The path to the standard library binary for Move
     #[structopt(long = "stdlib-path", short = "s")]
     pub stdlib_path: Option<String>,
+    /// Output CSV data of coverage
+    #[structopt(long = "csv", short = "c")]
+    pub csv_output: bool,
 }
 
 fn get_modules(args: &Args) -> Vec<CompiledModule> {
@@ -68,6 +71,46 @@ fn get_modules(args: &Args) -> Vec<CompiledModule> {
     modules
 }
 
+fn format_human_summary<W: Write>(args: &Args, coverage_map: &CoverageMap, summary_writer: &mut W) {
+    writeln!(summary_writer, "+-------------------------+").unwrap();
+    writeln!(summary_writer, "| Move Coverage Summary   |").unwrap();
+    writeln!(summary_writer, "+-------------------------+").unwrap();
+
+    let mut total_covered = 0;
+    let mut total_instructions = 0;
+
+    for module in get_modules(&args).iter() {
+        let mut summary_options = ModuleSummaryOptions::default();
+        summary_options.summarize_function_coverage = args.summarize_functions;
+        let (total, covered) = ModuleSummary::new(summary_options, &module, coverage_map)
+            .summarize_human(summary_writer)
+            .unwrap();
+        total_covered += covered;
+        total_instructions += total;
+    }
+
+    writeln!(summary_writer, "+-------------------------+").unwrap();
+    writeln!(
+        summary_writer,
+        "| % Move Coverage: {:.2}  |",
+        summary::percent_coverage_for_counts(total_instructions, total_covered)
+    )
+    .unwrap();
+    writeln!(summary_writer, "+-------------------------+").unwrap();
+}
+
+fn format_csv_summary<W: Write>(args: &Args, coverage_map: &CoverageMap, summary_writer: &mut W) {
+    writeln!(summary_writer, "ModuleName,FunctionName,Covered,Uncovered").unwrap();
+
+    for module in get_modules(&args).iter() {
+        let mut summary_options = ModuleSummaryOptions::default();
+        summary_options.summarize_function_coverage = true;
+        ModuleSummary::new(summary_options, &module, coverage_map)
+            .summarize_csv(summary_writer)
+            .unwrap();
+    }
+}
+
 fn main() {
     let args = Args::from_args();
     let input_trace_path = Path::new(&args.input_trace_path);
@@ -86,29 +129,9 @@ fn main() {
         None => Box::new(io::stdout()),
     };
 
-    writeln!(summary_writer, "+-------------------------+").unwrap();
-    writeln!(summary_writer, "| Move Coverage Summary   |").unwrap();
-    writeln!(summary_writer, "+-------------------------+").unwrap();
-
-    let mut total_covered = 0;
-    let mut total_instructions = 0;
-
-    for module in get_modules(&args).iter() {
-        let mut summary_options = ModuleSummaryOptions::default();
-        summary_options.summarize_function_coverage = args.summarize_functions;
-        let (total, covered) = ModuleSummary::new(summary_options, &module, &coverage_map)
-            .summarize(&mut summary_writer)
-            .unwrap();
-        total_covered += covered;
-        total_instructions += total;
+    if !args.csv_output {
+        format_human_summary(&args, &coverage_map, &mut summary_writer)
+    } else {
+        format_csv_summary(&args, &coverage_map, &mut summary_writer)
     }
-
-    writeln!(summary_writer, "+-------------------------+").unwrap();
-    writeln!(
-        summary_writer,
-        "| % Move Coverage: {:.2}  |",
-        summary::percent_coverage_for_counts(total_instructions, total_covered)
-    )
-    .unwrap();
-    writeln!(summary_writer, "+-------------------------+").unwrap();
 }

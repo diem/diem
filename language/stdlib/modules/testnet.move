@@ -13,5 +13,12 @@ module Testnet {
     public fun is_testnet(): bool {
         exists<IsTestnet>(0xA550C18)
     }
+
+    // only used for testing purposes
+    public fun remove_testnet()
+    acquires IsTestnet {
+        Transaction::assert(Transaction::sender() == 0xA550C18, 0);
+        IsTestnet{} = move_from<IsTestnet>(0xA550C18);
+    }
 }
 }

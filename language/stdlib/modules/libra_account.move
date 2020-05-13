@@ -625,14 +625,6 @@ module LibraAccount {
             // sent/received payment event.
             let transaction_fee_balance = borrow_global_mut<Balance<Token>>(0xFEE);
             Libra::deposit(&mut transaction_fee_balance.coin, transaction_fee);
-            Transaction::assert(
-                AccountTrack::update_deposit_limits<Token>(
-                    transaction_fee_amount,
-                    0xFEE,
-                    &borrow_global<AccountOperationsCapability>(0xA550C18).tracking_cap
-                ),
-                9
-            );
         }
     }
 }

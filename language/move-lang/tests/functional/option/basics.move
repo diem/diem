@@ -44,7 +44,8 @@ fun main() {
 
     // destroy_with_default, destroy_some, destroy_none
     Transaction::assert(Option::destroy_with_default(Option::none<u64>(), 4) == 4, 8018);
-    Transaction::assert(Option::destroy_some(Option::some(4)) == 4, 8019);
+    Transaction::assert(Option::destroy_with_default(Option::some(4), 5) == 4, 8019);
+    Transaction::assert(Option::destroy_some(Option::some(4)) == 4, 8020);
     Option::destroy_none(Option::none<u64>());
 
     // letting an Option<u64> go out of scope is also ok

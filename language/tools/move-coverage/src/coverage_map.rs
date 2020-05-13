@@ -29,10 +29,9 @@ pub struct ModuleCoverageMap {
 }
 
 impl CoverageMap {
-    /// Takes in a file containing a raw VM trace, and returns a coverage map.
-    pub fn from_trace_file<P: AsRef<Path>>(filename: P) -> Self {
+    /// Takes in a file containing a raw VM trace, and returns an updated coverage map.
+    pub fn update_coverage_from_trace_file<P: AsRef<Path>>(mut self, filename: P) -> Self {
         let file = File::open(filename).unwrap();
-        let mut module_maps = BTreeMap::new();
         for line in BufReader::new(file).lines() {
             let line = line.unwrap();
             let mut splits = line.split(',');
@@ -46,13 +45,22 @@ impl CoverageMap {
                 let func_name = Identifier::new(context_segs.pop().unwrap()).unwrap();
                 let module_name = Identifier::new(context_segs.pop().unwrap()).unwrap();
                 let addr = AccountAddress::from_hex_literal(context_segs.pop().unwrap()).unwrap();
-                let entry = module_maps
+                let entry = self
+                    .module_maps
                     .entry((addr, module_name.clone()))
                     .or_insert_with(|| ModuleCoverageMap::new(addr, module_name));
                 entry.insert(func_name, pc);
             }
         }
-        CoverageMap { module_maps }
+        self
+    }
+
+    /// Takes in a file containing a raw VM trace, and returns a coverage map.
+    pub fn from_trace_file<P: AsRef<Path>>(filename: P) -> Self {
+        let empty_module_map = CoverageMap {
+            module_maps: BTreeMap::new(),
+        };
+        empty_module_map.update_coverage_from_trace_file(filename)
     }
 
     /// Takes in a file containing a serialized coverage map and returns a coverage map.

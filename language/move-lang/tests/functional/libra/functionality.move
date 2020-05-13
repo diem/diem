@@ -1,3 +1,16 @@
+//! account: bob, 0Coin1
+
+module BurnCapabilityHolder {
+    use 0x0::Libra;
+    resource struct Holder<Token> {
+        cap: Libra::BurnCapability<Token>,
+    }
+
+    public fun hold<Token>(cap: Libra::BurnCapability<Token>) {
+        move_to_sender(Holder<Token>{ cap })
+    }
+}
+
 //! new-transaction
 //! sender: association
 script {
@@ -14,6 +27,7 @@ fun main() {
     let coin1 = Libra::mint<Coin1::T>(10000);
     let coin2 = Libra::mint<Coin2::T>(10000);
     Transaction::assert(Libra::value<Coin1::T>(&coin1) == 10000, 0);
+    Transaction::assert(Libra::value<Coin2::T>(&coin2) == 10000, 1);
     Transaction::assert(Libra::value<Coin2::T>(&coin2) == 10000, 1);
 
     let (coin11, coin12) = Libra::split(coin1, 5000);
@@ -39,5 +53,119 @@ fun main() {
     Libra::destroy_zero(Libra::zero<Coin1::T>());
     Libra::destroy_zero(Libra::zero<Coin2::T>());
 }
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: association
+script {
+    use 0x0::Libra;
+    use 0x0::Coin1;
+    fun main()  {
+        Libra::destroy_zero(Libra::mint<Coin1::T>(1));
+    }
+}
+// check: ABORTED
+// check: 5
+
+//! new-transaction
+//! sender: bob
+//! gas-currency: Coin1
+script {
+    use 0x0::Libra;
+    use 0x0::Coin1;
+    fun main()  {
+        let coins = Libra::zero<Coin1::T>();
+        Libra::approx_lbr_for_coin<Coin1::T>(&coins);
+        Libra::destroy_zero(coins);
+    }
+}
+// check: EXECUTED
+
+//! new-transaction
+script {
+    use 0x0::Libra;
+    fun main()  {
+        Libra::destroy_zero(
+            Libra::zero<u64>()
+        );
+    }
+}
+// check: ABORTED
+// check: 1
+
+//! new-transaction
+script {
+    use 0x0::Libra;
+    use 0x0::LBR;
+    use 0x0::Coin1;
+    use 0x0::Transaction;
+    fun main()  {
+        Transaction::assert(!Libra::is_synthetic_currency<Coin1::T>(), 9);
+        Transaction::assert(Libra::is_synthetic_currency<LBR::T>(), 10);
+        Transaction::assert(!Libra::is_synthetic_currency<u64>(), 11);
+    }
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: association
+script {
+    use 0x0::Libra;
+    fun main()  {
+        Libra::initialize();
+    }
+}
+// check: ABORTED
+// check: 0
+
+//! new-transaction
+//! sender: association
+script {
+    use 0x0::Libra;
+    use 0x0::Coin1;
+    fun main()  {
+        Libra::grant_burn_capability_for_sender<Coin1::T>();
+    }
+}
+// check: ABORTED
+// check: 0
+
+//! new-transaction
+//! sender: association
+script {
+    use 0x0::LibraAccount;
+    use 0x0::Coin1;
+    fun main()  {
+        LibraAccount::mint_to_address<Coin1::T>({{bob}}, 1000000000 * 1000000 + 1);
+    }
+}
+// check: ABORTED
+// check: 11
+
+//! new-transaction
+//! sender: association
+script {
+    use 0x0::Libra;
+    use 0x0::Coin1;
+    fun main()  {
+        Libra::publish_mint_capability(
+            Libra::remove_mint_capability<Coin1::T>()
+        );
+    }
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: association
+script {
+    use 0x0::Libra;
+    use 0x0::Coin1;
+    use {{default}}::BurnCapabilityHolder;
+    fun main()  {
+        BurnCapabilityHolder::hold(
+            Libra::remove_burn_capability<Coin1::T>()
+        );
+    }
 }
 // check: EXECUTED

@@ -76,7 +76,7 @@ module VASP {
         // account type.
         Transaction::assert(AccountType::is_a<RootVASP>(addr), 7001);
         let root_vasp = AccountType::account_metadata<RootVASP>(addr);
-        root_vasp.expiration_date = current_time() + cert_lifetime();
+        root_vasp.expiration_date = LibraTimestamp::now_microseconds() + cert_lifetime();
         // The sending account must have a TransitionCapability<RootVASP>.
         AccountType::update<RootVASP>(addr, root_vasp);
     }
@@ -145,7 +145,7 @@ module VASP {
         // Sanity check for key validity
         Transaction::assert(Vector::length(&compliance_public_key) == 32, 7004);
         AccountType::apply_for<RootVASP>(RootVASP {
-            expiration_date: current_time() + cert_lifetime(),
+            expiration_date: LibraTimestamp::now_microseconds() + cert_lifetime(),
             human_name,
             base_url,
             compliance_public_key,
@@ -345,7 +345,7 @@ module VASP {
     }
 
     fun root_credential_expired(root_credential: &RootVASP): bool {
-        root_credential.expiration_date < current_time()
+        root_credential.expiration_date < LibraTimestamp::now_microseconds()
     }
 
     fun assert_sender_is_assoc_vasp_privileged() {
@@ -359,10 +359,6 @@ module VASP {
     // A year in microseconds
     fun cert_lifetime(): u64 {
         31540000000000
-    }
-
-    fun current_time(): u64 {
-        if (LibraTimestamp::is_genesis()) 0 else LibraTimestamp::now_microseconds()
     }
 }
 

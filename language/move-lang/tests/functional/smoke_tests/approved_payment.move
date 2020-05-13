@@ -268,6 +268,23 @@ fun main() {
 }
 // check: EXECUTED
 
+// same as above, but with an invalid-length signature. should now abort
+
+//! new-transaction
+//! sender: bob3
+script {
+use {{default}}::ApprovedPayment;
+use 0x0::LBR;
+fun main() {
+    let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
+    let signature = x"";
+    ApprovedPayment::deposit_to_payee<LBR::T>({{alice}}, 1000, payment_id, signature);
+}
+}
+
+// check: ABORTED
+// check: 9001
+
 // same as above, but with an invalid signature. should now abort
 
 //! new-transaction

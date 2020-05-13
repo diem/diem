@@ -20,6 +20,36 @@ use move_core_types::{
 };
 
 #[test]
+fn invalid_write_set_sender() {
+    // create a FakeExecutor with a genesis from file
+    let mut executor = FakeExecutor::from_genesis_file();
+    executor.new_block();
+
+    // (1) Create a WriteSet that adds an account on a new address
+    let sender_account = AccountData::new(1000, 10);
+    executor.add_account_data(&sender_account);
+
+    let new_account_data = AccountData::new(1000, 10);
+    let write_set = new_account_data.to_writeset();
+
+    let writeset_txn = sender_account.account().create_signed_txn_impl(
+        *sender_account.address(),
+        TransactionPayload::WriteSet(ChangeSet::new(write_set, vec![])),
+        0,
+        100_000,
+        1,
+        LBR_NAME.to_owned(),
+    );
+
+    let output = executor.execute_transaction(writeset_txn);
+    assert_eq!(
+        output.status().vm_status().major_status,
+        StatusCode::ABORTED
+    );
+    assert_eq!(output.status().vm_status().sub_status, Some(33));
+}
+
+#[test]
 fn verify_and_execute_writeset() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();

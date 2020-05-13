@@ -92,8 +92,40 @@ impl ModuleSummary {
         }
     }
 
-    /// Summarizes the modules coverage, and returns the total module coverage
-    pub fn summarize<W: Write>(&self, summary_writer: &mut W) -> io::Result<(u64, u64)> {
+    /// Summarizes the modules coverage in CSV format
+    pub fn summarize_csv<W: Write>(&self, summary_writer: &mut W) -> io::Result<()> {
+        let module = format!(
+            "{}::{}",
+            self.module_name.address(),
+            self.module_name.name()
+        );
+
+        let mut format_line = |fn_name, covered, uncovered| {
+            writeln!(
+                summary_writer,
+                "{},{},{},{}",
+                module, fn_name, covered, uncovered
+            )
+        };
+
+        for (fn_name, fn_summary) in self
+            .function_summaries
+            .iter()
+            .filter(|(_, summary)| !summary.fn_is_native)
+        {
+            format_line(
+                fn_name,
+                fn_summary.covered_instructions,
+                fn_summary.total_number_of_instructions,
+            )?;
+        }
+
+        Ok(())
+    }
+
+    /// Summarizes the modules coverage, and returns the total module coverage in a human-readable
+    /// format.
+    pub fn summarize_human<W: Write>(&self, summary_writer: &mut W) -> io::Result<(u64, u64)> {
         let mut total_covered = 0;
         let mut total_instructions = 0;
 

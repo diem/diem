@@ -1,7 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account, account::AccountData, executor::FakeExecutor};
+use crate::{
+    account::{self, Account, AccountData},
+    common_transactions::peer_to_peer_txn,
+    executor::FakeExecutor,
+};
 use libra_types::vm_error::{StatusCode, VMStatus};
 use libra_vm::LibraVM;
 use move_core_types::gas_schedule::{GasAlgebra, GasPrice, GasUnits};
@@ -55,5 +59,28 @@ fn failed_transaction_cleanup_test() {
     assert_eq!(
         out2.status().vm_status().major_status,
         StatusCode::OUT_OF_BOUNDS_INDEX
+    );
+}
+
+#[test]
+fn non_existent_sender() {
+    let mut executor = FakeExecutor::from_genesis_file();
+    let sequence_number = 0;
+    let sender = Account::new();
+    let receiver = AccountData::new(100_000, sequence_number);
+    executor.add_account_data(&receiver);
+
+    let transfer_amount = 10;
+    let txn = peer_to_peer_txn(
+        &sender,
+        receiver.account(),
+        sequence_number,
+        transfer_amount,
+    );
+
+    let output = &executor.execute_transaction(txn);
+    assert_eq!(
+        output.status().vm_status().major_status,
+        StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST,
     );
 }

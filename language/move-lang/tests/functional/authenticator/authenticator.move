@@ -72,6 +72,26 @@ fun main() {
 // check: ABORTED
 // check: 7002
 
+//! new-transaction
+script {
+use 0x0::Authenticator;
+use 0x0::Vector;
+fun main() {
+    let pubkey = x"";
+
+    let keys = Vector::empty<vector<u8>>();
+    let index = 0;
+    while (index < 34) {
+        Vector::push_back(&mut keys, copy pubkey);
+        index = index + 1;
+    };
+    let _auth_key =
+    Authenticator::create_multi_ed25519(keys, 3);
+}
+}
+// check: ABORTED
+// check: 7003
+
 // bad threshold should be rejected (threshold 2 for 1 key)
 //! new-transaction
 script {

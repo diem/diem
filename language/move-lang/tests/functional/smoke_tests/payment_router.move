@@ -180,6 +180,19 @@ fun main() {
 }
 
 //! new-transaction
+//! sender: bob
+//! gas-price: 0
+//! max-gas: 100000
+script {
+use {{default}}::PaymentRouter;
+use 0x0::Transaction;
+fun main() {
+    PaymentRouter::allow_account_address({{bob}});
+    Transaction::assert(PaymentRouter::exclusive_withdrawals_only({{bob}}), 0);
+}
+}
+
+//! new-transaction
 //! sender: alice
 //! gas-currency: Coin1
 script {
@@ -584,3 +597,14 @@ fun main() {
 }
 // check: ABORTED
 // check: 1
+
+//! new-transaction
+script {
+use {{default}}::PaymentRouter;
+use 0x0::Coin1;
+fun main() {
+    let _addr = PaymentRouter::router_address<Coin1::T>({{default}})
+}
+}
+// check: ABORTED
+// check: 3

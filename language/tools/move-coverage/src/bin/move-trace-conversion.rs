@@ -19,14 +19,23 @@ struct Args {
     /// The path to the output file location
     #[structopt(long = "output-file-path", short = "o")]
     pub output_file_path: String,
+    /// Add traces from `input_file_path` to an existing coverage map at `update_coverage_map`
+    #[structopt(long = "update-coverage-map", short = "u")]
+    pub update_coverage_map: Option<String>,
 }
 
 fn main() {
     let args = Args::from_args();
     let input_path = Path::new(&args.input_file_path);
     let output_path = Path::new(&args.output_file_path);
+    let coverage_map = if let Some(old_coverage_path) = &args.update_coverage_map {
+        let path = Path::new(&old_coverage_path);
+        let old_coverage_map = CoverageMap::from_binary_file(&path);
+        old_coverage_map.update_coverage_from_trace_file(&input_path)
+    } else {
+        CoverageMap::from_trace_file(&input_path)
+    };
 
-    let coverage_map = CoverageMap::from_trace_file(&input_path);
     output_map_to_file(&output_path, &coverage_map)
         .expect("Unable to serialize coverage map to output file")
 }

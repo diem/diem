@@ -95,7 +95,6 @@ module TransactionFee {
     fun per_validator_distribution_amount(amount_collected: u64, num_validators: u64): u64 {
         Transaction::assert(num_validators != 0, 0);
         let validator_payout = amount_collected / num_validators;
-        Transaction::assert(validator_payout * num_validators <= amount_collected, 1);
         validator_payout
     }
 }
