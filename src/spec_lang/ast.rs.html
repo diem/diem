@@ -482,12 +482,6 @@
 <span id="482">482</span>
 <span id="483">483</span>
 <span id="484">484</span>
-<span id="485">485</span>
-<span id="486">486</span>
-<span id="487">487</span>
-<span id="488">488</span>
-<span id="489">489</span>
-<span id="490">490</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -573,16 +567,13 @@
     <span class="doccomment">/// Returns true if this condition is allowed on a public function declaration.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">allowed_on_public_fun_decl</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="kw">use</span> <span class="ident">ConditionKind</span>::<span class="kw-2">*</span>;
-        <span class="macro">matches</span><span class="macro">!</span>(
-            <span class="self">self</span>,
-            <span class="ident">Requires</span> <span class="op">|</span> <span class="ident">RequiresModule</span> <span class="op">|</span> <span class="ident">AbortsIf</span> <span class="op">|</span> <span class="ident">Ensures</span> <span class="op">|</span> <span class="ident">VarUpdate</span>(..)
-        )
+        <span class="macro">matches</span><span class="macro">!</span>(<span class="self">self</span>, <span class="ident">Requires</span> <span class="op">|</span> <span class="ident">RequiresModule</span> <span class="op">|</span> <span class="ident">AbortsIf</span> <span class="op">|</span> <span class="ident">Ensures</span>)
     }
 
     <span class="doccomment">/// Returns true if this condition is allowed on a private function declaration.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">allowed_on_private_fun_decl</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="kw">use</span> <span class="ident">ConditionKind</span>::<span class="kw-2">*</span>;
-        <span class="macro">matches</span><span class="macro">!</span>(<span class="self">self</span>, <span class="ident">Requires</span> <span class="op">|</span> <span class="ident">AbortsIf</span> <span class="op">|</span> <span class="ident">Ensures</span> <span class="op">|</span> <span class="ident">VarUpdate</span>(..))
+        <span class="macro">matches</span><span class="macro">!</span>(<span class="self">self</span>, <span class="ident">Requires</span> <span class="op">|</span> <span class="ident">AbortsIf</span> <span class="op">|</span> <span class="ident">Ensures</span>)
     }
 
     <span class="doccomment">/// Returns true if this condition is allowed in a function body.</span>
@@ -594,10 +585,7 @@
     <span class="doccomment">/// Returns true if this condition is allowed on a struct.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">allowed_on_struct</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="kw">use</span> <span class="ident">ConditionKind</span>::<span class="kw-2">*</span>;
-        <span class="macro">matches</span><span class="macro">!</span>(
-            <span class="self">self</span>,
-            <span class="ident">Invariant</span> <span class="op">|</span> <span class="ident">InvariantUpdate</span> <span class="op">|</span> <span class="ident">VarUpdate</span>(..) <span class="op">|</span> <span class="ident">VarPack</span>(..) <span class="op">|</span> <span class="ident">VarUnpack</span>(..)
-        )
+        <span class="macro">matches</span><span class="macro">!</span>(<span class="self">self</span>, <span class="ident">Invariant</span> <span class="op">|</span> <span class="ident">VarPack</span>(..) <span class="op">|</span> <span class="ident">VarUnpack</span>(..))
     }
 
     <span class="doccomment">/// Returns true if this condition is allowed on a module.</span>
