@@ -1031,21 +1031,6 @@
 <span id="1031">1031</span>
 <span id="1032">1032</span>
 <span id="1033">1033</span>
-<span id="1034">1034</span>
-<span id="1035">1035</span>
-<span id="1036">1036</span>
-<span id="1037">1037</span>
-<span id="1038">1038</span>
-<span id="1039">1039</span>
-<span id="1040">1040</span>
-<span id="1041">1041</span>
-<span id="1042">1042</span>
-<span id="1043">1043</span>
-<span id="1044">1044</span>
-<span id="1045">1045</span>
-<span id="1046">1046</span>
-<span id="1047">1047</span>
-<span id="1048">1048</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1577,21 +1562,6 @@
         <span class="comment">// The vector sizes are picked out of thin air.</span>
         <span class="ident">vec</span>(<span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>(), <span class="number">0</span>..<span class="number">100</span>).<span class="ident">prop_map</span>(<span class="ident">Module</span>::<span class="ident">new</span>).<span class="ident">boxed</span>()
     }
-}
-
-<span class="kw">impl</span> <span class="ident">Arbitrary</span> <span class="kw">for</span> <span class="ident">TransactionArgument</span> {
-    <span class="kw">type</span> <span class="ident">Parameters</span> <span class="op">=</span> ();
-    <span class="kw">fn</span> <span class="ident">arbitrary_with</span>(<span class="ident">_args</span>: ()) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Strategy</span> {
-        <span class="macro">prop_oneof</span><span class="macro">!</span>[
-            <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">TransactionArgument</span>::<span class="ident">Bool</span>),
-            <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">TransactionArgument</span>::<span class="ident">U64</span>),
-            <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">TransactionArgument</span>::<span class="ident">Address</span>),
-            <span class="ident">vec</span>(<span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>(), <span class="number">0</span>..<span class="number">10</span>).<span class="ident">prop_map</span>(<span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>),
-        ]
-        .<span class="ident">boxed</span>()
-    }
-
-    <span class="kw">type</span> <span class="ident">Strategy</span> <span class="op">=</span> <span class="ident">BoxedStrategy</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>;
 }
 
 <span class="macro">prop_compose</span><span class="macro">!</span> {

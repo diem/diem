@@ -45,6 +45,22 @@
 <span id="45">45</span>
 <span id="46">46</span>
 <span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -53,6 +69,7 @@
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">identifier</span>::<span class="ident">Identifier</span>,
     <span class="ident">language_storage</span>::{<span class="ident">StructTag</span>, <span class="ident">TypeTag</span>},
+    <span class="ident">transaction_argument</span>::<span class="ident">TransactionArgument</span>,
 };
 <span class="kw">use</span> <span class="ident">proptest</span>::{<span class="ident">collection</span>::<span class="ident">vec</span>, <span class="ident">prelude</span>::<span class="kw-2">*</span>};
 <span class="kw">impl</span> <span class="ident">Arbitrary</span> <span class="kw">for</span> <span class="ident">TypeTag</span> {
@@ -92,6 +109,21 @@
         )
         .<span class="ident">boxed</span>()
     }
+}
+
+<span class="kw">impl</span> <span class="ident">Arbitrary</span> <span class="kw">for</span> <span class="ident">TransactionArgument</span> {
+    <span class="kw">type</span> <span class="ident">Parameters</span> <span class="op">=</span> ();
+    <span class="kw">fn</span> <span class="ident">arbitrary_with</span>(<span class="ident">_args</span>: ()) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Strategy</span> {
+        <span class="macro">prop_oneof</span><span class="macro">!</span>[
+            <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">TransactionArgument</span>::<span class="ident">Bool</span>),
+            <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">TransactionArgument</span>::<span class="ident">U64</span>),
+            <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">TransactionArgument</span>::<span class="ident">Address</span>),
+            <span class="ident">vec</span>(<span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>(), <span class="number">0</span>..<span class="number">10</span>).<span class="ident">prop_map</span>(<span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>),
+        ]
+        .<span class="ident">boxed</span>()
+    }
+
+    <span class="kw">type</span> <span class="ident">Strategy</span> <span class="op">=</span> <span class="ident">BoxedStrategy</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>;
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "move_core_types";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
