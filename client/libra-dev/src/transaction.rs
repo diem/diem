@@ -699,7 +699,7 @@ mod test {
             public_key.clone(),
             signature.clone(),
         );
-        let proto_txn: libra_types::proto::types::SignedTransaction = signed_txn.clone().into();
+        let proto_txn: grpc_types::proto::types::SignedTransaction = signed_txn.clone().into();
 
         let mut libra_signed_txn = LibraSignedTransaction::default();
         let result = unsafe {

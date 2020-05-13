@@ -10,7 +10,7 @@ use crate::{
     proof::AccountStateProof,
     transaction::Version,
 };
-use anyhow::{anyhow, ensure, format_err, Error, Result};
+use anyhow::{anyhow, ensure, Error, Result};
 use libra_crypto::{
     hash::{CryptoHash, CryptoHasher},
     HashValue,
@@ -21,14 +21,17 @@ use proptest::{arbitrary::Arbitrary, prelude::*};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::{
-    convert::{TryFrom, TryInto},
-    fmt,
-};
+use std::{convert::TryFrom, fmt};
 
 #[derive(Clone, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
 pub struct AccountStateBlob {
     blob: Vec<u8>,
+}
+
+impl AccountStateBlob {
+    pub fn blob(&self) -> &Vec<u8> {
+        &self.blob
+    }
 }
 
 impl fmt::Debug for AccountStateBlob {
@@ -55,29 +58,21 @@ impl AsRef<[u8]> for AccountStateBlob {
     }
 }
 
+impl From<&AccountStateBlob> for Vec<u8> {
+    fn from(account_state_blob: &AccountStateBlob) -> Vec<u8> {
+        account_state_blob.blob.clone()
+    }
+}
+
 impl From<AccountStateBlob> for Vec<u8> {
     fn from(account_state_blob: AccountStateBlob) -> Vec<u8> {
-        account_state_blob.blob
+        Self::from(&account_state_blob)
     }
 }
 
 impl From<Vec<u8>> for AccountStateBlob {
     fn from(blob: Vec<u8>) -> AccountStateBlob {
         AccountStateBlob { blob }
-    }
-}
-
-impl TryFrom<crate::proto::types::AccountStateBlob> for AccountStateBlob {
-    type Error = Error;
-
-    fn try_from(proto: crate::proto::types::AccountStateBlob) -> Result<Self> {
-        Ok(proto.blob.into())
-    }
-}
-
-impl From<AccountStateBlob> for crate::proto::types::AccountStateBlob {
-    fn from(blob: AccountStateBlob) -> Self {
-        Self { blob: blob.blob }
     }
 }
 
@@ -223,40 +218,10 @@ impl AccountStateWithProof {
     }
 }
 
-impl TryFrom<crate::proto::types::AccountStateWithProof> for AccountStateWithProof {
-    type Error = Error;
-
-    fn try_from(mut proto: crate::proto::types::AccountStateWithProof) -> Result<Self> {
-        Ok(Self::new(
-            proto.version,
-            proto
-                .blob
-                .take()
-                .map(AccountStateBlob::try_from)
-                .transpose()?,
-            proto
-                .proof
-                .ok_or_else(|| format_err!("Missing proof"))?
-                .try_into()?,
-        ))
-    }
-}
-
-impl From<AccountStateWithProof> for crate::proto::types::AccountStateWithProof {
-    fn from(account: AccountStateWithProof) -> Self {
-        Self {
-            version: account.version,
-            blob: account.blob.map(Into::into),
-            proof: Some(account.proof.into()),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use lcs::test_helpers::assert_canonical_encode_decode;
-    use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
     use proptest::collection::vec;
 
     fn hash_blob(blob: &[u8]) -> HashValue {
@@ -267,18 +232,8 @@ mod tests {
 
     proptest! {
         #[test]
-        fn account_state_blob_proto_roundtrip(account_state_blob in any::<AccountStateBlob>()) {
-            assert_protobuf_encode_decode::<crate::proto::types::AccountStateBlob, AccountStateBlob>(&account_state_blob);
-        }
-
-        #[test]
         fn account_state_blob_hash(blob in vec(any::<u8>(), 1..100)) {
             prop_assert_eq!(hash_blob(&blob), AccountStateBlob::from(blob).hash());
-        }
-
-        #[test]
-        fn account_state_with_proof_proto_roundtrip(account_state_with_proof in any::<AccountStateWithProof>()) {
-            assert_protobuf_encode_decode::<crate::proto::types::AccountStateWithProof, AccountStateWithProof>(&account_state_with_proof);
         }
 
         #[test]

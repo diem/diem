@@ -10,7 +10,7 @@ use crate::{
     proof::EventProof,
     transaction::Version,
 };
-use anyhow::{ensure, format_err, Error, Result};
+use anyhow::{ensure, Error, Result};
 use libra_crypto::{
     hash::{CryptoHash, CryptoHasher},
     HashValue,
@@ -20,10 +20,7 @@ use move_core_types::{language_storage::TypeTag, move_resource::MoveResource};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::{
-    convert::{TryFrom, TryInto},
-    ops::Deref,
-};
+use std::{convert::TryFrom, ops::Deref};
 
 /// Support versioning of the data structure.
 #[derive(Hash, Clone, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
@@ -213,29 +210,6 @@ impl CryptoHash for ContractEvent {
     }
 }
 
-impl TryFrom<crate::proto::types::Event> for ContractEvent {
-    type Error = Error;
-
-    fn try_from(event: crate::proto::types::Event) -> Result<Self> {
-        let key = EventKey::try_from(event.key.as_ref())?;
-        let sequence_number = event.sequence_number;
-        let type_tag = lcs::from_bytes(&event.type_tag)?;
-        let event_data = event.event_data;
-        Ok(Self::new(key, sequence_number, type_tag, event_data))
-    }
-}
-
-impl From<ContractEvent> for crate::proto::types::Event {
-    fn from(event: ContractEvent) -> Self {
-        Self {
-            key: event.key.to_vec(),
-            sequence_number: event.sequence_number,
-            type_tag: lcs::to_bytes(&event.type_tag).expect("Failed to serialize."),
-            event_data: event.event_data.clone(),
-        }
-    }
-}
-
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct EventWithProof {
@@ -322,35 +296,5 @@ impl EventWithProof {
         )?;
 
         Ok(())
-    }
-}
-
-impl TryFrom<crate::proto::types::EventWithProof> for EventWithProof {
-    type Error = Error;
-
-    fn try_from(event: crate::proto::types::EventWithProof) -> Result<Self> {
-        Ok(Self::new(
-            event.transaction_version,
-            event.event_index,
-            event
-                .event
-                .ok_or_else(|| format_err!("Missing event"))?
-                .try_into()?,
-            event
-                .proof
-                .ok_or_else(|| format_err!("Missing proof"))?
-                .try_into()?,
-        ))
-    }
-}
-
-impl From<EventWithProof> for crate::proto::types::EventWithProof {
-    fn from(event: EventWithProof) -> Self {
-        Self {
-            transaction_version: event.transaction_version,
-            event_index: event.event_index,
-            event: Some(event.event.into()),
-            proof: Some(event.proof.into()),
-        }
     }
 }

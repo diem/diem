@@ -93,7 +93,7 @@ impl StorageRead for StorageReadServiceClient {
         EpochChangeProof,
         AccumulatorConsistencyProof,
     )> {
-        let req: libra_types::proto::types::UpdateToLatestLedgerRequest =
+        let req: grpc_types::proto::types::UpdateToLatestLedgerRequest =
             UpdateToLatestLedgerRequest {
                 client_known_version,
                 requested_items,

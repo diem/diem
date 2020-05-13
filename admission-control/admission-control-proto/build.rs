@@ -3,7 +3,7 @@
 
 fn main() {
     let protos = ["src/proto/admission_control.proto"];
-    let includes = ["../../types/src/proto", "src/proto"];
+    let includes = ["../../grpc/types/src/proto", "src/proto"];
 
     tonic_build::configure()
         .compile(&protos, &includes)

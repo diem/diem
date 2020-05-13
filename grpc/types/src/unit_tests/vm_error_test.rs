@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::vm_error::{StatusCode, VMStatus};
 use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
+use libra_types::vm_error::{StatusCode, VMStatus};
 use std::convert::TryFrom;
 
 #[test]

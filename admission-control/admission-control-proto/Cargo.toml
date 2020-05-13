@@ -15,6 +15,7 @@ tonic = "0.2"
 tokio = { version = "0.2.13", features = ["full"] }
 prost = "0.6"
 
+grpc-types = { path = "../../grpc/types", version = "0.1.0"}
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

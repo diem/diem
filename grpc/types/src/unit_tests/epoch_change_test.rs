@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::epoch_change::EpochChangeProof;
 use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
+use libra_types::epoch_change::EpochChangeProof;
 use proptest::prelude::*;
 
 proptest! {

@@ -10,14 +10,14 @@ use admission_control_proto::{
 };
 use anyhow::Result;
 use futures::executor::block_on;
+use grpc_types::proto::types::{
+    MempoolStatus, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
+    VmStatus as VmStatusProto,
+};
 use libra_crypto::{ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, PrivateKey, Uniform};
 use libra_types::{
     account_address::AccountAddress,
     mempool_status::MempoolStatusCode,
-    proto::types::{
-        MempoolStatus, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
-        VmStatus as VmStatusProto,
-    },
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::SignedTransaction,
     vm_error::{StatusCode, VMStatus},

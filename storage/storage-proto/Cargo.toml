@@ -17,6 +17,7 @@ proptest-derive = { version = "0.1.2", optional = true }
 prost = "0.6"
 serde = { version = "1.0.110", default-features = false }
 
+grpc-types = { path = "../../grpc/types", version = "0.1.0"}
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }

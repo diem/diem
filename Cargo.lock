@@ -40,6 +40,7 @@ name = "admission-control-proto"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.29 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpc-types 0.1.0",
  "libra-logger 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
@@ -58,6 +59,7 @@ dependencies = [
  "assert_matches 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "debug-interface 0.1.0",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpc-types 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-logger 0.1.0",
@@ -1688,6 +1690,23 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "grpc-types"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.29 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-canonical-serialization 0.1.0",
+ "libra-crypto 0.1.0",
+ "libra-network-address 0.1.0",
+ "libra-proptest-helpers 0.1.0",
+ "libra-prost-ext 0.1.0",
+ "libra-types 0.1.0",
+ "libra-workspace-hack 0.1.0",
+ "proptest 0.9.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "guppy"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2313,6 +2332,7 @@ name = "libra-dev"
 version = "0.1.0"
 dependencies = [
  "bindgen 0.53.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpc-types 0.1.0",
  "libc 0.2.70 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",
@@ -2343,6 +2363,7 @@ dependencies = [
  "consensus 0.1.0",
  "consensus-types 0.1.0",
  "datatest-stable 0.1.0",
+ "grpc-types 0.1.0",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-json-rpc 0.1.0",
@@ -2802,8 +2823,6 @@ dependencies = [
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "prost 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "prost-build 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "radix_trie 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5141,6 +5160,7 @@ dependencies = [
  "anyhow 1.0.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpc-types 0.1.0",
  "libra-crypto 0.1.0",
  "libra-secure-net 0.1.0",
  "libra-state-view 0.1.0",
@@ -5175,6 +5195,7 @@ name = "storage-proto"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.29 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpc-types 0.1.0",
  "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",
  "libra-prost-ext 0.1.0",
@@ -5196,6 +5217,7 @@ dependencies = [
  "anyhow 1.0.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpc-types 0.1.0",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
