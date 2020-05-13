@@ -191,6 +191,9 @@
 <span id="191">191</span>
 <span id="192">192</span>
 <span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -210,6 +213,7 @@
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">errors</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">runner</span>::<span class="kw-2">*</span>;
 
+<span class="kw">use</span> <span class="ident">guppy</span>::<span class="ident">PackageId</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">borrow</span>::<span class="ident">Cow</span>, <span class="ident">fmt</span>, <span class="ident">path</span>::<span class="ident">Path</span>};
 
 <span class="doccomment">/// Represents a linter.</span>
@@ -284,6 +288,8 @@
     <span class="ident">UnsupportedExtension</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="ident">str</span><span class="op">&gt;</span>),
     <span class="doccomment">/// The given file was unsupported by this linter.</span>
     <span class="ident">UnsupportedFile</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="ident">Path</span>),
+    <span class="doccomment">/// The given package was unsupported by this linter.</span>
+    <span class="ident">UnsupportedPackage</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="ident">PackageId</span>),
     <span class="comment">// TODO: Add more reasons.</span>
 }
 

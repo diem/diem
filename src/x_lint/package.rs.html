@@ -59,12 +59,30 @@
 <span id="59">59</span>
 <span id="60">60</span>
 <span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">LintContext</span>};
-<span class="kw">use</span> <span class="ident">guppy</span>::<span class="ident">graph</span>::<span class="ident">PackageMetadata</span>;
+<span class="kw">use</span> <span class="ident">guppy</span>::<span class="ident">graph</span>::{<span class="ident">PackageGraph</span>, <span class="ident">PackageMetadata</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">Path</span>;
 
 <span class="doccomment">/// Represents a linter that runs once per package.</span>
@@ -79,27 +97,40 @@
 <span class="doccomment">/// Lint context for an individual package.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PackageContext</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span> {
-    <span class="ident">project_ctx</span>: <span class="ident">ProjectContext</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span>,
+    <span class="ident">project_ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="ident">ProjectContext</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span>,
+    <span class="comment">// PackageContext requires the package graph to be computed and available, though ProjectContext</span>
+    <span class="comment">// does not.</span>
+    <span class="ident">package_graph</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="ident">PackageGraph</span>,
     <span class="ident">workspace_path</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="ident">Path</span>,
     <span class="ident">metadata</span>: <span class="ident">PackageMetadata</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span>,
+    <span class="ident">is_default_member</span>: <span class="ident">bool</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span> <span class="ident">PackageContext</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">project_ctx</span>: <span class="ident">ProjectContext</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span>,
+        <span class="ident">project_ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="ident">ProjectContext</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span>,
+        <span class="ident">package_graph</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="ident">PackageGraph</span>,
         <span class="ident">workspace_path</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="ident">Path</span>,
         <span class="ident">metadata</span>: <span class="ident">PackageMetadata</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">default_members</span> <span class="op">=</span> <span class="ident">project_ctx</span>.<span class="ident">default_workspace_members</span>()<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">project_ctx</span>,
+            <span class="ident">package_graph</span>,
             <span class="ident">workspace_path</span>,
             <span class="ident">metadata</span>,
-        }
+            <span class="ident">is_default_member</span>: <span class="ident">default_members</span>.<span class="ident">contains</span>(<span class="ident">metadata</span>.<span class="ident">id</span>()),
+        })
     }
 
-    <span class="doccomment">/// Returns the project context</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">project_ctx</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">ProjectContext</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">project_ctx</span>
+    <span class="doccomment">/// Returns the project context.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">project_ctx</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="ident">ProjectContext</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">project_ctx</span>
+    }
+
+    <span class="doccomment">/// Returns the package graph.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">package_graph</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="ident">PackageGraph</span> {
+        <span class="self">self</span>.<span class="ident">package_graph</span>
     }
 
     <span class="doccomment">/// Returns the relative path for this package in the workspace.</span>
@@ -110,6 +141,11 @@
     <span class="doccomment">/// Returns the metadata for this package.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">metadata</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">PackageMetadata</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">metadata</span>
+    }
+
+    <span class="doccomment">/// Returns true if this is a default member of this workspace.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_default_member</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+        <span class="self">self</span>.<span class="ident">is_default_member</span>
     }
 }
 

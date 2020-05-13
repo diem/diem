@@ -270,6 +270,11 @@
 <span id="270">270</span>
 <span id="271">271</span>
 <span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -342,33 +347,33 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LintEngine</span><span class="op">&lt;</span><span class="lifetime">&#39;cfg</span><span class="op">&gt;</span> {
     <span class="ident">config</span>: <span class="ident">LintEngineConfig</span><span class="op">&lt;</span><span class="lifetime">&#39;cfg</span><span class="op">&gt;</span>,
-
+    <span class="ident">project_ctx</span>: <span class="ident">ProjectContext</span><span class="op">&lt;</span><span class="lifetime">&#39;cfg</span><span class="op">&gt;</span>,
     <span class="comment">// Caches to allow results to live as long as the engine itself.</span>
     <span class="ident">files_stdout</span>: <span class="ident">OnceCell</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;cfg</span><span class="op">&gt;</span> <span class="ident">LintEngine</span><span class="op">&lt;</span><span class="lifetime">&#39;cfg</span><span class="op">&gt;</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="ident">LintEngineConfig</span><span class="op">&lt;</span><span class="lifetime">&#39;cfg</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">project_ctx</span> <span class="op">=</span> <span class="ident">ProjectContext</span>::<span class="ident">new</span>(<span class="ident">config</span>.<span class="ident">core</span>);
         <span class="self">Self</span> {
             <span class="ident">config</span>,
+            <span class="ident">project_ctx</span>,
             <span class="ident">files_stdout</span>: <span class="ident">OnceCell</span>::<span class="ident">new</span>(),
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LintResults</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;l</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LintResults</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">skipped</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">messages</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
 
         <span class="comment">// TODO: add support for file linters.</span>
 
-        <span class="kw">let</span> <span class="ident">project_ctx</span> <span class="op">=</span> <span class="ident">ProjectContext</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">config</span>.<span class="ident">core</span>);
-
         <span class="comment">// Run project linters.</span>
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">config</span>.<span class="ident">project_linters</span>.<span class="ident">is_empty</span>() {
             <span class="kw">for</span> <span class="ident">linter</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">project_linters</span> {
-                <span class="kw">let</span> <span class="ident">source</span> <span class="op">=</span> <span class="ident">project_ctx</span>.<span class="ident">source</span>(<span class="ident">linter</span>.<span class="ident">name</span>());
+                <span class="kw">let</span> <span class="ident">source</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">project_ctx</span>.<span class="ident">source</span>(<span class="ident">linter</span>.<span class="ident">name</span>());
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">formatter</span> <span class="op">=</span> <span class="ident">LintFormatter</span>::<span class="ident">new</span>(<span class="ident">source</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">messages</span>);
-                <span class="kw">match</span> <span class="ident">linter</span>.<span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="ident">project_ctx</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">formatter</span>)<span class="question-mark">?</span> {
+                <span class="kw">match</span> <span class="ident">linter</span>.<span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">project_ctx</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">formatter</span>)<span class="question-mark">?</span> {
                     <span class="ident">RunStatus</span>::<span class="ident">Executed</span> <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="comment">// Lint ran successfully.</span>
                     }
@@ -386,10 +391,15 @@
 
         <span class="comment">// Run package linters.</span>
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">config</span>.<span class="ident">package_linters</span>.<span class="ident">is_empty</span>() {
-            <span class="kw">let</span> <span class="ident">package_graph</span> <span class="op">=</span> <span class="ident">project_ctx</span>.<span class="ident">package_graph</span>()<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">package_graph</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">project_ctx</span>.<span class="ident">package_graph</span>()<span class="question-mark">?</span>;
 
             <span class="kw">for</span> (<span class="ident">workspace_path</span>, <span class="ident">metadata</span>) <span class="kw">in</span> <span class="ident">package_graph</span>.<span class="ident">workspace</span>().<span class="ident">members</span>() {
-                <span class="kw">let</span> <span class="ident">package_ctx</span> <span class="op">=</span> <span class="ident">PackageContext</span>::<span class="ident">new</span>(<span class="ident">project_ctx</span>, <span class="ident">workspace_path</span>, <span class="ident">metadata</span>);
+                <span class="kw">let</span> <span class="ident">package_ctx</span> <span class="op">=</span> <span class="ident">PackageContext</span>::<span class="ident">new</span>(
+                    <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">project_ctx</span>,
+                    <span class="ident">package_graph</span>,
+                    <span class="ident">workspace_path</span>,
+                    <span class="ident">metadata</span>,
+                )<span class="question-mark">?</span>;
                 <span class="kw">for</span> <span class="ident">linter</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">package_linters</span> {
                     <span class="kw">let</span> <span class="ident">source</span> <span class="op">=</span> <span class="ident">package_ctx</span>.<span class="ident">source</span>(<span class="ident">linter</span>.<span class="ident">name</span>());
                     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">formatter</span> <span class="op">=</span> <span class="ident">LintFormatter</span>::<span class="ident">new</span>(<span class="ident">source</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">messages</span>);
@@ -418,7 +428,7 @@
 
             <span class="kw">let</span> <span class="ident">file_ctxs</span> <span class="op">=</span> <span class="ident">file_list</span>
                 .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> <span class="ident">FileContext</span>::<span class="ident">new</span>(<span class="ident">project_ctx</span>, <span class="ident">path</span>));
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> <span class="ident">FileContext</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">project_ctx</span>, <span class="ident">path</span>));
 
             <span class="kw">for</span> <span class="ident">file_ctx</span> <span class="kw">in</span> <span class="ident">file_ctxs</span> {
                 <span class="kw">let</span> <span class="ident">linters_to_run</span> <span class="op">=</span> <span class="self">self</span>
