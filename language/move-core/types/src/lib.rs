@@ -10,5 +10,6 @@ pub mod language_storage;
 pub mod move_resource;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod proptest_types;
+pub mod transaction_argument;
 #[cfg(test)]
 mod unit_tests;

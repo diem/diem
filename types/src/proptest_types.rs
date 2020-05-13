@@ -530,21 +530,6 @@ impl Arbitrary for Module {
     }
 }
 
-impl Arbitrary for TransactionArgument {
-    type Parameters = ();
-    fn arbitrary_with(_args: ()) -> Self::Strategy {
-        prop_oneof![
-            any::<bool>().prop_map(TransactionArgument::Bool),
-            any::<u64>().prop_map(TransactionArgument::U64),
-            any::<AccountAddress>().prop_map(TransactionArgument::Address),
-            vec(any::<u8>(), 0..10).prop_map(TransactionArgument::U8Vector),
-        ]
-        .boxed()
-    }
-
-    type Strategy = BoxedStrategy<Self>;
-}
-
 prop_compose! {
     fn arb_validator_signature_for_hash(hash: HashValue)(
         hash in Just(hash),
