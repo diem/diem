@@ -472,6 +472,7 @@
 <span id="472">472</span>
 <span id="473">473</span>
 <span id="474">474</span>
+<span id="475">475</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -631,6 +632,7 @@
         <span class="self">self</span>.<span class="ident">base</span>.<span class="ident">data_dir</span> <span class="op">=</span> <span class="ident">data_dir</span>.<span class="ident">clone</span>();
         <span class="self">self</span>.<span class="ident">consensus</span>.<span class="ident">set_data_dir</span>(<span class="ident">data_dir</span>.<span class="ident">clone</span>());
         <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">set_data_dir</span>(<span class="ident">data_dir</span>.<span class="ident">clone</span>());
+        <span class="self">self</span>.<span class="ident">secure</span>.<span class="ident">set_data_dir</span>(<span class="ident">data_dir</span>.<span class="ident">clone</span>());
         <span class="self">self</span>.<span class="ident">storage</span>.<span class="ident">set_data_dir</span>(<span class="ident">data_dir</span>);
     }
 

@@ -112,6 +112,20 @@
 <span id="112">112</span>
 <span id="113">113</span>
 <span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -133,6 +147,12 @@
     <span class="kw">pub</span> <span class="ident">key_manager</span>: <span class="ident">KeyManagerConfig</span>,
 }
 
+<span class="kw">impl</span> <span class="ident">SecureConfig</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_data_dir</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">data_dir</span>: <span class="ident">PathBuf</span>) {
+        <span class="self">self</span>.<span class="ident">key_manager</span>.<span class="ident">set_data_dir</span>(<span class="ident">data_dir</span>);
+    }
+}
+
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">KeyManagerConfig</span> {
@@ -152,6 +172,14 @@
             <span class="ident">txn_expiration_secs</span>: <span class="ident">DEFAULT_TXN_EXPIRATION_SECS</span>,
             <span class="ident">json_rpc_endpoint</span>: <span class="ident">DEFAULT_JSON_RPC_ENDPOINT</span>.<span class="ident">into</span>(),
             <span class="ident">secure_backend</span>: <span class="ident">SecureBackend</span>::<span class="ident">InMemoryStorage</span>,
+        }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">KeyManagerConfig</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_data_dir</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">data_dir</span>: <span class="ident">PathBuf</span>) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">SecureBackend</span>::<span class="ident">OnDiskStorage</span>(<span class="ident">backend</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">secure_backend</span> {
+            <span class="ident">backend</span>.<span class="ident">set_data_dir</span>(<span class="ident">data_dir</span>);
         }
     }
 }
@@ -208,7 +236,7 @@
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">namespace</span>: <span class="prelude-val">None</span>,
-            <span class="ident">path</span>: <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="string">&quot;safety_rules.toml&quot;</span>),
+            <span class="ident">path</span>: <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="string">&quot;secure_storage.toml&quot;</span>),
             <span class="ident">data_dir</span>: <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="string">&quot;/opt/libra/data/common&quot;</span>),
         }
     }

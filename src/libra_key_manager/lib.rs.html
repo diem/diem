@@ -301,6 +301,17 @@
 <span id="301">301</span>
 <span id="302">302</span>
 <span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -329,7 +340,7 @@
     <span class="ident">PrivateKey</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_global_constants</span>::{<span class="ident">CONSENSUS_KEY</span>, <span class="ident">OPERATOR_KEY</span>};
-<span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">info</span>;
+<span class="kw">use</span> <span class="ident">libra_logger</span>::{<span class="ident">error</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">libra_secure_storage</span>::<span class="ident">Storage</span>;
 <span class="kw">use</span> <span class="ident">libra_secure_time</span>::<span class="ident">TimeService</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
@@ -369,7 +380,7 @@
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Data does not exist: {0}&quot;</span>)]</span>
     <span class="ident">DataDoesNotExist</span>(<span class="ident">String</span>),
     <span class="attribute">#[<span class="ident">error</span>(
-        <span class="string">&quot;The libra_timestamp value on-chain isn&#39;t increasing. Last value: {0}, Current value: {0}:&quot;</span>
+        <span class="string">&quot;The libra_timestamp value on-chain isn&#39;t increasing. Last value: {0}, Current value: {0}&quot;</span>
     )]</span>
     <span class="ident">LivenessError</span>(<span class="ident">u64</span>, <span class="ident">u64</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Internal storage error: {0}&quot;</span>)]</span>
@@ -427,13 +438,24 @@
 
     <span class="doccomment">/// Begins execution of the key manager by running an infinite loop where the key manager will</span>
     <span class="doccomment">/// periodically wake up, verify the state of the validator keys (e.g., the consensus key), and</span>
-    <span class="doccomment">/// initiate a key rotation when required. If something goes wrong, an error will be returned</span>
-    <span class="doccomment">/// by this method, upon which the key manager will flag the error and stop execution.</span>
+    <span class="doccomment">/// initiate a key rotation when required. If something goes wrong that we can&#39;t handle, an</span>
+    <span class="doccomment">/// error will be returned by this method, upon which the key manager will flag the error and</span>
+    <span class="doccomment">/// stop execution.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;The key manager has been created and is starting execution.&quot;</span>);
         <span class="kw">loop</span> {
             <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Checking the status of the keys.&quot;</span>);
-            <span class="self">self</span>.<span class="ident">execute_once</span>()<span class="question-mark">?</span>;
+            <span class="kw">match</span> <span class="self">self</span>.<span class="ident">execute_once</span>() {
+                <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {} <span class="comment">// Expected case</span>
+                <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">LivenessError</span>(<span class="ident">last_value</span>, <span class="ident">current_value</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="comment">// Log the liveness error, but don&#39;t throw the error up the call stack.</span>
+                    <span class="macro">error</span><span class="macro">!</span>(
+                        <span class="string">&quot;Encountered error, but still continuing to execute: {}&quot;</span>,
+                        <span class="ident">Error</span>::<span class="ident">LivenessError</span>(<span class="ident">last_value</span>, <span class="ident">current_value</span>).<span class="ident">to_string</span>()
+                    );
+                }
+                <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>), <span class="comment">// Unexpected error that we can&#39;t handle -- throw!</span>
+            };
 
             <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Going to sleep for {} seconds.&quot;</span>, <span class="self">self</span>.<span class="ident">sleep_period_secs</span>);
             <span class="ident">COUNTERS</span>.<span class="ident">sleeps</span>.<span class="ident">inc</span>();
