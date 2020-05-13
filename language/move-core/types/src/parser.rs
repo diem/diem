@@ -1,12 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::errors::*;
-use libra_types::account_address::AccountAddress;
-use move_core_types::{
+use crate::{
+    account_address::AccountAddress,
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
 };
+use anyhow::{bail, Result};
 use std::iter::Peekable;
 
 #[derive(Eq, PartialEq, Debug)]

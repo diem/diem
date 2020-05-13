@@ -1,15 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    common::strip,
-    config::{global::Config as GlobalConfig, type_tag_parser::parse_type_tags},
-    errors::*,
-    evaluator::Stage,
-};
+use crate::{common::strip, config::global::Config as GlobalConfig, errors::*, evaluator::Stage};
 use language_e2e_tests::account::Account;
-use libra_types::transaction::{parse_as_transaction_argument, TransactionArgument};
-use move_core_types::language_storage::TypeTag;
+use move_core_types::{
+    language_storage::TypeTag,
+    parser::parse_type_tags,
+    transaction_argument::{parse_as_transaction_argument, TransactionArgument},
+};
 use std::{collections::BTreeSet, str::FromStr, time::Duration};
 
 /// A partially parsed transaction argument.
