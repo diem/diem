@@ -339,7 +339,6 @@
 <span id="339">339</span>
 <span id="340">340</span>
 <span id="341">341</span>
-<span id="342">342</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -517,11 +516,10 @@
 
         <span class="comment">// Don&#39;t randomize ports. Until we better separate genesis generation,</span>
         <span class="comment">// we don&#39;t want to accidentally randomize initial discovery set addresses.</span>
-        <span class="kw">let</span> <span class="ident">randomize_service_ports</span> <span class="op">=</span> <span class="bool-val">false</span>;
-        <span class="kw">let</span> <span class="ident">randomize_libranet_ports</span> <span class="op">=</span> <span class="bool-val">false</span>;
+        <span class="kw">let</span> <span class="ident">randomize_validator_ports</span> <span class="op">=</span> <span class="bool-val">false</span>;
         <span class="kw">let</span> (<span class="ident">validator_configs</span>, <span class="ident">faucet_key</span>) <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">validator_config</span>
-            .<span class="ident">build_common</span>(<span class="ident">randomize_service_ports</span>, <span class="ident">randomize_libranet_ports</span>)<span class="question-mark">?</span>;
+            .<span class="ident">build_common</span>(<span class="ident">randomize_validator_ports</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">validator_config</span> <span class="op">=</span> <span class="ident">validator_configs</span>.<span class="ident">first</span>().<span class="ident">ok_or</span>(<span class="ident">Error</span>::<span class="ident">NoConfigs</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">StdRng</span>::<span class="ident">from_seed</span>(<span class="self">self</span>.<span class="ident">full_node_seed</span>);

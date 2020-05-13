@@ -339,12 +339,6 @@
 <span id="339">339</span>
 <span id="340">340</span>
 <span id="341">341</span>
-<span id="342">342</span>
-<span id="343">343</span>
-<span id="344">344</span>
-<span id="345">345</span>
-<span id="346">346</span>
-<span id="347">347</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -513,12 +507,12 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_set</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NodeConfig</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> (<span class="ident">configs</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">build_common</span>(<span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> (<span class="ident">configs</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">build_common</span>(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">configs</span>)
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_faucet_client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Ed25519PrivateKey</span>, <span class="ident">Waypoint</span>)<span class="op">&gt;</span> {
-        <span class="kw">let</span> (<span class="ident">configs</span>, <span class="ident">faucet_key</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">build_common</span>(<span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> (<span class="ident">configs</span>, <span class="ident">faucet_key</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">build_common</span>(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>((
             <span class="ident">faucet_key</span>,
             <span class="ident">configs</span>[<span class="number">0</span>]
@@ -530,8 +524,7 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_common</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">randomize_service_ports</span>: <span class="ident">bool</span>,
-        <span class="ident">randomize_libranet_ports</span>: <span class="ident">bool</span>,
+        <span class="ident">randomize_ports</span>: <span class="ident">bool</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NodeConfig</span><span class="op">&gt;</span>, <span class="ident">Ed25519PrivateKey</span>)<span class="op">&gt;</span> {
         <span class="macro">ensure</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">nodes</span> <span class="op">&gt;</span> <span class="number">0</span>, <span class="ident">Error</span>::<span class="ident">NonZeroNetwork</span>);
         <span class="macro">ensure</span><span class="macro">!</span>(
@@ -543,13 +536,8 @@
         );
 
         <span class="kw">let</span> (<span class="ident">faucet_key</span>, <span class="ident">config_seed</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">build_faucet_key</span>();
-        <span class="kw">let</span> <span class="ident">generator</span>::<span class="ident">ValidatorSwarm</span> { <span class="kw-2">mut</span> <span class="ident">nodes</span>, .. } <span class="op">=</span> <span class="ident">generator</span>::<span class="ident">validator_swarm</span>(
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">template</span>,
-            <span class="self">self</span>.<span class="ident">nodes</span>,
-            <span class="ident">config_seed</span>,
-            <span class="ident">randomize_service_ports</span>,
-            <span class="ident">randomize_libranet_ports</span>,
-        );
+        <span class="kw">let</span> <span class="ident">generator</span>::<span class="ident">ValidatorSwarm</span> { <span class="kw-2">mut</span> <span class="ident">nodes</span>, .. } <span class="op">=</span>
+            <span class="ident">generator</span>::<span class="ident">validator_swarm</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">template</span>, <span class="self">self</span>.<span class="ident">nodes</span>, <span class="ident">config_seed</span>, <span class="ident">randomize_ports</span>);
 
         <span class="macro">ensure</span><span class="macro">!</span>(
             <span class="ident">nodes</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">nodes</span>,
@@ -638,7 +626,7 @@
 
 <span class="kw">impl</span> <span class="ident">BuildSwarm</span> <span class="kw">for</span> <span class="ident">ValidatorConfig</span> {
     <span class="kw">fn</span> <span class="ident">build_swarm</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NodeConfig</span><span class="op">&gt;</span>, <span class="ident">Ed25519PrivateKey</span>)<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">build_common</span>(<span class="bool-val">true</span>, <span class="bool-val">true</span>)
+        <span class="self">self</span>.<span class="ident">build_common</span>(<span class="bool-val">true</span>)
     }
 }
 
