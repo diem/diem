@@ -54,6 +54,17 @@ fun main() {
 // check: 3
 
 //! new-transaction
+script {
+use {{default}}::X;
+use 0x0::AccountType;
+fun main() {
+    AccountType::register<X::B>();
+}
+}
+// check: ABORTED
+// check: 2001
+
+//! new-transaction
 //! sender: association
 script {
 use {{default}}::X;
@@ -262,6 +273,20 @@ fun main() {
 ///////////////////////////////////////////////////////////////////////////
 // Try certifying TransititionCapabilities without an approved GrantingCapability
 ///////////////////////////////////////////////////////////////////////////
+
+//! new-transaction
+//! sender: alice
+//! gas-price: 0
+script {
+use {{default}}::X;
+use 0x0::AccountType;
+
+fun main() {
+    AccountType::remove_transition_capability<X::A>({{bob}});
+}
+}
+// check: ABORTED
+// check: 2000
 
 //! new-transaction
 //! sender: association
@@ -513,6 +538,17 @@ use 0x0::AccountType;
 // alice has the right granting cap: GrantingCapability<X::A>
 fun main() {
     AccountType::remove_granting_capability<X::B>({{vivian}});
+}
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: bob
+script {
+use {{default}}::X;
+use 0x0::AccountType;
+fun main() {
+    AccountType::remove_granting_capability_from_sender<X::B>();
 }
 }
 // check: EXECUTED

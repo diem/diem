@@ -115,23 +115,5 @@ module LBR {
         let coin2 = Libra::withdraw(&mut reserve.coin2.backing, coin2_amount);
         (coin1, coin2)
     }
-
-    ///////////////////////////////////////////////////////////////////////////
-    // Helpers
-    ///////////////////////////////////////////////////////////////////////////
-
-    // Given an amount in Coin1, return the value in LBR. Note that the value
-    // of a LBR given any of the constituent currencies is well-defined since
-    // ratios are verified when creating a coin. Therefore given a Coin1 value
-    // we can return the LBR value.
-    fun to_libra_value(coin1: &Libra::T<Coin1::T>): u64
-    acquires Reserve {
-        let coin1_value = Libra::value(coin1);
-        let reserve = borrow_global<Reserve>(0xA550C18);
-        // The amount of libra to be issued is based upon the ratio number
-        // times the value of the currency on which the ratio is defined.
-        FixedPoint32::multiply_u64(coin1_value, *&reserve.coin1.ratio)
-    }
 }
-
 }

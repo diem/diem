@@ -3,12 +3,18 @@
 
 use crate::{common::strip, config::global::Config as GlobalConfig, errors::*};
 use libra_crypto::HashValue;
-use libra_types::block_metadata::BlockMetadata;
+use libra_types::{account_address::AccountAddress, block_metadata::BlockMetadata};
 use std::str::FromStr;
 
 #[derive(Debug)]
+pub enum Proposer {
+    Account(String),
+    Address(AccountAddress),
+}
+
+#[derive(Debug)]
 pub enum Entry {
-    Proposer(String),
+    Proposer(Proposer),
     Timestamp(u64),
 }
 
@@ -25,7 +31,16 @@ impl FromStr for Entry {
             if s.is_empty() {
                 return Err(ErrorKind::Other("sender cannot be empty".to_string()).into());
             }
-            return Ok(Entry::Proposer(s.to_string()));
+            return Ok(Entry::Proposer(Proposer::Account(s.to_string())));
+        }
+
+        if let Some(s) = strip(s, "proposer-address:") {
+            if s.is_empty() {
+                return Err(ErrorKind::Other("sender address cannot be empty".to_string()).into());
+            }
+            return Ok(Entry::Proposer(Proposer::Address(
+                AccountAddress::from_hex_literal(s)?,
+            )));
         }
 
         if let Some(s) = strip(s, "block-time:") {
@@ -64,7 +79,10 @@ pub fn build_block_metadata(config: &GlobalConfig, entries: &[Entry]) -> Result<
     for entry in entries {
         match entry {
             Entry::Proposer(s) => {
-                proposer = Some(*config.get_account_for_name(s)?.address());
+                proposer = match s {
+                    Proposer::Account(s) => Some(*config.get_account_for_name(s)?.address()),
+                    Proposer::Address(addr) => Some(*addr),
+                };
             }
             Entry::Timestamp(new_timestamp) => timestamp = Some(new_timestamp),
         }

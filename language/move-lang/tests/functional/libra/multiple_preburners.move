@@ -5,6 +5,7 @@
 //! account: alice, 0Coin1
 //! account: bob, 0Coin1
 //! account: carol, 0Coin1
+//! account: libraalice, 0LBR
 
 // allocate funds to alice, bob and carol
 //! sender: association
@@ -211,4 +212,75 @@ fun main() {
 }
 
 // check: CancelBurnEvent
+// check: EXECUTED
+
+//! new-transaction
+//! sender: association
+//! max-gas: 1000000
+script {
+use 0x0::LBR;
+use 0x0::LibraAccount;
+fun main() {
+    LibraAccount::mint_to_address<LBR::T>({{libraalice}}, 200);
+}
+}
+// check: EXECUTED
+
+// publish preburn resource for LBR to alice's account
+//! new-transaction
+//! sender: libraalice
+//! max-gas: 1000000
+script {
+use 0x0::LBR;
+use 0x0::Libra;
+use 0x0::LibraAccount;
+fun main() {
+    Libra::publish_preburn(Libra::new_preburn<LBR::T>());
+    let coin = LibraAccount::withdraw_from_sender<LBR::T>(100);
+    Libra::preburn_to_sender<LBR::T>(coin);
+}
+}
+
+// Try to destroy the preburn, but it will fail since there is an
+// outstanding preburn request.
+//! new-transaction
+//! sender: libraalice
+//! max-gas: 1000000
+script {
+use 0x0::LBR;
+use 0x0::Libra;
+fun main() {
+    Libra::destroy_preburn(
+        Libra::remove_preburn<LBR::T>()
+    );
+}
+}
+// check: NATIVE_FUNCTION_ERROR
+// check: 3
+
+//! new-transaction
+//! sender: association
+//! max-gas: 1000000
+script {
+use 0x0::LBR;
+use 0x0::LibraAccount;
+fun main() {
+    LibraAccount::cancel_burn<LBR::T>({{libraalice}});
+}
+}
+// check: EXECUTED
+
+// Now destroy the preburn
+//! new-transaction
+//! sender: libraalice
+//! max-gas: 1000000
+script {
+use 0x0::LBR;
+use 0x0::Libra;
+fun main() {
+    Libra::destroy_preburn(
+        Libra::remove_preburn<LBR::T>()
+    );
+}
+}
 // check: EXECUTED

@@ -144,3 +144,26 @@ fun main() {
 }
 // check: ABORTED
 // check: 1002
+
+//! new-transaction
+script {
+use 0x0::Association;
+// Make sure alice is no longer an association account
+fun main() {
+    Association::initialize();
+}
+}
+// check: ABORTED
+// check: 1000
+
+//! new-transaction
+//! sender: association
+script {
+use 0x0::Association;
+// Make sure alice is no longer an association account
+fun main() {
+    Association::remove_privilege<Association::T>({{alice}});
+}
+}
+// check: ABORTED
+// check: 1004

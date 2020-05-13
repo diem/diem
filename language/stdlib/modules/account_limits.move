@@ -98,7 +98,7 @@ module AccountLimits {
     // resource in their account information.
     public fun create(): Window {
         Window {
-            window_start: current_time(),
+            window_start: LibraTimestamp::now_microseconds(),
             window_outflow: 0,
             window_inflow: 0,
             tracked_balance: 0,
@@ -172,8 +172,7 @@ module AccountLimits {
     // the inflow and outflow records. Additionally the new
     // `tracked_balance` is computed at this time as well.
     fun reset_window(window: &mut Window, limits_definition: &LimitsDefinition) {
-        Transaction::assert(limits_definition.is_certified, 1);
-        let current_time = current_time();
+        let current_time = LibraTimestamp::now_microseconds();
         if (current_time > window.window_start + limits_definition.time_period) {
             window.window_start = current_time;
             window.window_inflow = 0;
@@ -189,6 +188,7 @@ module AccountLimits {
         receiving: &mut Window,
         limits_definition: &LimitsDefinition
     ): bool {
+        Transaction::assert(limits_definition.is_certified, 1);
         // If the limits ares unrestricted then no more work needs to be done
         if (is_unrestricted(limits_definition)) return true;
         reset_window(receiving, limits_definition);
@@ -212,6 +212,7 @@ module AccountLimits {
         sending: &mut Window,
         limits_definition: &LimitsDefinition
     ): bool {
+        Transaction::assert(limits_definition.is_certified, 1);
         // If the limits are unrestricted then no more work is required
         if (is_unrestricted(limits_definition)) return true;
         reset_window(sending, limits_definition);
@@ -235,10 +236,6 @@ module AccountLimits {
         limits_def.max_outflow == u64_max &&
         limits_def.max_holding == u64_max &&
         limits_def.time_period == u64_max
-    }
-
-    fun current_time(): u64 {
-        if (LibraTimestamp::is_genesis()) 0 else LibraTimestamp::now_microseconds()
     }
 }
 

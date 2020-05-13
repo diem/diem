@@ -73,6 +73,24 @@ fun main() {
 }
 // check: EXECUTED
 
+
+// transaction >= 1000 threshold goes through signature verification with
+// invalid signature, fails passes
+//! new-transaction
+//! sender: payer
+script {
+use 0x0::LBR;
+use 0x0::LibraAccount;
+fun main() {
+    let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
+    let signature = x"ab";
+
+    LibraAccount::pay_from_sender_with_metadata<LBR::T>({{payee}}, 1000, payment_id, signature);
+}
+}
+// check: ABORTED
+// check: 9001
+
 // transaction >= 1000 threshold goes through signature verification with invalid signature, aborts
 //! new-transaction
 //! sender: payer
@@ -252,3 +270,16 @@ fun main() {
 }
 }
 // check: EXECUTED
+
+//! new-transaction
+//! sender: association
+script {
+use 0x0::VASP;
+// Try to rotate to a (structurally) malformed compliance public key
+fun main() {
+    let new_pubkey = x"d7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
+    VASP::rotate_compliance_public_key({{payer}}, copy new_pubkey);
+}
+}
+// check: ABORTED
+// check: 7004

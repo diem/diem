@@ -17,7 +17,13 @@ module Unhosted {
         // TODO: error code
         Transaction::assert(Transaction::sender() == limits_addr(), 0);
         // These are limits for testnet _only_.
-        AccountLimits::publish_unrestricted_limits();
+        //AccountLimits::publish_unrestricted_limits();
+        AccountLimits::publish_limits_definition(
+            10000,
+            10000,
+            50000,
+            31540000000000
+        );
         AccountLimits::certify_limits_definition(limits_addr());
     }
 
