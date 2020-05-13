@@ -95,6 +95,8 @@
 <span id="95">95</span>
 <span id="96">96</span>
 <span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -113,6 +115,8 @@
 <span class="doccomment">/// https://www.vaultproject.io/docs/secrets/transit/index.html).</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">CryptoStorage</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
     <span class="doccomment">/// Securely generates a new named Ed25519 key pair and returns the corresponding public key.</span>
+    <span class="doccomment">/// There are no guarantees about the state of the system after calling this multiple times.</span>
+    <span class="doccomment">/// The behavior is implementation specific.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// The new key pair is named according to the &#39;name&#39; and is held in secure storage</span>
     <span class="doccomment">/// under the given &#39;policy&#39;. To access or use the key pair (e.g., sign or encrypt data),</span>

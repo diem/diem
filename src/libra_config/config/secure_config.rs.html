@@ -92,6 +92,11 @@
 <span id="92">92</span>
 <span id="93">93</span>
 <span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -161,6 +166,10 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OnDiskStorageConfig</span> {
     <span class="comment">// Required path for on disk storage</span>
     <span class="kw">pub</span> <span class="ident">path</span>: <span class="ident">PathBuf</span>,
+    <span class="doccomment">/// A namespace is an optional portion of the path to a key stored within OnDiskStorage. For</span>
+    <span class="doccomment">/// example, a key, S, without a namespace would be available in S, with a namespace, N, it</span>
+    <span class="doccomment">/// would be in N/S.</span>
+    <span class="kw">pub</span> <span class="ident">namespace</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">skip</span>)]</span>
     <span class="ident">data_dir</span>: <span class="ident">PathBuf</span>,
 }
@@ -168,6 +177,7 @@
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">OnDiskStorageConfig</span> {
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
+            <span class="ident">namespace</span>: <span class="prelude-val">None</span>,
             <span class="ident">path</span>: <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="string">&quot;safety_rules.toml&quot;</span>),
             <span class="ident">data_dir</span>: <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="string">&quot;/opt/libra/data/common&quot;</span>),
         }

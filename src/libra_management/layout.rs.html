@@ -155,7 +155,7 @@
 
         <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">Value</span>::<span class="ident">String</span>(<span class="ident">data</span>);
         <span class="ident">remote</span>
-            .<span class="ident">create_with_default_policy</span>(<span class="ident">LAYOUT</span>, <span class="ident">value</span>)
+            .<span class="ident">set</span>(<span class="ident">LAYOUT</span>, <span class="ident">value</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">RemoteStorageWriteError</span>(<span class="ident">e</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">layout</span>)
