@@ -313,6 +313,38 @@
 <span id="313">313</span>
 <span id="314">314</span>
 <span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -322,7 +354,10 @@
 <span class="kw">use</span> <span class="ident">libra_json_rpc_client</span>::{
     <span class="ident">errors</span>::<span class="ident">JsonRpcError</span>,
     <span class="ident">get_response_from_batch</span>,
-    <span class="ident">views</span>::{<span class="ident">AccountView</span>, <span class="ident">BlockMetadata</span>, <span class="ident">BytesView</span>, <span class="ident">EventView</span>, <span class="ident">StateProofView</span>, <span class="ident">TransactionView</span>},
+    <span class="ident">views</span>::{
+        <span class="ident">AccountStateWithProofView</span>, <span class="ident">AccountView</span>, <span class="ident">BlockMetadata</span>, <span class="ident">BytesView</span>, <span class="ident">EventView</span>,
+        <span class="ident">StateProofView</span>, <span class="ident">TransactionView</span>,
+    },
     <span class="ident">JsonRpcBatch</span>, <span class="ident">JsonRpcClient</span>, <span class="ident">JsonRpcResponse</span>, <span class="ident">ResponseAsView</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
@@ -330,6 +365,7 @@
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">account_config</span>::{<span class="ident">ACCOUNT_RECEIVED_EVENT_PATH</span>, <span class="ident">ACCOUNT_SENT_EVENT_PATH</span>},
+    <span class="ident">account_state_blob</span>::<span class="ident">AccountStateBlob</span>,
     <span class="ident">epoch_change</span>::<span class="ident">EpochChangeProof</span>,
     <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>,
     <span class="ident">transaction</span>::{<span class="ident">SignedTransaction</span>, <span class="ident">Version</span>},
@@ -444,6 +480,34 @@
             }
             <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">bail</span><span class="macro">!</span>(
                 <span class="string">&quot;Failed to get account state for account address {} with error: {:?}&quot;</span>,
+                <span class="ident">account</span>,
+                <span class="ident">e</span>
+            ),
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_account_state_blob</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">account</span>: <span class="ident">AccountAddress</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AccountStateBlob</span><span class="op">&gt;</span>, <span class="ident">Version</span>)<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">batch</span> <span class="op">=</span> <span class="ident">JsonRpcBatch</span>::<span class="ident">new</span>();
+        <span class="ident">batch</span>.<span class="ident">add_get_account_state_with_proof_request</span>(<span class="ident">account</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
+        <span class="kw">let</span> <span class="ident">responses</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">execute</span>(<span class="ident">batch</span>)<span class="question-mark">?</span>;
+        <span class="kw">match</span> <span class="ident">get_response_from_batch</span>(<span class="number">0</span>, <span class="kw-2">&amp;</span><span class="ident">responses</span>)<span class="question-mark">?</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">result</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">account_state_with_proof</span> <span class="op">=</span>
+                    <span class="ident">AccountStateWithProofView</span>::<span class="ident">from_response</span>(<span class="ident">result</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">bytes</span>) <span class="op">=</span> <span class="ident">account_state_with_proof</span>.<span class="ident">blob</span> {
+                    <span class="prelude-val">Ok</span>((
+                        <span class="prelude-val">Some</span>(<span class="ident">lcs</span>::<span class="ident">from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>.<span class="ident">into_bytes</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>),
+                        <span class="ident">account_state_with_proof</span>.<span class="ident">version</span>,
+                    ))
+                } <span class="kw">else</span> {
+                    <span class="prelude-val">Ok</span>((<span class="prelude-val">None</span>, <span class="ident">account_state_with_proof</span>.<span class="ident">version</span>))
+                }
+            }
+            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">bail</span><span class="macro">!</span>(
+                <span class="string">&quot;Failed to get account state blob for account address {} with error: {:?}&quot;</span>,
                 <span class="ident">account</span>,
                 <span class="ident">e</span>
             ),
