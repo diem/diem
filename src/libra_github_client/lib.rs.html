@@ -280,6 +280,89 @@
 <span id="280">280</span>
 <span id="281">281</span>
 <span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -350,8 +433,14 @@
     }
 
     <span class="doccomment">/// Delete a file from a GitHub repository</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">delete</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">hash</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_sha</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">delete_file</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="comment">// Occasionally GitHub sends us back delayed results and the file is already deleted.</span>
+        <span class="kw">let</span> <span class="ident">hash</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">get_sha</span>(<span class="ident">path</span>) {
+            <span class="prelude-val">Ok</span>(<span class="ident">hash</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">hash</span>,
+            <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">NotFound</span>(<span class="kw">_</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(()),
+            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>),
+        };
+
         <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">upgrade_request</span>(<span class="ident">ureq</span>::<span class="ident">delete</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">url</span>(<span class="ident">path</span>)))
             .<span class="ident">send_json</span>(<span class="macro">json</span><span class="macro">!</span>({ <span class="string">&quot;message&quot;</span>: <span class="string">&quot;libra-secure&quot;</span>, <span class="string">&quot;sha&quot;</span>: <span class="ident">hash</span> }));
@@ -362,13 +451,47 @@
         }
     }
 
+    <span class="doccomment">/// Recursively delete all files, which as a by product will delete all folders</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">delete_directory</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">files</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_directory</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
+        <span class="kw">for</span> <span class="ident">file</span> <span class="kw">in</span> <span class="ident">files</span> {
+            <span class="kw">if</span> <span class="ident">file</span>.<span class="ident">ends_with</span>(<span class="string">&#39;/&#39;</span>) {
+                <span class="self">self</span>.<span class="ident">delete_directory</span>(<span class="kw-2">&amp;</span><span class="ident">file</span>[..<span class="ident">file</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span>])<span class="question-mark">?</span>;
+                <span class="kw">continue</span>;
+            }
+            <span class="self">self</span>.<span class="ident">delete_file</span>(<span class="kw-2">&amp;</span><span class="ident">file</span>)<span class="question-mark">?</span>;
+        }
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="doccomment">/// Retrieve a list of branches, this is effectively a status check on the repository</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_branches</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">url</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/repos/{}/{}/branches&quot;</span>, <span class="ident">URL</span>, <span class="self">self</span>.<span class="ident">owner</span>, <span class="self">self</span>.<span class="ident">repository</span>);
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request</span>(<span class="ident">ureq</span>::<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">url</span>)).<span class="ident">call</span>();
+
+        <span class="kw">match</span> <span class="ident">resp</span>.<span class="ident">status</span>() {
+            <span class="number">200</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">branches</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Branch</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>)<span class="question-mark">?</span>;
+                <span class="prelude-val">Ok</span>(<span class="ident">branches</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">b</span><span class="op">|</span> <span class="ident">b</span>.<span class="ident">name</span>).<span class="ident">collect</span>())
+            }
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">resp</span>.<span class="ident">into</span>()),
+        }
+    }
+
     <span class="doccomment">/// Retrieve the name of contents within a given directory, note, there are no such thing as</span>
     <span class="doccomment">/// empty directories in git.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_directory</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="self">self</span>
             .<span class="ident">get_internal</span>(<span class="ident">path</span>)<span class="question-mark">?</span>
             .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">entry</span><span class="op">|</span> <span class="ident">entry</span>.<span class="ident">path</span>)
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">entry</span><span class="op">|</span> {
+                <span class="kw">if</span> <span class="ident">entry</span>.<span class="ident">content_type</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;dir&quot;</span> {
+                    <span class="ident">entry</span>.<span class="ident">path</span> <span class="op">+</span> <span class="string">&quot;/&quot;</span>
+                } <span class="kw">else</span> {
+                    <span class="ident">entry</span>.<span class="ident">path</span>
+                }
+            })
             .<span class="ident">collect</span>())
     }
 
@@ -380,7 +503,9 @@
                 .<span class="ident">content</span>
                 .<span class="ident">as_ref</span>()
                 .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">InternalError</span>(<span class="string">&quot;No content found&quot;</span>.<span class="ident">into</span>()))<span class="question-mark">?</span>;
-            <span class="prelude-val">Ok</span>(<span class="ident">content</span>.<span class="ident">trim</span>().<span class="ident">into</span>())
+            <span class="comment">// Apparently GitHub introduces newlines every 60 characters and at the end of content,</span>
+            <span class="comment">// this strips those characters out.</span>
+            <span class="prelude-val">Ok</span>(<span class="ident">content</span>.<span class="ident">lines</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>().<span class="ident">join</span>(<span class="string">&quot;&quot;</span>))
         } <span class="kw">else</span> {
             <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">InternalError</span>(<span class="macro">format</span><span class="macro">!</span>(
                 <span class="string">&quot;get mismatch, found {} entries&quot;</span>,
@@ -438,7 +563,7 @@
 
                 <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">SerializationError</span>(<span class="ident">resp</span>))
             }
-            <span class="number">404</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">NotFound</span>(<span class="self">self</span>.<span class="ident">url</span>(<span class="ident">path</span>))),
+            <span class="number">404</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">NotFound</span>(<span class="ident">path</span>.<span class="ident">into</span>())),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">resp</span>.<span class="ident">into</span>()),
         }
     }
@@ -463,6 +588,11 @@
             <span class="ident">URL</span>, <span class="self">self</span>.<span class="ident">owner</span>, <span class="self">self</span>.<span class="ident">repository</span>, <span class="ident">path</span>
         )
     }
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">struct</span> <span class="ident">Branch</span> {
+    <span class="ident">name</span>: <span class="ident">String</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
@@ -515,8 +645,8 @@
         <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">b64_value</span>).<span class="ident">unwrap</span>();
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">value</span>, <span class="ident">value2</span>);
 
-        <span class="comment">// Verify delete</span>
-        <span class="ident">github</span>.<span class="ident">delete</span>(<span class="ident">path</span>).<span class="ident">unwrap</span>();
+        <span class="comment">// Verify delete_file</span>
+        <span class="ident">github</span>.<span class="ident">delete_file</span>(<span class="ident">path</span>).<span class="ident">unwrap</span>();
         <span class="ident">github</span>.<span class="ident">get_file</span>(<span class="ident">path</span>).<span class="ident">unwrap_err</span>();
     }
 
@@ -549,7 +679,7 @@
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">value</span>, <span class="ident">value2</span>);
 
         <span class="comment">// Delete one of the directories</span>
-        <span class="ident">github</span>.<span class="ident">delete</span>(<span class="ident">path1</span>).<span class="ident">unwrap</span>();
+        <span class="ident">github</span>.<span class="ident">delete_file</span>(<span class="ident">path1</span>).<span class="ident">unwrap</span>();
 
         <span class="comment">// Verify one is good and the other is gone</span>
         <span class="ident">github</span>.<span class="ident">get_directory</span>(<span class="ident">path1_root</span>).<span class="ident">unwrap_err</span>();
@@ -559,8 +689,44 @@
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">value</span>, <span class="ident">value2</span>);
 
         <span class="comment">// Cleanup the rest</span>
-        <span class="ident">github</span>.<span class="ident">delete</span>(<span class="ident">path2</span>).<span class="ident">unwrap</span>();
+        <span class="ident">github</span>.<span class="ident">delete_file</span>(<span class="ident">path2</span>).<span class="ident">unwrap</span>();
         <span class="ident">github</span>.<span class="ident">get_directory</span>(<span class="ident">path2_root</span>).<span class="ident">unwrap_err</span>();
+    }
+
+    <span class="attribute">#[<span class="ident">ignore</span>]</span>
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_recursive_delete_file</span>() {
+        <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span> <span class="string">&quot;root_dir&quot;</span>;
+        <span class="kw">let</span> <span class="ident">file0</span> <span class="op">=</span> <span class="string">&quot;root_dir/another_dir/another_dir/ok.txt&quot;</span>;
+        <span class="kw">let</span> <span class="ident">file1</span> <span class="op">=</span> <span class="string">&quot;root_dir/another_dir/ok.txt&quot;</span>;
+        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>;
+        <span class="kw">let</span> <span class="ident">value_encoded</span> <span class="op">=</span> <span class="ident">base64</span>::<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>);
+
+        <span class="kw">let</span> <span class="ident">github</span> <span class="op">=</span> <span class="ident">Client</span>::<span class="ident">new</span>(<span class="ident">OWNER</span>.<span class="ident">into</span>(), <span class="ident">REPOSITORY</span>.<span class="ident">into</span>(), <span class="ident">TOKEN</span>.<span class="ident">into</span>());
+
+        <span class="ident">github</span>.<span class="ident">put</span>(<span class="ident">file0</span>, <span class="kw-2">&amp;</span><span class="ident">value_encoded</span>).<span class="ident">unwrap</span>();
+        <span class="ident">github</span>.<span class="ident">put</span>(<span class="ident">file1</span>, <span class="kw-2">&amp;</span><span class="ident">value_encoded</span>).<span class="ident">unwrap</span>();
+
+        <span class="kw">let</span> <span class="ident">b64_value</span> <span class="op">=</span> <span class="ident">base64</span>::<span class="ident">decode</span>(<span class="ident">github</span>.<span class="ident">get_file</span>(<span class="ident">file0</span>).<span class="ident">unwrap</span>()).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">rv</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">b64_value</span>).<span class="ident">unwrap</span>();
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">value</span>, <span class="ident">rv</span>);
+
+        <span class="kw">let</span> <span class="ident">b64_value</span> <span class="op">=</span> <span class="ident">base64</span>::<span class="ident">decode</span>(<span class="ident">github</span>.<span class="ident">get_file</span>(<span class="ident">file1</span>).<span class="ident">unwrap</span>()).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">rv</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">b64_value</span>).<span class="ident">unwrap</span>();
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">value</span>, <span class="ident">rv</span>);
+
+        <span class="ident">github</span>.<span class="ident">delete_directory</span>(<span class="ident">root</span>).<span class="ident">unwrap</span>();
+        <span class="ident">github</span>.<span class="ident">get_file</span>(<span class="ident">file0</span>).<span class="ident">unwrap_err</span>();
+        <span class="ident">github</span>.<span class="ident">get_file</span>(<span class="ident">file1</span>).<span class="ident">unwrap_err</span>();
+    }
+
+    <span class="attribute">#[<span class="ident">ignore</span>]</span>
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_branches</span>() {
+        <span class="kw">let</span> <span class="ident">github</span> <span class="op">=</span> <span class="ident">Client</span>::<span class="ident">new</span>(<span class="ident">OWNER</span>.<span class="ident">into</span>(), <span class="ident">REPOSITORY</span>.<span class="ident">into</span>(), <span class="ident">TOKEN</span>.<span class="ident">into</span>());
+        <span class="kw">let</span> <span class="ident">branches</span> <span class="op">=</span> <span class="ident">github</span>.<span class="ident">get_branches</span>().<span class="ident">unwrap</span>();
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">branches</span>.<span class="ident">is_empty</span>());
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">branches</span>.<span class="ident">iter</span>().<span class="ident">any</span>(<span class="op">|</span><span class="ident">b</span><span class="op">|</span> <span class="ident">b</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;master&quot;</span>));
     }
 }
 </pre></div>
