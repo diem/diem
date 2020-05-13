@@ -13,7 +13,6 @@ error: abort not covered by any of the `aborts_if` clauses
     │
     =     at tests/sources/functional/cast.move:44:5: aborting_u64_cast_incorrect (entry)
     =     at tests/sources/functional/cast.move:45:9: aborting_u64_cast_incorrect (ABORTED)
-    =         x = <redacted>
 
 error: abort not covered by any of the `aborts_if` clauses
 
@@ -29,4 +28,3 @@ error: abort not covered by any of the `aborts_if` clauses
     │
     =     at tests/sources/functional/cast.move:30:5: aborting_u8_cast_incorrect (entry)
     =     at tests/sources/functional/cast.move:31:9: aborting_u8_cast_incorrect (ABORTED)
-    =         x = <redacted>

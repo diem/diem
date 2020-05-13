@@ -8,8 +8,6 @@ error:  A postcondition might not hold on this return path.
     │
     =     at tests/sources/functional/aborts-if.move:32:5: abort2_incorrect (entry)
     =     at tests/sources/functional/aborts-if.move:32:5: abort2_incorrect (exit)
-    =         _x = <redacted>,
-    =         _y = <redacted>
 
 error:  A postcondition might not hold on this return path.
 
@@ -20,8 +18,6 @@ error:  A postcondition might not hold on this return path.
     │
     =     at tests/sources/functional/aborts-if.move:47:5: abort4_incorrect (entry)
     =     at tests/sources/functional/aborts-if.move:48:9: abort4_incorrect
-    =         x = <redacted>,
-    =         y = <redacted>
     =     at tests/sources/functional/aborts-if.move:47:5: abort4_incorrect (exit)
 
 error: abort not covered by any of the `aborts_if` clauses
@@ -38,8 +34,6 @@ error: abort not covered by any of the `aborts_if` clauses
     │
     =     at tests/sources/functional/aborts-if.move:55:5: abort5_incorrect (entry)
     =     at tests/sources/functional/aborts-if.move:56:9: abort5_incorrect (ABORTED)
-    =         x = <redacted>,
-    =         y = <redacted>
 
 error:  A postcondition might not hold on this return path.
 
@@ -50,8 +44,6 @@ error:  A postcondition might not hold on this return path.
     │
     =     at tests/sources/functional/aborts-if.move:63:5: abort6_incorrect (entry)
     =     at tests/sources/functional/aborts-if.move:64:9: abort6_incorrect
-    =         x = <redacted>,
-    =         y = <redacted>
     =     at tests/sources/functional/aborts-if.move:63:5: abort6_incorrect (exit)
 
 error:  A postcondition might not hold on this return path.
@@ -63,8 +55,6 @@ error:  A postcondition might not hold on this return path.
     │
     =     at tests/sources/functional/aborts-if.move:85:5: multi_abort2_incorrect (entry)
     =     at tests/sources/functional/aborts-if.move:86:9: multi_abort2_incorrect
-    =         x = <redacted>,
-    =         y = <redacted>
     =     at tests/sources/functional/aborts-if.move:85:5: multi_abort2_incorrect (exit)
 
 error: abort not covered by any of the `aborts_if` clauses
@@ -81,8 +71,6 @@ error: abort not covered by any of the `aborts_if` clauses
     │
     =     at tests/sources/functional/aborts-if.move:94:5: multi_abort3_incorrect (entry)
     =     at tests/sources/functional/aborts-if.move:95:9: multi_abort3_incorrect (ABORTED)
-    =         _x = <redacted>,
-    =         _y = <redacted>
 
 error:  A postcondition might not hold on this return path.
 
@@ -93,5 +81,4 @@ error:  A postcondition might not hold on this return path.
      │
      =     at tests/sources/functional/aborts-if.move:112:5: multi_abort5_incorrect (entry)
      =     at tests/sources/functional/aborts-if.move:113:9: multi_abort5_incorrect
-     =         x = <redacted>
      =     at tests/sources/functional/aborts-if.move:112:5: multi_abort5_incorrect (exit)

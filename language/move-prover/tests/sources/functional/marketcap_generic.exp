@@ -8,9 +8,7 @@ error:  A postcondition might not hold on this return path.
     │
     =     at tests/sources/functional/marketcap_generic.move:61:6: deposit_invalid (entry)
     =     at tests/sources/functional/marketcap_generic.move:62:18: deposit_invalid
-    =         coin_ref = <redacted>,
-    =         check = <redacted>,
     =         value = <redacted>
     =     at tests/sources/functional/marketcap_generic.move:63:27: deposit_invalid
-    =         coin_ref = <redacted>
     =     at tests/sources/functional/marketcap_generic.move:61:6: deposit_invalid (exit)
+    =         result = <redacted>

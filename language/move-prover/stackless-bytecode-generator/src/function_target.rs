@@ -36,6 +36,7 @@ pub struct FunctionTargetData {
     pub code: Vec<Bytecode>,
     pub local_types: Vec<Type>,
     pub return_types: Vec<Type>,
+    pub ref_param_map: BTreeMap<usize, usize>,
     pub acquires_global_resources: Vec<StructId>,
     pub locations: BTreeMap<AttrId, Loc>,
     pub annotations: Annotations,
@@ -212,6 +213,15 @@ impl<'env> FunctionTarget<'env> {
     /// Gets acquired resources
     pub fn get_acquires_global_resources(&self) -> &[StructId] {
         &self.data.acquires_global_resources
+    }
+
+    /// Gets index of return parameter for a reference input parameter
+    pub fn get_return_index(&self, idx: usize) -> Option<&usize> {
+        self.data.ref_param_map.get(&idx)
+    }
+
+    pub fn call_ends_lifetime(&self) -> bool {
+        self.is_public() && self.get_return_types().iter().all(|ty| !ty.is_reference())
     }
 }
 

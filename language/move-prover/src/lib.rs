@@ -18,9 +18,13 @@ use log::{debug, info, warn};
 use regex::Regex;
 use spec_lang::{env::GlobalEnv, run_spec_lang_compiler};
 use stackless_bytecode_generator::{
+    borrow_analysis::BorrowAnalysisProcessor,
     eliminate_imm_refs::EliminateImmRefsProcessor,
+    eliminate_mut_refs::EliminateMutRefsProcessor,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
-    lifetime_analysis::LifetimeAnalysisProcessor,
+    livevar_analysis::LiveVarAnalysisProcessor,
+    packref_analysis::PackrefAnalysisProcessor,
+    writeback_analysis::WritebackAnalysisProcessor,
 };
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -161,9 +165,11 @@ fn create_bytecode_processing_pipeline(_options: &Options) -> FunctionTargetPipe
 
     // Add processors in order they are executed.
     res.add_processor(EliminateImmRefsProcessor::new());
-
-    // Must happen last as it is currently computing information based on raw code offsets.
-    res.add_processor(LifetimeAnalysisProcessor::new());
+    res.add_processor(LiveVarAnalysisProcessor::new());
+    res.add_processor(BorrowAnalysisProcessor::new());
+    res.add_processor(WritebackAnalysisProcessor::new());
+    res.add_processor(PackrefAnalysisProcessor::new());
+    res.add_processor(EliminateMutRefsProcessor::new());
 
     res
 }

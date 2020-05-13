@@ -83,7 +83,7 @@ pub trait DataflowAnalysis: TransferFunctions {
                                     // The pre changed. Schedule the next block.
                                     work_list.push_back(*next_block_id);
                                 }
-                                _ => unreachable!(), // There shouldn't be any error at this point
+                                _ => unimplemented!(),
                             }
                         }
                         None => {

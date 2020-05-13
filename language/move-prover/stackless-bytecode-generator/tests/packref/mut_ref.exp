@@ -1,0 +1,645 @@
+============ initial translation from Move ================
+
+pub fun TestMutRefs::data_invariant(_x: &mut TestMutRefs::T) {
+    return ()
+}
+
+
+pub fun TestMutRefs::decrement_invalid(x: &mut TestMutRefs::T) {
+    var r: &mut TestMutRefs::TSum
+    var $t2: &mut TestMutRefs::T
+    var $t3: &u64
+    var $t4: u64
+    var $t5: u64
+    var $t6: u64
+    var $t7: &mut TestMutRefs::T
+    var $t8: &mut u64
+    var $t9: address
+    var $t10: &mut TestMutRefs::TSum
+    var $t11: &mut TestMutRefs::TSum
+    var $t12: &u64
+    var $t13: u64
+    var $t14: u64
+    var $t15: u64
+    var $t16: &mut TestMutRefs::TSum
+    var $t17: &mut u64
+    $t2 := copy(x)
+    $t3 := borrow_field<TestMutRefs::T>.value($t2)
+    $t4 := read_ref($t3)
+    $t5 := 1
+    $t6 := -($t4, $t5)
+    $t7 := move(x)
+    $t8 := borrow_field<TestMutRefs::T>.value($t7)
+    write_ref($t8, $t6)
+    $t9 := 0x0
+    $t10 := borrow_global<TestMutRefs::TSum>($t9)
+    r := $t10
+    $t11 := copy(r)
+    $t12 := borrow_field<TestMutRefs::TSum>.sum($t11)
+    $t13 := read_ref($t12)
+    $t14 := 1
+    $t15 := -($t13, $t14)
+    $t16 := move(r)
+    $t17 := borrow_field<TestMutRefs::TSum>.sum($t16)
+    write_ref($t17, $t15)
+    return ()
+}
+
+
+pub fun TestMutRefs::delete(x: TestMutRefs::T) {
+    var r: &mut TestMutRefs::TSum
+    var v: u64
+    var $t3: address
+    var $t4: &mut TestMutRefs::TSum
+    var $t5: TestMutRefs::T
+    var $t6: u64
+    var $t7: &mut TestMutRefs::TSum
+    var $t8: &u64
+    var $t9: u64
+    var $t10: u64
+    var $t11: u64
+    var $t12: &mut TestMutRefs::TSum
+    var $t13: &mut u64
+    $t3 := 0x0
+    $t4 := borrow_global<TestMutRefs::TSum>($t3)
+    r := $t4
+    $t5 := move(x)
+    $t6 := unpack TestMutRefs::T($t5)
+    v := $t6
+    $t7 := copy(r)
+    $t8 := borrow_field<TestMutRefs::TSum>.sum($t7)
+    $t9 := read_ref($t8)
+    $t10 := copy(v)
+    $t11 := -($t9, $t10)
+    $t12 := move(r)
+    $t13 := borrow_field<TestMutRefs::TSum>.sum($t12)
+    write_ref($t13, $t11)
+    return ()
+}
+
+
+pub fun TestMutRefs::increment(x: &mut TestMutRefs::T) {
+    var r: &mut TestMutRefs::TSum
+    var $t2: &mut TestMutRefs::T
+    var $t3: &u64
+    var $t4: u64
+    var $t5: u64
+    var $t6: u64
+    var $t7: &mut TestMutRefs::T
+    var $t8: &mut u64
+    var $t9: address
+    var $t10: &mut TestMutRefs::TSum
+    var $t11: &mut TestMutRefs::TSum
+    var $t12: &u64
+    var $t13: u64
+    var $t14: u64
+    var $t15: u64
+    var $t16: &mut TestMutRefs::TSum
+    var $t17: &mut u64
+    $t2 := copy(x)
+    $t3 := borrow_field<TestMutRefs::T>.value($t2)
+    $t4 := read_ref($t3)
+    $t5 := 1
+    $t6 := +($t4, $t5)
+    $t7 := move(x)
+    $t8 := borrow_field<TestMutRefs::T>.value($t7)
+    write_ref($t8, $t6)
+    $t9 := 0x0
+    $t10 := borrow_global<TestMutRefs::TSum>($t9)
+    r := $t10
+    $t11 := copy(r)
+    $t12 := borrow_field<TestMutRefs::TSum>.sum($t11)
+    $t13 := read_ref($t12)
+    $t14 := 1
+    $t15 := +($t13, $t14)
+    $t16 := move(r)
+    $t17 := borrow_field<TestMutRefs::TSum>.sum($t16)
+    write_ref($t17, $t15)
+    return ()
+}
+
+
+pub fun TestMutRefs::increment_invalid(x: &mut TestMutRefs::T) {
+    var $t1: &mut TestMutRefs::T
+    var $t2: &u64
+    var $t3: u64
+    var $t4: u64
+    var $t5: u64
+    var $t6: &mut TestMutRefs::T
+    var $t7: &mut u64
+    $t1 := copy(x)
+    $t2 := borrow_field<TestMutRefs::T>.value($t1)
+    $t3 := read_ref($t2)
+    $t4 := 1
+    $t5 := +($t3, $t4)
+    $t6 := move(x)
+    $t7 := borrow_field<TestMutRefs::T>.value($t6)
+    write_ref($t7, $t5)
+    return ()
+}
+
+
+pub fun TestMutRefs::new(x: u64): TestMutRefs::T {
+    var r: &mut TestMutRefs::TSum
+    var $t2: address
+    var $t3: &mut TestMutRefs::TSum
+    var $t4: &mut TestMutRefs::TSum
+    var $t5: &u64
+    var $t6: u64
+    var $t7: u64
+    var $t8: u64
+    var $t9: &mut TestMutRefs::TSum
+    var $t10: &mut u64
+    var $t11: u64
+    var $t12: TestMutRefs::T
+    $t2 := 0x0
+    $t3 := borrow_global<TestMutRefs::TSum>($t2)
+    r := $t3
+    $t4 := copy(r)
+    $t5 := borrow_field<TestMutRefs::TSum>.sum($t4)
+    $t6 := read_ref($t5)
+    $t7 := copy(x)
+    $t8 := +($t6, $t7)
+    $t9 := move(r)
+    $t10 := borrow_field<TestMutRefs::TSum>.sum($t9)
+    write_ref($t10, $t8)
+    $t11 := copy(x)
+    $t12 := pack TestMutRefs::T($t11)
+    return $t12
+}
+
+
+fun TestMutRefs::private_data_invariant_invalid(_x: &mut TestMutRefs::T) {
+    return ()
+}
+
+
+fun TestMutRefs::private_decrement(x: &mut TestMutRefs::T) {
+    var r: &mut TestMutRefs::TSum
+    var $t2: &mut TestMutRefs::T
+    var $t3: &u64
+    var $t4: u64
+    var $t5: u64
+    var $t6: u64
+    var $t7: &mut TestMutRefs::T
+    var $t8: &mut u64
+    var $t9: address
+    var $t10: &mut TestMutRefs::TSum
+    var $t11: &mut TestMutRefs::TSum
+    var $t12: &u64
+    var $t13: u64
+    var $t14: u64
+    var $t15: u64
+    var $t16: &mut TestMutRefs::TSum
+    var $t17: &mut u64
+    $t2 := copy(x)
+    $t3 := borrow_field<TestMutRefs::T>.value($t2)
+    $t4 := read_ref($t3)
+    $t5 := 1
+    $t6 := -($t4, $t5)
+    $t7 := move(x)
+    $t8 := borrow_field<TestMutRefs::T>.value($t7)
+    write_ref($t8, $t6)
+    $t9 := 0x0
+    $t10 := borrow_global<TestMutRefs::TSum>($t9)
+    r := $t10
+    $t11 := copy(r)
+    $t12 := borrow_field<TestMutRefs::TSum>.sum($t11)
+    $t13 := read_ref($t12)
+    $t14 := 1
+    $t15 := -($t13, $t14)
+    $t16 := move(r)
+    $t17 := borrow_field<TestMutRefs::TSum>.sum($t16)
+    write_ref($t17, $t15)
+    return ()
+}
+
+
+fun TestMutRefs::private_to_public_caller(r: &mut TestMutRefs::T) {
+    var $t1: &mut TestMutRefs::T
+    $t1 := move(r)
+    TestMutRefs::increment($t1)
+    return ()
+}
+
+
+fun TestMutRefs::private_to_public_caller_invalid_data_invariant() {
+    var r: &mut TestMutRefs::T
+    var x: TestMutRefs::T
+    var $t2: u64
+    var $t3: TestMutRefs::T
+    var $t4: &mut TestMutRefs::T
+    var $t5: &mut TestMutRefs::T
+    var $t6: &mut TestMutRefs::T
+    $t2 := 1
+    $t3 := TestMutRefs::new($t2)
+    x := $t3
+    $t4 := borrow_local(x)
+    r := $t4
+    $t5 := copy(r)
+    TestMutRefs::private_decrement($t5)
+    $t6 := move(r)
+    TestMutRefs::increment($t6)
+    return ()
+}
+
+
+pub fun TestMutRefsUser::valid() {
+    var x: TestMutRefs::T
+    var $t1: u64
+    var $t2: TestMutRefs::T
+    var $t3: &mut TestMutRefs::T
+    var $t4: TestMutRefs::T
+    $t1 := 4
+    $t2 := TestMutRefs::new($t1)
+    x := $t2
+    $t3 := borrow_local(x)
+    TestMutRefs::increment($t3)
+    $t4 := move(x)
+    TestMutRefs::delete($t4)
+    return ()
+}
+
+============ after pipeline `packref` ================
+
+pub fun TestMutRefs::data_invariant(_x: &mut TestMutRefs::T) {
+    // live_refs: _x borrowed_by: LocalRoot(_x) -> {Reference(_x)} borrows_from: Reference(_x) -> {LocalRoot(_x)}
+    // before: UnpackRef(_x), PackRef(_x) after:
+    return ()
+}
+
+
+pub fun TestMutRefs::decrement_invalid(x: &mut TestMutRefs::T) {
+    var r: &mut TestMutRefs::TSum
+    var $t2: &mut TestMutRefs::T
+    var $t3: u64
+    var $t4: u64
+    var $t5: u64
+    var $t6: u64
+    var $t7: &mut TestMutRefs::T
+    var $t8: &mut u64
+    var $t9: address
+    var $t10: &mut TestMutRefs::TSum
+    var $t11: &mut TestMutRefs::TSum
+    var $t12: u64
+    var $t13: u64
+    var $t14: u64
+    var $t15: u64
+    var $t16: &mut TestMutRefs::TSum
+    var $t17: &mut u64
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    // before: UnpackRef(x) after:
+    $t2 := copy(x)
+    // live_refs: x, $t2 borrowed_by: LocalRoot(x) -> {Reference(x)}, Reference(x) -> {Reference($t2)} borrows_from: Reference(x) -> {LocalRoot(x)}, Reference($t2) -> {Reference(x)}
+    $t3 := get_field<TestMutRefs::T>.value($t2)
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t4 := move($t3)
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t5 := 1
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t6 := -($t4, $t5)
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t7 := move(x)
+    // live_refs: $t7 borrowed_by: LocalRoot(x) -> {Reference($t7)} borrows_from: Reference($t7) -> {LocalRoot(x)}
+    // before:  after: UnpackRef($t8)
+    $t8 := borrow_field<TestMutRefs::T>.value($t7)
+    // live_refs: $t8 borrowed_by: LocalRoot(x) -> {Reference($t8)}, Reference($t7) -> {Reference($t8)} borrows_from: Reference($t8) -> {LocalRoot(x), Reference($t7)}
+    // before:  after: PackRef($t7), PackRef($t8)
+    write_ref($t8, $t6)
+    $t9 := 0x0
+    // before:  after: UnpackRef($t10)
+    $t10 := borrow_global<TestMutRefs::TSum>($t9)
+    // live_refs: $t10 borrowed_by: TestMutRefs::TSum -> {Reference($t10)} borrows_from: Reference($t10) -> {TestMutRefs::TSum}
+    r := $t10
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t11 := copy(r)
+    // live_refs: r, $t11 borrowed_by: TestMutRefs::TSum -> {Reference(r)}, Reference(r) -> {Reference($t11)} borrows_from: Reference(r) -> {TestMutRefs::TSum}, Reference($t11) -> {Reference(r)}
+    $t12 := get_field<TestMutRefs::TSum>.sum($t11)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t13 := move($t12)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t14 := 1
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t15 := -($t13, $t14)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t16 := move(r)
+    // live_refs: $t16 borrowed_by: TestMutRefs::TSum -> {Reference($t16)} borrows_from: Reference($t16) -> {TestMutRefs::TSum}
+    // before:  after: UnpackRef($t17)
+    $t17 := borrow_field<TestMutRefs::TSum>.sum($t16)
+    // live_refs: $t17 borrowed_by: TestMutRefs::TSum -> {Reference($t17)}, Reference($t16) -> {Reference($t17)} borrows_from: Reference($t17) -> {TestMutRefs::TSum, Reference($t16)}
+    // before:  after: PackRef($t16), PackRef($t17)
+    write_ref($t17, $t15)
+    return ()
+}
+
+
+pub fun TestMutRefs::delete(x: TestMutRefs::T) {
+    var r: &mut TestMutRefs::TSum
+    var v: u64
+    var $t3: address
+    var $t4: &mut TestMutRefs::TSum
+    var $t5: TestMutRefs::T
+    var $t6: u64
+    var $t7: &mut TestMutRefs::TSum
+    var $t8: u64
+    var $t9: u64
+    var $t10: u64
+    var $t11: u64
+    var $t12: &mut TestMutRefs::TSum
+    var $t13: &mut u64
+    $t3 := 0x0
+    // before:  after: UnpackRef($t4)
+    $t4 := borrow_global<TestMutRefs::TSum>($t3)
+    // live_refs: $t4 borrowed_by: TestMutRefs::TSum -> {Reference($t4)} borrows_from: Reference($t4) -> {TestMutRefs::TSum}
+    r := $t4
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t5 := move(x)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t6 := unpack TestMutRefs::T($t5)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    v := $t6
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t7 := copy(r)
+    // live_refs: r, $t7 borrowed_by: TestMutRefs::TSum -> {Reference(r)}, Reference(r) -> {Reference($t7)} borrows_from: Reference(r) -> {TestMutRefs::TSum}, Reference($t7) -> {Reference(r)}
+    $t8 := get_field<TestMutRefs::TSum>.sum($t7)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t9 := move($t8)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t10 := copy(v)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t11 := -($t9, $t10)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t12 := move(r)
+    // live_refs: $t12 borrowed_by: TestMutRefs::TSum -> {Reference($t12)} borrows_from: Reference($t12) -> {TestMutRefs::TSum}
+    // before:  after: UnpackRef($t13)
+    $t13 := borrow_field<TestMutRefs::TSum>.sum($t12)
+    // live_refs: $t13 borrowed_by: TestMutRefs::TSum -> {Reference($t13)}, Reference($t12) -> {Reference($t13)} borrows_from: Reference($t13) -> {TestMutRefs::TSum, Reference($t12)}
+    // before:  after: PackRef($t12), PackRef($t13)
+    write_ref($t13, $t11)
+    return ()
+}
+
+
+pub fun TestMutRefs::increment(x: &mut TestMutRefs::T) {
+    var r: &mut TestMutRefs::TSum
+    var $t2: &mut TestMutRefs::T
+    var $t3: u64
+    var $t4: u64
+    var $t5: u64
+    var $t6: u64
+    var $t7: &mut TestMutRefs::T
+    var $t8: &mut u64
+    var $t9: address
+    var $t10: &mut TestMutRefs::TSum
+    var $t11: &mut TestMutRefs::TSum
+    var $t12: u64
+    var $t13: u64
+    var $t14: u64
+    var $t15: u64
+    var $t16: &mut TestMutRefs::TSum
+    var $t17: &mut u64
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    // before: UnpackRef(x) after:
+    $t2 := copy(x)
+    // live_refs: x, $t2 borrowed_by: LocalRoot(x) -> {Reference(x)}, Reference(x) -> {Reference($t2)} borrows_from: Reference(x) -> {LocalRoot(x)}, Reference($t2) -> {Reference(x)}
+    $t3 := get_field<TestMutRefs::T>.value($t2)
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t4 := move($t3)
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t5 := 1
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t6 := +($t4, $t5)
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t7 := move(x)
+    // live_refs: $t7 borrowed_by: LocalRoot(x) -> {Reference($t7)} borrows_from: Reference($t7) -> {LocalRoot(x)}
+    // before:  after: UnpackRef($t8)
+    $t8 := borrow_field<TestMutRefs::T>.value($t7)
+    // live_refs: $t8 borrowed_by: LocalRoot(x) -> {Reference($t8)}, Reference($t7) -> {Reference($t8)} borrows_from: Reference($t8) -> {LocalRoot(x), Reference($t7)}
+    // before:  after: PackRef($t7), PackRef($t8)
+    write_ref($t8, $t6)
+    $t9 := 0x0
+    // before:  after: UnpackRef($t10)
+    $t10 := borrow_global<TestMutRefs::TSum>($t9)
+    // live_refs: $t10 borrowed_by: TestMutRefs::TSum -> {Reference($t10)} borrows_from: Reference($t10) -> {TestMutRefs::TSum}
+    r := $t10
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t11 := copy(r)
+    // live_refs: r, $t11 borrowed_by: TestMutRefs::TSum -> {Reference(r)}, Reference(r) -> {Reference($t11)} borrows_from: Reference(r) -> {TestMutRefs::TSum}, Reference($t11) -> {Reference(r)}
+    $t12 := get_field<TestMutRefs::TSum>.sum($t11)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t13 := move($t12)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t14 := 1
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t15 := +($t13, $t14)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t16 := move(r)
+    // live_refs: $t16 borrowed_by: TestMutRefs::TSum -> {Reference($t16)} borrows_from: Reference($t16) -> {TestMutRefs::TSum}
+    // before:  after: UnpackRef($t17)
+    $t17 := borrow_field<TestMutRefs::TSum>.sum($t16)
+    // live_refs: $t17 borrowed_by: TestMutRefs::TSum -> {Reference($t17)}, Reference($t16) -> {Reference($t17)} borrows_from: Reference($t17) -> {TestMutRefs::TSum, Reference($t16)}
+    // before:  after: PackRef($t16), PackRef($t17)
+    write_ref($t17, $t15)
+    return ()
+}
+
+
+pub fun TestMutRefs::increment_invalid(x: &mut TestMutRefs::T) {
+    var $t1: &mut TestMutRefs::T
+    var $t2: u64
+    var $t3: u64
+    var $t4: u64
+    var $t5: u64
+    var $t6: &mut TestMutRefs::T
+    var $t7: &mut u64
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    // before: UnpackRef(x) after:
+    $t1 := copy(x)
+    // live_refs: x, $t1 borrowed_by: LocalRoot(x) -> {Reference(x)}, Reference(x) -> {Reference($t1)} borrows_from: Reference(x) -> {LocalRoot(x)}, Reference($t1) -> {Reference(x)}
+    $t2 := get_field<TestMutRefs::T>.value($t1)
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t3 := move($t2)
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t4 := 1
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t5 := +($t3, $t4)
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t6 := move(x)
+    // live_refs: $t6 borrowed_by: LocalRoot(x) -> {Reference($t6)} borrows_from: Reference($t6) -> {LocalRoot(x)}
+    // before:  after: UnpackRef($t7)
+    $t7 := borrow_field<TestMutRefs::T>.value($t6)
+    // live_refs: $t7 borrowed_by: LocalRoot(x) -> {Reference($t7)}, Reference($t6) -> {Reference($t7)} borrows_from: Reference($t7) -> {LocalRoot(x), Reference($t6)}
+    // before:  after: PackRef($t6), PackRef($t7)
+    write_ref($t7, $t5)
+    return ()
+}
+
+
+pub fun TestMutRefs::new(x: u64): TestMutRefs::T {
+    var r: &mut TestMutRefs::TSum
+    var $t2: address
+    var $t3: &mut TestMutRefs::TSum
+    var $t4: &mut TestMutRefs::TSum
+    var $t5: u64
+    var $t6: u64
+    var $t7: u64
+    var $t8: u64
+    var $t9: &mut TestMutRefs::TSum
+    var $t10: &mut u64
+    var $t11: u64
+    var $t12: TestMutRefs::T
+    $t2 := 0x0
+    // before:  after: UnpackRef($t3)
+    $t3 := borrow_global<TestMutRefs::TSum>($t2)
+    // live_refs: $t3 borrowed_by: TestMutRefs::TSum -> {Reference($t3)} borrows_from: Reference($t3) -> {TestMutRefs::TSum}
+    r := $t3
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t4 := copy(r)
+    // live_refs: r, $t4 borrowed_by: TestMutRefs::TSum -> {Reference(r)}, Reference(r) -> {Reference($t4)} borrows_from: Reference(r) -> {TestMutRefs::TSum}, Reference($t4) -> {Reference(r)}
+    $t5 := get_field<TestMutRefs::TSum>.sum($t4)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t6 := move($t5)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t7 := copy(x)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t8 := +($t6, $t7)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t9 := move(r)
+    // live_refs: $t9 borrowed_by: TestMutRefs::TSum -> {Reference($t9)} borrows_from: Reference($t9) -> {TestMutRefs::TSum}
+    // before:  after: UnpackRef($t10)
+    $t10 := borrow_field<TestMutRefs::TSum>.sum($t9)
+    // live_refs: $t10 borrowed_by: TestMutRefs::TSum -> {Reference($t10)}, Reference($t9) -> {Reference($t10)} borrows_from: Reference($t10) -> {TestMutRefs::TSum, Reference($t9)}
+    // before:  after: PackRef($t9), PackRef($t10)
+    write_ref($t10, $t8)
+    $t11 := copy(x)
+    $t12 := pack TestMutRefs::T($t11)
+    return $t12
+}
+
+
+fun TestMutRefs::private_data_invariant_invalid(_x: &mut TestMutRefs::T) {
+    // live_refs: _x borrowed_by: LocalRoot(_x) -> {Reference(_x)} borrows_from: Reference(_x) -> {LocalRoot(_x)}
+    return ()
+}
+
+
+fun TestMutRefs::private_decrement(x: &mut TestMutRefs::T) {
+    var r: &mut TestMutRefs::TSum
+    var $t2: &mut TestMutRefs::T
+    var $t3: u64
+    var $t4: u64
+    var $t5: u64
+    var $t6: u64
+    var $t7: &mut TestMutRefs::T
+    var $t8: &mut u64
+    var $t9: address
+    var $t10: &mut TestMutRefs::TSum
+    var $t11: &mut TestMutRefs::TSum
+    var $t12: u64
+    var $t13: u64
+    var $t14: u64
+    var $t15: u64
+    var $t16: &mut TestMutRefs::TSum
+    var $t17: &mut u64
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t2 := copy(x)
+    // live_refs: x, $t2 borrowed_by: LocalRoot(x) -> {Reference(x)}, Reference(x) -> {Reference($t2)} borrows_from: Reference(x) -> {LocalRoot(x)}, Reference($t2) -> {Reference(x)}
+    $t3 := get_field<TestMutRefs::T>.value($t2)
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t4 := move($t3)
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t5 := 1
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t6 := -($t4, $t5)
+    // live_refs: x borrowed_by: LocalRoot(x) -> {Reference(x)} borrows_from: Reference(x) -> {LocalRoot(x)}
+    $t7 := move(x)
+    // live_refs: $t7 borrowed_by: LocalRoot(x) -> {Reference($t7)} borrows_from: Reference($t7) -> {LocalRoot(x)}
+    // before:  after: UnpackRef($t8)
+    $t8 := borrow_field<TestMutRefs::T>.value($t7)
+    // live_refs: $t8 borrowed_by: LocalRoot(x) -> {Reference($t8)}, Reference($t7) -> {Reference($t8)} borrows_from: Reference($t8) -> {LocalRoot(x), Reference($t7)}
+    // before:  after: PackRef($t8)
+    write_ref($t8, $t6)
+    $t9 := 0x0
+    // before:  after: UnpackRef($t10)
+    $t10 := borrow_global<TestMutRefs::TSum>($t9)
+    // live_refs: $t10 borrowed_by: TestMutRefs::TSum -> {Reference($t10)} borrows_from: Reference($t10) -> {TestMutRefs::TSum}
+    r := $t10
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t11 := copy(r)
+    // live_refs: r, $t11 borrowed_by: TestMutRefs::TSum -> {Reference(r)}, Reference(r) -> {Reference($t11)} borrows_from: Reference(r) -> {TestMutRefs::TSum}, Reference($t11) -> {Reference(r)}
+    $t12 := get_field<TestMutRefs::TSum>.sum($t11)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t13 := move($t12)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t14 := 1
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t15 := -($t13, $t14)
+    // live_refs: r borrowed_by: TestMutRefs::TSum -> {Reference(r)} borrows_from: Reference(r) -> {TestMutRefs::TSum}
+    $t16 := move(r)
+    // live_refs: $t16 borrowed_by: TestMutRefs::TSum -> {Reference($t16)} borrows_from: Reference($t16) -> {TestMutRefs::TSum}
+    // before:  after: UnpackRef($t17)
+    $t17 := borrow_field<TestMutRefs::TSum>.sum($t16)
+    // live_refs: $t17 borrowed_by: TestMutRefs::TSum -> {Reference($t17)}, Reference($t16) -> {Reference($t17)} borrows_from: Reference($t17) -> {TestMutRefs::TSum, Reference($t16)}
+    // before:  after: PackRef($t16), PackRef($t17)
+    write_ref($t17, $t15)
+    return ()
+}
+
+
+fun TestMutRefs::private_to_public_caller(r: &mut TestMutRefs::T) {
+    var $t1: &mut TestMutRefs::T
+    // live_refs: r borrowed_by: LocalRoot(r) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(r)}
+    $t1 := move(r)
+    // live_refs: $t1 borrowed_by: LocalRoot(r) -> {Reference($t1)} borrows_from: Reference($t1) -> {LocalRoot(r)}
+    // before: PackRef($t1) after: UnpackRef($t1)
+    TestMutRefs::increment($t1)
+    return ()
+}
+
+
+fun TestMutRefs::private_to_public_caller_invalid_data_invariant() {
+    var r: &mut TestMutRefs::T
+    var x: TestMutRefs::T
+    var $t2: u64
+    var $t3: TestMutRefs::T
+    var $t4: &mut TestMutRefs::T
+    var $t5: &mut TestMutRefs::T
+    var $t6: &mut TestMutRefs::T
+    $t2 := 1
+    $t3 := TestMutRefs::new($t2)
+    x := $t3
+    // before:  after: UnpackRef($t4)
+    $t4 := borrow_local(x)
+    // live_refs: $t4 borrowed_by: LocalRoot(x) -> {Reference($t4)} borrows_from: Reference($t4) -> {LocalRoot(x)}
+    r := $t4
+    // live_refs: r borrowed_by: LocalRoot(x) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(x)}
+    $t5 := copy(r)
+    // live_refs: r, $t5 borrowed_by: LocalRoot(x) -> {Reference(r)}, Reference(r) -> {Reference($t5)} borrows_from: Reference(r) -> {LocalRoot(x)}, Reference($t5) -> {Reference(r)}
+    TestMutRefs::private_decrement($t5)
+    // live_refs: r borrowed_by: LocalRoot(x) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(x)}
+    $t6 := move(r)
+    // live_refs: $t6 borrowed_by: LocalRoot(x) -> {Reference($t6)} borrows_from: Reference($t6) -> {LocalRoot(x)}
+    // before: PackRef($t6) after: UnpackRef($t6), PackRef($t6)
+    TestMutRefs::increment($t6)
+    return ()
+}
+
+
+pub fun TestMutRefsUser::valid() {
+    var x: TestMutRefs::T
+    var $t1: u64
+    var $t2: TestMutRefs::T
+    var $t3: &mut TestMutRefs::T
+    var $t4: TestMutRefs::T
+    $t1 := 4
+    $t2 := TestMutRefs::new($t1)
+    x := $t2
+    // before:  after: UnpackRef($t3)
+    $t3 := borrow_local(x)
+    // live_refs: $t3 borrowed_by: LocalRoot(x) -> {Reference($t3)} borrows_from: Reference($t3) -> {LocalRoot(x)}
+    // before: PackRef($t3) after: UnpackRef($t3), PackRef($t3)
+    TestMutRefs::increment($t3)
+    $t4 := move(x)
+    TestMutRefs::delete($t4)
+    return ()
+}

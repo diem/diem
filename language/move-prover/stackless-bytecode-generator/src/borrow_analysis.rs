@@ -33,11 +33,23 @@ pub struct BorrowInfo {
 }
 
 impl BorrowInfo {
-    fn is_empty(&self) -> bool {
+    pub fn all_refs(&self) -> BTreeSet<TempIndex> {
+        let filter_fn = |node: &BorrowNode| {
+            if let BorrowNode::Reference(idx) = node {
+                Some(*idx)
+            } else {
+                None
+            }
+        };
+        let borrowed_by_refs = self.borrowed_by.keys().filter_map(filter_fn).collect();
+        self.live_refs.union(&borrowed_by_refs).cloned().collect()
+    }
+
+    pub fn is_empty(&self) -> bool {
         self.live_refs.is_empty() && self.borrowed_by.is_empty() && self.borrows_from.is_empty()
     }
 
-    fn borrow_info_str(&self, func_target: &FunctionTarget<'_>) -> String {
+    pub fn borrow_info_str(&self, func_target: &FunctionTarget<'_>) -> String {
         let live_refs_str = format!(
             "live_refs: {}",
             self.live_refs

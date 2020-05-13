@@ -1,15 +1,6 @@
 Move prover returns: exiting with boogie verification errors
 error:  This assertion might not hold.
 
-    ┌── tests/sources/functional/mut_ref_accross_modules.move:81:13 ───
-    │
- 81 │             assert x.value > 0;
-    │             ^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/mut_ref_accross_modules.move:79:5: data_invariant (entry)
-
-error:  This assertion might not hold.
-
     ┌── tests/sources/functional/mut_ref_accross_modules.move:21:9 ───
     │
  21 │         invariant value > 0;
@@ -17,13 +8,6 @@ error:  This assertion might not hold.
     │
     =     at tests/sources/functional/mut_ref_accross_modules.move:64:5: decrement_invalid (entry)
     =     at tests/sources/functional/mut_ref_accross_modules.move:65:27: decrement_invalid
-    =         x = <redacted>,
-    =         x = <redacted>,
-    =         r = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:66:41: decrement_invalid
-    =         r = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:67:17: decrement_invalid
-    =         x = <redacted>,
     =         r = <redacted>
 
 error:  A postcondition might not hold on this return path.
@@ -35,52 +19,18 @@ error:  A postcondition might not hold on this return path.
     │
     =     at tests/sources/functional/mut_ref_accross_modules.move:58:5: increment_invalid (entry)
     =     at tests/sources/functional/mut_ref_accross_modules.move:59:27: increment_invalid
-    =         x = <redacted>,
-    =         x = <redacted>
     =     at tests/sources/functional/mut_ref_accross_modules.move:58:5: increment_invalid (exit)
-
-error:  This assertion might not hold.
-
-    ┌── tests/sources/functional/mut_ref_accross_modules.move:88:13 ───
-    │
- 88 │             assert x.value > 0;
-    │             ^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/mut_ref_accross_modules.move:86:5: private_data_invariant_invalid (entry)
-
-error:  This assertion might not hold.
-
-    ┌── tests/sources/functional/mut_ref_accross_modules.move:21:9 ───
-    │
- 21 │         invariant value > 0;
-    │         ^^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/mut_ref_accross_modules.move:115:6: private_to_public_caller_invalid_data_invariant (entry)
-    =     at tests/sources/functional/mut_ref_accross_modules.move:34:5: new (entry)
-    =     at tests/sources/functional/mut_ref_accross_modules.move:35:17: new
-    =         x = <redacted>,
-    =         r = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:36:17: new
-    =         r = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:37:18: new
     =         result = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:34:5: new (exit)
-    =     at tests/sources/functional/mut_ref_accross_modules.move:120:14: private_to_public_caller_invalid_data_invariant
-    =     at tests/sources/functional/mut_ref_accross_modules.move:121:18: private_to_public_caller_invalid_data_invariant
-    =         r = <redacted>,
-    =         x = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:72:5: private_decrement (entry)
-    =     at tests/sources/functional/mut_ref_accross_modules.move:73:27: private_decrement
-    =         x = <redacted>,
-    =         x = <redacted>,
-    =         r = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:74:41: private_decrement
-    =         r = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:75:17: private_decrement
-    =         x = <redacted>,
-    =         r = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:72:9: private_decrement
-    =     at tests/sources/functional/mut_ref_accross_modules.move:51:16: increment
+
+error:  A precondition for this call might not hold.
+
+    ┌── tests/sources/functional/mut_ref_accross_modules.move:30:9 ───
+    │
+ 30 │         invariant global<TSum>(0x0).sum == spec_sum;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/mut_ref_accross_modules.move:94:5: private_to_public_caller (entry)
+    =     at tests/sources/functional/mut_ref_accross_modules.move:51:5: increment (entry)
 
 error:  A precondition for this call might not hold.
 

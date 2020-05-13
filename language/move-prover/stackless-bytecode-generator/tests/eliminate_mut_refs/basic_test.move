@@ -50,17 +50,22 @@ module TestEliminateMutRefs {
         test3(r_ref, 0)
     }
 
-    fun test8(n: u64, r_ref: &mut R) {
+    fun test8(b: bool, n: u64, r_ref: &mut R) {
         let r1 = R {x: 3};
         let r2 = R {x: 4};
+        let t_ref = &mut r2;
         while (0 < n) {
             if (n/2 == 0) {
-                r_ref = &mut r1
+                t_ref = &mut r1
             } else {
-                r_ref = &mut r2;
+                t_ref = &mut r2;
             };
             n = n - 1
         };
-        test3(r_ref, 0)
+        if (b) {
+            test3(r_ref, 0);
+        } else {
+            test3(t_ref, 0);
+        }
     }
 }

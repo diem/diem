@@ -223,11 +223,10 @@ pub enum Bytecode {
     Nop(AttrId),
 
     WriteBack(AttrId, BorrowNode, TempIndex),
+    Splice(AttrId, TempIndex, BTreeMap<usize, TempIndex>),
 
     UnpackRef(AttrId, TempIndex),
     PackRef(AttrId, TempIndex),
-
-    Splice(AttrId, TempIndex, BTreeMap<usize, TempIndex>),
 }
 
 impl Bytecode {
@@ -249,6 +248,10 @@ impl Bytecode {
             | PackRef(id, ..)
             | Splice(id, ..) => *id,
         }
+    }
+
+    pub fn is_exit(&self) -> bool {
+        matches!(self, Bytecode::Ret(..) | Bytecode::Abort(..))
     }
 
     pub fn is_return(&self) -> bool {

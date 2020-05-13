@@ -8,16 +8,16 @@ error:  A postcondition might not hold on this return path.
     │
     =     at tests/sources/functional/references.move:58:5: mut_ref_incorrect (entry)
     =     at tests/sources/functional/references.move:59:13: mut_ref_incorrect
+    =         b_ref = <redacted>
     =     at tests/sources/functional/references.move:60:31: mut_ref_incorrect
     =         b = <redacted>,
     =         b_ref = <redacted>
+    =     at tests/sources/functional/references.move:61:15: mut_ref_incorrect
     =     at tests/sources/functional/references.move:43:5: mut_b (entry)
-    =     at tests/sources/functional/references.move:44:9: mut_b
-    =         b = <redacted>,
-    =         b = <redacted>,
-    =         $t1 = <redacted>
+    =     at tests/sources/functional/references.move:44:16: mut_b
     =     at tests/sources/functional/references.move:43:9: mut_b
-    =     at tests/sources/functional/references.move:62:14: mut_ref_incorrect
+    =     at tests/sources/functional/references.move:58:5: mut_ref_incorrect
     =         b = <redacted>
+    =     at tests/sources/functional/references.move:62:9: mut_ref_incorrect
     =     at tests/sources/functional/references.move:63:13: mut_ref_incorrect
     =     at tests/sources/functional/references.move:58:5: mut_ref_incorrect (exit)
