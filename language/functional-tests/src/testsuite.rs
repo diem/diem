@@ -4,9 +4,8 @@
 use crate::{
     checker::*,
     compiler::Compiler,
-    config::global::Config as GlobalConfig,
     evaluator::{eval, EvaluationOutput},
-    preprocessor::{build_transactions, split_input},
+    preprocessor::{build_transactions, extract_global_config, split_input},
 };
 use std::{env, fs::read_to_string, io::Write, iter, path::Path};
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
@@ -63,9 +62,8 @@ pub fn functional_tests<TComp: Compiler>(
     let input = read_to_string(path)?;
 
     let lines: Vec<String> = input.lines().map(|line| line.to_string()).collect();
-
-    let (config, directives, transactions) = split_input(&lines)?;
-    let config = GlobalConfig::build(&config)?;
+    let config = extract_global_config(&lines)?;
+    let (directives, transactions) = split_input(&lines, &config)?;
     let commands = build_transactions(&config, &transactions)?;
 
     let log = eval(&config, compiler, &commands)?;

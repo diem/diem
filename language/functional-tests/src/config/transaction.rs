@@ -5,8 +5,8 @@ use crate::{common::strip, config::global::Config as GlobalConfig, errors::*, ev
 use language_e2e_tests::account::Account;
 use move_core_types::{
     language_storage::TypeTag,
-    parser::parse_type_tags,
-    transaction_argument::{parse_as_transaction_argument, TransactionArgument},
+    parser::{parse_transaction_arguments, parse_type_tags},
+    transaction_argument::TransactionArgument,
 };
 use std::{collections::BTreeSet, str::FromStr, time::Duration};
 
@@ -16,21 +16,6 @@ pub enum Argument {
     AddressOf(String),
     SelfContained(TransactionArgument),
 }
-
-impl FromStr for Argument {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        if let Ok(arg) = parse_as_transaction_argument(s) {
-            return Ok(Argument::SelfContained(arg));
-        }
-        if s.starts_with("{{") && s.ends_with("}}") {
-            return Ok(Argument::AddressOf(s[2..s.len() - 2].to_string()));
-        }
-        Err(ErrorKind::Other(format!("failed to parse '{}' as argument", s)).into())
-    }
-}
-
 /// A raw entry extracted from the input. Used to build a transaction config table.
 #[derive(Debug)]
 pub enum Entry {
@@ -64,13 +49,12 @@ impl FromStr for Entry {
             return Ok(Entry::TypeArguments(parse_type_tags(s)?));
         }
         if let Some(s) = strip(s, "args:") {
-            let res: Result<Vec<_>> = s
-                .split(',')
-                .map(|s| s.trim())
-                .filter(|s| !s.is_empty())
-                .map(|s| s.parse::<Argument>())
-                .collect();
-            return Ok(Entry::Arguments(res?));
+            return Ok(Entry::Arguments(
+                parse_transaction_arguments(s)?
+                    .into_iter()
+                    .map(Argument::SelfContained)
+                    .collect(),
+            ));
         }
         if let Some(s) = strip(s, "no-run:") {
             let res: Result<Vec<_>> = s

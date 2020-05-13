@@ -116,17 +116,23 @@ Transaction:
 TransactionArgument:
   ENUM:
     0:
+      U8:
+        NEWTYPE: U8
+    1:
       U64:
         NEWTYPE: U64
-    1:
+    2:
+      U128:
+        NEWTYPE: U128
+    3:
       Address:
         NEWTYPE:
           TYPENAME: AccountAddress
-    2:
+    4:
       U8Vector:
         NEWTYPE:
           SEQ: U8
-    3:
+    5:
       Bool:
         NEWTYPE: BOOL
 TransactionAuthenticator:

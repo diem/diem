@@ -1,0 +1,5 @@
+//! args: 10u8, 10, 10u64, 10u128, true, false, 0x123, b"deadbeef"
+
+main(a: u8, b: u64, c: u64, d: u128, e: bool, f: bool, g: address, h: vector<u8>) {
+    return;
+}
