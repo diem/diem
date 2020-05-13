@@ -341,7 +341,7 @@ impl TransactionStore {
             ("gc.expiration_time_index", &mut self.expiration_time_index)
         };
         OP_COUNTERS.inc(index_name);
-        debug!("[mempool] gc {:?}", by_system_ttl);
+//        debug!("[mempool] gc {:?}", by_system_ttl);
 
         for key in index.gc(now) {
             if let Some(txns) = self.transactions.get_mut(&key.address) {
