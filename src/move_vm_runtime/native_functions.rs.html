@@ -169,6 +169,9 @@
 <span id="169">169</span>
 <span id="170">170</span>
 <span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -200,6 +203,7 @@
     <span class="ident">HashSha2_256</span>,
     <span class="ident">HashSha3_256</span>,
     <span class="ident">LCSToBytes</span>,
+    <span class="ident">PubED25519Validate</span>,
     <span class="ident">SigED25519Verify</span>,
     <span class="ident">SigED25519ThresholdVerify</span>,
     <span class="ident">VectorLength</span>,
@@ -229,6 +233,7 @@
             (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;Hash&quot;</span>, <span class="string">&quot;sha2_256&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">HashSha2_256</span>,
             (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;Hash&quot;</span>, <span class="string">&quot;sha3_256&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">HashSha3_256</span>,
             (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;LCS&quot;</span>, <span class="string">&quot;to_bytes&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">LCSToBytes</span>,
+            (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;Signature&quot;</span>, <span class="string">&quot;ed25519_validate_pubkey&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">PubED25519Validate</span>,
             (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;Signature&quot;</span>, <span class="string">&quot;ed25519_verify&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SigED25519Verify</span>,
             (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;Signature&quot;</span>, <span class="string">&quot;ed25519_threshold_verify&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">SigED25519ThresholdVerify</span>
@@ -259,6 +264,7 @@
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="self">Self</span>::<span class="ident">HashSha2_256</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">hash</span>::<span class="ident">native_sha2_256</span>(<span class="ident">ctx</span>, <span class="ident">t</span>, <span class="ident">v</span>),
             <span class="self">Self</span>::<span class="ident">HashSha3_256</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">hash</span>::<span class="ident">native_sha3_256</span>(<span class="ident">ctx</span>, <span class="ident">t</span>, <span class="ident">v</span>),
+            <span class="self">Self</span>::<span class="ident">PubED25519Validate</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">signature</span>::<span class="ident">native_ed25519_publickey_validation</span>(<span class="ident">ctx</span>, <span class="ident">t</span>, <span class="ident">v</span>),
             <span class="self">Self</span>::<span class="ident">SigED25519Verify</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">signature</span>::<span class="ident">native_ed25519_signature_verification</span>(<span class="ident">ctx</span>, <span class="ident">t</span>, <span class="ident">v</span>),
             <span class="self">Self</span>::<span class="ident">SigED25519ThresholdVerify</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">signature</span>::<span class="ident">native_ed25519_threshold_signature_verification</span>(<span class="ident">ctx</span>, <span class="ident">t</span>, <span class="ident">v</span>)

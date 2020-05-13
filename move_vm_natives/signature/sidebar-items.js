@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["native_ed25519_signature_verification",""],["native_ed25519_threshold_signature_verification","Batch verify a collection of signatures using a bitmap for matching signatures to keys."]]});
+initSidebarItems({"fn":[["native_ed25519_publickey_validation",""],["native_ed25519_signature_verification",""],["native_ed25519_threshold_signature_verification","Batch verify a collection of signatures using a bitmap for matching signatures to keys."]]});
