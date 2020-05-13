@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    config::global::Config as GlobalConfig,
     errors::*,
-    preprocessor::{build_transactions, split_input},
+    preprocessor::{build_transactions, extract_global_config, split_input},
 };
 
 fn parse_input(input: &str) -> Result<()> {
-    let (config, _, transactions) = split_input(input.lines())?;
-    let config = GlobalConfig::build(&config)?;
+    let config = extract_global_config("".lines())?;
+    let (_, transactions) = split_input(input.lines(), &config)?;
     build_transactions(&config, &transactions)?;
     Ok(())
 }

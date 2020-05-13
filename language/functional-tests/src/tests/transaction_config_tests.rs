@@ -7,6 +7,7 @@ use crate::{
         transaction::{is_new_transaction, Config, Entry},
     },
     errors::*,
+    preprocessor::substitute_addresses,
     tests::{
         global_config_tests::parse_and_build_config as parse_and_build_global_config,
         parse_each_line_as,
@@ -44,9 +45,7 @@ fn parse_args() {
         "//! args: 12",
         "//! args: 0xdeadbeef",
         "//! args: b\"AA\"",
-        r"//! args: {{bob}}",
         "//! args: 1, 2, 3, 4",
-        r"//! args: 1, 0x12, {{bob}}, {{alice}},",
     ] {
         s.parse::<Entry>().unwrap();
     }
@@ -105,7 +104,10 @@ fn parse_new_transaction() {
 }
 
 fn parse_and_build_config<'a>(global_config: &'a GlobalConfig, s: &str) -> Result<Config<'a>> {
-    Config::build(&global_config, &parse_each_line_as::<Entry>(s)?)
+    Config::build(
+        &global_config,
+        &parse_each_line_as::<Entry>(&substitute_addresses(global_config, s))?,
+    )
 }
 
 #[rustfmt::skip]
@@ -132,16 +134,4 @@ fn build_transaction_config_2() {
         //! sender: alice
         //! args: {{bob}}, {{alice}}
     ").unwrap();
-}
-
-#[rustfmt::skip]
-#[test]
-fn build_transaction_config_3() {
-    let global = parse_and_build_global_config(r"
-        //! account: alice
-    ").unwrap();
-
-    parse_and_build_config(&global, r"
-        //! args: {{bob}}
-    ").unwrap_err();
 }

@@ -30,7 +30,7 @@ use libra_types::{
     transaction::{
         authenticator::AuthenticationKey,
         helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
-        parse_as_transaction_argument, Module, RawTransaction, Script, SignedTransaction,
+        parse_transaction_argument, Module, RawTransaction, Script, SignedTransaction,
         TransactionArgument, TransactionPayload, Version,
     },
     waypoint::Waypoint,
@@ -788,7 +788,7 @@ impl ClientProxy {
         let script_bytes = fs::read(space_delim_strings[2])?;
         let arguments: Vec<_> = space_delim_strings[3..]
             .iter()
-            .filter_map(|arg| parse_as_transaction_argument_for_client(arg).ok())
+            .filter_map(|arg| parse_transaction_argument_for_client(arg).ok())
             .collect();
         // TODO: support type arguments in the client.
         self.submit_program(
@@ -1305,12 +1305,12 @@ impl ClientProxy {
     }
 }
 
-fn parse_as_transaction_argument_for_client(s: &str) -> Result<TransactionArgument> {
+fn parse_transaction_argument_for_client(s: &str) -> Result<TransactionArgument> {
     if is_address(s) {
         let account_address = ClientProxy::address_from_strings(s)?;
         return Ok(TransactionArgument::Address(account_address));
     }
-    parse_as_transaction_argument(s)
+    parse_transaction_argument(s)
 }
 
 fn format_parse_data_error<T: std::fmt::Debug>(

@@ -60,7 +60,7 @@ fn test_program_canonical_serialization_example() {
     let input = get_common_program();
 
     let expected_output: Vec<u8> = vec![
-        0x04, 0x6D, 0x6F, 0x76, 0x65, 0x00, 0x01, 0x00, 0xEF, 0xBE, 0xAD, 0xDE, 0x0D, 0xD0, 0xFE,
+        0x04, 0x6D, 0x6F, 0x76, 0x65, 0x00, 0x01, 0x01, 0xEF, 0xBE, 0xAD, 0xDE, 0x0D, 0xD0, 0xFE,
         0xCA,
     ];
 
@@ -85,7 +85,7 @@ fn test_raw_transaction_with_a_program_canonical_serialization_example() {
 
     let expected_output = vec![
         58, 36, 166, 30, 5, 209, 41, 202, 206, 158, 14, 252, 139, 201, 227, 56, 32, 0, 0, 0, 0, 0,
-        0, 0, 2, 4, 109, 111, 118, 101, 0, 1, 0, 239, 190, 173, 222, 13, 208, 254, 202, 16, 39, 0,
+        0, 0, 2, 4, 109, 111, 118, 101, 0, 1, 1, 239, 190, 173, 222, 13, 208, 254, 202, 16, 39, 0,
         0, 0, 0, 0, 0, 32, 78, 0, 0, 0, 0, 0, 0, 3, 76, 66, 82, 128, 81, 1, 0, 0, 0, 0, 0,
     ];
 
@@ -125,7 +125,7 @@ fn test_transaction_argument_address_canonical_serialization_example() {
     ]));
 
     let expected_output: Vec<u8> = vec![
-        0x01, 0x2C, 0x25, 0x99, 0x17, 0x85, 0x34, 0x3B, 0x23, 0xAE, 0x07, 0x3A, 0x50, 0xE5, 0xFD,
+        0x03, 0x2C, 0x25, 0x99, 0x17, 0x85, 0x34, 0x3B, 0x23, 0xAE, 0x07, 0x3A, 0x50, 0xE5, 0xFD,
         0x80, 0x9A,
     ];
 
@@ -138,7 +138,7 @@ fn test_transaction_argument_address_canonical_serialization_example() {
 fn test_transaction_argument_byte_array_canonical_serialization_example() {
     let input = TransactionArgument::U8Vector(vec![0xCA, 0xFE, 0xD0, 0x0D]);
 
-    let expected_output: Vec<u8> = vec![0x02, 0x04, 0xCA, 0xFE, 0xD0, 0x0D];
+    let expected_output: Vec<u8> = vec![0x04, 0x04, 0xCA, 0xFE, 0xD0, 0x0D];
 
     let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);
@@ -147,7 +147,7 @@ fn test_transaction_argument_byte_array_canonical_serialization_example() {
 #[test]
 fn test_transaction_argument_u64_canonical_serialization_example() {
     let input = TransactionArgument::U64(9_213_671_392_124_193_148);
-    let expected_output: Vec<u8> = vec![0x00, 0x7C, 0xC9, 0xBD, 0xA4, 0x50, 0x89, 0xDD, 0x7F];
+    let expected_output: Vec<u8> = vec![0x01, 0x7C, 0xC9, 0xBD, 0xA4, 0x50, 0x89, 0xDD, 0x7F];
 
     let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);
@@ -158,7 +158,7 @@ fn test_transaction_payload_with_a_program_canonical_serialization_example() {
     let input = TransactionPayload::Script(get_common_program());
 
     let expected_output = vec![
-        0x02, 0x04, 0x6D, 0x6F, 0x76, 0x65, 0x00, 0x01, 0x00, 0xEF, 0xBE, 0xAD, 0xDE, 0x0D, 0xD0,
+        0x02, 0x04, 0x6D, 0x6F, 0x76, 0x65, 0x00, 0x01, 0x01, 0xEF, 0xBE, 0xAD, 0xDE, 0x0D, 0xD0,
         0xFE, 0xCA,
     ];
 
