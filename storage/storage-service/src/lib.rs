@@ -11,11 +11,11 @@
 
 use anyhow::Result;
 use futures::{channel::mpsc, sink::SinkExt};
-use libra_config::config::NodeConfig;
-use libra_logger::prelude::*;
-use libra_types::proto::types::{
+use grpc_types::proto::types::{
     EpochChangeProof, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
 };
+use libra_config::config::NodeConfig;
+use libra_logger::prelude::*;
 use libradb::LibraDB;
 use std::{convert::TryFrom, sync::Arc};
 use storage_interface::{DbReader, DbWriter, Error, StartupInfo};

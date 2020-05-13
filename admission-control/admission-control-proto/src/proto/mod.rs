@@ -3,7 +3,7 @@
 
 #![allow(bare_trait_objects)]
 
-use ::libra_types::proto::*;
+use ::grpc_types::proto::*;
 use tokio::runtime::{Builder, Runtime};
 
 pub mod admission_control {

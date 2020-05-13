@@ -39,7 +39,6 @@ use crate::{
     account_address::AccountAddress,
     account_config::{AccountResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
 };
-use anyhow::{Error, Result};
 use libra_crypto::hash::HashValue;
 use move_core_types::{
     language_storage::{ModuleId, ResourceKey, StructTag, CODE_TAG, RESOURCE_TAG},
@@ -48,10 +47,7 @@ use move_core_types::{
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::{
-    convert::{TryFrom, TryInto},
-    fmt,
-};
+use std::fmt;
 
 #[derive(Clone, Eq, PartialEq, Default, Hash, Serialize, Deserialize, Ord, PartialOrd)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
@@ -151,23 +147,6 @@ impl fmt::Display for AccessPath {
                 "suffix: {:?} }} ",
                 String::from_utf8_lossy(&self.path[1 + HashValue::LENGTH..])
             )
-        }
-    }
-}
-
-impl TryFrom<crate::proto::types::AccessPath> for AccessPath {
-    type Error = Error;
-
-    fn try_from(proto: crate::proto::types::AccessPath) -> Result<Self> {
-        Ok(AccessPath::new(proto.address.try_into()?, proto.path))
-    }
-}
-
-impl From<AccessPath> for crate::proto::types::AccessPath {
-    fn from(path: AccessPath) -> Self {
-        Self {
-            address: path.address.to_vec(),
-            path: path.path,
         }
     }
 }

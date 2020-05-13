@@ -1,0 +1,33 @@
+[package]
+name = "grpc-types"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra types"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+prost = "0.6"
+proptest = { version = "0.9.6", default-features = false, optional = true }
+
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-crypto = {path = "../../crypto/crypto", version = "0.1.0"}
+libra-network-address = { path = "../../network/network-address", version = "0.1.0" }
+libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0", optional = true }
+libra-types = {path = "../../types", version = "0.1.0"}
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+
+[dev-dependencies]
+libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }
+
+
+[build-dependencies]
+prost-build = "0.6"
+
+[features]
+default = []
+fuzzing = ["libra-types/fuzzing"]

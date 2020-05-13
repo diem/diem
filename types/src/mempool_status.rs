@@ -3,7 +3,7 @@
 
 #![allow(clippy::unit_arg)]
 
-use anyhow::{Error, Result};
+use anyhow::Result;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -75,28 +75,5 @@ impl TryFrom<u64> for MempoolStatusCode {
 impl From<MempoolStatusCode> for u64 {
     fn from(status: MempoolStatusCode) -> u64 {
         status as u64
-    }
-}
-
-////***********************************
-//// Decoding/Encoding to Protobuffers
-////***********************************
-impl TryFrom<crate::proto::types::MempoolStatus> for MempoolStatus {
-    type Error = Error;
-
-    fn try_from(proto: crate::proto::types::MempoolStatus) -> Result<Self> {
-        Ok(MempoolStatus::new(
-            MempoolStatusCode::try_from(proto.code).unwrap_or(MempoolStatusCode::UnknownStatus),
-        )
-        .with_message(proto.message))
-    }
-}
-
-impl From<MempoolStatus> for crate::proto::types::MempoolStatus {
-    fn from(status: MempoolStatus) -> Self {
-        let mut proto_status = Self::default();
-        proto_status.code = status.code.into();
-        proto_status.message = status.message;
-        proto_status
     }
 }

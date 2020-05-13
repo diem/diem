@@ -213,7 +213,7 @@ fn test_libra_LibraEvent_from() {
 
     let event = ContractEvent::new(*event_key, sequence_number, type_tag, event_data_bytes);
 
-    let proto_txn = libra_types::proto::types::Event::from(event);
+    let proto_txn = grpc_types::proto::types::Event::from(event);
 
     let mut libra_event: *mut LibraEvent = std::ptr::null_mut();
     let result = unsafe {

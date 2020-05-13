@@ -17,17 +17,14 @@ use admission_control_proto::{
 use anyhow::Result;
 use debug_interface::prelude::*;
 use futures::{channel::oneshot, SinkExt};
+use grpc_types::proto::types::{
+    MempoolStatus as MempoolStatusProto, SignedTransaction as SignedTransactionProto,
+    UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse, VmStatus as VmStatusProto,
+};
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_mempool::MempoolClientSender;
-use libra_types::{
-    mempool_status::MempoolStatusCode,
-    proto::types::{
-        MempoolStatus as MempoolStatusProto, SignedTransaction as SignedTransactionProto,
-        UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse, VmStatus as VmStatusProto,
-    },
-    transaction::SignedTransaction,
-};
+use libra_types::{mempool_status::MempoolStatusCode, transaction::SignedTransaction};
 use std::{convert::TryFrom, sync::Arc};
 use storage_interface::DbReader;
 use tokio::runtime::{Builder, Runtime};
