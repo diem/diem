@@ -8,6 +8,7 @@ pub mod gas_schedule;
 pub mod identifier;
 pub mod language_storage;
 pub mod move_resource;
+pub mod parser;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod proptest_types;
 pub mod transaction_argument;

@@ -4,4 +4,3 @@
 pub mod block_metadata;
 pub mod global;
 pub mod transaction;
-pub mod type_tag_parser;
