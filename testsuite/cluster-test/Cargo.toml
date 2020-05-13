@@ -44,7 +44,7 @@ transaction-builder = { path = "../../language/transaction-builder", version = "
 
 futures = "0.3.5"
 tokio = { version = "0.2.13", features = ["full"] }
-async-trait = "0.1.30"
+async-trait = "0.1.31"
 
 kube = "0.32.0"
 k8s-openapi = { version = "0.7.1", default-features = false, features = ["v1_15"] }
