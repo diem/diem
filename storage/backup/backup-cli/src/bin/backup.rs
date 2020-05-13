@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use backup_cli::{adapter::local_storage::LocalStorage, backup_account_state, BackupServiceClient};
+use backup_cli::{
+    adapter::local_storage::LocalStorage,
+    backup::{backup_account_state, BackupServiceClient},
+};
 use std::path::PathBuf;
 use storage_client::{StorageRead, StorageReadServiceClient};
 use structopt::StructOpt;
@@ -30,7 +33,7 @@ async fn main() {
 
     let address = format!("127.0.0.1:{}", opt.node_port).parse().unwrap();
     let client = StorageReadServiceClient::new(&address);
-    let backup_service = BackupServiceClient::new(opt.backup_service_port);
+    let backup_service_client = BackupServiceClient::new(opt.backup_service_port);
 
     let (version, state_root_hash) = client
         .get_latest_state_root()
@@ -42,7 +45,7 @@ async fn main() {
     let adapter = LocalStorage::new(opt.local_dir);
     let file_handles = backup_account_state(
         &client,
-        &backup_service,
+        &backup_service_client,
         version,
         &adapter,
         opt.state_chunk_size,

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use backup_cli::restore_account_state;
+use backup_cli::restore::restore_account_state;
 use itertools::Itertools;
 use libra_crypto::HashValue;
 use std::{io::BufRead, path::PathBuf};
