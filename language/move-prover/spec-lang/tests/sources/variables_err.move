@@ -8,10 +8,10 @@ module M {
     global tick: num;
 
     // Undeclared
-    invariant update ticks = tick + 1;
+    // invariant update ticks = tick + 1;
 
     // Wrong type
-    invariant update tick = false;
+    // invariant update tick = false;
 
     // Cannot have assignment
     invariant tick = x;

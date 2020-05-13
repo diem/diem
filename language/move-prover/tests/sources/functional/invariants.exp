@@ -10,73 +10,6 @@ error:  This assertion might not hold.
 
 error:  This assertion might not hold.
 
-    ┌── tests/sources/functional/invariants.move:19:9 ───
-    │
- 19 │         invariant update x <= old(x) && tautology();
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/invariants.move:64:5: invalid_R_update (entry)
-    =     at tests/sources/functional/invariants.move:65:13: invalid_R_update
-    =     at tests/sources/functional/invariants.move:66:17: invalid_R_update
-    =         r = <redacted>,
-    =         t = <redacted>
-    =     at tests/sources/functional/invariants.move:67:20: invalid_R_update
-    =         r = <redacted>
-
-error:  This assertion might not hold.
-
-    ┌── tests/sources/functional/invariants.move:19:9 ───
-    │
- 19 │         invariant update x <= old(x) && tautology();
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/invariants.move:93:5: invalid_R_update_branching (entry)
-    =     at tests/sources/functional/invariants.move:94:13: invalid_R_update_branching
-    =         b = <redacted>,
-    =         t1 = <redacted>
-    =     at tests/sources/functional/invariants.move:95:24: invalid_R_update_branching
-    =         t2 = <redacted>
-    =     at tests/sources/functional/invariants.move:97:13: invalid_R_update_branching
-    =     at tests/sources/functional/invariants.move:102:13: invalid_R_update_branching
-    =     at tests/sources/functional/invariants.move:104:20: invalid_R_update_branching
-    =         r = <redacted>,
-    =         r = <redacted>
-    =     at tests/sources/functional/invariants.move:105:10: invalid_R_update_branching
-
-error:  This assertion might not hold.
-
-    ┌── tests/sources/functional/invariants.move:19:9 ───
-    │
- 19 │         invariant update x <= old(x) && tautology();
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/invariants.move:84:5: invalid_R_update_indirectly (entry)
-    =     at tests/sources/functional/invariants.move:85:13: invalid_R_update_indirectly
-    =     at tests/sources/functional/invariants.move:86:28: invalid_R_update_indirectly
-    =         t = <redacted>
-    =     at tests/sources/functional/invariants.move:89:5: update_helper (entry)
-    =     at tests/sources/functional/invariants.move:90:9: update_helper
-    =         r = <redacted>,
-    =         r = <redacted>
-    =     at tests/sources/functional/invariants.move:86:9: invalid_R_update_indirectly
-
-error:  This assertion might not hold.
-
-    ┌── tests/sources/functional/invariants.move:19:9 ───
-    │
- 19 │         invariant update x <= old(x) && tautology();
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/invariants.move:74:5: invalid_R_update_ref (entry)
-    =     at tests/sources/functional/invariants.move:75:13: invalid_R_update_ref
-    =     at tests/sources/functional/invariants.move:76:22: invalid_R_update_ref
-    =         r = <redacted>,
-    =         t = <redacted>
-    =     at tests/sources/functional/invariants.move:77:14: invalid_R_update_ref
-    =         r = <redacted>
-
-error:  This assertion might not hold.
-
     ┌── tests/sources/functional/invariants.move:16:9 ───
     │
  16 │         invariant greater_one(x);
@@ -90,34 +23,6 @@ error:  This assertion might not hold.
     =     at tests/sources/functional/invariants.move:115:26: lifetime_invalid_R
     =         x_ref = <redacted>
     =     at tests/sources/functional/invariants.move:116:18: lifetime_invalid_R
-    =         r_ref = <redacted>,
-    =         x_ref = <redacted>
-
-error:  This assertion might not hold.
-
-    ┌── tests/sources/functional/invariants.move:19:9 ───
-    │
- 19 │         invariant update x <= old(x) && tautology();
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/invariants.move:125:5: lifetime_invalid_R_2 (entry)
-    =     at tests/sources/functional/invariants.move:126:13: lifetime_invalid_R_2
-    =     at tests/sources/functional/invariants.move:127:21: lifetime_invalid_R_2
-    =         r = <redacted>,
-    =         r_ref = <redacted>
-    =     at tests/sources/functional/invariants.move:128:26: lifetime_invalid_R_2
-    =         x_ref = <redacted>
-    =     at tests/sources/functional/invariants.move:129:18: lifetime_invalid_R_2
-    =         r_ref = <redacted>,
-    =         x_ref = <redacted>
-    =     at tests/sources/functional/invariants.move:130:18: lifetime_invalid_R_2
-    =         r_ref = <redacted>,
-    =         x_ref = <redacted>
-    =     at tests/sources/functional/invariants.move:132:17: lifetime_invalid_R_2
-    =         r_ref = <redacted>
-    =     at tests/sources/functional/invariants.move:133:22: lifetime_invalid_R_2
-    =         x_ref = <redacted>
-    =     at tests/sources/functional/invariants.move:134:18: lifetime_invalid_R_2
     =         r_ref = <redacted>,
     =         x_ref = <redacted>
 

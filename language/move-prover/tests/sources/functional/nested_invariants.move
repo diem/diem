@@ -16,7 +16,7 @@ module TestNestedInvariants {
         invariant x > 0;
 
         // When we update via a reference, the new value must be smaller or equal the old one.
-        invariant update x <= old(x);
+        // invariant update x <= old(x);
     }
 
     struct Outer {
@@ -32,7 +32,7 @@ module TestNestedInvariants {
         invariant n.x < y;
 
         // Update invariant for own field.
-        invariant update y <= old(y);
+        // invariant update y <= old(y);
     }
 
     fun new(): Outer {

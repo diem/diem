@@ -11,7 +11,7 @@ module M {
 
   spec struct S {
     invariant x > 0 == y;
-    invariant update old(x) < x;
+    // invariant update old(x) < x;
   }
 
   spec struct R {

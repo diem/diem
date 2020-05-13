@@ -24,7 +24,6 @@ module Libra {
     spec struct T {
         invariant pack sum_of_token_values<Token> = sum_of_token_values<Token> + value;
         invariant unpack sum_of_token_values<Token> = sum_of_token_values<Token> - value;
-        invariant update sum_of_token_values<Token> = sum_of_token_values<Token> - old(value) + value;
     }
 
     // A singleton resource that grants access to `Libra::mint`. Only the Association has one.

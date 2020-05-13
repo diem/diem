@@ -32,7 +32,6 @@ module TestMarketCapGeneric {
         // maintain true sum_of_coins
         invariant pack sum_of_coins<X> = sum_of_coins<X> + value;
         invariant unpack sum_of_coins<X> = sum_of_coins<X> - value;
-        invariant update sum_of_coins<X> = sum_of_coins<X> - old(value) + value;
     }
 
     resource struct MarketCap<X> {
