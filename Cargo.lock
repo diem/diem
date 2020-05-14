@@ -253,7 +253,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "backtrace"
-version = "0.3.47"
+version = "0.3.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "addr2line 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -920,7 +920,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "crash-handler"
 version = "0.1.0"
 dependencies = [
- "backtrace 0.3.47 (registry+https://github.com/rust-lang/crates.io-index)",
+ "backtrace 0.3.48 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
  "libra-workspace-hack 0.1.0",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2731,7 +2731,7 @@ version = "0.1.0"
 name = "libra-security-logger"
 version = "0.1.0"
 dependencies = [
- "backtrace 0.3.47 (registry+https://github.com/rust-lang/crates.io-index)",
+ "backtrace 0.3.48 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
  "libra-workspace-hack 0.1.0",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6560,7 +6560,7 @@ dependencies = [
 "checksum atty 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)" = "d9b39be18770d11421cdb1b9947a45dd3f37e93092cbf377614828a319d5fee8"
 "checksum autocfg 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "1d49d90015b3c36167a20fe2810c5cd875ad504b39cff3d4eae7977e6b7c1cb2"
 "checksum autocfg 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f8aac770f1885fd7e387acedd76065302551364496e46b3dd00860b2f8359b9d"
-"checksum backtrace 0.3.47 (registry+https://github.com/rust-lang/crates.io-index)" = "a5393cb2f40a6fae0014c9af00018e95846f3b241b331a6b7733c326d3e58108"
+"checksum backtrace 0.3.48 (registry+https://github.com/rust-lang/crates.io-index)" = "0df2f85c8a2abbe3b7d7e748052fdd9b76a0458fdeb16ad4223f5eca78c7c130"
 "checksum base64 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b41b7ea54a0c9d92199de89e20e58d49f02f8e699814ef3fdf266f6f748d15c7"
 "checksum base64 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)" = "53d1ccbaf7d9ec9537465a97bf19edc1a4e158ecb49fc16178202238c569cc42"
 "checksum base64 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)" = "489d6c0ed21b11d038c31b6ceccca973e65d73ba3bd8ecb9a2babf5546164643"
