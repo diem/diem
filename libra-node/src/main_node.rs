@@ -34,7 +34,7 @@ use std::{
     time::{Duration, Instant},
 };
 use storage_interface::{DbReader, DbReaderWriter};
-use storage_service::{start_simple_storage_service_with_db, start_storage_service_with_db};
+use storage_service::{start_simple_storage_service_with_db};
 use subscription_service::ReconfigSubscription;
 use tokio::{
     runtime::{Builder, Handle, Runtime},
@@ -51,7 +51,6 @@ pub struct LibraHandle {
     _state_synchronizer: StateSynchronizer,
     _network_runtimes: Vec<Runtime>,
     _consensus_runtime: Option<Runtime>,
-    _storage: Runtime,
     _debug: Runtime,
     _backup: Runtime,
 }
@@ -240,8 +239,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         Arc::clone(&libra_db),
     );
 
-    // Will be deprecated. Do not reference it anymore.
-    let storage = start_storage_service_with_db(&node_config, Arc::clone(&libra_db));
     bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(&node_config).unwrap())
         .expect("Db-bootstrapper should not fail.");
 
@@ -412,7 +409,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         _mempool: mempool,
         _state_synchronizer: state_synchronizer,
         _consensus_runtime: consensus_runtime,
-        _storage: storage,
         _debug: debug_if,
         _backup: backup_service,
     }

@@ -21,11 +21,8 @@ use libra_types::{
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
-use std::sync::Arc;
 use stdlib::transaction_scripts::StdlibScript;
-use storage_client::SyncStorageClient;
 use storage_interface::DbReaderWriter;
-use storage_service::start_storage_service_with_db;
 use subscription_service::ReconfigSubscription;
 use transaction_builder::{
     encode_block_prologue_script, encode_publishing_option_script,
@@ -42,12 +39,9 @@ fn test_on_chain_config_pub_sub() {
 
     let (mut config, genesis_key) = config_builder::test_config();
     let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
-    let _storage = start_storage_service_with_db(&config, Arc::clone(&db));
     bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(&config).unwrap()).unwrap();
 
-    let mut block_executor = Box::new(Executor::<LibraVM>::new(
-        SyncStorageClient::new(&config.storage.address).into(),
-    ));
+    let mut block_executor = Box::new(Executor::<LibraVM>::new(db_rw.clone()));
     let chunk_executor = Box::new(Executor::<LibraVM>::new(db_rw));
     let mut executor_proxy = ExecutorProxy::new(db, chunk_executor, vec![subscription]);
 
