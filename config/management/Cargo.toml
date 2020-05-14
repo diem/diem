@@ -10,6 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 serde = { version = "1.0.110", features = ["rc"], default-features = false }
 structopt = "0.3.14"
 thiserror = "1.0"
@@ -27,7 +28,13 @@ transaction-builder = { path = "../../language/transaction-builder", version = "
 vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }
 
 [dev-dependencies]
+config-builder = { path = "../config-builder", version = "0.1.0" }
+libra-swarm = { path = "../../testsuite/libra-swarm", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
+libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
+libradb = { path = "../../storage/libradb", version = "0.1.0" }
+executor = { path = "../../execution/executor", version = "0.1.0" }
+storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
 
 [features]
 testing = ["libra-secure-storage/testing"]

@@ -243,6 +243,11 @@ impl NodeConfig {
             network.listen_address = crate::utils::get_available_port_in_multiaddr(true);
             network.advertised_address = network.listen_address.clone();
         }
+
+        for network in self.full_node_networks.iter_mut() {
+            network.listen_address = crate::utils::get_available_port_in_multiaddr(true);
+            network.advertised_address = network.listen_address.clone();
+        }
     }
 
     pub fn random() -> Self {

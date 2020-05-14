@@ -10,6 +10,9 @@ mod secure_backend;
 mod validator_config;
 
 #[cfg(test)]
+mod smoke_test;
+
+#[cfg(test)]
 mod storage_helper;
 
 use crate::{error::Error, layout::SetLayout, secure_backend::SecureBackend};
