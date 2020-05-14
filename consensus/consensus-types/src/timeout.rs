@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{block::Block, common::Round};
-use libra_crypto::{
-    ed25519::Ed25519Signature,
-    hash::{CryptoHash, CryptoHasher, HashValue},
-};
+use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash};
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_types::validator_signer::ValidatorSigner;
 use serde::{Deserialize, Serialize};
