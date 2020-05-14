@@ -9,7 +9,6 @@ use futures::{stream, stream::TryStreamExt};
 use libra_crypto::HashValue;
 use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
 use std::convert::TryInto;
-use storage_client::StorageReadServiceClient;
 use tokio::io::AsyncReadExt;
 use tokio_util::compat::FuturesAsyncReadCompatExt;
 
@@ -37,6 +36,15 @@ impl BackupServiceClient {
             .map_err(|e| futures::io::Error::new(futures::io::ErrorKind::Other, e))
             .into_async_read()
             .compat())
+    }
+
+    pub async fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
+        let mut buf = Vec::new();
+        self.get("latest_state_root")
+            .await?
+            .read_to_end(&mut buf)
+            .await?;
+        Ok(lcs::from_bytes(&buf)?)
     }
 
     async fn get_account_range_proof(
@@ -106,8 +114,7 @@ impl<R: AsyncReadExt + Send + Unpin> ReadRecordBytes for R {
 }
 
 pub async fn backup_account_state(
-    _client: &StorageReadServiceClient,
-    backup_service_client: &BackupServiceClient,
+    client: &BackupServiceClient,
     version: Version,
     adapter: &impl Adapter,
     max_chunk_size: usize,
@@ -115,7 +122,7 @@ pub async fn backup_account_state(
     let mut chunk = vec![];
     let mut ret = vec![];
 
-    let mut state_snapshot_stream = backup_service_client.get_state_snapshot(version).await?;
+    let mut state_snapshot_stream = client.get_state_snapshot(version).await?;
     let mut prev_record_bytes: Option<Bytes> = None;
     while let Some(record_bytes) = state_snapshot_stream.read_record_bytes().await? {
         if chunk.len() + 4 + record_bytes.len() > max_chunk_size {
@@ -130,8 +137,7 @@ pub async fn backup_account_state(
                 "Reached max_chunk_size. Asking proof for key: {:?}",
                 prev_key,
             );
-            let proof_file =
-                get_proof_and_write(backup_service_client, adapter, prev_key, version).await?;
+            let proof_file = get_proof_and_write(client, adapter, prev_key, version).await?;
             ret.push((account_state_file, proof_file));
             chunk = vec![];
         }
@@ -150,20 +156,20 @@ pub async fn backup_account_state(
     let prev_record_bytes = prev_record_bytes.expect("Should have at least one account.");
     let (prev_key, _): (HashValue, AccountStateBlob) = lcs::from_bytes(&prev_record_bytes)?;
     println!("Asking proof for last key: {:x}", prev_key);
-    let proof_file = get_proof_and_write(backup_service_client, adapter, prev_key, version).await?;
+    let proof_file = get_proof_and_write(client, adapter, prev_key, version).await?;
     ret.push((account_state_file, proof_file));
 
     Ok(ret)
 }
 
 async fn get_proof_and_write(
-    backup_service_client: &BackupServiceClient,
+    client: &BackupServiceClient,
     adapter: &impl Adapter,
     key: HashValue,
     version: Version,
 ) -> Result<FileHandle> {
     let mut proof_bytes = Vec::new();
-    backup_service_client
+    client
         .get_account_range_proof(key, version)
         .await?
         .read_to_end(&mut proof_bytes)

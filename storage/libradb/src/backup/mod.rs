@@ -80,4 +80,10 @@ impl BackupHandler {
         self.state_store
             .get_account_state_range_proof(rightmost_key, version)
     }
+
+    /// Get the latest version and state root hash.
+    pub fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
+        let (version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
+        Ok((version, txn_info.state_root_hash()))
+    }
 }
