@@ -7,6 +7,7 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
+anyhow = "1.0"
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"
 hex = "0.4.2"
@@ -29,7 +30,6 @@ lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical
 
 
 [dev-dependencies]
-anyhow = "1.0"
 functional-tests = { path = "../functional-tests", version = "0.1.0" }
 tempfile = "3.1.0"
 

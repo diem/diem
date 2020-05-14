@@ -20,6 +20,7 @@ pub mod test_utils;
 mod to_bytecode;
 pub mod typing;
 
+use anyhow::anyhow;
 use codespan::{ByteIndex, Span};
 use compiled_unit::CompiledUnit;
 use errors::*;
@@ -29,7 +30,7 @@ use shared::Address;
 use std::{
     collections::{BTreeMap, HashMap},
     fs::File,
-    io::{self, ErrorKind, Read, Write},
+    io::{Read, Write},
     iter::Peekable,
     path::{Path, PathBuf},
     str::Chars,
@@ -52,7 +53,7 @@ pub fn move_check(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
-) -> io::Result<()> {
+) -> anyhow::Result<()> {
     let (files, errors) = move_check_no_report(targets, deps, sender_opt)?;
     if !errors.is_empty() {
         errors::report_errors(files, errors)
@@ -65,7 +66,7 @@ pub fn move_check_no_report(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
-) -> io::Result<(FilesSourceText, Errors)> {
+) -> anyhow::Result<(FilesSourceText, Errors)> {
     let (files, pprog_and_comments_res) = parse_program(targets, deps)?;
     let pprog_res = pprog_and_comments_res.map(|(pprog, _)| pprog);
     match check_program(pprog_res, sender_opt) {
@@ -83,7 +84,7 @@ pub fn move_compile(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
-) -> io::Result<(FilesSourceText, Vec<CompiledUnit>)> {
+) -> anyhow::Result<(FilesSourceText, Vec<CompiledUnit>)> {
     let (files, pprog_and_comments_res) = parse_program(targets, deps)?;
     let pprog_res = pprog_and_comments_res.map(|(pprog, _)| pprog);
     match compile_program(pprog_res, sender_opt) {
@@ -97,7 +98,7 @@ pub fn move_compile_no_report(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
-) -> io::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Errors>)> {
+) -> anyhow::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Errors>)> {
     let (files, pprog_and_comments_res) = parse_program(targets, deps)?;
     let pprog_res = pprog_and_comments_res.map(|(pprog, _)| pprog);
     Ok(match compile_program(pprog_res, sender_opt) {
@@ -113,7 +114,7 @@ pub fn move_compile_to_expansion_no_report(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
-) -> io::Result<(
+) -> anyhow::Result<(
     FilesSourceText,
     Result<(expansion::ast::Program, CommentMap), Errors>,
 )> {
@@ -145,7 +146,7 @@ pub fn output_compiled_units(
     files: FilesSourceText,
     compiled_units: Vec<CompiledUnit>,
     out_dir: &str,
-) -> io::Result<()> {
+) -> anyhow::Result<()> {
     const SCRIPT_SUB_DIR: &str = "scripts";
     const MODULE_SUB_DIR: &str = "modules";
 
@@ -247,7 +248,7 @@ fn compile_program(
 fn parse_program(
     targets: &[String],
     deps: &[String],
-) -> io::Result<(
+) -> anyhow::Result<(
     FilesSourceText,
     Result<(parser::ast::Program, CommentMap), Errors>,
 )> {
@@ -286,15 +287,12 @@ fn parse_program(
     Ok((files, res))
 }
 
-fn find_and_intern_move_filenames(files: &[String]) -> io::Result<Vec<&'static str>> {
+fn find_and_intern_move_filenames(files: &[String]) -> anyhow::Result<Vec<&'static str>> {
     let mut result = vec![];
     for file in files {
         let path = Path::new(file);
         if !path.exists() {
-            return Err(std::io::Error::new(
-                ErrorKind::NotFound,
-                format!("No such file or directory '{}'", file),
-            ));
+            return Err(anyhow!(format!("No such file or directory '{}'", file)));
         }
         if !path.is_dir() {
             // If the filename is specified directly, add it to the list, regardless
@@ -313,10 +311,7 @@ fn find_and_intern_move_filenames(files: &[String]) -> io::Result<Vec<&'static s
             match entry_path.to_str() {
                 Some(p) => result.push(leak_str(p)),
                 None => {
-                    return Err(std::io::Error::new(
-                        ErrorKind::Other,
-                        "non-Unicode file name",
-                    ))
+                    return Err(anyhow!("non-Unicode file name"));
                 }
             }
         }
@@ -339,7 +334,7 @@ fn leak_str(s: &str) -> &'static str {
 fn parse_file(
     files: &mut FilesSourceText,
     fname: &'static str,
-) -> io::Result<(Vec<parser::ast::Definition>, MatchedFileCommentMap, Errors)> {
+) -> anyhow::Result<(Vec<parser::ast::Definition>, MatchedFileCommentMap, Errors)> {
     let mut errors: Errors = Vec::new();
     let mut f = File::open(fname)
         .map_err(|err| std::io::Error::new(err.kind(), format!("{}: {}", err, fname)))?;
