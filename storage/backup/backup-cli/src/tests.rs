@@ -13,9 +13,7 @@ use libra_temppath::TempPath;
 use libra_types::transaction::PRE_GENESIS_VERSION;
 use libradb::{test_helper::arb_blocks_to_commit, LibraDB};
 use std::sync::Arc;
-use storage_client::StorageReadServiceClient;
 use storage_interface::{DbReader, DbWriter};
-use storage_service::start_storage_service_with_db;
 
 fn tmp_db_empty() -> (TempPath, LibraDB) {
     let tmpdir = TempPath::new();
@@ -46,22 +44,19 @@ fn tmp_db_with_random_content() -> (TempPath, LibraDB) {
 fn end_to_end() {
     let (_src_db_dir, db_src) = tmp_db_with_random_content();
     let db_src = Arc::new(db_src);
-    let (latest_version, state_root_hash) = db_src.get_latest_state_root().unwrap();
     let tgt_db_dir = TempPath::new();
     let backup_dir = TempPath::new();
     backup_dir.create_as_dir().unwrap();
     let adaptor = LocalStorage::new(backup_dir.path().to_path_buf());
 
     let config = NodeConfig::random();
-    let _rt = start_storage_service_with_db(&config, Arc::clone(&db_src));
     let mut rt = start_backup_service(config.storage.backup_service_port, db_src);
-    let backup_service = BackupServiceClient::new(config.storage.backup_service_port);
-    let client = StorageReadServiceClient::new(&config.storage.address);
+    let client = BackupServiceClient::new(config.storage.backup_service_port);
+    let (version, state_root_hash) = rt.block_on(client.get_latest_state_root()).unwrap();
     let handles = rt
         .block_on(backup_account_state(
             &client,
-            &backup_service,
-            latest_version,
+            version,
             &adaptor,
             1024 * 1024,
         ))

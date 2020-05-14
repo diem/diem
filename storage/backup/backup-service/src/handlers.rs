@@ -17,6 +17,11 @@ use warp::{
     Filter, Rejection,
 };
 
+fn get_latest_state_root(backup_handler: &BackupHandler) -> Result<Box<dyn Reply>> {
+    let bytes = lcs::to_bytes(&backup_handler.get_latest_state_root()?)?;
+    Ok(Box::new(bytes))
+}
+
 fn get_state_range_proof(
     backup_handler: &BackupHandler,
     version: Version,
@@ -71,6 +76,13 @@ async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
 }
 
 pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Reply,)> {
+    // GET latest_state_root
+    let bh = backup_handler.clone();
+    let latest_state_root = warp::path::end()
+        .map(move || get_latest_state_root(&bh))
+        .map(unwrap_or_500)
+        .recover(handle_rejection);
+
     // GET state_range_proof/<version>/<end_key>
     let bh = backup_handler.clone();
     let state_range_proof = warp::path!(Version / HashValue)
@@ -87,7 +99,8 @@ pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Rep
 
     // Route by endpoint name.
     let routes = warp::any()
-        .and(warp::path("state_range_proof").and(state_range_proof))
+        .and(warp::path("latest_state_root").and(latest_state_root))
+        .or(warp::path("state_range_proof").and(state_range_proof))
         .or(warp::path("state_snapshot").and(state_snapshot));
 
     // Serve all routes for GET only.
