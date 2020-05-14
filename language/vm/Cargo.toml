@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 byteorder = "1.3.2"
-once_cell = "1.3.1"
+once_cell = "1.4.0"
 mirai-annotations = "1.8.0"
 proptest = { version = "0.9.6", optional = true }
 proptest-derive = { version = "0.1.2", optional = true }

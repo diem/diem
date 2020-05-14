@@ -19,7 +19,7 @@ libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0"
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 vm = { path = "../vm", version = "0.1.0" }
-once_cell = "1.3.1"
+once_cell = "1.4.0"
 include_dir = "0.6.0"
 
 [features]

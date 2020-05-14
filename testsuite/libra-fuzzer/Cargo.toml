@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0"
 byteorder = { version = "1.3.2", default-features = false }
 hex = "0.4.2"
-once_cell = "1.3.1"
+once_cell = "1.4.0"
 proptest = { version = "0.9.6", default-features = false }
 prost = "0.6"
 rusty-fork = { version = "0.2.2", default-features = false }
