@@ -13,18 +13,14 @@ use structopt::*;
 #[structopt(name = "Move Build", about = "Compile Move source to Move bytecode.")]
 pub struct Options {
     /// The source files to check and compile
-    #[structopt(
-        name = "PATH_TO_SOURCE_FILE",
-        short = cli::SOURCE_FILES_SHORT,
-        long = cli::SOURCE_FILES,
-    )]
+    #[structopt(name = "PATH_TO_SOURCE_FILE")]
     pub source_files: Vec<String>,
 
     /// The library files needed as dependencies
     #[structopt(
         name = "PATH_TO_DEPENDENCY_FILE",
-        short = cli::DEPENDENCIES_SHORT,
-        long = cli::DEPENDENCIES,
+        short = cli::DEPENDENCY_SHORT,
+        long = cli::DEPENDENCY,
     )]
     pub dependencies: Vec<String>,
 

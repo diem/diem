@@ -821,7 +821,7 @@ impl ClientProxy {
         self.temp_files.push(tmp_output_path.to_path_buf());
 
         let mut args = format!(
-            "run -p move-lang --bin move-build -- -f {} -s {} -o {}",
+            "run -p move-lang --bin move-build -- {} -s {} -o {}",
             file_path,
             address,
             tmp_output_path.display(),
