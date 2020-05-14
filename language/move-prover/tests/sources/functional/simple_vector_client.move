@@ -9,7 +9,6 @@ module TestVector {
     }
 
 
-
     // -----------------------------
     // Testing with concrete vectors
     // -----------------------------
@@ -277,7 +276,7 @@ module TestVector {
         ensures result_2 == true;
         ensures result_3 == false;
         ensures len(result_1) == 4;
-        ensures result_1[0] == 1;
+        ensures result_1[0] == 1; // FIXME: Comment this line out to reveal the bug. This function is not verified without this line, but should be.
         ensures result_1[1] == 2;
         ensures result_1[2] == 3;
         ensures result_1[3] == 5;
@@ -286,6 +285,33 @@ module TestVector {
         ensures any(result_1,|x| x==3);
         ensures !any(result_1,|x| x==4);
         ensures any(result_1,|x| x==5);
+    }
+
+    fun test_index_of(): (vector<u64>, bool, u64, bool, u64) {
+        let b1: bool;
+        let b2: bool;
+        let i1: u64;
+        let i2: u64;
+        let ev1 = Vector::empty<u64>();
+        Vector::push_back(&mut ev1, 1);
+        Vector::push_back(&mut ev1, 2);
+        Vector::push_back(&mut ev1, 3);
+        Vector::push_back(&mut ev1, 7);
+        Vector::push_back(&mut ev1, 7);
+        Vector::push_back(&mut ev1, 1);
+        Vector::reverse(&mut ev1);
+        (b1, i1) = Vector::index_of<u64>(&ev1, &4);
+        (b2, i2) = Vector::index_of<u64>(&ev1, &7);
+        (ev1, b1, i1, b2, i2)
+    }
+    spec fun test_index_of {
+        aborts_if false;
+        ensures result_2 == false;
+        ensures result_3 == 0;
+        ensures result_4 == true;
+        ensures result_1[1] == 7; // FIXME: Comment this line out to reveal the bug. This function is not verified without this line, but should be.
+        ensures result_1[2] == 7;
+        ensures result_5 == 1;
     }
 
 
