@@ -156,15 +156,14 @@ variable "log_to_file" {
 }
 
 variable "log_path" {
-  description = "Log path relative to data mount point"
   type    = string
-  default = "libra.log"
+  default = "/opt/libra/data/libra.log"
 }
 
 variable "structlog_path" {
-  description = "Structured log path relative to data mount point"
+  description = "Structured log path"
   type        = string
-  default     = "libra_structlog.log"
+  default     = "/opt/libra/data/libra_structlog.log"
 }
 
 variable "enable_logstash" {
