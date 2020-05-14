@@ -546,7 +546,7 @@
     <span class="ident">network_interface</span>::{<span class="ident">ConsensusMsg</span>, <span class="ident">ConsensusNetworkSender</span>},
     <span class="ident">persistent_liveness_storage</span>::{<span class="ident">LedgerRecoveryData</span>, <span class="ident">PersistentLivenessStorage</span>, <span class="ident">RecoveryData</span>},
     <span class="ident">state_replication</span>::{<span class="ident">StateComputer</span>, <span class="ident">TxnManager</span>},
-    <span class="ident">util</span>::<span class="ident">time_service</span>::{<span class="ident">ClockTimeService</span>, <span class="ident">TimeService</span>},
+    <span class="ident">util</span>::<span class="ident">time_service</span>::<span class="ident">TimeService</span>,
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">anyhow</span>;
 <span class="kw">use</span> <span class="ident">channel</span>::<span class="ident">libra_channel</span>;
@@ -601,7 +601,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EpochManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="ident">author</span>: <span class="ident">Author</span>,
     <span class="ident">config</span>: <span class="ident">ConsensusConfig</span>,
-    <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ClockTimeService</span><span class="op">&gt;</span>,
+    <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
     <span class="ident">self_sender</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">network_sender</span>: <span class="ident">ConsensusNetworkSender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
     <span class="ident">timeout_sender</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">Round</span><span class="op">&gt;</span>,
@@ -615,7 +615,7 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">EpochManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">node_config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">NodeConfig</span>,
-        <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ClockTimeService</span><span class="op">&gt;</span>,
+        <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
         <span class="ident">self_sender</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">network_sender</span>: <span class="ident">ConsensusNetworkSender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
         <span class="ident">timeout_sender</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">Round</span><span class="op">&gt;</span>,
