@@ -1,12 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    error::Error,
-    layout::Layout,
-    management_constants::{COMMON_NS, LAYOUT, VALIDATOR_CONFIG},
-    SingleBackend,
-};
+use crate::{error::Error, layout::Layout, SingleBackend};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{ASSOCIATION_KEY, OPERATOR_KEY};
 use libra_secure_storage::Storage;
@@ -62,11 +57,11 @@ impl Genesis {
         let mut common_config = self.backend.backend.clone();
         common_config
             .parameters
-            .insert("namespace".into(), COMMON_NS.into());
+            .insert("namespace".into(), crate::constants::COMMON_NS.into());
         let common: Box<dyn Storage> = common_config.try_into()?;
 
         let layout = common
-            .get(LAYOUT)
+            .get(crate::constants::LAYOUT)
             .map_err(|e| Error::RemoteStorageReadError(e.to_string()))?
             .value
             .string()
@@ -92,7 +87,7 @@ impl Genesis {
                 .map_err(|e| Error::RemoteStorageReadError(e.to_string()))?;
 
             let txn = validator
-                .get(VALIDATOR_CONFIG)
+                .get(crate::constants::VALIDATOR_CONFIG)
                 .map_err(|e| Error::RemoteStorageReadError(e.to_string()))?
                 .value;
             let txn = txn.transaction().unwrap();

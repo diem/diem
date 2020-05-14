@@ -28,3 +28,6 @@ vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }
 
 [dev-dependencies]
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
+
+[features]
+testing = ["libra-secure-storage/testing"]

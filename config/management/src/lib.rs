@@ -20,7 +20,7 @@ use libra_types::{transaction::Transaction, waypoint::Waypoint};
 use std::{convert::TryInto, fmt::Write, str::FromStr};
 use structopt::StructOpt;
 
-pub mod management_constants {
+pub mod constants {
     pub const COMMON_NS: &str = "common";
     pub const LAYOUT: &str = "layout";
     pub const VALIDATOR_CONFIG: &str = "validator_config";
@@ -308,7 +308,6 @@ pub struct SingleBackend {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::management_constants::{COMMON_NS, LAYOUT, VALIDATOR_CONFIG};
     use libra_network_address::NetworkAddress;
     use libra_secure_storage::{Policy, Value, VaultStorage};
     use libra_types::account_address::AccountAddress;
@@ -334,7 +333,7 @@ pub mod tests {
         // Step 1) Define and upload the layout specifying which identities have which roles. This
         // is uplaoded to the common namespace.
 
-        let mut common = default_storage(COMMON_NS.into());
+        let mut common = default_storage(constants::COMMON_NS.into());
         common.reset_and_clear().unwrap();
 
         // Note: owners are irrelevant currently
@@ -351,7 +350,7 @@ pub mod tests {
             .unwrap();
         file.sync_all().unwrap();
 
-        set_layout(temppath.path().to_str().unwrap(), COMMON_NS).unwrap();
+        set_layout(temppath.path().to_str().unwrap(), crate::constants::COMMON_NS).unwrap();
 
         // Step 2) Upload the association key:
 
@@ -411,7 +410,7 @@ pub mod tests {
             .unwrap();
         file.sync_all().unwrap();
         set_layout(temppath.path().to_str().unwrap(), namespace).unwrap();
-        let stored_layout = storage.get(LAYOUT).unwrap().value.string().unwrap();
+        let stored_layout = storage.get(constants::LAYOUT).unwrap().value.string().unwrap();
         assert_eq!(layout_text, stored_layout);
     }
 
@@ -435,7 +434,7 @@ pub mod tests {
         )
         .unwrap();
 
-        let remote_txn = remote.get(VALIDATOR_CONFIG).unwrap().value;
+        let remote_txn = remote.get(constants::VALIDATOR_CONFIG).unwrap().value;
         let remote_txn = remote_txn.transaction().unwrap();
 
         assert_eq!(local_txn, remote_txn);

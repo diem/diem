@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, management_constants::LAYOUT, SingleBackend};
+use crate::{error::Error, SingleBackend};
 use libra_secure_storage::{Storage, Value};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -15,7 +15,7 @@ use structopt::StructOpt;
 /// Layout defines the set of roles to identities within genesis. In practice, these identities
 /// will map to distinct namespaces where the expected data should be stored in the deterministic
 /// location as defined within this tool.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct Layout {
     pub operators: Vec<String>,
     pub owners: Vec<String>,
@@ -33,6 +33,10 @@ impl Layout {
 
     pub fn parse(contents: &str) -> Result<Self, Error> {
         toml::from_str(&contents).map_err(|e| Error::UnexpectedError(e.to_string()))
+    }
+
+    pub fn to_toml(&self) -> Result<String, Error> {
+        toml::to_string(&self).map_err(|e| Error::UnexpectedError(e.to_string()))
     }
 }
 
@@ -53,7 +57,7 @@ pub struct SetLayout {
 impl SetLayout {
     pub fn execute(self) -> Result<Layout, Error> {
         let layout = Layout::from_disk(&self.path)?;
-        let data = toml::to_string(&layout).map_err(|e| Error::UnexpectedError(e.to_string()))?;
+        let data = layout.to_toml()?;
 
         let mut remote: Box<dyn Storage> = self.backend.backend.try_into()?;
         if !remote.available() {
@@ -62,7 +66,7 @@ impl SetLayout {
 
         let value = Value::String(data);
         remote
-            .set(LAYOUT, value)
+            .set(crate::constants::LAYOUT, value)
             .map_err(|e| Error::RemoteStorageWriteError(e.to_string()))?;
 
         Ok(layout)
