@@ -15,7 +15,7 @@ futures = "0.3.5"
 hyper = "0.13"
 libra-logger = { path = "../logger", version = "0.1.0" }
 libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
-once_cell = "1.3.1"
+once_cell = "1.4.0"
 prometheus = { version = "0.8.0", default-features = false }
 serde_json = "1.0.53"
 tokio = "0.2"
