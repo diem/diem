@@ -368,7 +368,7 @@ fn no_vote_on_mismatch_round() {
     timed_block_on(&mut runtime, async {
         let bad_proposal = ProposalMsg::<TestPayload>::new(
             block_skip_round,
-            SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
+            SyncInfo::new(genesis_qc.clone(), None, None),
         );
         assert_eq!(
             node.event_processor
@@ -378,7 +378,7 @@ fn no_vote_on_mismatch_round() {
         );
         let good_proposal = ProposalMsg::<TestPayload>::new(
             correct_block.clone(),
-            SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
+            SyncInfo::new(genesis_qc.clone(), None, None),
         );
         assert_eq!(
             node.event_processor
@@ -454,7 +454,7 @@ fn no_vote_on_invalid_proposer() {
     timed_block_on(&mut runtime, async {
         let bad_proposal = ProposalMsg::<TestPayload>::new(
             block_incorrect_proposer,
-            SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
+            SyncInfo::new(genesis_qc.clone(), None, None),
         );
         assert_eq!(
             node.event_processor
@@ -464,7 +464,7 @@ fn no_vote_on_invalid_proposer() {
         );
         let good_proposal = ProposalMsg::<TestPayload>::new(
             correct_block.clone(),
-            SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
+            SyncInfo::new(genesis_qc.clone(), None, None),
         );
 
         assert_eq!(
@@ -498,7 +498,7 @@ fn new_round_on_timeout_certificate() {
     timed_block_on(&mut runtime, async {
         let skip_round_proposal = ProposalMsg::<TestPayload>::new(
             block_skip_round,
-            SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), Some(tc)),
+            SyncInfo::new(genesis_qc.clone(), None, Some(tc)),
         );
         assert_eq!(
             node.event_processor
@@ -508,7 +508,7 @@ fn new_round_on_timeout_certificate() {
         );
         let old_good_proposal = ProposalMsg::<TestPayload>::new(
             correct_block.clone(),
-            SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
+            SyncInfo::new(genesis_qc.clone(), None, None),
         );
         assert_eq!(
             node.event_processor
@@ -531,7 +531,7 @@ fn response_on_block_retrieval() {
     let block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let block_id = block.id();
     let proposal =
-        ProposalMsg::<TestPayload>::new(block, SyncInfo::new(genesis_qc.clone(), genesis_qc, None));
+        ProposalMsg::<TestPayload>::new(block, SyncInfo::new(genesis_qc.clone(), None, None));
 
     timed_block_on(&mut runtime, async {
         node.event_processor.process_proposal_msg(proposal).await;
@@ -637,7 +637,7 @@ fn recover_on_restart() {
                 proposal.clone(),
                 SyncInfo::new(
                     proposal.quorum_cert().clone(),
-                    genesis_qc.clone(),
+                    Some(genesis_qc.clone()),
                     Some(tc.clone()),
                 ),
             );
