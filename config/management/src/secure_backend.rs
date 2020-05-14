@@ -75,6 +75,7 @@ impl TryInto<config::SecureBackend> for SecureBackend {
                     .remove("path")
                     .ok_or_else(|| Error::BackendParsingError("missing path".into()))?;
                 config.path = PathBuf::from(path);
+                config.namespace = self.parameters.remove("namespace");
                 config::SecureBackend::OnDiskStorage(config)
             }
             MEMORY => config::SecureBackend::InMemoryStorage,
