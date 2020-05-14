@@ -440,60 +440,23 @@ pub trait CryptoHash {
 
 /// A trait for representing the state of a cryptographic hasher.
 pub trait CryptoHasher: Default + std::io::Write {
+    /// Write bytes into the hasher.
+    fn update(&mut self, bytes: &[u8]);
+
     /// Finish constructing the [`HashValue`].
     fn finish(self) -> HashValue;
-    /// Write bytes into the hasher.
-    fn update(&mut self, bytes: &[u8]) -> &mut Self;
 }
 
-/// Our preferred hashing schema, outputting [`HashValue`]s.
-/// * Hashing is parameterized by a `domain` to prevent domain
-/// ambiguity attacks.
-/// * The existence of serialization/deserialization function rules
-/// out any formatting ambiguity.
-/// * Assuming that the `domain` seed is used only once per Rust type,
-/// or that the serialization carries enough type information to avoid
-/// ambiguities within a same domain.
-/// * Only used internally within this crate
+/// The default hasher underlying generated implementations of `CryptoHasher`.
+#[doc(hidden)]
 #[derive(Clone)]
 pub struct DefaultHasher {
     state: Sha3,
 }
 
-impl CryptoHasher for DefaultHasher {
-    fn finish(self) -> HashValue {
-        let mut hasher = HashValue::default();
-        self.state.finalize(hasher.as_ref_mut());
-        hasher
-    }
-
-    fn update(&mut self, bytes: &[u8]) -> &mut Self {
-        self.state.update(bytes);
-        self
-    }
-}
-
-impl Default for DefaultHasher {
-    fn default() -> Self {
-        DefaultHasher {
-            state: Sha3::v256(),
-        }
-    }
-}
-
-impl std::io::Write for DefaultHasher {
-    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
-        self.update(bytes);
-        Ok(bytes.len())
-    }
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
-    }
-}
-
 impl DefaultHasher {
-    /// initialize a new hasher with a specific salt
-    pub fn new_with_salt(typename: &[u8]) -> Self {
+    #[doc(hidden)]
+    pub fn new(typename: &[u8]) -> Self {
         let mut state = Sha3::v256();
         if !typename.is_empty() {
             let mut salt = typename.to_vec();
@@ -501,6 +464,18 @@ impl DefaultHasher {
             state.update(HashValue::from_sha3_256(&salt[..]).as_ref());
         }
         DefaultHasher { state }
+    }
+
+    #[doc(hidden)]
+    pub fn update(&mut self, bytes: &[u8]) {
+        self.state.update(bytes);
+    }
+
+    #[doc(hidden)]
+    pub fn finish(self) -> HashValue {
+        let mut hasher = HashValue::default();
+        self.state.finalize(hasher.as_ref_mut());
+        hasher
     }
 }
 
@@ -516,9 +491,11 @@ macro_rules! define_hasher {
 
         impl $hasher_type {
             fn new() -> Self {
-                $hasher_type(DefaultHasher::new_with_salt($salt))
+                $hasher_type(DefaultHasher::new($salt))
             }
         }
+
+        static $hasher_name: Lazy<$hasher_type> = Lazy::new(|| { $hasher_type::new() });
 
         impl Default for $hasher_type {
             fn default() -> Self {
@@ -527,13 +504,12 @@ macro_rules! define_hasher {
         }
 
         impl CryptoHasher for $hasher_type {
-            fn finish(self) -> HashValue {
-                self.0.finish()
+            fn update(&mut self, bytes: &[u8]) {
+                self.0.update(bytes);
             }
 
-            fn update(&mut self, bytes: &[u8]) -> &mut Self {
-                self.0.update(bytes);
-                self
+            fn finish(self) -> HashValue {
+                self.0.finish()
             }
         }
 
@@ -546,8 +522,6 @@ macro_rules! define_hasher {
                 Ok(())
             }
         }
-
-        static $hasher_name: Lazy<$hasher_type> = Lazy::new(|| { $hasher_type::new() });
     };
 }
 
