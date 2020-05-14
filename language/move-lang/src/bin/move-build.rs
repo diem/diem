@@ -55,17 +55,7 @@ pub struct Options {
     pub emit_source_map: bool,
 }
 
-pub fn main() {
-    std::process::exit(match main_impl() {
-        Ok(_) => 0,
-        Err(e) => {
-            eprintln!("error: {}", e);
-            1
-        }
-    });
-}
-
-fn main_impl() -> std::io::Result<()> {
+pub fn main() -> anyhow::Result<()> {
     let Options {
         source_files,
         dependencies,
