@@ -49,14 +49,14 @@ impl ValidatorConfig {
 
         let validator_address = self.validator_address.clone().into_prod(
             validator_network_key.clone(),
-            crate::constants::GENESIS_HANDSHAKE_VERSION,
+            crate::constants::HANDSHAKE_VERSION,
         );
         let raw_validator_address = RawNetworkAddress::try_from(&validator_address)
             .map_err(|e| Error::UnexpectedError(format!("(raw_validator_address) {}", e)))?;
 
         let fullnode_address = self.fullnode_address.clone().into_prod(
             fullnode_network_key.clone(),
-            crate::constants::GENESIS_HANDSHAKE_VERSION,
+            crate::constants::HANDSHAKE_VERSION,
         );
         let raw_fullnode_address = RawNetworkAddress::try_from(&fullnode_address)
             .map_err(|e| Error::UnexpectedError(format!("(raw_fullnode_address) {}", e)))?;

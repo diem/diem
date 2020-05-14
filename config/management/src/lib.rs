@@ -36,7 +36,7 @@ pub mod constants {
     pub const MAX_GAS_AMOUNT: u64 = 1_000_000;
     pub const GAS_CURRENCY_CODE: &str = LBR_NAME;
     pub const TXN_EXPIRATION_SECS: u64 = 3600;
-    pub const GENESIS_HANDSHAKE_VERSION: u8 = 0;
+    pub const HANDSHAKE_VERSION: u8 = 0;
 }
 
 #[derive(Debug, StructOpt)]
