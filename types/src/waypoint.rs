@@ -9,7 +9,7 @@ use crate::{
 };
 use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
-use libra_crypto_derive::CryptoHasher;
+use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Display, Formatter},
@@ -123,7 +123,7 @@ impl FromStr for Waypoint {
 /// Keeps the fields of LedgerInfo that are hashed for generating a waypoint.
 /// Note that not all the fields of LedgerInfo are included: some consensus-related fields
 /// might not be the same for all the participants.
-#[derive(Deserialize, Serialize, CryptoHasher)]
+#[derive(Deserialize, Serialize, CryptoHasher, LCSCryptoHash)]
 struct Ledger2WaypointConverter {
     epoch: u64,
     root_hash: HashValue,
@@ -141,17 +141,6 @@ impl Ledger2WaypointConverter {
             timestamp_usecs: ledger_info.timestamp_usecs(),
             next_epoch_info: ledger_info.next_epoch_info().cloned(),
         }
-    }
-}
-
-impl CryptoHash for Ledger2WaypointConverter {
-    type Hasher = Ledger2WaypointConverterHasher;
-
-    fn hash(&self) -> HashValue {
-        let bytes = lcs::to_bytes(self).expect("Ledger2WaypointConverter serialization failed");
-        let mut state = Self::Hasher::default();
-        state.update(bytes.as_ref());
-        state.finish()
     }
 }
 

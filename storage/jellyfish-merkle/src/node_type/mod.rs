@@ -20,7 +20,6 @@ use libra_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use libra_crypto_derive::CryptoHasher;
 use libra_nibble::Nibble;
 use libra_types::{
     account_state_blob::AccountStateBlob,
@@ -161,7 +160,7 @@ pub(crate) type Children = HashMap<Nibble, Child>;
 /// Though we choose the same internal node structure as that of Patricia Merkle tree, the root hash
 /// computation logic is similar to a 4-level sparse Merkle tree except for some customizations. See
 /// the `CryptoHash` trait implementation below for details.
-#[derive(Clone, Debug, Eq, PartialEq, CryptoHasher)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InternalNode {
     // Up to 16 children.
     children: Children,
@@ -213,18 +212,6 @@ pub struct InternalNode {
 /// height
 /// Note: @ denotes placeholder hash.
 /// ```
-impl CryptoHash for InternalNode {
-    type Hasher = InternalNodeHasher;
-
-    fn hash(&self) -> HashValue {
-        self.merkle_hash(
-            0,  /* start index */
-            16, /* the number of leaves in the subtree of which we want the hash of root */
-            self.generate_bitmaps(),
-        )
-    }
-}
-
 #[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for InternalNode {
     type Parameters = ();
@@ -259,6 +246,14 @@ impl InternalNode {
             )
         }
         Self { children }
+    }
+
+    pub fn hash(&self) -> HashValue {
+        self.merkle_hash(
+            0,  /* start index */
+            16, /* the number of leaves in the subtree of which we want the hash of root */
+            self.generate_bitmaps(),
+        )
     }
 
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
@@ -494,7 +489,7 @@ pub(crate) fn get_child_and_sibling_half_start(n: Nibble, height: u8) -> (u8, u8
 }
 
 /// Represents an account.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct LeafNode {
     // The hashed account address associated with this leaf node.
     account_key: HashValue,
@@ -529,14 +524,8 @@ impl LeafNode {
     pub fn blob(&self) -> &AccountStateBlob {
         &self.blob
     }
-}
 
-/// Computes the hash of a [`LeafNode`].
-impl CryptoHash for LeafNode {
-    // Unused hasher.
-    type Hasher = LeafNodeHasher;
-
-    fn hash(&self) -> HashValue {
+    pub fn hash(&self) -> HashValue {
         SparseMerkleLeafNode::new(self.account_key, self.blob_hash).hash()
     }
 }

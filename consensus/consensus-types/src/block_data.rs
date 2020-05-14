@@ -204,9 +204,8 @@ where
     type Hasher = BlockDataHasher;
 
     fn hash(&self) -> HashValue {
-        let bytes = lcs::to_bytes(self).expect("BlockData serialization failed");
         let mut state = Self::Hasher::default();
-        state.update(bytes.as_ref());
+        lcs::serialize_into(&mut state, self).expect("BlockData serialization failed");
         state.finish()
     }
 }

@@ -1,17 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_crypto::{
-    hash::{CryptoHash, CryptoHasher},
-    HashValue,
-};
-use libra_crypto_derive::CryptoHasher;
+use libra_crypto::{hash::CryptoHasher, HashValue};
+use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_types::block_info::BlockInfo;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
 /// VoteData keeps the information about the block, and its parent.
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, CryptoHasher)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, CryptoHasher, LCSCryptoHash)]
 pub struct VoteData {
     /// Contains all the block information needed for voting for the proposed round.
     proposed: BlockInfo,
@@ -62,15 +59,5 @@ impl VoteData {
             "Proposed version is less than parent version",
         );
         Ok(())
-    }
-}
-
-impl CryptoHash for VoteData {
-    type Hasher = VoteDataHasher;
-
-    fn hash(&self) -> HashValue {
-        let mut state = Self::Hasher::default();
-        state.update(lcs::to_bytes(self).expect("Should serialize.").as_ref());
-        state.finish()
     }
 }
