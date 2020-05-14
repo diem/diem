@@ -939,11 +939,37 @@ procedure {:inline 1} $Vector_contains(ta: TypeValue, v: Value, e: Value) return
     res := Boolean($contains_vector(v, e));
 }
 
-procedure {:inline 1} $Vector_index_of(ta: TypeValue, v: Value, e: Value) returns (res1: Value, res2: Value)  {
-    // TODO: implement me
-    assert false;
-}
+// FIXME: This procedure sometimes (not always) make the test (performance_200511) very slow (> 10 mins) or hang
+// although this is not used in the test script (performance_200511). The test finishes in 20 secs when it works fine.
+procedure {:inline 1} $Vector_index_of(ta: TypeValue, v: Value, e: Value) returns (res1: Value, res2: Value);
+requires is#Vector(v);
+ensures is#Boolean(res1);
+ensures is#Integer(res2);
+ensures 0 <= i#Integer(res2) && i#Integer(res2) < $vlen(v);
+ensures res1 == Boolean($contains_vector(v, e));
+ensures b#Boolean(res1) ==> IsEqual($vmap(v)[i#Integer(res2)], e);
+ensures b#Boolean(res1) ==> (forall i:int :: 0<=i && i<i#Integer(res2) ==> !IsEqual($vmap(v)[i], e));
+ensures !b#Boolean(res1) ==> i#Integer(res2) == 0;
 
+// FIXME: This alternative definition has the same issue as the other one above.
+// TODO: Delete this when unnecessary
+//procedure {:inline 1} $Vector_index_of(ta: TypeValue, v: Value, e: Value) returns (res1: Value, res2: Value) {
+//    var b: bool;
+//    var i: int;
+//    assume is#Vector(v);
+//    b := $contains_vector(v, e);
+//    if (b) {
+//        havoc i;
+//        assume 0 <= i && i < $vlen(v);
+//        assume IsEqual($vmap(v)[i], e);
+//        assume (forall j:int :: 0<=j && j<i ==> !IsEqual($vmap(v)[j], e));
+//    }
+//    else {
+//        i := 0;
+//    }
+//    res1 := Boolean(b);
+//    res2 := Integer(i);
+//}
 
 // ==================================================================================
 // Native hash

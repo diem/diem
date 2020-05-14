@@ -12,7 +12,6 @@ module VerifyVector {
         pragma verify = true;
     }
 
-
     fun verify_model_empty<Element>() : vector<Element> {
         Vector::empty<Element>() // inlining the built-in Boogie procedure
     }
@@ -87,6 +86,18 @@ module VerifyVector {
         ensures v == old(update(update(v,i,v[j]),j,v[i]));
     }
 
+    // Return an vector of size one containing `e`
+    fun verify_singleton<Element>(e: Element): vector<Element> {
+        let v = Vector::empty();
+        Vector::push_back(&mut v, e);
+        v
+    }
+    spec fun verify_singleton {
+        aborts_if false;
+        ensures len(result) == 1;
+        ensures result[0] == e;
+    }
+
     // Reverses the order of the elements in the vector in place.
     fun verify_reverse<Element>(v: &mut vector<Element>) {
         let len = Vector::length(v);
@@ -100,8 +111,9 @@ module VerifyVector {
 //            back_index = back_index - 1;
 //        }
     }
-    spec fun verify_reverse {
-        // TODO: may need to extend the spec language to be able to specify this
+    spec fun verify_reverse { // TODO: cannot verify loop
+//        aborts_if false;
+//        ensures all(0..len(v), |i| old(v[i]) == v[len(v)-1-i]);
     }
 
     // Reverses the order of the elements in the vector in place.
@@ -109,7 +121,8 @@ module VerifyVector {
         Vector::reverse(v); // inlining the built-in Boogie procedure
     }
     spec fun verify_model_reverse {
-        // TODO: may need to extend the spec language to be able to specify this
+        aborts_if false;
+        ensures all(0..len(v), |i| old(v[i]) == v[len(v)-1-i]);
     }
 
     // Moves all of the elements of the `other` vector into the `lhs` vector.
@@ -148,6 +161,31 @@ module VerifyVector {
     }
     spec fun verify_model_is_empty {
         ensures result == (len(v) == 0);
+    }
+
+    // Return (true, i) if `e` is in the vector `v` at index `i`.
+    // Otherwise returns (false, 0).
+    fun verify_index_of<Element>(_v: &vector<Element>, _e: &Element): (bool, u64) {
+        // let i = 0;
+        // let len = length(v);
+        // while (i < len) {
+        //     if (borrow(v, i) == e) return (true, i);
+        //     i = i + 1;
+        // };
+        (false, 0)
+    }
+    spec fun verify_index_of { // TODO: cannot verify loop
+    }
+
+    fun verify_model_index_of<Element>(v: &vector<Element>, e: &Element): (bool, u64) {
+        Vector::index_of(v, e) // inlining the built-in Boogie procedure
+    }
+    spec fun verify_model_index_of {
+        aborts_if false;
+        ensures result_1 == any(v,|x| x==e); // whether v contains e or not
+        ensures result_1 ==> v[result_2] == e; // if true, return the index where v contains e
+        ensures result_1 ==> all(0..result_2,|i| v[i]!=e); // ensure the smallest index
+        ensures !result_1 ==> result_2 == 0; // return 0 if v does not contain e
     }
 
     // Return true if `e` is in the vector `v`
