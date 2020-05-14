@@ -3,11 +3,8 @@
 
 use crate::shared::*;
 
-pub const SOURCE_FILES: &str = "source-files";
-pub const SOURCE_FILES_SHORT: &str = "f";
-
-pub const DEPENDENCIES: &str = "dependencies";
-pub const DEPENDENCIES_SHORT: &str = "d";
+pub const DEPENDENCY: &str = "dependency";
+pub const DEPENDENCY_SHORT: &str = "d";
 
 pub const SENDER: &str = "sender";
 pub const SENDER_SHORT: &str = "s";

@@ -68,16 +68,18 @@ move-check 0.0.1
 Check Move source code, without compiling to bytecode.
 
 USAGE:
-    move-check [OPTIONS]
+    move-check [OPTIONS] [--] [PATH_TO_SOURCE_FILE]...
 
 FLAGS:
     -h, --help       Prints help information
     -V, --version    Prints version information
 
 OPTIONS:
-    -s, --sender <address>                             The sender address for modules and scripts
-    -d, --dependencies <path-to-dependency-file>...    The library files needed as dependencies
-    -f, --source-files <path-to-source-file>...        The source files to check/build
+    -s, --sender <ADDRESS>                           The sender address for modules and scripts
+    -d, --dependency <PATH_TO_DEPENDENCY_FILE>...    The library files needed as dependencies
+
+ARGS:
+    <PATH_TO_SOURCE_FILE>...    The source files to check
 ```
 
 Move build is a command line tool for checking Move programs and producing serialized bytecode.
@@ -88,17 +90,20 @@ move-build 0.0.1
 Compile Move source to Move bytecode.
 
 USAGE:
-    move-build [OPTIONS]
+    move-build [FLAGS] [OPTIONS] [--] [PATH_TO_SOURCE_FILE]...
 
 FLAGS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
+    -m, --source-map    Save bytecode source map to disk
+    -h, --help          Prints help information
+    -V, --version       Prints version information
 
 OPTIONS:
-    -s, --sender <address>                             The sender address for modules and scripts
-    -d, --dependencies <path-to-dependency-file>...    The library files needed as dependencies
-    -o, --out-dir <path-to-output-directory>           The Move bytecode output directory [default: move_build_output]
-    -f, --source-files <path-to-source-file>...        The source files to check and compile
+    -s, --sender <ADDRESS>                           The sender address for modules and scripts
+    -d, --dependency <PATH_TO_DEPENDENCY_FILE>...    The library files needed as dependencies
+    -o, --out-dir <PATH_TO_OUTPUT_DIRECTORY>         The Move bytecode output directory [default: move_build_output]
+
+ARGS:
+    <PATH_TO_SOURCE_FILE>...    The source files to check and compile
 ```
 
 ## Folder Structure
