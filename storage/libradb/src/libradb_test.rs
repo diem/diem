@@ -2,13 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+#[allow(unused_imports)]
 use crate::{
     schema::jellyfish_merkle_node::JellyfishMerkleNodeSchema,
     test_helper::{arb_blocks_to_commit, arb_mock_genesis},
 };
+#[allow(unused_imports)]
 use jellyfish_merkle::node_type::{Node, NodeKey};
 use libra_crypto::hash::CryptoHash;
 use libra_temppath::TempPath;
+#[allow(unused_imports)]
 use libra_types::{
     account_config::AccountResource, contract_event::ContractEvent, ledger_info::LedgerInfo,
     proof::SparseMerkleLeafNode, vm_error::StatusCode,
@@ -29,7 +32,7 @@ fn verify_epochs(db: &LibraDB, ledger_infos_with_sigs: &[LedgerInfoWithSignature
     );
 }
 
-fn test_save_blocks_impl(input: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>) {
+pub fn test_save_blocks_impl(input: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>) {
     let tmp_dir = TempPath::new();
     let db = LibraDB::new_for_test(&tmp_dir);
 
