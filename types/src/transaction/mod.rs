@@ -20,7 +20,7 @@ use libra_crypto::{
     traits::SigningKey,
     HashValue,
 };
-use libra_crypto_derive::CryptoHasher;
+use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{de, ser, Deserialize, Serialize};
@@ -54,7 +54,7 @@ pub const PRE_GENESIS_VERSION: Version = u64::max_value();
 pub const MAX_TRANSACTION_SIZE_IN_BYTES: usize = 4096;
 
 /// RawTransaction is the portion of a transaction that a client signs
-#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize, CryptoHasher, LCSCryptoHash)]
 pub struct RawTransaction {
     /// Sender's address.
     sender: AccountAddress,
@@ -285,20 +285,6 @@ impl RawTransaction {
     }
 }
 
-impl CryptoHash for RawTransaction {
-    type Hasher = RawTransactionHasher;
-
-    fn hash(&self) -> HashValue {
-        let mut state = Self::Hasher::default();
-        state.update(
-            lcs::to_bytes(self)
-                .expect("Failed to serialize RawTransaction")
-                .as_slice(),
-        );
-        state.finish()
-    }
-}
-
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TransactionPayload {
     /// Deprecated. See https://developers.libra.org/blog/2019/10/22/simplifying-payloads for more
@@ -319,7 +305,7 @@ pub enum TransactionPayload {
 /// **IMPORTANT:** The signature of a `SignedTransaction` is not guaranteed to be verified. For a
 /// transaction whose signature is statically guaranteed to be verified, see
 /// [`SignatureCheckedTransaction`].
-#[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize, CryptoHasher)]
+#[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct SignedTransaction {
     /// The raw transaction
     raw_txn: RawTransaction,
@@ -650,7 +636,7 @@ impl TransactionOutput {
 
 /// `TransactionInfo` is the object we store in the transaction accumulator. It consists of the
 /// transaction as well as the execution result of this transaction.
-#[derive(Clone, CryptoHasher, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, CryptoHasher, LCSCryptoHash, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct TransactionInfo {
     /// The hash of this transaction.
@@ -715,16 +701,6 @@ impl TransactionInfo {
 
     pub fn major_status(&self) -> StatusCode {
         self.major_status
-    }
-}
-
-impl CryptoHash for TransactionInfo {
-    type Hasher = TransactionInfoHasher;
-
-    fn hash(&self) -> HashValue {
-        let mut state = Self::Hasher::default();
-        state.update(&lcs::to_bytes(self).expect("Serialization should work."));
-        state.finish()
     }
 }
 
@@ -892,7 +868,7 @@ impl TransactionListWithProof {
 /// transaction.
 #[allow(clippy::large_enum_variant)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher, LCSCryptoHash)]
 pub enum Transaction {
     /// Transaction submitted by the user. e.g: P2P payment transaction, publishing module
     /// transaction, etc.
@@ -926,16 +902,6 @@ impl Transaction {
             // TODO: display proper information for client
             Transaction::BlockMetadata(_block_metadata) => String::from("block_metadata"),
         }
-    }
-}
-
-impl CryptoHash for Transaction {
-    type Hasher = TransactionHasher;
-
-    fn hash(&self) -> HashValue {
-        let mut state = Self::Hasher::default();
-        state.update(&lcs::to_bytes(self).expect("Failed to serialize Transaction."));
-        state.finish()
     }
 }
 

@@ -15,15 +15,16 @@ use libra_crypto::{
     hash::{CryptoHash, CryptoHasher},
     HashValue,
 };
-use libra_crypto_derive::CryptoHasher;
+use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use move_core_types::{language_storage::TypeTag, move_resource::MoveResource};
+
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, ops::Deref};
 
 /// Support versioning of the data structure.
-#[derive(Hash, Clone, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
+#[derive(Hash, Clone, Eq, PartialEq, Serialize, Deserialize, CryptoHasher, LCSCryptoHash)]
 pub enum ContractEvent {
     V0(ContractEventV0),
 }
@@ -197,16 +198,6 @@ impl std::fmt::Display for ContractEvent {
         } else {
             write!(f, "{:?}", self)
         }
-    }
-}
-
-impl CryptoHash for ContractEvent {
-    type Hasher = ContractEventHasher;
-
-    fn hash(&self) -> HashValue {
-        let mut state = Self::Hasher::default();
-        state.update(&lcs::to_bytes(self).expect("Failed to serialize."));
-        state.finish()
     }
 }
 

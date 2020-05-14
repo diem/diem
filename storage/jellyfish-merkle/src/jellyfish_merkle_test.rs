@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use libra_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
+use libra_crypto::{
+    hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
+    HashValue,
+};
 use libra_nibble::Nibble;
 use libra_types::{proof::SparseMerkleInternalNode, transaction::PRE_GENESIS_VERSION};
 use mock_tree_store::MockTreeStore;

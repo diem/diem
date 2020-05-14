@@ -13,7 +13,7 @@ use libra_crypto::{
     ed25519::Ed25519Signature,
     hash::{CryptoHash, CryptoHasher, HashValue},
 };
-use libra_crypto_derive::CryptoHasher;
+use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -40,7 +40,7 @@ use std::{
 /// LedgerInfo with the `version` being the latest version that will be committed if B gets 2f+1
 /// votes. It sets `consensus_data_hash` to represent B so that if those 2f+1 votes are gathered a
 /// QC is formed on B.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher, LCSCryptoHash)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct LedgerInfo {
     commit_info: BlockInfo,
@@ -125,16 +125,6 @@ impl LedgerInfo {
 
     pub fn set_consensus_data_hash(&mut self, consensus_data_hash: HashValue) {
         self.consensus_data_hash = consensus_data_hash;
-    }
-}
-
-impl CryptoHash for LedgerInfo {
-    type Hasher = LedgerInfoHasher;
-
-    fn hash(&self) -> HashValue {
-        let mut state = Self::Hasher::default();
-        state.update(&lcs::to_bytes(self).expect("Serialization should work."));
-        state.finish()
     }
 }
 

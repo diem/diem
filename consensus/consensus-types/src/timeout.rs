@@ -6,14 +6,14 @@ use libra_crypto::{
     ed25519::Ed25519Signature,
     hash::{CryptoHash, CryptoHasher, HashValue},
 };
-use libra_crypto_derive::CryptoHasher;
+use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_types::validator_signer::ValidatorSigner;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
 /// This structure contains all the information necessary to construct a signature
 /// on the equivalent of a timeout message
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, CryptoHasher)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, CryptoHasher, LCSCryptoHash)]
 pub struct Timeout {
     /// Epoch number corresponds to the set of validators that are active for this round.
     epoch: u64,
@@ -43,17 +43,6 @@ impl Timeout {
 
     pub fn sign(&self, signer: &ValidatorSigner) -> Ed25519Signature {
         signer.sign_message(self.hash())
-    }
-}
-
-impl CryptoHash for Timeout {
-    type Hasher = TimeoutHasher;
-
-    fn hash(&self) -> HashValue {
-        let bytes = lcs::to_bytes(self).expect("Timeout serialization failed");
-        let mut state = Self::Hasher::default();
-        state.update(bytes.as_ref());
-        state.finish()
     }
 }
 

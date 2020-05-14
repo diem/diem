@@ -81,7 +81,7 @@ mod test_helper;
 mod tree_cache;
 
 use anyhow::{bail, ensure, format_err, Result};
-use libra_crypto::{hash::CryptoHash, HashValue};
+use libra_crypto::HashValue;
 use libra_types::{
     account_state_blob::AccountStateBlob,
     proof::{SparseMerkleProof, SparseMerkleRangeProof},
