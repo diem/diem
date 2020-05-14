@@ -19,6 +19,7 @@ prost = "0.6"
 rusty-fork = { version = "0.2.2", default-features = false }
 sha-1 = { version = "0.8.1", default-features = false }
 structopt = "0.3.14"
+rand = "0.7.3"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
@@ -35,6 +36,7 @@ move-vm-types = { path = "../../language/move-vm/types", version = "0.1.0", feat
 network = { path = "../../network", version = "0.1.0", features = ["fuzzing"] }
 noise = { path = "../../network/noise", features = ["fuzzing"]}
 vm = { path = "../../language/vm", version = "0.1.0", features = ["fuzzing"] }
+libradb = { path = "../../storage/libradb", version = "0.1.0", features = ["fuzzing"] }
 
 [dev-dependencies]
 rusty-fork = "0.2.2"

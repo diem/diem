@@ -26,8 +26,12 @@ mod state_store;
 mod system_store;
 mod transaction_store;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "fuzzing"))]
+#[allow(dead_code)]
 mod libradb_test;
+
+#[cfg(feature = "fuzzing")]
+pub use libradb_test::test_save_blocks_impl;
 
 use crate::{
     backup::BackupHandler,
