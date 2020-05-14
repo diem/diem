@@ -90,8 +90,8 @@ pub(crate) async fn coordinator<V>(
                 .spawn(tasks::process_config_update(config_update, smp.validator.clone()))
                 .await;
             },
-            peer = scheduled_broadcasts.select_next_some() => {
-                tasks::execute_broadcast(peer, &mut smp, &mut scheduled_broadcasts, executor.clone());
+            (peer, is_retry) = scheduled_broadcasts.select_next_some() => {
+                tasks::execute_broadcast(peer, is_retry, &mut smp, &mut scheduled_broadcasts, executor.clone());
             },
             (network_id, event) = events.select_next_some() => {
                 match event {
@@ -105,7 +105,7 @@ pub(crate) async fn coordinator<V>(
                                 let is_new_peer = peer_manager.add_peer(peer);
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                                 if is_new_peer && peer_manager.is_upstream_peer(peer) {
-                                    tasks::execute_broadcast(peer, &mut smp, &mut scheduled_broadcasts, executor.clone());
+                                    tasks::execute_broadcast(peer, false, &mut smp, &mut scheduled_broadcasts, executor.clone());
                                 }
                             }
                             Event::LostPeer(peer_id) => {

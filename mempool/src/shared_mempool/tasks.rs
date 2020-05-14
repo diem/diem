@@ -46,38 +46,59 @@ use std::convert::TryInto;
 /// attempts broadcast to `peer` and schedules the next broadcast
 pub(crate) fn execute_broadcast<V>(
     peer: PeerNetworkId,
+    is_retry: bool,
     smp: &mut SharedMempool<V>,
     scheduled_broadcasts: &mut FuturesUnordered<ScheduledBroadcast>,
     executor: Handle,
 ) where
     V: TransactionValidation,
 {
-    broadcast_single_peer(peer, smp);
 
-    let interval_ms = smp.config.shared_mempool_tick_interval_ms;
+    // only broadcast this if current mode according to peer manager is retry mode, and this is a retry broadcast
+
+    let is_retry_mode = broadcast_single_peer(peer, is_retry, smp);
+
+    let interval_ms = if is_retry_mode {
+        // TODO set this as config value
+        // 30 seconds
+        30_000
+    } else {
+        smp.config.shared_mempool_tick_interval_ms
+    };
     scheduled_broadcasts.push(ScheduledBroadcast::new(
         Instant::now() + Duration::from_millis(interval_ms),
         peer,
+        is_retry_mode,
         executor,
     ))
 }
 
 /// broadcasts txns to `peer` if alive
-fn broadcast_single_peer<V>(peer: PeerNetworkId, smp: &mut SharedMempool<V>)
+/// only broadcast this if current mode according to peer manager is retry mode, and this is a retry broadcast
+/// returns true if next scheduled broadcast should be in retry mode
+fn broadcast_single_peer<V>(peer: PeerNetworkId, is_retry: bool, smp: &mut SharedMempool<V>) -> bool
 where
     V: TransactionValidation,
 {
     let peer_manager = &smp.peer_manager;
-    let timeline_id = if peer_manager.is_picked_peer(peer) {
+    let (timeline_id, is_retry_mode) = if peer_manager.is_picked_peer(peer) {
         let state = peer_manager.get_peer_state(peer);
         if state.is_alive {
-            state.timeline_id
+            match state.retry_timeline_id {
+                Some(retry_timeline_id) => (retry_timeline_id, true),
+                None => (state.timeline_id, false),
+            }
         } else {
-            return;
+            return false;
         }
     } else {
-        return;
+        return false;
     };
+
+    // only broadcast this if
+    if is_retry != is_retry_mode {
+        return is_retry_mode;
+    }
 
     let (transactions, new_timeline_id) = smp
         .mempool
@@ -86,7 +107,7 @@ where
         .read_timeline(timeline_id, smp.config.shared_mempool_batch_size);
 
     if transactions.is_empty() {
-        return;
+        return is_retry_mode;
     }
 
     debug!("[mempool] sending batch {}:{} to {:?}", timeline_id, new_timeline_id, peer);
@@ -115,6 +136,8 @@ where
         peer_manager.update_peer_broadcast(peer, new_timeline_id);
         notify_subscribers(SharedMempoolNotification::Broadcast, &smp.subscribers);
     }
+
+    is_retry_mode
 }
 
 fn send_mempool_sync_msg(
@@ -342,8 +365,26 @@ pub(crate) fn process_broadcast_ack(
             if retry {
                 let rebroadcast_timeline_id = start_id + retry_index;
                 debug!("[mempool] resetting timeline id {}", rebroadcast_timeline_id);
-                peer_manager.update_peer_broadcast(peer, rebroadcast_timeline_id);
+//                peer_manager.update_peer_broadcast(peer, rebroadcast_timeline_id);
+                peer_manager.set_retry(peer, rebroadcast_timeline_id);
+                // TODO clear txns that were successful in this ACK, i.e. up till rebroadcast_timeline_id
+
+                if rebroadcast_timeline_id > start_id && !is_validator {
+                    let mut mempool = mempool
+                        .lock()
+                        .expect("[shared mempool] failed to acquire mempool lock");
+
+                    for txn in mempool.timeline_range(start_id, rebroadcast_timeline_id).iter() {
+                        mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
+                    }
+                }
             } else {
+                // this is a successful ACK
+                // if was in successful mode, just clean everything
+                // if in retry mode, clear retry mode only if this ACK matches the retry mode timeline ID
+                // problem is: what if retry mode timeline ID
+                peer_manager.clear_retry(peer, start_id, end_id);
+
                 if is_validator {
                     return;
                 }

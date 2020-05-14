@@ -14,6 +14,7 @@ pub(crate) type PeerInfo = HashMap<PeerNetworkId, PeerSyncState>;
 pub(crate) struct PeerSyncState {
     pub timeline_id: u64,
     pub is_alive: bool,
+    pub retry_timeline_id: Option<u64>,
 }
 
 pub(crate) struct PeerManager {
@@ -44,6 +45,7 @@ impl PeerManager {
                 .or_insert(PeerSyncState {
                     timeline_id: 0,
                     is_alive: true,
+                    retry_timeline_id: None,
                 })
                 .is_alive = true;
         }
@@ -68,6 +70,36 @@ impl PeerManager {
             .entry(peer)
             .and_modify(|t| {
                 t.timeline_id = timeline_id;
+            });
+    }
+
+    pub fn set_retry(&self, peer: PeerNetworkId, new_retry_id: u64) {
+        self.peer_info
+            .lock()
+            .expect("failed to acquire peer_info lock")
+            .entry(peer)
+            .and_modify(|t| {
+                if let Some(retry_id) = t.retry_timeline_id {
+                    t.retry_timeline_id = Some(std::cmp::min(retry_id, new_retry_id));
+                } else {
+                    t.retry_timeline_id = Some(new_retry_id);
+                }
+            });
+    }
+
+    // call this when we receive successful ACK for the retry batch
+    pub fn clear_retry(&self, peer: PeerNetworkId, acked_timeline_id: u64, new_timeline_id: u64) {
+        self.peer_info
+            .lock()
+            .expect("failed to acquire peer_info lock")
+            .entry(peer)
+            .and_modify(|t| {
+                if let Some(pending_retry_timeline) = t.retry_timeline_id {
+                    if acked_timeline_id == pending_retry_timeline {
+                        t.retry_timeline_id = None;
+                        t.timeline_id = new_timeline_id;
+                    }
+                }
             });
     }
 

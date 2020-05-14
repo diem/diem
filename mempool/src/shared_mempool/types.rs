@@ -73,12 +73,14 @@ pub(crate) struct ScheduledBroadcast {
     deadline: Instant,
     /// broadcast recipient
     peer: PeerNetworkId,
+    /// is this broadcast a retry broadcast
+    is_retry: bool,
     /// the waker that will be used to notify the executor when the broadcast is ready
     waker: Arc<Mutex<Option<Waker>>>,
 }
 
 impl ScheduledBroadcast {
-    pub fn new(deadline: Instant, peer: PeerNetworkId, executor: Handle) -> Self {
+    pub fn new(deadline: Instant, peer: PeerNetworkId, is_retry: bool, executor: Handle) -> Self {
         let waker: Arc<Mutex<Option<Waker>>> = Arc::new(Mutex::new(None));
         let waker_clone = waker.clone();
 
@@ -96,13 +98,14 @@ impl ScheduledBroadcast {
         Self {
             deadline,
             peer,
+            is_retry,
             waker,
         }
     }
 }
 
 impl Future for ScheduledBroadcast {
-    type Output = PeerNetworkId;
+    type Output = (PeerNetworkId, bool);
 
     fn poll(self: Pin<&mut Self>, context: &mut Context) -> Poll<Self::Output> {
         if Instant::now() < self.deadline {
@@ -112,7 +115,7 @@ impl Future for ScheduledBroadcast {
 
             Poll::Pending
         } else {
-            Poll::Ready(self.peer)
+            Poll::Ready((self.peer, self.is_retry))
         }
     }
 }
