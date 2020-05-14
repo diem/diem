@@ -561,3 +561,17 @@ encode_txn_script! {
     script: RemoveParentAccount,
     doc: "Removes the parent account at `parent_address`. It can be recertified in the future however."
 }
+
+encode_txn_script! {
+    name: encode_freeze_account,
+    args: [addr: Address],
+    script: FreezeAccount,
+    doc: "Freezes account with address addr."
+}
+
+encode_txn_script! {
+    name: encode_unfreeze_account,
+    args: [addr: Address],
+    script: UnfreezeAccount,
+    doc: "Unfreezes account with address addr."
+}

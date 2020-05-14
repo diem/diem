@@ -10,12 +10,20 @@
 
 use crate::{
     account::{Account, AccountData},
-    common_transactions::mint_txn,
+    common_transactions::{mint_txn, rotate_key_txn},
     executor::FakeExecutor,
     keygen::KeyGen,
 };
-use libra_crypto::{ed25519::Ed25519PrivateKey, traits::SigningKey};
-use libra_types::account_config;
+use libra_crypto::{ed25519::Ed25519PrivateKey, traits::SigningKey, PrivateKey, Uniform};
+use libra_types::{
+    account_config,
+    transaction::{authenticator::AuthenticationKey, TransactionStatus},
+    vm_error::{StatusCode, VMStatus},
+};
+use move_core_types::{
+    identifier::Identifier,
+    language_storage::{StructTag, TypeTag},
+};
 use transaction_builder::*;
 
 #[test]
@@ -63,6 +71,65 @@ fn register_preburn_burn() {
         encode_cancel_burn_script(account_config::lbr_type_tag(), *preburner.address()),
         3,
     ));
+}
+
+#[test]
+fn freeze_unfreeze_account() {
+    // create a FakeExecutor with a genesis from file
+    let mut executor = FakeExecutor::from_genesis_file();
+    // association account to do the actual burning
+    let association = Account::new_association();
+
+    let account = {
+        let data = AccountData::new(1_000_000, 0);
+        executor.add_account_data(&data);
+        data.into_account()
+    };
+
+    let lbr_ty = TypeTag::Struct(StructTag {
+        address: account_config::CORE_CODE_ADDRESS,
+        module: Identifier::new("LibraAccount").unwrap(),
+        name: Identifier::new("FreezingPrivilege").unwrap(),
+        type_params: vec![],
+    });
+
+    // Request freezing privilege
+    executor.execute_and_apply(
+        association.signed_script_txn(encode_apply_for_association_privilege(lbr_ty.clone()), 1),
+    );
+
+    // Grant freezing privilege to assocation account
+    executor.execute_and_apply(association.signed_script_txn(
+        encode_grant_association_privilege(lbr_ty, *association.address()),
+        2,
+    ));
+    // Execute freeze on account
+    executor.execute_and_apply(
+        association.signed_script_txn(encode_freeze_account(*account.address()), 3),
+    );
+
+    // Attempt rotate key txn from frozen account
+    let privkey = Ed25519PrivateKey::generate_for_testing();
+    let pubkey = privkey.public_key();
+    let new_key_hash = AuthenticationKey::ed25519(&pubkey).to_vec();
+    let txn = rotate_key_txn(&account, new_key_hash, 0);
+
+    let output = &executor.execute_transaction(txn.clone());
+    assert_eq!(
+        output.status(),
+        &TransactionStatus::Discard(VMStatus::new(StatusCode::SENDING_ACCOUNT_FROZEN)),
+    );
+
+    // Execute unfreeze on account
+    executor.execute_and_apply(
+        association.signed_script_txn(encode_unfreeze_account(*account.address()), 4),
+    );
+    // execute rotate key transaction from unfrozen account now succeeds
+    let output = &executor.execute_transaction(txn);
+    assert_eq!(
+        output.status(),
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
+    );
 }
 
 #[test]
