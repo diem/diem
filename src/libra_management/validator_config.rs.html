@@ -120,19 +120,11 @@
 <span id="120">120</span>
 <span id="121">121</span>
 <span id="122">122</span>
-<span id="123">123</span>
-<span id="124">124</span>
-<span id="125">125</span>
-<span id="126">126</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">error</span>::<span class="ident">Error</span>,
-    <span class="ident">management_constants</span>::{<span class="ident">GAS_UNIT_PRICE</span>, <span class="ident">MAX_GAS_AMOUNT</span>, <span class="ident">TXN_EXPIRATION_SECS</span>, <span class="ident">VALIDATOR_CONFIG</span>},
-    <span class="ident">SecureBackends</span>,
-};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">error</span>::<span class="ident">Error</span>, <span class="ident">SecureBackends</span>};
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::{<span class="ident">ed25519</span>::<span class="ident">Ed25519PublicKey</span>, <span class="ident">hash</span>::<span class="ident">CryptoHash</span>, <span class="ident">x25519</span>, <span class="ident">ValidCryptoMaterial</span>};
 <span class="kw">use</span> <span class="ident">libra_global_constants</span>::{
     <span class="ident">CONSENSUS_KEY</span>, <span class="ident">FULLNODE_NETWORK_KEY</span>, <span class="ident">OWNER_KEY</span>, <span class="ident">VALIDATOR_NETWORK_KEY</span>,
@@ -198,13 +190,13 @@
         <span class="comment">// TODO(davidiw): In genesis this is irrelevant -- afterward we need to obtain the</span>
         <span class="comment">// current sequence number by querying the blockchain.</span>
         <span class="kw">let</span> <span class="ident">sequence_number</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">let</span> <span class="ident">expiration_time</span> <span class="op">=</span> <span class="ident">RealTimeService</span>::<span class="ident">new</span>().<span class="ident">now</span>() <span class="op">+</span> <span class="ident">TXN_EXPIRATION_SECS</span>;
+        <span class="kw">let</span> <span class="ident">expiration_time</span> <span class="op">=</span> <span class="ident">RealTimeService</span>::<span class="ident">new</span>().<span class="ident">now</span>() <span class="op">+</span> <span class="kw">crate</span>::<span class="ident">constants</span>::<span class="ident">TXN_EXPIRATION_SECS</span>;
         <span class="kw">let</span> <span class="ident">raw_transaction</span> <span class="op">=</span> <span class="ident">RawTransaction</span>::<span class="ident">new_script</span>(
             <span class="ident">sender</span>,
             <span class="ident">sequence_number</span>,
             <span class="ident">script</span>,
-            <span class="ident">MAX_GAS_AMOUNT</span>,
-            <span class="ident">GAS_UNIT_PRICE</span>,
+            <span class="kw">crate</span>::<span class="ident">constants</span>::<span class="ident">MAX_GAS_AMOUNT</span>,
+            <span class="kw">crate</span>::<span class="ident">constants</span>::<span class="ident">GAS_UNIT_PRICE</span>,
             <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="ident">expiration_time</span>),
         );
         <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">local</span>
@@ -223,7 +215,7 @@
 
             <span class="kw">let</span> <span class="ident">txn</span> <span class="op">=</span> <span class="ident">Value</span>::<span class="ident">Transaction</span>(<span class="ident">txn</span>.<span class="ident">clone</span>());
             <span class="ident">remote</span>
-                .<span class="ident">set</span>(<span class="ident">VALIDATOR_CONFIG</span>, <span class="ident">txn</span>)
+                .<span class="ident">set</span>(<span class="kw">crate</span>::<span class="ident">constants</span>::<span class="ident">VALIDATOR_CONFIG</span>, <span class="ident">txn</span>)
                 .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">RemoteStorageWriteError</span>(<span class="ident">e</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
         }
 

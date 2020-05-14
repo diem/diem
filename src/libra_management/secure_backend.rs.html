@@ -155,6 +155,7 @@
 <span id="155">155</span>
 <span id="156">156</span>
 <span id="157">157</span>
+<span id="158">158</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -233,6 +234,7 @@
                     .<span class="ident">remove</span>(<span class="string">&quot;path&quot;</span>)
                     .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">BackendParsingError</span>(<span class="string">&quot;missing path&quot;</span>.<span class="ident">into</span>()))<span class="question-mark">?</span>;
                 <span class="ident">config</span>.<span class="ident">path</span> <span class="op">=</span> <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="ident">path</span>);
+                <span class="ident">config</span>.<span class="ident">namespace</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">parameters</span>.<span class="ident">remove</span>(<span class="string">&quot;namespace&quot;</span>);
                 <span class="ident">config</span>::<span class="ident">SecureBackend</span>::<span class="ident">OnDiskStorage</span>(<span class="ident">config</span>)
             }
             <span class="ident">MEMORY</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">config</span>::<span class="ident">SecureBackend</span>::<span class="ident">InMemoryStorage</span>,
