@@ -346,7 +346,7 @@ pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
                 let f_name = #fn_name;
 
                 #hasher_name(
-                    libra_crypto::hash::DefaultHasher::new_with_salt(&format!("{}::{}", mp, f_name).as_bytes()))
+                    libra_crypto::hash::DefaultHasher::new(&format!("{}::{}", mp, f_name).as_bytes()))
             }
         }
 
@@ -362,13 +362,12 @@ pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
         }
 
         impl libra_crypto::hash::CryptoHasher for #hasher_name {
-            fn finish(self) -> libra_crypto::hash::HashValue {
-                self.0.finish()
+            fn update(&mut self, bytes: &[u8]) {
+                self.0.update(bytes);
             }
 
-            fn update(&mut self, bytes: &[u8]) -> &mut Self {
-                self.0.update(bytes);
-                self
+            fn finish(self) -> libra_crypto::hash::HashValue {
+                self.0.finish()
             }
         }
 
