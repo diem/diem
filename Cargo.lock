@@ -3441,6 +3441,7 @@ dependencies = [
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-crypto-derive 0.1.0",
  "libra-logger 0.1.0",
  "libra-metrics 0.1.0",
  "libra-network-address 0.1.0",
