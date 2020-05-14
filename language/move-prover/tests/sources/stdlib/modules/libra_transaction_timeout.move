@@ -16,6 +16,11 @@ module LibraTransactionTimeout {
     // Currently set to 1day.
     move_to_sender<TTL>(TTL {duration_microseconds: 86400000000});
   }
+  spec fun initialize {
+    aborts_if sender() != 0xA550C18;
+    aborts_if exists<TTL>(sender());
+    ensures global<TTL>(sender()).duration_microseconds == 86400000000;
+  }
 
   public fun set_timeout(new_duration: u64) acquires TTL {
     // Only callable by the Association address
@@ -23,6 +28,11 @@ module LibraTransactionTimeout {
 
     let timeout = borrow_global_mut<TTL>(0xA550C18);
     timeout.duration_microseconds = new_duration;
+  }
+  spec fun set_timeout {
+    aborts_if sender() != 0xA550C18;
+    aborts_if !exists<TTL>(0xA550C18);
+    ensures global<TTL>(sender()).duration_microseconds == new_duration;
   }
 
   public fun is_valid_transaction_timestamp(timestamp: u64): bool acquires TTL {
@@ -41,6 +51,14 @@ module LibraTransactionTimeout {
     //       clock time might be out of sync with the real block time stored in StateStore.
     //       See details in issue #2346.
     current_block_time < txn_time_microseconds
+  }
+  spec fun is_valid_transaction_timestamp {
+    aborts_if timestamp <= 9223372036854 && !exists<LibraTimestamp::CurrentTimeMicroseconds>(0xA550C18);
+    aborts_if timestamp <= 9223372036854 && !exists<TTL>(0xA550C18);
+    aborts_if timestamp <= 9223372036854 && global<LibraTimestamp::CurrentTimeMicroseconds>(0xA550C18).microseconds + global<TTL>(0xA550C18).duration_microseconds > max_u64();
+    aborts_if timestamp <= 9223372036854 && timestamp * 1000000 > max_u64();
+    ensures timestamp > 9223372036854 ==> result == false;
+    ensures timestamp <= 9223372036854 ==> result == (global<LibraTimestamp::CurrentTimeMicroseconds>(0xA550C18).microseconds < timestamp * 1000000);
   }
 }
 }
