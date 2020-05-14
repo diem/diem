@@ -55,18 +55,6 @@ impl From<serde_json::Error> for Error {
     }
 }
 
-impl From<toml::de::Error> for Error {
-    fn from(error: toml::de::Error) -> Self {
-        Self::SerializationError(format!("{}", error))
-    }
-}
-
-impl From<toml::ser::Error> for Error {
-    fn from(error: toml::ser::Error) -> Self {
-        Self::SerializationError(format!("{}", error))
-    }
-}
-
 impl From<libra_vault_client::Error> for Error {
     fn from(error: libra_vault_client::Error) -> Self {
         match error {

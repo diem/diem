@@ -2720,7 +2720,6 @@ dependencies = [
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
- "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
