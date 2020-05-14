@@ -493,6 +493,7 @@
 <span id="493">493</span>
 <span id="494">494</span>
 <span id="495">495</span>
+<span id="496">496</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -860,6 +861,7 @@
         <span class="kw">use</span> <span class="ident">SignatureToken</span>::<span class="kw-2">*</span>;
 
         <span class="kw">match</span> <span class="ident">signature</span> {
+            <span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
             <span class="ident">Struct</span>(<span class="ident">struct_handle_index</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="self">self</span>.<span class="ident">struct_handles</span>[<span class="ident">struct_handle_index</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">usize</span>].<span class="ident">is_nominal_resource</span>
             }

@@ -71,6 +71,8 @@
 <span id="71">71</span>
 <span id="72">72</span>
 <span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -99,6 +101,7 @@
     <span class="ident">U64</span>,
     <span class="ident">U128</span>,
     <span class="ident">Address</span>,
+    <span class="ident">Signer</span>,
     <span class="ident">Vector</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
     <span class="ident">Struct</span>(<span class="ident">usize</span>),
     <span class="ident">StructInstantiation</span>(<span class="ident">usize</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
@@ -126,6 +129,7 @@
             <span class="ident">Type</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">U64</span>,
             <span class="ident">Type</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">U128</span>,
             <span class="ident">Type</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">Address</span>,
+            <span class="ident">Type</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">Signer</span>,
             <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">ty</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">ty</span>.<span class="ident">subst</span>(<span class="ident">ty_args</span>)<span class="question-mark">?</span>)),
             <span class="ident">Type</span>::<span class="ident">Reference</span>(<span class="ident">ty</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">Reference</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">ty</span>.<span class="ident">subst</span>(<span class="ident">ty_args</span>)<span class="question-mark">?</span>)),
             <span class="ident">Type</span>::<span class="ident">MutableReference</span>(<span class="ident">ty</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">MutableReference</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">ty</span>.<span class="ident">subst</span>(<span class="ident">ty_args</span>)<span class="question-mark">?</span>)),

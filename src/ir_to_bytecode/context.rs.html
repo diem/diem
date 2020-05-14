@@ -778,6 +778,7 @@
 <span id="778">778</span>
 <span id="779">779</span>
 <span id="780">780</span>
+<span id="781">781</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1437,6 +1438,7 @@
             <span class="op">|</span> <span class="ident">x</span> @ <span class="ident">SignatureToken</span>::<span class="ident">U64</span>
             <span class="op">|</span> <span class="ident">x</span> @ <span class="ident">SignatureToken</span>::<span class="ident">U128</span>
             <span class="op">|</span> <span class="ident">x</span> @ <span class="ident">SignatureToken</span>::<span class="ident">Address</span>
+            <span class="op">|</span> <span class="ident">x</span> @ <span class="ident">SignatureToken</span>::<span class="ident">Signer</span>
             <span class="op">|</span> <span class="ident">x</span> @ <span class="ident">SignatureToken</span>::<span class="ident">TypeParameter</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">x</span>,
             <span class="ident">SignatureToken</span>::<span class="ident">Vector</span>(<span class="ident">inner</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">correct_inner</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">reindex_signature_token</span>(<span class="ident">dep</span>, <span class="kw-2">*</span><span class="ident">inner</span>)<span class="question-mark">?</span>;

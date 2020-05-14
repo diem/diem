@@ -1443,6 +1443,9 @@
 <span id="1443">1443</span>
 <span id="1444">1444</span>
 <span id="1445">1445</span>
+<span id="1446">1446</span>
+<span id="1447">1447</span>
+<span id="1448">1448</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1663,6 +1666,7 @@
             <span class="ident">SignatureToken</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">U64</span>,
             <span class="ident">SignatureToken</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">U128</span>,
             <span class="ident">SignatureToken</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">Address</span>,
+            <span class="ident">SignatureToken</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">Signer</span>,
             <span class="ident">SignatureToken</span>::<span class="ident">TypeParameter</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">TyParam</span>(<span class="kw-2">*</span><span class="ident">idx</span> <span class="kw">as</span> <span class="ident">usize</span>),
             <span class="ident">SignatureToken</span>::<span class="ident">Vector</span>(<span class="ident">inner_tok</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">inner_type</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">make_type</span>(<span class="ident">binary</span>, <span class="ident">inner_tok</span>)<span class="question-mark">?</span>;
@@ -1809,6 +1813,7 @@
             <span class="ident">TypeTag</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">U64</span>,
             <span class="ident">TypeTag</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">U128</span>,
             <span class="ident">TypeTag</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">Address</span>,
+            <span class="ident">TypeTag</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">Signer</span>,
             <span class="ident">TypeTag</span>::<span class="ident">Vector</span>(<span class="ident">tt</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">load_type</span>(<span class="ident">tt</span>, <span class="ident">context</span>)<span class="question-mark">?</span>)),
             <span class="ident">TypeTag</span>::<span class="ident">Struct</span>(<span class="ident">struct_tag</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">module_id</span> <span class="op">=</span> <span class="ident">ModuleId</span>::<span class="ident">new</span>(<span class="ident">struct_tag</span>.<span class="ident">address</span>, <span class="ident">struct_tag</span>.<span class="ident">module</span>.<span class="ident">clone</span>());
@@ -2820,6 +2825,7 @@
             <span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">FatType</span>::<span class="ident">U64</span>,
             <span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">FatType</span>::<span class="ident">U128</span>,
             <span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">FatType</span>::<span class="ident">Address</span>,
+            <span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">FatType</span>::<span class="ident">Signer</span>,
             <span class="ident">Vector</span>(<span class="ident">ty</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">FatType</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">type_to_fat_type</span>(<span class="ident">ty</span>)<span class="question-mark">?</span>)),
             <span class="ident">Struct</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">FatType</span>::<span class="ident">Struct</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">struct_to_fat_struct</span>(<span class="kw-2">*</span><span class="ident">idx</span>, <span class="macro">vec</span><span class="macro">!</span>[])<span class="question-mark">?</span>)),
             <span class="ident">StructInstantiation</span>(<span class="ident">idx</span>, <span class="ident">instantiation</span>) <span class="op">=</span><span class="op">&gt;</span> {

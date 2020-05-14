@@ -1926,6 +1926,11 @@
 <span id="1926">1926</span>
 <span id="1927">1927</span>
 <span id="1928">1928</span>
+<span id="1929">1929</span>
+<span id="1930">1930</span>
+<span id="1931">1931</span>
+<span id="1932">1932</span>
+<span id="1933">1933</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2090,6 +2095,7 @@
     <span class="ident">U64</span>,
     <span class="ident">U128</span>,
     <span class="ident">Address</span>,
+    <span class="ident">Signer</span>,
     <span class="ident">Vector</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">InferredType</span><span class="op">&gt;</span>),
     <span class="ident">Struct</span>(<span class="ident">StructHandleIndex</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">InferredType</span><span class="op">&gt;</span>),
     <span class="ident">Reference</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">InferredType</span><span class="op">&gt;</span>),
@@ -2110,6 +2116,7 @@
             <span class="ident">S</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">I</span>::<span class="ident">U64</span>,
             <span class="ident">S</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">I</span>::<span class="ident">U128</span>,
             <span class="ident">S</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">I</span>::<span class="ident">Address</span>,
+            <span class="ident">S</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">I</span>::<span class="ident">Signer</span>,
             <span class="ident">S</span>::<span class="ident">Vector</span>(<span class="ident">s_inner</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">I</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="self">Self</span>::<span class="ident">from_signature_token_with_subst</span>(
                 <span class="ident">subst</span>, <span class="ident">s_inner</span>,
             ))),
@@ -2162,6 +2169,7 @@
             <span class="ident">InferredType</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;no struct type for U64&quot;</span>),
             <span class="ident">InferredType</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;no struct type for U128&quot;</span>),
             <span class="ident">InferredType</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;no struct type for Address&quot;</span>),
+            <span class="ident">InferredType</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;no struct type for Signer&quot;</span>),
             <span class="ident">InferredType</span>::<span class="ident">Vector</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;no struct type for vector&quot;</span>),
             <span class="ident">InferredType</span>::<span class="ident">Reference</span>(<span class="ident">inner</span>) <span class="op">|</span> <span class="ident">InferredType</span>::<span class="ident">MutableReference</span>(<span class="ident">inner</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">inner</span>.<span class="ident">get_struct_handle</span>()
@@ -2180,6 +2188,7 @@
             <span class="ident">I</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">S</span>::<span class="ident">U64</span>,
             <span class="ident">I</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">S</span>::<span class="ident">U128</span>,
             <span class="ident">I</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">S</span>::<span class="ident">Address</span>,
+            <span class="ident">I</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">S</span>::<span class="ident">Signer</span>,
             <span class="ident">I</span>::<span class="ident">Vector</span>(<span class="ident">inner</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">S</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="self">Self</span>::<span class="ident">to_signature_token</span>(<span class="ident">inner</span>)<span class="question-mark">?</span>)),
             <span class="ident">I</span>::<span class="ident">Struct</span>(<span class="ident">si</span>, <span class="ident">tys</span>) <span class="kw">if</span> <span class="ident">tys</span>.<span class="ident">is_empty</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="ident">S</span>::<span class="ident">Struct</span>(<span class="kw-2">*</span><span class="ident">si</span>),
             <span class="ident">I</span>::<span class="ident">Struct</span>(<span class="ident">si</span>, <span class="ident">tys</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">S</span>::<span class="ident">StructInstantiation</span>(<span class="kw-2">*</span><span class="ident">si</span>, <span class="self">Self</span>::<span class="ident">build_signature_tokens</span>(<span class="ident">tys</span>)<span class="question-mark">?</span>),
@@ -2570,6 +2579,7 @@
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SignatureToken</span><span class="op">&gt;</span> {
     <span class="prelude-val">Ok</span>(<span class="kw">match</span> <span class="ident">ty</span> {
         <span class="ident">Type</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SignatureToken</span>::<span class="ident">Address</span>,
+        <span class="ident">Type</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SignatureToken</span>::<span class="ident">Signer</span>,
         <span class="ident">Type</span>::<span class="ident">U8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SignatureToken</span>::<span class="ident">U8</span>,
         <span class="ident">Type</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SignatureToken</span>::<span class="ident">U64</span>,
         <span class="ident">Type</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SignatureToken</span>::<span class="ident">U128</span>,

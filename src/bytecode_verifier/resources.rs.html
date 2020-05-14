@@ -79,6 +79,8 @@
 <span id="79">79</span>
 <span id="80">80</span>
 <span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -128,11 +130,13 @@
     <span class="doccomment">/// Determines if the given signature token contains a nominal resource.</span>
     <span class="doccomment">/// More specifically, a signature token contains a nominal resource if</span>
     <span class="doccomment">///   1) it is a type variable explicitly marked as resource kind.</span>
-    <span class="doccomment">///   2) it is a struct that</span>
+    <span class="doccomment">///   2) it is a signer, which is always a resource type</span>
+    <span class="doccomment">///   3) it is a struct that</span>
     <span class="doccomment">///       a) is marked as resource.</span>
     <span class="doccomment">///       b) has a type actual which is a nominal resource.</span>
     <span class="kw">fn</span> <span class="ident">contains_nominal_resource</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">token</span>: <span class="kw-2">&amp;</span><span class="ident">SignatureToken</span>, <span class="ident">type_parameters</span>: <span class="kw-2">&amp;</span>[<span class="ident">Kind</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="kw">match</span> <span class="ident">token</span> {
+            <span class="ident">SignatureToken</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
             <span class="ident">SignatureToken</span>::<span class="ident">Struct</span>(<span class="ident">sh_idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">sh</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">struct_handle_at</span>(<span class="kw-2">*</span><span class="ident">sh_idx</span>);
                 <span class="ident">sh</span>.<span class="ident">is_nominal_resource</span>

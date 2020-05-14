@@ -161,6 +161,8 @@
 <span id="161">161</span>
 <span id="162">162</span>
 <span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -188,6 +190,7 @@
     <span class="ident">U64</span>,
     <span class="ident">U128</span>,
     <span class="ident">Address</span>,
+    <span class="ident">Signer</span>,
     <span class="ident">Vector</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">TypeTag</span><span class="op">&gt;</span>),
     <span class="ident">Struct</span>(<span class="ident">StructTag</span>),
 }
@@ -321,6 +324,7 @@
             <span class="ident">TypeTag</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;U64&quot;</span>),
             <span class="ident">TypeTag</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;U128&quot;</span>),
             <span class="ident">TypeTag</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Address&quot;</span>),
+            <span class="ident">TypeTag</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Signer&quot;</span>),
             <span class="ident">TypeTag</span>::<span class="ident">Bool</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Bool&quot;</span>),
         }
     }

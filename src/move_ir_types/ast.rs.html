@@ -1832,6 +1832,9 @@
 <span id="1832">1832</span>
 <span id="1833">1833</span>
 <span id="1834">1834</span>
+<span id="1835">1835</span>
+<span id="1836">1836</span>
+<span id="1837">1837</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2006,6 +2009,8 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Type</span> {
     <span class="doccomment">/// `address`</span>
     <span class="ident">Address</span>,
+    <span class="doccomment">/// `signer`</span>
+    <span class="ident">Signer</span>,
     <span class="doccomment">/// `u8`</span>
     <span class="ident">U8</span>,
     <span class="doccomment">/// `u64`</span>
@@ -3321,6 +3326,7 @@
             <span class="ident">Type</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;u128&quot;</span>),
             <span class="ident">Type</span>::<span class="ident">Bool</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;bool&quot;</span>),
             <span class="ident">Type</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;address&quot;</span>),
+            <span class="ident">Type</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;signer&quot;</span>),
             <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">ty</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;vector&lt;{}&gt;&quot;</span>, <span class="ident">ty</span>),
             <span class="ident">Type</span>::<span class="ident">Struct</span>(<span class="ident">ident</span>, <span class="ident">tys</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{}{}&quot;</span>, <span class="ident">ident</span>, <span class="ident">format_type_actuals</span>(<span class="ident">tys</span>)),
             <span class="ident">Type</span>::<span class="ident">Reference</span>(<span class="ident">is_mutable</span>, <span class="ident">t</span>) <span class="op">=</span><span class="op">&gt;</span> {

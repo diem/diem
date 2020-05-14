@@ -272,6 +272,7 @@
 <span id="272">272</span>
 <span id="273">273</span>
 <span id="274">274</span>
+<span id="275">275</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -457,7 +458,7 @@
     <span class="kw">fn</span> <span class="ident">check_signature_token</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ty</span>: <span class="kw-2">&amp;</span><span class="ident">SignatureToken</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">use</span> <span class="ident">SignatureToken</span>::<span class="kw-2">*</span>;
         <span class="kw">match</span> <span class="ident">ty</span> {
-            <span class="ident">U8</span> <span class="op">|</span> <span class="ident">U64</span> <span class="op">|</span> <span class="ident">U128</span> <span class="op">|</span> <span class="ident">Bool</span> <span class="op">|</span> <span class="ident">Address</span> <span class="op">|</span> <span class="ident">Struct</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">TypeParameter</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(()),
+            <span class="ident">U8</span> <span class="op">|</span> <span class="ident">U64</span> <span class="op">|</span> <span class="ident">U128</span> <span class="op">|</span> <span class="ident">Bool</span> <span class="op">|</span> <span class="ident">Address</span> <span class="op">|</span> <span class="ident">Signer</span> <span class="op">|</span> <span class="ident">Struct</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">TypeParameter</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(()),
             <span class="ident">Reference</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">MutableReference</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="comment">// TODO: Prop tests expect us to NOT check the inner types.</span>
                 <span class="comment">// Revisit this once we rework prop tests.</span>
@@ -515,6 +516,7 @@
     <span class="kw">match</span> <span class="ident">ty</span> {
         <span class="comment">// The primitive types &amp; references have kind unrestricted.</span>
         <span class="ident">Bool</span> <span class="op">|</span> <span class="ident">U8</span> <span class="op">|</span> <span class="ident">U64</span> <span class="op">|</span> <span class="ident">U128</span> <span class="op">|</span> <span class="ident">Address</span> <span class="op">|</span> <span class="ident">Reference</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">MutableReference</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Kind</span>::<span class="ident">Copyable</span>,
+        <span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Kind</span>::<span class="ident">Resource</span>,
         <span class="ident">TypeParameter</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">constraints</span>[<span class="kw-2">*</span><span class="ident">idx</span> <span class="kw">as</span> <span class="ident">usize</span>],
         <span class="ident">Vector</span>(<span class="ident">ty</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">kind</span>(<span class="ident">module</span>, <span class="ident">ty</span>, <span class="ident">constraints</span>),
         <span class="ident">Struct</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> {

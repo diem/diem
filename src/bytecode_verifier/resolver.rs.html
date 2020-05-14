@@ -182,6 +182,7 @@
 <span id="182">182</span>
 <span id="183">183</span>
 <span id="184">184</span>
+<span id="185">185</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -250,6 +251,7 @@
             <span class="op">|</span> <span class="ident">SignatureToken</span>::<span class="ident">U64</span>
             <span class="op">|</span> <span class="ident">SignatureToken</span>::<span class="ident">U128</span>
             <span class="op">|</span> <span class="ident">SignatureToken</span>::<span class="ident">Address</span>
+            <span class="op">|</span> <span class="ident">SignatureToken</span>::<span class="ident">Signer</span>
             <span class="op">|</span> <span class="ident">SignatureToken</span>::<span class="ident">TypeParameter</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">sig_token</span>.<span class="ident">clone</span>()),
             <span class="ident">SignatureToken</span>::<span class="ident">Vector</span>(<span class="ident">ty</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">SignatureToken</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(
                 <span class="self">self</span>.<span class="ident">import_signature_token</span>(<span class="ident">dependency</span>, <span class="ident">ty</span>)<span class="question-mark">?</span>,

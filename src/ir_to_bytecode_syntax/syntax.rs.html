@@ -2108,6 +2108,11 @@
 <span id="2108">2108</span>
 <span id="2109">2109</span>
 <span id="2110">2110</span>
+<span id="2111">2111</span>
+<span id="2112">2112</span>
+<span id="2113">2113</span>
+<span id="2114">2114</span>
+<span id="2115">2115</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -3260,6 +3265,7 @@
 
 <span class="comment">// Type: Type = {</span>
 <span class="comment">//     &quot;address&quot; =&gt; Type::Address,</span>
+<span class="comment">//     &quot;signer&quot; =&gt; Type::Signer,</span>
 <span class="comment">//     &quot;u64&quot; =&gt; Type::U64,</span>
 <span class="comment">//     &quot;bool&quot; =&gt; Type::Bool,</span>
 <span class="comment">//     &quot;bytearray&quot; =&gt; Type::ByteArray,</span>
@@ -3274,6 +3280,10 @@
         <span class="ident">Tok</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">tokens</span>.<span class="ident">advance</span>()<span class="question-mark">?</span>;
             <span class="ident">Type</span>::<span class="ident">Address</span>
+        }
+        <span class="ident">Tok</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">tokens</span>.<span class="ident">advance</span>()<span class="question-mark">?</span>;
+            <span class="ident">Type</span>::<span class="ident">Signer</span>
         }
         <span class="ident">Tok</span>::<span class="ident">U8</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">tokens</span>.<span class="ident">advance</span>()<span class="question-mark">?</span>;

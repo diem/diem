@@ -309,6 +309,10 @@
 <span id="309">309</span>
 <span id="310">310</span>
 <span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -409,6 +413,8 @@
                 <span class="string">&quot;IntegerType()&quot;</span>.<span class="ident">to_string</span>()
             }
             <span class="ident">PrimitiveType</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;AddressType()&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="comment">// TODO fix this for a real boogie type</span>
+            <span class="ident">PrimitiveType</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;AddressType()&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">PrimitiveType</span>::<span class="ident">Range</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;RangeType()&quot;</span>.<span class="ident">to_string</span>(),
         },
         <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">t</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$Vector_type_value({})&quot;</span>, <span class="ident">boogie_type_value</span>(<span class="ident">env</span>, <span class="ident">t</span>)),
@@ -493,6 +499,8 @@
             <span class="ident">PrimitiveType</span>::<span class="ident">Num</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$IsValidNum({})&quot;</span>, <span class="ident">name</span>)),
             <span class="ident">PrimitiveType</span>::<span class="ident">Bool</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;is#Boolean({})&quot;</span>, <span class="ident">name</span>)),
             <span class="ident">PrimitiveType</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;is#Address({})&quot;</span>, <span class="ident">name</span>)),
+            <span class="comment">// TODO fix this for a real boogie check</span>
+            <span class="ident">PrimitiveType</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;is#Address({})&quot;</span>, <span class="ident">name</span>)),
             <span class="ident">PrimitiveType</span>::<span class="ident">Range</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$IsValidRange({})&quot;</span>, <span class="ident">name</span>)),
         },
         <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">elem_ty</span>) <span class="op">=</span><span class="op">&gt;</span> {

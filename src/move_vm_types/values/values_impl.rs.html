@@ -2500,6 +2500,24 @@
 <span id="2500">2500</span>
 <span id="2501">2501</span>
 <span id="2502">2502</span>
+<span id="2503">2503</span>
+<span id="2504">2504</span>
+<span id="2505">2505</span>
+<span id="2506">2506</span>
+<span id="2507">2507</span>
+<span id="2508">2508</span>
+<span id="2509">2509</span>
+<span id="2510">2510</span>
+<span id="2511">2511</span>
+<span id="2512">2512</span>
+<span id="2513">2513</span>
+<span id="2514">2514</span>
+<span id="2515">2515</span>
+<span id="2516">2516</span>
+<span id="2517">2517</span>
+<span id="2518">2518</span>
+<span id="2519">2519</span>
+<span id="2520">2520</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2550,6 +2568,7 @@
     <span class="ident">U128</span>(<span class="ident">u128</span>),
     <span class="ident">Bool</span>(<span class="ident">bool</span>),
     <span class="ident">Address</span>(<span class="ident">AccountAddress</span>),
+    <span class="ident">Signer</span>(<span class="ident">AccountAddress</span>),
 
     <span class="ident">Container</span>(<span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">Container</span><span class="op">&gt;</span><span class="op">&gt;</span>),
 
@@ -2821,6 +2840,8 @@
             <span class="ident">U128</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">U128</span>(<span class="kw-2">*</span><span class="ident">x</span>),
             <span class="ident">Bool</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bool</span>(<span class="kw-2">*</span><span class="ident">x</span>),
             <span class="ident">Address</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Address</span>(<span class="kw-2">*</span><span class="ident">x</span>),
+            <span class="comment">// TODO copying resource?</span>
+            <span class="ident">Signer</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Signer</span>(<span class="kw-2">*</span><span class="ident">x</span>),
 
             <span class="ident">ContainerRef</span>(<span class="ident">r</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ContainerRef</span>(<span class="ident">r</span>.<span class="ident">copy_value</span>()),
             <span class="ident">IndexedRef</span>(<span class="ident">r</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">IndexedRef</span>(<span class="ident">r</span>.<span class="ident">copy_value</span>()),
@@ -2900,6 +2921,7 @@
             (<span class="ident">U128</span>(<span class="ident">l</span>), <span class="ident">U128</span>(<span class="ident">r</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">l</span> <span class="op">=</span><span class="op">=</span> <span class="ident">r</span>,
             (<span class="ident">Bool</span>(<span class="ident">l</span>), <span class="ident">Bool</span>(<span class="ident">r</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">l</span> <span class="op">=</span><span class="op">=</span> <span class="ident">r</span>,
             (<span class="ident">Address</span>(<span class="ident">l</span>), <span class="ident">Address</span>(<span class="ident">r</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">l</span> <span class="op">=</span><span class="op">=</span> <span class="ident">r</span>,
+            (<span class="ident">Signer</span>(<span class="ident">l</span>), <span class="ident">Signer</span>(<span class="ident">r</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">l</span> <span class="op">=</span><span class="op">=</span> <span class="ident">r</span>,
 
             (<span class="ident">Container</span>(<span class="ident">l</span>), <span class="ident">Container</span>(<span class="ident">r</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">l</span>.<span class="ident">borrow</span>().<span class="ident">equals</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">r</span>.<span class="ident">borrow</span>())<span class="question-mark">?</span>,
 
@@ -3213,7 +3235,8 @@
                 <span class="op">|</span> <span class="ident">ValueImpl</span>::<span class="ident">U64</span>(<span class="kw">_</span>)
                 <span class="op">|</span> <span class="ident">ValueImpl</span>::<span class="ident">U128</span>(<span class="kw">_</span>)
                 <span class="op">|</span> <span class="ident">ValueImpl</span>::<span class="ident">Bool</span>(<span class="kw">_</span>)
-                <span class="op">|</span> <span class="ident">ValueImpl</span>::<span class="ident">Address</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Value</span>(<span class="ident">ValueImpl</span>::<span class="ident">IndexedRef</span>(<span class="ident">IndexedRef</span> {
+                <span class="op">|</span> <span class="ident">ValueImpl</span>::<span class="ident">Address</span>(<span class="kw">_</span>)
+                <span class="op">|</span> <span class="ident">ValueImpl</span>::<span class="ident">Signer</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Value</span>(<span class="ident">ValueImpl</span>::<span class="ident">IndexedRef</span>(<span class="ident">IndexedRef</span> {
                     <span class="ident">container_ref</span>: <span class="ident">ContainerRef</span>::<span class="ident">Local</span>(<span class="ident">Rc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>)),
                     <span class="ident">idx</span>,
                 }))),
@@ -3337,6 +3360,10 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">address</span>(<span class="ident">x</span>: <span class="ident">AccountAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span>(<span class="ident">ValueImpl</span>::<span class="ident">Address</span>(<span class="ident">x</span>))
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">signer</span>(<span class="ident">x</span>: <span class="ident">AccountAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span>(<span class="ident">ValueImpl</span>::<span class="ident">Signer</span>(<span class="ident">x</span>))
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">struct_</span>(<span class="ident">s</span>: <span class="ident">Struct</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
@@ -3880,6 +3907,7 @@
             <span class="op">|</span> (<span class="ident">Type</span>::<span class="ident">U128</span>, <span class="ident">Container</span>::<span class="ident">U128</span>(<span class="kw">_</span>))
             <span class="op">|</span> (<span class="ident">Type</span>::<span class="ident">Bool</span>, <span class="ident">Container</span>::<span class="ident">Bool</span>(<span class="kw">_</span>))
             <span class="op">|</span> (<span class="ident">Type</span>::<span class="ident">Address</span>, <span class="ident">Container</span>::<span class="ident">General</span>(<span class="kw">_</span>))
+            <span class="op">|</span> (<span class="ident">Type</span>::<span class="ident">Signer</span>, <span class="ident">Container</span>::<span class="ident">General</span>(<span class="kw">_</span>))
             <span class="op">|</span> (<span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="kw">_</span>), <span class="ident">Container</span>::<span class="ident">General</span>(<span class="kw">_</span>))
             <span class="op">|</span> (<span class="ident">Type</span>::<span class="ident">Struct</span>(<span class="kw">_</span>), <span class="ident">Container</span>::<span class="ident">General</span>(<span class="kw">_</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(()),
             (<span class="ident">Type</span>::<span class="ident">StructInstantiation</span>(<span class="kw">_</span>, <span class="kw">_</span>), <span class="ident">Container</span>::<span class="ident">General</span>(<span class="kw">_</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(()),
@@ -3894,6 +3922,7 @@
             <span class="op">|</span> (<span class="ident">Type</span>::<span class="ident">U128</span>, <span class="kw">_</span>)
             <span class="op">|</span> (<span class="ident">Type</span>::<span class="ident">Bool</span>, <span class="kw">_</span>)
             <span class="op">|</span> (<span class="ident">Type</span>::<span class="ident">Address</span>, <span class="kw">_</span>)
+            <span class="op">|</span> (<span class="ident">Type</span>::<span class="ident">Signer</span>, <span class="kw">_</span>)
             <span class="op">|</span> (<span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="kw">_</span>), <span class="kw">_</span>)
             <span class="op">|</span> (<span class="ident">Type</span>::<span class="ident">Struct</span>(<span class="kw">_</span>), <span class="kw">_</span>)
             <span class="op">|</span> (<span class="ident">Type</span>::<span class="ident">StructInstantiation</span>(<span class="kw">_</span>, <span class="kw">_</span>), <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(
@@ -3922,9 +3951,11 @@
             <span class="ident">Type</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Container</span>::<span class="ident">U128</span>(<span class="macro">vec</span><span class="macro">!</span>[]),
             <span class="ident">Type</span>::<span class="ident">Bool</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Container</span>::<span class="ident">Bool</span>(<span class="macro">vec</span><span class="macro">!</span>[]),
 
-            <span class="ident">Type</span>::<span class="ident">Address</span> <span class="op">|</span> <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">Type</span>::<span class="ident">Struct</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">Type</span>::<span class="ident">StructInstantiation</span>(<span class="kw">_</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">Container</span>::<span class="ident">General</span>(<span class="macro">vec</span><span class="macro">!</span>[])
-            }
+            <span class="ident">Type</span>::<span class="ident">Address</span>
+            <span class="op">|</span> <span class="ident">Type</span>::<span class="ident">Signer</span>
+            <span class="op">|</span> <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="kw">_</span>)
+            <span class="op">|</span> <span class="ident">Type</span>::<span class="ident">Struct</span>(<span class="kw">_</span>)
+            <span class="op">|</span> <span class="ident">Type</span>::<span class="ident">StructInstantiation</span>(<span class="kw">_</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Container</span>::<span class="ident">General</span>(<span class="macro">vec</span><span class="macro">!</span>[]),
 
             <span class="ident">Type</span>::<span class="ident">Reference</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">Type</span>::<span class="ident">MutableReference</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">Type</span>::<span class="ident">TyParam</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_INVARIANT_VIOLATION_ERROR</span>)
@@ -4185,7 +4216,7 @@
 
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">Invalid</span> <span class="op">|</span> <span class="ident">U8</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">U64</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">U128</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">Bool</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CONST_SIZE</span>,
-            <span class="ident">Address</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AbstractMemorySize</span>::<span class="ident">new</span>(<span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span> <span class="kw">as</span> <span class="ident">u64</span>),
+            <span class="ident">Address</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">Signer</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AbstractMemorySize</span>::<span class="ident">new</span>(<span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span> <span class="kw">as</span> <span class="ident">u64</span>),
             <span class="ident">ContainerRef</span>(<span class="ident">r</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">r</span>.<span class="ident">size</span>(),
             <span class="ident">IndexedRef</span>(<span class="ident">r</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">r</span>.<span class="ident">size</span>(),
             <span class="comment">// TODO: in case the borrow fails the VM will panic.</span>
@@ -4325,6 +4356,7 @@
             <span class="self">Self</span>::<span class="ident">U128</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;U128({})&quot;</span>, <span class="ident">x</span>),
             <span class="self">Self</span>::<span class="ident">Bool</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">x</span>),
             <span class="self">Self</span>::<span class="ident">Address</span>(<span class="ident">addr</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Address({})&quot;</span>, <span class="ident">addr</span>.<span class="ident">short_str</span>()),
+            <span class="self">Self</span>::<span class="ident">Signer</span>(<span class="ident">addr</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Signer({})&quot;</span>, <span class="ident">addr</span>.<span class="ident">short_str</span>()),
 
             <span class="self">Self</span>::<span class="ident">Container</span>(<span class="ident">r</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Container({})&quot;</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">r</span>.<span class="ident">borrow</span>()),
 
@@ -4729,6 +4761,7 @@
             (<span class="ident">FatType</span>::<span class="ident">U128</span>, <span class="ident">ValueImpl</span>::<span class="ident">U128</span>(<span class="ident">x</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">serializer</span>.<span class="ident">serialize_u128</span>(<span class="kw-2">*</span><span class="ident">x</span>),
             (<span class="ident">FatType</span>::<span class="ident">Bool</span>, <span class="ident">ValueImpl</span>::<span class="ident">Bool</span>(<span class="ident">x</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">serializer</span>.<span class="ident">serialize_bool</span>(<span class="kw-2">*</span><span class="ident">x</span>),
             (<span class="ident">FatType</span>::<span class="ident">Address</span>, <span class="ident">ValueImpl</span>::<span class="ident">Address</span>(<span class="ident">x</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">x</span>.<span class="ident">serialize</span>(<span class="ident">serializer</span>),
+            (<span class="ident">FatType</span>::<span class="ident">Signer</span>, <span class="ident">ValueImpl</span>::<span class="ident">Signer</span>(<span class="ident">x</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">x</span>.<span class="ident">serialize</span>(<span class="ident">serializer</span>),
 
             (<span class="ident">FatType</span>::<span class="ident">Struct</span>(<span class="ident">ty</span>), <span class="ident">ValueImpl</span>::<span class="ident">Container</span>(<span class="ident">r</span>)) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">borrow</span>();
@@ -4809,6 +4842,7 @@
             <span class="ident">FatType</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">u64</span>::<span class="ident">deserialize</span>(<span class="ident">deserializer</span>).<span class="ident">map</span>(<span class="ident">Value</span>::<span class="ident">u64</span>),
             <span class="ident">FatType</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">u128</span>::<span class="ident">deserialize</span>(<span class="ident">deserializer</span>).<span class="ident">map</span>(<span class="ident">Value</span>::<span class="ident">u128</span>),
             <span class="ident">FatType</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AccountAddress</span>::<span class="ident">deserialize</span>(<span class="ident">deserializer</span>).<span class="ident">map</span>(<span class="ident">Value</span>::<span class="ident">address</span>),
+            <span class="ident">FatType</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AccountAddress</span>::<span class="ident">deserialize</span>(<span class="ident">deserializer</span>).<span class="ident">map</span>(<span class="ident">Value</span>::<span class="ident">signer</span>),
 
             <span class="ident">FatType</span>::<span class="ident">Struct</span>(<span class="ident">ty</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Value</span>::<span class="ident">struct_</span>(<span class="ident">ty</span>.<span class="ident">deserialize</span>(<span class="ident">deserializer</span>)<span class="question-mark">?</span>)),
 
@@ -4914,6 +4948,7 @@
             <span class="ident">S</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">U64</span>,
             <span class="ident">S</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">U128</span>,
             <span class="ident">S</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">Address</span>,
+            <span class="ident">S</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">Signer</span>,
             <span class="ident">S</span>::<span class="ident">Vector</span>(<span class="ident">inner</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="self">Self</span>::<span class="ident">constant_sig_token_to_type</span>(<span class="ident">inner</span>)<span class="question-mark">?</span>)),
             <span class="comment">// Not yet supported</span>
             <span class="ident">S</span>::<span class="ident">Struct</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">S</span>::<span class="ident">StructInstantiation</span>(<span class="kw">_</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">None</span>,
@@ -4953,6 +4988,7 @@
             <span class="ident">FatType</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">u128</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">Value</span>::<span class="ident">u128</span>).<span class="ident">boxed</span>(),
             <span class="ident">FatType</span>::<span class="ident">Bool</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">Value</span>::<span class="ident">bool</span>).<span class="ident">boxed</span>(),
             <span class="ident">FatType</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">Value</span>::<span class="ident">address</span>).<span class="ident">boxed</span>(),
+            <span class="ident">FatType</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">Value</span>::<span class="ident">signer</span>).<span class="ident">boxed</span>(),
 
             <span class="ident">FatType</span>::<span class="ident">Vector</span>(<span class="ident">layout</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">layout</span> {
                 <span class="ident">FatType</span>::<span class="ident">U8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">vec</span>(<span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>(), <span class="number">0</span>..<span class="number">10</span>)

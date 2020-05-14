@@ -1370,6 +1370,8 @@
 <span id="1370">1370</span>
 <span id="1371">1371</span>
 <span id="1372">1372</span>
+<span id="1373">1373</span>
+<span id="1374">1374</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2138,6 +2140,7 @@
                 <span class="ident">S</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">Saturated</span>(<span class="ident">SignatureToken</span>::<span class="ident">U64</span>),
                 <span class="ident">S</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">Saturated</span>(<span class="ident">SignatureToken</span>::<span class="ident">U128</span>),
                 <span class="ident">S</span>::<span class="ident">ADDRESS</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">Saturated</span>(<span class="ident">SignatureToken</span>::<span class="ident">Address</span>),
+                <span class="ident">S</span>::<span class="ident">SIGNER</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">Saturated</span>(<span class="ident">SignatureToken</span>::<span class="ident">Signer</span>),
                 <span class="ident">S</span>::<span class="ident">VECTOR</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">Vector</span>,
                 <span class="ident">S</span>::<span class="ident">REFERENCE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">Reference</span>,
                 <span class="ident">S</span>::<span class="ident">MUTABLE_REFERENCE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">MutableReference</span>,
@@ -2636,6 +2639,7 @@
             <span class="number">0x9</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">SerializedType</span>::<span class="ident">TYPE_PARAMETER</span>),
             <span class="number">0xA</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">SerializedType</span>::<span class="ident">VECTOR</span>),
             <span class="number">0xB</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">SerializedType</span>::<span class="ident">STRUCT_INST</span>),
+            <span class="number">0xC</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">SerializedType</span>::<span class="ident">SIGNER</span>),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_SERIALIZED_TYPE</span>)),
         }
     }

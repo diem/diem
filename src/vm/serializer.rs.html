@@ -1237,6 +1237,7 @@
 <span id="1237">1237</span>
 <span id="1238">1238</span>
 <span id="1239">1239</span>
+<span id="1240">1240</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1733,6 +1734,7 @@
             <span class="ident">SignatureToken</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">SerializedType</span>::<span class="ident">U64</span> <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>,
             <span class="ident">SignatureToken</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">SerializedType</span>::<span class="ident">U128</span> <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>,
             <span class="ident">SignatureToken</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">SerializedType</span>::<span class="ident">ADDRESS</span> <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>,
+            <span class="ident">SignatureToken</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">SerializedType</span>::<span class="ident">SIGNER</span> <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>,
             <span class="ident">SignatureToken</span>::<span class="ident">Vector</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">SerializedType</span>::<span class="ident">VECTOR</span> <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>;
             }

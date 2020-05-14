@@ -1902,15 +1902,6 @@
 <span id="1902">1902</span>
 <span id="1903">1903</span>
 <span id="1904">1904</span>
-<span id="1905">1905</span>
-<span id="1906">1906</span>
-<span id="1907">1907</span>
-<span id="1908">1908</span>
-<span id="1909">1909</span>
-<span id="1910">1910</span>
-<span id="1911">1911</span>
-<span id="1912">1912</span>
-<span id="1913">1913</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2460,6 +2451,8 @@
     <span class="ident">U128</span>,
     <span class="doccomment">/// Address, a 16 bytes immutable type.</span>
     <span class="ident">Address</span>,
+    <span class="doccomment">/// Signer, a 16 bytes immutable type representing the capability to publish at an address</span>
+    <span class="ident">Signer</span>,
     <span class="doccomment">/// Vector</span>
     <span class="ident">Vector</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">SignatureToken</span><span class="op">&gt;</span>),
     <span class="doccomment">/// MOVE user type, resource or copyable</span>
@@ -2498,7 +2491,7 @@
                         <span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">extend</span>(<span class="ident">inner_toks</span>.<span class="ident">iter</span>().<span class="ident">rev</span>())
                     }
 
-                    <span class="ident">Bool</span> <span class="op">|</span> <span class="ident">Address</span> <span class="op">|</span> <span class="ident">U8</span> <span class="op">|</span> <span class="ident">U64</span> <span class="op">|</span> <span class="ident">U128</span> <span class="op">|</span> <span class="ident">Struct</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">TypeParameter</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
+                    <span class="ident">Signer</span> <span class="op">|</span> <span class="ident">Bool</span> <span class="op">|</span> <span class="ident">Address</span> <span class="op">|</span> <span class="ident">U8</span> <span class="op">|</span> <span class="ident">U64</span> <span class="op">|</span> <span class="ident">U128</span> <span class="op">|</span> <span class="ident">Struct</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">TypeParameter</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
                 }
                 <span class="prelude-val">Some</span>(<span class="ident">tok</span>)
             }
@@ -2549,6 +2542,7 @@
             <span class="ident">SignatureToken</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;U64&quot;</span>),
             <span class="ident">SignatureToken</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;U128&quot;</span>),
             <span class="ident">SignatureToken</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Address&quot;</span>),
+            <span class="ident">SignatureToken</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Signer&quot;</span>),
             <span class="ident">SignatureToken</span>::<span class="ident">Vector</span>(<span class="ident">boxed</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Vector({:?})&quot;</span>, <span class="ident">boxed</span>),
             <span class="ident">SignatureToken</span>::<span class="ident">Struct</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Struct({:?})&quot;</span>, <span class="ident">idx</span>),
             <span class="ident">SignatureToken</span>::<span class="ident">StructInstantiation</span>(<span class="ident">idx</span>, <span class="ident">types</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -2577,26 +2571,13 @@
             <span class="op">|</span> <span class="ident">U64</span>
             <span class="op">|</span> <span class="ident">U128</span>
             <span class="op">|</span> <span class="ident">Address</span>
+            <span class="op">|</span> <span class="ident">Signer</span>
             <span class="op">|</span> <span class="ident">Struct</span>(<span class="kw">_</span>)
             <span class="op">|</span> <span class="ident">StructInstantiation</span>(<span class="kw">_</span>, <span class="kw">_</span>)
             <span class="op">|</span> <span class="ident">Vector</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SignatureTokenKind</span>::<span class="ident">Value</span>,
             <span class="comment">// TODO: This is a temporary hack to please the verifier. SignatureTokenKind will soon</span>
             <span class="comment">// be completely removed. `SignatureTokenView::kind()` should be used instead.</span>
             <span class="ident">TypeParameter</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SignatureTokenKind</span>::<span class="ident">Value</span>,
-        }
-    }
-
-    <span class="doccomment">/// Returns `true` if the `SignatureToken` is a primitive type.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_primitive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="kw">use</span> <span class="ident">SignatureToken</span>::<span class="kw-2">*</span>;
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Bool</span> <span class="op">|</span> <span class="ident">U8</span> <span class="op">|</span> <span class="ident">U64</span> <span class="op">|</span> <span class="ident">U128</span> <span class="op">|</span> <span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
-            <span class="ident">Struct</span>(<span class="kw">_</span>)
-            <span class="op">|</span> <span class="ident">StructInstantiation</span>(<span class="kw">_</span>, <span class="kw">_</span>)
-            <span class="op">|</span> <span class="ident">Reference</span>(<span class="kw">_</span>)
-            <span class="op">|</span> <span class="ident">Vector</span>(<span class="kw">_</span>)
-            <span class="op">|</span> <span class="ident">MutableReference</span>(<span class="kw">_</span>)
-            <span class="op">|</span> <span class="ident">TypeParameter</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
         }
     }
 
@@ -2607,6 +2588,7 @@
             <span class="ident">U8</span> <span class="op">|</span> <span class="ident">U64</span> <span class="op">|</span> <span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
             <span class="ident">Bool</span>
             <span class="op">|</span> <span class="ident">Address</span>
+            <span class="op">|</span> <span class="ident">Signer</span>
             <span class="op">|</span> <span class="ident">Vector</span>(<span class="kw">_</span>)
             <span class="op">|</span> <span class="ident">Struct</span>(<span class="kw">_</span>)
             <span class="op">|</span> <span class="ident">StructInstantiation</span>(<span class="kw">_</span>, <span class="kw">_</span>)

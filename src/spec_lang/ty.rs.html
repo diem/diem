@@ -520,6 +520,8 @@
 <span id="520">520</span>
 <span id="521">521</span>
 <span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -564,6 +566,7 @@
     <span class="ident">U64</span>,
     <span class="ident">U128</span>,
     <span class="ident">Address</span>,
+    <span class="ident">Signer</span>,
 
     <span class="comment">// Types only appearing in specifications</span>
     <span class="ident">Num</span>,
@@ -1038,6 +1041,7 @@
             <span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;u64&quot;</span>),
             <span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;u128&quot;</span>),
             <span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;address&quot;</span>),
+            <span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;signer&quot;</span>),
             <span class="ident">Range</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;range&quot;</span>),
             <span class="ident">Num</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;num&quot;</span>),
         }
