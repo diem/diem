@@ -57,7 +57,7 @@ EOF
 {% if enable_logrotate %}
 cat > /etc/logrotate.d/libra <<EOF
 hourly
-${log_path} {
+$log_path {
 	maxsize 500M
 	rotate 100
 	compress
@@ -65,7 +65,7 @@ ${log_path} {
 	copytruncate
 }
 
-${structlog_path} {
+$structlog_path {
 	maxsize 500M
 	rotate 100
 	compress
