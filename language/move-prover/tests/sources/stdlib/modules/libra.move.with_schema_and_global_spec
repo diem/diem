@@ -4,20 +4,101 @@ module Libra {
     use 0x0::Transaction;
     use 0x0::Vector;
 
+    spec module {
+        // verify also private functions.
+        pragma verify = true;
+    }
+
     // A resource representing a fungible token
     resource struct T<Token> {
         // The value of the token. May be zero
         value: u64,
     }
 
+    spec module {
+         // This ghost variable is defined to have the true sum values of all instances of Token
+         global sum_of_token_values<Token>: num;
+    }
+
+    // maintain sum_of_tokens
+    spec struct T {
+        invariant pack sum_of_token_values<Token> = sum_of_token_values<Token> + value;
+        invariant unpack sum_of_token_values<Token> = sum_of_token_values<Token> - value;
+    }
+
     // A singleton resource that grants access to `Libra::mint`. Only the Association has one.
     resource struct MintCapability<Token> { }
+
+    // maintain mint_capability_count
+    spec struct MintCapability {
+        invariant pack mint_capability_count<Token> = mint_capability_count<Token> + 1;
+        invariant unpack mint_capability_count<Token> = mint_capability_count<Token> - 1;
+    }
+
+    // Specification helpers to work with MintCapability
+    spec module {
+        define exists_sender_mint_capability<Token>(): bool { exists<MintCapability<Token>>(sender()) }
+        // Ghost variable representing the total number of MintCapability instances for Token (0 or 1).
+        global mint_capability_count<Token>: num;
+    }
+
+    // There is a MintCapability for Token iff the token is registered
+    spec schema MintCapabilityCountInvariant<Token> {
+         invariant module !token_is_registered<Token>() ==> mint_capability_count<Token> == 0;
+         invariant module token_is_registered<Token>() ==> mint_capability_count<Token> == 1;
+    }
+    spec module {
+       apply MintCapabilityCountInvariant<Token> to public *<Token>;
+    }
 
     resource struct Info<Token> {
         // The sum of the values of all Libra::T resources in the system
         total_value: u128,
         // Value of funds that are in the process of being burned
         preburn_value: u64,
+    }
+
+    // Specifications helpers for working with Info<Token> at association address.
+    spec module {
+       define association_address(): address { 0xA550C18 }
+       define token_is_registered<Token>(): bool { exists<Info<Token>>(association_address()) }
+       define info<Token>(): Info<Token> { global<Info<Token>>(association_address()) }
+    }
+
+    spec schema SumRemainsSame<Token> {
+         ensures sum_of_token_values<Token> == old(sum_of_token_values<Token>);
+    }
+    spec module {
+        // Only mint/burn & with capability versions can change the total amount of currency.
+        // skip mint, burn, mint_with_capability, burn_with_capability.
+        // Burn always aborts because Preburn.is_approved is always false.
+        apply SumRemainsSame<Token> to *<Token> except mint*<Token>, burn*<Token>;
+    }
+
+    // Once registered, a token stays registered forever.
+    spec schema RegistrationPersists<Token> {
+         ensures old(token_is_registered<Token>()) ==> token_is_registered<Token>();
+    }
+    spec module {
+        apply RegistrationPersists<Token> to *<Token>;
+    }
+
+    spec schema SumOfTokenValuesInvariant<Token> {
+         // SPEC: MarketCap == Sum of all the instances of a particular token.
+
+         // Note: this works even though the verifier does not
+         // know that each existing token.value must be <= sum_of_token_values. I assume that
+         // total_value is constrained to be non-negative, so it all works. I should check this out.
+
+         // Note: What is the value of a ghost variable in the genesis state?
+         // State machine with two states (not registered/registered), so write as two invariants.
+
+         invariant module !token_is_registered<Token>() ==> sum_of_token_values<Token> == 0;
+         invariant module token_is_registered<Token>()
+                     ==> sum_of_token_values<Token> == global<Info<Token>>(0xA550C18).total_value;
+    }
+    spec module {
+        apply SumOfTokenValuesInvariant<Token> to public *<Token>;
     }
 
     // A holding area where funds that will subsequently be burned wait while their underyling
@@ -37,6 +118,12 @@ module Libra {
         is_approved: bool,
     }
 
+   spec schema RegisterAbortsIf<Token>{
+        aborts_if sender() != association_address();
+        aborts_if exists_sender_mint_capability<Token>();
+        aborts_if token_is_registered<Token>();
+    }
+
     public fun register<Token>() {
         // Only callable by the Association address
         Transaction::assert(Transaction::sender() == 0xA550C18, 1);
@@ -44,20 +131,18 @@ module Libra {
         move_to_sender(Info<Token> { total_value: 0u128, preburn_value: 0 });
     }
     spec fun register {
-        aborts_if sender() != 0xA550C18;
-        aborts_if exists<MintCapability<Token>>(sender());
-        aborts_if exists<Info<Token>>(sender());
-        ensures exists<MintCapability<Token>>(sender());
-        ensures exists<Info<Token>>(sender());
-        ensures global<Info<Token>>(sender()).total_value == 0;
-        ensures global<Info<Token>>(sender()).preburn_value == 0;
+        include RegisterAbortsIf<Token>;
+        ensures exists_sender_mint_capability<Token>();
+        ensures token_is_registered<Token>();
+        ensures info<Token>().total_value == 0;
+        ensures info<Token>().preburn_value == 0;
     }
 
     fun assert_is_registered<Token>() {
         Transaction::assert(exists<Info<Token>>(0xA550C18), 12);
     }
     spec fun assert_is_registered {
-        aborts_if !exists<Info<Token>>(0xA550C18);
+        aborts_if !token_is_registered<Token>();
     }
 
     // Return `amount` coins.
@@ -65,13 +150,22 @@ module Libra {
     public fun mint<Token>(amount: u64): T<Token> acquires Info, MintCapability {
         mint_with_capability(amount, borrow_global<MintCapability<Token>>(Transaction::sender()))
     }
-    spec fun mint {
-        aborts_if !exists<MintCapability<Token>>(sender());
-        aborts_if !exists<Info<Token>>(0xA550C18);
+    spec schema MintAbortsIf<Token> {
+        amount: u64;
+        aborts_if !token_is_registered<Token>();
         aborts_if amount > 1000000000 * 1000000;
-        aborts_if global<Info<Token>>(0xA550C18).total_value + amount > max_u128();
-        ensures global<Info<Token>>(0xA550C18).total_value == old(global<Info<Token>>(0xA550C18).total_value) + amount;
+        aborts_if info<Token>().total_value + amount > max_u128();
+    }
+    spec schema MintEnsures<Token> {
+        amount: u64;
+        result: T<Token>;
+        ensures info<Token>().total_value == old(info<Token>().total_value) + amount;
         ensures result.value == amount;
+    }
+    spec fun mint {
+        include MintAbortsIf<Token>;
+        aborts_if !exists_sender_mint_capability<Token>();
+        include MintEnsures<Token>;
     }
 
     // Burn the coins currently held in the preburn holding area under `preburn_address`.
@@ -84,16 +178,33 @@ module Libra {
             borrow_global<MintCapability<Token>>(Transaction::sender())
         )
     }
-    spec fun burn {
-        aborts_if !exists<MintCapability<Token>>(sender());
+    spec schema BasicBurnAbortsIf<Token> {
+        // Properties applying both to burn and to burn_cancel functions.
+        preburn_address: address;
         aborts_if !exists<Preburn<Token>>(preburn_address);
-        aborts_if old(len(global<Preburn<Token>>(preburn_address).requests)) == 0;
-        aborts_if !exists<Info<Token>>(0xA550C18);
-        aborts_if old(global<Info<Token>>(0xA550C18).total_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
-        aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
-        ensures eq_pop_front(global<Preburn<Token>>(preburn_address).requests, old(global<Preburn<Token>>(preburn_address).requests));
-        ensures global<Info<Token>>(0xA550C18).total_value == old(global<Info<Token>>(0xA550C18).total_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
-        ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
+        aborts_if len(global<Preburn<Token>>(preburn_address).requests) == 0;
+        aborts_if !token_is_registered<Token>();
+        aborts_if info<Token>().preburn_value < global<Preburn<Token>>(preburn_address).requests[0].value;
+    }
+    spec schema BurnAbortsIf<Token> {
+        include BasicBurnAbortsIf<Token>;
+        aborts_if info<Token>().total_value < global<Preburn<Token>>(preburn_address).requests[0].value;
+    }
+    spec schema BurnEnsures<Token> {
+        preburn_address: address;
+        ensures Vector::eq_pop_front(
+            global<Preburn<Token>>(preburn_address).requests,
+            old(global<Preburn<Token>>(preburn_address).requests)
+        );
+        ensures info<Token>().total_value ==
+            old(info<Token>().total_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
+        ensures info<Token>().preburn_value ==
+            old(info<Token>().preburn_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
+    }
+    spec fun burn {
+        aborts_if !exists_sender_mint_capability<Token>();
+        include BurnAbortsIf<Token>;
+        include BurnEnsures<Token>;
     }
 
     // Cancel the oldest burn request from `preburn_address`
@@ -106,15 +217,21 @@ module Libra {
             borrow_global<MintCapability<Token>>(Transaction::sender())
         )
     }
-    spec fun cancel_burn {
-        aborts_if !exists<MintCapability<Token>>(sender());
-        aborts_if !exists<Preburn<Token>>(preburn_address);
-        aborts_if old(len(global<Preburn<Token>>(preburn_address).requests)) == 0;
-        aborts_if !exists<Info<Token>>(0xA550C18);
-        aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
-        ensures eq_pop_front(global<Preburn<Token>>(preburn_address).requests, old(global<Preburn<Token>>(preburn_address).requests));
-        ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
+    spec schema CancelBurnEnsures<Token> {
+        preburn_address: address;
+        result: T<Token>;
+        ensures Vector::eq_pop_front(
+            global<Preburn<Token>>(preburn_address).requests,
+            old(global<Preburn<Token>>(preburn_address).requests)
+        );
+        ensures info<Token>().preburn_value ==
+            old(info<Token>().preburn_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
         ensures result == old(global<Preburn<Token>>(preburn_address).requests[0]);
+    }
+    spec fun cancel_burn {
+        aborts_if !exists_sender_mint_capability<Token>();
+        include BasicBurnAbortsIf<Token>;
+        include CancelBurnEnsures<Token>;
     }
 
     // Create a new Preburn resource
@@ -123,7 +240,7 @@ module Libra {
         Preburn<Token> { requests: Vector::empty(), is_approved: false, }
     }
     spec fun new_preburn {
-        aborts_if !exists<Info<Token>>(0xA550C18);
+        aborts_if !token_is_registered<Token>();
         ensures len(result.requests) == 0;
         ensures result.is_approved == false;
     }
@@ -149,26 +266,8 @@ module Libra {
         T<Token> { value }
     }
     spec fun mint_with_capability {
-        aborts_if !exists<Info<Token>>(0xA550C18);
-        aborts_if value > 1000000000 * 1000000;
-        aborts_if global<Info<Token>>(0xA550C18).total_value + value > max_u128();
-        ensures global<Info<Token>>(0xA550C18).total_value == old(global<Info<Token>>(0xA550C18).total_value) + value;
-        ensures result.value == value;
-    }
-
-    spec module {
-        // Auxiliary function to check if `v1` is equal to the result of adding `e` at the end of `v2`
-        define eq_push_back<Element>(v1: vector<Element>, v2: vector<Element>, e: Element): bool {
-            len(v1) == len(v2) + 1 &&
-            v1[len(v1)-1] == e &&
-            v1[0..len(v1)-1] == v2[0..len(v2)]
-        }
-
-        // Auxiliary function to check if `v1` is equal to the result of removing the first element of `v2`
-        define eq_pop_front<Element>(v1: vector<Element>, v2: vector<Element>): bool {
-            len(v1) + 1 == len(v2) &&
-            v1 == v2[1..len(v2)]
-        }
+        include MintAbortsIf<Token>{amount: value};
+        include MintEnsures<Token>{amount: value};
     }
 
     // Send coin to the preburn holding area `preburn_ref`, where it will wait to be burned.
@@ -186,12 +285,21 @@ module Libra {
         let market_cap = borrow_global_mut<Info<Token>>(0xA550C18);
         market_cap.preburn_value = market_cap.preburn_value + coin_value
     }
-    spec fun preburn {
+    spec schema PreburnAbortsIf<Token> {
+        coin: T<Token>;
         // aborts_if !preburn_ref.is_approved; // TODO: bring this back once we can automate approvals in testnet
-        aborts_if !exists<Info<Token>>(0xA550C18);
-        aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) + coin.value > max_u64();
-        ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) + coin.value;
-        ensures eq_push_back(preburn_ref.requests, old(preburn_ref.requests), coin);
+        aborts_if !token_is_registered<Token>();
+        aborts_if info<Token>().preburn_value + coin.value > max_u64();
+    }
+    spec schema PreburnEnsures<Token> {
+        preburn_ref: &mut Preburn<Token>;
+        coin: T<Token>;
+        ensures info<Token>().preburn_value == old(info<Token>().preburn_value) + coin.value;
+        ensures Vector::eq_push_back(preburn_ref.requests, old(preburn_ref.requests), coin);
+    }
+    spec fun preburn {
+        include PreburnAbortsIf<Token>;
+        include PreburnEnsures<Token>;
     }
 
     // Send coin to the preburn holding area, where it will wait to be burned.
@@ -201,12 +309,9 @@ module Libra {
     }
 
     spec fun preburn_to_sender {
-        // aborts_if !preburn_ref.is_approved; // TODO: bring this back once we can automate approvals in testnet
-        aborts_if !exists<Info<Token>>(0xA550C18);
+        include PreburnAbortsIf<Token>;
         aborts_if !exists<Preburn<Token>>(sender());
-        aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) + coin.value > max_u64();
-        ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) + coin.value;
-        ensures eq_push_back(global<Preburn<Token>>(sender()).requests, old(global<Preburn<Token>>(sender()).requests), coin);
+        include PreburnEnsures<Token>{preburn_ref: global<Preburn<Token>>(sender())};
     }
 
     // Permanently remove the coins held in the `Preburn` resource stored at `preburn_address` and
@@ -227,14 +332,9 @@ module Libra {
         market_cap.preburn_value = market_cap.preburn_value - value
     }
     spec fun burn_with_capability {
-        aborts_if !exists<Preburn<Token>>(preburn_address);
-        aborts_if old(len(global<Preburn<Token>>(preburn_address).requests)) == 0;
-        aborts_if !exists<Info<Token>>(0xA550C18);
-        aborts_if old(global<Info<Token>>(0xA550C18).total_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
-        aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
-        ensures eq_pop_front(global<Preburn<Token>>(preburn_address).requests, old(global<Preburn<Token>>(preburn_address).requests));
-        ensures global<Info<Token>>(0xA550C18).total_value == old(global<Info<Token>>(0xA550C18).total_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
-        ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
+        include BurnAbortsIf<Token>;
+        aborts_if info<Token>().total_value < global<Preburn<Token>>(preburn_address).requests[0].value;
+        include BurnEnsures<Token>;
     }
 
     // Cancel the burn request in the `Preburn` resource stored at `preburn_address` and
@@ -256,13 +356,8 @@ module Libra {
         coin
     }
     spec fun cancel_burn_with_capability {
-        aborts_if !exists<Preburn<Token>>(preburn_address);
-        aborts_if old(len(global<Preburn<Token>>(preburn_address).requests)) == 0;
-        aborts_if !exists<Info<Token>>(0xA550C18);
-        aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
-        ensures eq_pop_front(global<Preburn<Token>>(preburn_address).requests, old(global<Preburn<Token>>(preburn_address).requests));
-        ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
-        ensures result == old(global<Preburn<Token>>(preburn_address).requests[0]);
+        include BasicBurnAbortsIf<Token>;
+        include CancelBurnEnsures<Token>;
     }
 
     // Publish `preburn` under the sender's account
@@ -300,8 +395,8 @@ module Libra {
         move_to_sender(capability)
     }
     spec fun publish_mint_capability {
-        aborts_if exists<MintCapability<Token>>(sender());
-        ensures exists<MintCapability<Token>>(sender());
+        aborts_if exists_sender_mint_capability<Token>();
+        ensures exists_sender_mint_capability<Token>();
         ensures capability == global<MintCapability<Token>>(sender());
     }
 
@@ -311,8 +406,8 @@ module Libra {
         move_from<MintCapability<Token>>(Transaction::sender())
     }
     spec fun remove_mint_capability {
-        aborts_if !exists<MintCapability<Token>>(sender());
-        ensures !exists<MintCapability<Token>>(sender());
+        aborts_if !exists_sender_mint_capability<Token>();
+        ensures !exists_sender_mint_capability<Token>();
         ensures result == old(global<MintCapability<Token>>(sender()));
     }
 
@@ -321,8 +416,8 @@ module Libra {
         borrow_global<Info<Token>>(0xA550C18).total_value
     }
     spec fun market_cap {
-        aborts_if !exists<Info<Token>>(0xA550C18);
-        ensures result == global<Info<Token>>(0xA550C18).total_value;
+        aborts_if !token_is_registered<Token>();
+        ensures result == info<Token>().total_value;
     }
 
     // Return the total value of Libra to be burned
@@ -330,8 +425,8 @@ module Libra {
         borrow_global<Info<Token>>(0xA550C18).preburn_value
     }
     spec fun preburn_value {
-        aborts_if !exists<Info<Token>>(0xA550C18);
-        ensures result == global<Info<Token>>(0xA550C18).preburn_value;
+        aborts_if !token_is_registered<Token>();
+        ensures result == info<Token>().preburn_value;
     }
 
     // Create a new Libra::T with a value of 0
@@ -341,7 +436,7 @@ module Libra {
         T { value: 0 }
     }
     spec fun zero {
-        aborts_if !exists<Info<Token>>(0xA550C18);
+        aborts_if !token_is_registered<Token>();
         ensures result.value == 0;
     }
 

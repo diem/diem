@@ -12,6 +12,9 @@ module Transaction {
     public fun assert(check: bool, code: u64) {
         if (check) () else abort code
     }
+    spec fun assert {
+        aborts_if !check;
+    }
 }
 
 }

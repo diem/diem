@@ -11,7 +11,7 @@ module LibraAccount {
     use 0x0::Vector;
 
     spec module {
-        pragma verify=false;
+        pragma verify=true;
     }
 
     // Every Libra account has a LibraAccount::T resource
@@ -208,100 +208,17 @@ module LibraAccount {
     // and those accounts will be charged for gas. If those accounts don't have enough gas to pay
     // for the transaction cost they will fail minting.
     // However those account can also mint to themselves so that is a decent workaround
-    public fun mint_to_address(
+    public fun mint_to_address<Token>(
         payee: address,
         auth_key_prefix: vector<u8>,
         amount: u64
     ) acquires T, Balance {
         // Create an account if it does not exist
         if (!exists(payee)) {
-            create_account(payee, auth_key_prefix);
+            create_account<Token>(payee, auth_key_prefix);
         };
-
         // Mint and deposit the coin
-        deposit(payee, Libra::mint<LBR::T>(amount));
-    }
-
-    // This function is created to demonstrate a schema inclusion bug.
-    // TODO: remove this function when not needed.
-    public fun mint_LBR(amount: u64): Libra::T<LBR::T> {
-        Libra::mint<LBR::T>(amount)
-    }
-    spec fun mint_LBR {
-        pragma verify=false; // FIXME: this function should be verified.
-        include Libra::MintAbortsIf<LBR::T>; // TODO: uncomment this to reveal the bug
-        aborts_if !Libra::exists_sender_mint_capability<LBR::T>();
-    }
-
-    // This function is created to work around the type parameter issue.
-    public fun modified_mint_to_address(
-        payee: address,
-        auth_key_prefix: vector<u8>,
-        amount: u64
-    ) acquires T, Balance {
-        // Create an account if it does not exist
-        if (!exists(payee)) {
-            create_account(payee, auth_key_prefix);
-            let _ = borrow_global<T>(Transaction::sender()).sent_events.counter; // added to workaround the issue
-            // Mint and deposit the coin
-            deposit(payee, Libra::mint<LBR::T>(amount));
-        }
-        else if (exists(payee)) {
-            let _ = borrow_global<T>(Transaction::sender()).sent_events.counter; // added to workaround the issue
-            // Mint and deposit the coin
-            deposit(payee, Libra::mint<LBR::T>(amount));
-        }
-    }
-    spec fun modified_mint_to_address {
-        // derived from create_account
-        aborts_if !exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32; // modified
-        aborts_if !exists<T>(payee) && exists<Balance<LBR::T>>(payee); // modified
-//        aborts_if !exists<T>(payee) && exists<T>(payee); // removed because it's obviously false
-        aborts_if !exists<T>(payee) && !exists<Libra::Info<LBR::T>>(0xA550C18); // modified
-
-        // derived from Libra::mint
-        aborts_if !Libra::token_is_registered<LBR::T>();
-        aborts_if amount > 1000000000 * 1000000;
-        aborts_if Libra::info<LBR::T>().total_value + amount > max_u128();
-        include Libra::MintAbortsIf<LBR::T>; //FIXME: uncomment this so that a schema inclusion bug manifests. The bug is in the instantiation of the type variable
-        aborts_if !Libra::exists_sender_mint_capability<LBR::T>();
-
-        // derived from deposit
-        aborts_if amount == 0;
-        aborts_if sender() != payee && !exists<T>(sender());
-        aborts_if exists<T>(payee) && exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64();
-        aborts_if !exists<T>(payee) && sender() == payee && exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64(); // reduces to false
-        aborts_if !exists<T>(payee) && sender() != payee && exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64(); // FIXME: This is not verified for the original ("unmodified" version of) function
-//        aborts_if exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64(); // this should be able to simply replace the three lines above
-
-//        aborts_if !exists<T>(payee); // removed because it's guaranteed to exist.
-        aborts_if exists<T>(payee) && !exists<Balance<LBR::T>>(payee);
-        aborts_if exists<Balance<LBR::T>>(payee) && global<Balance<LBR::T>>(payee).coin.value + amount > max_u64(); // does not need "sender() != payee" like pay_from_sender_with_metadata because this is minting instead of withdrawing
-        aborts_if exists<T>(payee) && global<T>(payee).received_events.counter + 1 > max_u64();
-
-        // derived from create_account
-        ensures old(!exists<T>(payee)) ==> exists<Balance<LBR::T>>(payee);
-        ensures old(!exists<T>(payee)) ==> global<Balance<LBR::T>>(payee).coin.value == amount;
-        ensures old(!exists<T>(payee)) ==> exists<T>(payee);
-        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).authentication_key, auth_key_prefix, LCS::serialize(payee));
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_key_rotation_capability == false;
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_withdrawal_capability == false;
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).sequence_number == 0;
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).event_generator.counter == 2;
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).received_events.counter == 1;
-        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).received_events.guid, LCS::serialize(0), LCS::serialize(payee));
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).sent_events.counter == 0;
-        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).sent_events.guid, LCS::serialize(1), LCS::serialize(payee));
-
-        // derived from Libra::mint
-        ensures Libra::info<LBR::T>().total_value == old(Libra::info<LBR::T>().total_value) + amount;
-
-        // derived from deposit
-        ensures global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1;
-        ensures old(exists<T>(payee)) ==> global<T>(payee).received_events.counter == old(global<T>(payee).received_events.counter) + 1;
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).received_events.counter == 1;
-        ensures old(exists<T>(payee)) ==> global<Balance<LBR::T>>(payee).coin.value == old(global<Balance<LBR::T>>(payee).coin.value) + amount;
-        ensures old(!exists<T>(payee)) ==> global<Balance<LBR::T>>(payee).coin.value == amount;
+        deposit(payee, Libra::mint<Token>(amount));
     }
 
     spec module {
@@ -431,7 +348,7 @@ module LibraAccount {
         metadata: vector<u8>
     ) acquires T, Balance {
         if (!exists(payee)) {
-            create_account(payee, auth_key_prefix);
+            create_account<Token>(payee, auth_key_prefix);
         };
         deposit_with_sender_and_metadata<Token>(
             payee,
@@ -440,106 +357,6 @@ module LibraAccount {
             metadata,
         );
     }
-
-    // This function is removed to work around the type parameter issue.
-    public fun modified_pay_from_capability(
-        payee: address,
-        auth_key_prefix: vector<u8>,
-        cap: &WithdrawalCapability,
-        amount: u64,
-        metadata: vector<u8>
-    ) acquires T, Balance {
-        if (!exists(payee)) {
-            create_account(payee, auth_key_prefix);
-            let _ = borrow_global<T>(cap.account_address).sent_events.counter;
-            let _ = Libra::value(&borrow_global<Balance<LBR::T>>(cap.account_address).coin);
-            //let _ = cap.account_address;
-            deposit_with_sender_and_metadata<LBR::T>(
-                payee,
-                cap.account_address, //*&cap.account_address,
-                withdraw_with_capability(cap, amount),
-                metadata,
-            );
-        }
-        else if(exists(payee)) {
-            let _ = borrow_global<T>(cap.account_address).sent_events.counter;
-            let _ = Libra::value(&borrow_global<Balance<LBR::T>>(cap.account_address).coin);
-            //let _ = cap.account_address;
-            deposit_with_sender_and_metadata<LBR::T>(
-                payee,
-                cap.account_address, //*&cap.account_address,
-                withdraw_with_capability(cap, amount),
-                metadata,
-            );
-        }
-    }
-    spec fun modified_pay_from_capability {
-        pragma verify=false; // 20 seconds to verify the empty spec
-
-        // derived from create_account
-        aborts_if !exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32;
-        aborts_if !exists<T>(payee) && exists<Balance<LBR::T>>(payee);
-        //aborts_if !exists<T>(payee) && exists<T>(payee); // obviously false
-        aborts_if !exists<T>(payee) && !exists<Libra::Info<LBR::T>>(0xA550C18);
-
-        // derived from withdraw_with_capability
-        aborts_if payee == cap.account_address && exists<T>(payee) && !exists<Balance<LBR::T>>(cap.account_address);
-        aborts_if !exists<Balance<LBR::T>>(cap.account_address) && amount > 0;
-        aborts_if !exists<Balance<LBR::T>>(cap.account_address) && amount == 0 && exists<T>(payee);
-        aborts_if !exists<Balance<LBR::T>>(cap.account_address) && amount == 0 && !exists<T>(payee) && payee != cap.account_address;
-        aborts_if exists<T>(payee) && exists<Balance<LBR::T>>(cap.account_address) && global<Balance<LBR::T>>(cap.account_address).coin.value < amount; // verified
-        aborts_if !exists<T>(payee) && payee == cap.account_address && exists<Balance<LBR::T>>(cap.account_address) && global<Balance<LBR::T>>(cap.account_address).coin.value < amount; // verified
-        aborts_if !exists<T>(payee) && exists<Balance<LBR::T>>(payee) && payee != cap.account_address && exists<Balance<LBR::T>>(cap.account_address) && global<Balance<LBR::T>>(cap.account_address).coin.value < amount; //  verified
-        //aborts_if !exists<T>(payee) && !exists<Balance<LBR::T>>(payee) && payee != cap.account_address && exists<Balance<LBR::T>>(cap.account_address) && global<Balance<LBR::T>>(cap.account_address).coin.value < amount; //  not verified. Is this false?
-
-        // derived from deposit_with_sender_and_metadata
-        aborts_if amount == 0;
-        aborts_if payee != cap.account_address && !exists<T>(cap.account_address); // modified // not verified if "let _ = ..." is enabled
-        aborts_if exists<T>(cap.account_address) && global<T>(cap.account_address).sent_events.counter + 1 > max_u64(); // FIXME: should be verified // not verified if "let _ = ..." is enabled
-//            aborts_if !exists<T>(payee) && exists<T>(cap.account_address) && global<T>(cap.account_address).sent_events.counter + 1 > max_u64(); // verified
-//            aborts_if exists<T>(payee) && exists<T>(cap.account_address) && global<T>(cap.account_address).sent_events.counter + 1 > max_u64(); // verified
-//        aborts_if !exists<T>(payee); // deleted because not relevant here
-        aborts_if exists<T>(payee) && !exists<Balance<LBR::T>>(payee);
-        aborts_if cap.account_address != payee && exists<T>(payee) && global<Balance<LBR::T>>(payee).coin.value + amount > max_u64(); // modified
-        aborts_if exists<T>(payee) && global<T>(payee).received_events.counter + 1 > max_u64(); // modified
-    }
-
-// FIXME: This function is not verified, instead verification does not terminate. Turn pragma verify=true to
-// reproduce.
-// It's verified if the  line (i.e., "let _ = ...") in the function is commented out (and removing `T` from the acquires clause).
-fun simplified_pay_from_capability(
-    payee: address,
-    auth_key_prefix: vector<u8>,
-    cap: &WithdrawalCapability,
-    amount: u64,
-    ) acquires T, Balance {
-    if (!exists(payee)) {
-        create_account(payee, auth_key_prefix)
-    };
-    let _ = borrow_global<T>(cap.account_address).sent_events.counter;
-    let val = Libra::value(&borrow_global<Balance<LBR::T>>(cap.account_address).coin);
-    if(val < amount) {
-        abort 1
-    };
-}
-spec fun simplified_pay_from_capability {
-    // TODO: this currently takes 30s to verify. It also produces an error which need to be investigated.
-    pragma verify=false;
-
-    // capability check
-    aborts_if exists<T>(payee) && !exists<T>(cap.account_address);
-
-    // derived from create_account
-    aborts_if !exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32;
-    aborts_if !exists<T>(payee) && exists<Balance<LBR::T>>(payee);
-    //aborts_if !exists<T>(payee) && exists<T>(payee); // obviously false
-    aborts_if !exists<T>(payee) && !exists<Libra::Info<LBR::T>>(0xA550C18);
-
-    aborts_if !exists<Balance<LBR::T>>(cap.account_address) && amount > 0;
-    aborts_if !exists<Balance<LBR::T>>(cap.account_address) && amount == 0 && exists<T>(payee);
-    aborts_if !exists<Balance<LBR::T>>(cap.account_address) && amount == 0 && !exists<T>(payee) && payee != cap.account_address;
-    aborts_if exists<Balance<LBR::T>>(cap.account_address) && global<Balance<LBR::T>>(cap.account_address).coin.value < amount;
-}
 
     // Withdraw `amount` Libra::T<Token> from the transaction sender's
     // account balance and send the coin to the `payee` address with the
@@ -551,7 +368,7 @@ spec fun simplified_pay_from_capability {
         metadata: vector<u8>
     ) acquires T, Balance {
         if (!exists(payee)) {
-            create_account(payee, auth_key_prefix);
+            create_account<Token>(payee, auth_key_prefix);
         };
         deposit_with_metadata<Token>(
             payee,
@@ -559,50 +376,27 @@ spec fun simplified_pay_from_capability {
             metadata
         );
     }
-
-    // This function is created and verified to work around the type parameter issue
-    public fun modified_pay_from_sender_with_metadata(
-        payee: address,
-        auth_key_prefix: vector<u8>,
-        amount: u64,
-        metadata: vector<u8>
-    ) acquires T, Balance {
-        if (!exists(payee)) {
-            create_account(payee, auth_key_prefix);
-        };
-        deposit_with_metadata<LBR::T>(
-            payee,
-            withdraw_from_sender<LBR::T>(amount),
-            metadata
-        );
-    }
-    spec fun modified_pay_from_sender_with_metadata {
+    spec fun pay_from_sender_with_metadata {
         // derived from create_account
         aborts_if !exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32; // modified
-        aborts_if !exists<T>(payee) && exists<Balance<LBR::T>>(payee); // modified
-//        aborts_if !exists<T>(payee) && exists<T>(payee); // removed because it's obviously false
-        aborts_if !exists<T>(payee) && !exists<Libra::Info<LBR::T>>(0xA550C18); // modified
-
+        aborts_if !exists<T>(payee) && exists<Balance<Token>>(payee); // modified
+        aborts_if !exists<T>(payee) && !exists<Libra::Info<Token>>(0xA550C18); // modified
         // derived from withdraw_from_sender
         aborts_if sender() != payee && !exists<T>(sender()); // modified
-        aborts_if sender() != payee && !exists<Balance<LBR::T>>(sender()); // modified
-        aborts_if sender() == payee && exists<T>(payee) && !exists<Balance<LBR::T>>(sender()); // modified
+        aborts_if sender() != payee && !exists<Balance<Token>>(sender()); // modified
+        aborts_if sender() == payee && exists<T>(payee) && !exists<Balance<Token>>(sender()); // modified
         aborts_if exists<T>(sender()) && global<T>(sender()).delegated_withdrawal_capability; // modified
-        aborts_if sender() == payee && !exists<T>(payee); // added. If this holds, delegated_withdrawal_capability is false. // TODO: Record this in the finding list. However, this line is not crucial because this function can be verified without this line.
-        aborts_if exists<Balance<LBR::T>>(sender()) && global<Balance<LBR::T>>(sender()).coin.value < amount; // modified
-
+        aborts_if sender() == payee && !exists<T>(payee);
+        aborts_if exists<Balance<Token>>(sender()) && global<Balance<Token>>(sender()).coin.value < amount; // modified
         // derived from deposit_with_metadata
         aborts_if amount == 0;
-//        aborts_if sender() != payee && !exists<T>(sender()); // removed because it's redundant
-        aborts_if exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64(); // modified // FIXME: this line makes Prover slow time to time "non-deterministically"
-//        aborts_if !exists<T>(payee); // removed not relevant
-        aborts_if exists<T>(payee) && !exists<Balance<LBR::T>>(payee); // modified
-        aborts_if sender() != payee && exists<Balance<LBR::T>>(payee) && global<Balance<LBR::T>>(payee).coin.value + amount > max_u64(); // modified
+        aborts_if exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64();
+        aborts_if exists<T>(payee) && !exists<Balance<Token>>(payee); // modified
+        aborts_if sender() != payee && exists<Balance<Token>>(payee) && global<Balance<Token>>(payee).coin.value + amount > max_u64(); // modified
         aborts_if exists<T>(payee) && global<T>(payee).received_events.counter + 1 > max_u64();
-
         // derived from create_account
-        ensures old(!exists<T>(payee)) ==> exists<Balance<LBR::T>>(payee);
-        ensures old(!exists<T>(payee)) ==> global<Balance<LBR::T>>(payee).coin.value == amount;
+        ensures old(!exists<T>(payee)) ==> exists<Balance<Token>>(payee);
+        ensures old(!exists<T>(payee)) ==> global<Balance<Token>>(payee).coin.value == amount;
         ensures old(!exists<T>(payee)) ==> exists<T>(payee);
         ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).authentication_key, auth_key_prefix, LCS::serialize(payee));
         ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_key_rotation_capability == false;
@@ -613,16 +407,14 @@ spec fun simplified_pay_from_capability {
         ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).received_events.guid, LCS::serialize(0), LCS::serialize(payee));
         ensures old(!exists<T>(payee)) ==> global<T>(payee).sent_events.counter == 0;
         ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).sent_events.guid, LCS::serialize(1), LCS::serialize(payee));
-
         // derived from withdraw_from_sender
-        ensures payee != sender() ==> global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value) - amount;
-        //ensures result.value == amount; // removed because not relevant
-
+        ensures payee != sender() ==> global<Balance<Token>>(sender()).coin.value == old(global<Balance<Token>>(sender()).coin.value) - amount;
         // derived from deposit_with_metadata
         ensures global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1;
         ensures old(exists<T>(payee)) ==> global<T>(payee).received_events.counter == old(global<T>(payee).received_events.counter) + 1;
-        ensures old(exists<T>(payee)) && payee != sender() ==> global<Balance<LBR::T>>(payee).coin.value == old(global<Balance<LBR::T>>(payee).coin.value) + amount;
+        ensures old(exists<T>(payee)) && payee != sender() ==> global<Balance<Token>>(payee).coin.value == old(global<Balance<Token>>(payee).coin.value) + amount;
     }
+
 
     // Withdraw `amount` Libra::T<Token> from the transaction sender's
     // account balance  and send the coin to the `payee` address
@@ -634,42 +426,27 @@ spec fun simplified_pay_from_capability {
     ) acquires T, Balance {
         pay_from_sender_with_metadata<Token>(payee, auth_key_prefix, amount, x"");
     }
-
-    // This function is created and verified to work around the type parameter issue.
-    public fun modified_pay_from_sender(
-        payee: address,
-        auth_key_prefix: vector<u8>,
-        amount: u64
-    ) acquires T, Balance {
-        modified_pay_from_sender_with_metadata(payee, auth_key_prefix, amount, x"");
-    }
-    spec fun modified_pay_from_sender {
+    spec fun pay_from_sender {
         // derived from create_account
         aborts_if !exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32; // modified
-        aborts_if !exists<T>(payee) && exists<Balance<LBR::T>>(payee); // modified
-        //aborts_if !exists<T>(payee) && exists<T>(payee); // removed because it's obviously false
-        aborts_if !exists<T>(payee) && !exists<Libra::Info<LBR::T>>(0xA550C18); // modified
-
+        aborts_if !exists<T>(payee) && exists<Balance<Token>>(payee); // modified
+        aborts_if !exists<T>(payee) && !exists<Libra::Info<Token>>(0xA550C18); // modified
         // derived from withdraw_from_sender
         aborts_if sender() != payee && !exists<T>(sender()); // modified
-        aborts_if sender() != payee && !exists<Balance<LBR::T>>(sender()); // modified
-        aborts_if sender() == payee && exists<T>(payee) && !exists<Balance<LBR::T>>(sender()); // modified
+        aborts_if sender() != payee && !exists<Balance<Token>>(sender()); // modified
+        aborts_if sender() == payee && exists<T>(payee) && !exists<Balance<Token>>(sender()); // modified
         aborts_if exists<T>(sender()) && global<T>(sender()).delegated_withdrawal_capability; // modified
         aborts_if sender() == payee && !exists<T>(payee); // added. If this holds, delegated_withdrawal_capability is false.
-        aborts_if exists<Balance<LBR::T>>(sender()) && global<Balance<LBR::T>>(sender()).coin.value < amount; // modified
-
+        aborts_if exists<Balance<Token>>(sender()) && global<Balance<Token>>(sender()).coin.value < amount; // modified
         // derived from deposit_with_metadata
         aborts_if amount == 0;
-//        aborts_if sender() != payee && !exists<T>(sender()); // removed because it's redundant
-        aborts_if exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64(); // modified // FIXME: slow sometimes non-deterministically
-//        aborts_if !exists<T>(payee); // removed not relevant
-        aborts_if exists<T>(payee) && !exists<Balance<LBR::T>>(payee); // modified
-        aborts_if sender() != payee && exists<Balance<LBR::T>>(payee) && global<Balance<LBR::T>>(payee).coin.value + amount > max_u64(); // modified
+        aborts_if exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64(); // modified
+        aborts_if exists<T>(payee) && !exists<Balance<Token>>(payee); // modified
+        aborts_if sender() != payee && exists<Balance<Token>>(payee) && global<Balance<Token>>(payee).coin.value + amount > max_u64(); // modified
         aborts_if exists<T>(payee) && global<T>(payee).received_events.counter + 1 > max_u64();
-
         // derived from create_account
-        ensures old(!exists<T>(payee)) ==> exists<Balance<LBR::T>>(payee);
-        ensures old(!exists<T>(payee)) ==> global<Balance<LBR::T>>(payee).coin.value == amount;
+        ensures old(!exists<T>(payee)) ==> exists<Balance<Token>>(payee);
+        ensures old(!exists<T>(payee)) ==> global<Balance<Token>>(payee).coin.value == amount;
         ensures old(!exists<T>(payee)) ==> exists<T>(payee);
         ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).authentication_key, auth_key_prefix, LCS::serialize(payee));
         ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_key_rotation_capability == false;
@@ -680,17 +457,13 @@ spec fun simplified_pay_from_capability {
         ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).received_events.guid, LCS::serialize(0), LCS::serialize(payee));
         ensures old(!exists<T>(payee)) ==> global<T>(payee).sent_events.counter == 0;
         ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).sent_events.guid, LCS::serialize(1), LCS::serialize(payee));
-
         // derived from withdraw_from_sender
-        ensures payee != sender() ==> global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value) - amount;
-        //ensures result.value == amount; // removed because not relevant
-
+        ensures payee != sender() ==> global<Balance<Token>>(sender()).coin.value == old(global<Balance<Token>>(sender()).coin.value) - amount;
         // derived from deposit_with_metadata
         ensures global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1;
         ensures old(exists<T>(payee)) ==> global<T>(payee).received_events.counter == old(global<T>(payee).received_events.counter) + 1;
-        ensures old(exists<T>(payee)) && payee != sender() ==> global<Balance<LBR::T>>(payee).coin.value == old(global<Balance<LBR::T>>(payee).coin.value) + amount;
+        ensures old(exists<T>(payee)) && payee != sender() ==> global<Balance<Token>>(payee).coin.value == old(global<Balance<Token>>(payee).coin.value) + amount;
     }
-
 
     fun rotate_authentication_key_for_account(account: &mut T, new_authentication_key: vector<u8>) {
       // Don't allow rotating to clearly invalid key
@@ -772,7 +545,7 @@ spec fun simplified_pay_from_capability {
     // key `auth_key_prefix` | `fresh_address`
     // Creating an account at address 0x0 will cause runtime failure as it is a
     // reserved address for the MoveVM.
-    public fun create_account(fresh_address: address, auth_key_prefix: vector<u8>) {
+    public fun create_account<Token>(fresh_address: address, auth_key_prefix: vector<u8>) {
         let generator = EventHandleGenerator {counter: 0};
         let authentication_key = auth_key_prefix;
         Vector::append(&mut authentication_key, LCS::to_bytes(&fresh_address));
@@ -780,7 +553,7 @@ spec fun simplified_pay_from_capability {
 
         save_account(
             Balance{
-                coin: Libra::zero<LBR::T>()
+                coin: Libra::zero<Token>()
             },
             T {
                 authentication_key,
@@ -795,14 +568,12 @@ spec fun simplified_pay_from_capability {
         );
     }
     spec fun create_account {
-        // TODO: this currently fails, need to figure out why.
-        pragma verify=true;
         aborts_if len(LCS::serialize(fresh_address)) + len(auth_key_prefix) != 32;
-        aborts_if exists<Balance<LBR::T>>(fresh_address);
+        aborts_if exists<Balance<Token>>(fresh_address);
         aborts_if exists<T>(fresh_address);
-        aborts_if !exists<Libra::Info<LBR::T>>(0xA550C18);
-        ensures exists<Balance<LBR::T>>(fresh_address);
-        ensures global<Balance<LBR::T>>(fresh_address).coin.value == 0;
+        aborts_if !exists<Libra::Info<Token>>(0xA550C18);
+        ensures exists<Balance<Token>>(fresh_address);
+        ensures global<Balance<Token>>(fresh_address).coin.value == 0;
         ensures exists<T>(fresh_address);
         ensures Vector::eq_append(global<T>(fresh_address).authentication_key, auth_key_prefix, LCS::serialize(fresh_address));
         ensures global<T>(fresh_address).delegated_key_rotation_capability == false;
@@ -813,8 +584,6 @@ spec fun simplified_pay_from_capability {
         ensures Vector::eq_append(global<T>(fresh_address).received_events.guid, LCS::serialize(0), LCS::serialize(fresh_address));
         ensures global<T>(fresh_address).sent_events.counter == 0;
         ensures Vector::eq_append(global<T>(fresh_address).sent_events.guid, LCS::serialize(1), LCS::serialize(fresh_address));
-        //ensures Vector::eq_append(global<T>(fresh_address).received_events.guid, LCS::serialize(EventHandleGenerator {counter: 0}), LCS::serialize(fresh_address)); // FIXME: This line is wrong, so should not be verified. Z3 will hang if one uncomments this.
-        //ensures Vector::eq_append(global<T>(fresh_address).sent_events.guid, LCS::serialize(EventHandleGenerator {counter: 1}), LCS::serialize(fresh_address)); // FIXME: This line is wrong, so should not be verified. Z3 will hang if one uncomments this.
     }
 
     // Creates a new account at `fresh_address` with the `initial_balance` deducted from the
@@ -824,7 +593,7 @@ spec fun simplified_pay_from_capability {
         auth_key_prefix: vector<u8>,
         initial_balance: u64
     ) acquires T, Balance {
-        create_account(fresh_address, auth_key_prefix);
+        create_account<Token>(fresh_address, auth_key_prefix);
         if (initial_balance > 0) {
             deposit_with_metadata(
                 fresh_address,
@@ -833,48 +602,24 @@ spec fun simplified_pay_from_capability {
             );
         }
     }
-
-    // This function is created and verified to work around the type parameter issue
-    public fun modified_create_new_account(
-        fresh_address: address,
-        auth_key_prefix: vector<u8>,
-        initial_balance: u64
-    ) acquires T, Balance {
-        create_account(fresh_address, auth_key_prefix);
-        if (initial_balance > 0) {
-            deposit_with_metadata(
-                fresh_address,
-                withdraw_from_sender<LBR::T>(initial_balance),
-                Vector::empty(),
-            );
-        }
-    }
-
-    spec fun modified_create_new_account {
-        // derived from create_account (this could be done using a schema)
+    spec fun create_new_account {
+        // derived from create_account
         aborts_if len(LCS::serialize(fresh_address)) + len(auth_key_prefix) != 32;
-        aborts_if exists<Balance<LBR::T>>(fresh_address);
+        aborts_if exists<Balance<Token>>(fresh_address);
         aborts_if exists<T>(fresh_address);
-        aborts_if !exists<Libra::Info<LBR::T>>(0xA550C18);
-
+        aborts_if !exists<Libra::Info<Token>>(0xA550C18);
         // derived from withdraw_from_sender
         aborts_if initial_balance > 0 && !exists<T>(sender()); // modified
-        aborts_if initial_balance > 0 && !exists<Balance<LBR::T>>(sender()); // modified
+        aborts_if initial_balance > 0 && !exists<Balance<Token>>(sender()); // modified
         aborts_if initial_balance > 0 && global<T>(sender()).delegated_withdrawal_capability; // modified
-        aborts_if initial_balance > 0 && global<Balance<LBR::T>>(sender()).coin.value < initial_balance; // modified
-
+        aborts_if initial_balance > 0 && global<Balance<Token>>(sender()).coin.value < initial_balance; // modified
         // derived from deposit_with_metadata
         aborts_if initial_balance > 0 && initial_balance == 0; // modified
         aborts_if initial_balance > 0 && fresh_address != sender() && !exists<T>(sender()); // modified
         aborts_if initial_balance > 0 && global<T>(sender()).sent_events.counter + 1 > max_u64(); // modified
-        //aborts_if initial_balance > 0 && !exists<T>(fresh_address); // deleted because not relevant here
-        //aborts_if initial_balance > 0 && !exists<Balance<Token>>(fresh_address); // deleted because not relevant here
-        //aborts_if initial_balance > 0 && fresh_address != sender() && global<Balance<Token>>(fresh_address).coin.value + initial_balance > max_u64(); // deleted because not relevant here
-        //aborts_if initial_balance > 0 && global<T>(fresh_address).received_events.counter + 1 > max_u64(); // deleted because not relevant here
-
         // derived from create_account
-        ensures exists<Balance<LBR::T>>(fresh_address);
-        ensures global<Balance<LBR::T>>(fresh_address).coin.value == initial_balance; // modified
+        ensures exists<Balance<Token>>(fresh_address);
+        ensures global<Balance<Token>>(fresh_address).coin.value == initial_balance; // modified
         ensures exists<T>(fresh_address);
         ensures Vector::eq_append(global<T>(fresh_address).authentication_key, auth_key_prefix, LCS::serialize(fresh_address));
         ensures global<T>(fresh_address).delegated_key_rotation_capability == false;
@@ -885,58 +630,10 @@ spec fun simplified_pay_from_capability {
         ensures Vector::eq_append(global<T>(fresh_address).received_events.guid, LCS::serialize(0), LCS::serialize(fresh_address));
         ensures global<T>(fresh_address).sent_events.counter == 0;
         ensures Vector::eq_append(global<T>(fresh_address).sent_events.guid, LCS::serialize(1), LCS::serialize(fresh_address));
-
         // derived from withdraw_from_sender
-        ensures initial_balance > 0 ==> global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value) - initial_balance;
-        //ensures initial_balance == 0 ==> global<Balance<Token>>(sender()).coin.value == old(global<Balance<Token>>(sender()).coin.value) - initial_balance; // FIXME: true, but not verified (due to the issue of partial assumption)
-        //ensures global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value) - initial_balance; //FIXME: true, but not verified (due to the issue of partial assumption)
-
+        ensures initial_balance > 0 ==> global<Balance<Token>>(sender()).coin.value == old(global<Balance<Token>>(sender()).coin.value) - initial_balance;
         // derived from deposit_with_metadata
         ensures initial_balance > 0 ==> global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1; // modified
-        //ensures global<T>(fresh_address).received_events.counter == old(global<T>(fresh_address).received_events.counter) + 1; // deleted because it is already handled above
-        //ensures global<Balance<Token>>(fresh_address).coin.value == old(global<Balance<Token>>(fresh_address).coin.value) + initial_balance; // deleted because it is already handled above
-    }
-
-
-    // This function is created for an exercise for verifying modified_create_new_account.
-    // TODO: this function can be removed later.
-    public fun simplified_create_new_account<Token>(
-        fresh_address: address,
-        _auth_key_prefix: vector<u8>,
-        initial_balance: u64
-    ) acquires T, Balance {
-        //create_account(fresh_address, auth_key_prefix);
-        if (initial_balance > 0) {
-            deposit_with_metadata(
-                fresh_address,
-                withdraw_from_sender<Token>(initial_balance),
-                Vector::empty(),
-            );
-        }
-    }
-    spec fun simplified_create_new_account {
-//        aborts_if fresh_address == sender();
-
-        // derived from create_account
-//        aborts_if len(LCS::serialize(fresh_address)) + len(auth_key_prefix) != 32;
-//        aborts_if exists<Balance<LBR::T>>(fresh_address);
-//        aborts_if exists<T>(fresh_address);
-//        aborts_if !exists<Libra::Info<LBR::T>>(0xA550C18);
-
-        // derived from withdraw_from_sender
-        aborts_if initial_balance > 0 && !exists<T>(sender());
-        aborts_if initial_balance > 0 && !exists<Balance<Token>>(sender());
-        aborts_if initial_balance > 0 && global<T>(sender()).delegated_withdrawal_capability;
-        aborts_if initial_balance > 0 && global<Balance<Token>>(sender()).coin.value < initial_balance;
-
-        // derived from deposit_with_metadata
-        aborts_if initial_balance > 0 && initial_balance == 0;
-        aborts_if initial_balance > 0 && !exists<T>(sender());
-        aborts_if initial_balance > 0 && global<T>(sender()).sent_events.counter + 1 > max_u64();
-        aborts_if initial_balance > 0 && !exists<T>(fresh_address);
-        aborts_if initial_balance > 0 && !exists<Balance<Token>>(fresh_address);
-        aborts_if initial_balance > 0 && fresh_address != sender() && global<Balance<Token>>(fresh_address).coin.value + initial_balance > max_u64();
-        aborts_if initial_balance > 0 && global<T>(fresh_address).received_events.counter + 1 > max_u64();
     }
 
     // Save an account to a given address if the address does not have account resources yet
@@ -945,28 +642,6 @@ spec fun simplified_pay_from_capability {
         account: Self::T,
         addr: address,
     );
-    spec fun save_account { // Prover does not attempt to prove this spec because it's a native function.
-        aborts_if exists<T>(addr);
-        aborts_if exists<Balance<Token>>(addr);
-        ensures exists<T>(addr);
-        ensures exists<Balance<Token>>(addr);
-        ensures global<T>(addr) == account;
-        ensures global<Balance<Token>>(addr) == balance;
-    }
-
-    // This function is created to verify the builtin Boogie model for the native function `save_account`,
-    // and should be removed when it becomes possible for the spec for native function to be verified in place (TODO).
-    fun verify_save_account<Token>(balance: Balance<Token>, account: Self::T, addr: address) {
-        save_account<Token>(balance, account, addr);
-    }
-    spec fun verify_save_account {
-        aborts_if exists<T>(addr);
-        aborts_if exists<Balance<Token>>(addr);
-        ensures exists<T>(addr);
-        ensures exists<Balance<Token>>(addr);
-        ensures global<T>(addr) == account;
-        ensures global<Balance<Token>>(addr) == balance;
-    }
 
     // Helper to return the u64 value of the `balance` for `account`
     fun balance_for<Token>(balance: &Balance<Token>): u64 {
@@ -1090,68 +765,6 @@ spec fun simplified_pay_from_capability {
         Transaction::assert(txn_sequence_number == sender_account.sequence_number, 4);
         Transaction::assert(LibraTransactionTimeout::is_valid_transaction_timestamp(txn_expiration_time), 7);
     }
-//    spec fun prologue { // TODO: Verify this spec. Currently, unable to verify due to the multiplication involved
-//        aborts_if !exists<T>(sender());
-//        aborts_if Hash::sha3(txn_public_key) != global<T>(sender()).authentication_key;
-//        aborts_if !exists<Balance<LBR::T>>(sender());
-//        aborts_if global<Balance<LBR::T>>(sender()).coin.value < (txn_gas_price * txn_max_gas_units);
-//        aborts_if txn_sequence_number < global<T>(sender()).sequence_number;
-//        aborts_if txn_sequence_number != global<T>(sender()).sequence_number;
-//        aborts_if txn_expiration_time > 9223372036854;
-//        aborts_if !exists<LibraTransactionTimeout::TTL>(0xA550C18);
-//        aborts_if global<0x0::LibraTimestamp::CurrentTimeMicroseconds>(0xA550C18).microseconds + global<LibraTransactionTimeout::TTL>(0xA550C18).duration_microseconds > max_u64();
-//        aborts_if !exists<0x0::LibraTimestamp::CurrentTimeMicroseconds>(0xA550C18);
-//        aborts_if txn_expiration_time * 1000000 > max_u64();
-//        aborts_if global<0x0::LibraTimestamp::CurrentTimeMicroseconds>(0xA550C18).microseconds >= (txn_expiration_time * 1000000);
-//    }
-
-    // A simplified version of `prologue` that take `max_transaction_fee` as an argument instead of calculating internally.
-    // TODO: Remove this function after finishing verifying `prologue`
-    fun simplified_prologue(
-        txn_sequence_number: u64,
-        txn_public_key: vector<u8>,
-        max_transaction_fee: u64,
-        txn_expiration_time: u64,
-    ) acquires T, Balance {
-        let transaction_sender = Transaction::sender();
-
-        // FUTURE: Make these error codes sequential
-        // Verify that the transaction sender's account exists
-        Transaction::assert(exists(transaction_sender), 5);
-
-        // Load the transaction sender's account
-        let sender_account = borrow_global_mut<T>(transaction_sender);
-
-        // Check that the hash of the transaction's public key matches the account's auth key
-        Transaction::assert(
-            Hash::sha3_256(txn_public_key) == *&sender_account.authentication_key,
-            2
-        );
-
-        // Check that the account has enough balance for all of the gas
-        //let max_transaction_fee = txn_gas_price * txn_max_gas_units;
-        let balance_amount = balance<LBR::T>(transaction_sender);
-        Transaction::assert(balance_amount >= max_transaction_fee, 6);
-
-        // Check that the transaction sequence number matches the sequence number of the account
-        Transaction::assert(txn_sequence_number >= sender_account.sequence_number, 3);
-        Transaction::assert(txn_sequence_number == sender_account.sequence_number, 4);
-        Transaction::assert(LibraTransactionTimeout::is_valid_transaction_timestamp(txn_expiration_time), 7);
-    }
-    spec fun simplified_prologue {
-        aborts_if !exists<T>(sender());
-        aborts_if Hash::sha3(txn_public_key) != global<T>(sender()).authentication_key;
-        aborts_if !exists<Balance<LBR::T>>(sender());
-        aborts_if global<Balance<LBR::T>>(sender()).coin.value < max_transaction_fee;
-        aborts_if txn_sequence_number < global<T>(sender()).sequence_number;
-        aborts_if txn_sequence_number != global<T>(sender()).sequence_number;
-        aborts_if txn_expiration_time > 9223372036854;
-        aborts_if !exists<LibraTransactionTimeout::TTL>(0xA550C18);
-        aborts_if global<0x0::LibraTimestamp::CurrentTimeMicroseconds>(0xA550C18).microseconds + global<LibraTransactionTimeout::TTL>(0xA550C18).duration_microseconds > max_u64();
-        aborts_if !exists<0x0::LibraTimestamp::CurrentTimeMicroseconds>(0xA550C18);
-        aborts_if txn_expiration_time * 1000000 > max_u64();
-        aborts_if global<0x0::LibraTimestamp::CurrentTimeMicroseconds>(0xA550C18).microseconds >= (txn_expiration_time * 1000000);
-    }
 
     // The epilogue is invoked at the end of transactions.
     // It collects gas and bumps the sequence number
@@ -1181,59 +794,6 @@ spec fun simplified_pay_from_capability {
         // Pay the transaction fee into the transaction fee balance
         let transaction_fee_balance = borrow_global_mut<Balance<LBR::T>>(0xFEE);
         Libra::deposit(&mut transaction_fee_balance.coin, transaction_fee);
-    }
-//    spec fun epilogue { // TODO: Verify this spec. Currently, unable to verify due to the multiplication involved
-//        aborts_if txn_max_gas_units < gas_units_remaining;
-//        aborts_if txn_gas_price * (txn_max_gas_units - gas_units_remaining) > max_u64();
-//        aborts_if !exists<T>(sender());
-//        aborts_if !exists<Balance<LBR::T>>(sender());
-//        aborts_if global<Balance<LBR::T>>(sender()).coin.value < (txn_gas_price * (txn_max_gas_units - gas_units_remaining));
-//        aborts_if txn_sequence_number + 1 > max_u64();
-//        aborts_if !exists<Balance<LBR::T>>(0xFEE);
-//        aborts_if sender() != 0xFEE && global<Balance<LBR::T>>(0xFEE).coin.value + (txn_gas_price * (txn_max_gas_units - gas_units_remaining)) > max_u64();
-//        ensures global<T>(sender()).sequence_number == txn_sequence_number + 1;
-//        ensures sender() != 0xFEE ==> global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value) - (txn_gas_price * (txn_max_gas_units - gas_units_remaining));
-//        ensures sender() != 0xFEE ==> global<Balance<LBR::T>>(0xFEE).coin.value == old(global<Balance<LBR::T>>(0xFEE).coin.value) + (txn_gas_price * (txn_max_gas_units - gas_units_remaining));
-//        ensures sender() == 0xFEE ==> global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value);
-//    }
-
-    // A simplified version of `epilogue` that take `transaction_fee_amount` as an argument instead of calculating internally.
-    // TODO: Remove this function after finishing verifying `epilogue`
-    fun simplified_epilogue(
-        txn_sequence_number: u64,
-        transaction_fee_amount: u64 // Suppose transaction_fee_amount == txn_gas_price * (txn_max_gas_units - gas_units_remaining)
-    ) acquires T, Balance {
-        // Load the transaction sender's account and balance resources
-        let sender_account = borrow_global_mut<T>(Transaction::sender());
-        let sender_balance = borrow_global_mut<Balance<LBR::T>>(Transaction::sender());
-
-        // Charge for gas
-        Transaction::assert(
-            balance_for(sender_balance) >= transaction_fee_amount,
-            6
-        );
-        let transaction_fee = withdraw_from_balance(
-                sender_balance,
-                transaction_fee_amount
-            );
-
-        // Bump the sequence number
-        sender_account.sequence_number = txn_sequence_number + 1;
-        // Pay the transaction fee into the transaction fee balance
-        let transaction_fee_balance = borrow_global_mut<Balance<LBR::T>>(0xFEE);
-        Libra::deposit(&mut transaction_fee_balance.coin, transaction_fee);
-    }
-    spec fun simplified_epilogue {
-        aborts_if !exists<T>(sender());
-        aborts_if !exists<Balance<LBR::T>>(sender());
-        aborts_if global<Balance<LBR::T>>(sender()).coin.value < transaction_fee_amount;
-        aborts_if txn_sequence_number + 1 > max_u64();
-        aborts_if !exists<Balance<LBR::T>>(0xFEE);
-        aborts_if sender() != 0xFEE && global<Balance<LBR::T>>(0xFEE).coin.value + transaction_fee_amount > max_u64();
-        ensures global<T>(sender()).sequence_number == txn_sequence_number + 1;
-        ensures sender() != 0xFEE ==> global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value) - transaction_fee_amount;
-        ensures sender() != 0xFEE ==> global<Balance<LBR::T>>(0xFEE).coin.value == old(global<Balance<LBR::T>>(0xFEE).coin.value) + transaction_fee_amount;
-        ensures sender() == 0xFEE ==> global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value);
     }
 
     /// Events
