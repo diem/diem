@@ -568,11 +568,6 @@ define_hasher! {
     (TestOnlyHasher, TEST_ONLY_HASHER, b"")
 }
 
-define_hasher! {
-    /// The hasher used to compute the hash of a DiscoveryMsg object.
-    (DiscoveryMsgHasher, DISCOVERY_MSG_HASHER, b"DiscoveryMsg")
-}
-
 fn create_literal_hash(word: &str) -> HashValue {
     let mut s = word.as_bytes().to_vec();
     assert!(s.len() <= HashValue::LENGTH);

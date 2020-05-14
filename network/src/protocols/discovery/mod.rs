@@ -49,9 +49,10 @@ use futures::{
 use libra_config::config::RoleType;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    hash::{CryptoHasher, DiscoveryMsgHasher},
+    hash::{CryptoHash, CryptoHasher},
     HashValue, Signature, SigningKey,
 };
+use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
 use libra_security_logger::{security_log, SecurityEvent};
@@ -493,17 +494,15 @@ pub struct SignedPeerInfo {
 
 impl SignedPeerInfo {
     fn verify(&self, pub_key: &Ed25519PublicKey) -> Result<(), NetworkError> {
-        let peer_info_bytes =
-            lcs::to_bytes(&self.peer_info).map_err(|_| NetworkErrorKind::ParsingError)?;
         self.signature
-            .verify(&get_hash(&peer_info_bytes), &pub_key)
+            .verify(&self.peer_info.hash(), &pub_key)
             .map_err(|_| NetworkErrorKind::SignatureError)?;
         Ok(())
     }
 }
 
 /// A `PeerInfo` represents the network address(es) of a Peer.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, CryptoHasher, LCSCryptoHash)]
 pub struct PeerInfo {
     /// Network addresses this peer can be reached at.
     addrs: Vec<NetworkAddress>,
@@ -515,8 +514,7 @@ pub struct PeerInfo {
 
 impl PeerInfo {
     fn sign(self, signer: &Ed25519PrivateKey) -> SignedPeerInfo {
-        let peer_info_bytes = lcs::to_bytes(&self).expect("LCS serialization fails");
-        let signature = signer.sign_message(&get_hash(&peer_info_bytes));
+        let signature = signer.sign_message(&self.hash());
         SignedPeerInfo {
             peer_info: self,
             signature,
@@ -535,17 +533,15 @@ pub struct SignedFullNodeInfo {
 
 impl SignedFullNodeInfo {
     fn verify(&self, pub_key: &Ed25519PublicKey) -> Result<(), NetworkError> {
-        let full_node_info_bytes =
-            lcs::to_bytes(&self.full_node_info).map_err(|_| NetworkErrorKind::ParsingError)?;
         self.signature
-            .verify(&get_hash(&full_node_info_bytes), &pub_key)
+            .verify(&self.full_node_info.hash(), &pub_key)
             .map_err(|_| NetworkErrorKind::SignatureError)?;
         Ok(())
     }
 }
 
 /// Discovery information relevant to public full nodes and clients.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, CryptoHasher, LCSCryptoHash)]
 pub struct FullNodeInfo {
     /// The DNS domain name other public full nodes should query to get this
     /// validator's list of full nodes.
@@ -558,8 +554,7 @@ pub struct FullNodeInfo {
 
 impl FullNodeInfo {
     fn sign(self, signer: &Ed25519PrivateKey) -> SignedFullNodeInfo {
-        let full_node_info_bytes = lcs::to_bytes(&self).expect("LCS serialization failed");
-        let signature = signer.sign_message(&get_hash(&full_node_info_bytes));
+        let signature = signer.sign_message(&self.hash());
         SignedFullNodeInfo {
             full_node_info: self,
             signature,
@@ -604,10 +599,4 @@ fn handle_discovery_msg(
         verified_notes.push(verified_note);
     }
     Ok(verified_notes)
-}
-
-fn get_hash(msg: &[u8]) -> HashValue {
-    let mut hasher = DiscoveryMsgHasher::default();
-    hasher.update(msg);
-    hasher.finish()
 }
