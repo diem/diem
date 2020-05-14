@@ -1,11 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    error::Error,
-    management_constants::{GAS_UNIT_PRICE, MAX_GAS_AMOUNT, TXN_EXPIRATION_SECS, VALIDATOR_CONFIG},
-    SecureBackends,
-};
+use crate::{error::Error, SecureBackends};
 use libra_crypto::{ed25519::Ed25519PublicKey, hash::CryptoHash, x25519, ValidCryptoMaterial};
 use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OWNER_KEY, VALIDATOR_NETWORK_KEY,
@@ -71,13 +67,13 @@ impl ValidatorConfig {
         // TODO(davidiw): In genesis this is irrelevant -- afterward we need to obtain the
         // current sequence number by querying the blockchain.
         let sequence_number = 0;
-        let expiration_time = RealTimeService::new().now() + TXN_EXPIRATION_SECS;
+        let expiration_time = RealTimeService::new().now() + crate::constants::TXN_EXPIRATION_SECS;
         let raw_transaction = RawTransaction::new_script(
             sender,
             sequence_number,
             script,
-            MAX_GAS_AMOUNT,
-            GAS_UNIT_PRICE,
+            crate::constants::MAX_GAS_AMOUNT,
+            crate::constants::GAS_UNIT_PRICE,
             Duration::from_secs(expiration_time),
         );
         let signature = local
@@ -96,7 +92,7 @@ impl ValidatorConfig {
 
             let txn = Value::Transaction(txn.clone());
             remote
-                .set(VALIDATOR_CONFIG, txn)
+                .set(crate::constants::VALIDATOR_CONFIG, txn)
                 .map_err(|e| Error::RemoteStorageWriteError(e.to_string()))?;
         }
 
