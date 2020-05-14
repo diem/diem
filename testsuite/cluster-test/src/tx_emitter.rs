@@ -66,6 +66,7 @@ struct StatsAccumulator {
     submitted: AtomicU64,
     committed: AtomicU64,
     expired: AtomicU64,
+    latency: AtomicU64,
 }
 
 #[derive(Debug, Default)]
@@ -73,6 +74,7 @@ pub struct TxStats {
     pub submitted: u64,
     pub committed: u64,
     pub expired: u64,
+    pub latency: u64,
 }
 
 #[derive(Debug, Default)]
@@ -80,6 +82,7 @@ pub struct TxStatsRate {
     pub submitted: u64,
     pub committed: u64,
     pub expired: u64,
+    pub latency: u64,
 }
 
 #[derive(Clone)]
@@ -376,6 +379,7 @@ impl SubmissionWorker {
         while !self.stop.load(Ordering::Relaxed) {
             let requests = self.gen_requests();
             let num_requests = requests.len();
+            let start_time = Instant::now();
             for request in requests {
                 self.stats.submitted.fetch_add(1, Ordering::Relaxed);
                 let wait_util = Instant::now() + wait;
@@ -398,6 +402,10 @@ impl SubmissionWorker {
                     self.stats
                         .expired
                         .fetch_add(uncommitted.len() as u64, Ordering::Relaxed);
+                    self.stats.latency.fetch_add(
+                        (Instant::now() - start_time).as_millis() as u64,
+                        Ordering::Relaxed,
+                    );
                     info!(
                         "[{:?}] Transactions were not committed before expiration: {:?}",
                         self.client, uncommitted
@@ -406,6 +414,10 @@ impl SubmissionWorker {
                     self.stats
                         .committed
                         .fetch_add(num_requests as u64, Ordering::Relaxed);
+                    self.stats.latency.fetch_add(
+                        (Instant::now() - start_time).as_millis() as u64,
+                        Ordering::Relaxed,
+                    );
                 }
             }
         }
@@ -729,6 +741,7 @@ impl StatsAccumulator {
             submitted: self.submitted.load(Ordering::Relaxed),
             committed: self.committed.load(Ordering::Relaxed),
             expired: self.expired.load(Ordering::Relaxed),
+            latency: self.latency.load(Ordering::Relaxed),
         }
     }
 }
@@ -739,6 +752,7 @@ impl TxStats {
             submitted: self.submitted / window.as_secs(),
             committed: self.committed / window.as_secs(),
             expired: self.expired / window.as_secs(),
+            latency: self.latency / self.committed,
         }
     }
 }
@@ -751,6 +765,7 @@ impl Sub for &TxStats {
             submitted: self.submitted - other.submitted,
             committed: self.committed - other.committed,
             expired: self.expired - other.expired,
+            latency: self.latency - other.latency,
         }
     }
 }
@@ -769,8 +784,8 @@ impl fmt::Display for TxStatsRate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "submitted: {} txn/s, committed: {} txn/s, expired: {} txn/s",
-            self.submitted, self.committed, self.expired
+            "submitted: {} txn/s, committed: {} txn/s, expired: {} txn/s, latency: {} ms",
+            self.submitted, self.committed, self.expired, self.latency
         )
     }
 }
