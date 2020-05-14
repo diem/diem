@@ -13,10 +13,8 @@ edition = "2018"
 anyhow = "1.0"
 async-trait = "0.1"
 tokio = { version = "0.2.13", features = ["full"] }
-tonic = "0.2"
 futures = "0.3.5"
 
-grpc-types = {path = "../../grpc/types", version = "0.1.0"}
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-config = { path = "../../config", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
@@ -25,7 +23,6 @@ libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
 libra-secure-net = { path = "../../secure/net", version = "0.1.0" }
 storage-interface = { path = "../storage-interface", version = "0.1.0" }
-storage-proto = { path = "../storage-proto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 rand = { version = "0.7.3", optional = true }
@@ -36,7 +33,6 @@ simple-storage-client = { path = "../simple-storage-client", version = "0.1.0", 
 itertools = "0.9.0"
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
 proptest = "0.9.6"
-storage-client = { path = "../storage-client", version = "0.1.0"}
 
 [features]
 default = []
