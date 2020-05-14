@@ -74,6 +74,7 @@ impl ValidatorConfig {
             script,
             crate::constants::MAX_GAS_AMOUNT,
             crate::constants::GAS_UNIT_PRICE,
+            crate::constants::GAS_CURRENCY_CODE.to_owned(),
             Duration::from_secs(expiration_time),
         );
         let signature = local

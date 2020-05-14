@@ -30,6 +30,7 @@ use libra_secure_storage::Storage;
 use libra_secure_time::TimeService;
 use libra_types::{
     account_address::AccountAddress,
+    account_config::LBR_NAME,
     transaction::{RawTransaction, Script, Transaction, TransactionArgument},
 };
 use std::time::Duration;
@@ -307,6 +308,7 @@ pub fn build_rotation_transaction(
         script,
         MAX_GAS_AMOUNT,
         GAS_UNIT_PRICE,
+        LBR_NAME.to_owned(),
         expiration,
     );
     let signed_txn = raw_txn.sign(signing_key, signing_key.public_key()).unwrap();

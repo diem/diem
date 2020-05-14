@@ -22,6 +22,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_config::{
         association_address, lbr_type_tag, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
+        LBR_NAME,
     },
     account_state::AccountState,
     ledger_info::LedgerInfoWithSignatures,
@@ -603,6 +604,7 @@ impl ClientProxy {
             sender_sequence_number,
             max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
             gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
+            LBR_NAME.to_owned(),
             TX_EXPIRATION,
         ))
     }
@@ -1275,6 +1277,7 @@ impl ClientProxy {
             sender_account.sequence_number,
             max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
             gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
+            LBR_NAME.to_owned(),
             TX_EXPIRATION,
         )
     }

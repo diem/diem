@@ -7,7 +7,7 @@ use crate::{
 };
 use libra_types::{
     access_path::AccessPath,
-    account_config::{lbr_type_tag, CORE_CODE_ADDRESS},
+    account_config::{lbr_type_tag, CORE_CODE_ADDRESS, LBR_NAME},
     contract_event::ContractEvent,
     on_chain_config::new_epoch_event_key,
     transaction::{ChangeSet, TransactionPayload, TransactionStatus},
@@ -36,6 +36,7 @@ fn verify_and_execute_writeset() {
         0,
         100_000,
         1,
+        LBR_NAME.to_owned(),
     );
 
     let output = executor.execute_transaction(writeset_txn.clone());
@@ -75,6 +76,7 @@ fn verify_and_execute_writeset() {
         10,
         100_000,
         1,
+        LBR_NAME.to_owned(),
     );
     let output = executor.execute_transaction(writeset_txn.clone());
     let status = output.status();
@@ -105,6 +107,7 @@ fn bad_writesets() {
         0,
         100_000,
         1,
+        LBR_NAME.to_owned(),
     );
 
     let output = executor.execute_transaction(writeset_txn);
@@ -121,6 +124,7 @@ fn bad_writesets() {
         0,
         100_000,
         1,
+        LBR_NAME.to_owned(),
     );
 
     let output = executor.execute_transaction(writeset_txn);
@@ -150,6 +154,7 @@ fn bad_writesets() {
         0,
         100_000,
         0,
+        LBR_NAME.to_owned(),
     );
 
     let output = executor.execute_transaction(writeset_txn);

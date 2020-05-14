@@ -3,6 +3,7 @@
 
 use crate::{
     account_address::AccountAddress,
+    account_config::LBR_NAME,
     account_state_blob::AccountStateBlob,
     block_metadata::BlockMetadata,
     contract_event::ContractEvent,
@@ -68,6 +69,8 @@ pub struct RawTransaction {
     // Maximal price can be paid per gas.
     gas_unit_price: u64,
 
+    gas_currency_code: String,
+
     // Expiration time for this transaction.  If storage is queried and
     // the time returned is greater than or equal to this time and this
     // transaction has not been included, you can be certain that it will
@@ -121,6 +124,7 @@ impl RawTransaction {
         payload: TransactionPayload,
         max_gas_amount: u64,
         gas_unit_price: u64,
+        gas_currency_code: String,
         expiration_time: Duration,
     ) -> Self {
         RawTransaction {
@@ -129,6 +133,7 @@ impl RawTransaction {
             payload,
             max_gas_amount,
             gas_unit_price,
+            gas_currency_code,
             expiration_time,
         }
     }
@@ -142,6 +147,7 @@ impl RawTransaction {
         script: Script,
         max_gas_amount: u64,
         gas_unit_price: u64,
+        gas_currency_code: String,
         expiration_time: Duration,
     ) -> Self {
         RawTransaction {
@@ -150,6 +156,7 @@ impl RawTransaction {
             payload: TransactionPayload::Script(script),
             max_gas_amount,
             gas_unit_price,
+            gas_currency_code,
             expiration_time,
         }
     }
@@ -164,6 +171,7 @@ impl RawTransaction {
         module: Module,
         max_gas_amount: u64,
         gas_unit_price: u64,
+        gas_currency_code: String,
         expiration_time: Duration,
     ) -> Self {
         RawTransaction {
@@ -172,6 +180,7 @@ impl RawTransaction {
             payload: TransactionPayload::Module(module),
             max_gas_amount,
             gas_unit_price,
+            gas_currency_code,
             expiration_time,
         }
     }
@@ -188,6 +197,7 @@ impl RawTransaction {
             // Since write-set transactions bypass the VM, these fields aren't relevant.
             max_gas_amount: 0,
             gas_unit_price: 0,
+            gas_currency_code: LBR_NAME.to_owned(),
             // Write-set transactions are special and important and shouldn't expire.
             expiration_time: Duration::new(u64::max_value(), 0),
         }
@@ -205,6 +215,7 @@ impl RawTransaction {
             // Since write-set transactions bypass the VM, these fields aren't relevant.
             max_gas_amount: 0,
             gas_unit_price: 0,
+            gas_currency_code: LBR_NAME.to_owned(),
             // Write-set transactions are special and important and shouldn't expire.
             expiration_time: Duration::new(u64::max_value(), 0),
         }
@@ -268,6 +279,7 @@ impl RawTransaction {
              \t}}, \n\
              \tmax_gas_amount: {}, \n\
              \tgas_unit_price: {}, \n\
+             \tgas_currency_code: {}, \n\
              \texpiration_time: {:#?}, \n\
              }}",
             self.sender,
@@ -276,6 +288,7 @@ impl RawTransaction {
             f_args,
             self.max_gas_amount,
             self.gas_unit_price,
+            self.gas_currency_code,
             self.expiration_time,
         )
     }
@@ -404,6 +417,10 @@ impl SignedTransaction {
 
     pub fn gas_unit_price(&self) -> u64 {
         self.raw_txn.gas_unit_price
+    }
+
+    pub fn gas_currency_code(&self) -> &str {
+        &self.raw_txn.gas_currency_code
     }
 
     pub fn expiration_time(&self) -> Duration {
