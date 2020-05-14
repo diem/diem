@@ -2545,16 +2545,23 @@ dependencies = [
 name = "libra-management"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
+ "config-builder 0.1.0",
+ "executor 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-global-constants 0.1.0",
  "libra-network-address 0.1.0",
  "libra-secure-storage 0.1.0",
  "libra-secure-time 0.1.0",
+ "libra-swarm 0.1.0",
  "libra-temppath 0.1.0",
  "libra-types 0.1.0",
+ "libra-vm 0.1.0",
  "libra-workspace-hack 0.1.0",
+ "libradb 0.1.0",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
+ "storage-interface 0.1.0",
  "structopt 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
