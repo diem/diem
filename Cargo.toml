@@ -46,6 +46,7 @@ members = [
     "execution/executor-benchmark",
     "execution/executor-types",
     "execution/executor-utils",
+    "grpc/storage",
     "grpc/types",
     "json-rpc",
     "json-rpc/types",

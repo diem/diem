@@ -4,7 +4,7 @@
 fn main() {
     let protos = ["src/proto/storage.proto"];
 
-    let includes = ["../../grpc/types/src/proto", "src/proto"];
+    let includes = ["../types/src/proto", "src/proto"];
 
     tonic_build::configure()
         .compile(&protos, &includes)
