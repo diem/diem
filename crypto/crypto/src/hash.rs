@@ -7,14 +7,13 @@
 //!
 //! It is designed to help authors protect against two types of real world attacks:
 //!
-//! 1. **Domain Ambiguity**: imagine that Alice has a private key and is using
+//! 1. **Semantic Ambiguity**: imagine that Alice has a private key and is using
 //!    two different applications, X and Y. X asks Alice to sign a message saying
-//!    "I am Alice". naturally, Alice is willing to sign this message, since she
-//!    is in fact Alice. However, unbeknownst to Alice, in application Y,
-//!    messages beginning with the letter "I" represent transfers. " am "
-//!    represents a transfer of 500 coins and "Alice" can be interpreted as a
-//!    destination address. When Alice signed the message she needed to be
-//!    aware of how other applications might interpret that message.
+//!    "I am Alice". Alice accepts to sign this message in the context of X. However,
+//!    unbeknownst to Alice, in application Y, messages beginning with the letter "I"
+//!    represent transfers. " am " represents a transfer of 500 coins and "Alice"
+//!    can be interpreted as a destination address. When Alice signed the message she
+//!    needed to be aware of how other applications might interpret that message.
 //!
 //! 2. **Format Ambiguity**: imagine a program that hashes a pair of strings.
 //!    To hash the strings `a` and `b` it hashes `a + "||" + b`. The pair of
@@ -22,23 +21,46 @@
 //!    same input to the hash function and therefore the same hash. This
 //!    creates a collision.
 //!
-//! # Examples
+//! Regarding (1), this library makes it easy for Libra developers to create as
+//! many new "hashable" Rust types as needed so that each Rust type hashed and signed
+//! in Libra has a unique meaning, that is, unambiguously captures the intent of a signer.
 //!
+//! Regarding (2), this library provides the `CryptoHasher` abstraction to easily manage
+//! cryptographic seeds for hashing. Hashing seeds aim to ensure that
+//! the hashes of values of a given type `MyNewStruct` never collide with hashes of values
+//! from another type.
+//!
+//! Finally, to prevent format ambiguity within a same type `MyNewStruct` and facilitate protocol
+//! specifications, we use [Libra Canonical Serialization (LCS)](../../libra_canonical_serialization/index.html)
+//! as the recommended solution to write Rust values into a hasher.
+//!
+//! # Quick Start
+//!
+//! To obtain a `hash()` method for any new type `MyNewStruct`, it is (strongly) recommended to
+//! use the derive macros of `serde` and `libra_crypto_derive` as follows:
 //! ```
-//! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};
+//! use libra_crypto::hash::CryptoHash;
+//! use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
+//! use serde::Serialize;
+//! #[derive(Serialize, CryptoHasher, LCSCryptoHash)]
+//! struct MyNewStruct { /*...*/ }
 //!
-//! let mut hasher = TestOnlyHasher::default();
-//! hasher.update("Test message".as_bytes());
-//! let hash_value = hasher.finish();
+//! let value = MyNewStruct { /*...*/ };
+//! value.hash();
 //! ```
-//! The output is of type [`HashValue`], which can be used as an input for signing.
 //!
-//! # Implementing new hashers
+//! Under the hood, this will generate a new implementation `MyNewStructHasher` for the trait
+//! `CryptoHasher` and implement the trait `CryptoHash` for `MyNewStruct` using LCS.
 //!
-//! ## The automatic way
+//! # Implementing New Hashers
 //!
-//! For any new structure `MyNewStruct` that needs to be hashed, the developer
-//! should use the [`CryptoHasher` derive macro](https://doc.rust-lang.org/reference/procedural-macros.html).
+//! The trait `CryptoHasher` captures the notion of a pre-seeded hash function, aka a "hasher".
+//! New implementations can be defined in two ways.
+//!
+//! ## Derive macro (recommended)
+//!
+//! For any new structure `MyNewStruct` that needs to be hashed, it is recommended to simply
+//! use the derive macro [`CryptoHasher`](https://doc.rust-lang.org/reference/procedural-macros.html).
 //!
 //! ```ignore
 //! #[derive(CryptoHasher)]
@@ -50,34 +72,29 @@
 //! The macro will define a hasher automatically called `MyNewStructHasher`, and pick a salt
 //! equal to the full module path + "::"  + structure name, i.e. if
 //! `MyNewStruct` is defined in `bar::baz::quux`, the salt will be `b"bar::baz::quux::MyNewStruct"`.
-//! You can then use it in your implementation of `CryptoHash` (see below).
 //!
-//! ## The semi-automatic way
+//! ## Customized hashers
 //!
-//! For any new structure `MyNewStruct` that needs to be hashed, the developer should define a
-//! new hasher with:
+//! **IMPORTANT:** Do NOT use this for new code unless you know what you are doing.
+//!
+//! This library also provides a few customized hashers defined in the code as follows:
 //!
 //! ```
 //! # // To get around that there's no way to doc-test a non-exported macro:
 //! # macro_rules! define_hasher { ($e:expr) => () }
-//! define_hasher! { (MyNewStructHasher, MY_NEW_STRUCT_HASHER, b"MyNewStruct") }
+//! define_hasher! { (MyNewDataHasher, MY_NEW_DATA_HASHER, b"MyUniqueSaltString") }
 //! ```
 //!
-//! **Note**: The last argument for the `define_hasher` macro must be a unique string.
+//! # Using a hasher directly
 //!
-//! ## The `CryptoHash` implementation (for both automatic and semi-automatic way)
-//! In most cases, the `CryptoHash` trait should be implemented using LCS serialization.
-//! The derive macro `LCSCryptoHash` generates such an implementation based on `serde::Serialize`,
-//! the LCS encoding, and `MyNewStructHasher`:
+//! **IMPORTANT:** Do NOT use this for new code unless you know what you are doing.
+//!
 //! ```
-//! # use libra_crypto::hash::*;
-//! # use libra_crypto_derive::*;
-//! # use serde::Serialize;
-//! #[derive(Serialize, CryptoHasher, LCSCryptoHash)]
-//! struct MyNewStruct { /*...*/ }
+//! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};
 //!
-//! let value = MyNewStruct { /*...*/ };
-//! value.hash();
+//! let mut hasher = TestOnlyHasher::default();
+//! hasher.update("Test message".as_bytes());
+//! let hash_value = hasher.finish();
 //! ```
 
 use anyhow::{ensure, Error, Result};
@@ -409,8 +426,10 @@ impl<'a> std::iter::DoubleEndedIterator for HashValueBitIterator<'a> {
 
 impl<'a> std::iter::ExactSizeIterator for HashValueBitIterator<'a> {}
 
-/// A type that implements `CryptoHash` can be hashed by a cryptographic hash function and produce
-/// a `HashValue`. Each type needs to have its own `Hasher` type.
+/// A type that can be cryptographically hashed to produce a `HashValue`.
+///
+/// In most cases, this trait should not be implemented manually but rather derived using
+/// the macros `serde::Serialize`, `CryptoHasher`, and `LCSCryptoHash`.
 pub trait CryptoHash {
     /// The associated `Hasher` type which comes with a unique salt for this type.
     type Hasher: CryptoHasher;
@@ -419,11 +438,7 @@ pub trait CryptoHash {
     fn hash(&self) -> HashValue;
 }
 
-/// A trait for generating hash from arbitrary stream of bytes.
-///
-/// Instances of `CryptoHasher` usually represent state that is changed while hashing data.
-/// Similar to `std::hash::Hasher` but not same. CryptoHasher cannot be reused after finish() has
-/// been called.
+/// A trait for representing the state of a cryptographic hasher.
 pub trait CryptoHasher: Default + std::io::Write {
     /// Finish constructing the [`HashValue`].
     fn finish(self) -> HashValue;

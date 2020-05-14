@@ -49,8 +49,8 @@ use futures::{
 use libra_config::config::RoleType;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    hash::{CryptoHash, CryptoHasher},
-    HashValue, Signature, SigningKey,
+    hash::CryptoHash,
+    Signature, SigningKey,
 };
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_logger::prelude::*;

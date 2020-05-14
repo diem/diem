@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_crypto::{hash::CryptoHasher, HashValue};
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_types::block_info::BlockInfo;
 use serde::{Deserialize, Serialize};

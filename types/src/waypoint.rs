@@ -8,7 +8,7 @@ use crate::{
     transaction::Version,
 };
 use anyhow::{ensure, format_err, Error, Result};
-use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
+use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use serde::{Deserialize, Serialize};
 use std::{

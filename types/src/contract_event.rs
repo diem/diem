@@ -11,10 +11,7 @@ use crate::{
     transaction::Version,
 };
 use anyhow::{ensure, Error, Result};
-use libra_crypto::{
-    hash::{CryptoHash, CryptoHasher},
-    HashValue,
-};
+use libra_crypto::hash::CryptoHash;
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use move_core_types::{language_storage::TypeTag, move_resource::MoveResource};
 

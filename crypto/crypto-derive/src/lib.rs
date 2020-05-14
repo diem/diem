@@ -362,7 +362,7 @@ pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
         }
 
         impl libra_crypto::hash::CryptoHasher for #hasher_name {
-            fn finish(self) -> HashValue {
+            fn finish(self) -> libra_crypto::hash::HashValue {
                 self.0.finish()
             }
 
@@ -401,7 +401,9 @@ pub fn lcs_crypto_hash_dispatch(input: TokenStream) -> TokenStream {
         impl libra_crypto::hash::CryptoHash for #name {
             type Hasher = #hasher_name;
 
-            fn hash(&self) -> HashValue {
+            fn hash(&self) -> libra_crypto::hash::HashValue {
+                use libra_crypto::hash::CryptoHasher;
+
                 let mut state = Self::Hasher::default();
                 lcs::serialize_into(&mut state, &self).expect(#error_msg);
                 state.finish()

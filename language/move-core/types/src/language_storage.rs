@@ -5,7 +5,7 @@ use crate::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
 };
-use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
+use libra_crypto::hash::CryptoHash;
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;

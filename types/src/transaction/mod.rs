@@ -15,7 +15,7 @@ use crate::{
 use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::{
     ed25519::*,
-    hash::{CryptoHash, CryptoHasher, EventAccumulatorHasher},
+    hash::{CryptoHash, EventAccumulatorHasher},
     multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature},
     traits::SigningKey,
     HashValue,

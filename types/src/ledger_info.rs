@@ -11,7 +11,7 @@ use crate::{
 };
 use libra_crypto::{
     ed25519::Ed25519Signature,
-    hash::{CryptoHash, CryptoHasher, HashValue},
+    hash::{CryptoHash, HashValue},
 };
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 #[cfg(any(test, feature = "fuzzing"))]
