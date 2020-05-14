@@ -72,8 +72,9 @@ pub fn generate_verified_modules(
     let (root, callees) = generate_modules(rng, number, options);
     let verified_modules = callees
         .into_iter()
-        .map(|m| VerifiedModule::new(m).unwrap())
-        .collect();
+        .map(VerifiedModule::new)
+        .collect::<Result<_, _>>()
+        .unwrap();
     let verified_root = VerifiedModule::new(root).unwrap();
     (verified_root, verified_modules)
 }

@@ -266,8 +266,9 @@ impl BasicSwarmUtil {
         let parsed_peers: Vec<_> = args
             .peers
             .iter()
-            .map(|peer| parse_host_port(peer).unwrap())
-            .collect();
+            .map(|peer| parse_host_port(peer))
+            .collect::<Result<_, _>>()
+            .unwrap();
         Self {
             cluster: Cluster::from_host_port(parsed_peers, &args.mint_file),
         }

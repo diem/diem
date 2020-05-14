@@ -103,8 +103,8 @@ async fn get_account_state(
     let currency_info = currencies_info(service, request).await?;
     let currencies: Vec<_> = currency_info
         .into_iter()
-        .map(|info| from_currency_code_string(&info.code).unwrap())
-        .collect();
+        .map(|info| from_currency_code_string(&info.code))
+        .collect::<Result<_, _>>()?;
     if let Some(blob) = response {
         let account_state = AccountState::try_from(&blob)?;
         if let Some(account) = account_state.get_account_resource()? {

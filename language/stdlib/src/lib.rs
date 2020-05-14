@@ -48,8 +48,9 @@ static STAGED_MOVELANG_STDLIB: Lazy<Vec<VerifiedModule>> = Lazy::new(|| {
     let modules = lcs::from_bytes::<Vec<Vec<u8>>>(STAGED_STDLIB_BYTES)
         .unwrap()
         .into_iter()
-        .map(|bytes| CompiledModule::deserialize(&bytes).unwrap())
-        .collect();
+        .map(|bytes| CompiledModule::deserialize(&bytes))
+        .collect::<Result<_, _>>()
+        .unwrap();
     batch_verify_modules(modules)
 });
 
