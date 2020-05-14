@@ -9,6 +9,9 @@ mod layout;
 mod secure_backend;
 mod validator_config;
 
+#[cfg(test)]
+mod storage_helper;
+
 use crate::{error::Error, layout::SetLayout, secure_backend::SecureBackend};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{
@@ -308,17 +311,14 @@ pub struct SingleBackend {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use libra_network_address::NetworkAddress;
-    use libra_secure_storage::{Policy, Value, VaultStorage};
+    use crate::storage_helper::StorageHelper;
     use libra_types::account_address::AccountAddress;
     use std::{fs::File, io::Write};
 
-    const VAULT_HOST: &str = "http://localhost:8200";
-    const VAULT_ROOT_TOKEN: &str = "root_token";
-
     #[test]
-    #[ignore]
     fn test_end_to_end() {
+        let helper = StorageHelper::new();
+
         // Each identity works in their own namespace
         // Alice, Bob, and Carol are operators, implicitly mapped 1:1 with owners.
         // Dave is the association.
@@ -332,9 +332,6 @@ pub mod tests {
 
         // Step 1) Define and upload the layout specifying which identities have which roles. This
         // is uplaoded to the common namespace.
-
-        let mut common = default_storage(constants::COMMON_NS.into());
-        common.reset_and_clear().unwrap();
 
         // Note: owners are irrelevant currently
         let layout_text = "\
@@ -350,54 +347,53 @@ pub mod tests {
             .unwrap();
         file.sync_all().unwrap();
 
-        set_layout(temppath.path().to_str().unwrap(), crate::constants::COMMON_NS).unwrap();
+        helper
+            .set_layout(
+                temppath.path().to_str().unwrap(),
+                crate::constants::COMMON_NS,
+            )
+            .unwrap();
 
         // Step 2) Upload the association key:
 
-        let mut association = default_storage(dave_ns.into());
-        initialize_storage(association.as_mut());
-
-        let mut association_shared = default_storage(dave_ns.to_string() + shared);
-        association_shared.reset_and_clear().unwrap();
-
-        association_key(dave_ns, &(dave_ns.to_string() + shared)).unwrap();
+        helper.initialize(dave_ns.into());
+        helper
+            .association_key(dave_ns, &(dave_ns.to_string() + shared))
+            .unwrap();
 
         // Step 3) Upload each operators key and then a signed transaction:
 
         for ns in [alice_ns, bob_ns, carol_ns].iter() {
-            let mut local = default_storage((*ns).to_string());
-            initialize_storage(local.as_mut());
+            helper.initialize((*ns).to_string());
+            helper
+                .operator_key(ns, &((*ns).to_string() + shared))
+                .unwrap();
 
-            let mut remote = default_storage((*ns).to_string() + shared);
-            remote.reset_and_clear().unwrap();
-
-            operator_key(ns, &((*ns).to_string() + shared)).unwrap();
-
-            validator_config(
-                AccountAddress::random(),
-                "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
-                "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
-                ns,
-                &((*ns).to_string() + shared),
-            )
-            .unwrap();
+            helper
+                .validator_config(
+                    AccountAddress::random(),
+                    "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
+                    "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
+                    ns,
+                    &((*ns).to_string() + shared),
+                )
+                .unwrap();
         }
 
         // Step 4) Produce genesis
 
-        genesis().unwrap();
+        helper.genesis().unwrap();
     }
 
     #[test]
-    #[ignore]
     fn test_set_layout() {
+        let helper = StorageHelper::new();
         let namespace = "set_layout";
 
-        let mut storage = default_storage(namespace.into());
-        storage.reset_and_clear().unwrap();
-
         let temppath = libra_temppath::TempPath::new();
-        set_layout(temppath.path().to_str().unwrap(), namespace).unwrap_err();
+        helper
+            .set_layout(temppath.path().to_str().unwrap(), namespace)
+            .unwrap_err();
 
         temppath.create_as_file().unwrap();
         let mut file = File::create(temppath.path()).unwrap();
@@ -409,31 +405,39 @@ pub mod tests {
         file.write_all(&layout_text.to_string().into_bytes())
             .unwrap();
         file.sync_all().unwrap();
-        set_layout(temppath.path().to_str().unwrap(), namespace).unwrap();
-        let stored_layout = storage.get(constants::LAYOUT).unwrap().value.string().unwrap();
+
+        helper
+            .set_layout(temppath.path().to_str().unwrap(), namespace)
+            .unwrap();
+        let storage = helper.storage(namespace.into());
+        let stored_layout = storage
+            .get(constants::LAYOUT)
+            .unwrap()
+            .value
+            .string()
+            .unwrap();
         assert_eq!(layout_text, stored_layout);
     }
 
     #[test]
-    #[ignore]
     fn test_validator_config() {
+        let helper = StorageHelper::new();
         let local_ns = "local_validator_config";
         let remote_ns = "remote_validator_config";
-        let mut local = default_storage(local_ns.into());
-        initialize_storage(local.as_mut());
 
-        let mut remote = default_storage(remote_ns.into());
-        remote.reset_and_clear().unwrap();
+        helper.initialize(local_ns.into());
 
-        let local_txn = validator_config(
-            AccountAddress::random(),
-            "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
-            "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
-            local_ns,
-            remote_ns,
-        )
-        .unwrap();
+        let local_txn = helper
+            .validator_config(
+                AccountAddress::random(),
+                "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
+                "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
+                local_ns,
+                remote_ns,
+            )
+            .unwrap();
 
+        let remote = helper.storage(remote_ns.into());
         let remote_txn = remote.get(constants::VALIDATOR_CONFIG).unwrap().value;
         let remote_txn = remote_txn.transaction().unwrap();
 
@@ -441,49 +445,45 @@ pub mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_verify() {
+        let helper = StorageHelper::new();
         let namespace = "verify";
 
-        let mut storage = default_storage(namespace.into());
-        storage.reset_and_clear().unwrap();
-
-        let output = verify(namespace).unwrap().split("KeyNotSet").count();
+        let output = helper.verify(namespace).unwrap().split("KeyNotSet").count();
         assert_eq!(output, 10); // 9 KeyNotSet results in 9 splits
 
-        initialize_storage(storage.as_mut());
+        helper.initialize(namespace.into());
 
-        let output = verify(namespace).unwrap().split("KeyNotSet").count();
+        let output = helper.verify(namespace).unwrap().split("KeyNotSet").count();
         assert_eq!(output, 1); // 0 KeyNotSet results in 1 split
     }
 
     #[test]
-    #[ignore]
     fn test_owner_key() {
-        test_key(OWNER_KEY, owner_key);
+        test_key(OWNER_KEY, StorageHelper::owner_key);
     }
 
     #[test]
-    #[ignore]
     fn test_operator_key() {
-        test_key(OPERATOR_KEY, operator_key);
+        test_key(OPERATOR_KEY, StorageHelper::operator_key);
     }
 
-    fn test_key(key_name: &str, op: fn(&str, &str) -> Result<Ed25519PublicKey, Error>) {
+    fn test_key(
+        key_name: &str,
+        op: fn(&StorageHelper, &str, &str) -> Result<Ed25519PublicKey, Error>,
+    ) {
+        let helper = StorageHelper::new();
         let local_ns = format!("local_{}_key", key_name);
         let remote_ns = format!("remote_{}_key", key_name);
 
-        let mut local = default_storage(local_ns.clone());
-        local.reset_and_clear().unwrap();
-        op(&local_ns, &remote_ns).unwrap_err();
+        op(&helper, &local_ns, &remote_ns).unwrap_err();
 
-        initialize_storage(local.as_mut());
+        helper.initialize(local_ns.clone());
+        let local = helper.storage(local_ns.clone());
         let local_key = local.get_public_key(key_name).unwrap().public_key;
 
-        let mut remote = default_storage(remote_ns.clone());
-        remote.reset_and_clear().unwrap();
-
-        let output_key = op(&local_ns, &remote_ns).unwrap();
+        let output_key = op(&helper, &local_ns, &remote_ns).unwrap();
+        let remote = helper.storage(remote_ns);
         let remote_key = remote
             .get(key_name)
             .unwrap()
@@ -493,202 +493,5 @@ pub mod tests {
 
         assert_eq!(local_key, output_key);
         assert_eq!(local_key, remote_key);
-    }
-
-    fn default_storage(namespace: String) -> Box<dyn Storage> {
-        Box::new(VaultStorage::new(
-            VAULT_HOST.into(),
-            VAULT_ROOT_TOKEN.into(),
-            Some(namespace),
-        ))
-    }
-
-    fn initialize_storage(storage: &mut dyn Storage) {
-        let policy = Policy::public();
-        storage.reset_and_clear().unwrap();
-
-        storage.create_key(ASSOCIATION_KEY, &policy).unwrap();
-        storage.create_key(CONSENSUS_KEY, &policy).unwrap();
-        storage.create_key(FULLNODE_NETWORK_KEY, &policy).unwrap();
-        storage.create_key(OWNER_KEY, &policy).unwrap();
-        storage.create_key(OPERATOR_KEY, &policy).unwrap();
-        storage.create_key(VALIDATOR_NETWORK_KEY, &policy).unwrap();
-
-        storage.set(EPOCH, Value::U64(0)).unwrap();
-        storage.set(LAST_VOTED_ROUND, Value::U64(0)).unwrap();
-        storage.set(PREFERRED_ROUND, Value::U64(0)).unwrap();
-        storage.set(WAYPOINT, Value::String("".into())).unwrap();
-    }
-
-    fn association_key(local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
-        let args = format!(
-            "
-                management
-                association-key
-                --local backend={backend};\
-                    server={server};\
-                    token={token};\
-                    namespace={local_ns}
-                --remote backend={backend};\
-                    server={server};\
-                    token={token};\
-                    namespace={remote_ns}\
-            ",
-            backend = crate::secure_backend::VAULT,
-            server = VAULT_HOST,
-            token = VAULT_ROOT_TOKEN,
-            local_ns = local_ns,
-            remote_ns = remote_ns,
-        );
-
-        let command = Command::from_iter(args.split_whitespace());
-        command.association_key()
-    }
-
-    fn genesis() -> Result<Transaction, Error> {
-        let args = format!(
-            "
-                management
-                genesis
-                --backend backend={backend};\
-                    server={server};\
-                    token={token}
-            ",
-            backend = crate::secure_backend::VAULT,
-            server = VAULT_HOST,
-            token = VAULT_ROOT_TOKEN,
-        );
-
-        let command = Command::from_iter(args.split_whitespace());
-        command.genesis()
-    }
-
-    fn operator_key(local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
-        let args = format!(
-            "
-                management
-                operator-key
-                --local backend={backend};\
-                    server={server};\
-                    token={token};\
-                    namespace={local_ns}
-                --remote backend={backend};\
-                    server={server};\
-                    token={token};\
-                    namespace={remote_ns}\
-            ",
-            backend = crate::secure_backend::VAULT,
-            server = VAULT_HOST,
-            token = VAULT_ROOT_TOKEN,
-            local_ns = local_ns,
-            remote_ns = remote_ns,
-        );
-
-        let command = Command::from_iter(args.split_whitespace());
-        command.operator_key()
-    }
-
-    fn owner_key(local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
-        let args = format!(
-            "
-                management
-                owner-key
-                --local backend={backend};\
-                    server={server};\
-                    token={token};\
-                    namespace={local_ns}
-                --remote backend={backend};\
-                    server={server};\
-                    token={token};\
-                    namespace={remote_ns}\
-            ",
-            backend = crate::secure_backend::VAULT,
-            server = VAULT_HOST,
-            token = VAULT_ROOT_TOKEN,
-            local_ns = local_ns,
-            remote_ns = remote_ns,
-        );
-
-        let command = Command::from_iter(args.split_whitespace());
-        command.owner_key()
-    }
-
-    fn set_layout(path: &str, namespace: &str) -> Result<crate::layout::Layout, Error> {
-        let args = format!(
-            "
-                validator_config
-                set-layout
-                --path {path}
-                --backend backend={backend};\
-                    server={server};\
-                    token={token};\
-                    namespace={ns}
-            ",
-            path = path,
-            backend = crate::secure_backend::VAULT,
-            server = VAULT_HOST,
-            token = VAULT_ROOT_TOKEN,
-            ns = namespace,
-        );
-
-        let command = Command::from_iter(args.split_whitespace());
-        command.set_layout()
-    }
-
-    fn validator_config(
-        owner_address: AccountAddress,
-        validator_address: NetworkAddress,
-        fullnode_address: NetworkAddress,
-        local_ns: &str,
-        remote_ns: &str,
-    ) -> Result<Transaction, Error> {
-        let args = format!(
-            "
-                management
-                validator-config
-                --owner-address {owner_address}
-                --validator-address {validator_address}
-                --fullnode-address {fullnode_address}
-                --local backend={backend};\
-                    server={server};\
-                    token={token};\
-                    namespace={local_ns}
-                --remote backend={backend};\
-                    server={server};\
-                    token={token};\
-                    namespace={remote_ns}\
-            ",
-            owner_address = owner_address,
-            validator_address = validator_address,
-            fullnode_address = fullnode_address,
-            backend = crate::secure_backend::VAULT,
-            server = VAULT_HOST,
-            token = VAULT_ROOT_TOKEN,
-            local_ns = local_ns,
-            remote_ns = remote_ns,
-        );
-
-        let command = Command::from_iter(args.split_whitespace());
-        command.validator_config()
-    }
-
-    fn verify(namespace: &str) -> Result<String, Error> {
-        let args = format!(
-            "
-                validator_config
-                verify
-                --backend backend={backend};\
-                    server={server};\
-                    token={token};\
-                    namespace={ns}
-            ",
-            backend = crate::secure_backend::VAULT,
-            server = VAULT_HOST,
-            token = VAULT_ROOT_TOKEN,
-            ns = namespace,
-        );
-
-        let command = Command::from_iter(args.split_whitespace());
-        command.verify()
     }
 }
