@@ -372,6 +372,41 @@ pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
             }
         }
 
+        impl std::io::Write for #hasher_name {
+            fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+                use libra_crypto::hash::CryptoHasher;
+
+                self.0.update(bytes);
+                Ok(bytes.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+
+    );
+    out.into()
+}
+
+#[proc_macro_derive(LCSCryptoHash)]
+pub fn lcs_crypto_hash_dispatch(input: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(input as DeriveInput);
+    let name = &ast.ident;
+    let hasher_name = Ident::new(&format!("{}Hasher", &name.to_string()), Span::call_site());
+    let error_msg = syn::LitStr::new(
+        &format!("LCS serialization of {} should not fail", name.to_string()),
+        Span::call_site(),
+    );
+    let out = quote!(
+        impl libra_crypto::hash::CryptoHash for #name {
+            type Hasher = #hasher_name;
+
+            fn hash(&self) -> HashValue {
+                let mut state = Self::Hasher::default();
+                lcs::serialize_into(&mut state, &self).expect(#error_msg);
+                state.finish()
+            }
+        }
     );
     out.into()
 }

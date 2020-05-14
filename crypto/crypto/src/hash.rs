@@ -66,26 +66,18 @@
 //! **Note**: The last argument for the `define_hasher` macro must be a unique string.
 //!
 //! ## The `CryptoHash` implementation (for both automatic and semi-automatic way)
-//! Then, the `CryptoHash` trait should be implemented:
+//! In most cases, the `CryptoHash` trait should be implemented using LCS serialization.
+//! The derive macro `LCSCryptoHash` generates such an implementation based on `serde::Serialize`,
+//! the LCS encoding, and `MyNewStructHasher`:
 //! ```
 //! # use libra_crypto::hash::*;
-//! # #[derive(Default)]
-//! # struct MyNewStructHasher;
-//! # impl CryptoHasher for MyNewStructHasher {
-//! #   fn finish(self) -> HashValue { unimplemented!() }
-//! #   fn update(&mut self, bytes: &[u8]) -> &mut Self { unimplemented!() }
-//! # }
-//! struct MyNewStruct;
+//! # use libra_crypto_derive::*;
+//! # use serde::Serialize;
+//! #[derive(Serialize, CryptoHasher, LCSCryptoHash)]
+//! struct MyNewStruct { /*...*/ }
 //!
-//! impl CryptoHash for MyNewStruct {
-//!     type Hasher = MyNewStructHasher; // use the above defined hasher here
-//!
-//!     fn hash(&self) -> HashValue {
-//!         let mut state = Self::Hasher::default();
-//!         state.update(b"Struct serialized into bytes here");
-//!         state.finish()
-//!     }
-//! }
+//! let value = MyNewStruct { /*...*/ };
+//! value.hash();
 //! ```
 
 use anyhow::{ensure, Error, Result};
@@ -100,7 +92,7 @@ use serde::{de, ser};
 use std::{self, convert::AsRef, fmt, str::FromStr};
 use tiny_keccak::{Hasher, Sha3};
 
-const LIBRA_HASH_SUFFIX: &[u8] = b"@@$$LIBRA$$@@";
+pub(crate) const LIBRA_HASH_SUFFIX: &[u8] = b"@@$$LIBRA$$@@";
 const SHORT_STRING_LENGTH: usize = 4;
 
 /// Output value of our hash function. Intentionally opaque for safety and modularity.
@@ -432,7 +424,7 @@ pub trait CryptoHash {
 /// Instances of `CryptoHasher` usually represent state that is changed while hashing data.
 /// Similar to `std::hash::Hasher` but not same. CryptoHasher cannot be reused after finish() has
 /// been called.
-pub trait CryptoHasher: Default {
+pub trait CryptoHasher: Default + std::io::Write {
     /// Finish constructing the [`HashValue`].
     fn finish(self) -> HashValue;
     /// Write bytes into the hasher.
@@ -471,6 +463,16 @@ impl Default for DefaultHasher {
         DefaultHasher {
             state: Sha3::v256(),
         }
+    }
+}
+
+impl std::io::Write for DefaultHasher {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.update(bytes);
+        Ok(bytes.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
     }
 }
 
@@ -517,6 +519,16 @@ macro_rules! define_hasher {
             fn update(&mut self, bytes: &[u8]) -> &mut Self {
                 self.0.update(bytes);
                 self
+            }
+        }
+
+        impl std::io::Write for $hasher_type {
+            fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+                self.0.update(bytes);
+                Ok(bytes.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
             }
         }
 

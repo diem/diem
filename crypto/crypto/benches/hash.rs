@@ -4,34 +4,45 @@
 #[macro_use]
 extern crate criterion;
 
-use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue, SparseMerkleInternalHasher};
+use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
+use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
+use serde::{Deserialize, Serialize};
 
+const INPUT: &[u8] = &[1u8; 120];
+
+// Main use case
+#[derive(CryptoHasher, Serialize, Deserialize, LCSCryptoHash)]
 struct HashBencher(&'static [u8]);
 
-impl HashBencher {
-    fn bench_hash(input: &'static [u8]) -> HashValue {
-        let bench = Self(input);
-        bench.hash()
-    }
-}
+// Similar with an hand-written implementation of CryptoHash.
+struct HashBencherBase(&'static [u8]);
 
-impl CryptoHash for HashBencher {
-    type Hasher = SparseMerkleInternalHasher;
+impl CryptoHash for HashBencherBase {
+    type Hasher = HashBencherHasher;
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.update(self.0);
+        // Assumes self.0.len() < 128
+        state.update(&[self.0.len() as u8]);
+        state.update(&self.0);
         state.finish()
     }
 }
 
 fn bench_hasher(c: &mut criterion::Criterion) {
     let expected_digest =
-        HashValue::from_hex("a2a3adfaed90739641d57dc3d0f8e6231b0d038748dad0feaec765c9aa9676a6")
+        HashValue::from_hex("72640fc4b2379de554a45871056f65b7c7ffe282841ae5f1774dc88bc91c3062")
             .unwrap();
 
     c.bench_function("hashing", |b| {
         b.iter(|| {
-            let digest = HashBencher::bench_hash(criterion::black_box(b"someinput"));
+            let digest = CryptoHash::hash(criterion::black_box(&HashBencher(INPUT)));
+            assert_eq!(digest, expected_digest);
+        })
+    });
+
+    c.bench_function("hashing_base", |b| {
+        b.iter(|| {
+            let digest = CryptoHash::hash(criterion::black_box(&HashBencherBase(INPUT)));
             assert_eq!(digest, expected_digest);
         })
     });
