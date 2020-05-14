@@ -501,7 +501,7 @@
 <span class="doccomment">//! use rand::{rngs::StdRng, SeedableRng};</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! let mut hasher = TestOnlyHasher::default();</span>
-<span class="doccomment">//! hasher.write(&quot;Test message&quot;.as_bytes());</span>
+<span class="doccomment">//! hasher.update(&quot;Test message&quot;.as_bytes());</span>
 <span class="doccomment">//! let hashed_message = hasher.finish();</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! let mut rng: StdRng = SeedableRng::from_seed([0; 32]);</span>

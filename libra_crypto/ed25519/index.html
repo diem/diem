@@ -11,7 +11,7 @@ Edwards curve as defined in <a href="https://tools.ietf.org/html/rfc8032">RFC803
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">rngs</span>::<span class="ident">StdRng</span>, <span class="ident">SeedableRng</span>};
 
 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">TestOnlyHasher</span>::<span class="ident">default</span>();
-<span class="ident">hasher</span>.<span class="ident">write</span>(<span class="string">&quot;Test message&quot;</span>.<span class="ident">as_bytes</span>());
+<span class="ident">hasher</span>.<span class="ident">update</span>(<span class="string">&quot;Test message&quot;</span>.<span class="ident">as_bytes</span>());
 <span class="kw">let</span> <span class="ident">hashed_message</span> <span class="op">=</span> <span class="ident">hasher</span>.<span class="ident">finish</span>();
 
 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span>: <span class="ident">StdRng</span> <span class="op">=</span> <span class="ident">SeedableRng</span>::<span class="ident">from_seed</span>([<span class="number">0</span>; <span class="number">32</span>]);

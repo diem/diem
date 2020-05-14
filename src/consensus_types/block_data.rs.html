@@ -209,7 +209,6 @@
 <span id="209">209</span>
 <span id="210">210</span>
 <span id="211">211</span>
-<span id="212">212</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -417,9 +416,8 @@
     <span class="kw">type</span> <span class="ident">Hasher</span> <span class="op">=</span> <span class="ident">BlockDataHasher</span>;
 
     <span class="kw">fn</span> <span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
-        <span class="kw">let</span> <span class="ident">bytes</span> <span class="op">=</span> <span class="ident">lcs</span>::<span class="ident">to_bytes</span>(<span class="self">self</span>).<span class="ident">expect</span>(<span class="string">&quot;BlockData serialization failed&quot;</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">Hasher</span>::<span class="ident">default</span>();
-        <span class="ident">state</span>.<span class="ident">write</span>(<span class="ident">bytes</span>.<span class="ident">as_ref</span>());
+        <span class="ident">lcs</span>::<span class="ident">serialize_into</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">state</span>, <span class="self">self</span>).<span class="ident">expect</span>(<span class="string">&quot;BlockData serialization failed&quot;</span>);
         <span class="ident">state</span>.<span class="ident">finish</span>()
     }
 }

@@ -77,7 +77,7 @@
 <span class="doccomment">/// Record sample values for crypto types used by transactions.</span>
 <span class="kw">fn</span> <span class="ident">trace_crypto_values</span>(<span class="ident">tracer</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Tracer</span>, <span class="ident">samples</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Samples</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">TestOnlyHasher</span>::<span class="ident">default</span>();
-    <span class="ident">hasher</span>.<span class="ident">write</span>(<span class="string">b&quot;Test message&quot;</span>);
+    <span class="ident">hasher</span>.<span class="ident">update</span>(<span class="string">b&quot;Test message&quot;</span>);
     <span class="kw">let</span> <span class="ident">hashed_message</span> <span class="op">=</span> <span class="ident">hasher</span>.<span class="ident">finish</span>();
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span>: <span class="ident">StdRng</span> <span class="op">=</span> <span class="ident">SeedableRng</span>::<span class="ident">from_seed</span>([<span class="number">0</span>; <span class="number">32</span>]);

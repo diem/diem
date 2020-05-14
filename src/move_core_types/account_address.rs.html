@@ -335,7 +335,7 @@
 
     <span class="kw">fn</span> <span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">Hasher</span>::<span class="ident">default</span>();
-        <span class="ident">state</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>);
+        <span class="ident">state</span>.<span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>);
         <span class="ident">state</span>.<span class="ident">finish</span>()
     }
 }

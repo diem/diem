@@ -1222,7 +1222,7 @@
 
 <span class="kw">fn</span> <span class="ident">get_hash</span>(<span class="ident">msg</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">DiscoveryMsgHasher</span>::<span class="ident">default</span>();
-    <span class="ident">hasher</span>.<span class="ident">write</span>(<span class="ident">msg</span>);
+    <span class="ident">hasher</span>.<span class="ident">update</span>(<span class="ident">msg</span>);
     <span class="ident">hasher</span>.<span class="ident">finish</span>()
 }
 </pre></div>

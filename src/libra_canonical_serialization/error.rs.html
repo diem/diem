@@ -50,6 +50,14 @@
 <span id="50">50</span>
 <span id="51">51</span>
 <span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -64,6 +72,8 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Error</span> {
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;unexpected end of input&quot;</span>)]</span>
     <span class="ident">Eof</span>,
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;I/O error: {0}&quot;</span>)]</span>
+    <span class="ident">Io</span>(<span class="ident">String</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;exceeded max sequence length&quot;</span>)]</span>
     <span class="ident">ExceededMaxLen</span>(<span class="ident">usize</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;expected boolean&quot;</span>)]</span>
@@ -90,6 +100,12 @@
     <span class="ident">NonCanonicalUleb128Encoding</span>,
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;ULEB128-encoded integer did not fit in the target size&quot;</span>)]</span>
     <span class="ident">IntegerOverflowDuringUleb128Decoding</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">err</span>: <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Error</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">Error</span>::<span class="ident">Io</span>(<span class="ident">err</span>.<span class="ident">to_string</span>())
+    }
 }
 
 <span class="kw">impl</span> <span class="ident">ser</span>::<span class="ident">Error</span> <span class="kw">for</span> <span class="ident">Error</span> {
