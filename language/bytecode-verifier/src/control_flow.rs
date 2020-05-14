@@ -170,10 +170,11 @@ fn check_breaks(context: &ControlFlowVerifier, labels: &[Label]) -> VMResult<()>
 
 fn check_no_loop_splits(context: &ControlFlowVerifier, labels: &[Label]) -> VMResult<()> {
     let is_break = |loop_stack: &Vec<(CodeOffset, CodeOffset)>, jump_target: CodeOffset| -> bool {
-        match loop_stack.last() {
-            None => false,
-            Some((_cur_loop, last_continue)) => jump_target > *last_continue,
-        }
+        loop_stack
+            .last()
+            .map_or(false, |(_cur_loop, last_continue)| {
+                jump_target > *last_continue
+            })
     };
     let loop_depth = count_loop_depth(&labels);
     check_code(context, labels, |loop_stack, i, instr| {

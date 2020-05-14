@@ -117,10 +117,9 @@ pub fn kinds_for_instantiation(
 /// Determine whether the stack contains an integer value at given index.
 pub fn stack_has_integer(state: &AbstractState, index: usize) -> bool {
     index < state.stack_len()
-        && match state.stack_peek(index) {
-            Some(AbstractValue { token, .. }) => token.is_integer(),
-            None => false,
-        }
+        && state
+            .stack_peek(index)
+            .map_or(false, |AbstractValue { token, .. }| token.is_integer())
 }
 
 pub fn stack_top_is_castable_to(state: &AbstractState, typ: SignatureToken) -> bool {

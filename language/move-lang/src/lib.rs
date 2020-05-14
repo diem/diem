@@ -325,10 +325,9 @@ fn find_and_intern_move_filenames(files: &[String]) -> io::Result<Vec<&'static s
 }
 
 fn has_move_extension(path: &Path) -> bool {
-    match path.extension().and_then(|s| s.to_str()) {
-        Some(extension) => extension == MOVE_EXTENSION,
-        None => false,
-    }
+    path.extension()
+        .and_then(|s| s.to_str())
+        .map_or(false, |extension| extension == MOVE_EXTENSION)
 }
 
 // TODO replace with some sort of intern table

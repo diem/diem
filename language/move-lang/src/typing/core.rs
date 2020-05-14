@@ -220,10 +220,7 @@ impl Context {
     }
 
     pub fn is_current_module(&self, m: &ModuleIdent) -> bool {
-        match &self.current_module {
-            Some(curm) => curm == m,
-            None => false,
-        }
+        self.current_module.as_ref().map_or(false, |curm| curm == m)
     }
 
     pub fn is_current_function(&self, m: &ModuleIdent, f: &FunctionName) -> bool {
@@ -605,10 +602,10 @@ pub fn make_function_type(
     f: &FunctionName,
     ty_args_opt: Option<Vec<Type>>,
 ) -> (Loc, Vec<Type>, Vec<(Var, Type)>, BTreeSet<StructName>, Type) {
-    let in_current_module = match &context.current_module {
-        Some(current) => m == current,
-        None => false,
-    };
+    let in_current_module = context
+        .current_module
+        .as_ref()
+        .map_or(false, |current| m == current);
     let constraints: Vec<_> = context
         .function_info(m, f)
         .signature

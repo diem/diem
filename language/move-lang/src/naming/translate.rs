@@ -471,10 +471,10 @@ fn acquires_type_struct(
     n: StructName,
     resource_opt: Option<Kind>,
 ) -> Option<StructName> {
-    let declared_in_current = match &context.current_module {
-        Some(current_module) => current_module == &declared_module,
-        None => false,
-    };
+    let declared_in_current = context
+        .current_module
+        .as_ref()
+        .map_or(false, |current_module| current_module == &declared_module);
     if !declared_in_current {
         let tmsg = format!(
             "The struct '{}' was not declared in the current module. Global \
