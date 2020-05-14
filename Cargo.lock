@@ -6119,6 +6119,7 @@ dependencies = [
  "mirai-annotations 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "move-core-types 0.1.0",
  "stdlib 0.1.0",
+ "vm 0.1.0",
 ]
 
 [[package]]
