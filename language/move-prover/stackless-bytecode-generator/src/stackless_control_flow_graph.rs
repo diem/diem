@@ -46,14 +46,13 @@ impl StacklessControlFlowGraph {
         Self {
             entry_block_ids: blocks
                 .iter()
-                .map(|(block_id, block)| {
+                .flat_map(|(block_id, block)| {
                     if code[block.upper as usize].is_return() {
                         Some(*block_id)
                     } else {
                         None
                     }
                 })
-                .flatten()
                 .collect(),
             blocks: block_id_to_predecessors
                 .into_iter()

@@ -68,7 +68,7 @@ impl SourceCoverageBuilder {
             .function_defs()
             .iter()
             .enumerate()
-            .map(|(function_def_idx, function_def)| {
+            .flat_map(|(function_def_idx, function_def)| {
                 let fn_handle = module.function_handle_at(function_def.function);
                 let fn_name = module.identifier_at(fn_handle.name).to_owned();
                 let function_def_idx = FunctionDefinitionIndex(function_def_idx as u16);
@@ -120,7 +120,6 @@ impl SourceCoverageBuilder {
                 };
                 coverage.map(|x| (fn_name, x))
             })
-            .flatten()
             .collect();
 
         Self {

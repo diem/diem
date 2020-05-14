@@ -332,8 +332,7 @@ impl<'a> EliminateMutRefs<'a> {
     fn transform_bytecodes(&mut self, instrs: &[Bytecode]) -> Vec<Bytecode> {
         instrs
             .iter()
-            .map(|bytecode| self.transform_bytecode(bytecode.clone()))
-            .flatten()
+            .flat_map(|bytecode| self.transform_bytecode(bytecode.clone()))
             .collect()
     }
 }

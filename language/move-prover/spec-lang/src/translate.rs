@@ -1685,12 +1685,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         // First recursively visit all schema includes and ensure they are analyzed.
         for included_name in self
             .iter_schema_includes(&block.value.members)
-            .map(|(_, exp)| {
+            .flat_map(|(_, exp)| {
                 let mut res = vec![];
                 extract_schema_access(exp, &mut res);
                 res
             })
-            .flatten()
         {
             let included_loc = self.parent.env.to_loc(&included_name.loc);
             let included_name = self.module_access_to_qualified(included_name);

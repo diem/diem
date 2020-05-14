@@ -135,14 +135,13 @@ impl<'a> LiveVarAnalysis<'a> {
         let label_to_code_offset: BTreeMap<Label, usize> = code
             .iter()
             .enumerate()
-            .map(|(code_offset, bytecode)| {
+            .flat_map(|(code_offset, bytecode)| {
                 use Bytecode::*;
                 match bytecode {
                     Label(_, label) => Some((*label, code_offset)),
                     _ => None,
                 }
             })
-            .flatten()
             .collect();
         let mut transformed_code = vec![];
         let mut new_bytecodes = vec![];
