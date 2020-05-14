@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use backup_restore::{adapter::local_storage::LocalStorage, backup_account_state};
+use grpc_storage::client::{StorageRead, StorageReadServiceClient};
 use std::path::PathBuf;
-use storage_client::{StorageRead, StorageReadServiceClient};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]

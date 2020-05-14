@@ -9,6 +9,20 @@
 //! library implementation and protobuf interface, and the interface between the rest of the system
 //! and the client library will remain the same, so we won't need to change other components.
 
+use crate::{
+    proto::storage::{
+        storage_client::StorageClient, GetLatestStateRootRequest, GetStartupInfoRequest,
+    },
+    types::{
+        BackupAccountStateRequest, BackupAccountStateResponse, BackupTransactionInfoRequest,
+        BackupTransactionInfoResponse, BackupTransactionRequest, BackupTransactionResponse,
+        GetAccountStateRangeProofRequest, GetAccountStateRangeProofResponse,
+        GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
+        GetEpochChangeLedgerInfosRequest, GetLatestAccountStateRequest,
+        GetLatestAccountStateResponse, GetLatestStateRootResponse, GetStartupInfoResponse,
+        GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
+    },
+};
 use anyhow::{format_err, Error, Result};
 use futures::{
     executor::block_on,
@@ -37,18 +51,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 use storage_interface::{DbReader, DbWriter, StartupInfo, TreeState};
-use storage_proto::{
-    proto::storage::{
-        storage_client::StorageClient, GetLatestStateRootRequest, GetStartupInfoRequest,
-    },
-    BackupAccountStateRequest, BackupAccountStateResponse, BackupTransactionInfoRequest,
-    BackupTransactionInfoResponse, BackupTransactionRequest, BackupTransactionResponse,
-    GetAccountStateRangeProofRequest, GetAccountStateRangeProofResponse,
-    GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
-    GetEpochChangeLedgerInfosRequest, GetLatestAccountStateRequest, GetLatestAccountStateResponse,
-    GetLatestStateRootResponse, GetStartupInfoResponse, GetTransactionsRequest,
-    GetTransactionsResponse, SaveTransactionsRequest,
-};
 use tokio::runtime::Runtime;
 
 /// This provides storage read interfaces backed by real storage service.
@@ -121,7 +123,7 @@ impl StorageRead for StorageReadServiceClient {
         ledger_version: Version,
         fetch_events: bool,
     ) -> Result<TransactionListWithProof> {
-        let req: storage_proto::proto::storage::GetTransactionsRequest =
+        let req: crate::proto::storage::GetTransactionsRequest =
             GetTransactionsRequest::new(start_version, batch_size, ledger_version, fetch_events)
                 .into();
         let resp = self
@@ -150,7 +152,7 @@ impl StorageRead for StorageReadServiceClient {
         &self,
         address: AccountAddress,
     ) -> Result<Option<AccountStateBlob>> {
-        let req: storage_proto::proto::storage::GetLatestAccountStateRequest =
+        let req: crate::proto::storage::GetLatestAccountStateRequest =
             GetLatestAccountStateRequest::new(address).into();
         let resp = self
             .client()
@@ -167,7 +169,7 @@ impl StorageRead for StorageReadServiceClient {
         address: AccountAddress,
         version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
-        let req: storage_proto::proto::storage::GetAccountStateWithProofByVersionRequest =
+        let req: crate::proto::storage::GetAccountStateWithProofByVersionRequest =
             GetAccountStateWithProofByVersionRequest::new(address, version).into();
         let resp = self
             .client()
@@ -196,7 +198,7 @@ impl StorageRead for StorageReadServiceClient {
         start_epoch: u64,
         end_epoch: u64,
     ) -> Result<EpochChangeProof> {
-        let proto_req: storage_proto::proto::storage::GetEpochChangeLedgerInfosRequest =
+        let proto_req: crate::proto::storage::GetEpochChangeLedgerInfosRequest =
             GetEpochChangeLedgerInfosRequest::new(start_epoch, end_epoch).into();
         let resp = self
             .client()
@@ -212,7 +214,7 @@ impl StorageRead for StorageReadServiceClient {
         &self,
         version: Version,
     ) -> Result<BoxStream<'_, Result<BackupAccountStateResponse, Error>>> {
-        let proto_req: storage_proto::proto::storage::BackupAccountStateRequest =
+        let proto_req: crate::proto::storage::BackupAccountStateRequest =
             BackupAccountStateRequest::new(version).into();
         let stream = self
             .client()
@@ -233,7 +235,7 @@ impl StorageRead for StorageReadServiceClient {
         rightmost_key: HashValue,
         version: Version,
     ) -> Result<SparseMerkleRangeProof> {
-        let req: storage_proto::proto::storage::GetAccountStateRangeProofRequest =
+        let req: crate::proto::storage::GetAccountStateRangeProofRequest =
             GetAccountStateRangeProofRequest::new(rightmost_key, version).into();
         let resp = self
             .client()
@@ -250,7 +252,7 @@ impl StorageRead for StorageReadServiceClient {
         start_version: Version,
         num_transactions: u64,
     ) -> Result<BoxStream<'_, Result<BackupTransactionResponse, Error>>> {
-        let proto_req: storage_proto::proto::storage::BackupTransactionRequest =
+        let proto_req: crate::proto::storage::BackupTransactionRequest =
             BackupTransactionRequest::new(start_version, num_transactions).into();
         let stream = self
             .client()
@@ -271,7 +273,7 @@ impl StorageRead for StorageReadServiceClient {
         start_version: Version,
         num_transactions: u64,
     ) -> Result<BoxStream<'_, Result<BackupTransactionInfoResponse, Error>>> {
-        let proto_req: storage_proto::proto::storage::BackupTransactionInfoRequest =
+        let proto_req: crate::proto::storage::BackupTransactionInfoRequest =
             BackupTransactionInfoRequest::new(start_version, num_transactions).into();
         let stream = self
             .client()
@@ -374,7 +376,7 @@ impl StorageWrite for StorageWriteServiceClient {
         first_version: Version,
         ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
     ) -> Result<()> {
-        let req: storage_proto::proto::storage::SaveTransactionsRequest =
+        let req: crate::proto::storage::SaveTransactionsRequest =
             SaveTransactionsRequest::new(txns_to_commit, first_version, ledger_info_with_sigs)
                 .into();
         self.client().await?.save_transactions(req).await?;

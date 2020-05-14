@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use crate::client::{
+    StorageRead, StorageReadServiceClient, StorageWrite, StorageWriteServiceClient,
+};
 use futures::stream::StreamExt;
 use itertools::zip_eq;
 use libra_config::{config::NodeConfig, utils};
@@ -14,9 +17,6 @@ use simple_storage_client::SimpleStorageClient;
 use std::{
     collections::{BTreeMap, HashMap},
     net::{IpAddr, Ipv4Addr, SocketAddr},
-};
-use storage_client::{
-    StorageRead, StorageReadServiceClient, StorageWrite, StorageWriteServiceClient,
 };
 use tokio::runtime::Runtime;
 

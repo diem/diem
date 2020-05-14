@@ -26,6 +26,7 @@ crash-handler = { path = "../common/crash-handler", version = "0.1.0" }
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
 executor = { path = "../execution/executor", version = "0.1.0" }
 executor-types = { path = "../execution/executor-types", version = "0.1.0" }
+grpc-storage = { path = "../grpc/storage", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-mempool = { path = "../mempool", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
@@ -36,7 +37,6 @@ libra-json-rpc = { path = "../json-rpc", version = "0.1.0" }
 simple-storage-client = { path = "../storage/simple-storage-client", version = "0.1.0" }
 state-synchronizer = { path = "../state-synchronizer", version = "0.1.0" }
 storage-interface= { path = "../storage/storage-interface", version = "0.1.0" }
-storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 subscription-service = { path = "../common/subscription-service", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 libra-vm = { path = "../language/libra-vm", version = "0.1.0" }

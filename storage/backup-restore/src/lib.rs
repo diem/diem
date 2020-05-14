@@ -6,9 +6,9 @@ pub mod adapter;
 use crate::adapter::Adapter;
 use anyhow::Result;
 use futures::{stream, StreamExt};
+use grpc_storage::client::{StorageRead, StorageReadServiceClient};
 use libra_crypto::HashValue;
 use libra_types::transaction::Version;
-use storage_client::{StorageRead, StorageReadServiceClient};
 
 pub type FileHandle = String;
 

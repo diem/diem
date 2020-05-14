@@ -272,6 +272,7 @@ dependencies = [
  "async-trait 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpc-storage 0.1.0",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
@@ -281,7 +282,6 @@ dependencies = [
  "libradb 0.1.0",
  "proptest 0.9.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "storage-client 0.1.0",
  "structopt 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1275,6 +1275,7 @@ dependencies = [
  "executor 0.1.0",
  "executor-types 0.1.0",
  "executor-utils 0.1.0",
+ "grpc-storage 0.1.0",
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
@@ -1289,7 +1290,6 @@ dependencies = [
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "simple-storage-client 0.1.0",
  "storage-interface 0.1.0",
- "storage-service 0.1.0",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
@@ -1339,6 +1339,7 @@ dependencies = [
  "executor 0.1.0",
  "executor-types 0.1.0",
  "executor-utils 0.1.0",
+ "grpc-storage 0.1.0",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
@@ -1351,7 +1352,6 @@ dependencies = [
  "rayon 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "simple-storage-client 0.1.0",
  "storage-interface 0.1.0",
- "storage-service 0.1.0",
  "structopt 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
 ]
@@ -1385,7 +1385,6 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "simple-storage-client 0.1.0",
  "storage-interface 0.1.0",
- "storage-service 0.1.0",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1693,18 +1692,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "grpc-storage"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.29 (registry+https://github.com/rust-lang/crates.io-index)",
+ "anyhow 1.0.30 (registry+https://github.com/rust-lang/crates.io-index)",
+ "async-trait 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpc-types 0.1.0",
+ "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
+ "libra-config 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-logger 0.1.0",
+ "libra-metrics 0.1.0",
  "libra-prost-ext 0.1.0",
+ "libra-secure-net 0.1.0",
+ "libra-state-view 0.1.0",
+ "libra-temppath 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
+ "libradb 0.1.0",
  "proptest 0.9.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
+ "simple-storage-client 0.1.0",
  "storage-interface 0.1.0",
+ "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "tonic 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tonic-build 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -2577,7 +2589,6 @@ dependencies = [
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
- "storage-service 0.1.0",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm-validator 0.1.0",
 ]
@@ -2635,6 +2646,7 @@ dependencies = [
  "executor 0.1.0",
  "executor-types 0.1.0",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpc-storage 0.1.0",
  "jemallocator 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
@@ -2652,7 +2664,6 @@ dependencies = [
  "simple-storage-client 0.1.0",
  "state-synchronizer 0.1.0",
  "storage-interface 0.1.0",
- "storage-service 0.1.0",
  "structopt 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "subscription-service 0.1.0",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3648,7 +3659,6 @@ dependencies = [
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "simple-storage-client 0.1.0",
  "storage-interface 0.1.0",
- "storage-service 0.1.0",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm-genesis 0.1.0",
 ]
@@ -5110,6 +5120,7 @@ dependencies = [
  "executor-types 0.1.0",
  "executor-utils 0.1.0",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpc-storage 0.1.0",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
@@ -5126,9 +5137,7 @@ dependencies = [
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
- "storage-client 0.1.0",
  "storage-interface 0.1.0",
- "storage-service 0.1.0",
  "subscription-service 0.1.0",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
@@ -5172,25 +5181,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "storage-client"
-version = "0.1.0"
-dependencies = [
- "anyhow 1.0.30 (registry+https://github.com/rust-lang/crates.io-index)",
- "async-trait 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpc-types 0.1.0",
- "libra-crypto 0.1.0",
- "libra-secure-net 0.1.0",
- "libra-state-view 0.1.0",
- "libra-types 0.1.0",
- "libra-workspace-hack 0.1.0",
- "storage-interface 0.1.0",
- "storage-proto 0.1.0",
- "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "tonic 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "storage-interface"
 version = "0.1.0"
 dependencies = [
@@ -5206,55 +5196,6 @@ dependencies = [
  "scratchpad 0.1.0",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "storage-proto"
-version = "0.1.0"
-dependencies = [
- "anyhow 1.0.30 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpc-types 0.1.0",
- "libra-canonical-serialization 0.1.0",
- "libra-crypto 0.1.0",
- "libra-prost-ext 0.1.0",
- "libra-types 0.1.0",
- "libra-workspace-hack 0.1.0",
- "proptest 0.9.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "prost 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
- "storage-interface 0.1.0",
- "tonic 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "tonic-build 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "storage-service"
-version = "0.1.0"
-dependencies = [
- "anyhow 1.0.30 (registry+https://github.com/rust-lang/crates.io-index)",
- "async-trait 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpc-types 0.1.0",
- "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "libra-canonical-serialization 0.1.0",
- "libra-config 0.1.0",
- "libra-crypto 0.1.0",
- "libra-logger 0.1.0",
- "libra-metrics 0.1.0",
- "libra-secure-net 0.1.0",
- "libra-temppath 0.1.0",
- "libra-types 0.1.0",
- "libra-workspace-hack 0.1.0",
- "libradb 0.1.0",
- "proptest 0.9.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "simple-storage-client 0.1.0",
- "storage-client 0.1.0",
- "storage-interface 0.1.0",
- "storage-proto 0.1.0",
- "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "tonic 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -6216,6 +6157,7 @@ dependencies = [
  "anyhow 1.0.30 (registry+https://github.com/rust-lang/crates.io-index)",
  "config-builder 0.1.0",
  "executor 0.1.0",
+ "grpc-storage 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-state-view 0.1.0",
@@ -6225,9 +6167,7 @@ dependencies = [
  "libradb 0.1.0",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "scratchpad 0.1.0",
- "storage-client 0.1.0",
  "storage-interface 0.1.0",
- "storage-service 0.1.0",
  "transaction-builder 0.1.0",
 ]
 

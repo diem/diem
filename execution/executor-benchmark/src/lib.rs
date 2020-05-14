@@ -3,6 +3,7 @@
 
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_types::BlockExecutor;
+use grpc_storage::service::start_simple_storage_service_with_db;
 use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
@@ -30,7 +31,6 @@ use std::{
     sync::{mpsc, Arc},
 };
 use storage_interface::{DbReader, DbReaderWriter};
-use storage_service::start_simple_storage_service_with_db;
 use transaction_builder::{encode_mint_script, encode_transfer_with_metadata_script};
 
 struct AccountData {

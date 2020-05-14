@@ -19,12 +19,12 @@ rand = "0.7.3"
 structopt = "0.3"
 tokio = "0.2"
 
+grpc-storage = { path = "../../grpc/storage", version = "0.1.0" }
 lcs = { path = "../../common/lcs", package = "libra-canonical-serialization", version = "0.1.0" }
 libradb = { path = "../libradb", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-storage-client = { path = "../storage-client", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.9.6"

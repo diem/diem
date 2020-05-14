@@ -113,10 +113,7 @@ members = [
     "storage/scratchpad",
     "storage/simple-storage-client",
     "storage/state-view",
-    "storage/storage-client",
     "storage/storage-interface",
-    "storage/storage-proto",
-    "storage/storage-service",
     "testsuite",
     "testsuite/cli",
     "testsuite/cli/libra-wallet",
@@ -137,7 +134,6 @@ default-members = [
     "language/compiler",
     "language/tools/vm-genesis",
     "libra-node",
-    "storage/storage-service",
 ]
 
 [profile.release]

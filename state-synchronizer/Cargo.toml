@@ -12,11 +12,11 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 futures = "0.3.5"
-serde = { version = "1.0.110", default-features = false }
+itertools = { version = "0.9.0", default-features = false }
 once_cell = "1.4.0"
 rand = "0.7.3"
+serde = { version = "1.0.110", default-features = false }
 tokio = { version = "0.2.13", features = ["full"] }
-itertools = { version = "0.9.0", default-features = false }
 
 channel = { path = "../common/channel", version = "0.1.0" }
 executor = { path = "../execution/executor", version = "0.1.0" }
@@ -27,26 +27,25 @@ libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-mempool = { path = "../mempool", version = "0.1.0"}
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
+libra-vm = { path = "../language/libra-vm", version = "0.1.0" }
 libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 network = { path = "../network", version = "0.1.0" }
 storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
 subscription-service = { path = "../common/subscription-service", version = "0.1.0" }
-libra-vm = { path = "../language/libra-vm", version = "0.1.0" }
 
 [dev-dependencies]
 bytes = "0.5.4"
 
-config-builder = { path = "../config/config-builder", version = "0.1.0" }
-libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
-libra-network-address = { path = "../network/network-address", version = "0.1.0" }
-libradb = { path = "../storage/libradb", version = "0.1.0" }
-vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }
-transaction-builder = { path = "../language/transaction-builder", version = "0.1.0" }
 channel = { path = "../common/channel", version = "0.1.0" }
+config-builder = { path = "../config/config-builder", version = "0.1.0" }
 executor-utils = { path = "../execution/executor-utils", version = "0.1.0" }
+grpc-storage = { path = "../grpc/storage", version = "0.1.0" }
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+libradb = { path = "../storage/libradb", version = "0.1.0" }
+libra-network-address = { path = "../network/network-address", version = "0.1.0" }
 stdlib = { path = "../language/stdlib", version = "0.1.0" }
-storage-client = { path = "../storage/storage-client", version = "0.1.0" }
-storage-service = { path = "../storage/storage-service", version = "0.1.0" }
+transaction-builder = { path = "../language/transaction-builder", version = "0.1.0" }
+vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }
 
 [features]
 default = []

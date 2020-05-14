@@ -8,6 +8,7 @@ use executor_utils::test_helpers::{
     gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
 };
 use futures::{future::FutureExt, stream::StreamExt};
+use grpc_storage::{client::SyncStorageClient, service::start_storage_service_with_db};
 use libra_config::utils::get_genesis_txn;
 use libra_crypto::{
     ed25519::*,
@@ -23,9 +24,7 @@ use libra_vm::LibraVM;
 use libradb::LibraDB;
 use std::sync::Arc;
 use stdlib::transaction_scripts::StdlibScript;
-use storage_client::SyncStorageClient;
 use storage_interface::DbReaderWriter;
-use storage_service::start_storage_service_with_db;
 use subscription_service::ReconfigSubscription;
 use transaction_builder::{
     encode_block_prologue_script, encode_publishing_option_script,

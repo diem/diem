@@ -25,8 +25,6 @@
 //! [`storage-client`](../storage-client/index.html) don't need to depending on the entire
 //! [`storage-service`](../storage-service/index.html).
 
-pub mod proto;
-
 use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::HashValue;
 use libra_types::{
@@ -857,6 +855,3 @@ impl From<BackupTransactionInfoResponse> for crate::proto::storage::BackupTransa
 pub mod prelude {
     pub use super::*;
 }
-
-#[cfg(test)]
-mod tests;

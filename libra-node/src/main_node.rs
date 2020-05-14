@@ -10,6 +10,7 @@ use debug_interface::{
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on, stream::StreamExt};
+use grpc_storage::service::{start_simple_storage_service_with_db, start_storage_service_with_db};
 use libra_config::{
     config::{DiscoveryMethod, NetworkConfig, NodeConfig, RoleType},
     utils::get_genesis_txn,
@@ -33,7 +34,6 @@ use std::{
     time::{Duration, Instant},
 };
 use storage_interface::{DbReader, DbReaderWriter};
-use storage_service::{start_simple_storage_service_with_db, start_storage_service_with_db};
 use subscription_service::ReconfigSubscription;
 use tokio::{
     runtime::{Builder, Handle, Runtime},

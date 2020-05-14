@@ -8,6 +8,7 @@ mod suite;
 mod thread;
 
 use executor::db_bootstrapper::bootstrap_db_if_empty;
+use grpc_storage::service::start_simple_storage_service_with_db;
 use libra_config::{config::NodeConfig, utils};
 use libra_vm::LibraVM;
 use libradb::LibraDB;
@@ -16,7 +17,6 @@ use std::{
     thread::JoinHandle,
 };
 use storage_interface::DbReaderWriter;
-use storage_service::start_simple_storage_service_with_db;
 
 fn start_storage_service() -> (NodeConfig, JoinHandle<()>) {
     let (mut config, _genesis_key) = config_builder::test_config();
