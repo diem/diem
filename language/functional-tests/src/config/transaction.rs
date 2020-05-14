@@ -40,6 +40,7 @@ pub enum Entry {
     Arguments(Vec<Argument>),
     MaxGas(u64),
     GasPrice(u64),
+    GasCurrencyCode(String),
     SequenceNumber(u64),
     ExpirationTime(u64),
 }
@@ -86,6 +87,9 @@ impl FromStr for Entry {
         if let Some(s) = strip(s, "gas-price:") {
             return Ok(Entry::GasPrice(s.parse::<u64>()?));
         }
+        if let Some(s) = strip(s, "gas-currency:") {
+            return Ok(Entry::GasCurrencyCode(s.to_owned()));
+        }
         if let Some(s) = strip(s, "sequence-number:") {
             return Ok(Entry::SequenceNumber(s.parse::<u64>()?));
         }
@@ -130,6 +134,7 @@ pub struct Config<'a> {
     pub args: Vec<TransactionArgument>,
     pub max_gas: Option<u64>,
     pub gas_price: Option<u64>,
+    pub gas_currency_code: Option<String>,
     pub sequence_number: Option<u64>,
     pub expiration_time: Option<Duration>,
 }
@@ -143,6 +148,7 @@ impl<'a> Config<'a> {
         let mut args = None;
         let mut max_gas = None;
         let mut gas_price = None;
+        let mut gas_currency_code = None;
         let mut sequence_number = None;
         let mut expiration_time = None;
 
@@ -204,6 +210,12 @@ impl<'a> Config<'a> {
                         return Err(ErrorKind::Other("gas price already set".to_string()).into())
                     }
                 },
+                Entry::GasCurrencyCode(code) => match gas_currency_code {
+                    None => gas_currency_code = Some(code.to_owned()),
+                    Some(_) => {
+                        return Err(ErrorKind::Other("gas currency already set".to_string()).into())
+                    }
+                },
                 Entry::SequenceNumber(sn) => match sequence_number {
                     None => sequence_number = Some(*sn),
                     Some(_) => {
@@ -230,6 +242,7 @@ impl<'a> Config<'a> {
             args: args.unwrap_or_else(|| vec![]),
             max_gas,
             gas_price,
+            gas_currency_code,
             sequence_number,
             expiration_time,
         })

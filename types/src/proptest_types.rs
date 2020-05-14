@@ -212,6 +212,7 @@ pub struct RawTransactionGen {
     payload: TransactionPayload,
     max_gas_amount: u64,
     gas_unit_price: u64,
+    gas_currency_code: String,
     expiration_time_secs: u64,
 }
 
@@ -232,6 +233,7 @@ impl RawTransactionGen {
             self.payload,
             self.max_gas_amount,
             self.gas_unit_price,
+            self.gas_currency_code,
             self.expiration_time_secs,
         )
     }
@@ -241,6 +243,7 @@ impl RawTransaction {
     fn strategy_impl(
         address_strategy: impl Strategy<Value = AccountAddress>,
         payload_strategy: impl Strategy<Value = TransactionPayload>,
+        gas_currency_code_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
         // XXX what other constraints do these need to obey?
         (
@@ -249,6 +252,7 @@ impl RawTransaction {
             payload_strategy,
             any::<u64>(),
             any::<u64>(),
+            gas_currency_code_strategy,
             any::<u64>(),
         )
             .prop_map(
@@ -258,6 +262,7 @@ impl RawTransaction {
                     payload,
                     max_gas_amount,
                     gas_unit_price,
+                    gas_currency_code,
                     expiration_time_secs,
                 )| {
                     new_raw_transaction(
@@ -266,6 +271,7 @@ impl RawTransaction {
                         payload,
                         max_gas_amount,
                         gas_unit_price,
+                        gas_currency_code,
                         expiration_time_secs,
                     )
                 },
@@ -279,6 +285,7 @@ fn new_raw_transaction(
     payload: TransactionPayload,
     max_gas_amount: u64,
     gas_unit_price: u64,
+    gas_currency_code: String,
     expiration_time_secs: u64,
 ) -> RawTransaction {
     match payload {
@@ -288,6 +295,7 @@ fn new_raw_transaction(
             TransactionPayload::Program,
             max_gas_amount,
             gas_unit_price,
+            gas_currency_code,
             Duration::from_secs(expiration_time_secs),
         ),
         TransactionPayload::Module(module) => RawTransaction::new_module(
@@ -296,6 +304,7 @@ fn new_raw_transaction(
             module,
             max_gas_amount,
             gas_unit_price,
+            gas_currency_code,
             Duration::from_secs(expiration_time_secs),
         ),
         TransactionPayload::Script(script) => RawTransaction::new_script(
@@ -304,6 +313,7 @@ fn new_raw_transaction(
             script,
             max_gas_amount,
             gas_unit_price,
+            gas_currency_code,
             Duration::from_secs(expiration_time_secs),
         ),
         TransactionPayload::WriteSet(write_set) => {
@@ -317,7 +327,12 @@ fn new_raw_transaction(
 impl Arbitrary for RawTransaction {
     type Parameters = ();
     fn arbitrary_with(_args: ()) -> Self::Strategy {
-        Self::strategy_impl(any::<AccountAddress>(), any::<TransactionPayload>()).boxed()
+        Self::strategy_impl(
+            any::<AccountAddress>(),
+            any::<TransactionPayload>(),
+            any::<String>(),
+        )
+        .boxed()
     }
 
     type Strategy = BoxedStrategy<Self>;
@@ -328,38 +343,67 @@ impl SignatureCheckedTransaction {
     // just one kind of them.
     pub fn script_strategy(
         keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
+        gas_currency_code_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
-        Self::strategy_impl(keypair_strategy, TransactionPayload::script_strategy())
+        Self::strategy_impl(
+            keypair_strategy,
+            TransactionPayload::script_strategy(),
+            gas_currency_code_strategy,
+        )
     }
 
     pub fn module_strategy(
         keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
+        gas_currency_code_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
-        Self::strategy_impl(keypair_strategy, TransactionPayload::module_strategy())
+        Self::strategy_impl(
+            keypair_strategy,
+            TransactionPayload::module_strategy(),
+            gas_currency_code_strategy,
+        )
     }
 
     pub fn write_set_strategy(
         keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
+        gas_currency_code_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
-        Self::strategy_impl(keypair_strategy, TransactionPayload::write_set_strategy())
+        Self::strategy_impl(
+            keypair_strategy,
+            TransactionPayload::write_set_strategy(),
+            gas_currency_code_strategy,
+        )
     }
 
     pub fn genesis_strategy(
         keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
+        gas_currency_code_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
-        Self::strategy_impl(keypair_strategy, TransactionPayload::genesis_strategy())
+        Self::strategy_impl(
+            keypair_strategy,
+            TransactionPayload::genesis_strategy(),
+            gas_currency_code_strategy,
+        )
     }
 
     fn strategy_impl(
         keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
         payload_strategy: impl Strategy<Value = TransactionPayload>,
+        gas_currency_code_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
-        (keypair_strategy, payload_strategy)
-            .prop_flat_map(|(keypair, payload)| {
+        (
+            keypair_strategy,
+            payload_strategy,
+            gas_currency_code_strategy,
+        )
+            .prop_flat_map(|(keypair, payload, gas_currency_code)| {
                 let address = account_address::from_public_key(&keypair.public_key);
                 (
                     Just(keypair),
-                    RawTransaction::strategy_impl(Just(address), Just(payload)),
+                    RawTransaction::strategy_impl(
+                        Just(address),
+                        Just(payload),
+                        Just(gas_currency_code),
+                    ),
                 )
             })
             .prop_flat_map(|(keypair, raw_txn)| {
@@ -402,7 +446,12 @@ impl SignatureCheckedTransactionGen {
 impl Arbitrary for SignatureCheckedTransaction {
     type Parameters = ();
     fn arbitrary_with(_args: ()) -> Self::Strategy {
-        Self::strategy_impl(ed25519::keypair_strategy(), any::<TransactionPayload>()).boxed()
+        Self::strategy_impl(
+            ed25519::keypair_strategy(),
+            any::<TransactionPayload>(),
+            any::<String>(),
+        )
+        .boxed()
     }
 
     type Strategy = BoxedStrategy<Self>;

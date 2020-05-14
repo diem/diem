@@ -15,6 +15,7 @@ pub fn create_unsigned_txn(
     sender_sequence_number: u64,
     max_gas_amount: u64,
     gas_unit_price: u64,
+    gas_currency_code: String,
     txn_expiration: i64, // for compatibility with UTC's timestamp.
 ) -> RawTransaction {
     RawTransaction::new(
@@ -23,6 +24,7 @@ pub fn create_unsigned_txn(
         payload,
         max_gas_amount,
         gas_unit_price,
+        gas_currency_code,
         std::time::Duration::new((Utc::now().timestamp() + txn_expiration) as u64, 0),
     )
 }
@@ -39,6 +41,7 @@ pub fn create_user_txn<T: TransactionSigner + ?Sized>(
     sender_sequence_number: u64,
     max_gas_amount: u64,
     gas_unit_price: u64,
+    gas_currency_code: String,
     txn_expiration: i64, // for compatibility with UTC's timestamp.
 ) -> Result<SignedTransaction> {
     let raw_txn = create_unsigned_txn(
@@ -47,6 +50,7 @@ pub fn create_user_txn<T: TransactionSigner + ?Sized>(
         sender_sequence_number,
         max_gas_amount,
         gas_unit_price,
+        gas_currency_code,
         txn_expiration,
     );
     signer.sign_txn(raw_txn)

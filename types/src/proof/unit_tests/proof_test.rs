@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    account_config::LBR_NAME,
     account_state_blob::AccountStateBlob,
     block_info::BlockInfo,
     ledger_info::LedgerInfo,
@@ -346,6 +347,7 @@ fn test_verify_account_state_and_event() {
             Script::new(vec![], vec![], vec![]),
             /* max_gas_amount = */ 0,
             /* gas_unit_price = */ 0,
+            /* gas_currency_code = */ LBR_NAME.to_owned(),
             /* expiration_time = */ std::time::Duration::new(0, 0),
         )
         .sign(&privkey, pubkey)

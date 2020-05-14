@@ -15,6 +15,7 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
+    account_config::LBR_NAME,
     block_metadata::BlockMetadata,
     on_chain_config::VMPublishingOption,
     transaction::{
@@ -263,6 +264,7 @@ struct TransactionParameters<'a> {
     pub sequence_number: u64,
     pub max_gas_amount: u64,
     pub gas_unit_price: u64,
+    pub gas_currency_code: String,
     pub expiration_time: Duration,
 }
 
@@ -274,6 +276,10 @@ fn get_transaction_parameters<'a>(
     let account_resource = exec.read_account_resource(config.sender).unwrap();
     let account_balance = exec.read_balance_resource(config.sender).unwrap();
     let gas_unit_price = config.gas_price.unwrap_or(0);
+    let gas_currency_code = config
+        .gas_currency_code
+        .clone()
+        .unwrap_or_else(|| LBR_NAME.to_owned());
     let max_number_of_gas_units = GasConstants::default().maximum_number_of_gas_units;
     let max_gas_amount = config.max_gas.unwrap_or_else(|| {
         if gas_unit_price == 0 {
@@ -295,6 +301,7 @@ fn get_transaction_parameters<'a>(
             .unwrap_or_else(|| account_resource.sequence_number()),
         max_gas_amount,
         gas_unit_price,
+        gas_currency_code,
         // TTL is 86400s. Initial time was set to 0.
         expiration_time: config
             .expiration_time
@@ -319,6 +326,7 @@ fn make_script_transaction(
         script,
         params.max_gas_amount,
         params.gas_unit_price,
+        params.gas_currency_code,
         params.expiration_time,
     )
     .sign(params.privkey, params.pubkey.clone())?
@@ -342,6 +350,7 @@ fn make_module_transaction(
         module,
         params.max_gas_amount,
         params.gas_unit_price,
+        params.gas_currency_code,
         params.expiration_time,
     )
     .sign(params.privkey, params.pubkey.clone())?

@@ -3,6 +3,7 @@
 
 use crate::{
     account_address::AccountAddress,
+    account_config::LBR_NAME,
     transaction::{Module, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction},
     write_set::WriteSet,
 };
@@ -34,6 +35,7 @@ pub fn get_test_signed_module_publishing_transaction(
         module,
         MAX_GAS_AMOUNT,
         TEST_GAS_PRICE,
+        LBR_NAME.to_owned(),
         Duration::from_secs(expiration_time),
     );
 
@@ -51,6 +53,7 @@ pub fn get_test_signed_transaction(
     script: Option<Script>,
     expiration_time: u64,
     gas_unit_price: u64,
+    gas_currency_code: String,
     max_gas_amount: Option<u64>,
 ) -> SignedTransaction {
     let raw_txn = RawTransaction::new_script(
@@ -59,6 +62,7 @@ pub fn get_test_signed_transaction(
         script.unwrap_or_else(|| Script::new(EMPTY_SCRIPT.to_vec(), vec![], Vec::new())),
         max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
         gas_unit_price,
+        gas_currency_code,
         Duration::from_secs(expiration_time),
     );
 
@@ -76,6 +80,7 @@ pub fn get_test_unchecked_transaction(
     script: Option<Script>,
     expiration_time: u64,
     gas_unit_price: u64,
+    gas_currency_code: String,
     max_gas_amount: Option<u64>,
 ) -> SignedTransaction {
     let raw_txn = RawTransaction::new_script(
@@ -84,6 +89,7 @@ pub fn get_test_unchecked_transaction(
         script.unwrap_or_else(|| Script::new(EMPTY_SCRIPT.to_vec(), vec![], Vec::new())),
         max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
         gas_unit_price,
+        gas_currency_code,
         Duration::from_secs(expiration_time),
     );
 
@@ -114,6 +120,7 @@ pub fn get_test_signed_txn(
         script,
         expiration_time,
         TEST_GAS_PRICE,
+        LBR_NAME.to_owned(),
         None,
     )
 }
@@ -138,6 +145,7 @@ pub fn get_test_unchecked_txn(
         script,
         expiration_time,
         TEST_GAS_PRICE,
+        LBR_NAME.to_owned(),
         None,
     )
 }
