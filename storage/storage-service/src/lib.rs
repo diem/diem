@@ -11,14 +11,14 @@
 use anyhow::Result;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
-use libradb::LibraDB;
-use std::{sync::Arc};
-use storage_interface::{DbReader, DbWriter, Error, StartupInfo};
 use libra_secure_net::NetworkServer;
 use libra_types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof};
+use libradb::LibraDB;
 use std::{
+    sync::Arc,
     thread::{self, JoinHandle},
 };
+use storage_interface::{DbReader, DbWriter, Error, StartupInfo};
 
 /// Starts storage service with a given LibraDB
 pub fn start_simple_storage_service_with_db(

@@ -34,7 +34,7 @@ use std::{
     time::{Duration, Instant},
 };
 use storage_interface::{DbReader, DbReaderWriter};
-use storage_service::{start_simple_storage_service_with_db};
+use storage_service::start_simple_storage_service_with_db;
 use subscription_service::ReconfigSubscription;
 use tokio::{
     runtime::{Builder, Handle, Runtime},
