@@ -24,6 +24,7 @@ impl Command for DevCommand {
             Box::new(DevCommandCompile {}),
             Box::new(DevCommandPublish {}),
             Box::new(DevCommandExecute {}),
+            Box::new(DevCommandUpgradeStdlib {}),
             Box::new(DevCommandAddValidator {}),
             Box::new(DevCommandRemoveValidator {}),
             Box::new(DevCommandGenWaypoint {}),
@@ -168,6 +169,33 @@ impl Command for DevCommandDisableCustomScript {
             return;
         }
         match client.disable_custom_script(params, true) {
+            Ok(_) => println!("Successfully finished execution"),
+            Err(e) => println!("{}", e),
+        }
+    }
+}
+
+pub struct DevCommandUpgradeStdlib {}
+
+impl Command for DevCommandUpgradeStdlib {
+    fn get_aliases(&self) -> Vec<&'static str> {
+        vec!["upgrade_stdlib"]
+    }
+
+    fn get_params_help(&self) -> &'static str {
+        ""
+    }
+
+    fn get_description(&self) -> &'static str {
+        "Upgrade the move stdlib used for the blockchain"
+    }
+
+    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
+        if params.len() != 1 {
+            println!("Invalid number of arguments");
+            return;
+        }
+        match client.upgrade_stdlib(params, true) {
             Ok(_) => println!("Successfully finished execution"),
             Err(e) => println!("{}", e),
         }

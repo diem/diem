@@ -4,15 +4,20 @@
 #![forbid(unsafe_code)]
 
 use libra_types::{
+    access_path::AccessPath,
     account_address::AccountAddress,
     block_metadata::BlockMetadata,
     on_chain_config::{LibraVersion, VMPublishingOption},
-    transaction::{authenticator::AuthenticationKey, Script, Transaction, TransactionArgument},
+    transaction::{
+        authenticator::AuthenticationKey, ChangeSet, Script, Transaction, TransactionArgument,
+    },
+    write_set::{WriteOp, WriteSetMut},
 };
 use mirai_annotations::*;
 use move_core_types::language_storage::TypeTag;
 use std::convert::TryFrom;
-use stdlib::transaction_scripts::StdlibScript;
+use stdlib::{transaction_scripts::StdlibScript, StdLibOptions};
+use vm::access::ModuleAccess;
 
 fn validate_auth_key_prefix(auth_key_prefix: &[u8]) {
     let auth_key_prefix_length = auth_key_prefix.len();
@@ -426,4 +431,27 @@ encode_txn_script! {
     script: RotateAuthenticationKeyWithNonce,
     doc: "Encode a program that rotates the sender's authentication key to `new_key`. `new_key`\
           should be a 256 bit sha3 hash of an ed25519 public key. This script also takes nonce"
+
+}
+//...........................................................................
+// WriteSets
+//...........................................................................
+
+pub fn encode_stdlib_upgrade_transaction(option: StdLibOptions) -> ChangeSet {
+    let mut write_set = WriteSetMut::new(vec![]);
+    let stdlib = stdlib::stdlib_modules(option);
+    for module in stdlib {
+        let mut bytes = vec![];
+        module
+            .serialize(&mut bytes)
+            .expect("Failed to serialize module");
+        write_set.push((
+            AccessPath::code_access_path(&module.self_id()),
+            WriteOp::Value(bytes),
+        ));
+    }
+    ChangeSet::new(
+        write_set.freeze().expect("Failed to create writeset"),
+        vec![],
+    )
 }

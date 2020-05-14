@@ -54,7 +54,7 @@ use std::{
     str::{self, FromStr},
     thread, time,
 };
-use stdlib::transaction_scripts::StdlibScript;
+use stdlib::{transaction_scripts::StdlibScript, StdLibOptions};
 use transaction_builder::encode_register_validator_script;
 
 const CLIENT_WALLET_MNEMONIC_FILE: &str = "client.mnemonic";
@@ -439,7 +439,10 @@ impl ClientProxy {
                         num_coins,
                     )
                 };
-                self.association_transaction_with_local_faucet_account(script, is_blocking)
+                self.association_transaction_with_local_faucet_account(
+                    TransactionPayload::Script(script),
+                    is_blocking,
+                )
             }
             None => self.mint_coins_with_faucet_service(
                 receiver_auth_key,
@@ -467,9 +470,9 @@ impl ClientProxy {
         );
         match self.faucet_account {
             Some(_) => self.association_transaction_with_local_faucet_account(
-                transaction_builder::encode_publishing_option_script(
+                TransactionPayload::Script(transaction_builder::encode_publishing_option_script(
                     VMPublishingOption::CustomScripts,
-                ),
+                )),
                 is_blocking,
             ),
             None => unimplemented!(),
@@ -493,9 +496,36 @@ impl ClientProxy {
         );
         match self.faucet_account {
             Some(_) => self.association_transaction_with_local_faucet_account(
-                transaction_builder::encode_publishing_option_script(VMPublishingOption::Locked(
-                    StdlibScript::whitelist(),
+                TransactionPayload::Script(transaction_builder::encode_publishing_option_script(
+                    VMPublishingOption::Locked(StdlibScript::whitelist()),
                 )),
+                is_blocking,
+            ),
+            None => unimplemented!(),
+        }
+    }
+
+    /// Only allow executing predefined script in the Move standard library in the network.
+    pub fn upgrade_stdlib(
+        &mut self,
+        space_delim_strings: &[&str],
+        is_blocking: bool,
+    ) -> Result<()> {
+        ensure!(
+            space_delim_strings[0] == "upgrade_stdlib",
+            "inconsistent command '{}' for upgrade_stdlib",
+            space_delim_strings[0]
+        );
+        ensure!(
+            space_delim_strings.len() == 1,
+            "Invalid number of arguments for upgrading_stdlib_transaction"
+        );
+
+        match self.faucet_account {
+            Some(_) => self.association_transaction_with_local_faucet_account(
+                TransactionPayload::WriteSet(
+                    transaction_builder::encode_stdlib_upgrade_transaction(StdLibOptions::Fresh),
+                ),
                 is_blocking,
             ),
             None => unimplemented!(),
@@ -1341,19 +1371,13 @@ impl ClientProxy {
 
     fn association_transaction_with_local_faucet_account(
         &mut self,
-        program: Script,
+        payload: TransactionPayload,
         is_blocking: bool,
     ) -> Result<()> {
         ensure!(self.faucet_account.is_some(), "No faucet account loaded");
         let sender = self.faucet_account.as_ref().unwrap();
         let sender_address = sender.address;
-        let txn = self.create_txn_to_submit(
-            TransactionPayload::Script(program),
-            sender,
-            None,
-            None,
-            None,
-        )?;
+        let txn = self.create_txn_to_submit(payload, sender, None, None, None)?;
         let mut sender_mut = self.faucet_account.as_mut().unwrap();
         let resp = self.client.submit_transaction(Some(&mut sender_mut), txn);
         if is_blocking {
