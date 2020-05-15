@@ -1073,6 +1073,11 @@
 <span id="1073">1073</span>
 <span id="1074">1074</span>
 <span id="1075">1075</span>
+<span id="1076">1076</span>
+<span id="1077">1077</span>
+<span id="1078">1078</span>
+<span id="1079">1079</span>
+<span id="1080">1080</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2101,6 +2106,11 @@
                     <span class="macro">vec</span><span class="macro">!</span>[],
                     <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">value_operand_index</span>],
                 ));
+            }
+
+            <span class="ident">MoveBytecode</span>::<span class="ident">MoveTo</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unimplemented</span><span class="macro">!</span>(<span class="string">&quot;Not yet supported instruction: MoveTo&quot;</span>),
+            <span class="ident">MoveBytecode</span>::<span class="ident">MoveToGeneric</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">unimplemented</span><span class="macro">!</span>(<span class="string">&quot;Not yet supported instruction: MoveToGeneric&quot;</span>)
             }
 
             <span class="ident">MoveBytecode</span>::<span class="ident">GetTxnSenderAddress</span> <span class="op">=</span><span class="op">&gt;</span> {

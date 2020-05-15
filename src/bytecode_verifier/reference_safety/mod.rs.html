@@ -339,6 +339,12 @@
 <span id="339">339</span>
 <span id="340">340</span>
 <span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -600,6 +606,12 @@
         <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">MoveToSender</span>(<span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">MoveToSenderGeneric</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="macro">checked_verify</span><span class="macro">!</span>(<span class="ident">verifier</span>.<span class="ident">stack</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>().<span class="ident">is_value</span>());
+        }
+        <span class="ident">Bytecode</span>::<span class="ident">MoveTo</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">MoveToGeneric</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="comment">// resource value</span>
+            <span class="macro">checked_verify</span><span class="macro">!</span>(<span class="ident">verifier</span>.<span class="ident">stack</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>().<span class="ident">is_value</span>());
+            <span class="comment">// signer reference</span>
+            <span class="ident">state</span>.<span class="ident">release_value</span>(<span class="ident">verifier</span>.<span class="ident">stack</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>());
         }
 
         <span class="ident">Bytecode</span>::<span class="ident">LdTrue</span> <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">LdFalse</span> <span class="op">=</span><span class="op">&gt;</span> {

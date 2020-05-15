@@ -187,6 +187,8 @@
 <span id="187">187</span>
 <span id="188">188</span>
 <span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -354,6 +356,8 @@
         <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">MoveFromGeneric</span>(<span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">MoveToSender</span>(<span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">MoveToSenderGeneric</span>(<span class="kw">_</span>)
+        <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">MoveTo</span>(<span class="kw">_</span>)
+        <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">MoveToGeneric</span>(<span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">GetTxnSenderAddress</span> <span class="op">=</span><span class="op">&gt;</span> (),
     };
     <span class="prelude-val">Ok</span>(())

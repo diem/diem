@@ -1238,6 +1238,14 @@
 <span id="1238">1238</span>
 <span id="1239">1239</span>
 <span id="1240">1240</span>
+<span id="1241">1241</span>
+<span id="1242">1242</span>
+<span id="1243">1243</span>
+<span id="1244">1244</span>
+<span id="1245">1245</span>
+<span id="1246">1246</span>
+<span id="1247">1247</span>
+<span id="1248">1248</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1951,6 +1959,10 @@
             <span class="ident">write_u16_as_uleb128</span>(<span class="ident">binary</span>, <span class="ident">class_idx</span>.<span class="number">0</span>)
         }
         <span class="ident">Bytecode</span>::<span class="ident">MoveToSender</span>(<span class="ident">class_idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_SENDER</span> <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>;
+            <span class="ident">write_u16_as_uleb128</span>(<span class="ident">binary</span>, <span class="ident">class_idx</span>.<span class="number">0</span>)
+        }
+        <span class="ident">Bytecode</span>::<span class="ident">MoveTo</span>(<span class="ident">class_idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_TO</span> <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>;
             <span class="ident">write_u16_as_uleb128</span>(<span class="ident">binary</span>, <span class="ident">class_idx</span>.<span class="number">0</span>)
         }
@@ -1971,6 +1983,10 @@
             <span class="ident">write_u16_as_uleb128</span>(<span class="ident">binary</span>, <span class="ident">class_idx</span>.<span class="number">0</span>)
         }
         <span class="ident">Bytecode</span>::<span class="ident">MoveToSenderGeneric</span>(<span class="ident">class_idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_SENDER_GENERIC</span> <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>;
+            <span class="ident">write_u16_as_uleb128</span>(<span class="ident">binary</span>, <span class="ident">class_idx</span>.<span class="number">0</span>)
+        }
+        <span class="ident">Bytecode</span>::<span class="ident">MoveToGeneric</span>(<span class="ident">class_idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">binary</span>.<span class="ident">push</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_GENERIC</span> <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>;
             <span class="ident">write_u16_as_uleb128</span>(<span class="ident">binary</span>, <span class="ident">class_idx</span>.<span class="number">0</span>)
         }

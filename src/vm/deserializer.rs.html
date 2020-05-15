@@ -1372,6 +1372,16 @@
 <span id="1372">1372</span>
 <span id="1373">1373</span>
 <span id="1374">1374</span>
+<span id="1375">1375</span>
+<span id="1376">1376</span>
+<span id="1377">1377</span>
+<span id="1378">1378</span>
+<span id="1379">1379</span>
+<span id="1380">1380</span>
+<span id="1381">1381</span>
+<span id="1382">1382</span>
+<span id="1383">1383</span>
+<span id="1384">1384</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2550,13 +2560,21 @@
                 <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
                 <span class="ident">Bytecode</span>::<span class="ident">MoveFromGeneric</span>(<span class="ident">StructDefInstantiationIndex</span>(<span class="ident">idx</span>))
             }
-            <span class="ident">Opcodes</span>::<span class="ident">MOVE_TO</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_SENDER</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
                 <span class="ident">Bytecode</span>::<span class="ident">MoveToSender</span>(<span class="ident">StructDefinitionIndex</span>(<span class="ident">idx</span>))
             }
-            <span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_GENERIC</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_SENDER_GENERIC</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
                 <span class="ident">Bytecode</span>::<span class="ident">MoveToSenderGeneric</span>(<span class="ident">StructDefInstantiationIndex</span>(<span class="ident">idx</span>))
+            }
+            <span class="ident">Opcodes</span>::<span class="ident">MOVE_TO</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
+                <span class="ident">Bytecode</span>::<span class="ident">MoveTo</span>(<span class="ident">StructDefinitionIndex</span>(<span class="ident">idx</span>))
+            }
+            <span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_GENERIC</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
+                <span class="ident">Bytecode</span>::<span class="ident">MoveToGeneric</span>(<span class="ident">StructDefInstantiationIndex</span>(<span class="ident">idx</span>))
             }
             <span class="ident">Opcodes</span>::<span class="ident">FREEZE_REF</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">FreezeRef</span>,
             <span class="ident">Opcodes</span>::<span class="ident">NOP</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">Nop</span>,
@@ -2723,7 +2741,7 @@
             <span class="number">0x2A</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MUT_BORROW_GLOBAL</span>),
             <span class="number">0x2B</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">IMM_BORROW_GLOBAL</span>),
             <span class="number">0x2C</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_FROM</span>),
-            <span class="number">0x2D</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_TO</span>),
+            <span class="number">0x2D</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_SENDER</span>),
             <span class="number">0x2E</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">FREEZE_REF</span>),
             <span class="number">0x2F</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">SHL</span>),
             <span class="number">0x30</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">SHR</span>),
@@ -2741,8 +2759,10 @@
             <span class="number">0x3C</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MUT_BORROW_GLOBAL_GENERIC</span>),
             <span class="number">0x3D</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">IMM_BORROW_GLOBAL_GENERIC</span>),
             <span class="number">0x3E</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_FROM_GENERIC</span>),
-            <span class="number">0x3F</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_GENERIC</span>),
+            <span class="number">0x3F</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_SENDER_GENERIC</span>),
             <span class="number">0x40</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">NOP</span>),
+            <span class="number">0x41</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_TO</span>),
+            <span class="number">0x42</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_GENERIC</span>),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_OPCODE</span>)),
         }
     }

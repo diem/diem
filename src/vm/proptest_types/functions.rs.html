@@ -655,6 +655,14 @@
 <span id="655">655</span>
 <span id="656">656</span>
 <span id="657">657</span>
+<span id="658">658</span>
+<span id="659">659</span>
+<span id="660">660</span>
+<span id="661">661</span>
+<span id="662">662</span>
+<span id="663">663</span>
+<span id="664">664</span>
+<span id="665">665</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1097,6 +1105,8 @@
     <span class="ident">MoveFromGeneric</span>(<span class="ident">PropIndex</span>),
     <span class="ident">MoveToSender</span>(<span class="ident">PropIndex</span>),
     <span class="ident">MoveToSenderGeneric</span>(<span class="ident">PropIndex</span>),
+    <span class="ident">MoveTo</span>(<span class="ident">PropIndex</span>),
+    <span class="ident">MoveToGeneric</span>(<span class="ident">PropIndex</span>),
     <span class="ident">BrTrue</span>(<span class="ident">PropIndex</span>),
     <span class="ident">BrFalse</span>(<span class="ident">PropIndex</span>),
     <span class="ident">Branch</span>(<span class="ident">PropIndex</span>),
@@ -1136,6 +1146,8 @@
             <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">PropIndex</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">MoveFromGeneric</span>),
             <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">PropIndex</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">MoveToSender</span>),
             <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">PropIndex</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">MoveToSenderGeneric</span>),
+            <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">PropIndex</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">MoveTo</span>),
+            <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">PropIndex</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">MoveToGeneric</span>),
             <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">PropIndex</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">BrTrue</span>),
             <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">PropIndex</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">BrFalse</span>),
             <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">PropIndex</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">Branch</span>),
@@ -1219,6 +1231,10 @@
                 <span class="ident">idx</span>.<span class="ident">index</span>(<span class="ident">state</span>.<span class="ident">struct_defs_len</span>) <span class="kw">as</span> <span class="ident">TableIndex</span>,
             )),
             <span class="ident">BytecodeGen</span>::<span class="ident">MoveToSenderGeneric</span>(<span class="ident">_idx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">None</span>,
+            <span class="ident">BytecodeGen</span>::<span class="ident">MoveTo</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">MoveTo</span>(<span class="ident">StructDefinitionIndex</span>(
+                <span class="ident">idx</span>.<span class="ident">index</span>(<span class="ident">state</span>.<span class="ident">struct_defs_len</span>) <span class="kw">as</span> <span class="ident">TableIndex</span>,
+            )),
+            <span class="ident">BytecodeGen</span>::<span class="ident">MoveToGeneric</span>(<span class="ident">_idx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">None</span>,
             <span class="ident">BytecodeGen</span>::<span class="ident">BrTrue</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">if</span> <span class="ident">code_len</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
                     <span class="kw">return</span> <span class="prelude-val">None</span>;

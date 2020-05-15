@@ -574,6 +574,24 @@
 <span id="574">574</span>
 <span id="575">575</span>
 <span id="576">576</span>
+<span id="577">577</span>
+<span id="578">578</span>
+<span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1093,6 +1111,24 @@
                 <span class="macro">state_memory_safe</span><span class="macro">!</span>(<span class="prelude-val">None</span>),
             ],
             <span class="ident">effects</span>: <span class="ident">Effects</span>::<span class="ident">NoTyParams</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="macro">state_stack_pop</span><span class="macro">!</span>()]),
+        },
+        <span class="ident">Bytecode</span>::<span class="ident">MoveTo</span>(<span class="ident">i</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Summary</span> {
+            <span class="ident">preconditions</span>: <span class="macro">vec</span><span class="macro">!</span>[
+                <span class="macro">state_stack_has_reference</span><span class="macro">!</span>(<span class="number">1</span>, <span class="ident">Mutability</span>::<span class="ident">Immutable</span>),
+                <span class="macro">state_struct_is_resource</span><span class="macro">!</span>(<span class="ident">i</span>),
+                <span class="macro">state_stack_has_struct</span><span class="macro">!</span>(<span class="ident">i</span>),
+                <span class="macro">state_memory_safe</span><span class="macro">!</span>(<span class="prelude-val">None</span>),
+            ],
+            <span class="ident">effects</span>: <span class="ident">Effects</span>::<span class="ident">NoTyParams</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="macro">state_stack_pop</span><span class="macro">!</span>(), <span class="macro">state_stack_pop</span><span class="macro">!</span>()]),
+        },
+        <span class="ident">Bytecode</span>::<span class="ident">MoveToGeneric</span>(<span class="ident">i</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Summary</span> {
+            <span class="ident">preconditions</span>: <span class="macro">vec</span><span class="macro">!</span>[
+                <span class="macro">state_stack_has_reference</span><span class="macro">!</span>(<span class="number">1</span>, <span class="ident">Mutability</span>::<span class="ident">Immutable</span>),
+                <span class="macro">state_struct_inst_is_resource</span><span class="macro">!</span>(<span class="ident">i</span>),
+                <span class="macro">state_stack_has_struct_inst</span><span class="macro">!</span>(<span class="ident">i</span>),
+                <span class="macro">state_memory_safe</span><span class="macro">!</span>(<span class="prelude-val">None</span>),
+            ],
+            <span class="ident">effects</span>: <span class="ident">Effects</span>::<span class="ident">NoTyParams</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="macro">state_stack_pop</span><span class="macro">!</span>(), <span class="macro">state_stack_pop</span><span class="macro">!</span>()]),
         },
         <span class="ident">Bytecode</span>::<span class="ident">Call</span>(<span class="ident">i</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Summary</span> {
             <span class="ident">preconditions</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="macro">state_stack_satisfies_function_signature</span><span class="macro">!</span>(<span class="ident">i</span>)],

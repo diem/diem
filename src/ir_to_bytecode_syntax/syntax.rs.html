@@ -2113,6 +2113,15 @@
 <span id="2113">2113</span>
 <span id="2114">2114</span>
 <span id="2115">2115</span>
+<span id="2116">2116</span>
+<span id="2117">2117</span>
+<span id="2118">2118</span>
+<span id="2119">2119</span>
+<span id="2120">2120</span>
+<span id="2121">2121</span>
+<span id="2122">2122</span>
+<span id="2123">2123</span>
+<span id="2124">2124</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2508,6 +2517,7 @@
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">GetTxnSender</span>
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">MoveFrom</span>
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">MoveToSender</span>
+        <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">MoveTo</span>
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">Freeze</span>
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">ToU8</span>
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">ToU64</span>
@@ -2646,6 +2656,7 @@
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">GetTxnSender</span>
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">MoveFrom</span>
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">MoveToSender</span>
+        <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">MoveTo</span>
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">Freeze</span>
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">DotNameValue</span>
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">ToU8</span>
@@ -2860,6 +2871,12 @@
             <span class="ident">consume_end_of_generics</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(<span class="ident">Builtin</span>::<span class="ident">MoveToSender</span>(<span class="ident">StructName</span>::<span class="ident">new</span>(<span class="ident">name</span>), <span class="ident">type_actuals</span>))
         }
+        <span class="ident">Tok</span>::<span class="ident">MoveTo</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">tokens</span>.<span class="ident">advance</span>()<span class="question-mark">?</span>;
+            <span class="kw">let</span> (<span class="ident">name</span>, <span class="ident">type_actuals</span>) <span class="op">=</span> <span class="ident">parse_name_and_type_actuals</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>;
+            <span class="ident">consume_end_of_generics</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>;
+            <span class="prelude-val">Ok</span>(<span class="ident">Builtin</span>::<span class="ident">MoveTo</span>(<span class="ident">StructName</span>::<span class="ident">new</span>(<span class="ident">name</span>), <span class="ident">type_actuals</span>))
+        }
         <span class="ident">Tok</span>::<span class="ident">Freeze</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">tokens</span>.<span class="ident">advance</span>()<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(<span class="ident">Builtin</span>::<span class="ident">Freeze</span>)
@@ -3039,6 +3056,7 @@
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">GetTxnSender</span>
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">MoveFrom</span>
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">MoveToSender</span>
+        <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">MoveTo</span>
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">Freeze</span>
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">DotNameValue</span>
         <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">ToU8</span>

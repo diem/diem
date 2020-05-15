@@ -144,6 +144,16 @@
 <span id="144">144</span>
 <span id="145">145</span>
 <span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -171,6 +181,16 @@
         (
             <span class="ident">MoveToSenderGeneric</span>(<span class="ident">StructDefInstantiationIndex</span>::<span class="ident">new</span>(<span class="number">0</span>)),
             <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">774</span>, <span class="number">1</span>),
+        ),
+        (
+            <span class="ident">MoveTo</span>(<span class="ident">StructDefinitionIndex</span>::<span class="ident">new</span>(<span class="number">0</span>)),
+            <span class="comment">/* MoveToSender + ReadRef == 774 + 51 == 825 */</span>
+            <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">825</span>, <span class="number">1</span>),
+        ),
+        (
+            <span class="ident">MoveToGeneric</span>(<span class="ident">StructDefInstantiationIndex</span>::<span class="ident">new</span>(<span class="number">0</span>)),
+            <span class="comment">/* MoveToSender + ReadRef == 774 + 51 == 825 */</span>
+            <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">825</span>, <span class="number">1</span>),
         ),
         (<span class="ident">GetTxnSenderAddress</span>, <span class="ident">GasCost</span>::<span class="ident">new</span>(<span class="number">30</span>, <span class="number">1</span>)),
         (

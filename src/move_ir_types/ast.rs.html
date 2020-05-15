@@ -1835,6 +1835,9 @@
 <span id="1835">1835</span>
 <span id="1836">1836</span>
 <span id="1837">1837</span>
+<span id="1838">1838</span>
+<span id="1839">1839</span>
+<span id="1840">1840</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2196,6 +2199,8 @@
     <span class="ident">MoveFrom</span>(<span class="ident">StructName</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
     <span class="doccomment">/// Publish an instantiated struct object into sender&#39;s account.</span>
     <span class="ident">MoveToSender</span>(<span class="ident">StructName</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
+    <span class="doccomment">/// Publish an instantiated struct object into signer&#39;s (signer is the first arg) account.</span>
+    <span class="ident">MoveTo</span>(<span class="ident">StructName</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
 
     <span class="doccomment">/// Convert a mutable reference into an immutable one</span>
     <span class="ident">Freeze</span>,
@@ -3362,6 +3367,7 @@
             <span class="ident">Builtin</span>::<span class="ident">MoveToSender</span>(<span class="ident">t</span>, <span class="ident">tys</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;move_to_sender&lt;{}{}&gt;&quot;</span>, <span class="ident">t</span>, <span class="ident">format_type_actuals</span>(<span class="ident">tys</span>))
             }
+            <span class="ident">Builtin</span>::<span class="ident">MoveTo</span>(<span class="ident">t</span>, <span class="ident">tys</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;move_to&lt;{}{}&gt;&quot;</span>, <span class="ident">t</span>, <span class="ident">format_type_actuals</span>(<span class="ident">tys</span>)),
             <span class="ident">Builtin</span>::<span class="ident">Freeze</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;freeze&quot;</span>),
             <span class="ident">Builtin</span>::<span class="ident">ToU8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;to_u8&quot;</span>),
             <span class="ident">Builtin</span>::<span class="ident">ToU64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;to_u64&quot;</span>),

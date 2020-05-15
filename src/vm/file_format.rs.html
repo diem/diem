@@ -1902,6 +1902,17 @@
 <span id="1902">1902</span>
 <span id="1903">1903</span>
 <span id="1904">1904</span>
+<span id="1905">1905</span>
+<span id="1906">1906</span>
+<span id="1907">1907</span>
+<span id="1908">1908</span>
+<span id="1909">1909</span>
+<span id="1910">1910</span>
+<span id="1911">1911</span>
+<span id="1912">1912</span>
+<span id="1913">1913</span>
+<span id="1914">1914</span>
+<span id="1915">1915</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -3053,6 +3064,15 @@
     <span class="doccomment">/// ```..., value -&gt; ...```</span>
     <span class="ident">MoveToSender</span>(<span class="ident">StructDefinitionIndex</span>),
     <span class="ident">MoveToSenderGeneric</span>(<span class="ident">StructDefInstantiationIndex</span>),
+    <span class="doccomment">/// Move the instance at the top of the stack to the address of the `Signer` on the stack below</span>
+    <span class="doccomment">/// it</span>
+    <span class="doccomment">/// Abort execution if an object of type StructDefinitionIndex already exists in address.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Stack transition:</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// ```..., signer_value, value -&gt; ...```</span>
+    <span class="ident">MoveTo</span>(<span class="ident">StructDefinitionIndex</span>),
+    <span class="ident">MoveToGeneric</span>(<span class="ident">StructDefInstantiationIndex</span>),
     <span class="doccomment">/// Shift the (second top value) left (top value) bits and pushes the result on the stack.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Stack transition:</span>
@@ -3139,6 +3159,8 @@
             <span class="ident">Bytecode</span>::<span class="ident">MoveFromGeneric</span>(<span class="ident">a</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;MoveFromGeneric({:?})&quot;</span>, <span class="ident">a</span>),
             <span class="ident">Bytecode</span>::<span class="ident">MoveToSender</span>(<span class="ident">a</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;MoveToSender({:?})&quot;</span>, <span class="ident">a</span>),
             <span class="ident">Bytecode</span>::<span class="ident">MoveToSenderGeneric</span>(<span class="ident">a</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;MoveToSenderGeneric({:?})&quot;</span>, <span class="ident">a</span>),
+            <span class="ident">Bytecode</span>::<span class="ident">MoveTo</span>(<span class="ident">a</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;MoveTo({:?})&quot;</span>, <span class="ident">a</span>),
+            <span class="ident">Bytecode</span>::<span class="ident">MoveToGeneric</span>(<span class="ident">a</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;MoveToGeneric({:?})&quot;</span>, <span class="ident">a</span>),
             <span class="ident">Bytecode</span>::<span class="ident">Nop</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Nop&quot;</span>),
         }
     }

@@ -418,6 +418,10 @@
 <span id="418">418</span>
 <span id="419">419</span>
 <span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -576,7 +580,7 @@
     <span class="ident">MUT_BORROW_GLOBAL</span>           <span class="op">=</span> <span class="number">0x2A</span>,
     <span class="ident">IMM_BORROW_GLOBAL</span>           <span class="op">=</span> <span class="number">0x2B</span>,
     <span class="ident">MOVE_FROM</span>                   <span class="op">=</span> <span class="number">0x2C</span>,
-    <span class="ident">MOVE_TO</span>                     <span class="op">=</span> <span class="number">0x2D</span>,
+    <span class="ident">MOVE_TO_SENDER</span>              <span class="op">=</span> <span class="number">0x2D</span>,
     <span class="ident">FREEZE_REF</span>                  <span class="op">=</span> <span class="number">0x2E</span>,
     <span class="ident">SHL</span>                         <span class="op">=</span> <span class="number">0x2F</span>,
     <span class="ident">SHR</span>                         <span class="op">=</span> <span class="number">0x30</span>,
@@ -594,8 +598,10 @@
     <span class="ident">MUT_BORROW_GLOBAL_GENERIC</span>   <span class="op">=</span> <span class="number">0x3C</span>,
     <span class="ident">IMM_BORROW_GLOBAL_GENERIC</span>   <span class="op">=</span> <span class="number">0x3D</span>,
     <span class="ident">MOVE_FROM_GENERIC</span>           <span class="op">=</span> <span class="number">0x3E</span>,
-    <span class="ident">MOVE_TO_GENERIC</span>             <span class="op">=</span> <span class="number">0x3F</span>,
+    <span class="ident">MOVE_TO_SENDER_GENERIC</span>      <span class="op">=</span> <span class="number">0x3F</span>,
     <span class="ident">NOP</span>                         <span class="op">=</span> <span class="number">0x40</span>,
+    <span class="ident">MOVE_TO</span>                     <span class="op">=</span> <span class="number">0x41</span>,
+    <span class="ident">MOVE_TO_GENERIC</span>             <span class="op">=</span> <span class="number">0x42</span>,
 }
 
 <span class="doccomment">/// Upper limit on the binary size</span>
@@ -833,9 +839,11 @@
         <span class="ident">ExistsGeneric</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Opcodes</span>::<span class="ident">EXISTS_GENERIC</span>,
         <span class="ident">MoveFrom</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Opcodes</span>::<span class="ident">MOVE_FROM</span>,
         <span class="ident">MoveFromGeneric</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Opcodes</span>::<span class="ident">MOVE_FROM_GENERIC</span>,
-        <span class="ident">MoveToSender</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Opcodes</span>::<span class="ident">MOVE_TO</span>,
-        <span class="ident">MoveToSenderGeneric</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_GENERIC</span>,
+        <span class="ident">MoveToSender</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_SENDER</span>,
+        <span class="ident">MoveToSenderGeneric</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_SENDER_GENERIC</span>,
         <span class="ident">Nop</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Opcodes</span>::<span class="ident">NOP</span>,
+        <span class="ident">MoveTo</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Opcodes</span>::<span class="ident">MOVE_TO</span>,
+        <span class="ident">MoveToGeneric</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Opcodes</span>::<span class="ident">MOVE_TO_GENERIC</span>,
     };
     <span class="ident">opcode</span> <span class="kw">as</span> <span class="ident">u8</span>
 }

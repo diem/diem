@@ -475,6 +475,7 @@
 <span id="475">475</span>
 <span id="476">476</span>
 <span id="477">477</span>
+<span id="478">478</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -774,7 +775,7 @@
                     }
                 }
                 <span class="ident">Pack</span>(<span class="ident">idx</span>) <span class="op">|</span> <span class="ident">Unpack</span>(<span class="ident">idx</span>) <span class="op">|</span> <span class="ident">Exists</span>(<span class="ident">idx</span>) <span class="op">|</span> <span class="ident">ImmBorrowGlobal</span>(<span class="ident">idx</span>)
-                <span class="op">|</span> <span class="ident">MutBorrowGlobal</span>(<span class="ident">idx</span>) <span class="op">|</span> <span class="ident">MoveFrom</span>(<span class="ident">idx</span>) <span class="op">|</span> <span class="ident">MoveToSender</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="op">|</span> <span class="ident">MutBorrowGlobal</span>(<span class="ident">idx</span>) <span class="op">|</span> <span class="ident">MoveFrom</span>(<span class="ident">idx</span>) <span class="op">|</span> <span class="ident">MoveToSender</span>(<span class="ident">idx</span>) <span class="op">|</span> <span class="ident">MoveTo</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="ident">check_code_unit_bounds_impl</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module</span>.<span class="ident">struct_defs</span>, <span class="ident">bytecode_offset</span>, <span class="kw-2">*</span><span class="ident">idx</span>)<span class="question-mark">?</span>
                 }
                 <span class="ident">PackGeneric</span>(<span class="ident">idx</span>)
@@ -783,6 +784,7 @@
                 <span class="op">|</span> <span class="ident">ImmBorrowGlobalGeneric</span>(<span class="ident">idx</span>)
                 <span class="op">|</span> <span class="ident">MutBorrowGlobalGeneric</span>(<span class="ident">idx</span>)
                 <span class="op">|</span> <span class="ident">MoveFromGeneric</span>(<span class="ident">idx</span>)
+                <span class="op">|</span> <span class="ident">MoveToGeneric</span>(<span class="ident">idx</span>)
                 <span class="op">|</span> <span class="ident">MoveToSenderGeneric</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="ident">check_code_unit_bounds_impl</span>(
                         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module</span>.<span class="ident">struct_def_instantiations</span>,

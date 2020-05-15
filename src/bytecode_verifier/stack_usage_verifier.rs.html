@@ -360,8 +360,8 @@
             <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">Le</span>
             <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">Ge</span> <span class="op">=</span><span class="op">&gt;</span> (<span class="number">2</span>, <span class="number">1</span>),
 
-            <span class="comment">// WriteRef pops twice but does not push</span>
-            <span class="ident">Bytecode</span>::<span class="ident">WriteRef</span> <span class="op">=</span><span class="op">&gt;</span> (<span class="number">2</span>, <span class="number">0</span>),
+            <span class="comment">// MoveTo and WriteRef pop twice but do not push</span>
+            <span class="ident">Bytecode</span>::<span class="ident">MoveTo</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">MoveToGeneric</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">WriteRef</span> <span class="op">=</span><span class="op">&gt;</span> (<span class="number">2</span>, <span class="number">0</span>),
 
             <span class="comment">// Branch and Nop neither pops nor pushes</span>
             <span class="ident">Bytecode</span>::<span class="ident">Branch</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">Nop</span> <span class="op">=</span><span class="op">&gt;</span> (<span class="number">0</span>, <span class="number">0</span>),
