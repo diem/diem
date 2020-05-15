@@ -35,6 +35,7 @@ module TransactionFee {
         });
     }
 
+    // Called from block metadata transaction for each currency
     public fun distribute_transaction_fees<Token>() acquires TransactionFees {
       // Can only be invoked by LibraVM privilege.
       Transaction::assert(Transaction::sender() == 0x0, 33);
