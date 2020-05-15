@@ -104,13 +104,14 @@ impl<T: Payload> SafetyRules<T> {
     /// @TODO if public key does not match private key in validator set, access persistent storage
     /// to identify new key
     fn start_new_epoch(&mut self, ledger_info: &LedgerInfo) -> Result<(), Error> {
-        let epoch_info = ledger_info.next_epoch_info().cloned();
-        self.validator_verifier = Some(epoch_info.ok_or(Error::InvalidLedgerInfo)?.verifier);
-
+        let epoch_info = ledger_info
+            .next_epoch_info()
+            .cloned()
+            .ok_or(Error::InvalidLedgerInfo)?;
+        self.validator_verifier = Some(epoch_info.verifier);
         let current_epoch = self.persistent_storage.epoch()?;
-        let next_epoch = ledger_info.epoch() + 1;
 
-        if current_epoch < next_epoch {
+        if current_epoch < epoch_info.epoch {
             // This is ordered specifically to avoid configuration issues:
             // * First set the waypoint to lock in the minimum restarting point,
             // * set the round information,
@@ -120,7 +121,7 @@ impl<T: Payload> SafetyRules<T> {
                 .set_waypoint(&Waypoint::new_epoch_boundary(ledger_info)?)?;
             self.persistent_storage.set_last_voted_round(0)?;
             self.persistent_storage.set_preferred_round(0)?;
-            self.persistent_storage.set_epoch(ledger_info.epoch() + 1)?;
+            self.persistent_storage.set_epoch(epoch_info.epoch)?;
         }
 
         Ok(())
