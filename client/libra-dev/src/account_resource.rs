@@ -19,10 +19,10 @@ pub fn libra_LibraAccountResource_from_safe(
             // TODO/XXX: Need to get all of the currencies held by this account here.
             let lbr_currency_code =
                 account_config::from_currency_code_string(account_config::LBR_NAME).unwrap();
-            if let Ok(mut balance_resources) =
-                account_state.get_balance_resources(&[lbr_currency_code])
+            if let Ok(balance_resources) =
+                account_state.get_balance_resources(&[lbr_currency_code.clone()])
             {
-                if let Some(balance_resource) = balance_resources.pop() {
+                if let Some(balance_resource) = balance_resources.get(&lbr_currency_code) {
                     let mut authentication_key = [0u8; ED25519_PUBLIC_KEY_LENGTH];
                     authentication_key.copy_from_slice(account_resource.authentication_key());
 
@@ -111,7 +111,6 @@ mod tests {
             EventHandle::new(EventKey::new_from_address(&addr, 0), 777),
             EventHandle::new(EventKey::new_from_address(&addr, 0), 888),
             false,
-            from_currency_code_string(LBR_NAME).unwrap(),
         );
         let br = BalanceResource::new(100);
 
@@ -124,7 +123,7 @@ mod tests {
             // TODO: Need to update this to use BalanceResource::resource_path path once we can
             // pass type arguments to it.
             BalanceResource::access_path_for(type_tag_for_currency_code(
-                ar.balance_currency_code().to_owned(),
+                from_currency_code_string(LBR_NAME).unwrap(),
             )),
             lcs::to_bytes(&br).expect("Balance resource lcs serialization was not successful"),
         );

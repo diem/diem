@@ -8,6 +8,7 @@
 //! sender: bob
 //! gas-price: 0
 //! max-gas: 100000
+//! gas-currency: Coin1
 script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
@@ -24,6 +25,7 @@ fun main() {
 //! sender: alice
 //! gas-price: 0
 //! max-gas: 100000
+//! gas-currency: Coin1
 script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
@@ -41,6 +43,7 @@ fun main() {
 //! sender: gary
 //! gas-price: 0
 //! max-gas: 100000
+//! gas-currency: Coin1
 script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
@@ -53,6 +56,7 @@ fun main() {
 //! sender: bob
 //! gas-price: 0
 //! max-gas: 100000
+//! gas-currency: Coin1
 script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
@@ -65,6 +69,7 @@ fun main() {
 //! sender: alice
 //! gas-price: 0
 //! max-gas: 100000
+//! gas-currency: Coin1
 script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
@@ -77,6 +82,7 @@ fun main() {
 //! sender: vivian
 //! gas-price: 0
 //! max-gas: 100000
+//! gas-currency: Coin1
 script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
@@ -89,6 +95,7 @@ fun main() {
 //! sender: gary
 //! gas-price: 0
 //! max-gas: 1000000
+//! gas-currency: Coin1
 script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
@@ -106,6 +113,7 @@ fun main() {
 //! sender: vivian
 //! gas-price: 0
 //! max-gas: 1000000
+//! gas-currency: Coin1
 script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
@@ -121,6 +129,7 @@ fun main() {
 //! sender: vivian
 //! gas-price: 0
 //! max-gas: 1000000
+//! gas-currency: Coin1
 script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
@@ -143,6 +152,7 @@ fun main() {
 //! sender: nope
 //! gas-price: 0
 //! max-gas: 100000
+//! gas-currency: Coin1
 script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
@@ -155,6 +165,7 @@ fun main() {
 //! sender: nope
 //! gas-price: 0
 //! max-gas: 100000
+//! gas-currency: Coin1
 script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
@@ -171,6 +182,7 @@ fun main() {
 //! sender: nope
 //! gas-price: 0
 //! max-gas: 100000
+//! gas-currency: Coin1
 script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;

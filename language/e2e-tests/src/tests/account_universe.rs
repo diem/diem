@@ -6,6 +6,7 @@ mod peer_to_peer;
 mod rotate_key;
 
 use crate::{
+    account,
     account_universe::{
         default_num_accounts, default_num_transactions, log_balance_strategy, AUTransactionGen,
         AccountCurrent, AccountPairGen, AccountPickStyle, AccountUniverse, AccountUniverseGen,
@@ -159,9 +160,12 @@ pub(crate) fn assert_accounts_match(
     executor: &FakeExecutor,
 ) -> Result<(), TestCaseError> {
     for (idx, account) in universe.accounts().iter().enumerate() {
-        let (resource, resource_balance) = executor
-            .read_account_info(&account.account())
-            .expect("resource for this account must exist");
+        let resource = executor
+            .read_account_resource(&account.account())
+            .expect("account resource must exist");
+        let resource_balance = executor
+            .read_balance_resource(account.account(), account::lbr_currency_code())
+            .expect("account balance resource must exist");
         let auth_key = account.account().auth_key();
         prop_assert_eq!(
             auth_key.as_slice(),

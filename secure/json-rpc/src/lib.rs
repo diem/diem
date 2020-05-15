@@ -275,7 +275,7 @@ mod test {
     use libra_json_rpc::bootstrap;
     use libra_types::{
         account_address::AccountAddress,
-        account_config::{from_currency_code_string, AccountResource, BalanceResource, LBR_NAME},
+        account_config::{AccountResource, BalanceResource},
         account_state::AccountState,
         account_state_blob::{AccountStateBlob, AccountStateWithProof},
         block_info::BlockInfo,
@@ -482,7 +482,6 @@ mod test {
             EventHandle::random_handle(100),
             EventHandle::random_handle(100),
             false,
-            from_currency_code_string(LBR_NAME).unwrap(),
         )
     }
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account::{Account, AccountData},
+    account::{self, Account, AccountData},
     executor::FakeExecutor,
 };
 use libra_types::{
@@ -51,8 +51,11 @@ fn verify_and_execute_writeset() {
 
     executor.apply_write_set(output.write_set());
 
-    let (updated_sender, updated_sender_balance) = executor
-        .read_account_info(new_account_data.account())
+    let updated_sender = executor
+        .read_account_resource(new_account_data.account())
+        .expect("sender must exist");
+    let updated_sender_balance = executor
+        .read_balance_resource(new_account_data.account(), account::lbr_currency_code())
         .expect("sender balance must exist");
 
     assert_eq!(1000, updated_sender_balance.coin());

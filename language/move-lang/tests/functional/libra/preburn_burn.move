@@ -25,6 +25,7 @@ fun main() {
 //! sender: preburner
 //! max-gas: 1000000
 //! gas-price: 0
+//! gas-currency: Coin1
 script {
 use 0x0::Coin1;
 use 0x0::Libra;
@@ -40,6 +41,7 @@ fun main() {
 //! sender: preburner
 //! max-gas: 1000000
 //! gas-price: 0
+//! gas-currency: Coin1
 script {
 use 0x0::Coin1;
 use 0x0::Libra;

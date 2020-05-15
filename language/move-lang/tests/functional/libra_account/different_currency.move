@@ -3,6 +3,7 @@
 //! new-transaction
 //! sender: bob
 //! gas-price: 0
+//! gas-currency: Coin1
 script {
 fun main() {
 }

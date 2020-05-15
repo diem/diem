@@ -17,10 +17,12 @@ use libra_types::{
     vm_error::StatusCode,
 };
 use move_core_types::{
-    identifier::IdentStr, language_storage::TypeTag, move_resource::MoveResource,
+    identifier::{IdentStr, Identifier},
+    language_storage::TypeTag,
+    move_resource::MoveResource,
 };
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
+use std::{collections::BTreeMap, convert::TryFrom};
 use transaction_builder::get_transaction_name;
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
@@ -50,11 +52,11 @@ pub struct AccountView {
 }
 
 impl AccountView {
-    pub fn new(account: &AccountResource, balances: &[BalanceResource]) -> Self {
+    pub fn new(account: &AccountResource, balances: BTreeMap<Identifier, BalanceResource>) -> Self {
         Self {
             balances: balances
-                .iter()
-                .map(|balance| AmountView::new(balance.coin(), account.balance_currency_code()))
+                .into_iter()
+                .map(|(currency_code, balance)| AmountView::new(balance.coin(), &currency_code))
                 .collect(),
             sequence_number: account.sequence_number(),
             authentication_key: BytesView::from(account.authentication_key()),

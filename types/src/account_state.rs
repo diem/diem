@@ -35,7 +35,7 @@ impl AccountState {
     pub fn get_balance_resources(
         &self,
         currency_codes: &[Identifier],
-    ) -> Result<Vec<BalanceResource>> {
+    ) -> Result<BTreeMap<Identifier, BalanceResource>> {
         currency_codes
             .iter()
             .filter_map(|currency_code| {
@@ -44,6 +44,7 @@ impl AccountState {
                 // parameters
                 self.get_resource(&BalanceResource::access_path_for(currency_type_tag))
                     .transpose()
+                    .map(|balance| balance.map(|b| (currency_code.to_owned(), b)))
             })
             .collect()
     }

@@ -3,6 +3,7 @@
 
 //! new-transaction
 //! sender: bob
+//! gas-currency: Coin1
 script {
 use 0x0::LibraAccount;
 use 0x0::Coin2;
@@ -14,6 +15,7 @@ fun main() {
 
 //! new-transaction
 //! sender: alice
+//! gas-currency: Coin2
 script {
 use 0x0::LibraAccount;
 use 0x0::Coin1;
@@ -25,6 +27,7 @@ fun main() {
 
 //! new-transaction
 //! sender: alice
+//! gas-currency: Coin2
 script {
 use 0x0::LibraAccount;
 use 0x0::Coin2;
@@ -39,6 +42,7 @@ fun main() {
 
 //! new-transaction
 //! sender: bob
+//! gas-currency: Coin1
 script {
 use 0x0::LibraAccount;
 use 0x0::Coin2;

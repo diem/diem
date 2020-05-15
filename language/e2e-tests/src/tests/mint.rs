@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account::{Account, AccountData},
+    account::{self, Account, AccountData},
     common_transactions::mint_txn,
     executor::FakeExecutor,
     gas_costs::TXN_RESERVED,
@@ -43,9 +43,12 @@ fn mint_to_existing() {
     let updated_sender = executor
         .read_account_resource(&genesis_account)
         .expect("sender balance must exist");
-    let (updated_receiver, updated_receiver_balance) = executor
-        .read_account_info(receiver.account())
+    let updated_receiver = executor
+        .read_account_resource(receiver.account())
         .expect("receiver must exist");
+    let updated_receiver_balance = executor
+        .read_balance_resource(receiver.account(), account::lbr_currency_code())
+        .expect("receiver balance must exist");
     assert_eq!(receiver_balance, updated_receiver_balance.coin());
     assert_eq!(2, updated_sender.sequence_number());
     assert_eq!(10, updated_receiver.sequence_number());
@@ -80,9 +83,12 @@ fn mint_to_new_account() {
     let updated_sender = executor
         .read_account_resource(&genesis_account)
         .expect("sender must exist");
-    let (updated_receiver, updated_receiver_balance) = executor
-        .read_account_info(&new_account)
+    let updated_receiver = executor
+        .read_account_resource(&new_account)
         .expect("receiver must exist");
+    let updated_receiver_balance = executor
+        .read_balance_resource(&new_account, account::lbr_currency_code())
+        .expect("receiver balance must exist");
     assert_eq!(receiver_balance, updated_receiver_balance.coin());
     assert_eq!(2, updated_sender.sequence_number());
     assert_eq!(0, updated_receiver.sequence_number());
