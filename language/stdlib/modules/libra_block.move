@@ -1,12 +1,10 @@
 address 0x0 {
 
 module LibraBlock {
-    use 0x0::LBR;
     use 0x0::Event;
     use 0x0::LibraSystem;
     use 0x0::LibraTimestamp;
     use 0x0::Transaction;
-    use 0x0::TransactionFee;
 
     resource struct BlockMetadata {
       // Height of the current block
@@ -52,12 +50,6 @@ module LibraBlock {
         Transaction::assert(Transaction::sender() == 0x0, 33);
 
         process_block_prologue(round, timestamp, previous_block_votes, proposer);
-
-        // Currently distribute once per-block.
-        // TODO: Once we have a better on-chain representation of epochs we will make this per-epoch.
-        // TODO: Need to update this to allow per-currency transaction fee
-        // distribution
-        TransactionFee::distribute_transaction_fees<LBR::T>();
 
         // TODO(valerini): call regular reconfiguration here LibraSystem2::update_all_validator_info()
     }

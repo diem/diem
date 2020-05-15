@@ -88,6 +88,8 @@ pub static PROLOGUE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("prolo
 pub static EPILOGUE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("epilogue").unwrap());
 pub static BLOCK_PROLOGUE: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("block_prologue").unwrap());
+pub static DISTRIBUTE_TXN_FEES: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("distribute_transaction_fees").unwrap());
 
 static ASSOCIATION_MODULE_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("Association").unwrap());
