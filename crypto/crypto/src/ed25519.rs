@@ -123,6 +123,7 @@ impl Ed25519PublicKey {
     /// compensate for the poor key storage capabilities of key management
     /// solutions, and NOT to promote double usage of keys under several
     /// schemes, which would lead to BAD vulnerabilities.
+    ///
     /// Arguments:
     /// - `x25519_bytes`: bit representation of a public key in clamped
     ///            Montgomery form, a.k.a. the x25519 public key format.
@@ -131,7 +132,8 @@ impl Ed25519PublicKey {
     ///               convention, if you expect to ever convert this back to an
     ///               x25519 public key, you should pass `false` for this
     ///               argument.
-    pub fn from_x25519_bytes(
+    #[cfg(test)]
+    pub(crate) fn from_x25519_public_bytes(
         x25519_bytes: &[u8],
         negative: bool,
     ) -> Result<Self, CryptoMaterialError> {
