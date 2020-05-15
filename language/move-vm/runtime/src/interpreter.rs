@@ -1163,8 +1163,12 @@ impl Frame {
                     }
                     Bytecode::MoveTo(sd_idx) => {
                         let resource = interpreter.operand_stack.pop_as::<Struct>()?;
-                        let signer_reference = interpreter.operand_stack.pop_as::<Reference>()?;
-                        let addr = signer_reference.read_ref()?.value_as::<AccountAddress>()?;
+                        let signer_reference = interpreter.operand_stack.pop_as::<StructRef>()?;
+                        let addr = signer_reference
+                            .borrow_field(0)?
+                            .value_as::<Reference>()?
+                            .read_ref()?
+                            .value_as::<AccountAddress>()?;
                         let size = interpreter.global_data_op(
                             resolver,
                             context,
@@ -1176,8 +1180,12 @@ impl Frame {
                     }
                     Bytecode::MoveToGeneric(si_idx) => {
                         let resource = interpreter.operand_stack.pop_as::<Struct>()?;
-                        let signer_reference = interpreter.operand_stack.pop_as::<Reference>()?;
-                        let addr = signer_reference.read_ref()?.value_as::<AccountAddress>()?;
+                        let signer_reference = interpreter.operand_stack.pop_as::<StructRef>()?;
+                        let addr = signer_reference
+                            .borrow_field(0)?
+                            .value_as::<Reference>()?
+                            .read_ref()?
+                            .value_as::<AccountAddress>()?;
                         let size = interpreter.global_data_op_generic(
                             resolver,
                             context,
