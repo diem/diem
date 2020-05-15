@@ -165,7 +165,7 @@ impl ScriptAccess for VerifiedScript {
 
 /// This function checks the extra requirements on the signature of the main function of a script.
 pub fn verify_main_signature(script: &CompiledScript) -> VMResult<()> {
-    fn is_valid_arg_type(arg_type: &SignatureToken) -> bool {
+    fn is_valid_arg_type(idx: usize, arg_type: &SignatureToken) -> bool {
         use SignatureToken as S;
         match arg_type {
             S::Bool | S::U8 | S::U64 | S::U128 | S::Address => true,
@@ -183,18 +183,22 @@ pub fn verify_main_signature(script: &CompiledScript) -> VMResult<()> {
                 | S::MutableReference(_)
                 | S::TypeParameter(_) => false,
             },
+
+            // &signer is a type that can only be populated by the Move VM. And its value is filled
+            // based on the sender of the transaction
+            S::Reference(inner) => idx == 0 && matches!(&**inner, S::Signer),
+
             S::Signer
             | S::Struct(_)
             | S::StructInstantiation(_, _)
-            | S::Reference(_)
             | S::MutableReference(_)
             | S::TypeParameter(_) => false,
         }
     }
 
     let arguments = script.signature_at(script.as_inner().parameters);
-    for arg_type in &arguments.0 {
-        if !is_valid_arg_type(arg_type) {
+    for (idx, arg_type) in arguments.0.iter().enumerate() {
+        if !is_valid_arg_type(idx, arg_type) {
             return Err(VMStatus::new(StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE));
         }
     }

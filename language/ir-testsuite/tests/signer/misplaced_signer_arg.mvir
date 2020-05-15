@@ -1,0 +1,12 @@
+//! args: 0
+main(u: u64, s: &signer) {
+    return;
+}
+// check: INVALID_MAIN_FUNCTION_SIGNATURE
+
+//! new-transaction
+//! args: 0, 1
+main(u: u64, s: &signer, u2: u64) {
+    return;
+}
+// check: INVALID_MAIN_FUNCTION_SIGNATURE

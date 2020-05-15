@@ -1,0 +1,62 @@
+module M {
+    resource R1 { f: bool }
+    resource R2<T> { f: T }
+
+    public store(sender: &signer, f: bool) {
+        move_to<R1>(copy(sender), R1 { f: move(f) });
+        return;
+    }
+
+    public store_gen<T>(sender: &signer, t: T) {
+        move_to<R2<T>>(copy(sender), R2<T> { f: move(t) });
+        return;
+    }
+
+    // TODO migrate to use signer
+    public read(): bool acquires R1 {
+        return *&(borrow_global<R1>(get_txn_sender())).f;
+    }
+
+    // TODO migrate to use signer
+    public read_gen<T: copyable>(): T acquires R2 {
+        return *&(borrow_global<R2<T>>(get_txn_sender())).f;
+    }
+}
+
+
+//! new-transaction
+import {{default}}.M;
+main(sender: &signer) {
+    M.store(copy(sender), false);
+    assert((M.read() == false), 42);
+
+    M.store_gen<bool>(copy(sender), true);
+    assert((M.read_gen<bool>() == true), 42);
+
+    M.store_gen<u64>(copy(sender), 112);
+    assert((M.read_gen<u64>() == 112), 42);
+
+    return;
+}
+
+
+//! account: alice, 90000
+//! new-transaction
+//! sender: alice
+import {{default}}.M;
+main(sender: &signer) {
+    M.store(copy(sender), false);
+    M.store_gen<bool>(copy(sender), true);
+    M.store_gen<u64>(copy(sender), 112);
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+import {{default}}.M;
+main(sender: &signer) {
+    assert((M.read() == false), 42);
+    assert((M.read_gen<bool>() == true), 42);
+    assert((M.read_gen<u64>() == 112), 42);
+    return;
+}

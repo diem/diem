@@ -47,7 +47,6 @@ enum ValueImpl {
     U128(u128),
     Bool(bool),
     Address(AccountAddress),
-    Signer(AccountAddress),
 
     Container(Rc<RefCell<Container>>),
 
@@ -194,6 +193,10 @@ impl Container {
             Address(v) => v.len(),
         }
     }
+
+    fn signer(x: AccountAddress) -> Self {
+        Container::General(vec![ValueImpl::Address(x)])
+    }
 }
 
 impl ValueImpl {
@@ -212,6 +215,15 @@ impl Value {
             (SignatureToken::Address, ValueImpl::Address(_)) => true,
             (SignatureToken::Vector(ty), ValueImpl::Container(r)) => match (&**ty, &*r.borrow()) {
                 (SignatureToken::U8, Container::U8(_)) => true,
+                _ => false,
+            },
+            (
+                SignatureToken::Reference(inner_ty),
+                ValueImpl::ContainerRef(ContainerRef::Local(inner_ref)),
+            ) => match (&**inner_ty, &*inner_ref.borrow()) {
+                (SignatureToken::Signer, Container::General(v)) => {
+                    v.len() == 1 && matches!(&v[0], ValueImpl::Address(_))
+                }
                 _ => false,
             },
             _ => false,
@@ -321,8 +333,6 @@ impl ValueImpl {
             U128(x) => U128(*x),
             Bool(x) => Bool(*x),
             Address(x) => Address(*x),
-            // TODO copying resource?
-            Signer(x) => Signer(*x),
 
             ContainerRef(r) => ContainerRef(r.copy_value()),
             IndexedRef(r) => IndexedRef(r.copy_value()),
@@ -403,7 +413,6 @@ impl ValueImpl {
             (U128(l), U128(r)) => l == r,
             (Bool(l), Bool(r)) => l == r,
             (Address(l), Address(r)) => l == r,
-            (Signer(l), Signer(r)) => l == r,
 
             (Container(l), Container(r)) => l.borrow().equals(&*r.borrow())?,
 
@@ -727,8 +736,7 @@ impl Locals {
                 | ValueImpl::U64(_)
                 | ValueImpl::U128(_)
                 | ValueImpl::Bool(_)
-                | ValueImpl::Address(_)
-                | ValueImpl::Signer(_) => Ok(Value(ValueImpl::IndexedRef(IndexedRef {
+                | ValueImpl::Address(_) => Ok(Value(ValueImpl::IndexedRef(IndexedRef {
                     container_ref: ContainerRef::Local(Rc::clone(&self.0)),
                     idx,
                 }))),
@@ -855,7 +863,15 @@ impl Value {
     }
 
     pub fn signer(x: AccountAddress) -> Self {
-        Self(ValueImpl::Signer(x))
+        Self(ValueImpl::new_container(Container::signer(x)))
+    }
+
+    /// Create a "unowned" reference to a signer value (&signer) for populating the &signer in a
+    /// transaction script
+    pub fn transaction_argument_signer_reference(x: AccountAddress) -> Self {
+        Self(ValueImpl::ContainerRef(ContainerRef::Local(Rc::new(
+            RefCell::new(Container::signer(x)),
+        ))))
     }
 
     pub fn struct_(s: Struct) -> Self {
@@ -1719,7 +1735,7 @@ impl ValueImpl {
 
         match self {
             Invalid | U8(_) | U64(_) | U128(_) | Bool(_) => CONST_SIZE,
-            Address(_) | Signer(_) => AbstractMemorySize::new(AccountAddress::LENGTH as u64),
+            Address(_) => AbstractMemorySize::new(AccountAddress::LENGTH as u64),
             ContainerRef(r) => r.size(),
             IndexedRef(r) => r.size(),
             // TODO: in case the borrow fails the VM will panic.
@@ -1863,7 +1879,6 @@ impl Display for ValueImpl {
             Self::U128(x) => write!(f, "U128({})", x),
             Self::Bool(x) => write!(f, "{}", x),
             Self::Address(addr) => write!(f, "Address({})", addr.short_str()),
-            Self::Signer(addr) => write!(f, "Signer({})", addr.short_str()),
 
             Self::Container(r) => write!(f, "Container({})", &*r.borrow()),
 
@@ -2269,7 +2284,6 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, FatType, ValueImpl> {
             (FatType::U128, ValueImpl::U128(x)) => serializer.serialize_u128(*x),
             (FatType::Bool, ValueImpl::Bool(x)) => serializer.serialize_bool(*x),
             (FatType::Address, ValueImpl::Address(x)) => x.serialize(serializer),
-            (FatType::Signer, ValueImpl::Signer(x)) => x.serialize(serializer),
 
             (FatType::Struct(ty), ValueImpl::Container(r)) => {
                 let r = r.borrow();
@@ -2303,6 +2317,18 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, FatType, ValueImpl> {
                     ))),
                 }
             }
+
+            (FatType::Signer, ValueImpl::Container(r)) => match &*r.borrow() {
+                Container::General(v) if v.len() == 1 => (AnnotatedValue {
+                    ty: &FatType::Address,
+                    val: &v[0],
+                })
+                .serialize(serializer),
+                container => Err(invariant_violation::<S>(format!(
+                    "cannot serialize container {:?} as a signer",
+                    container
+                ))),
+            },
 
             (ty, val) => Err(invariant_violation::<S>(format!(
                 "cannot serialize value {:?} as {:?}",
@@ -2555,7 +2581,6 @@ pub mod prop {
                 (FatType::U128, ValueImpl::U128(x)) => MoveValue::U128(*x),
                 (FatType::Bool, ValueImpl::Bool(x)) => MoveValue::Bool(*x),
                 (FatType::Address, ValueImpl::Address(x)) => MoveValue::Address(*x),
-                (FatType::Signer, ValueImpl::Signer(x)) => MoveValue::Signer(*x),
 
                 (FatType::Struct(ty), ValueImpl::Container(r)) => match &*r.borrow() {
                     Container::General(v) => {
@@ -2565,7 +2590,10 @@ pub mod prop {
                         }
                         MoveValue::Struct(MoveStruct::new(fields))
                     }
-                    _ => panic!("Unexpected Container"),
+                    _ => panic!(
+                        "Unexpected non-general container while converting struct: {:?}",
+                        ty
+                    ),
                 },
 
                 (FatType::Vector(inner_ty), ValueImpl::Container(r)) => {
@@ -2582,7 +2610,20 @@ pub mod prop {
                     })
                 }
 
-                (ty, val) => panic!("cannot serialize value {:?} as {:?}", val, ty),
+                (FatType::Signer, ValueImpl::Container(r)) => {
+                    MoveValue::Signer(match &*r.borrow() {
+                        Container::General(v) if v.len() == 1 => match &v[0] {
+                            ValueImpl::Address(a) => *a,
+                            v => panic!("Unexpected non-address while converting signer: {:?}", v),
+                        },
+                        c => panic!(
+                            "Unexpected non-general container while converting signer: {:?}",
+                            c
+                        ),
+                    })
+                }
+
+                (ty, val) => panic!("Cannot convert value {:?} as {:?}", val, ty),
             }
         }
     }

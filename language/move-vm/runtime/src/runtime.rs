@@ -18,7 +18,7 @@ use move_vm_types::{
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, vm_error, Location, VMResult},
-    file_format::Signature,
+    file_format::{Signature, SignatureToken},
     CompiledModule, IndexKind,
 };
 
@@ -81,8 +81,16 @@ impl VMRuntime {
         gas_schedule: &CostTable,
         script: Vec<u8>,
         ty_args: Vec<TypeTag>,
-        args: Vec<Value>,
+        mut args: Vec<Value>,
     ) -> VMResult<()> {
+        fn is_signer_reference(s: &SignatureToken) -> bool {
+            use SignatureToken as S;
+            match s {
+                S::Reference(inner) => matches!(&**inner, S::Signer),
+                _ => false,
+            }
+        }
+
         let mut type_params = vec![];
         for ty in &ty_args {
             type_params.push(self.loader.load_type(ty, context)?);
@@ -91,6 +99,13 @@ impl VMRuntime {
 
         self.loader
             .verify_ty_args(main.type_parameters(), &type_params)?;
+        let first_param_opt = main.parameters().0.get(0);
+        if first_param_opt.map_or(false, |sig| is_signer_reference(sig)) {
+            args.insert(
+                0,
+                Value::transaction_argument_signer_reference(txn_data.sender()),
+            )
+        }
         verify_args(main.parameters(), &args)?;
 
         Interpreter::entrypoint(
