@@ -925,6 +925,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::Index => self.translate_primitive_call("$select_vector_by_value", args),
             Operation::Slice => self.translate_primitive_call("$slice_vector", args),
             Operation::Range => self.translate_primitive_call("$Range", args),
+            Operation::Addresses => self.translate_primitive_call("Addresses", args),
 
             // Binary operators
             Operation::Add => self.translate_arith_op("+", args),
@@ -1070,57 +1071,78 @@ impl<'env> SpecTranslator<'env> {
         //      (var $r := v; exists $i: int :: $InVectorRange($v, $i) && (var x:=$r[$i]; x > 0))
         // any(r, |x| x > 0) -->
         //      (var $r := r; exists $i: int :: $InRange($r, $i) && (var x:=$i; x > 0))
+        // all(addresses, |a| P(a)) -->
+        //      (forall $a: Value :: is#Address(Value) ==> P(a))
+        // any(addresses, |a| P(a)) -->
+        //      (exists $a: Value :: is#Address(Value) && P(a))
         let quant_ty = self.module_env().get_node_type(args[0].node_id());
         let connective = if is_all { "==>" } else { "&&" };
         if let Exp::Lambda(_, vars, exp) = &args[1] {
             if let Some((var, _)) = self.get_decl_var(loc, vars) {
                 let var_name = self.module_env().symbol_pool().string(var);
                 let quant_var = self.fresh_var_name("i");
-                let is_vector = match quant_ty {
-                    Type::Vector(..) => true,
-                    Type::Primitive(PrimitiveType::Range) => false,
+                let mut is_vector = false;
+                let mut is_addresses = false;
+                match quant_ty {
+                    Type::Vector(..) => is_vector = true,
+                    Type::Primitive(PrimitiveType::Range) => (),
+                    Type::Primitive(PrimitiveType::Addresses) => is_addresses = true,
                     Type::Reference(_, b) => {
                         if let Type::Vector(..) = *b {
-                            true
+                            is_vector = true
                         } else {
                             panic!("unexpected type")
                         }
                     }
                     _ => panic!("unexpected type"),
                 };
-                let range_tmp = self.fresh_var_name("range");
-                emit!(self.writer, "Boolean((var {} := ", range_tmp);
-                self.translate_exp(&args[0]);
-                if is_all {
-                    emit!(self.writer, "; (forall {}: int :: ", quant_var);
-                } else {
-                    emit!(self.writer, "; (exists {}: int :: ", quant_var);
-                }
-                if is_vector {
+                if is_addresses {
                     emit!(
                         self.writer,
-                        "$InVectorRange({}, {}) {} (var {} := $select_vector({}, {}); ",
-                        range_tmp,
-                        quant_var,
-                        connective,
+                        "Boolean(({} {}: Value :: is#Address({}) {} ",
+                        if is_all { "forall" } else { "exists" },
                         var_name,
-                        range_tmp,
-                        quant_var,
+                        var_name,
+                        connective
                     );
+                    emit!(self.writer, "b#Boolean(");
+                    self.translate_exp(exp.as_ref());
+                    emit!(self.writer, ")))");
                 } else {
-                    emit!(
-                        self.writer,
-                        "$InRange({}, {}) {} (var {} := Integer({}); ",
-                        range_tmp,
-                        quant_var,
-                        connective,
-                        var_name,
-                        quant_var,
-                    );
+                    let range_tmp = self.fresh_var_name("range");
+                    emit!(self.writer, "Boolean((var {} := ", range_tmp);
+                    self.translate_exp(&args[0]);
+                    if is_all {
+                        emit!(self.writer, "; (forall {}: int :: ", quant_var);
+                    } else {
+                        emit!(self.writer, "; (exists {}: int :: ", quant_var);
+                    }
+                    if is_vector {
+                        emit!(
+                            self.writer,
+                            "$InVectorRange({}, {}) {} (var {} := $select_vector({}, {}); ",
+                            range_tmp,
+                            quant_var,
+                            connective,
+                            var_name,
+                            range_tmp,
+                            quant_var,
+                        );
+                    } else {
+                        emit!(
+                            self.writer,
+                            "$InRange({}, {}) {} (var {} := Integer({}); ",
+                            range_tmp,
+                            quant_var,
+                            connective,
+                            var_name,
+                            quant_var,
+                        );
+                    }
+                    emit!(self.writer, "b#Boolean(");
+                    self.translate_exp(exp.as_ref());
+                    emit!(self.writer, ")))))");
                 }
-                emit!(self.writer, "b#Boolean(");
-                self.translate_exp(exp.as_ref());
-                emit!(self.writer, ")))))");
             } else {
                 // error reported
             }

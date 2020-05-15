@@ -99,6 +99,7 @@ pub fn boogie_type_value(env: &GlobalEnv, ty: &Type) -> String {
             PrimitiveType::Address => "AddressType()".to_string(),
             // TODO fix this for a real boogie type
             PrimitiveType::Signer => "AddressType()".to_string(),
+            PrimitiveType::Addresses => "AddressesType()".to_string(),
             PrimitiveType::Range => "RangeType()".to_string(),
         },
         Type::Vector(t) => format!("$Vector_type_value({})", boogie_type_value(env, t)),
@@ -185,6 +186,7 @@ fn boogie_well_formed_expr_impl(
             PrimitiveType::Address => conds.push(format!("is#Address({})", name)),
             // TODO fix this for a real boogie check
             PrimitiveType::Signer => conds.push(format!("is#Address({})", name)),
+            PrimitiveType::Addresses => (), // not needed
             PrimitiveType::Range => conds.push(format!("$IsValidRange({})", name)),
         },
         Type::Vector(elem_ty) => {

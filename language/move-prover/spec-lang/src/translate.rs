@@ -322,6 +322,8 @@ impl<'env> Translator<'env> {
         let num_t = &Type::new_prim(PrimitiveType::Num);
         let range_t = &Type::new_prim(PrimitiveType::Range);
         let address_t = &Type::new_prim(PrimitiveType::Address);
+        let addresses_t = &Type::new_prim(PrimitiveType::Addresses);
+
         let param_t = &Type::TypeParameter(0);
         let add_builtin = |trans: &mut Translator, name: QualifiedSymbol, entry: SpecFunEntry| {
             trans
@@ -415,6 +417,7 @@ impl<'env> Translator<'env> {
             let vector_t = &Type::Vector(Box::new(param_t.clone()));
             let pred_t = &Type::Fun(vec![param_t.clone()], Box::new(bool_t.clone()));
             let pred_num_t = &Type::Fun(vec![num_t.clone()], Box::new(bool_t.clone()));
+            let pred_address_t = &Type::Fun(vec![address_t.clone()], Box::new(bool_t.clone()));
 
             // Transaction metadata
             add_builtin(
@@ -556,6 +559,43 @@ impl<'env> Translator<'env> {
                     oper: Operation::Exists,
                     type_params: vec![param_t.clone()],
                     arg_types: vec![address_t.clone()],
+                    result_type: bool_t.clone(),
+                },
+            );
+
+            // address quantifiers
+            // addresses() is set of all addresses
+            add_builtin(
+                self,
+                self.builtin_fun_symbol("addresses"),
+                SpecFunEntry {
+                    loc: loc.clone(),
+                    oper: Operation::Addresses,
+                    type_params: vec![],
+                    arg_types: vec![],
+                    result_type: addresses_t.clone(),
+                },
+            );
+
+            add_builtin(
+                self,
+                self.builtin_fun_symbol("all"),
+                SpecFunEntry {
+                    loc: loc.clone(),
+                    oper: Operation::All,
+                    type_params: vec![],
+                    arg_types: vec![addresses_t.clone(), pred_address_t.clone()],
+                    result_type: bool_t.clone(),
+                },
+            );
+            add_builtin(
+                self,
+                self.builtin_fun_symbol("any"),
+                SpecFunEntry {
+                    loc: loc.clone(),
+                    oper: Operation::Any,
+                    type_params: vec![],
+                    arg_types: vec![addresses_t.clone(), pred_address_t.clone()],
                     result_type: bool_t.clone(),
                 },
             );

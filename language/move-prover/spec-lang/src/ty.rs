@@ -42,7 +42,7 @@ pub enum PrimitiveType {
     U128,
     Address,
     Signer,
-
+    Addresses, // set of addresses, for quantification
     // Types only appearing in specifications
     Num,
     Range,
@@ -533,6 +533,7 @@ impl fmt::Display for PrimitiveType {
             U128 => f.write_str("u128"),
             Address => f.write_str("address"),
             Signer => f.write_str("signer"),
+            Addresses => f.write_str("addresses"),
             Range => f.write_str("range"),
             Num => f.write_str("num"),
         }
