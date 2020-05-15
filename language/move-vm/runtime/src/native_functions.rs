@@ -13,7 +13,7 @@ use move_vm_types::{
     gas_schedule::CostStrategy,
     loaded_data::{runtime_types::Type, types::FatType},
     natives::function::{NativeContext, NativeResult},
-    values::{debug, vector, Struct, Value},
+    values::{debug, signer, vector, Struct, Value},
 };
 use std::{collections::VecDeque, fmt::Write};
 use vm::errors::VMResult;
@@ -44,6 +44,7 @@ pub(crate) enum NativeFunction {
     AccountSaveAccount,
     DebugPrint,
     DebugPrintStackTrace,
+    SignerBorrowAddress,
 }
 
 impl NativeFunction {
@@ -76,6 +77,7 @@ impl NativeFunction {
             (&CORE_CODE_ADDRESS, "LibraAccount", "save_account") => AccountSaveAccount,
             (&CORE_CODE_ADDRESS, "Debug", "print") => DebugPrint,
             (&CORE_CODE_ADDRESS, "Debug", "print_stack_trace") => DebugPrintStackTrace,
+            (&CORE_CODE_ADDRESS, "Signer", "borrow_address") => SignerBorrowAddress,
             _ => return None,
         })
     }
@@ -109,6 +111,7 @@ impl NativeFunction {
             Self::LCSToBytes => lcs::native_to_bytes(ctx, t, v),
             Self::DebugPrint => debug::native_print(ctx, t, v),
             Self::DebugPrintStackTrace => debug::native_print_stack_trace(ctx, t, v),
+            Self::SignerBorrowAddress => signer::native_borrow_address(ctx, t, v),
         }
     }
 }

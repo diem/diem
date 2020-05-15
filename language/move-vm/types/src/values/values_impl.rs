@@ -1693,6 +1693,30 @@ pub mod vector {
 }
 
 /***************************************************************************************
+*
+* Signer
+*
+*   Native function imeplementations of the Signer module.
+**************************************************************************************/
+
+pub mod signer {
+    use super::*;
+    use crate::{loaded_data::runtime_types::Type, natives::function::NativeContext};
+
+    pub fn native_borrow_address(
+        context: &impl NativeContext,
+        _ty_args: Vec<Type>,
+        mut arguments: VecDeque<Value>,
+    ) -> VMResult<NativeResult> {
+        let arg = arguments.pop_front().unwrap();
+        let signer_reference = arg.value_as::<ContainerRef>()?;
+        let address_reference = Value(signer_reference.borrow_elem(0)?);
+        let cost = native_gas(context.cost_table(), NativeCostIndex::SIGNER_BORROW, 1);
+        Ok(NativeResult::ok(cost, vec![address_reference]))
+    }
+}
+
+/***************************************************************************************
  *
  * Gas
  *
