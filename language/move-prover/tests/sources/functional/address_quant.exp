@@ -1,0 +1,11 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/functional/address_quant.move:57:10 ───
+    │
+ 57 │          invariant atMostOne();
+    │          ^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/address_quant.move:50:5: multiple_copy_incorrect (entry)
+    =     at tests/sources/functional/address_quant.move:51:9: multiple_copy_incorrect
+    =     at tests/sources/functional/address_quant.move:50:5: multiple_copy_incorrect (exit)

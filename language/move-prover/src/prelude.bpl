@@ -701,18 +701,35 @@ procedure {:inline 1} $Sub(src1: Value, src2: Value) returns (dst: Value)
     dst := Integer(i#Integer(src1) - i#Integer(src2));
 }
 
+// This deals only with narrow special cases. Src2 must be constant
+// 32 or 64, which is what we use now.  Obviously, it could be extended
+// to src2 == any integer value from 0..127.
+// Left them out for brevity
+function power_of_2 (power:Value): int {
+    (var p := i#Integer(power);
+     if p == 32 then 4294967296
+     else if p == 64 then 18446744073709551616
+     // value is undefined, otherwise.
+     else -1
+     )
+}
+
 procedure {:inline 1} $Shl(src1: Value, src2: Value) returns (dst: Value)
-{{type_requires}} is#Integer(src1) && is#Integer(src2);
+requires is#Integer(src1) && is#Integer(src2);
 {
-    // TOOD: implement
-    assert false;
+    var po2: int;
+    po2 := power_of_2(src2);
+    assert po2 >= 1;   // po2 < 0 if src2 not 32 or 63
+    dst := Integer(i#Integer(src2) * po2);
 }
 
 procedure {:inline 1} $Shr(src1: Value, src2: Value) returns (dst: Value)
-{{type_requires}} is#Integer(src1) && is#Integer(src2);
+requires is#Integer(src1) && is#Integer(src2);
 {
-    // TOOD: implement
-    assert false;
+    var po2: int;
+    po2 := power_of_2(src2);
+    assert po2 >= 1;   // po2 < 0 if src2 not 32 or 63
+    dst := Integer(i#Integer(src2) div po2);
 }
 
 procedure {:inline 1} $MulU8(src1: Value, src2: Value) returns (dst: Value)

@@ -281,6 +281,7 @@ pub enum Operation {
     Result(usize),
     Index,
     Slice,
+    Addresses,
 
     // Binary operators
     Range,
