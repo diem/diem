@@ -539,8 +539,8 @@
     <span class="ident">STRUCT_LOGGER_STATE</span>.<span class="ident">load</span>(<span class="ident">Ordering</span>::<span class="ident">SeqCst</span>) <span class="op">=</span><span class="op">=</span> <span class="ident">INITIALIZED</span>
 }
 
-<span class="doccomment">/// Initializes struct logger from STRUCT_LOG_FILE env var</span>
-<span class="doccomment">/// If STRUCT_LOG_FILE is set, STRUCT_LOG_UDP_ADDR will be ignored</span>
+<span class="doccomment">/// Initializes struct logger from STRUCT_LOG_FILE env var.</span>
+<span class="doccomment">/// If STRUCT_LOG_FILE is set, STRUCT_LOG_UDP_ADDR will be ignored.</span>
 <span class="doccomment">/// Can only be called once</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">init_struct_log_from_env</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">InitLoggerError</span><span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">file</span>) <span class="op">=</span> <span class="ident">env</span>::<span class="ident">var</span>(<span class="string">&quot;STRUCT_LOG_FILE&quot;</span>) {
@@ -552,7 +552,7 @@
     }
 }
 
-<span class="doccomment">/// Initializes struct logger sink that writes to specified file</span>
+<span class="doccomment">/// Initializes struct logger sink that writes to specified file.</span>
 <span class="doccomment">/// Can only be called once</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">init_file_struct_log</span>(<span class="ident">file_path</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">InitLoggerError</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">logger</span> <span class="op">=</span> <span class="ident">FileStructLog</span>::<span class="ident">start_new</span>(<span class="ident">file_path</span>).<span class="ident">map_err</span>(<span class="ident">InitLoggerError</span>::<span class="ident">IoError</span>)<span class="question-mark">?</span>;
@@ -560,7 +560,7 @@
     <span class="ident">set_struct_logger</span>(<span class="ident">logger</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">InitLoggerError</span>::<span class="ident">StructLoggerAlreadySet</span>)
 }
 
-<span class="doccomment">/// Initializes struct logger sink that stream logs through UDP protocol</span>
+<span class="doccomment">/// Initializes struct logger sink that stream logs through UDP protocol.</span>
 <span class="doccomment">/// Can only be called once</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">init_udp_struct_log</span>(<span class="ident">udp_address</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">InitLoggerError</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">logger</span> <span class="op">=</span> <span class="ident">UDPStructLog</span>::<span class="ident">start_new</span>(<span class="ident">udp_address</span>).<span class="ident">map_err</span>(<span class="ident">InitLoggerError</span>::<span class="ident">IoError</span>)<span class="question-mark">?</span>;
@@ -667,7 +667,7 @@
     <span class="doccomment">/// Creates new UDPStructLog and starts async thread to send results</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_new</span>(<span class="ident">udp_address</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> (<span class="ident">sender</span>, <span class="ident">receiver</span>) <span class="op">=</span> <span class="ident">mpsc</span>::<span class="ident">sync_channel</span>(<span class="number">1_024</span>);
-        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">UdpSocket</span>::<span class="ident">bind</span>(<span class="ident">udp_address</span>.<span class="ident">clone</span>()).<span class="ident">expect</span>(<span class="string">&quot;couldn&#39;t bind to address&quot;</span>);
+        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">UdpSocket</span>::<span class="ident">bind</span>(<span class="string">&quot;0.0.0.0:0&quot;</span>).<span class="ident">expect</span>(<span class="string">&quot;couldn&#39;t bind to address&quot;</span>);
         <span class="kw">let</span> <span class="ident">sink_thread</span> <span class="op">=</span> <span class="ident">UDPStructLogThread</span> {
             <span class="ident">receiver</span>,
             <span class="ident">socket</span>,
@@ -683,7 +683,7 @@
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">sender</span>.<span class="ident">try_send</span>(<span class="ident">entry</span>) {
             <span class="comment">// Use log crate macro to avoid generation of structured log in this case</span>
             <span class="comment">// Otherwise we will have infinite loop</span>
-            <span class="ident">log</span>::<span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Failed to send structured log: {}&quot;</span>, <span class="ident">e</span>);
+            <span class="ident">log</span>::<span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;[Logging] Failed to send structured log: {}&quot;</span>, <span class="ident">e</span>);
         }
     }
 }
@@ -699,7 +699,7 @@
         <span class="kw">for</span> <span class="ident">entry</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">receiver</span> {
             <span class="kw">let</span> <span class="ident">json</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">serde_json</span>::<span class="ident">to_value</span>(<span class="ident">entry</span>) {
                 <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="ident">log</span>::<span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Failed to serialize struct log entry: {}&quot;</span>, <span class="ident">e</span>);
+                    <span class="ident">log</span>::<span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;[Logging] Failed to serialize struct log entry: {}&quot;</span>, <span class="ident">e</span>);
                     <span class="kw">continue</span>;
                 }
                 <span class="prelude-val">Ok</span>(<span class="ident">json</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">json</span>,
@@ -712,7 +712,7 @@
                     <span class="kw">continue</span>;
                 }
                 <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Error while sending data to socket: {}&quot;</span>, <span class="ident">e</span>);
+                    <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;[Logging] Error while sending data to socket: {}&quot;</span>, <span class="ident">e</span>);
                     <span class="kw">break</span>;
                 }
             }
