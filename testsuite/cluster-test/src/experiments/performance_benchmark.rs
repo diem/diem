@@ -105,7 +105,7 @@ impl Experiment for PerformanceBenchmark {
             .collect();
         try_join_all(futures).await?;
         let buffer = Duration::from_secs(60);
-        let window = self.duration + buffer * 2;
+        let window = self.duration + buffer * 5;
         let emit_job_request = if context.emit_to_validator {
             EmitJobRequest::for_instances(
                 self.up_validators.clone(),
