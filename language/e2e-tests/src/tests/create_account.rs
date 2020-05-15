@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account::{Account, AccountData},
+    account::{self, Account, AccountData},
     common_transactions::create_account_txn,
     executor::FakeExecutor,
 };
@@ -33,11 +33,14 @@ fn create_account() {
     // check that numbers in stored DB are correct
     let gas = output.gas_used();
     let sender_balance = 1_000_000 - initial_amount - gas;
-    let (updated_sender, updated_sender_balance) = executor
-        .read_account_info(sender.account())
+    let updated_sender = executor
+        .read_account_resource(sender.account())
         .expect("sender must exist");
+    let updated_sender_balance = executor
+        .read_balance_resource(sender.account(), account::lbr_currency_code())
+        .expect("sender balance must exist");
     let updated_receiver_balance = executor
-        .read_balance_resource(&new_account)
+        .read_balance_resource(&new_account, account::lbr_currency_code())
         .expect("receiver balance must exist");
     assert_eq!(initial_amount, updated_receiver_balance.coin(),);
     assert_eq!(sender_balance, updated_sender_balance.coin(),);
@@ -67,11 +70,14 @@ fn create_account_zero_balance() {
     // check that numbers in stored DB are correct
     let gas = output.gas_used();
     let sender_balance = 1_000_000 - initial_amount - gas;
-    let (updated_sender, updated_sender_balance) = executor
-        .read_account_info(sender.account())
+    let updated_sender = executor
+        .read_account_resource(sender.account())
         .expect("sender must exist");
+    let updated_sender_balance = executor
+        .read_balance_resource(sender.account(), account::lbr_currency_code())
+        .expect("sender balance must exist");
     let updated_receiver_balance = executor
-        .read_balance_resource(&new_account)
+        .read_balance_resource(&new_account, account::lbr_currency_code())
         .expect("receiver balance must exist");
     assert_eq!(initial_amount, updated_receiver_balance.coin());
     assert_eq!(sender_balance, updated_sender_balance.coin());

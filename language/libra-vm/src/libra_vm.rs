@@ -22,9 +22,8 @@ use libra_types::{
 };
 use move_core_types::{
     gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
-    identifier::{IdentStr, Identifier},
+    identifier::IdentStr,
     language_storage::{ResourceKey, StructTag, TypeTag},
-    move_resource::MoveResource,
 };
 use move_vm_runtime::MoveVM;
 use move_vm_state::{
@@ -387,7 +386,9 @@ impl LibraVM {
         txn: &SignatureCheckedTransaction,
     ) -> TransactionOutput {
         let txn_data = TransactionMetadata::new(txn);
-        let account_currency_symbol = account_curreny_currency_code(txn.sender(), remote_cache);
+        let account_currency_symbol =
+            account_config::from_currency_code_string(txn.gas_currency_code())
+                .map_err(|_| VMStatus::new(StatusCode::INVALID_GAS_SPECIFIER));
         let verified_payload = account_currency_symbol.clone().and_then(|currency_code| {
             let _timer = TXN_VERIFICATION_SECONDS.start_timer();
             self.verify_user_transaction_impl(txn, remote_cache, &currency_code)
@@ -832,6 +833,18 @@ impl VMValidator for LibraVM {
         let data_cache = BlockDataCache::new(state_view);
         let _timer = TXN_VALIDATION_SECONDS.start_timer();
         let gas_price = transaction.gas_unit_price();
+        let currency_code =
+            match account_config::from_currency_code_string(transaction.gas_currency_code()) {
+                Ok(code) => code,
+                Err(_) => {
+                    return VMValidatorResult::new(
+                        Some(VMStatus::new(StatusCode::INVALID_GAS_SPECIFIER)),
+                        gas_price,
+                        false,
+                    )
+                }
+            };
+
         let txn_sender = transaction.sender();
         let signature_verified_txn = if let Ok(t) = transaction.check_signature() {
             t
@@ -844,11 +857,6 @@ impl VMValidator for LibraVM {
         };
 
         let is_governance_txn = is_governance_txn(txn_sender, &data_cache);
-        let currency_code = match account_curreny_currency_code(txn_sender, &data_cache) {
-            Ok(code) => code,
-            Err(err) => return VMValidatorResult::new(Some(err), gas_price, false),
-        };
-
         let normalized_gas_price = match normalize_gas_price(gas_price, &currency_code, &data_cache)
         {
             Ok(price) => price,
@@ -940,22 +948,6 @@ impl<'a> LibraVMInternals<'a> {
     }
 }
 
-fn account_curreny_currency_code(
-    sender: AccountAddress,
-    state_view: &dyn RemoteCache,
-) -> VMResult<Identifier> {
-    let account_access_path =
-        create_access_path(sender, account_config::AccountResource::struct_tag());
-    if let Ok(Some(blob)) = state_view.get(&account_access_path) {
-        Ok(lcs::from_bytes::<account_config::AccountResource>(&blob)
-            .map_err(|_| VMStatus::new(StatusCode::UNABLE_TO_DESERIALIZE_ACCOUNT))?
-            .balance_currency_code()
-            .to_owned())
-    } else {
-        Err(VMStatus::new(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST))
-    }
-}
-
 fn is_governance_txn(sender: AccountAddress, remote_cache: &dyn RemoteCache) -> bool {
     let association_capability_path =
         create_access_path(sender, association_capability_struct_tag());
@@ -969,12 +961,11 @@ fn is_governance_txn(sender: AccountAddress, remote_cache: &dyn RemoteCache) -> 
 
 fn normalize_gas_price(
     gas_price: u64,
-    account_curreny_currency_code: &IdentStr,
+    currency_code: &IdentStr,
     remote_cache: &dyn RemoteCache,
 ) -> VMResult<u64> {
-    let currency_info_path = account_config::CurrencyInfoResource::resource_path_for(
-        account_curreny_currency_code.to_owned(),
-    );
+    let currency_info_path =
+        account_config::CurrencyInfoResource::resource_path_for(currency_code.to_owned());
     if let Ok(Some(blob)) = remote_cache.get(&currency_info_path) {
         let x = lcs::from_bytes::<account_config::CurrencyInfoResource>(&blob)
             .map_err(|_| VMStatus::new(StatusCode::CURRENCY_INFO_DOES_NOT_EXIST))?;

@@ -8,7 +8,7 @@ use anyhow::Result;
 use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{from_currency_code_string, AccountResource, LBR_NAME},
+    account_config::AccountResource,
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::ContractEvent,
@@ -138,7 +138,6 @@ fn get_mock_account_state_blob() -> AccountStateBlob {
         EventHandle::random_handle(0),
         EventHandle::random_handle(0),
         false,
-        from_currency_code_string(LBR_NAME).unwrap(),
     );
 
     let mut account_state = AccountState::default();

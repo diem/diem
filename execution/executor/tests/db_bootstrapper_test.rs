@@ -181,7 +181,7 @@ fn get_balance(account: &AccountAddress, db: &DbReaderWriter) -> u64 {
     account_state
         .get_balance_resources(&[from_currency_code_string(LBR_NAME).unwrap()])
         .unwrap()
-        .last()
+        .get(&from_currency_code_string(LBR_NAME).unwrap())
         .unwrap()
         .coin()
 }

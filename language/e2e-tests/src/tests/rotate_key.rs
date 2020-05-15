@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account::{Account, AccountData},
+    account::{self, Account, AccountData},
     common_transactions::{create_account_txn, raw_rotate_key_txn, rotate_key_txn},
     executor::FakeExecutor,
     keygen::KeyGen,
@@ -41,9 +41,12 @@ fn rotate_ed25519_key() {
     // Check that numbers in store are correct.
     let gas = output.gas_used();
     let balance = 1_000_000 - gas;
-    let (updated_sender, updated_sender_balance) = executor
-        .read_account_info(sender.account())
+    let updated_sender = executor
+        .read_account_resource(sender.account())
         .expect("sender must exist");
+    let updated_sender_balance = executor
+        .read_balance_resource(sender.account(), account::lbr_currency_code())
+        .expect("sender balance must exist");
     assert_eq!(new_key_hash, updated_sender.authentication_key().to_vec());
     assert_eq!(balance, updated_sender_balance.coin());
     assert_eq!(11, updated_sender.sequence_number());

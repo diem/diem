@@ -13,6 +13,7 @@ fun main() { }
 //! new-transaction
 //! sender: alice
 //! gas-price: 1
+//! gas-currency: Coin1
 script {
 fun main() { }
 }
@@ -21,6 +22,7 @@ fun main() { }
 //! new-transaction
 //! sender: gary
 //! gas-price: 1
+//! gas-currency: Coin2
 script {
 fun main() { }
 }

@@ -21,7 +21,7 @@ pub use rotate_key::*;
 pub use universe::*;
 
 use crate::{
-    account::{Account, AccountData},
+    account::{lbr_currency_code, Account, AccountData},
     gas_costs,
 };
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
@@ -120,7 +120,7 @@ pub struct AccountCurrent {
 
 impl AccountCurrent {
     fn new(initial_data: AccountData) -> Self {
-        let balance = initial_data.balance();
+        let balance = initial_data.balance(&lbr_currency_code());
         let sequence_number = initial_data.sequence_number();
         let sent_events_count = initial_data.sent_events_count();
         let received_events_count = initial_data.received_events_count();

@@ -905,7 +905,7 @@ where
     let balance = if let Some(blob) = &account_state_with_proof.blob {
         AccountState::try_from(blob)?
             .get_balance_resources(&[from_currency_code_string(LBR_NAME).unwrap()])?
-            .last()
+            .get(&from_currency_code_string(LBR_NAME).unwrap())
             .map(|b| b.coin())
             .unwrap_or(0)
     } else {

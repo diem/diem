@@ -4,7 +4,7 @@
 use crate::{
     access_path::AccessPath,
     account_address::{self, AccountAddress},
-    account_config::{AccountResource, BalanceResource, LBR_NAME},
+    account_config::{AccountResource, BalanceResource},
     account_state_blob::AccountStateBlob,
     block_info::{BlockInfo, Round},
     block_metadata::BlockMetadata,
@@ -32,7 +32,7 @@ use libra_crypto::{
     HashValue,
 };
 use libra_proptest_helpers::Index;
-use move_core_types::{identifier::Identifier, language_storage::TypeTag};
+use move_core_types::language_storage::TypeTag;
 use proptest::{
     collection::{vec, SizeRange},
     option,
@@ -108,7 +108,6 @@ struct AccountInfo {
     sequence_number: u64,
     sent_event_handle: EventHandle,
     received_event_handle: EventHandle,
-    balance_currency_code: Identifier,
 }
 
 impl AccountInfo {
@@ -121,7 +120,6 @@ impl AccountInfo {
             sequence_number: 0,
             sent_event_handle: EventHandle::new_from_address(&address, 0),
             received_event_handle: EventHandle::new_from_address(&address, 1),
-            balance_currency_code: Identifier::new(LBR_NAME).unwrap(),
         }
     }
 }
@@ -686,7 +684,6 @@ impl AccountResourceGen {
             account_info.sent_event_handle.clone(),
             account_info.received_event_handle.clone(),
             false,
-            account_info.balance_currency_code.clone(),
         )
     }
 }

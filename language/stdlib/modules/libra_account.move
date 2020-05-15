@@ -34,8 +34,6 @@ module LibraAccount {
         // Incremented by one each time a transaction is submitted
         sequence_number: u64,
         is_frozen: bool,
-        // The currency code string for the balance held by this account.
-        balance_currency_code: vector<u8>,
     }
 
     // A resource that holds the coins stored in this account
@@ -443,7 +441,6 @@ module LibraAccount {
                 sent_events: Event::new_event_handle_from_generator<SentPaymentEvent>(&mut generator),
                 sequence_number: 0,
                 is_frozen: false,
-                balance_currency_code: Libra::currency_code<Token>(),
             },
             generator,
             fresh_address,

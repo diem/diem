@@ -148,14 +148,9 @@ impl FakeExecutor {
         lcs::from_bytes(data_blob.as_slice()).ok()
     }
 
-    /// Reads the balance resource value for an account from this executor's data store.
-    pub fn read_balance_resource(&self, account: &Account) -> Option<BalanceResource> {
-        Some(self.read_account_info(account)?.1)
-    }
-
-    // Reads the balance resource value for an account from this executor's data store with the
-    // given balance currency_code.
-    fn read_balance_resource_from_currency_code(
+    /// Reads the balance resource value for an account from this executor's data store with the
+    /// given balance currency_code.
+    pub fn read_balance_resource(
         &self,
         account: &Account,
         balance_currency_code: Identifier,
@@ -165,20 +160,6 @@ impl FakeExecutor {
             .expect("account must exist in data store")
             .expect("data must exist in data store");
         lcs::from_bytes(data_blob.as_slice()).ok()
-    }
-
-    /// Reads the AccountResource and BalanceResource for this account. These are coupled together.
-    pub fn read_account_info(
-        &self,
-        account: &Account,
-    ) -> Option<(AccountResource, BalanceResource)> {
-        self.read_account_resource(account).and_then(|ar| {
-            self.read_balance_resource_from_currency_code(
-                account,
-                ar.balance_currency_code().to_owned(),
-            )
-            .map(|br| (ar, br))
-        })
     }
 
     /// Executes the given block of transactions.

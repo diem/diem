@@ -6,6 +6,7 @@ use crate::{
     errors::*,
     tests::parse_each_line_as,
 };
+use move_core_types::identifier::IdentStr;
 
 #[test]
 fn parse_account_positive() {
@@ -54,7 +55,7 @@ fn build_global_config_1() {
     assert!(config.accounts.contains_key("default"));
     assert!(config.accounts.contains_key("alice"));
     let bob = config.accounts.get("bob").unwrap();
-    assert_eq!(bob.balance(), 2000);
+    assert_eq!(bob.balance(IdentStr::new("LBR").unwrap()), 2000);
     assert_eq!(bob.sequence_number(), 10);
 }
 
@@ -84,8 +85,7 @@ fn build_global_config_4() {
 
     assert_eq!(config.accounts.len(), 1);
     let default = config.accounts.get("default").unwrap();
-    assert_eq!(default.balance(), 50);
-    assert_eq!(default.balance_currency_code().as_str(), "LBR");
+    assert_eq!(default.balance(IdentStr::new("LBR").unwrap()), 50);
 }
 
 #[rustfmt::skip]
@@ -97,8 +97,7 @@ fn build_global_config_5() {
 
     assert_eq!(config.accounts.len(), 1);
     let default = config.accounts.get("default").unwrap();
-    assert_eq!(default.balance(), 50);
-    assert_eq!(default.balance_currency_code().as_str(), "LBR");
+    assert_eq!(default.balance(IdentStr::new("LBR").unwrap()), 50);
 }
 
 #[rustfmt::skip]
@@ -110,6 +109,5 @@ fn build_global_config_6() {
 
     assert_eq!(config.accounts.len(), 2);
     let default = config.accounts.get("bob").unwrap();
-    assert_eq!(default.balance(), 51);
-    assert_eq!(default.balance_currency_code().as_str(), "Coin1");
+    assert_eq!(default.balance(IdentStr::new("Coin1").unwrap()), 51);
 }
