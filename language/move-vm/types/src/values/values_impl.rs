@@ -2440,12 +2440,6 @@ impl Value {
         let ty = Self::constant_sig_token_to_type(&constant.type_)?;
         Value::simple_deserialize(&constant.data, &ty).ok()
     }
-
-    pub fn serialize_constant(type_: SignatureToken, value: Value) -> Option<Constant> {
-        let ty = Self::constant_sig_token_to_type(&type_)?;
-        let data = value.simple_serialize(&ty)?;
-        Some(Constant { data, type_ })
-    }
 }
 
 /***************************************************************************************

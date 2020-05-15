@@ -11,8 +11,7 @@ use crate::{
     },
 };
 use itertools::Itertools;
-use libra_types::account_address::AccountAddress;
-use move_vm_types::values::Value as VMValue;
+use move_core_types::value::MoveValue;
 use spec_lang::{
     env::{FunctionEnv, Loc, ModuleEnv, StructId},
     ty::{PrimitiveType, Type},
@@ -366,7 +365,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     .globalize_signature(&constant.type_);
                 let value = Self::translate_value(
                     &ty,
-                    self.func_env.module_env.get_constant_value(constant),
+                    &self.func_env.module_env.get_constant_value(constant),
                 );
                 self.local_types.push(ty);
                 self.code.push(Bytecode::Load(attr_id, temp_index, value));
@@ -1049,12 +1048,11 @@ impl<'a> StacklessBytecodeGenerator<'a> {
         }
     }
 
-    fn translate_value(ty: &Type, value: VMValue) -> Constant {
-        match ty {
-            Type::Vector(inner) => {
-                let vs = value.value_as::<Vec<VMValue>>().unwrap();
+    fn translate_value(ty: &Type, value: &MoveValue) -> Constant {
+        match (ty, &value) {
+            (Type::Vector(inner), MoveValue::Vector(vs)) => {
                 let b = vs
-                    .into_iter()
+                    .iter()
                     .map(|v| match Self::translate_value(inner, v) {
                         Constant::U8(u) => u,
                         _ => unimplemented!("Not yet supported constant vector type: {:?}", ty),
@@ -1062,17 +1060,12 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     .collect::<Vec<u8>>();
                 Constant::ByteArray(b)
             }
-            Type::Primitive(PrimitiveType::Bool) => {
-                Constant::Bool(value.value_as::<bool>().unwrap())
-            }
-            Type::Primitive(PrimitiveType::U8) => Constant::U8(value.value_as::<u8>().unwrap()),
-            Type::Primitive(PrimitiveType::U64) => Constant::U64(value.value_as::<u64>().unwrap()),
-            Type::Primitive(PrimitiveType::U128) => {
-                Constant::U128(value.value_as::<u128>().unwrap())
-            }
-            Type::Primitive(PrimitiveType::Address) => {
-                let a = value.value_as::<AccountAddress>().unwrap();
-                Constant::Address(ModuleEnv::addr_to_big_uint(&a))
+            (Type::Primitive(PrimitiveType::Bool), MoveValue::Bool(b)) => Constant::Bool(*b),
+            (Type::Primitive(PrimitiveType::U8), MoveValue::U8(b)) => Constant::U8(*b),
+            (Type::Primitive(PrimitiveType::U64), MoveValue::U64(b)) => Constant::U64(*b),
+            (Type::Primitive(PrimitiveType::U128), MoveValue::U128(b)) => Constant::U128(*b),
+            (Type::Primitive(PrimitiveType::Address), MoveValue::Address(a)) => {
+                Constant::Address(ModuleEnv::addr_to_big_uint(a))
             }
             _ => panic!("Unexpected (and possibly invalid) constant type: {:?}", ty),
         }

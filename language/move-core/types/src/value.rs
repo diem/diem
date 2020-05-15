@@ -48,6 +48,10 @@ impl MoveValue {
     pub fn simple_serialize(&self) -> Option<Vec<u8>> {
         lcs::to_bytes(self).ok()
     }
+
+    pub fn vector_u8(v: Vec<u8>) -> Self {
+        MoveValue::Vector(v.into_iter().map(MoveValue::U8).collect())
+    }
 }
 
 impl MoveStruct {

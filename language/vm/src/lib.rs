@@ -12,6 +12,7 @@ pub mod access;
 pub mod check_bounds;
 #[macro_use]
 pub mod errors;
+pub mod constant;
 pub mod deserializer;
 pub mod file_format;
 pub mod file_format_common;
