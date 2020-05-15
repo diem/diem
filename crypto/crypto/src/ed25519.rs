@@ -117,6 +117,39 @@ impl Ed25519PublicKey {
             Err(_) => Err(CryptoMaterialError::DeserializationError),
         }
     }
+
+    /// Deserialize an Ed25519PublicKey from its representation as an x25519
+    /// public key, along with an indication of sign. This is meant to
+    /// compensate for the poor key storage capabilities of key management
+    /// solutions, and NOT to promote double usage of keys under several
+    /// schemes, which would lead to BAD vulnerabilities.
+    /// Arguments:
+    /// - `x25519_bytes`: bit representation of a public key in clamped
+    ///            Montgomery form, a.k.a. the x25519 public key format.
+    /// - `negative`: whether to interpret the given point as a negative point,
+    ///               as the Montgomery form erases the sign byte. By XEdDSA
+    ///               convention, if you expect to ever convert this back to an
+    ///               x25519 public key, you should pass `false` for this
+    ///               argument.
+    pub fn from_x25519_bytes(
+        x25519_bytes: &[u8],
+        negative: bool,
+    ) -> Result<Self, CryptoMaterialError> {
+        if x25519_bytes.len() != 32 {
+            return Err(CryptoMaterialError::DeserializationError);
+        }
+        let key_bits = {
+            let mut bits = [0u8; 32];
+            bits.copy_from_slice(x25519_bytes);
+            bits
+        };
+        let mtg_point = curve25519_dalek::montgomery::MontgomeryPoint(key_bits);
+        let sign = if negative { 1u8 } else { 0u8 };
+        let ed_point = mtg_point
+            .to_edwards(sign)
+            .ok_or(CryptoMaterialError::DeserializationError)?;
+        Ed25519PublicKey::try_from(&ed_point.compress().as_bytes()[..])
+    }
 }
 
 impl Ed25519Signature {

@@ -31,7 +31,10 @@
 //! ```
 //!
 
-use crate::traits::{self, ValidCryptoMaterial, ValidCryptoMaterialStringExt};
+use crate::{
+    traits::{self, CryptoMaterialError, ValidCryptoMaterial, ValidCryptoMaterialStringExt},
+    x25519,
+};
 use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
 use rand::{CryptoRng, RngCore};
 use std::convert::{TryFrom, TryInto};
@@ -99,6 +102,21 @@ impl PublicKey {
     /// Obtain a slice reference to the underlying bytearray
     pub fn as_slice(&self) -> &[u8] {
         &self.0
+    }
+
+    /// Deserialize an X25119 PublicKey from its representation as an
+    /// Ed25519PublicKey, following the XEdDSA approach. This is meant to
+    /// compensate for the poor key storage capabilities of key management
+    /// solutions, and NOT to promote double usage of keys under several
+    /// schemes, which would lead to BAD vulnerabilities.
+    pub fn from_ed25519_bytes(ed25519_bytes: &[u8]) -> Result<Self, CryptoMaterialError> {
+        if ed25519_bytes.len() != 32 {
+            return Err(CryptoMaterialError::DeserializationError);
+        }
+        let ed_point = curve25519_dalek::edwards::CompressedEdwardsY::from_slice(ed25519_bytes)
+            .decompress()
+            .ok_or(CryptoMaterialError::DeserializationError)?;
+        Ok(x25519::PublicKey::from(ed_point.to_montgomery().to_bytes()))
     }
 }
 
@@ -211,4 +229,15 @@ impl std::fmt::Debug for PublicKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[X25519 public key: {}]", hex::encode(self.0))
     }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+use crate::test_utils::{self, KeyPair};
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest::prelude::*;
+
+/// Produces a uniformly random ed25519 keypair from a seed
+#[cfg(any(test, feature = "fuzzing"))]
+pub fn keypair_strategy() -> impl Strategy<Value = KeyPair<PrivateKey, PublicKey>> {
+    test_utils::uniform_keypair_strategy::<PrivateKey, PublicKey>()
 }
