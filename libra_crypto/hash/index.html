@@ -1,17 +1,16 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `hash` mod in crate `libra_crypto`."><meta name="keywords" content="rust, rustlang, rust-lang, hash"><title>libra_crypto::hash - Rust</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../libra_crypto/index.html'><div class='logo-container'><img src='../../rust-logo.png' alt='logo'></div></a><p class='location'>Module hash</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#statics">Statics</a></li><li><a href="#traits">Traits</a></li></ul></div><p class='location'><a href='../index.html'>libra_crypto</a></p><script>window.sidebarCurrent = {name: 'hash', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class='fqn'><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../../src/libra_crypto/hash.rs.html#4-627' title='goto source code'>[src]</a></span><span class='in-band'>Module <a href='../index.html'>libra_crypto</a>::<wbr><a class="mod" href=''>hash</a></span></h1><div class='docblock'><p>This module defines traits and implementations of
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `hash` mod in crate `libra_crypto`."><meta name="keywords" content="rust, rustlang, rust-lang, hash"><title>libra_crypto::hash - Rust</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../libra_crypto/index.html'><div class='logo-container'><img src='../../rust-logo.png' alt='logo'></div></a><p class='location'>Module hash</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#statics">Statics</a></li><li><a href="#traits">Traits</a></li></ul></div><p class='location'><a href='../index.html'>libra_crypto</a></p><script>window.sidebarCurrent = {name: 'hash', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class='fqn'><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../../src/libra_crypto/hash.rs.html#4-611' title='goto source code'>[src]</a></span><span class='in-band'>Module <a href='../index.html'>libra_crypto</a>::<wbr><a class="mod" href=''>hash</a></span></h1><div class='docblock'><p>This module defines traits and implementations of
 <a href="https://en.wikipedia.org/wiki/Cryptographic_hash_function">cryptographic hash functions</a>
 for the Libra project.</p>
 <p>It is designed to help authors protect against two types of real world attacks:</p>
 <ol>
 <li>
-<p><strong>Domain Ambiguity</strong>: imagine that Alice has a private key and is using
+<p><strong>Semantic Ambiguity</strong>: imagine that Alice has a private key and is using
 two different applications, X and Y. X asks Alice to sign a message saying
-&quot;I am Alice&quot;. naturally, Alice is willing to sign this message, since she
-is in fact Alice. However, unbeknownst to Alice, in application Y,
-messages beginning with the letter &quot;I&quot; represent transfers. &quot; am &quot;
-represents a transfer of 500 coins and &quot;Alice&quot; can be interpreted as a
-destination address. When Alice signed the message she needed to be
-aware of how other applications might interpret that message.</p>
+&quot;I am Alice&quot;. Alice accepts to sign this message in the context of X. However,
+unbeknownst to Alice, in application Y, messages beginning with the letter &quot;I&quot;
+represent transfers. &quot; am &quot; represents a transfer of 500 coins and &quot;Alice&quot;
+can be interpreted as a destination address. When Alice signed the message she
+needed to be aware of how other applications might interpret that message.</p>
 </li>
 <li>
 <p><strong>Format Ambiguity</strong>: imagine a program that hashes a pair of strings.
@@ -21,17 +20,37 @@ same input to the hash function and therefore the same hash. This
 creates a collision.</p>
 </li>
 </ol>
-<h1 id="examples" class="section-header"><a href="#examples">Examples</a></h1>
-<div class="example-wrap"><pre class="rust rust-example-rendered">
-<span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::{<span class="ident">CryptoHasher</span>, <span class="ident">TestOnlyHasher</span>};
+<p>Regarding (1), this library makes it easy for Libra developers to create as
+many new &quot;hashable&quot; Rust types as needed so that each Rust type hashed and signed
+in Libra has a unique meaning, that is, unambiguously captures the intent of a signer.</p>
+<p>Regarding (2), this library provides the <code>CryptoHasher</code> abstraction to easily manage
+cryptographic seeds for hashing. Hashing seeds aim to ensure that
+the hashes of values of a given type <code>MyNewStruct</code> never collide with hashes of values
+from another type.</p>
+<p>Finally, to prevent format ambiguity within a same type <code>MyNewStruct</code> and facilitate protocol
+specifications, we use <a href="../../libra_canonical_serialization/index.html">Libra Canonical Serialization (LCS)</a>
+as the recommended solution to write Rust values into a hasher.</p>
+<h1 id="quick-start" class="section-header"><a href="#quick-start">Quick Start</a></h1>
+<p>To obtain a <code>hash()</code> method for any new type <code>MyNewStruct</code>, it is (strongly) recommended to
+use the derive macros of <code>serde</code> and <code>libra_crypto_derive</code> as follows:</p>
 
-<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">TestOnlyHasher</span>::<span class="ident">default</span>();
-<span class="ident">hasher</span>.<span class="ident">update</span>(<span class="string">&quot;Test message&quot;</span>.<span class="ident">as_bytes</span>());
-<span class="kw">let</span> <span class="ident">hash_value</span> <span class="op">=</span> <span class="ident">hasher</span>.<span class="ident">finish</span>();</pre></div>
-<p>The output is of type <a href="../../libra_crypto/hash/struct.HashValue.html" title="`HashValue`"><code>HashValue</code></a>, which can be used as an input for signing.</p>
-<h1 id="implementing-new-hashers" class="section-header"><a href="#implementing-new-hashers">Implementing new hashers</a></h1><h2 id="the-automatic-way" class="section-header"><a href="#the-automatic-way">The automatic way</a></h2>
-<p>For any new structure <code>MyNewStruct</code> that needs to be hashed, the developer
-should use the <a href="https://doc.rust-lang.org/reference/procedural-macros.html"><code>CryptoHasher</code> derive macro</a>.</p>
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">CryptoHash</span>;
+<span class="kw">use</span> <span class="ident">libra_crypto_derive</span>::{<span class="ident">CryptoHasher</span>, <span class="ident">LCSCryptoHash</span>};
+<span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Serialize</span>;
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">CryptoHasher</span>, <span class="ident">LCSCryptoHash</span>)]</span>
+<span class="kw">struct</span> <span class="ident">MyNewStruct</span> { <span class="comment">/*...*/</span> }
+
+<span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">MyNewStruct</span> { <span class="comment">/*...*/</span> };
+<span class="ident">value</span>.<span class="ident">hash</span>();</pre></div>
+<p>Under the hood, this will generate a new implementation <code>MyNewStructHasher</code> for the trait
+<code>CryptoHasher</code> and implement the trait <code>CryptoHash</code> for <code>MyNewStruct</code> using LCS.</p>
+<h1 id="implementing-new-hashers" class="section-header"><a href="#implementing-new-hashers">Implementing New Hashers</a></h1>
+<p>The trait <code>CryptoHasher</code> captures the notion of a pre-seeded hash function, aka a &quot;hasher&quot;.
+New implementations can be defined in two ways.</p>
+<h2 id="derive-macro-recommended" class="section-header"><a href="#derive-macro-recommended">Derive macro (recommended)</a></h2>
+<p>For any new structure <code>MyNewStruct</code> that needs to be hashed, it is recommended to simply
+use the derive macro <a href="https://doc.rust-lang.org/reference/procedural-macros.html"><code>CryptoHasher</code></a>.</p>
 
 <div class='information'><div class='tooltip ignore'>ⓘ<span class='tooltiptext'>This example is not tested</span></div></div><div class="example-wrap"><pre class="rust rust-example-rendered ignore">
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">CryptoHasher</span>)]</span>
@@ -40,30 +59,24 @@ should use the <a href="https://doc.rust-lang.org/reference/procedural-macros.ht
 }</pre></div>
 <p>The macro will define a hasher automatically called <code>MyNewStructHasher</code>, and pick a salt
 equal to the full module path + &quot;::&quot;  + structure name, i.e. if
-<code>MyNewStruct</code> is defined in <code>bar::baz::quux</code>, the salt will be <code>b&quot;bar::baz::quux::MyNewStruct&quot;</code>.
-You can then use it in your implementation of <code>CryptoHash</code> (see below).</p>
-<h2 id="the-semi-automatic-way" class="section-header"><a href="#the-semi-automatic-way">The semi-automatic way</a></h2>
-<p>For any new structure <code>MyNewStruct</code> that needs to be hashed, the developer should define a
-new hasher with:</p>
+<code>MyNewStruct</code> is defined in <code>bar::baz::quux</code>, the salt will be <code>b&quot;bar::baz::quux::MyNewStruct&quot;</code>.</p>
+<h2 id="customized-hashers" class="section-header"><a href="#customized-hashers">Customized hashers</a></h2>
+<p><strong>IMPORTANT:</strong> Do NOT use this for new code unless you know what you are doing.</p>
+<p>This library also provides a few customized hashers defined in the code as follows:</p>
 
 <div class="example-wrap"><pre class="rust rust-example-rendered">
-<span class="macro">define_hasher</span><span class="macro">!</span> { (<span class="ident">MyNewStructHasher</span>, <span class="ident">MY_NEW_STRUCT_HASHER</span>, <span class="string">b&quot;MyNewStruct&quot;</span>) }</pre></div>
-<p><strong>Note</strong>: The last argument for the <code>define_hasher</code> macro must be a unique string.</p>
-<h2 id="the-cryptohash-implementation-for-both-automatic-and-semi-automatic-way" class="section-header"><a href="#the-cryptohash-implementation-for-both-automatic-and-semi-automatic-way">The <code>CryptoHash</code> implementation (for both automatic and semi-automatic way)</a></h2>
-<p>In most cases, the <code>CryptoHash</code> trait should be implemented using LCS serialization.
-The derive macro <code>LCSCryptoHash</code> generates such an implementation based on <code>serde::Serialize</code>,
-the LCS encoding, and <code>MyNewStructHasher</code>:</p>
+<span class="macro">define_hasher</span><span class="macro">!</span> { (<span class="ident">MyNewDataHasher</span>, <span class="ident">MY_NEW_DATA_HASHER</span>, <span class="string">b&quot;MyUniqueSaltString&quot;</span>) }</pre></div>
+<h1 id="using-a-hasher-directly" class="section-header"><a href="#using-a-hasher-directly">Using a hasher directly</a></h1>
+<p><strong>IMPORTANT:</strong> Do NOT use this for new code unless you know what you are doing.</p>
 
 <div class="example-wrap"><pre class="rust rust-example-rendered">
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">CryptoHasher</span>, <span class="ident">LCSCryptoHash</span>)]</span>
-<span class="kw">struct</span> <span class="ident">MyNewStruct</span> { <span class="comment">/*...*/</span> }
+<span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::{<span class="ident">CryptoHasher</span>, <span class="ident">TestOnlyHasher</span>};
 
-<span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">MyNewStruct</span> { <span class="comment">/*...*/</span> };
-<span class="ident">value</span>.<span class="ident">hash</span>();</pre></div>
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">TestOnlyHasher</span>::<span class="ident">default</span>();
+<span class="ident">hasher</span>.<span class="ident">update</span>(<span class="string">&quot;Test message&quot;</span>.<span class="ident">as_bytes</span>());
+<span class="kw">let</span> <span class="ident">hash_value</span> <span class="op">=</span> <span class="ident">hasher</span>.<span class="ident">finish</span>();</pre></div>
 </div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
-<table><tr class='module-item'><td><a class="struct" href="struct.DefaultHasher.html" title='libra_crypto::hash::DefaultHasher struct'>DefaultHasher</a></td><td class='docblock-short'><p>Our preferred hashing schema, outputting <a href="../../libra_crypto/hash/struct.HashValue.html" title="`HashValue`"><code>HashValue</code></a>s.</p>
-</td></tr><tr class='module-item'><td><a class="struct" href="struct.DiscoveryMsgHasher.html" title='libra_crypto::hash::DiscoveryMsgHasher struct'>DiscoveryMsgHasher</a></td><td class='docblock-short'><p>The hasher used to compute the hash of a DiscoveryMsg object.</p>
-</td></tr><tr class='module-item'><td><a class="struct" href="struct.EventAccumulatorHasher.html" title='libra_crypto::hash::EventAccumulatorHasher struct'>EventAccumulatorHasher</a></td><td class='docblock-short'><p>The hasher used to compute the hash of an internal node in the event accumulator.</p>
+<table><tr class='module-item'><td><a class="struct" href="struct.EventAccumulatorHasher.html" title='libra_crypto::hash::EventAccumulatorHasher struct'>EventAccumulatorHasher</a></td><td class='docblock-short'><p>The hasher used to compute the hash of an internal node in the event accumulator.</p>
 </td></tr><tr class='module-item'><td><a class="struct" href="struct.HashValue.html" title='libra_crypto::hash::HashValue struct'>HashValue</a></td><td class='docblock-short'><p>Output value of our hash function. Intentionally opaque for safety and modularity.</p>
 </td></tr><tr class='module-item'><td><a class="struct" href="struct.HashValueBitIterator.html" title='libra_crypto::hash::HashValueBitIterator struct'>HashValueBitIterator</a></td><td class='docblock-short'><p>An iterator over <code>HashValue</code> that generates one bit for each iteration.</p>
 </td></tr><tr class='module-item'><td><a class="struct" href="struct.SparseMerkleInternalHasher.html" title='libra_crypto::hash::SparseMerkleInternalHasher struct'>SparseMerkleInternalHasher</a></td><td class='docblock-short'><p>The hasher used to compute the hash of an internal node in the Sparse Merkle Tree.</p>
@@ -75,9 +88,8 @@ the LCS encoding, and <code>MyNewStructHasher</code>:</p>
 </td></tr><tr class='module-item'><td><a class="static" href="static.PRE_GENESIS_BLOCK_ID.html" title='libra_crypto::hash::PRE_GENESIS_BLOCK_ID static'>PRE_GENESIS_BLOCK_ID</a></td><td class='docblock-short'><p>Block id reserved as the id of parent block of the genesis block.</p>
 </td></tr><tr class='module-item'><td><a class="static" href="static.SPARSE_MERKLE_PLACEHOLDER_HASH.html" title='libra_crypto::hash::SPARSE_MERKLE_PLACEHOLDER_HASH static'>SPARSE_MERKLE_PLACEHOLDER_HASH</a></td><td class='docblock-short'><p>Placeholder hash of <code>SparseMerkleTree</code>.</p>
 </td></tr></table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
-<table><tr class='module-item'><td><a class="trait" href="trait.CryptoHash.html" title='libra_crypto::hash::CryptoHash trait'>CryptoHash</a></td><td class='docblock-short'><p>A type that implements <code>CryptoHash</code> can be hashed by a cryptographic hash function and produce
-a <code>HashValue</code>. Each type needs to have its own <code>Hasher</code> type.</p>
-</td></tr><tr class='module-item'><td><a class="trait" href="trait.CryptoHasher.html" title='libra_crypto::hash::CryptoHasher trait'>CryptoHasher</a></td><td class='docblock-short'><p>A trait for generating hash from arbitrary stream of bytes.</p>
+<table><tr class='module-item'><td><a class="trait" href="trait.CryptoHash.html" title='libra_crypto::hash::CryptoHash trait'>CryptoHash</a></td><td class='docblock-short'><p>A type that can be cryptographically hashed to produce a <code>HashValue</code>.</p>
+</td></tr><tr class='module-item'><td><a class="trait" href="trait.CryptoHasher.html" title='libra_crypto::hash::CryptoHasher trait'>CryptoHasher</a></td><td class='docblock-short'><p>A trait for representing the state of a cryptographic hasher.</p>
 </td></tr><tr class='module-item'><td><a class="trait" href="trait.TestOnlyHash.html" title='libra_crypto::hash::TestOnlyHash trait'>TestOnlyHash</a></td><td class='docblock-short'><p>Provides a test_only_hash() method that can be used in tests on types that implement
 <code>serde::Serialize</code>.</p>
 </td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "libra_crypto";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script defer src="../../search-index.js"></script></body></html>

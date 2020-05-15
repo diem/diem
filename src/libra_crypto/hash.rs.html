@@ -609,22 +609,6 @@
 <span id="609">609</span>
 <span id="610">610</span>
 <span id="611">611</span>
-<span id="612">612</span>
-<span id="613">613</span>
-<span id="614">614</span>
-<span id="615">615</span>
-<span id="616">616</span>
-<span id="617">617</span>
-<span id="618">618</span>
-<span id="619">619</span>
-<span id="620">620</span>
-<span id="621">621</span>
-<span id="622">622</span>
-<span id="623">623</span>
-<span id="624">624</span>
-<span id="625">625</span>
-<span id="626">626</span>
-<span id="627">627</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -635,14 +619,13 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! It is designed to help authors protect against two types of real world attacks:</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! 1. **Domain Ambiguity**: imagine that Alice has a private key and is using</span>
+<span class="doccomment">//! 1. **Semantic Ambiguity**: imagine that Alice has a private key and is using</span>
 <span class="doccomment">//!    two different applications, X and Y. X asks Alice to sign a message saying</span>
-<span class="doccomment">//!    &quot;I am Alice&quot;. naturally, Alice is willing to sign this message, since she</span>
-<span class="doccomment">//!    is in fact Alice. However, unbeknownst to Alice, in application Y,</span>
-<span class="doccomment">//!    messages beginning with the letter &quot;I&quot; represent transfers. &quot; am &quot;</span>
-<span class="doccomment">//!    represents a transfer of 500 coins and &quot;Alice&quot; can be interpreted as a</span>
-<span class="doccomment">//!    destination address. When Alice signed the message she needed to be</span>
-<span class="doccomment">//!    aware of how other applications might interpret that message.</span>
+<span class="doccomment">//!    &quot;I am Alice&quot;. Alice accepts to sign this message in the context of X. However,</span>
+<span class="doccomment">//!    unbeknownst to Alice, in application Y, messages beginning with the letter &quot;I&quot;</span>
+<span class="doccomment">//!    represent transfers. &quot; am &quot; represents a transfer of 500 coins and &quot;Alice&quot;</span>
+<span class="doccomment">//!    can be interpreted as a destination address. When Alice signed the message she</span>
+<span class="doccomment">//!    needed to be aware of how other applications might interpret that message.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! 2. **Format Ambiguity**: imagine a program that hashes a pair of strings.</span>
 <span class="doccomment">//!    To hash the strings `a` and `b` it hashes `a + &quot;||&quot; + b`. The pair of</span>
@@ -650,23 +633,46 @@
 <span class="doccomment">//!    same input to the hash function and therefore the same hash. This</span>
 <span class="doccomment">//!    creates a collision.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! # Examples</span>
+<span class="doccomment">//! Regarding (1), this library makes it easy for Libra developers to create as</span>
+<span class="doccomment">//! many new &quot;hashable&quot; Rust types as needed so that each Rust type hashed and signed</span>
+<span class="doccomment">//! in Libra has a unique meaning, that is, unambiguously captures the intent of a signer.</span>
 <span class="doccomment">//!</span>
+<span class="doccomment">//! Regarding (2), this library provides the `CryptoHasher` abstraction to easily manage</span>
+<span class="doccomment">//! cryptographic seeds for hashing. Hashing seeds aim to ensure that</span>
+<span class="doccomment">//! the hashes of values of a given type `MyNewStruct` never collide with hashes of values</span>
+<span class="doccomment">//! from another type.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! Finally, to prevent format ambiguity within a same type `MyNewStruct` and facilitate protocol</span>
+<span class="doccomment">//! specifications, we use [Libra Canonical Serialization (LCS)](../../libra_canonical_serialization/index.html)</span>
+<span class="doccomment">//! as the recommended solution to write Rust values into a hasher.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! # Quick Start</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! To obtain a `hash()` method for any new type `MyNewStruct`, it is (strongly) recommended to</span>
+<span class="doccomment">//! use the derive macros of `serde` and `libra_crypto_derive` as follows:</span>
 <span class="doccomment">//! ```</span>
-<span class="doccomment">//! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};</span>
+<span class="doccomment">//! use libra_crypto::hash::CryptoHash;</span>
+<span class="doccomment">//! use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};</span>
+<span class="doccomment">//! use serde::Serialize;</span>
+<span class="doccomment">//! #[derive(Serialize, CryptoHasher, LCSCryptoHash)]</span>
+<span class="doccomment">//! struct MyNewStruct { /*...*/ }</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! let mut hasher = TestOnlyHasher::default();</span>
-<span class="doccomment">//! hasher.update(&quot;Test message&quot;.as_bytes());</span>
-<span class="doccomment">//! let hash_value = hasher.finish();</span>
+<span class="doccomment">//! let value = MyNewStruct { /*...*/ };</span>
+<span class="doccomment">//! value.hash();</span>
 <span class="doccomment">//! ```</span>
-<span class="doccomment">//! The output is of type [`HashValue`], which can be used as an input for signing.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! # Implementing new hashers</span>
+<span class="doccomment">//! Under the hood, this will generate a new implementation `MyNewStructHasher` for the trait</span>
+<span class="doccomment">//! `CryptoHasher` and implement the trait `CryptoHash` for `MyNewStruct` using LCS.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! ## The automatic way</span>
+<span class="doccomment">//! # Implementing New Hashers</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! For any new structure `MyNewStruct` that needs to be hashed, the developer</span>
-<span class="doccomment">//! should use the [`CryptoHasher` derive macro](https://doc.rust-lang.org/reference/procedural-macros.html).</span>
+<span class="doccomment">//! The trait `CryptoHasher` captures the notion of a pre-seeded hash function, aka a &quot;hasher&quot;.</span>
+<span class="doccomment">//! New implementations can be defined in two ways.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ## Derive macro (recommended)</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! For any new structure `MyNewStruct` that needs to be hashed, it is recommended to simply</span>
+<span class="doccomment">//! use the derive macro [`CryptoHasher`](https://doc.rust-lang.org/reference/procedural-macros.html).</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```ignore</span>
 <span class="doccomment">//! #[derive(CryptoHasher)]</span>
@@ -678,34 +684,29 @@
 <span class="doccomment">//! The macro will define a hasher automatically called `MyNewStructHasher`, and pick a salt</span>
 <span class="doccomment">//! equal to the full module path + &quot;::&quot;  + structure name, i.e. if</span>
 <span class="doccomment">//! `MyNewStruct` is defined in `bar::baz::quux`, the salt will be `b&quot;bar::baz::quux::MyNewStruct&quot;`.</span>
-<span class="doccomment">//! You can then use it in your implementation of `CryptoHash` (see below).</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! ## The semi-automatic way</span>
+<span class="doccomment">//! ## Customized hashers</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! For any new structure `MyNewStruct` that needs to be hashed, the developer should define a</span>
-<span class="doccomment">//! new hasher with:</span>
+<span class="doccomment">//! **IMPORTANT:** Do NOT use this for new code unless you know what you are doing.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! This library also provides a few customized hashers defined in the code as follows:</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//! # // To get around that there&#39;s no way to doc-test a non-exported macro:</span>
 <span class="doccomment">//! # macro_rules! define_hasher { ($e:expr) =&gt; () }</span>
-<span class="doccomment">//! define_hasher! { (MyNewStructHasher, MY_NEW_STRUCT_HASHER, b&quot;MyNewStruct&quot;) }</span>
+<span class="doccomment">//! define_hasher! { (MyNewDataHasher, MY_NEW_DATA_HASHER, b&quot;MyUniqueSaltString&quot;) }</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! **Note**: The last argument for the `define_hasher` macro must be a unique string.</span>
+<span class="doccomment">//! # Using a hasher directly</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! ## The `CryptoHash` implementation (for both automatic and semi-automatic way)</span>
-<span class="doccomment">//! In most cases, the `CryptoHash` trait should be implemented using LCS serialization.</span>
-<span class="doccomment">//! The derive macro `LCSCryptoHash` generates such an implementation based on `serde::Serialize`,</span>
-<span class="doccomment">//! the LCS encoding, and `MyNewStructHasher`:</span>
+<span class="doccomment">//! **IMPORTANT:** Do NOT use this for new code unless you know what you are doing.</span>
+<span class="doccomment">//!</span>
 <span class="doccomment">//! ```</span>
-<span class="doccomment">//! # use libra_crypto::hash::*;</span>
-<span class="doccomment">//! # use libra_crypto_derive::*;</span>
-<span class="doccomment">//! # use serde::Serialize;</span>
-<span class="doccomment">//! #[derive(Serialize, CryptoHasher, LCSCryptoHash)]</span>
-<span class="doccomment">//! struct MyNewStruct { /*...*/ }</span>
+<span class="doccomment">//! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! let value = MyNewStruct { /*...*/ };</span>
-<span class="doccomment">//! value.hash();</span>
+<span class="doccomment">//! let mut hasher = TestOnlyHasher::default();</span>
+<span class="doccomment">//! hasher.update(&quot;Test message&quot;.as_bytes());</span>
+<span class="doccomment">//! let hash_value = hasher.finish();</span>
 <span class="doccomment">//! ```</span>
 
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">ensure</span>, <span class="ident">Error</span>, <span class="prelude-ty">Result</span>};
@@ -1037,8 +1038,10 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">iter</span>::<span class="ident">ExactSizeIterator</span> <span class="kw">for</span> <span class="ident">HashValueBitIterator</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {}
 
-<span class="doccomment">/// A type that implements `CryptoHash` can be hashed by a cryptographic hash function and produce</span>
-<span class="doccomment">/// a `HashValue`. Each type needs to have its own `Hasher` type.</span>
+<span class="doccomment">/// A type that can be cryptographically hashed to produce a `HashValue`.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// In most cases, this trait should not be implemented manually but rather derived using</span>
+<span class="doccomment">/// the macros `serde::Serialize`, `CryptoHasher`, and `LCSCryptoHash`.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">CryptoHash</span> {
     <span class="doccomment">/// The associated `Hasher` type which comes with a unique salt for this type.</span>
     <span class="kw">type</span> <span class="ident">Hasher</span>: <span class="ident">CryptoHasher</span>;
@@ -1047,66 +1050,25 @@
     <span class="kw">fn</span> <span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span>;
 }
 
-<span class="doccomment">/// A trait for generating hash from arbitrary stream of bytes.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Instances of `CryptoHasher` usually represent state that is changed while hashing data.</span>
-<span class="doccomment">/// Similar to `std::hash::Hasher` but not same. CryptoHasher cannot be reused after finish() has</span>
-<span class="doccomment">/// been called.</span>
+<span class="doccomment">/// A trait for representing the state of a cryptographic hasher.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">CryptoHasher</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Write</span> {
+    <span class="doccomment">/// Write bytes into the hasher.</span>
+    <span class="kw">fn</span> <span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]);
+
     <span class="doccomment">/// Finish constructing the [`HashValue`].</span>
     <span class="kw">fn</span> <span class="ident">finish</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span>;
-    <span class="doccomment">/// Write bytes into the hasher.</span>
-    <span class="kw">fn</span> <span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span>;
 }
 
-<span class="doccomment">/// Our preferred hashing schema, outputting [`HashValue`]s.</span>
-<span class="doccomment">/// * Hashing is parameterized by a `domain` to prevent domain</span>
-<span class="doccomment">/// ambiguity attacks.</span>
-<span class="doccomment">/// * The existence of serialization/deserialization function rules</span>
-<span class="doccomment">/// out any formatting ambiguity.</span>
-<span class="doccomment">/// * Assuming that the `domain` seed is used only once per Rust type,</span>
-<span class="doccomment">/// or that the serialization carries enough type information to avoid</span>
-<span class="doccomment">/// ambiguities within a same domain.</span>
-<span class="doccomment">/// * Only used internally within this crate</span>
+<span class="doccomment">/// The default hasher underlying generated implementations of `CryptoHasher`.</span>
+<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DefaultHasher</span> {
     <span class="ident">state</span>: <span class="ident">Sha3</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">CryptoHasher</span> <span class="kw">for</span> <span class="ident">DefaultHasher</span> {
-    <span class="kw">fn</span> <span class="ident">finish</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">HashValue</span>::<span class="ident">default</span>();
-        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">finalize</span>(<span class="ident">hasher</span>.<span class="ident">as_ref_mut</span>());
-        <span class="ident">hasher</span>
-    }
-
-    <span class="kw">fn</span> <span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">update</span>(<span class="ident">bytes</span>);
-        <span class="self">self</span>
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">DefaultHasher</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">DefaultHasher</span> {
-            <span class="ident">state</span>: <span class="ident">Sha3</span>::<span class="ident">v256</span>(),
-        }
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Write</span> <span class="kw">for</span> <span class="ident">DefaultHasher</span> {
-    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">update</span>(<span class="ident">bytes</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">bytes</span>.<span class="ident">len</span>())
-    }
-    <span class="kw">fn</span> <span class="ident">flush</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(())
-    }
-}
-
 <span class="kw">impl</span> <span class="ident">DefaultHasher</span> {
-    <span class="doccomment">/// initialize a new hasher with a specific salt</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_with_salt</span>(<span class="ident">typename</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">typename</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">Sha3</span>::<span class="ident">v256</span>();
         <span class="kw">if</span> <span class="op">!</span><span class="ident">typename</span>.<span class="ident">is_empty</span>() {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">salt</span> <span class="op">=</span> <span class="ident">typename</span>.<span class="ident">to_vec</span>();
@@ -1114,6 +1076,18 @@
             <span class="ident">state</span>.<span class="ident">update</span>(<span class="ident">HashValue</span>::<span class="ident">from_sha3_256</span>(<span class="kw-2">&amp;</span><span class="ident">salt</span>[..]).<span class="ident">as_ref</span>());
         }
         <span class="ident">DefaultHasher</span> { <span class="ident">state</span> }
+    }
+
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) {
+        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">update</span>(<span class="ident">bytes</span>);
+    }
+
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">finish</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">HashValue</span>::<span class="ident">default</span>();
+        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">finalize</span>(<span class="ident">hasher</span>.<span class="ident">as_ref_mut</span>());
+        <span class="ident">hasher</span>
     }
 }
 
@@ -1129,9 +1103,11 @@
 
         <span class="kw">impl</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_type</span> {
             <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-                <span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_type</span>(<span class="ident">DefaultHasher</span>::<span class="ident">new_with_salt</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">salt</span>))
+                <span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_type</span>(<span class="ident">DefaultHasher</span>::<span class="ident">new</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">salt</span>))
             }
         }
+
+        <span class="kw">static</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_name</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_type</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> { <span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_type</span>::<span class="ident">new</span>() });
 
         <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_type</span> {
             <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
@@ -1140,13 +1116,12 @@
         }
 
         <span class="kw">impl</span> <span class="ident">CryptoHasher</span> <span class="kw">for</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_type</span> {
-            <span class="kw">fn</span> <span class="ident">finish</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
-                <span class="self">self</span>.<span class="number">0</span>.<span class="ident">finish</span>()
+            <span class="kw">fn</span> <span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) {
+                <span class="self">self</span>.<span class="number">0</span>.<span class="ident">update</span>(<span class="ident">bytes</span>);
             }
 
-            <span class="kw">fn</span> <span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-                <span class="self">self</span>.<span class="number">0</span>.<span class="ident">update</span>(<span class="ident">bytes</span>);
-                <span class="self">self</span>
+            <span class="kw">fn</span> <span class="ident">finish</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
+                <span class="self">self</span>.<span class="number">0</span>.<span class="ident">finish</span>()
             }
         }
 
@@ -1159,8 +1134,6 @@
                 <span class="prelude-val">Ok</span>(())
             }
         }
-
-        <span class="kw">static</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_name</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_type</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> { <span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_type</span>::<span class="ident">new</span>() });
     };
 }
 
@@ -1194,11 +1167,6 @@
 <span class="macro">define_hasher</span><span class="macro">!</span> {
     <span class="doccomment">/// The hasher used only for testing. It doesn&#39;t have a salt.</span>
     (<span class="ident">TestOnlyHasher</span>, <span class="ident">TEST_ONLY_HASHER</span>, <span class="string">b&quot;&quot;</span>)
-}
-
-<span class="macro">define_hasher</span><span class="macro">!</span> {
-    <span class="doccomment">/// The hasher used to compute the hash of a DiscoveryMsg object.</span>
-    (<span class="ident">DiscoveryMsgHasher</span>, <span class="ident">DISCOVERY_MSG_HASHER</span>, <span class="string">b&quot;DiscoveryMsg&quot;</span>)
 }
 
 <span class="kw">fn</span> <span class="ident">create_literal_hash</span>(<span class="ident">word</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {

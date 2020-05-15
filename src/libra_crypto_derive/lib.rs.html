@@ -410,6 +410,7 @@
 <span id="410">410</span>
 <span id="411">411</span>
 <span id="412">412</span>
+<span id="413">413</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -759,7 +760,7 @@
                 <span class="kw">let</span> <span class="ident">f_name</span> <span class="op">=</span> #<span class="ident">fn_name</span>;
 
                 #<span class="ident">hasher_name</span>(
-                    <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">DefaultHasher</span>::<span class="ident">new_with_salt</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="ident">mp</span>, <span class="ident">f_name</span>).<span class="ident">as_bytes</span>()))
+                    <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">DefaultHasher</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="ident">mp</span>, <span class="ident">f_name</span>).<span class="ident">as_bytes</span>()))
             }
         }
 
@@ -775,13 +776,12 @@
         }
 
         <span class="kw">impl</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">CryptoHasher</span> <span class="kw">for</span> #<span class="ident">hasher_name</span> {
-            <span class="kw">fn</span> <span class="ident">finish</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
-                <span class="self">self</span>.<span class="number">0</span>.<span class="ident">finish</span>()
+            <span class="kw">fn</span> <span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) {
+                <span class="self">self</span>.<span class="number">0</span>.<span class="ident">update</span>(<span class="ident">bytes</span>);
             }
 
-            <span class="kw">fn</span> <span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-                <span class="self">self</span>.<span class="number">0</span>.<span class="ident">update</span>(<span class="ident">bytes</span>);
-                <span class="self">self</span>
+            <span class="kw">fn</span> <span class="ident">finish</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">HashValue</span> {
+                <span class="self">self</span>.<span class="number">0</span>.<span class="ident">finish</span>()
             }
         }
 
@@ -814,7 +814,9 @@
         <span class="kw">impl</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">CryptoHash</span> <span class="kw">for</span> #<span class="ident">name</span> {
             <span class="kw">type</span> <span class="ident">Hasher</span> <span class="op">=</span> #<span class="ident">hasher_name</span>;
 
-            <span class="kw">fn</span> <span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
+            <span class="kw">fn</span> <span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">HashValue</span> {
+                <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">CryptoHasher</span>;
+
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">Hasher</span>::<span class="ident">default</span>();
                 <span class="ident">lcs</span>::<span class="ident">serialize_into</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">state</span>, <span class="kw-2">&amp;</span><span class="self">self</span>).<span class="ident">expect</span>(#<span class="ident">error_msg</span>);
                 <span class="ident">state</span>.<span class="ident">finish</span>()

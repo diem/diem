@@ -600,17 +600,6 @@
 <span id="600">600</span>
 <span id="601">601</span>
 <span id="602">602</span>
-<span id="603">603</span>
-<span id="604">604</span>
-<span id="605">605</span>
-<span id="606">606</span>
-<span id="607">607</span>
-<span id="608">608</span>
-<span id="609">609</span>
-<span id="610">610</span>
-<span id="611">611</span>
-<span id="612">612</span>
-<span id="613">613</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -663,9 +652,10 @@
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">RoleType</span>;
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::{
     <span class="ident">ed25519</span>::{<span class="ident">Ed25519PrivateKey</span>, <span class="ident">Ed25519PublicKey</span>, <span class="ident">Ed25519Signature</span>},
-    <span class="ident">hash</span>::{<span class="ident">CryptoHasher</span>, <span class="ident">DiscoveryMsgHasher</span>},
-    <span class="ident">HashValue</span>, <span class="ident">Signature</span>, <span class="ident">SigningKey</span>,
+    <span class="ident">hash</span>::<span class="ident">CryptoHash</span>,
+    <span class="ident">Signature</span>, <span class="ident">SigningKey</span>,
 };
+<span class="kw">use</span> <span class="ident">libra_crypto_derive</span>::{<span class="ident">CryptoHasher</span>, <span class="ident">LCSCryptoHash</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
 <span class="kw">use</span> <span class="ident">libra_security_logger</span>::{<span class="ident">security_log</span>, <span class="ident">SecurityEvent</span>};
@@ -1107,17 +1097,15 @@
 
 <span class="kw">impl</span> <span class="ident">SignedPeerInfo</span> {
     <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">pub_key</span>: <span class="kw-2">&amp;</span><span class="ident">Ed25519PublicKey</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">NetworkError</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">peer_info_bytes</span> <span class="op">=</span>
-            <span class="ident">lcs</span>::<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">peer_info</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">NetworkErrorKind</span>::<span class="ident">ParsingError</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">signature</span>
-            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">get_hash</span>(<span class="kw-2">&amp;</span><span class="ident">peer_info_bytes</span>), <span class="kw-2">&amp;</span><span class="ident">pub_key</span>)
+            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">peer_info</span>.<span class="ident">hash</span>(), <span class="kw-2">&amp;</span><span class="ident">pub_key</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">NetworkErrorKind</span>::<span class="ident">SignatureError</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }
 
 <span class="doccomment">/// A `PeerInfo` represents the network address(es) of a Peer.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">CryptoHasher</span>, <span class="ident">LCSCryptoHash</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PeerInfo</span> {
     <span class="doccomment">/// Network addresses this peer can be reached at.</span>
     <span class="ident">addrs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span>,
@@ -1129,8 +1117,7 @@
 
 <span class="kw">impl</span> <span class="ident">PeerInfo</span> {
     <span class="kw">fn</span> <span class="ident">sign</span>(<span class="self">self</span>, <span class="ident">signer</span>: <span class="kw-2">&amp;</span><span class="ident">Ed25519PrivateKey</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SignedPeerInfo</span> {
-        <span class="kw">let</span> <span class="ident">peer_info_bytes</span> <span class="op">=</span> <span class="ident">lcs</span>::<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>).<span class="ident">expect</span>(<span class="string">&quot;LCS serialization fails&quot;</span>);
-        <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">signer</span>.<span class="ident">sign_message</span>(<span class="kw-2">&amp;</span><span class="ident">get_hash</span>(<span class="kw-2">&amp;</span><span class="ident">peer_info_bytes</span>));
+        <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">signer</span>.<span class="ident">sign_message</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">hash</span>());
         <span class="ident">SignedPeerInfo</span> {
             <span class="ident">peer_info</span>: <span class="self">self</span>,
             <span class="ident">signature</span>,
@@ -1149,17 +1136,15 @@
 
 <span class="kw">impl</span> <span class="ident">SignedFullNodeInfo</span> {
     <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">pub_key</span>: <span class="kw-2">&amp;</span><span class="ident">Ed25519PublicKey</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">NetworkError</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">full_node_info_bytes</span> <span class="op">=</span>
-            <span class="ident">lcs</span>::<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">full_node_info</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">NetworkErrorKind</span>::<span class="ident">ParsingError</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">signature</span>
-            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">get_hash</span>(<span class="kw-2">&amp;</span><span class="ident">full_node_info_bytes</span>), <span class="kw-2">&amp;</span><span class="ident">pub_key</span>)
+            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">full_node_info</span>.<span class="ident">hash</span>(), <span class="kw-2">&amp;</span><span class="ident">pub_key</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">NetworkErrorKind</span>::<span class="ident">SignatureError</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }
 
 <span class="doccomment">/// Discovery information relevant to public full nodes and clients.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">CryptoHasher</span>, <span class="ident">LCSCryptoHash</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FullNodeInfo</span> {
     <span class="doccomment">/// The DNS domain name other public full nodes should query to get this</span>
     <span class="doccomment">/// validator&#39;s list of full nodes.</span>
@@ -1172,8 +1157,7 @@
 
 <span class="kw">impl</span> <span class="ident">FullNodeInfo</span> {
     <span class="kw">fn</span> <span class="ident">sign</span>(<span class="self">self</span>, <span class="ident">signer</span>: <span class="kw-2">&amp;</span><span class="ident">Ed25519PrivateKey</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SignedFullNodeInfo</span> {
-        <span class="kw">let</span> <span class="ident">full_node_info_bytes</span> <span class="op">=</span> <span class="ident">lcs</span>::<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>).<span class="ident">expect</span>(<span class="string">&quot;LCS serialization failed&quot;</span>);
-        <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">signer</span>.<span class="ident">sign_message</span>(<span class="kw-2">&amp;</span><span class="ident">get_hash</span>(<span class="kw-2">&amp;</span><span class="ident">full_node_info_bytes</span>));
+        <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">signer</span>.<span class="ident">sign_message</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">hash</span>());
         <span class="ident">SignedFullNodeInfo</span> {
             <span class="ident">full_node_info</span>: <span class="self">self</span>,
             <span class="ident">signature</span>,
@@ -1218,12 +1202,6 @@
         <span class="ident">verified_notes</span>.<span class="ident">push</span>(<span class="ident">verified_note</span>);
     }
     <span class="prelude-val">Ok</span>(<span class="ident">verified_notes</span>)
-}
-
-<span class="kw">fn</span> <span class="ident">get_hash</span>(<span class="ident">msg</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">DiscoveryMsgHasher</span>::<span class="ident">default</span>();
-    <span class="ident">hasher</span>.<span class="ident">update</span>(<span class="ident">msg</span>);
-    <span class="ident">hasher</span>.<span class="ident">finish</span>()
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../../";window.currentCrate = "network";</script><script src="../../../../aliases.js"></script><script src="../../../../main.js"></script><script src="../../../../source-script.js"></script><script src="../../../../source-files.js"></script><script defer src="../../../../search-index.js"></script></body></html>

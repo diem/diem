@@ -171,7 +171,7 @@
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>},
 };
-<span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::{<span class="ident">CryptoHash</span>, <span class="ident">CryptoHasher</span>, <span class="ident">HashValue</span>};
+<span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">CryptoHash</span>;
 <span class="kw">use</span> <span class="ident">libra_crypto_derive</span>::{<span class="ident">CryptoHasher</span>, <span class="ident">LCSCryptoHash</span>};
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
 <span class="kw">use</span> <span class="ident">proptest_derive</span>::<span class="ident">Arbitrary</span>;
