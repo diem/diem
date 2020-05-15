@@ -19,7 +19,12 @@ use libra_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
     waypoint::Waypoint, PeerId,
 };
-use std::{boxed::Box, collections::HashMap, sync::Arc, time::Duration};
+use std::{
+    boxed::Box,
+    collections::HashMap,
+    sync::Arc,
+    time::{Duration, SystemTime},
+};
 use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
 use tokio::{
@@ -134,9 +139,15 @@ impl StateSyncClient {
     pub fn sync_to(&self, target: LedgerInfoWithSignatures) -> impl Future<Output = Result<()>> {
         let mut sender = self.coordinator_sender.clone();
         let (callback, cb_receiver) = oneshot::channel();
-        let request = SyncRequest { callback, target };
+        let request = SyncRequest {
+            callback,
+            target,
+            last_progress_tst: SystemTime::now(),
+        };
         async move {
-            sender.send(CoordinatorMessage::Request(request)).await?;
+            sender
+                .send(CoordinatorMessage::Request(Box::new(request)))
+                .await?;
             cb_receiver.await?
         }
     }

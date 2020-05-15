@@ -38,12 +38,13 @@ pub(crate) struct SyncRequest {
     // reach the target (the LI in the storage remains unchanged as if nothing happened).
     pub callback: oneshot::Sender<Result<()>>,
     pub target: LedgerInfoWithSignatures,
+    pub last_progress_tst: SystemTime,
 }
 
 /// message used by StateSyncClient for communication with Coordinator
 pub(crate) enum CoordinatorMessage {
     // used to initiate new sync
-    Request(SyncRequest),
+    Request(Box<SyncRequest>),
     // used to notify about new txn commit
     Commit(
         // committed transactions
@@ -159,7 +160,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 msg = self.client_events.select_next_some() => {
                     match msg {
                         CoordinatorMessage::Request(request) => {
-                            if let Err(e) = self.request_sync(request) {
+                            if let Err(e) = self.request_sync(*request) {
                                 error!("[state sync] request sync fail: {}", e);
                             }
                         }
@@ -382,6 +383,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         self.check_subscriptions();
         self.peer_manager.remove_requests(local_version);
 
+        if let Some(mut req) = self.sync_request.as_mut() {
+            req.last_progress_tst = SystemTime::now();
+        }
         let sync_request_complete = self.sync_request.as_ref().map_or(false, |sync_req| {
             // Each `ChunkResponse` is verified to make sure it never goes beyond the requested
             // target version, hence, the local version should never go beyond sync req target.
@@ -798,6 +802,27 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         if self.role == RoleType::Validator && self.sync_request.is_none() && self.is_initialized()
         {
             return;
+        }
+
+        // check that we made progress in fulfilling consensus sync request
+        let sync_request_expired = self.sync_request.as_ref().map_or(false, |req| {
+            let default_timeout = Duration::from_millis(self.config.sync_request_timeout_ms);
+            if let Some(tst) = req.last_progress_tst.checked_add(default_timeout) {
+                return SystemTime::now().duration_since(tst).is_ok();
+            }
+            false
+        });
+        // notify consensus if sync request timed out
+        if sync_request_expired {
+            if let Some(sync_request) = self.sync_request.take() {
+                if sync_request
+                    .callback
+                    .send(Err(format_err!("request timed out")))
+                    .is_err()
+                {
+                    error!("[state sync] Failed to notify consensus");
+                }
+            }
         }
 
         let known_version = self.local_state.highest_version_in_local_storage();
