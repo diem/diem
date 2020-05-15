@@ -178,8 +178,8 @@ pub fn struct_logger_set() -> bool {
     STRUCT_LOGGER_STATE.load(Ordering::SeqCst) == INITIALIZED
 }
 
-/// Initializes struct logger from STRUCT_LOG_FILE env var
-/// If STRUCT_LOG_FILE is set, STRUCT_LOG_UDP_ADDR will be ignored
+/// Initializes struct logger from STRUCT_LOG_FILE env var.
+/// If STRUCT_LOG_FILE is set, STRUCT_LOG_UDP_ADDR will be ignored.
 /// Can only be called once
 pub fn init_struct_log_from_env() -> Result<(), InitLoggerError> {
     if let Ok(file) = env::var("STRUCT_LOG_FILE") {
@@ -191,7 +191,7 @@ pub fn init_struct_log_from_env() -> Result<(), InitLoggerError> {
     }
 }
 
-/// Initializes struct logger sink that writes to specified file
+/// Initializes struct logger sink that writes to specified file.
 /// Can only be called once
 pub fn init_file_struct_log(file_path: String) -> Result<(), InitLoggerError> {
     let logger = FileStructLog::start_new(file_path).map_err(InitLoggerError::IoError)?;
@@ -199,7 +199,7 @@ pub fn init_file_struct_log(file_path: String) -> Result<(), InitLoggerError> {
     set_struct_logger(logger).map_err(|_| InitLoggerError::StructLoggerAlreadySet)
 }
 
-/// Initializes struct logger sink that stream logs through UDP protocol
+/// Initializes struct logger sink that stream logs through UDP protocol.
 /// Can only be called once
 pub fn init_udp_struct_log(udp_address: String) -> Result<(), InitLoggerError> {
     let logger = UDPStructLog::start_new(udp_address).map_err(InitLoggerError::IoError)?;
@@ -306,7 +306,7 @@ impl UDPStructLog {
     /// Creates new UDPStructLog and starts async thread to send results
     pub fn start_new(udp_address: String) -> io::Result<Self> {
         let (sender, receiver) = mpsc::sync_channel(1_024);
-        let socket = UdpSocket::bind(udp_address.clone()).expect("couldn't bind to address");
+        let socket = UdpSocket::bind("0.0.0.0:0").expect("couldn't bind to address");
         let sink_thread = UDPStructLogThread {
             receiver,
             socket,
@@ -322,7 +322,7 @@ impl StructLogSink for UDPStructLog {
         if let Err(e) = self.sender.try_send(entry) {
             // Use log crate macro to avoid generation of structured log in this case
             // Otherwise we will have infinite loop
-            log::error!("Failed to send structured log: {}", e);
+            log::error!("[Logging] Failed to send structured log: {}", e);
         }
     }
 }
@@ -338,7 +338,7 @@ impl UDPStructLogThread {
         for entry in self.receiver {
             let json = match serde_json::to_value(entry) {
                 Err(e) => {
-                    log::error!("Failed to serialize struct log entry: {}", e);
+                    log::error!("[Logging] Failed to serialize struct log entry: {}", e);
                     continue;
                 }
                 Ok(json) => json,
@@ -351,7 +351,7 @@ impl UDPStructLogThread {
                     continue;
                 }
                 Err(e) => {
-                    println!("Error while sending data to socket: {}", e);
+                    println!("[Logging] Error while sending data to socket: {}", e);
                     break;
                 }
             }
