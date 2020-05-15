@@ -38,4 +38,4 @@ harness = false
 [features]
 default = []
 fuzzing = ["consensus-types/fuzzing", "libra-config/fuzzing"]
-testing = []
+testing = ["libra-secure-storage/testing"]
