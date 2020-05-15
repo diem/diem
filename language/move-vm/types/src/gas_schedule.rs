@@ -306,4 +306,5 @@ pub enum NativeCostIndex {
     SWAP = 12,
     SAVE_ACCOUNT = 13,
     ED25519_VALIDATE_KEY = 14,
+    SIGNER_BORROW = 15,
 }
