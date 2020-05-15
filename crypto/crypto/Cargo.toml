@@ -36,7 +36,6 @@ libra-crypto-derive = { path = "../crypto-derive", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-nibble = { path = "../../common/nibble", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-subtle = { version = "2.2.1" }
 
 [dev-dependencies]
 bitvec = "0.17.3"
