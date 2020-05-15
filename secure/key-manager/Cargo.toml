@@ -14,7 +14,7 @@ once_cell = "1.4.0"
 serde = { version = "1.0.110", features = ["rc"], default-features = false }
 thiserror = "1.0"
 
-libra-config = { path = "../../config", version = "0.1.0", features = ["fuzzing"]}
+libra-config = { path = "../../config", version = "0.1.0"}
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-global-constants = { path = "../../config/global-constants", version = "0.1.0"}
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
@@ -42,4 +42,4 @@ storage-interface= { path = "../../storage/storage-interface", version = "0.1.0"
 vm-validator = { path = "../../vm-validator", version = "0.1.0" }
 
 [features]
-fuzzing = ["libradb/fuzzing", "libra-json-rpc/fuzzing"]
+fuzzing = ["libradb/fuzzing", "libra-json-rpc/fuzzing", "libradb/fuzzing", "libra-config/fuzzing", "libra-secure-storage/testing" ]
