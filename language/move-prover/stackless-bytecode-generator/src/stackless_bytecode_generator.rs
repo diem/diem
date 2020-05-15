@@ -276,16 +276,10 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             | MoveBytecode::MutBorrowFieldGeneric(field_inst_index) => {
                 let field_inst = self.module.field_instantiation_at(*field_inst_index);
                 let struct_ref_index = self.temp_stack.pop().unwrap();
-                let (struct_id, field_offset, field_signature) =
+                let (struct_id, field_offset, base_field_type) =
                     self.get_field_info(field_inst.handle);
-                let type_sigs = self
-                    .func_env
-                    .module_env
-                    .globalize_signatures(&self.module.signature_at(field_inst.type_parameters).0);
-                let field_type = match field_signature {
-                    Type::TypeParameter(i) => type_sigs[i as usize].clone(),
-                    _ => field_signature,
-                };
+                let actuals = self.get_type_params(field_inst.type_parameters);
+                let field_type = base_field_type.instantiate(&actuals);
                 let field_ref_index = self.temp_count;
                 self.temp_stack.push(field_ref_index);
 
@@ -293,7 +287,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     Operation::BorrowField(
                         self.func_env.module_env.get_id(),
                         struct_id,
-                        type_sigs,
+                        actuals,
                         field_offset,
                     ),
                     vec![field_ref_index],
