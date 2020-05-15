@@ -27,3 +27,4 @@ libra-types = { path = "../../types", version = "0.1.0" }
 
 [features]
 testing = []
+fuzzing = [ "libra-types/fuzzing" ]
