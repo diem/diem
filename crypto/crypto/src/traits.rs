@@ -38,6 +38,8 @@ pub enum CryptoMaterialError {
     PointNotOnCurveError,
     /// BitVec errors in accountable multi-sig schemes.
     BitVecError(String),
+    /// Key conversion related errors (i.e., from ed25519 to x25519).
+    KeyConversionError,
 }
 
 /// The serialized length of the data that enables macro derived serialization and deserialization.

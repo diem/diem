@@ -9,8 +9,27 @@ use crate::{
     x25519, Uniform as _,
 };
 
+use crate::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use rand::SeedableRng;
 use serde::*;
+use std::convert::TryFrom;
+
+#[test]
+fn convert_from_ed25519_publickey() {
+    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
+    let ed25519_private_key = Ed25519PrivateKey::generate(&mut rng);
+    let ed25519_public_key: Ed25519PublicKey = Ed25519PublicKey::from(&ed25519_private_key);
+    let x25519_public_key = x25519::PublicKey::try_from(&ed25519_public_key);
+    assert!(x25519_public_key.is_ok());
+
+    // Let's construct an x25519 private key from the ed25519 private key.
+    let x25519_privatekey = x25519::PrivateKey::try_from(&ed25519_private_key).unwrap();
+
+    // Now derive the public key from x25519_privatekey and see if it matches the public key that
+    // was created from the Ed25519PublicKey.
+    let x25519_publickey_2 = x25519_privatekey.public_key();
+    assert_eq!(x25519_public_key.unwrap(), x25519_publickey_2)
+}
 
 #[test]
 fn simple_handshake() {

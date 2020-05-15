@@ -47,6 +47,10 @@ use proptest_derive::Arbitrary;
 // This makes it easier to uniformalize build dalek-x25519 in libra-core.
 //
 
+use crate::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
+use crate::CryptoMaterialError;
+use curve25519_dalek::edwards::CompressedEdwardsY;
+use ed25519_dalek::SecretKey;
 pub use x25519_dalek;
 
 //
@@ -116,13 +120,34 @@ impl std::convert::From<[u8; PRIVATE_KEY_SIZE]> for PrivateKey {
 }
 
 impl std::convert::TryFrom<&[u8]> for PrivateKey {
-    type Error = traits::CryptoMaterialError;
+    type Error = CryptoMaterialError;
 
     fn try_from(private_key_bytes: &[u8]) -> Result<Self, Self::Error> {
         let private_key_bytes: [u8; PRIVATE_KEY_SIZE] = private_key_bytes
             .try_into()
-            .map_err(|_| traits::CryptoMaterialError::DeserializationError)?;
+            .map_err(|_| CryptoMaterialError::DeserializationError)?;
         Ok(Self(x25519_dalek::StaticSecret::from(private_key_bytes)))
+    }
+}
+
+// Convert an Ed25519PrivateKey to x25519::PrivateKey. To be used only when x25519 keys are required
+// (i.e., for noise protocol), but the KMS (key management service) can only store Ed25519 keys
+// (i.e., Vault or HSM).
+impl std::convert::TryFrom<&Ed25519PrivateKey> for PrivateKey {
+    type Error = CryptoMaterialError;
+
+    fn try_from(ed25519_privatekey: &Ed25519PrivateKey) -> Result<Self, Self::Error> {
+        // Reconstruct an x25519 private key from the ed25519 private key.
+        let ed25519_secretkey = SecretKey::from_bytes(&ed25519_privatekey.to_bytes())
+            .map_err(|_| CryptoMaterialError::KeyConversionError)?;
+        let expanded_ed25519_privatekey: ed25519_dalek::ExpandedSecretKey =
+            ed25519_dalek::ExpandedSecretKey::from(&ed25519_secretkey);
+
+        // Note: the first 32 bytes of the ExpandedSecretKey correspond to the actual private key.
+        let mut expanded_keypart = [0u8; 32];
+        let bytes = &expanded_ed25519_privatekey.to_bytes()[..32];
+        expanded_keypart.copy_from_slice(bytes);
+        Ok(PrivateKey::from(expanded_keypart))
     }
 }
 
@@ -174,6 +199,21 @@ impl From<&PrivateKey> for PublicKey {
     }
 }
 
+// Convert an Ed25519PublicKey to x25519::PublicKey. To be used only when x25519 keys are required
+// (i.e., for noise protocol), but the KMS (key management service) can only store Ed25519 keys
+// (i.e., Vault or HSM).
+impl std::convert::TryFrom<&Ed25519PublicKey> for PublicKey {
+    type Error = CryptoMaterialError;
+
+    fn try_from(ed25519_publickey: &Ed25519PublicKey) -> Result<Self, Self::Error> {
+        let dec_compressed = CompressedEdwardsY(ed25519_publickey.to_bytes());
+        match dec_compressed.decompress() {
+            Some(ed25519_point) => Ok(PublicKey(ed25519_point.to_montgomery().to_bytes())),
+            None => Err(CryptoMaterialError::KeyConversionError),
+        }
+    }
+}
+
 impl std::convert::From<[u8; PUBLIC_KEY_SIZE]> for PublicKey {
     fn from(public_key_bytes: [u8; PUBLIC_KEY_SIZE]) -> Self {
         Self(public_key_bytes)
@@ -181,12 +221,12 @@ impl std::convert::From<[u8; PUBLIC_KEY_SIZE]> for PublicKey {
 }
 
 impl std::convert::TryFrom<&[u8]> for PublicKey {
-    type Error = traits::CryptoMaterialError;
+    type Error = CryptoMaterialError;
 
     fn try_from(public_key_bytes: &[u8]) -> Result<Self, Self::Error> {
         let public_key_bytes: [u8; PUBLIC_KEY_SIZE] = public_key_bytes
             .try_into()
-            .map_err(|_| traits::CryptoMaterialError::WrongLengthError)?;
+            .map_err(|_| CryptoMaterialError::WrongLengthError)?;
         Ok(Self(public_key_bytes))
     }
 }
