@@ -60,10 +60,8 @@ function $DebugTrackAbort(file_id: int, byte_index: int) : bool {
 // Path type
 // ---------
 
-type Edge = int; // both FieldName and vector index are mapped to int
-
 type {:datatype} Path;
-function {:constructor} Path(p: [int]Edge, size: int): Path;
+function {:constructor} Path(p: [int]int, size: int): Path;
 const EmptyPath: Path;
 axiom size#Path(EmptyPath) == 0;
 
