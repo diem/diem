@@ -223,6 +223,16 @@ impl SynchronizerEnv {
         role: RoleType,
         waypoint: Option<Waypoint>,
     ) {
+        self.setup_next_synchronizer(handler, role, waypoint, 60_000);
+    }
+
+    fn setup_next_synchronizer(
+        &mut self,
+        handler: MockRpcHandler,
+        role: RoleType,
+        waypoint: Option<Waypoint>,
+        timeout_ms: u64,
+    ) {
         let new_peer_idx = self.synchronizers.len();
         let trusted_peers: HashMap<_, _> = self
             .public_keys
@@ -279,6 +289,7 @@ impl SynchronizerEnv {
             config.validator_network = None;
         }
         config.base.role = role;
+        config.state_sync.sync_request_timeout_ms = timeout_ms;
         if new_peer_idx > 0 {
             // set the upstream peer in the config
             let upstream_peer = PeerNetworkId(network_id, self.peer_ids[new_peer_idx - 1]);
@@ -427,6 +438,23 @@ fn test_flaky_peer_sync() {
     env.commit(0, 20);
     env.sync_to(1, env.latest_li(0));
     assert_eq!(env.latest_li(1).ledger_info().version(), 20);
+}
+
+#[test]
+#[should_panic]
+fn test_request_timeout() {
+    let handler =
+        Box::new(move |_| -> Result<TransactionListWithProof> { bail!("chunk fetch failed") });
+    let mut env = SynchronizerEnv::new(2);
+    env.start_next_synchronizer(handler, RoleType::Validator, None);
+    env.setup_next_synchronizer(
+        SynchronizerEnv::default_handler(),
+        RoleType::Validator,
+        None,
+        100,
+    );
+    env.commit(0, 1);
+    env.sync_to(1, env.latest_li(0));
 }
 
 #[test]
