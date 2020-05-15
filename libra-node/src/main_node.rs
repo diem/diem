@@ -22,7 +22,7 @@ use libra_metrics::metric_server;
 use libra_types::{on_chain_config::ON_CHAIN_CONFIG_REGISTRY, waypoint::Waypoint, PeerId};
 use libra_vm::LibraVM;
 use libradb::LibraDB;
-use network::validator_network::network_builder::{NetworkBuilder, TransportType};
+use network::validator_network::network_builder::{AuthMode, NetworkBuilder, HANDSHAKE_VERSION};
 use onchain_discovery::{client::OnchainDiscovery, service::OnchainDiscoveryService};
 use state_synchronizer::StateSynchronizer;
 use std::{
@@ -131,10 +131,13 @@ pub fn setup_network(
         .build()
         .expect("Failed to start runtime. Won't be able to start networking.");
 
-    let mut network_builder = NetworkBuilder::new(runtime.handle().clone(), config.peer_id, role);
-    network_builder
-        .enable_remote_authentication(config.enable_remote_authentication)
-        .add_connection_monitoring();
+    let mut network_builder = NetworkBuilder::new(
+        runtime.handle().clone(),
+        config.peer_id,
+        role,
+        config.listen_address.clone(),
+    );
+    network_builder.add_connection_monitoring();
 
     // TODO(philiphayes): it might make more sense to refactor this so we have a
     // config per "archetype"?
@@ -144,7 +147,7 @@ pub fn setup_network(
         // encryption.
         assert!(
             config.enable_noise,
-            "Permissioned network end-points should use authentication"
+            "Permissioned network end-points must use authentication"
         );
         let seed_peers = config.seed_peers.seed_peers.clone();
         let network_peers = config.network_peers.peers.clone();
@@ -163,19 +166,6 @@ pub fn setup_network(
             .identity_keypair
             .take_private()
             .expect("identity key should be present");
-        let identity_pubkey = identity_key.public_key();
-
-        let handshake_version = config.handshake_version;
-
-        // TODO(philiphayes): ideally config should contain full addrs
-        let listen_address = config
-            .listen_address
-            .clone()
-            .into_prod(identity_pubkey, handshake_version);
-        let advertised_address = config
-            .advertised_address
-            .clone()
-            .into_prod(identity_pubkey, handshake_version);
 
         // TODO(philiphayes): seed peers should be fully rendered. then we can
         // also get rid of `network_peers`. we'll need to make some changes to
@@ -191,7 +181,7 @@ pub fn setup_network(
                     Some(id_pubkey) => {
                         let addrs = addrs
                             .into_iter()
-                            .map(|addr| addr.into_prod(id_pubkey, handshake_version))
+                            .map(|addr| addr.append_prod_protos(id_pubkey, HANDSHAKE_VERSION))
                             .collect();
                         (peer_id, addrs)
                     }
@@ -208,12 +198,12 @@ pub fn setup_network(
         } else {
             network_peers
         };
+
         network_builder
-            .listen_address(listen_address)
-            .advertised_address(advertised_address)
-            .transport(TransportType::TcpNoise(Some(identity_key)))
-            .seed_peers(seed_peers)
+            .advertised_address(config.advertised_address.clone())
+            .auth_mode(AuthMode::Mutual(identity_key))
             .trusted_peers(trusted_peers)
+            .seed_peers(seed_peers)
             .signing_keypair((signing_private, signing_public))
             .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
             .add_connectivity_manager();
@@ -225,30 +215,17 @@ pub fn setup_network(
             .identity_keypair
             .take_private()
             .expect("identity key should be present");
-        let identity_pubkey = identity_key.public_key();
-
-        let listen_address = config
-            .listen_address
-            .clone()
-            .into_prod(identity_pubkey, config.handshake_version);
-        let advertised_address = config
-            .advertised_address
-            .clone()
-            .into_prod(identity_pubkey, config.handshake_version);
 
         // Even if a network end-point operates without remote authentication, it might want to prove
         // its identity to another peer it connects to. For this, we use TCP + Noise but without
         // enforcing a trusted peers set.
         network_builder
-            .transport(TransportType::TcpNoise(Some(identity_key)))
-            .listen_address(listen_address)
-            .advertised_address(advertised_address);
+            .auth_mode(AuthMode::ClientOnly(identity_key))
+            .advertised_address(config.advertised_address.clone());
     } else {
         // TODO(philiphayes): probably remove this branch since there are no
         // current no noise or no client auth use cases.
-        network_builder
-            .transport(TransportType::Tcp)
-            .listen_address(config.listen_address.clone());
+        network_builder.auth_mode(AuthMode::Unauthed);
     }
 
     match config.discovery_method {

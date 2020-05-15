@@ -47,14 +47,14 @@ impl ValidatorConfig {
 
         // append ln-noise-ik and ln-handshake protocols to base network addresses
 
-        let validator_address = self.validator_address.clone().into_prod(
+        let validator_address = self.validator_address.clone().append_prod_protos(
             validator_network_key.clone(),
             crate::constants::HANDSHAKE_VERSION,
         );
         let raw_validator_address = RawNetworkAddress::try_from(&validator_address)
             .map_err(|e| Error::UnexpectedError(format!("(raw_validator_address) {}", e)))?;
 
-        let fullnode_address = self.fullnode_address.clone().into_prod(
+        let fullnode_address = self.fullnode_address.clone().append_prod_protos(
             fullnode_network_key.clone(),
             crate::constants::HANDSHAKE_VERSION,
         );

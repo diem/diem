@@ -26,51 +26,33 @@ impl Transport for MemoryTransport {
         &self,
         addr: NetworkAddress,
     ) -> Result<(Self::Listener, NetworkAddress), Self::Error> {
-        let (port, addr_suffix) = parse_addr(&addr)?;
+        let (port, addr_suffix) = addr.parse_memory_proto().ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Invalid NetworkAddress: '{}'", addr),
+            )
+        })?;
         let listener = MemoryListener::bind(port)?;
         let actual_port = listener.local_addr();
-        let mut actual_addr = NetworkAddress::from(Protocol::Memory(actual_port));
 
         // append the addr_suffix so any trailing protocols get included in the
         // actual listening adddress we return
-        actual_addr.extend_from_slice(addr_suffix);
+        let actual_addr =
+            NetworkAddress::from(Protocol::Memory(actual_port)).extend_from_slice(addr_suffix);
 
         Ok((Listener { inner: listener }, actual_addr))
     }
 
     fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
-        let (port, _addr_suffix) = parse_addr(&addr)?;
+        let (port, _addr_suffix) = addr.parse_memory_proto().ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Invalid NetworkAddress: '{}'", addr),
+            )
+        })?;
         let socket = MemorySocket::connect(port)?;
         Ok(future::ready(Ok(socket)))
     }
-}
-
-/// parse the `NetworkAddress` into the `/memory/<port>` prefix and unparsed
-/// `&[Protocol]` suffix.
-fn parse_addr<'a>(addr: &'a NetworkAddress) -> io::Result<(u16, &'a [Protocol])> {
-    let (first, suffix) = match addr.as_slice().split_first() {
-        Some((first, suffix)) => (first, suffix),
-        // TODO(philiphayes): this should be technically unreachable as
-        // `NetworkAddress` is always non-empty.
-        None => {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("Invalid NetworkAddress '{:?}'", addr),
-            ))
-        }
-    };
-
-    let port = match first {
-        Protocol::Memory(port) => *port,
-        _ => {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("Invalid NetworkAddress '{:?}'", addr),
-            ))
-        }
-    };
-
-    Ok((port, suffix))
 }
 
 #[must_use = "streams do nothing unless polled"]

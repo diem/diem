@@ -80,8 +80,10 @@ impl Transport for TcpTransport {
         let listener = ::std::net::TcpListener::bind(&socket_addr)?;
         let listener = TcpListener::try_from(listener)?;
 
-        let mut actual_addr = NetworkAddress::from(listener.local_addr()?);
-        actual_addr.extend_from_slice(addr_suffix);
+        // append the addr_suffix so any trailing protocols get included in the
+        // actual listening adddress we return
+        let actual_addr =
+            NetworkAddress::from(listener.local_addr()?).extend_from_slice(addr_suffix);
 
         Ok((
             TcpListenerStream {

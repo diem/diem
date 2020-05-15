@@ -57,9 +57,7 @@ pub fn get_available_port_in_multiaddr(is_ipv4: bool) -> NetworkAddress {
     } else {
         Protocol::Ip6("::1".parse().unwrap())
     };
-    let mut addr = NetworkAddress::from(ip_proto);
-    addr.push(Protocol::Tcp(get_available_port()));
-    addr
+    NetworkAddress::from(ip_proto).push(Protocol::Tcp(get_available_port()))
 }
 
 /// Serialize HashMaps as BTreeMaps for consistent ordering

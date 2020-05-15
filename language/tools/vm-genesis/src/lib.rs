@@ -37,6 +37,9 @@ const GENESIS_SEED: [u8; 32] = [42; 32];
 
 const GENESIS_MODULE_NAME: &str = "Genesis";
 
+// TODO(philiphayes): probably not the right place to put this...
+const HANDSHAKE_VERSION: u8 = 0;
+
 pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::new(|| {
     let mut rng = StdRng::from_seed(GENESIS_SEED);
     let private_key = Ed25519PrivateKey::generate(&mut rng);
@@ -385,14 +388,12 @@ pub fn validator_registrations(node_configs: &[NodeConfig]) -> Vec<ValidatorRegi
             let network = n.validator_network.as_ref().unwrap();
             let network_keypairs = network.network_keypairs.as_ref().unwrap();
             let signing_key = network_keypairs.signing_keypair.public_key();
-
             let identity_key = network_keypairs.identity_keypair.public_key();
-            let handshake_version = network.handshake_version;
 
             let advertised_address = network
                 .advertised_address
                 .clone()
-                .into_prod(identity_key, handshake_version);
+                .append_prod_protos(identity_key, HANDSHAKE_VERSION);
             let raw_advertised_address = RawNetworkAddress::try_from(&advertised_address).unwrap();
 
             // TODO(philiphayes): do something with n.full_node_networks instead

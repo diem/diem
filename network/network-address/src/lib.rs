@@ -139,6 +139,9 @@ pub enum Protocol {
     // probably need to move network wire into its own crate to avoid circular
     // dependency b/w network and types.
     Handshake(u8),
+    // TODO(philiphayes): gate behind cfg(test), should not even parse in prod.
+    // testing only, unauthenticated peer id exchange
+    PeerIdExchange,
 }
 
 /// A minimally parsed DNS name. We don't really do any checking other than
@@ -277,26 +280,66 @@ impl NetworkAddress {
         self.0.as_slice()
     }
 
-    pub fn push(&mut self, proto: Protocol) {
-        self.0.push(proto)
+    pub fn push(mut self, proto: Protocol) -> Self {
+        self.0.push(proto);
+        self
     }
 
-    pub fn extend_from_slice(&mut self, protos: &[Protocol]) {
-        self.0.extend_from_slice(protos)
+    pub fn extend_from_slice(mut self, protos: &[Protocol]) -> Self {
+        self.0.extend_from_slice(protos);
+        self
     }
 
-    /// Given base advertised `NetworkAddress`, append production protocols and
+    /// Given a base `NetworkAddress`, append production protocols and
     /// return the modified `NetworkAddress`.
     ///
     /// ### Example
     ///
     /// `/dns/example.com/tcp/6180` =>
     /// `/dns/example.com/tcp/6180/ln-noise-ik/<network_pubkey>/ln-handshake/<handshake_version>`
-    // TODO(philiphayes): handshake version type
-    pub fn into_prod(mut self, network_pubkey: x25519::PublicKey, handshake_version: u8) -> Self {
-        self.push(Protocol::NoiseIk(network_pubkey));
-        self.push(Protocol::Handshake(handshake_version));
-        self
+    // TODO(philiphayes): use handshake version enum
+    pub fn append_prod_protos(
+        self,
+        network_pubkey: x25519::PublicKey,
+        handshake_version: u8,
+    ) -> Self {
+        self.push(Protocol::NoiseIk(network_pubkey))
+            .push(Protocol::Handshake(handshake_version))
+    }
+
+    /// Given a base `NetworkAddress`, append production protocols and
+    /// return the modified `NetworkAddress`.
+    ///
+    /// ### Example
+    ///
+    /// `/ip4/127.0.0.1/tcp/6180` =>
+    /// `/ip4/127.0.0.1/tcp/6180/ln-peerid-ex/ln-handshake/<handshake_version>`
+    // TODO(philiphayes): gate with cfg(test)
+    // TODO(philiphayes): use handshake version enum
+    pub fn append_test_protos(self, handshake_version: u8) -> Self {
+        self.push(Protocol::PeerIdExchange)
+            .push(Protocol::Handshake(handshake_version))
+    }
+
+    /// A temporary, hacky function to parse out the first `/ln-noise-ik/<pubkey>` from
+    /// a `NetworkAddress`. We can remove this soon, when we move to the interim
+    /// "monolithic" transport model.
+    pub fn find_noise_proto(&self) -> Option<&x25519::PublicKey> {
+        self.0.iter().find_map(|proto| match proto {
+            Protocol::NoiseIk(pubkey) => Some(pubkey),
+            _ => None,
+        })
+    }
+
+    /// parse the `NetworkAddress` into the `/memory/<port>` prefix and unparsed
+    /// `&[Protocol]` suffix.
+    pub fn parse_memory_proto(&self) -> Option<(u16, &[Protocol])> {
+        self.as_slice()
+            .split_first()
+            .and_then(|(first, suffix)| match first {
+                Protocol::Memory(port) => Some((*port, suffix)),
+                _ => None,
+            })
     }
 
     #[cfg(any(test, feature = "fuzzing"))]
@@ -462,6 +505,7 @@ impl fmt::Display for Protocol {
                     .expect("ValidCryptoMaterialStringExt::to_encoded_string is infallible")
             ),
             Handshake(version) => write!(f, "/ln-handshake/{}", version),
+            PeerIdExchange => write!(f, "/ln-peerid-ex"),
         }
     }
 }
@@ -492,6 +536,7 @@ impl Protocol {
                 args.next().ok_or(ParseError::UnexpectedEnd)?,
             )?),
             "ln-handshake" => Protocol::Handshake(parse_one(args)?),
+            "ln-peerid-ex" => Protocol::PeerIdExchange,
             unknown => return Err(ParseError::UnknownProtocolType(unknown.to_string())),
         };
         Ok(protocol)

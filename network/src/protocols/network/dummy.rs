@@ -9,9 +9,8 @@ use crate::{
     protocols::{
         network::{Event, NetworkEvents, NetworkSender},
         rpc::error::RpcError,
-        wire::handshake::v1::MessagingProtocolVersion,
     },
-    validator_network::network_builder::{NetworkBuilder, TransportType, NETWORK_CHANNEL_SIZE},
+    validator_network::network_builder::{AuthMode, NetworkBuilder, NETWORK_CHANNEL_SIZE},
     NetworkPublicKeys, ProtocolId,
 };
 use channel::message_queues::QueueStyle;
@@ -115,13 +114,8 @@ pub fn setup_network() -> DummyNetwork {
     let listener_identity_public_key = listener_identity_private_key.public_key();
 
     // Setup listen addresses
-    let base_addr: NetworkAddress = "/ip4/127.0.0.1/tcp/0".parse().unwrap();
-    let handshake_version = MessagingProtocolVersion::V1 as u8;
-    let dialer_addr = base_addr
-        .clone()
-        .into_prod(dialer_identity_public_key.clone(), handshake_version);
-    let listener_addr =
-        base_addr.into_prod(listener_identity_public_key.clone(), handshake_version);
+    let dialer_addr: NetworkAddress = "/ip4/127.0.0.1/tcp/0".parse().unwrap();
+    let listener_addr: NetworkAddress = "/ip4/127.0.0.1/tcp/0".parse().unwrap();
 
     // Setup trusted peers.
     let trusted_peers: HashMap<_, _> = vec![
@@ -148,27 +142,27 @@ pub fn setup_network() -> DummyNetwork {
         runtime.handle().clone(),
         listener_peer_id,
         RoleType::Validator,
+        listener_addr,
     );
     network_builder
-        .transport(TransportType::TcpNoise(Some(listener_identity_private_key)))
-        .listen_address(listener_addr)
+        .auth_mode(AuthMode::Mutual(listener_identity_private_key))
         .trusted_peers(trusted_peers.clone())
         .add_connectivity_manager();
     let (listener_sender, mut listener_events) = add_to_network(&mut network_builder);
-    let listen_addr = network_builder.build();
+    let listener_addr = network_builder.build();
 
     // Set up the dialer network
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
         dialer_peer_id,
         RoleType::Validator,
+        dialer_addr,
     );
     network_builder
-        .transport(TransportType::TcpNoise(Some(dialer_identity_private_key)))
-        .listen_address(dialer_addr)
+        .auth_mode(AuthMode::Mutual(dialer_identity_private_key))
         .trusted_peers(trusted_peers)
         .seed_peers(
-            [(listener_peer_id, vec![listen_addr])]
+            [(listener_peer_id, vec![listener_addr])]
                 .iter()
                 .cloned()
                 .collect(),

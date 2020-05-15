@@ -20,9 +20,6 @@ use std::{collections::HashMap, convert::TryFrom, path::PathBuf, string::ToStrin
 const NETWORK_PEERS_DEFAULT: &str = "network_peers.config.toml";
 const SEED_PEERS_DEFAULT: &str = "seed_peers.toml";
 
-// TODO(philiphayes): extract handshake types into separate crate and use that enum
-const LIBRANET_HANDSHAKE_VERSION: u8 = 0;
-
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]
@@ -33,9 +30,6 @@ pub struct NetworkConfig {
     pub listen_address: NetworkAddress,
     // The address that this node advertises to other nodes for the discovery protocol.
     pub advertised_address: NetworkAddress,
-    // TODO(philiphayes): use the enum type
-    // the supported libranet negotiation protocol version
-    pub handshake_version: u8,
     pub discovery_interval_ms: u64,
     pub connectivity_check_interval_ms: u64,
     // Flag to toggle if Noise is used for encryption and authentication.
@@ -64,7 +58,6 @@ impl Default for NetworkConfig {
             peer_id: PeerId::default(),
             listen_address: "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
             advertised_address: "/ip4/127.0.0.1/tcp/6180".parse().unwrap(),
-            handshake_version: LIBRANET_HANDSHAKE_VERSION,
             discovery_interval_ms: 1000,
             connectivity_check_interval_ms: 5000,
             enable_noise: true,
@@ -87,7 +80,6 @@ impl NetworkConfig {
             peer_id: self.peer_id,
             listen_address: self.listen_address.clone(),
             advertised_address: self.advertised_address.clone(),
-            handshake_version: self.handshake_version,
             discovery_interval_ms: self.discovery_interval_ms,
             connectivity_check_interval_ms: self.connectivity_check_interval_ms,
             enable_noise: self.enable_noise,

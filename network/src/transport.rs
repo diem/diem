@@ -11,7 +11,7 @@ use crate::{
 use futures::io::{AsyncRead, AsyncWrite};
 use libra_crypto::{traits::ValidCryptoMaterial, x25519};
 use libra_logger::prelude::*;
-use libra_network_address::{NetworkAddress, Protocol};
+use libra_network_address::NetworkAddress;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
 use netcore::transport::{boxed, memory, tcp, ConnectionOrigin, TransportExt};
@@ -145,37 +145,29 @@ fn identity_key_to_peer_id(
     None
 }
 
-/// A temporary, hacky function to parse out the first `/ln-noise-ik/<pubkey>` from
-/// a `NetworkAddress`. We can remove this soon, when we move to the interim
-/// "monolithic" transport model.
-fn parse_noise_pubkey(addr: NetworkAddress) -> Result<x25519::PublicKey, io::Error> {
-    addr.into_iter()
-        .find_map(|proto| match proto {
-            Protocol::NoiseIk(pubkey) => Some(pubkey),
-            _ => None,
-        })
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Invalid NetworkAddress"))
-}
-
 /// temporary checks to make sure noise pubkeys are actually getting propagated correctly.
 // TODO(philiphayes): remove this after Transport refactor
 fn expect_noise_pubkey(
-    addr: NetworkAddress,
+    addr: &NetworkAddress,
     remote_static_key: &[u8],
     origin: ConnectionOrigin,
 ) -> Result<(), io::Error> {
     if let ConnectionOrigin::Outbound = origin {
-        if let Ok(expected_remote_static_key) = parse_noise_pubkey(addr) {
-            if remote_static_key != expected_remote_static_key.as_slice() {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    format!(
-                        "remote static key did not match expected: actual: {:?}, expected: {:?}",
-                        remote_static_key,
-                        expected_remote_static_key.as_slice()
-                    ),
-                ));
-            }
+        let expected_remote_static_key = addr.find_noise_proto().ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Invalid NetworkAddress, no NoiseIk protocol: '{}'", addr),
+            )
+        })?;
+
+        if remote_static_key != expected_remote_static_key.as_slice() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "remote static pubkey did not match expected: actual: {:?}, expected: {:?}",
+                    remote_static_key, expected_remote_static_key,
+                ),
+            ));
         }
     }
 
@@ -229,7 +221,7 @@ pub fn build_memory_noise_transport(
             let (remote_static_key, socket) =
                 noise_config.upgrade_connection(socket, origin).await?;
 
-            expect_noise_pubkey(addr, remote_static_key.as_slice(), origin)?;
+            expect_noise_pubkey(&addr, remote_static_key.as_slice(), origin)?;
 
             if let Some(peer_id) = identity_key_to_peer_id(&trusted_peers, &remote_static_key) {
                 Ok((peer_id, socket))
@@ -259,7 +251,7 @@ pub fn build_unauthenticated_memory_noise_transport(
                 let (remote_static_key, socket) =
                     noise_config.upgrade_connection(socket, origin).await?;
 
-                expect_noise_pubkey(addr, remote_static_key.as_slice(), origin)?;
+                expect_noise_pubkey(&addr, remote_static_key.as_slice(), origin)?;
 
                 // Generate PeerId from x25519::PublicKey.
                 // Note: This is inconsistent with current types because AccountAddress is derived
@@ -313,7 +305,7 @@ pub fn build_tcp_noise_transport(
             let (remote_static_key, socket) =
                 noise_config.upgrade_connection(socket, origin).await?;
 
-            expect_noise_pubkey(addr, remote_static_key.as_slice(), origin)?;
+            expect_noise_pubkey(&addr, remote_static_key.as_slice(), origin)?;
 
             if let Some(peer_id) = identity_key_to_peer_id(&trusted_peers, &remote_static_key) {
                 Ok((peer_id, socket))
@@ -349,7 +341,7 @@ pub fn build_unauthenticated_tcp_noise_transport(
                 let (remote_static_key, socket) =
                     noise_config.upgrade_connection(socket, origin).await?;
 
-                expect_noise_pubkey(addr, remote_static_key.as_slice(), origin)?;
+                expect_noise_pubkey(&addr, remote_static_key.as_slice(), origin)?;
 
                 // Generate PeerId from x25519::PublicKey.
                 // Note: This is inconsistent with current types because AccountAddress is derived
