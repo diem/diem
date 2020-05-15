@@ -1,21 +1,21 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    cached_access_path_table::resource_vec_to_type_tag,
-    resolver::Resolver,
-    value::{MoveStruct, MoveStructLayout, MoveTypeLayout, MoveValue},
-};
+use crate::{cached_access_path_table::resource_vec_to_type_tag, resolver::Resolver};
 use anyhow::{anyhow, Result};
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath, account_address::AccountAddress, account_state::AccountState,
     contract_event::ContractEvent,
 };
-use move_core_types::{identifier::Identifier, language_storage::StructTag};
+use move_core_types::{
+    identifier::Identifier,
+    language_storage::StructTag,
+    value::{MoveStruct, MoveValue},
+};
 use std::{
     collections::btree_map::BTreeMap,
-    convert::TryFrom,
+    convert::TryInto,
     fmt::{Display, Formatter},
 };
 
@@ -25,7 +25,6 @@ use move_vm_types::loaded_data::types::{FatStructType, FatType};
 mod cached_access_path_table;
 mod module_cache;
 mod resolver;
-pub mod value;
 
 #[derive(Debug)]
 pub struct AnnotatedAccountStateBlob(BTreeMap<StructTag, AnnotatedMoveStruct>);
@@ -72,14 +71,14 @@ impl<'a> MoveValueAnnotator<'a> {
         blob: &[u8],
     ) -> Result<AnnotatedMoveStruct> {
         let ty = resource_vec_to_type_tag(&access_path.path)?;
-        let struct_def = MoveStructLayout::try_from(&ty)?;
+        let struct_def = (&ty).try_into()?;
         let move_struct = MoveStruct::simple_deserialize(blob, &struct_def)?;
         self.annotate_struct(&move_struct, &ty)
     }
 
     pub fn view_contract_event(&self, event: &ContractEvent) -> Result<AnnotatedMoveValue> {
         let ty = self.cache.resolve_type(event.type_tag())?;
-        let move_ty = MoveTypeLayout::try_from(&ty)?;
+        let move_ty = (&ty).try_into()?;
         let move_value = MoveValue::simple_deserialize(event.event_data(), &move_ty)?;
         self.annotate_value(&move_value, &ty)
     }
@@ -88,7 +87,7 @@ impl<'a> MoveValueAnnotator<'a> {
         let mut output = BTreeMap::new();
         for (k, v) in state.iter() {
             let ty = resource_vec_to_type_tag(k.as_slice())?;
-            let struct_def = MoveStructLayout::try_from(&ty)?;
+            let struct_def = (&ty).try_into()?;
             let move_struct = MoveStruct::simple_deserialize(v.as_slice(), &struct_def)?;
             output.insert(ty.struct_tag()?, self.annotate_struct(&move_struct, &ty)?);
         }

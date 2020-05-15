@@ -2458,6 +2458,7 @@ impl Value {
 #[cfg(feature = "fuzzing")]
 pub mod prop {
     use super::*;
+    use move_core_types::value::{MoveStruct, MoveValue};
     use proptest::{collection::vec, prelude::*};
 
     pub fn value_strategy_with_layout(layout: &FatType) -> impl Strategy<Value = Value> {
@@ -2516,5 +2517,50 @@ pub mod prop {
             let value_strategy = value_strategy_with_layout(&layout);
             (Just(layout), value_strategy)
         })
+    }
+
+    impl ValueImpl {
+        pub fn as_move_value(&self, ty: &FatType) -> MoveValue {
+            match (ty, &self) {
+                (FatType::U8, ValueImpl::U8(x)) => MoveValue::U8(*x),
+                (FatType::U64, ValueImpl::U64(x)) => MoveValue::U64(*x),
+                (FatType::U128, ValueImpl::U128(x)) => MoveValue::U128(*x),
+                (FatType::Bool, ValueImpl::Bool(x)) => MoveValue::Bool(*x),
+                (FatType::Address, ValueImpl::Address(x)) => MoveValue::Address(*x),
+                (FatType::Signer, ValueImpl::Signer(x)) => MoveValue::Signer(*x),
+
+                (FatType::Struct(ty), ValueImpl::Container(r)) => match &*r.borrow() {
+                    Container::General(v) => {
+                        let mut fields = vec![];
+                        for (v, field_ty) in v.iter().zip(ty.layout.iter()) {
+                            fields.push(v.as_move_value(field_ty));
+                        }
+                        MoveValue::Struct(MoveStruct::new(fields))
+                    }
+                    _ => panic!("Unexpected Container"),
+                },
+
+                (FatType::Vector(inner_ty), ValueImpl::Container(r)) => {
+                    MoveValue::Vector(match &*r.borrow() {
+                        Container::U8(v) => v.iter().map(|u| MoveValue::U8(*u)).collect(),
+                        Container::U64(v) => v.iter().map(|u| MoveValue::U64(*u)).collect(),
+                        Container::U128(v) => v.iter().map(|u| MoveValue::U128(*u)).collect(),
+                        Container::Bool(b) => b.iter().map(|u| MoveValue::Bool(*u)).collect(),
+                        Container::General(v) => v
+                            .iter()
+                            .map(|v| v.as_move_value(inner_ty.as_ref()))
+                            .collect(),
+                    })
+                }
+
+                (ty, val) => panic!("cannot serialize value {:?} as {:?}", val, ty),
+            }
+        }
+    }
+
+    impl Value {
+        pub fn as_move_value(&self, ty: &FatType) -> MoveValue {
+            self.0.as_move_value(ty)
+        }
     }
 }
