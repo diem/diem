@@ -23,11 +23,11 @@ use storage_interface::{
     StartupInfo, StorageRequest, TreeState,
 };
 
-pub struct SimpleStorageClient {
+pub struct StorageClient {
     network_client: Mutex<NetworkClient>,
 }
 
-impl SimpleStorageClient {
+impl StorageClient {
     pub fn new(server_address: &SocketAddr) -> Self {
         Self {
             network_client: Mutex::new(NetworkClient::new(*server_address)),
@@ -70,7 +70,7 @@ impl SimpleStorageClient {
     }
 }
 
-impl DbReader for SimpleStorageClient {
+impl DbReader for StorageClient {
     fn get_account_state_with_proof_by_version(
         &self,
         address: AccountAddress,
@@ -175,7 +175,7 @@ impl DbReader for SimpleStorageClient {
     }
 }
 
-impl DbWriter for SimpleStorageClient {
+impl DbWriter for StorageClient {
     fn save_transactions(
         &self,
         txns_to_commit: &[TransactionToCommit],

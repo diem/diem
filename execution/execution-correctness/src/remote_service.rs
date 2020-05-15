@@ -9,8 +9,8 @@ use executor_types::Error;
 use libra_logger::warn;
 use libra_secure_net::{NetworkClient, NetworkServer};
 use libra_vm::LibraVM;
-use simple_storage_client::SimpleStorageClient;
 use std::net::SocketAddr;
+use storage_client::StorageClient;
 
 pub trait RemoteService {
     fn client(&self) -> SerializerClient {
@@ -24,7 +24,7 @@ pub trait RemoteService {
 
 pub fn execute(storage_addr: SocketAddr, listen_addr: SocketAddr) {
     let block_executor = Box::new(Executor::<LibraVM>::new(
-        SimpleStorageClient::new(&storage_addr).into(),
+        StorageClient::new(&storage_addr).into(),
     ));
     let mut serializer_service = SerializerService::new(block_executor);
     let mut network_server = NetworkServer::new(listen_addr);
