@@ -1,19 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Error, Result as AResult};
-use libra_types::account_address::AccountAddress;
-use move_vm_types::loaded_data::types::{FatStructType, FatType};
-use serde::{de::Error as DeError, Deserialize};
-use std::{
-    convert::TryFrom,
-    fmt::{self, Debug},
+use crate::account_address::AccountAddress;
+use anyhow::Result as AResult;
+use serde::{
+    de::Error as DeError,
+    ser::{SerializeSeq, SerializeTuple},
+    Deserialize,
 };
+use std::fmt::{self, Debug};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct MoveStruct(Vec<MoveValue>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum MoveValue {
     U8(u8),
     U64(u64),
@@ -22,6 +22,7 @@ pub enum MoveValue {
     Address(AccountAddress),
     Vector(Vec<MoveValue>),
     Struct(MoveStruct),
+    Signer(AccountAddress),
 }
 
 #[derive(Debug)]
@@ -36,13 +37,19 @@ pub enum MoveTypeLayout {
     Address,
     Vector(Box<MoveTypeLayout>),
     Struct(MoveStructLayout),
+    Signer,
 }
 
 impl MoveValue {
     pub fn simple_deserialize(blob: &[u8], ty: &MoveTypeLayout) -> AResult<Self> {
         Ok(lcs::from_bytes_seed(ty, blob)?)
     }
+
+    pub fn simple_serialize(&self) -> Option<Vec<u8>> {
+        lcs::to_bytes(self).ok()
+    }
 }
+
 impl MoveStruct {
     pub fn new(value: Vec<MoveValue>) -> Self {
         MoveStruct(value)
@@ -85,9 +92,10 @@ impl<'d> serde::de::DeserializeSeed<'d> for &MoveTypeLayout {
             MoveTypeLayout::Address => {
                 AccountAddress::deserialize(deserializer).map(MoveValue::Address)
             }
-
+            MoveTypeLayout::Signer => {
+                AccountAddress::deserialize(deserializer).map(MoveValue::Signer)
+            }
             MoveTypeLayout::Struct(ty) => Ok(MoveValue::Struct(ty.deserialize(deserializer)?)),
-
             MoveTypeLayout::Vector(layout) => Ok(MoveValue::Vector(
                 deserializer.deserialize_seq(VectorElementVisitor(layout))?,
             )),
@@ -108,7 +116,11 @@ impl<'d, 'a> serde::de::Visitor<'d> for VectorElementVisitor<'a> {
     where
         A: serde::de::SeqAccess<'d>,
     {
-        Ok(seq.next_element_seed(self.0)?.into_iter().collect())
+        let mut vals = Vec::new();
+        while let Some(elem) = seq.next_element_seed(self.0)? {
+            vals.push(elem)
+        }
+        Ok(vals)
     }
 }
 
@@ -149,40 +161,33 @@ impl<'d> serde::de::DeserializeSeed<'d> for &MoveStructLayout {
     }
 }
 
-impl TryFrom<&FatStructType> for MoveStructLayout {
-    type Error = Error;
-
-    fn try_from(ty: &FatStructType) -> Result<Self, Self::Error> {
-        Ok(MoveStructLayout(
-            ty.layout
-                .iter()
-                .map(MoveTypeLayout::try_from)
-                .collect::<AResult<Vec<_>>>()?,
-        ))
+impl serde::Serialize for MoveValue {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            MoveValue::Struct(s) => s.serialize(serializer),
+            MoveValue::Bool(b) => serializer.serialize_bool(*b),
+            MoveValue::U8(i) => serializer.serialize_u8(*i),
+            MoveValue::U64(i) => serializer.serialize_u64(*i),
+            MoveValue::U128(i) => serializer.serialize_u128(*i),
+            MoveValue::Address(a) => a.serialize(serializer),
+            MoveValue::Signer(a) => a.serialize(serializer),
+            MoveValue::Vector(v) => {
+                let mut t = serializer.serialize_seq(Some(v.len()))?;
+                for val in v {
+                    t.serialize_element(val)?;
+                }
+                t.end()
+            }
+        }
     }
 }
 
-impl TryFrom<&FatType> for MoveTypeLayout {
-    type Error = Error;
-
-    fn try_from(ty: &FatType) -> Result<Self, Self::Error> {
-        Ok(match ty {
-            FatType::Address => MoveTypeLayout::Address,
-            FatType::U8 => MoveTypeLayout::U8,
-            FatType::U64 => MoveTypeLayout::U64,
-            FatType::U128 => MoveTypeLayout::U128,
-            FatType::Bool => MoveTypeLayout::Bool,
-            FatType::Vector(v) => {
-                MoveTypeLayout::Vector(Box::new(MoveTypeLayout::try_from(v.as_ref())?))
-            }
-            FatType::Struct(s) => MoveTypeLayout::Struct(MoveStructLayout(
-                s.layout
-                    .iter()
-                    .map(MoveTypeLayout::try_from)
-                    .collect::<AResult<Vec<_>>>()?,
-            )),
-
-            _ => return Err(anyhow!("Unexpected type: {:?}", ty)),
-        })
+impl serde::Serialize for MoveStruct {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut t = serializer.serialize_tuple(self.0.len())?;
+        for v in self.0.iter() {
+            t.serialize_element(v)?;
+        }
+        t.end()
     }
 }

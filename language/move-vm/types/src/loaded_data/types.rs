@@ -9,8 +9,9 @@ use libra_types::{
 use move_core_types::{
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
+    value::{MoveStructLayout, MoveTypeLayout},
 };
-use std::fmt::Write;
+use std::{convert::TryInto, fmt::Write};
 use vm::errors::VMResult;
 
 use libra_types::access_path::AccessPath;
@@ -274,5 +275,42 @@ pub mod prop {
         }
 
         type Strategy = BoxedStrategy<Self>;
+    }
+}
+
+impl TryInto<MoveStructLayout> for &FatStructType {
+    type Error = VMStatus;
+
+    fn try_into(self) -> Result<MoveStructLayout, Self::Error> {
+        Ok(MoveStructLayout::new(
+            self.layout
+                .iter()
+                .map(|ty| ty.try_into())
+                .collect::<VMResult<Vec<_>>>()?,
+        ))
+    }
+}
+
+impl TryInto<MoveTypeLayout> for &FatType {
+    type Error = VMStatus;
+
+    fn try_into(self) -> Result<MoveTypeLayout, Self::Error> {
+        Ok(match self {
+            FatType::Address => MoveTypeLayout::Address,
+            FatType::U8 => MoveTypeLayout::U8,
+            FatType::U64 => MoveTypeLayout::U64,
+            FatType::U128 => MoveTypeLayout::U128,
+            FatType::Bool => MoveTypeLayout::Bool,
+            FatType::Vector(v) => MoveTypeLayout::Vector(Box::new(v.as_ref().try_into()?)),
+            FatType::Struct(s) => MoveTypeLayout::Struct(MoveStructLayout::new(
+                s.layout
+                    .iter()
+                    .map(|ty| ty.try_into())
+                    .collect::<VMResult<Vec<_>>>()?,
+            )),
+            FatType::Signer => MoveTypeLayout::Signer,
+
+            _ => return Err(VMStatus::new(StatusCode::ABORT_TYPE_MISMATCH_ERROR)),
+        })
     }
 }
