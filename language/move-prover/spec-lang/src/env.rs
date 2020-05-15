@@ -18,8 +18,7 @@ use itertools::Itertools;
 use num::{BigUint, Num};
 
 use bytecode_source_map::source_map::SourceMap;
-use move_core_types::{account_address::AccountAddress, language_storage};
-use move_vm_types::values::Value as VMValue;
+use move_core_types::{account_address::AccountAddress, language_storage, value::MoveValue};
 use vm::{
     access::ModuleAccess,
     file_format::{
@@ -950,9 +949,9 @@ impl<'env> ModuleEnv<'env> {
     }
 
     /// Converts a constant to the specified type. The type must correspond to the expected
-    /// cannonical representation as defined in `move_vm_types::values`
-    pub fn get_constant_value(&self, constant: &VMConstant) -> VMValue {
-        VMValue::deserialize_constant(constant).unwrap()
+    /// cannonical representation as defined in `move_core_types::values`
+    pub fn get_constant_value(&self, constant: &VMConstant) -> MoveValue {
+        VMConstant::deserialize_constant(constant).unwrap()
     }
 
     /// Retrieve an address identifier from the pool

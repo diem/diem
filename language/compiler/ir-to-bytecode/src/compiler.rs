@@ -8,12 +8,12 @@ use crate::{
 use anyhow::{bail, format_err, Result};
 use bytecode_source_map::source_map::SourceMap;
 use libra_types::account_address::AccountAddress;
+use move_core_types::value::{MoveTypeLayout, MoveValue};
 use move_ir_types::{
     ast::{self, Bytecode as IRBytecode, Bytecode_ as IRBytecode_, *},
     location::*,
     sp,
 };
-use move_vm_types::values::Value as MoveVMValue;
 use std::{
     clone::Clone,
     collections::{
@@ -1189,8 +1189,8 @@ fn compile_expression(
         }
         Exp_::Value(cv) => match cv.value {
             CopyableVal_::Address(address) => {
-                let address_value = MoveVMValue::address(address);
-                let constant = compile_constant(context, SignatureToken::Address, address_value)?;
+                let address_value = MoveValue::Address(address);
+                let constant = compile_constant(context, MoveTypeLayout::Address, address_value)?;
                 let idx = context.constant_index(constant)?;
                 push_instr!(exp.loc, Bytecode::LdConst(idx));
                 function_frame.push()?;
@@ -1212,8 +1212,8 @@ fn compile_expression(
                 vec_deque![InferredType::U128]
             }
             CopyableVal_::ByteArray(buf) => {
-                let vec_value = MoveVMValue::vector_u8(buf);
-                let type_ = SignatureToken::Vector(Box::new(SignatureToken::U8));
+                let vec_value = MoveValue::vector_u8(buf);
+                let type_ = MoveTypeLayout::Vector(Box::new(MoveTypeLayout::U8));
                 let constant = compile_constant(context, type_, vec_value)?;
                 let idx = context.constant_index(constant)?;
                 push_instr!(exp.loc, Bytecode::LdConst(idx));
@@ -1639,10 +1639,10 @@ fn compile_call(
 
 fn compile_constant(
     _context: &mut Context,
-    type_: SignatureToken,
-    value: MoveVMValue,
+    type_: MoveTypeLayout,
+    value: MoveValue,
 ) -> Result<Constant> {
-    MoveVMValue::serialize_constant(type_, value)
+    Constant::serialize_constant(&type_, &value)
         .ok_or_else(|| format_err!("Could not serialize constant"))
 }
 
@@ -1725,14 +1725,14 @@ fn compile_bytecode(
         IRBytecode_::CastU64 => Bytecode::CastU64,
         IRBytecode_::CastU128 => Bytecode::CastU128,
         IRBytecode_::LdByteArray(b) => {
-            let vec_value = MoveVMValue::vector_u8(b);
-            let type_ = SignatureToken::Vector(Box::new(SignatureToken::U8));
+            let vec_value = MoveValue::vector_u8(b);
+            let type_ = MoveTypeLayout::Vector(Box::new(MoveTypeLayout::U8));
             let constant = compile_constant(context, type_, vec_value)?;
             Bytecode::LdConst(context.constant_index(constant)?)
         }
         IRBytecode_::LdAddr(a) => {
-            let address_value = MoveVMValue::address(a);
-            let constant = compile_constant(context, SignatureToken::Address, address_value)?;
+            let address_value = MoveValue::Address(a);
+            let constant = compile_constant(context, MoveTypeLayout::Address, address_value)?;
             Bytecode::LdConst(context.constant_index(constant)?)
         }
         IRBytecode_::LdTrue => Bytecode::LdTrue,

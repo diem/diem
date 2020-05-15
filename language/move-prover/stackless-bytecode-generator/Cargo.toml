@@ -19,7 +19,7 @@ libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1
 num = "0.2.0"
 itertools = "0.9.0"
 libra-types = { path = "../../../types", version = "0.1.0" }
-move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
+move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 
 [dev-dependencies]
 datatest-stable = { path = "../../../common/datatest-stable", version = "0.1.0" }
