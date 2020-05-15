@@ -58,11 +58,12 @@ impl ExperimentParam for PerformanceBenchmarkPacketLossParams {
             ((self.percent_instances / 100.0) * total_instances as f32).ceil() as usize,
             total_instances,
         );
-        let (test_cluster, _) = cluster.split_n_validators_random(packet_loss_num_instances);
+//        let (test_cluster, _) = cluster.split_n_validators_random(packet_loss_num_instances);
+        let (test_cluster, _) = cluster.split_n_fullnodes_random(packet_loss_num_instances);
         Self::E {
             up_validators: cluster.validator_instances().to_vec(),
             up_fullnodes: cluster.fullnode_instances().to_vec(),
-            affected_instances: test_cluster.into_validator_instances(),
+            affected_instances: test_cluster.into_fullnode_instances(),
             percent: self.packet_loss_percent,
             duration: Duration::from_secs(self.duration_secs),
         }
