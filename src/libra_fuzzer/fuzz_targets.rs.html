@@ -107,6 +107,8 @@
 <span id="107">107</span>
 <span id="108">108</span>
 <span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -175,21 +177,23 @@
 <span class="kw">mod</span> <span class="ident">network_noise_responder</span>;
 <span class="kw">mod</span> <span class="ident">signed_transaction</span>;
 <span class="kw">mod</span> <span class="ident">sparse_merkle_proof</span>;
+<span class="kw">mod</span> <span class="ident">storage_save_blocks</span>;
 <span class="kw">mod</span> <span class="ident">vm_value</span>;
 
 <span class="kw">static</span> <span class="ident">ALL_TARGETS</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">FuzzTargetImpl</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
     <span class="kw">let</span> <span class="ident">targets</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">FuzzTargetImpl</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[
         <span class="comment">// List fuzz targets here in this format.</span>
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">compiled_module</span>::<span class="ident">CompiledModuleTarget</span>::<span class="ident">default</span>()),
-        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">signed_transaction</span>::<span class="ident">SignedTransactionTarget</span>::<span class="ident">default</span>()),
-        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">inner_signed_transaction</span>::<span class="ident">SignedTransactionTarget</span>::<span class="ident">default</span>()),
-        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">sparse_merkle_proof</span>::<span class="ident">SparseMerkleProofTarget</span>::<span class="ident">default</span>()),
-        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">vm_value</span>::<span class="ident">ValueTarget</span>::<span class="ident">default</span>()),
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">consensus_proposal</span>::<span class="ident">ConsensusProposal</span>::<span class="ident">default</span>()),
-        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">json_rpc_service</span>::<span class="ident">JsonRpcSubmitTransactionRequest</span>::<span class="ident">default</span>()),
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">inbound_rpc_protocol</span>::<span class="ident">RpcInboundRequest</span>::<span class="ident">default</span>()),
+        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">inner_signed_transaction</span>::<span class="ident">SignedTransactionTarget</span>::<span class="ident">default</span>()),
+        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">json_rpc_service</span>::<span class="ident">JsonRpcSubmitTransactionRequest</span>::<span class="ident">default</span>()),
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">network_noise_initiator</span>::<span class="ident">NetworkNoiseInitiator</span>::<span class="ident">default</span>()),
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">network_noise_responder</span>::<span class="ident">NetworkNoiseResponder</span>::<span class="ident">default</span>()),
+        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">signed_transaction</span>::<span class="ident">SignedTransactionTarget</span>::<span class="ident">default</span>()),
+        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">sparse_merkle_proof</span>::<span class="ident">SparseMerkleProofTarget</span>::<span class="ident">default</span>()),
+        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">storage_save_blocks</span>::<span class="ident">StorageSaveBlocks</span>::<span class="ident">default</span>()),
+        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">vm_value</span>::<span class="ident">ValueTarget</span>::<span class="ident">default</span>()),
     ];
     <span class="ident">targets</span>
         .<span class="ident">into_iter</span>()

@@ -953,6 +953,10 @@
 <span id="953">953</span>
 <span id="954">954</span>
 <span id="955">955</span>
+<span id="956">956</span>
+<span id="957">957</span>
+<span id="958">958</span>
+<span id="959">959</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -982,8 +986,12 @@
 <span class="kw">mod</span> <span class="ident">system_store</span>;
 <span class="kw">mod</span> <span class="ident">transaction_store</span>;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
+<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
 <span class="kw">mod</span> <span class="ident">libradb_test</span>;
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>)]</span>
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">libradb_test</span>::<span class="ident">test_save_blocks_impl</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">backup</span>::<span class="ident">BackupHandler</span>,
