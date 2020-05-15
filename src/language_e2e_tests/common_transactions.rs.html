@@ -181,6 +181,14 @@
 <span id="181">181</span>
 <span id="182">182</span>
 <span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -190,7 +198,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">account</span>::<span class="ident">Account</span>, <span class="ident">gas_costs</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
-    <span class="ident">account_config</span>::<span class="ident">lbr_type_tag</span>,
+    <span class="ident">account_config</span>::{<span class="ident">lbr_type_tag</span>, <span class="ident">LBR_NAME</span>},
     <span class="ident">transaction</span>::{<span class="ident">RawTransaction</span>, <span class="ident">SignedTransaction</span>, <span class="ident">TransactionArgument</span>},
 };
 <span class="kw">use</span> <span class="ident">stdlib</span>::<span class="ident">transaction_scripts</span>::<span class="ident">StdlibScript</span>;
@@ -211,6 +219,7 @@
         <span class="ident">seq_num</span>,
         <span class="ident">gas_costs</span>::<span class="ident">TXN_RESERVED</span> <span class="op">*</span> <span class="number">2</span>,
         <span class="number">0</span>,
+        <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
     )
 }
 
@@ -233,6 +242,7 @@
         <span class="ident">seq_num</span>,
         <span class="ident">gas_costs</span>::<span class="ident">TXN_RESERVED</span>,
         <span class="number">1</span>,
+        <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
     )
 }
 
@@ -257,6 +267,7 @@
         <span class="ident">seq_num</span>,
         <span class="ident">gas_costs</span>::<span class="ident">TXN_RESERVED</span>, <span class="comment">// this is a default for gas</span>
         <span class="number">1</span>,                       <span class="comment">// this is a default for gas</span>
+        <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
     )
 }
 
@@ -286,6 +297,7 @@
         <span class="ident">seq_num</span>,
         <span class="ident">gas_costs</span>::<span class="ident">TXN_RESERVED</span>,
         <span class="number">0</span>,
+        <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
     )
 }
 
@@ -301,6 +313,7 @@
         <span class="ident">seq_num</span>,
         <span class="ident">gas_costs</span>::<span class="ident">TXN_RESERVED</span>,
         <span class="number">1</span>,
+        <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
     )
 }
 
@@ -321,6 +334,7 @@
         <span class="ident">seq_num</span>,
         <span class="ident">gas_costs</span>::<span class="ident">TXN_RESERVED</span>,
         <span class="number">1</span>,
+        <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
     )
 }
 
@@ -340,6 +354,7 @@
         <span class="ident">seq_num</span>,
         <span class="ident">gas_costs</span>::<span class="ident">TXN_RESERVED</span> <span class="op">*</span> <span class="number">3</span>,
         <span class="number">1</span>,
+        <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
     )
 }
 
@@ -363,6 +378,7 @@
         <span class="ident">seq_num</span>,
         <span class="ident">gas_costs</span>::<span class="ident">TXN_RESERVED</span>, <span class="comment">// this is a default for gas</span>
         <span class="number">0</span>,                       <span class="comment">// this is a default for gas</span>
+        <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
     )
 }
 </pre></div>

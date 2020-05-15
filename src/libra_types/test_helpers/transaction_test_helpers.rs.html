@@ -154,12 +154,21 @@
 <span id="154">154</span>
 <span id="155">155</span>
 <span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
+    <span class="ident">account_config</span>::<span class="ident">LBR_NAME</span>,
     <span class="ident">transaction</span>::{<span class="ident">Module</span>, <span class="ident">RawTransaction</span>, <span class="ident">Script</span>, <span class="ident">SignatureCheckedTransaction</span>, <span class="ident">SignedTransaction</span>},
     <span class="ident">write_set</span>::<span class="ident">WriteSet</span>,
 };
@@ -191,6 +200,7 @@
         <span class="ident">module</span>,
         <span class="ident">MAX_GAS_AMOUNT</span>,
         <span class="ident">TEST_GAS_PRICE</span>,
+        <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
         <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="ident">expiration_time</span>),
     );
 
@@ -208,6 +218,7 @@
     <span class="ident">script</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Script</span><span class="op">&gt;</span>,
     <span class="ident">expiration_time</span>: <span class="ident">u64</span>,
     <span class="ident">gas_unit_price</span>: <span class="ident">u64</span>,
+    <span class="ident">gas_currency_code</span>: <span class="ident">String</span>,
     <span class="ident">max_gas_amount</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SignedTransaction</span> {
     <span class="kw">let</span> <span class="ident">raw_txn</span> <span class="op">=</span> <span class="ident">RawTransaction</span>::<span class="ident">new_script</span>(
@@ -216,6 +227,7 @@
         <span class="ident">script</span>.<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Script</span>::<span class="ident">new</span>(<span class="ident">EMPTY_SCRIPT</span>.<span class="ident">to_vec</span>(), <span class="macro">vec</span><span class="macro">!</span>[], <span class="ident">Vec</span>::<span class="ident">new</span>())),
         <span class="ident">max_gas_amount</span>.<span class="ident">unwrap_or</span>(<span class="ident">MAX_GAS_AMOUNT</span>),
         <span class="ident">gas_unit_price</span>,
+        <span class="ident">gas_currency_code</span>,
         <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="ident">expiration_time</span>),
     );
 
@@ -233,6 +245,7 @@
     <span class="ident">script</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Script</span><span class="op">&gt;</span>,
     <span class="ident">expiration_time</span>: <span class="ident">u64</span>,
     <span class="ident">gas_unit_price</span>: <span class="ident">u64</span>,
+    <span class="ident">gas_currency_code</span>: <span class="ident">String</span>,
     <span class="ident">max_gas_amount</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SignedTransaction</span> {
     <span class="kw">let</span> <span class="ident">raw_txn</span> <span class="op">=</span> <span class="ident">RawTransaction</span>::<span class="ident">new_script</span>(
@@ -241,6 +254,7 @@
         <span class="ident">script</span>.<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Script</span>::<span class="ident">new</span>(<span class="ident">EMPTY_SCRIPT</span>.<span class="ident">to_vec</span>(), <span class="macro">vec</span><span class="macro">!</span>[], <span class="ident">Vec</span>::<span class="ident">new</span>())),
         <span class="ident">max_gas_amount</span>.<span class="ident">unwrap_or</span>(<span class="ident">MAX_GAS_AMOUNT</span>),
         <span class="ident">gas_unit_price</span>,
+        <span class="ident">gas_currency_code</span>,
         <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="ident">expiration_time</span>),
     );
 
@@ -271,6 +285,7 @@
         <span class="ident">script</span>,
         <span class="ident">expiration_time</span>,
         <span class="ident">TEST_GAS_PRICE</span>,
+        <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
         <span class="prelude-val">None</span>,
     )
 }
@@ -295,6 +310,7 @@
         <span class="ident">script</span>,
         <span class="ident">expiration_time</span>,
         <span class="ident">TEST_GAS_PRICE</span>,
+        <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
         <span class="prelude-val">None</span>,
     )
 }

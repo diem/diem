@@ -120,6 +120,7 @@
 <span id="120">120</span>
 <span id="121">121</span>
 <span id="122">122</span>
+<span id="123">123</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -197,6 +198,7 @@
             <span class="ident">script</span>,
             <span class="kw">crate</span>::<span class="ident">constants</span>::<span class="ident">MAX_GAS_AMOUNT</span>,
             <span class="kw">crate</span>::<span class="ident">constants</span>::<span class="ident">GAS_UNIT_PRICE</span>,
+            <span class="kw">crate</span>::<span class="ident">constants</span>::<span class="ident">GAS_CURRENCY_CODE</span>.<span class="ident">to_owned</span>(),
             <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="ident">expiration_time</span>),
         );
         <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">local</span>

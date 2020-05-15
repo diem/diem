@@ -1448,6 +1448,9 @@
 <span id="1448">1448</span>
 <span id="1449">1449</span>
 <span id="1450">1450</span>
+<span id="1451">1451</span>
+<span id="1452">1452</span>
+<span id="1453">1453</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1473,6 +1476,7 @@
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">account_config</span>::{
         <span class="ident">association_address</span>, <span class="ident">lbr_type_tag</span>, <span class="ident">ACCOUNT_RECEIVED_EVENT_PATH</span>, <span class="ident">ACCOUNT_SENT_EVENT_PATH</span>,
+        <span class="ident">LBR_NAME</span>,
     },
     <span class="ident">account_state</span>::<span class="ident">AccountState</span>,
     <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>,
@@ -2054,6 +2058,7 @@
             <span class="ident">sender_sequence_number</span>,
             <span class="ident">max_gas_amount</span>.<span class="ident">unwrap_or</span>(<span class="ident">MAX_GAS_AMOUNT</span>),
             <span class="ident">gas_unit_price</span>.<span class="ident">unwrap_or</span>(<span class="ident">GAS_UNIT_PRICE</span>),
+            <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
             <span class="ident">TX_EXPIRATION</span>,
         ))
     }
@@ -2726,6 +2731,7 @@
             <span class="ident">sender_account</span>.<span class="ident">sequence_number</span>,
             <span class="ident">max_gas_amount</span>.<span class="ident">unwrap_or</span>(<span class="ident">MAX_GAS_AMOUNT</span>),
             <span class="ident">gas_unit_price</span>.<span class="ident">unwrap_or</span>(<span class="ident">GAS_UNIT_PRICE</span>),
+            <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
             <span class="ident">TX_EXPIRATION</span>,
         )
     }

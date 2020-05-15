@@ -312,6 +312,8 @@
 <span id="312">312</span>
 <span id="313">313</span>
 <span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -345,6 +347,7 @@
 <span class="kw">use</span> <span class="ident">libra_secure_time</span>::<span class="ident">TimeService</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
+    <span class="ident">account_config</span>::<span class="ident">LBR_NAME</span>,
     <span class="ident">transaction</span>::{<span class="ident">RawTransaction</span>, <span class="ident">Script</span>, <span class="ident">Transaction</span>, <span class="ident">TransactionArgument</span>},
 };
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
@@ -622,6 +625,7 @@
         <span class="ident">script</span>,
         <span class="ident">MAX_GAS_AMOUNT</span>,
         <span class="ident">GAS_UNIT_PRICE</span>,
+        <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
         <span class="ident">expiration</span>,
     );
     <span class="kw">let</span> <span class="ident">signed_txn</span> <span class="op">=</span> <span class="ident">raw_txn</span>.<span class="ident">sign</span>(<span class="ident">signing_key</span>, <span class="ident">signing_key</span>.<span class="ident">public_key</span>()).<span class="ident">unwrap</span>();

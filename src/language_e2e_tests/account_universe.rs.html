@@ -339,7 +339,7 @@
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">universe</span>::<span class="kw-2">*</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">account</span>::{<span class="ident">Account</span>, <span class="ident">AccountData</span>},
+    <span class="ident">account</span>::{<span class="ident">lbr_currency_code</span>, <span class="ident">Account</span>, <span class="ident">AccountData</span>},
     <span class="ident">gas_costs</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">ed25519</span>::{<span class="ident">Ed25519PrivateKey</span>, <span class="ident">Ed25519PublicKey</span>};
@@ -438,7 +438,7 @@
 
 <span class="kw">impl</span> <span class="ident">AccountCurrent</span> {
     <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">initial_data</span>: <span class="ident">AccountData</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">balance</span> <span class="op">=</span> <span class="ident">initial_data</span>.<span class="ident">balance</span>();
+        <span class="kw">let</span> <span class="ident">balance</span> <span class="op">=</span> <span class="ident">initial_data</span>.<span class="ident">balance</span>(<span class="kw-2">&amp;</span><span class="ident">lbr_currency_code</span>());
         <span class="kw">let</span> <span class="ident">sequence_number</span> <span class="op">=</span> <span class="ident">initial_data</span>.<span class="ident">sequence_number</span>();
         <span class="kw">let</span> <span class="ident">sent_events_count</span> <span class="op">=</span> <span class="ident">initial_data</span>.<span class="ident">sent_events_count</span>();
         <span class="kw">let</span> <span class="ident">received_events_count</span> <span class="op">=</span> <span class="ident">initial_data</span>.<span class="ident">received_events_count</span>();

@@ -778,6 +778,9 @@
 <span id="778">778</span>
 <span id="779">779</span>
 <span id="780">780</span>
+<span id="781">781</span>
+<span id="782">782</span>
+<span id="783">783</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -798,7 +801,7 @@
 };
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::{<span class="self">self</span>, <span class="ident">AccountAddress</span>},
-    <span class="ident">account_config</span>::<span class="ident">lbr_type_tag</span>,
+    <span class="ident">account_config</span>::{<span class="ident">lbr_type_tag</span>, <span class="ident">LBR_NAME</span>},
     <span class="ident">transaction</span>::{
         <span class="ident">authenticator</span>::<span class="ident">AuthenticationKey</span>, <span class="ident">helpers</span>::<span class="ident">TransactionSigner</span>, <span class="ident">RawTransaction</span>,
         <span class="ident">SignedTransaction</span>, <span class="ident">TransactionArgument</span>, <span class="ident">TransactionPayload</span>,
@@ -886,6 +889,7 @@
         <span class="ident">payload</span>,
         <span class="ident">max_gas_amount</span>,
         <span class="ident">gas_unit_price</span>,
+        <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
         <span class="ident">expiration_time</span>,
     );
 
@@ -999,6 +1003,7 @@
         <span class="ident">payload</span>,
         <span class="ident">max_gas_amount</span>,
         <span class="ident">gas_unit_price</span>,
+        <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
         <span class="ident">expiration_time</span>,
     );
 
@@ -1475,6 +1480,7 @@
                 <span class="ident">program</span>,
                 <span class="ident">max_gas_amount</span>,
                 <span class="ident">gas_unit_price</span>,
+                <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
                 <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="ident">expiration_time_secs</span>),
             ),
             <span class="ident">public_key</span>.<span class="ident">clone</span>(),

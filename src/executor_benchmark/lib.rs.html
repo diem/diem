@@ -364,6 +364,7 @@
 <span id="364">364</span>
 <span id="365">365</span>
 <span id="366">366</span>
+<span id="367">367</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -379,7 +380,7 @@
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
-    <span class="ident">account_config</span>::{<span class="ident">association_address</span>, <span class="ident">lbr_type_tag</span>, <span class="ident">AccountResource</span>},
+    <span class="ident">account_config</span>::{<span class="ident">association_address</span>, <span class="ident">lbr_type_tag</span>, <span class="ident">AccountResource</span>, <span class="ident">LBR_NAME</span>},
     <span class="ident">block_info</span>::<span class="ident">BlockInfo</span>,
     <span class="ident">ledger_info</span>::{<span class="ident">LedgerInfo</span>, <span class="ident">LedgerInfoWithSignatures</span>},
     <span class="ident">transaction</span>::{
@@ -708,8 +709,9 @@
         <span class="ident">sender</span>,
         <span class="ident">sequence_number</span>,
         <span class="ident">program</span>,
-        <span class="number">1_000_000</span>, <span class="comment">/* max_gas_amount */</span>
-        <span class="number">0</span>,         <span class="comment">/* gas_unit_price */</span>
+        <span class="number">1_000_000</span>,           <span class="comment">/* max_gas_amount */</span>
+        <span class="number">0</span>,                   <span class="comment">/* gas_unit_price */</span>
+        <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(), <span class="comment">/* gas_currency_code */</span>
         <span class="ident">expiration_time</span>,
     );
 

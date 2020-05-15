@@ -240,6 +240,19 @@
 <span id="240">240</span>
 <span id="241">241</span>
 <span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -283,6 +296,7 @@
     <span class="ident">Arguments</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Argument</span><span class="op">&gt;</span>),
     <span class="ident">MaxGas</span>(<span class="ident">u64</span>),
     <span class="ident">GasPrice</span>(<span class="ident">u64</span>),
+    <span class="ident">GasCurrencyCode</span>(<span class="ident">String</span>),
     <span class="ident">SequenceNumber</span>(<span class="ident">u64</span>),
     <span class="ident">ExpirationTime</span>(<span class="ident">u64</span>),
 }
@@ -329,6 +343,9 @@
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">s</span>) <span class="op">=</span> <span class="ident">strip</span>(<span class="ident">s</span>, <span class="string">&quot;gas-price:&quot;</span>) {
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">Entry</span>::<span class="ident">GasPrice</span>(<span class="ident">s</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>()<span class="question-mark">?</span>));
         }
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">s</span>) <span class="op">=</span> <span class="ident">strip</span>(<span class="ident">s</span>, <span class="string">&quot;gas-currency:&quot;</span>) {
+            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">Entry</span>::<span class="ident">GasCurrencyCode</span>(<span class="ident">s</span>.<span class="ident">to_owned</span>()));
+        }
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">s</span>) <span class="op">=</span> <span class="ident">strip</span>(<span class="ident">s</span>, <span class="string">&quot;sequence-number:&quot;</span>) {
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">Entry</span>::<span class="ident">SequenceNumber</span>(<span class="ident">s</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>()<span class="question-mark">?</span>));
         }
@@ -373,6 +390,7 @@
     <span class="kw">pub</span> <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TransactionArgument</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">max_gas</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">gas_price</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">gas_currency_code</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">sequence_number</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">expiration_time</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Duration</span><span class="op">&gt;</span>,
 }
@@ -386,6 +404,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">args</span> <span class="op">=</span> <span class="prelude-val">None</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">max_gas</span> <span class="op">=</span> <span class="prelude-val">None</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gas_price</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gas_currency_code</span> <span class="op">=</span> <span class="prelude-val">None</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sequence_number</span> <span class="op">=</span> <span class="prelude-val">None</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expiration_time</span> <span class="op">=</span> <span class="prelude-val">None</span>;
 
@@ -447,6 +466,12 @@
                         <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ErrorKind</span>::<span class="ident">Other</span>(<span class="string">&quot;gas price already set&quot;</span>.<span class="ident">to_string</span>()).<span class="ident">into</span>())
                     }
                 },
+                <span class="ident">Entry</span>::<span class="ident">GasCurrencyCode</span>(<span class="ident">code</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">gas_currency_code</span> {
+                    <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">gas_currency_code</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">code</span>.<span class="ident">to_owned</span>()),
+                    <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ErrorKind</span>::<span class="ident">Other</span>(<span class="string">&quot;gas currency already set&quot;</span>.<span class="ident">to_string</span>()).<span class="ident">into</span>())
+                    }
+                },
                 <span class="ident">Entry</span>::<span class="ident">SequenceNumber</span>(<span class="ident">sn</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">sequence_number</span> {
                     <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">sequence_number</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">sn</span>),
                     <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -473,6 +498,7 @@
             <span class="ident">args</span>: <span class="ident">args</span>.<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">vec</span><span class="macro">!</span>[]),
             <span class="ident">max_gas</span>,
             <span class="ident">gas_price</span>,
+            <span class="ident">gas_currency_code</span>,
             <span class="ident">sequence_number</span>,
             <span class="ident">expiration_time</span>,
         })

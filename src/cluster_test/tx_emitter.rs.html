@@ -789,6 +789,8 @@
 <span id="789">789</span>
 <span id="790">790</span>
 <span id="791">791</span>
+<span id="792">792</span>
+<span id="793">793</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -813,7 +815,7 @@
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
-    <span class="ident">account_config</span>::{<span class="ident">association_address</span>, <span class="ident">lbr_type_tag</span>},
+    <span class="ident">account_config</span>::{<span class="ident">association_address</span>, <span class="ident">lbr_type_tag</span>, <span class="ident">LBR_NAME</span>},
     <span class="ident">transaction</span>::{
         <span class="ident">authenticator</span>::<span class="ident">AuthenticationKey</span>, <span class="ident">helpers</span>::<span class="ident">create_user_txn</span>, <span class="ident">Script</span>, <span class="ident">TransactionPayload</span>,
     },
@@ -1302,6 +1304,7 @@
 
 <span class="kw">const</span> <span class="ident">MAX_GAS_AMOUNT</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1_000_000</span>;
 <span class="kw">const</span> <span class="ident">GAS_UNIT_PRICE</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0</span>;
+<span class="kw">const</span> <span class="ident">GAS_CURRENCY_CODE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="ident">LBR_NAME</span>;
 <span class="kw">const</span> <span class="ident">TXN_EXPIRATION_SECONDS</span>: <span class="ident">i64</span> <span class="op">=</span> <span class="number">50</span>;
 <span class="kw">const</span> <span class="ident">TXN_MAX_WAIT</span>: <span class="ident">Duration</span> <span class="op">=</span> <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="ident">TXN_EXPIRATION_SECONDS</span> <span class="kw">as</span> <span class="ident">u64</span> <span class="op">+</span> <span class="number">30</span>);
 <span class="kw">const</span> <span class="ident">LIBRA_PER_NEW_ACCOUNT</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1_000_000</span>;
@@ -1317,6 +1320,7 @@
         <span class="ident">sender_account</span>.<span class="ident">sequence_number</span>,
         <span class="ident">MAX_GAS_AMOUNT</span>,
         <span class="ident">GAS_UNIT_PRICE</span>,
+        <span class="ident">GAS_CURRENCY_CODE</span>.<span class="ident">to_owned</span>(),
         <span class="ident">TXN_EXPIRATION_SECONDS</span>,
     )
     .<span class="ident">expect</span>(<span class="string">&quot;Failed to create signed transaction&quot;</span>);

@@ -632,7 +632,6 @@
 <span id="632">632</span>
 <span id="633">633</span>
 <span id="634">634</span>
-<span id="635">635</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -911,7 +910,7 @@
     <span class="kw">use</span> <span class="ident">libra_json_rpc</span>::<span class="ident">bootstrap</span>;
     <span class="kw">use</span> <span class="ident">libra_types</span>::{
         <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
-        <span class="ident">account_config</span>::{<span class="ident">from_currency_code_string</span>, <span class="ident">AccountResource</span>, <span class="ident">BalanceResource</span>, <span class="ident">LBR_NAME</span>},
+        <span class="ident">account_config</span>::{<span class="ident">AccountResource</span>, <span class="ident">BalanceResource</span>},
         <span class="ident">account_state</span>::<span class="ident">AccountState</span>,
         <span class="ident">account_state_blob</span>::{<span class="ident">AccountStateBlob</span>, <span class="ident">AccountStateWithProof</span>},
         <span class="ident">block_info</span>::<span class="ident">BlockInfo</span>,
@@ -1118,7 +1117,6 @@
             <span class="ident">EventHandle</span>::<span class="ident">random_handle</span>(<span class="number">100</span>),
             <span class="ident">EventHandle</span>::<span class="ident">random_handle</span>(<span class="number">100</span>),
             <span class="bool-val">false</span>,
-            <span class="ident">from_currency_code_string</span>(<span class="ident">LBR_NAME</span>).<span class="ident">unwrap</span>(),
         )
     }
 

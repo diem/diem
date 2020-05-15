@@ -915,12 +915,30 @@
 <span id="915">915</span>
 <span id="916">916</span>
 <span id="917">917</span>
+<span id="918">918</span>
+<span id="919">919</span>
+<span id="920">920</span>
+<span id="921">921</span>
+<span id="922">922</span>
+<span id="923">923</span>
+<span id="924">924</span>
+<span id="925">925</span>
+<span id="926">926</span>
+<span id="927">927</span>
+<span id="928">928</span>
+<span id="929">929</span>
+<span id="930">930</span>
+<span id="931">931</span>
+<span id="932">932</span>
+<span id="933">933</span>
+<span id="934">934</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
+    <span class="ident">account_config</span>::<span class="ident">LBR_NAME</span>,
     <span class="ident">account_state_blob</span>::<span class="ident">AccountStateBlob</span>,
     <span class="ident">block_metadata</span>::<span class="ident">BlockMetadata</span>,
     <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>,
@@ -986,6 +1004,8 @@
     <span class="comment">// Maximal price can be paid per gas.</span>
     <span class="ident">gas_unit_price</span>: <span class="ident">u64</span>,
 
+    <span class="ident">gas_currency_code</span>: <span class="ident">String</span>,
+
     <span class="comment">// Expiration time for this transaction.  If storage is queried and</span>
     <span class="comment">// the time returned is greater than or equal to this time and this</span>
     <span class="comment">// transaction has not been included, you can be certain that it will</span>
@@ -1039,6 +1059,7 @@
         <span class="ident">payload</span>: <span class="ident">TransactionPayload</span>,
         <span class="ident">max_gas_amount</span>: <span class="ident">u64</span>,
         <span class="ident">gas_unit_price</span>: <span class="ident">u64</span>,
+        <span class="ident">gas_currency_code</span>: <span class="ident">String</span>,
         <span class="ident">expiration_time</span>: <span class="ident">Duration</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">RawTransaction</span> {
@@ -1047,6 +1068,7 @@
             <span class="ident">payload</span>,
             <span class="ident">max_gas_amount</span>,
             <span class="ident">gas_unit_price</span>,
+            <span class="ident">gas_currency_code</span>,
             <span class="ident">expiration_time</span>,
         }
     }
@@ -1060,6 +1082,7 @@
         <span class="ident">script</span>: <span class="ident">Script</span>,
         <span class="ident">max_gas_amount</span>: <span class="ident">u64</span>,
         <span class="ident">gas_unit_price</span>: <span class="ident">u64</span>,
+        <span class="ident">gas_currency_code</span>: <span class="ident">String</span>,
         <span class="ident">expiration_time</span>: <span class="ident">Duration</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">RawTransaction</span> {
@@ -1068,6 +1091,7 @@
             <span class="ident">payload</span>: <span class="ident">TransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">script</span>),
             <span class="ident">max_gas_amount</span>,
             <span class="ident">gas_unit_price</span>,
+            <span class="ident">gas_currency_code</span>,
             <span class="ident">expiration_time</span>,
         }
     }
@@ -1082,6 +1106,7 @@
         <span class="ident">module</span>: <span class="ident">Module</span>,
         <span class="ident">max_gas_amount</span>: <span class="ident">u64</span>,
         <span class="ident">gas_unit_price</span>: <span class="ident">u64</span>,
+        <span class="ident">gas_currency_code</span>: <span class="ident">String</span>,
         <span class="ident">expiration_time</span>: <span class="ident">Duration</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">RawTransaction</span> {
@@ -1090,6 +1115,7 @@
             <span class="ident">payload</span>: <span class="ident">TransactionPayload</span>::<span class="ident">Module</span>(<span class="ident">module</span>),
             <span class="ident">max_gas_amount</span>,
             <span class="ident">gas_unit_price</span>,
+            <span class="ident">gas_currency_code</span>,
             <span class="ident">expiration_time</span>,
         }
     }
@@ -1106,6 +1132,7 @@
             <span class="comment">// Since write-set transactions bypass the VM, these fields aren&#39;t relevant.</span>
             <span class="ident">max_gas_amount</span>: <span class="number">0</span>,
             <span class="ident">gas_unit_price</span>: <span class="number">0</span>,
+            <span class="ident">gas_currency_code</span>: <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
             <span class="comment">// Write-set transactions are special and important and shouldn&#39;t expire.</span>
             <span class="ident">expiration_time</span>: <span class="ident">Duration</span>::<span class="ident">new</span>(<span class="ident">u64</span>::<span class="ident">max_value</span>(), <span class="number">0</span>),
         }
@@ -1123,6 +1150,7 @@
             <span class="comment">// Since write-set transactions bypass the VM, these fields aren&#39;t relevant.</span>
             <span class="ident">max_gas_amount</span>: <span class="number">0</span>,
             <span class="ident">gas_unit_price</span>: <span class="number">0</span>,
+            <span class="ident">gas_currency_code</span>: <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
             <span class="comment">// Write-set transactions are special and important and shouldn&#39;t expire.</span>
             <span class="ident">expiration_time</span>: <span class="ident">Duration</span>::<span class="ident">new</span>(<span class="ident">u64</span>::<span class="ident">max_value</span>(), <span class="number">0</span>),
         }
@@ -1186,6 +1214,7 @@
              \t}}, \n\
              \tmax_gas_amount: {}, \n\
              \tgas_unit_price: {}, \n\
+             \tgas_currency_code: {}, \n\
              \texpiration_time: {:#?}, \n\
              }}&quot;</span>,
             <span class="self">self</span>.<span class="ident">sender</span>,
@@ -1194,6 +1223,7 @@
             <span class="ident">f_args</span>,
             <span class="self">self</span>.<span class="ident">max_gas_amount</span>,
             <span class="self">self</span>.<span class="ident">gas_unit_price</span>,
+            <span class="self">self</span>.<span class="ident">gas_currency_code</span>,
             <span class="self">self</span>.<span class="ident">expiration_time</span>,
         )
     }
@@ -1322,6 +1352,10 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">gas_unit_price</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
         <span class="self">self</span>.<span class="ident">raw_txn</span>.<span class="ident">gas_unit_price</span>
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">gas_currency_code</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">str</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">raw_txn</span>.<span class="ident">gas_currency_code</span>
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">expiration_time</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Duration</span> {
