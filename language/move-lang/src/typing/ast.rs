@@ -105,6 +105,7 @@ pub struct ModuleCall {
 #[allow(clippy::large_enum_variant)]
 pub enum BuiltinFunction_ {
     MoveToSender(Type),
+    MoveTo(Type),
     MoveFrom(Type),
     BorrowGlobal(bool, Type),
     Exists(Type),
@@ -209,6 +210,7 @@ impl fmt::Display for BuiltinFunction_ {
         use BuiltinFunction_::*;
         let s = match self {
             MoveToSender(_) => NB::MOVE_TO_SENDER,
+            MoveTo(_) => NB::MOVE_TO,
             MoveFrom(_) => NB::MOVE_FROM,
             BorrowGlobal(false, _) => NB::BORROW_GLOBAL,
             BorrowGlobal(true, _) => NB::BORROW_GLOBAL_MUT,
@@ -553,6 +555,7 @@ impl AstDebug for BuiltinFunction_ {
         use BuiltinFunction_ as F;
         let (n, bt) = match self {
             F::MoveToSender(bt) => (NF::MOVE_TO_SENDER, bt),
+            F::MoveTo(bt) => (NF::MOVE_TO, bt),
             F::MoveFrom(bt) => (NF::MOVE_FROM, bt),
             F::BorrowGlobal(true, bt) => (NF::BORROW_GLOBAL_MUT, bt),
             F::BorrowGlobal(false, bt) => (NF::BORROW_GLOBAL, bt),

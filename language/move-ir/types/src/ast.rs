@@ -664,6 +664,7 @@ pub enum Bytecode_ {
     Exists(StructName, Vec<Type>),
     MoveFrom(StructName, Vec<Type>),
     MoveToSender(StructName, Vec<Type>),
+    MoveTo(StructName, Vec<Type>),
     Shl,
     Shr,
 }
@@ -1833,6 +1834,7 @@ impl fmt::Display for Bytecode_ {
             Bytecode_::MoveToSender(n, tys) => {
                 write!(f, "MoveToSender {}{}", n, format_type_actuals(tys))
             }
+            Bytecode_::MoveTo(n, tys) => write!(f, "MoveTo {}{}", n, format_type_actuals(tys)),
             Bytecode_::Shl => write!(f, "Shl"),
             Bytecode_::Shr => write!(f, "Shr"),
         }

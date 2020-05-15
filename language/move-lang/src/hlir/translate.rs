@@ -6,7 +6,7 @@ use crate::{
     expansion::ast::Fields,
     hlir::ast::{self as H, Block},
     naming::ast as N,
-    parser::ast::{BinOp_, Field, FunctionName, ModuleIdent, StructName, Value_, Var},
+    parser::ast::{BinOp_, Field, FunctionName, Kind_, ModuleIdent, StructName, Value_, Var},
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
 };
@@ -351,7 +351,10 @@ fn base_type(context: &Context, sp!(loc, nb_): N::Type) -> H::BaseType {
     use N::Type_ as NT;
     let b_ = match nb_ {
         NT::Var(_) => panic!("ICE tvar not expanded: {}:{}", loc.file(), loc.span()),
-        NT::Apply(None, _, _) => panic!("ICE kind not expanded: {:#?}", loc),
+        NT::Apply(None, n, tys) => {
+            crate::shared::ast_debug::print_verbose(&NT::Apply(None, n, tys));
+            panic!("ICE kind not expanded: {:#?}", loc)
+        }
         NT::Apply(Some(k), n, nbs) => HB::Apply(k, type_name(context, n), base_types(context, nbs)),
         NT::Param(tp) => HB::Param(tp),
         NT::UnresolvedError => HB::UnresolvedError,
@@ -396,7 +399,10 @@ fn type_(context: &Context, sp!(loc, ty_): N::Type) -> H::Type {
     use N::{TypeName_ as TN, Type_ as NT};
     let t_ = match ty_ {
         NT::Unit => HT::Unit,
-        NT::Apply(None, _, _) => panic!("ICE kind not expanded: {:#?}", loc),
+        NT::Apply(None, n, tys) => {
+            crate::shared::ast_debug::print_verbose(&NT::Apply(None, n, tys));
+            panic!("ICE kind not expanded: {:#?}", loc)
+        }
         NT::Apply(Some(_), sp!(_, TN::Multiple(_)), ss) => HT::Multiple(single_types(context, ss)),
         _ => HT::Single(single_type(context, sp(loc, ty_))),
     };
@@ -879,10 +885,7 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
             };
             HE::ModuleCall(Box::new(call))
         }
-        TE::Builtin(bf, targ) => {
-            let arg = exp(context, result, None, *targ);
-            builtin(context, result, eloc, *bf, arg)
-        }
+        TE::Builtin(bf, targ) => builtin(context, result, eloc, *bf, targ),
         TE::Dereference(te) => {
             let e = exp(context, result, None, *te);
             HE::Dereference(e)
@@ -1185,31 +1188,53 @@ fn use_tmp(var: Var) -> H::UnannotatedExp_ {
 
 fn builtin(
     context: &mut Context,
-    _result: &mut Block,
+    result: &mut Block,
     _eloc: Loc,
     sp!(loc, tb_): T::BuiltinFunction,
-    arg: Box<H::Exp>,
+    targ: Box<T::Exp>,
 ) -> H::UnannotatedExp_ {
     use H::{BuiltinFunction_ as HB, UnannotatedExp_ as E};
     use T::BuiltinFunction_ as TB;
     match tb_ {
+        TB::MoveTo(bt) => {
+            let texpected_tys = vec![
+                sp(loc, N::Type_::Ref(false, Box::new(N::Type_::signer(loc)))),
+                bt.clone(),
+            ];
+            let texpected_ty_ = N::Type_::Apply(
+                Some(sp(loc, Kind_::Resource)),
+                sp(loc, N::TypeName_::Multiple(texpected_tys.len())),
+                texpected_tys,
+            );
+            let expected_ty = type_(context, sp(loc, texpected_ty_));
+            let arg = exp(context, result, Some(&expected_ty), *targ);
+            let ty = base_type(context, bt);
+            E::Builtin(Box::new(sp(loc, HB::MoveTo(ty))), arg)
+        }
         TB::MoveToSender(bt) => {
             let ty = base_type(context, bt);
+            let arg = exp(context, result, None, *targ);
             E::Builtin(Box::new(sp(loc, HB::MoveToSender(ty))), arg)
         }
         TB::MoveFrom(bt) => {
             let ty = base_type(context, bt);
+            let arg = exp(context, result, None, *targ);
             E::Builtin(Box::new(sp(loc, HB::MoveFrom(ty))), arg)
         }
         TB::BorrowGlobal(mut_, bt) => {
             let ty = base_type(context, bt);
+            let arg = exp(context, result, None, *targ);
             E::Builtin(Box::new(sp(loc, HB::BorrowGlobal(mut_, ty))), arg)
         }
         TB::Exists(bt) => {
             let ty = base_type(context, bt);
+            let arg = exp(context, result, None, *targ);
             E::Builtin(Box::new(sp(loc, HB::Exists(ty))), arg)
         }
-        TB::Freeze(_bt) => E::Freeze(arg),
+        TB::Freeze(_bt) => {
+            let arg = exp(context, result, None, *targ);
+            E::Freeze(arg)
+        }
     }
 }
 

@@ -6,7 +6,7 @@ error:
    │     ^^^^ Invalid parameter for script function 'main'
    ·
  2 │ fun main<T: copyable>(x: T, y: vector<T>, z: vector<vector<u8>>, a: vector<vector<T>>) {
-   │                          - Found: 'T'. But expected: u8, u64, u128, bool, address, vector<u8>
+   │                          - Found: 'T'. But expected: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<u8>', '&signer'
    │
 
 error: 
@@ -17,7 +17,7 @@ error:
    │     ^^^^ Invalid parameter for script function 'main'
    ·
  2 │ fun main<T: copyable>(x: T, y: vector<T>, z: vector<vector<u8>>, a: vector<vector<T>>) {
-   │                                --------- Found: 'vector<T>'. But expected: u8, u64, u128, bool, address, vector<u8>
+   │                                --------- Found: 'vector<T>'. But expected: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<u8>', '&signer'
    │
 
 error: 
@@ -28,7 +28,7 @@ error:
    │     ^^^^ Invalid parameter for script function 'main'
    ·
  2 │ fun main<T: copyable>(x: T, y: vector<T>, z: vector<vector<u8>>, a: vector<vector<T>>) {
-   │                                              ------------------ Found: 'vector<vector<u8>>'. But expected: u8, u64, u128, bool, address, vector<u8>
+   │                                              ------------------ Found: 'vector<vector<u8>>'. But expected: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<u8>', '&signer'
    │
 
 error: 
@@ -39,6 +39,6 @@ error:
    │     ^^^^ Invalid parameter for script function 'main'
    ·
  2 │ fun main<T: copyable>(x: T, y: vector<T>, z: vector<vector<u8>>, a: vector<vector<T>>) {
-   │                                                                     ----------------- Found: 'vector<vector<T>>'. But expected: u8, u64, u128, bool, address, vector<u8>
+   │                                                                     ----------------- Found: 'vector<vector<T>>'. But expected: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<u8>', '&signer'
    │
 

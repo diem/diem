@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/signer/is_resource_st_loc.move:3:9 ───
+   │
+ 3 │         s1 = s2;
+   │         ^^ Invalid assignment to local 's1'
+   ·
+ 2 │     fun t(s1: signer, s2: signer): signer {
+   │           -- The local contains a resource value due to this assignment. The resource must be used before you assign to this local again
+   │
+

@@ -2999,6 +2999,8 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 match &type_name.value {
                     Builtin(builtin_type_name) => match &builtin_type_name.value {
                         Address => Type::new_prim(PrimitiveType::Address),
+                        // TODO fix this for a real signer type
+                        Signer => Type::new_prim(PrimitiveType::Address),
                         U8 => Type::new_prim(PrimitiveType::U8),
                         U64 => Type::new_prim(PrimitiveType::U64),
                         U128 => Type::new_prim(PrimitiveType::U128),

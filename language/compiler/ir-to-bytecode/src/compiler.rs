@@ -1932,6 +1932,21 @@ fn compile_bytecode(
                 Bytecode::MoveToSenderGeneric(si_idx)
             }
         }
+        IRBytecode_::MoveTo(n, tys) => {
+            let tokens = Signature(compile_types(
+                context,
+                function_frame.type_parameters(),
+                &tys,
+            )?);
+            let type_actuals_id = context.signature_index(tokens)?;
+            let def_idx = context.struct_definition_index(&n)?;
+            if tys.is_empty() {
+                Bytecode::MoveTo(def_idx)
+            } else {
+                let si_idx = context.struct_instantiation_index(def_idx, type_actuals_id)?;
+                Bytecode::MoveToGeneric(si_idx)
+            }
+        }
         IRBytecode_::Shl => Bytecode::Shl,
         IRBytecode_::Shr => Bytecode::Shr,
     };

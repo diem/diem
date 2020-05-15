@@ -589,6 +589,7 @@ fn base_type(context: &mut Context, sp!(_, bt_): H::BaseType) -> IR::Type {
             panic!("ICE should not have reached compilation if there are errors")
         }
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Address))), _) => IRT::Address,
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Signer))), _) => IRT::Signer,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U8))), _) => IRT::U8,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U64))), _) => IRT::U64,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U128))), _) => IRT::U128,
@@ -903,6 +904,10 @@ fn builtin(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, b_): H:
             HB::MoveToSender(bt) => {
                 let (n, tys) = struct_definition_name_base(context, bt);
                 B::MoveToSender(n, tys)
+            }
+            HB::MoveTo(bt) => {
+                let (n, tys) = struct_definition_name_base(context, bt);
+                B::MoveTo(n, tys)
             }
             HB::MoveFrom(bt) => {
                 let (n, tys) = struct_definition_name_base(context, bt);

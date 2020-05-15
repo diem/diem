@@ -852,6 +852,7 @@ fn resolve_builtin_function(
     use N::{BuiltinFunction_ as B, BuiltinFunction_::*};
     Some(match b.value.as_str() {
         B::MOVE_TO_SENDER => MoveToSender(check_builtin_ty_arg(context, loc, b, ty_args)),
+        B::MOVE_TO => MoveTo(check_builtin_ty_arg(context, loc, b, ty_args)),
         B::MOVE_FROM => MoveFrom(check_builtin_ty_arg(context, loc, b, ty_args)),
         B::BORROW_GLOBAL => BorrowGlobal(false, check_builtin_ty_arg(context, loc, b, ty_args)),
         B::BORROW_GLOBAL_MUT => BorrowGlobal(true, check_builtin_ty_arg(context, loc, b, ty_args)),

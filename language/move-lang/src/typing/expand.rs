@@ -305,6 +305,7 @@ fn builtin_function(context: &mut Context, b: &mut T::BuiltinFunction) {
     use T::BuiltinFunction_ as B;
     match &mut b.value {
         B::MoveToSender(bt)
+        | B::MoveTo(bt)
         | B::MoveFrom(bt)
         | B::BorrowGlobal(_, bt)
         | B::Exists(bt)

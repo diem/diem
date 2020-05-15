@@ -1,0 +1,33 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/signer/double_signer.move:3:9 ───
+   │
+ 3 │     fun t0(_s: &signer, _s2: &signer) {
+   │         ^^ Invalid parameter for script function 't0'
+   ·
+ 3 │     fun t0(_s: &signer, _s2: &signer) {
+   │                              ------- '&signer' must be the first argument to a script
+   │
+
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/signer/double_signer.move:9:9 ───
+   │
+ 9 │     fun t1(_s: &signer, _s2: &signer, u: u64) {
+   │         ^^ Invalid parameter for script function 't1'
+   ·
+ 9 │     fun t1(_s: &signer, _s2: &signer, u: u64) {
+   │                              ------- '&signer' must be the first argument to a script
+   │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/signer/double_signer.move:15:9 ───
+    │
+ 15 │     fun t2(_s: &signer, _u: u64, _s2: &signer) {
+    │         ^^ Invalid parameter for script function 't2'
+    ·
+ 15 │     fun t2(_s: &signer, _u: u64, _s2: &signer) {
+    │                                       ------- '&signer' must be the first argument to a script
+    │
+
