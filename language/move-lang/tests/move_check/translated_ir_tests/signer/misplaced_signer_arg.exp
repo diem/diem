@@ -1,0 +1,22 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/signer/misplaced_signer_arg.move:2:9 ───
+   │
+ 2 │     fun t0(_u: u64, _s: &signer) {
+   │         ^^ Invalid parameter for script function 't0'
+   ·
+ 2 │     fun t0(_u: u64, _s: &signer) {
+   │                         ------- '&signer' must be the first argument to a script
+   │
+
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/signer/misplaced_signer_arg.move:8:9 ───
+   │
+ 8 │     fun t1(_u: u64, _s: &signer, _u2: u64) {
+   │         ^^ Invalid parameter for script function 't1'
+   ·
+ 8 │     fun t1(_u: u64, _s: &signer, _u2: u64) {
+   │                         ------- '&signer' must be the first argument to a script
+   │
+

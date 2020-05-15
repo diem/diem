@@ -1,0 +1,19 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/signer/is_resource_transitive.move:7:13 ───
+   │
+ 7 │         let x = S<signer> { f: s };
+   │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing it with '_'
+   │
+
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/signer/is_resource_transitive.move:7:35 ───
+   │
+ 7 │         let x = S<signer> { f: s };
+   │                                   ^ Invalid return
+   ·
+ 7 │         let x = S<signer> { f: s };
+   │             - The local 'x' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+   │
+

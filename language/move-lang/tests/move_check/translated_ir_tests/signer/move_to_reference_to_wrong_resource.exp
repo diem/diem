@@ -1,0 +1,28 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/signer/move_to_reference_to_wrong_resource.move:5:9 ───
+   │
+ 5 │         move_to<R>(s, X { f: false })
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'. Invalid argument for parameter '1'
+   ·
+ 5 │         move_to<R>(s, X { f: false })
+   │                       -------------- The type: '0x8675309::M::X'
+   ·
+ 5 │         move_to<R>(s, X { f: false })
+   │                 - Is not compatible with: '0x8675309::M::R'
+   │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/signer/move_to_reference_to_wrong_resource.move:16:14 ───
+    │
+ 16 │         () = move_to<X<bool>>(s, R { f: false })
+    │              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'. Invalid argument for parameter '1'
+    ·
+ 16 │         () = move_to<X<bool>>(s, R { f: false })
+    │                                  -------------- The type: '0x8675309::N::R<bool>'
+    ·
+ 16 │         () = move_to<X<bool>>(s, R { f: false })
+    │                      ------- Is not compatible with: '0x8675309::N::X<bool>'
+    │
+

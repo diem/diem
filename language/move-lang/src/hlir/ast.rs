@@ -216,6 +216,7 @@ pub struct ModuleCall {
 #[derive(Debug, PartialEq)]
 pub enum BuiltinFunction_ {
     MoveToSender(BaseType),
+    MoveTo(BaseType),
     MoveFrom(BaseType),
     BorrowGlobal(bool, BaseType),
     Exists(BaseType),
@@ -354,6 +355,7 @@ impl BaseType_ {
 
         let kind = match b_ {
             U8 | U64 | U128 | Bool | Address => sp(loc, Kind_::Copyable),
+            Signer => sp(loc, Kind_::Resource),
             Vector => {
                 assert!(
                     ty_args.len() == 1,
@@ -949,6 +951,7 @@ impl AstDebug for BuiltinFunction_ {
         use BuiltinFunction_ as F;
         let (n, bt) = match self {
             F::MoveToSender(bt) => (NF::MOVE_TO_SENDER, bt),
+            F::MoveTo(bt) => (NF::MOVE_TO, bt),
             F::MoveFrom(bt) => (NF::MOVE_FROM, bt),
             F::BorrowGlobal(true, bt) => (NF::BORROW_GLOBAL_MUT, bt),
             F::BorrowGlobal(false, bt) => (NF::BORROW_GLOBAL, bt),

@@ -1,0 +1,25 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/signer/invalid_move_to_sender.move:3:9 ───
+   │
+ 3 │         move_to_sender<signer>(move s)
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
+   ·
+ 3 │         move_to_sender<signer>(move s)
+   │                        ------ Expected a nominal resource. Found the type: 'signer'
+   │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/signer/invalid_move_to_sender.move:10:9 ───
+    │
+ 10 │         move_to_sender<R>(move s);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to_sender'. Invalid argument for parameter '0'
+    ·
+  9 │     fun t(s: signer) {
+    │              ------ The type: 'signer'
+    ·
+ 10 │         move_to_sender<R>(move s);
+    │                        - Is not compatible with: '0x8675309::N::R'
+    │
+

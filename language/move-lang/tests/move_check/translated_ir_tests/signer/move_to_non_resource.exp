@@ -1,0 +1,28 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/signer/move_to_non_resource.move:4:9 ───
+   │
+ 4 │         move_to(s, R { f: false })
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to.
+   ·
+ 4 │         move_to(s, R { f: false })
+   │                    -------------- Expected a nominal resource. Found the type: '0x8675309::M::R'
+   ·
+ 2 │     struct R { f: bool }
+   │            - Declared as a normal struct here
+   │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/signer/move_to_non_resource.move:14:14 ───
+    │
+ 14 │         () = move_to(s, R { f: false })
+    │              ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to.
+    ·
+ 14 │         () = move_to(s, R { f: false })
+    │                         -------------- Expected a nominal resource. Found the type: '0x8675309::N::R<bool>'
+    ·
+ 12 │     struct R<T> { f: T }
+    │            - Declared as a normal struct here
+    │
+

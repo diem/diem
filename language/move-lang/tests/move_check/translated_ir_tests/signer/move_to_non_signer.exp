@@ -1,0 +1,28 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/signer/move_to_non_signer.move:4:9 ───
+   │
+ 4 │         move_to(s, R { f: false })
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'. Invalid argument for parameter '0'
+   ·
+ 3 │     fun t0(s: &address) {
+   │                ------- The type: 'address'
+   ·
+ 4 │         move_to(s, R { f: false })
+   │         ------- Is not compatible with: 'signer'
+   │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/signer/move_to_non_signer.move:12:9 ───
+    │
+ 12 │         move_to(s, R { f: false })
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'. Invalid argument for parameter '0'
+    ·
+ 11 │     fun t0<T>(s: address) {
+    │                  ------- The type: 'address'
+    ·
+ 12 │         move_to(s, R { f: false })
+    │         ------- Is not compatible with: '&signer'
+    │
+

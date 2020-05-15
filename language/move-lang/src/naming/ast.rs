@@ -101,6 +101,8 @@ pub struct Function {
 pub enum BuiltinTypeName_ {
     // address
     Address,
+    // signer
+    Signer,
     // u8
     U8,
     // u64
@@ -174,6 +176,7 @@ pub type ExpDotted = Spanned<ExpDotted_>;
 #[allow(clippy::large_enum_variant)]
 pub enum BuiltinFunction_ {
     MoveToSender(Option<Type>),
+    MoveTo(Option<Type>),
     MoveFrom(Option<Type>),
     BorrowGlobal(bool, Option<Type>),
     Exists(Option<Type>),
@@ -255,6 +258,7 @@ pub type SequenceItem = Spanned<SequenceItem_>;
 
 impl BuiltinTypeName_ {
     pub const ADDRESS: &'static str = "address";
+    pub const SIGNER: &'static str = "signer";
     pub const U_8: &'static str = "u8";
     pub const U_64: &'static str = "u64";
     pub const U_128: &'static str = "u128";
@@ -264,6 +268,7 @@ impl BuiltinTypeName_ {
     pub fn all_names() -> BTreeSet<&'static str> {
         let mut s = BTreeSet::new();
         s.insert(Self::ADDRESS);
+        s.insert(Self::SIGNER);
         s.insert(Self::U_8);
         s.insert(Self::U_64);
         s.insert(Self::U_128);
@@ -298,6 +303,7 @@ impl BuiltinTypeName_ {
         use BuiltinTypeName_ as BT;
         match name_str {
             BT::ADDRESS => Some(BT::Address),
+            BT::SIGNER => Some(BT::Signer),
             BT::U_8 => Some(BT::U8),
             BT::U_64 => Some(BT::U64),
             BT::U_128 => Some(BT::U128),
@@ -311,7 +317,7 @@ impl BuiltinTypeName_ {
         use BuiltinTypeName_::*;
         // Match here to make sure this function is fixed when collections are added
         match self {
-            Address | U8 | U64 | U128 | Bool => vec![],
+            Address | Signer | U8 | U64 | U128 | Bool => vec![],
             Vector => vec![Spanned::new(loc, Kind_::Unknown)],
         }
     }
@@ -331,6 +337,7 @@ impl TVar {
 
 impl BuiltinFunction_ {
     pub const MOVE_TO_SENDER: &'static str = "move_to_sender";
+    pub const MOVE_TO: &'static str = "move_to";
     pub const MOVE_FROM: &'static str = "move_from";
     pub const BORROW_GLOBAL: &'static str = "borrow_global";
     pub const BORROW_GLOBAL_MUT: &'static str = "borrow_global_mut";
@@ -340,6 +347,7 @@ impl BuiltinFunction_ {
     pub fn all_names() -> BTreeSet<&'static str> {
         let mut s = BTreeSet::new();
         s.insert(Self::MOVE_TO_SENDER);
+        s.insert(Self::MOVE_TO);
         s.insert(Self::MOVE_FROM);
         s.insert(Self::BORROW_GLOBAL);
         s.insert(Self::BORROW_GLOBAL_MUT);
@@ -352,6 +360,7 @@ impl BuiltinFunction_ {
         use BuiltinFunction_ as BF;
         match name_str {
             BF::MOVE_TO_SENDER => Some(BF::MoveToSender(arg)),
+            BF::MOVE_TO => Some(BF::MoveTo(arg)),
             BF::MOVE_FROM => Some(BF::MoveFrom(arg)),
             BF::BORROW_GLOBAL => Some(BF::BorrowGlobal(false, arg)),
             BF::BORROW_GLOBAL_MUT => Some(BF::BorrowGlobal(true, arg)),
@@ -368,6 +377,7 @@ impl Type_ {
 
         let kind = match b.value {
             U8 | U64 | U128 | Address | Bool => Some(sp(b.loc, Kind_::Copyable)),
+            Signer => Some(sp(b.loc, Kind_::Resource)),
             Vector => None,
         };
         let n = sp(b.loc, TypeName_::Builtin(b));
@@ -384,6 +394,10 @@ impl Type_ {
 
     pub fn address(loc: Loc) -> Type {
         Self::builtin(loc, sp(loc, BuiltinTypeName_::Address), vec![])
+    }
+
+    pub fn signer(loc: Loc) -> Type {
+        Self::builtin(loc, sp(loc, BuiltinTypeName_::Signer), vec![])
     }
 
     pub fn u8(loc: Loc) -> Type {
@@ -448,6 +462,7 @@ impl fmt::Display for BuiltinTypeName_ {
             "{}",
             match self {
                 BT::Address => BT::ADDRESS,
+                BT::Signer => BT::SIGNER,
                 BT::U8 => BT::U_8,
                 BT::U64 => BT::U_64,
                 BT::U128 => BT::U_128,
@@ -878,6 +893,7 @@ impl AstDebug for BuiltinFunction_ {
         use BuiltinFunction_ as F;
         let (n, bt) = match self {
             F::MoveToSender(bt) => (F::MOVE_TO_SENDER, bt),
+            F::MoveTo(bt) => (F::MOVE_TO, bt),
             F::MoveFrom(bt) => (F::MOVE_FROM, bt),
             F::BorrowGlobal(true, bt) => (F::BORROW_GLOBAL_MUT, bt),
             F::BorrowGlobal(false, bt) => (F::BORROW_GLOBAL, bt),
