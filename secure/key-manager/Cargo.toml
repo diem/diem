@@ -42,4 +42,5 @@ storage-interface= { path = "../../storage/storage-interface", version = "0.1.0"
 vm-validator = { path = "../../vm-validator", version = "0.1.0" }
 
 [features]
-fuzzing = ["libradb/fuzzing", "libra-json-rpc/fuzzing", "libradb/fuzzing", "libra-config/fuzzing", "libra-secure-storage/testing" ]
+testing = [ "libra-secure-storage/testing" ]
+fuzzing = ["libradb/fuzzing", "libra-json-rpc/fuzzing", "libra-config/fuzzing" ]
