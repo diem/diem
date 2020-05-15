@@ -13,11 +13,11 @@ use executor::Executor;
 use executor_types::BlockExecutor;
 use libra_config::config::{ExecutionCorrectnessService, NodeConfig};
 use libra_vm::LibraVM;
-use simple_storage_client::SimpleStorageClient;
 use std::{
     net::SocketAddr,
     sync::{Arc, Mutex},
 };
+use storage_client::StorageClient;
 
 enum ExecutionCorrectnessWrapper {
     Local(Arc<Mutex<Box<dyn BlockExecutor>>>),
@@ -33,7 +33,7 @@ pub struct ExecutionCorrectnessManager {
 
 impl ExecutionCorrectnessManager {
     pub fn new(config: &mut NodeConfig) -> Self {
-        let storage_address = config.storage.simple_address;
+        let storage_address = config.storage.address;
         match &config.execution.service {
             ExecutionCorrectnessService::Process(remote_service) => {
                 Self::new_process(remote_service.server_address)
@@ -47,7 +47,7 @@ impl ExecutionCorrectnessManager {
 
     pub fn new_local(storage_address: SocketAddr) -> Self {
         let block_executor = Box::new(Executor::<LibraVM>::new(
-            SimpleStorageClient::new(&storage_address).into(),
+            StorageClient::new(&storage_address).into(),
         ));
         Self {
             internal_execution_correctness: ExecutionCorrectnessWrapper::Local(Arc::new(
@@ -65,7 +65,7 @@ impl ExecutionCorrectnessManager {
 
     pub fn new_serializer(storage_address: SocketAddr) -> Self {
         let block_executor = Box::new(Executor::<LibraVM>::new(
-            SimpleStorageClient::new(&storage_address).into(),
+            StorageClient::new(&storage_address).into(),
         ));
         let serializer_service = SerializerService::new(block_executor);
         Self {

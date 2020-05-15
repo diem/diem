@@ -27,7 +27,7 @@ impl ProcessClientWrapper {
         let mut config = NodeConfig::random();
         config.execution.service =
             ExecutionCorrectnessService::SpawnedProcess(RemoteExecutionService { server_address });
-        config.storage.simple_address = storage_addr;
+        config.storage.address = storage_addr;
 
         let execution_correctness_manager = ExecutionCorrectnessManager::new(&mut config);
         let block_executor = execution_correctness_manager.client();

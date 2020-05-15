@@ -13,6 +13,6 @@ fn test() {
 fn block_executor() -> Box<dyn BlockExecutor> {
     let (config, _handle) = start_storage_service();
     let execution_correctness_manager =
-        ExecutionCorrectnessManager::new_serializer(config.storage.simple_address);
+        ExecutionCorrectnessManager::new_serializer(config.storage.address);
     execution_correctness_manager.client()
 }

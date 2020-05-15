@@ -12,6 +12,6 @@ fn test() {
 
 fn block_executor() -> Box<dyn BlockExecutor> {
     let (config, _handle) = start_storage_service();
-    let block_executor = ProcessClientWrapper::new(config.storage.simple_address);
+    let block_executor = ProcessClientWrapper::new(config.storage.address);
     Box::new(block_executor)
 }

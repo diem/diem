@@ -22,15 +22,15 @@ use libra_types::{
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use rand::{rngs::StdRng, SeedableRng};
-use simple_storage_client::SimpleStorageClient;
 use std::{
     collections::BTreeMap,
     convert::TryFrom,
     path::PathBuf,
     sync::{mpsc, Arc},
 };
+use storage_client::StorageClient;
 use storage_interface::{DbReader, DbReaderWriter};
-use storage_service::start_simple_storage_service_with_db;
+use storage_service::start_storage_service_with_db;
 use transaction_builder::{encode_mint_script, encode_transfer_with_metadata_script};
 
 struct AccountData {
@@ -273,8 +273,8 @@ fn create_storage_service_and_executor(
     );
     bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap()).unwrap();
 
-    let _handle = start_simple_storage_service_with_db(config, db.clone());
-    let executor = Executor::new(SimpleStorageClient::new(&config.storage.simple_address).into());
+    let _handle = start_storage_service_with_db(config, db.clone());
+    let executor = Executor::new(StorageClient::new(&config.storage.address).into());
 
     (db, executor)
 }

@@ -26,7 +26,7 @@ public_metrics_server_port = 9102
 address = "0.0.0.0"
 
 [storage]
-address = "127.0.0.1:6184"
+address = "127.0.0.1:6666"
 dir = "libradb/db"
 grpc_max_receive_len = 100000000
 

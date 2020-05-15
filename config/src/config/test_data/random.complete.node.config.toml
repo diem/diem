@@ -61,7 +61,7 @@ max_chunk_limit = 1000
 max_timeout_ms = 120000
 
 [storage]
-address = "127.0.0.1:6184"
+address = "127.0.0.1:6666"
 dir = "libradb/db"
 grpc_max_receive_len = 100000000
 

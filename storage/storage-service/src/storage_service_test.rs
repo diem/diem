@@ -8,27 +8,23 @@ use libra_crypto::hash::CryptoHash;
 #[cfg(test)]
 use libradb::test_helper::arb_blocks_to_commit;
 use proptest::prelude::*;
-use simple_storage_client::SimpleStorageClient;
 use std::{
     collections::{BTreeMap, HashMap},
     net::{IpAddr, Ipv4Addr, SocketAddr},
 };
+use storage_client::StorageClient;
 
-fn start_test_storage_with_client() -> (
-    JoinHandle<()>,
-    libra_temppath::TempPath,
-    SimpleStorageClient,
-) {
+fn start_test_storage_with_client() -> (JoinHandle<()>, libra_temppath::TempPath, StorageClient) {
     let mut config = NodeConfig::random();
     let tmp_dir = libra_temppath::TempPath::new();
 
     let server_port = utils::get_available_port();
-    config.storage.simple_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
+    config.storage.address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
 
     let db = Arc::new(LibraDB::new_for_test(&tmp_dir));
-    let storage_server_handle = start_simple_storage_service_with_db(&config, db);
+    let storage_server_handle = start_storage_service_with_db(&config, db);
 
-    let client = SimpleStorageClient::new(&config.storage.simple_address);
+    let client = StorageClient::new(&config.storage.address);
     (storage_server_handle, tmp_dir, client)
 }
 

@@ -6,7 +6,7 @@
 //! This crate implements the storage service.
 //!
 //! The user of storage service is supposed to use it via client lib provided in
-//! [`simple-storage-client`](../simple-storage-client/index.html) instead of via
+//! [`storage-client`](../storage-client/index.html) instead of via
 
 use anyhow::Result;
 use libra_config::config::NodeConfig;
@@ -21,20 +21,20 @@ use std::{
 use storage_interface::{DbReader, DbWriter, Error, StartupInfo};
 
 /// Starts storage service with a given LibraDB
-pub fn start_simple_storage_service_with_db(
+pub fn start_storage_service_with_db(
     config: &NodeConfig,
     libra_db: Arc<LibraDB>,
 ) -> JoinHandle<()> {
-    let storage_service = SimpleStorageService { db: libra_db };
+    let storage_service = StorageService { db: libra_db };
     storage_service.run(config)
 }
 
 #[derive(Clone)]
-pub struct SimpleStorageService {
+pub struct StorageService {
     db: Arc<LibraDB>,
 }
 
-impl SimpleStorageService {
+impl StorageService {
     fn handle_message(&self, input_message: Vec<u8>) -> Result<Vec<u8>, Error> {
         let input = lcs::from_bytes(&input_message)?;
         let output = match input {
@@ -76,7 +76,7 @@ impl SimpleStorageService {
     }
 
     fn run(self, config: &NodeConfig) -> JoinHandle<()> {
-        let mut network_server = NetworkServer::new(config.storage.simple_address);
+        let mut network_server = NetworkServer::new(config.storage.address);
         thread::spawn(move || loop {
             if let Err(e) = self.process_one_message(&mut network_server) {
                 warn!("Failed to process message: {}", e);

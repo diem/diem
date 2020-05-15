@@ -23,7 +23,7 @@ impl Process {
             }
             _ => panic!("Unexpected ExecutionCorrectness service: {:?}", service),
         };
-        remote_service::execute(self.config.storage.simple_address, server_addr);
+        remote_service::execute(self.config.storage.address, server_addr);
     }
 }
 

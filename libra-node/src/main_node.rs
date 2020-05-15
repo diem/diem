@@ -34,7 +34,7 @@ use std::{
     time::{Duration, Instant},
 };
 use storage_interface::{DbReader, DbReaderWriter};
-use storage_service::start_simple_storage_service_with_db;
+use storage_service::start_storage_service_with_db;
 use subscription_service::ReconfigSubscription;
 use tokio::{
     runtime::{Builder, Handle, Runtime},
@@ -233,7 +233,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         .expect("DB should open."),
     );
     let _simple_storage_service =
-        start_simple_storage_service_with_db(&node_config, Arc::clone(&libra_db));
+        start_storage_service_with_db(&node_config, Arc::clone(&libra_db));
     let backup_service = start_backup_service(
         node_config.storage.backup_service_port,
         Arc::clone(&libra_db),
