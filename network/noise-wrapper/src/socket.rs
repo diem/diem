@@ -150,12 +150,12 @@ where
                     match ready!(poll_read_exact(
                         &mut context,
                         Pin::new(&mut self.socket),
-                        &mut self.buffers.read_encrypted[..(frame_len as usize)],
+                        &mut self.buffers.read_buffer[..(frame_len as usize)],
                         offset
                     )) {
                         Ok(()) => {
                             match self.session.read_message_in_place(
-                                &mut self.buffers.read_encrypted[..(frame_len as usize)],
+                                &mut self.buffers.read_buffer[..(frame_len as usize)],
                             ) {
                                 Ok(decrypted) => {
                                     self.read_state = ReadState::CopyDecryptedFrame {
@@ -184,7 +184,7 @@ where
                     let bytes_to_copy =
                         ::std::cmp::min(decrypted_len as usize - *offset, buf.len());
                     buf[..bytes_to_copy].copy_from_slice(
-                        &self.buffers.read_encrypted[*offset..(*offset + bytes_to_copy)],
+                        &self.buffers.read_buffer[*offset..(*offset + bytes_to_copy)],
                     );
                     trace!(
                         "CopyDecryptedFrame: copied {}/{} bytes",
@@ -271,7 +271,7 @@ where
                     let bytes_buffered = if let Some(buf) = buf {
                         let bytes_to_copy =
                             ::std::cmp::min(MAX_WRITE_BUFFER_LENGTH - *offset, buf.len());
-                        self.buffers.write_decrypted[*offset..(*offset + bytes_to_copy)]
+                        self.buffers.write_buffer[*offset..(*offset + bytes_to_copy)]
                             .copy_from_slice(&buf[..bytes_to_copy]);
                         trace!("BufferData: buffered {}/{} bytes", bytes_to_copy, buf.len());
                         *offset += bytes_to_copy;
@@ -283,11 +283,11 @@ where
                     if buf.is_none() || *offset == MAX_WRITE_BUFFER_LENGTH {
                         match self
                             .session
-                            .write_message_in_place(&mut self.buffers.write_decrypted[..*offset])
+                            .write_message_in_place(&mut self.buffers.write_buffer[..*offset])
                         {
                             Ok(authentication_tag) => {
                                 // append the authentication tag
-                                self.buffers.write_decrypted
+                                self.buffers.write_buffer
                                     [*offset..*offset + noise::AES_GCM_TAGLEN]
                                     .copy_from_slice(&authentication_tag);
                                 // calculate frame length
@@ -349,7 +349,7 @@ where
                     match ready!(poll_write_all(
                         &mut context,
                         Pin::new(&mut self.socket),
-                        &self.buffers.write_decrypted[..(frame_len as usize)],
+                        &self.buffers.write_buffer[..(frame_len as usize)],
                         offset
                     )) {
                         Ok(()) => {
@@ -443,16 +443,16 @@ const MAX_WRITE_BUFFER_LENGTH: usize = noise::decrypted_len(noise::MAX_SIZE_NOIS
 /// NoiseSocket
 struct NoiseBuffers {
     /// TODO: doc
-    read_encrypted: [u8; noise::MAX_SIZE_NOISE_MSG],
+    read_buffer: [u8; noise::MAX_SIZE_NOISE_MSG],
     /// TODO: doc
-    write_decrypted: [u8; MAX_WRITE_BUFFER_LENGTH],
+    write_buffer: [u8; noise::MAX_SIZE_NOISE_MSG],
 }
 
 impl NoiseBuffers {
     fn new() -> Self {
         Self {
-            read_encrypted: [0; noise::MAX_SIZE_NOISE_MSG],
-            write_decrypted: [0; MAX_WRITE_BUFFER_LENGTH],
+            read_buffer: [0; noise::MAX_SIZE_NOISE_MSG],
+            write_buffer: [0; noise::MAX_SIZE_NOISE_MSG],
         }
     }
 }
@@ -572,7 +572,9 @@ mod test {
     use rand::SeedableRng as _;
     use libra_crypto::traits::Uniform as _;
 
-    /// helper to setup two peers
+    // TODO: move the handshake tests to handshake.rs
+
+    /// helper to setup two testing peers
     fn build_peers() -> (
         (NoiseWrapper, x25519::PublicKey),
         (NoiseWrapper, x25519::PublicKey),
@@ -616,31 +618,31 @@ mod test {
 
     #[test]
     fn test_handshake() {
+        // perform handshake with two testing peers
         let ((client, client_public), (server, server_public)) =
             build_peers();
-
         let (client, server) = perform_handshake(client, server_public, server, None).unwrap();
 
         assert_eq!(client.get_remote_static(), server_public,);
         assert_eq!(server.get_remote_static(), client_public,);
     }
-    /*
+    
 
     #[test]
     fn simple_test() -> io::Result<()> {
-        let ((_dialer_keypair, dialer), (_listener_keypair, listener)) =
+        // perform handshake with two testing peers
+        let ((client, client_public), (server, server_public)) =
             build_peers();
+        let (mut client, mut server) = perform_handshake(client, server_public, server, None).unwrap();
 
-        let (mut dialer_socket, mut listener_socket) = perform_handshake(dialer, listener)?;
-
-        block_on(dialer_socket.write_all(b"stormlight"))?;
-        block_on(dialer_socket.write_all(b" "))?;
-        block_on(dialer_socket.write_all(b"archive"))?;
-        block_on(dialer_socket.flush())?;
-        block_on(dialer_socket.close())?;
+        block_on(client.write_all(b"stormlight"))?;
+        block_on(client.write_all(b" "))?;
+        block_on(client.write_all(b"archive"))?;
+        block_on(client.flush())?;
+        block_on(client.close())?;
 
         let mut buf = Vec::new();
-        block_on(listener_socket.read_to_end(&mut buf))?;
+        block_on(server.read_to_end(&mut buf))?;
 
         assert_eq!(buf, b"stormlight archive");
 
@@ -649,28 +651,28 @@ mod test {
 
     #[test]
     fn interleaved_writes() -> io::Result<()> {
-        let ((_dialer_keypair, dialer), (_listener_keypair, listener)) =
+        // perform handshake with two testing peers
+        let ((client, client_public), (server, server_public)) =
             build_peers();
+        let (mut client, mut server) = perform_handshake(client, server_public, server, None).unwrap();
 
-        let (mut a, mut b) = perform_handshake(dialer, listener)?;
+        block_on(client.write_all(b"The Name of the Wind"))?;
+        block_on(client.flush())?;
+        block_on(client.write_all(b"The Wise Man's Fear"))?;
+        block_on(client.flush())?;
 
-        block_on(a.write_all(b"The Name of the Wind"))?;
-        block_on(a.flush())?;
-        block_on(a.write_all(b"The Wise Man's Fear"))?;
-        block_on(a.flush())?;
-
-        block_on(b.write_all(b"The Doors of Stone"))?;
-        block_on(b.flush())?;
+        block_on(server.write_all(b"The Doors of Stone"))?;
+        block_on(server.flush())?;
 
         let mut buf = [0; 20];
-        block_on(b.read_exact(&mut buf))?;
+        block_on(server.read_exact(&mut buf))?;
         assert_eq!(&buf, b"The Name of the Wind");
         let mut buf = [0; 19];
-        block_on(b.read_exact(&mut buf))?;
+        block_on(server.read_exact(&mut buf))?;
         assert_eq!(&buf, b"The Wise Man's Fear");
 
         let mut buf = [0; 18];
-        block_on(a.read_exact(&mut buf))?;
+        block_on(client.read_exact(&mut buf))?;
         assert_eq!(&buf, b"The Doors of Stone");
 
         Ok(())
@@ -678,20 +680,20 @@ mod test {
 
     #[test]
     fn u16_max_writes() -> io::Result<()> {
-        let ((_dialer_keypair, dialer), (_listener_keypair, listener)) =
+        // perform handshake with two testing peers
+        let ((client, client_public), (server, server_public)) =
             build_peers();
-
-        let (mut a, mut b) = perform_handshake(dialer, listener)?;
+        let (mut client, mut server) = perform_handshake(client, server_public, server, None).unwrap();
 
         let buf_send = [1; noise::MAX_SIZE_NOISE_MSG];
-        block_on(a.write_all(&buf_send))?;
-        block_on(a.flush())?;
+        block_on(client.write_all(&buf_send))?;
+        block_on(client.flush())?;
 
         let mut buf_receive = [0; noise::MAX_SIZE_NOISE_MSG];
-        block_on(b.read_exact(&mut buf_receive))?;
+        block_on(server.read_exact(&mut buf_receive))?;
         assert_eq!(&buf_receive[..], &buf_send[..]);
 
         Ok(())
     }
-    */
+    
 }

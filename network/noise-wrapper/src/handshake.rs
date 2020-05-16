@@ -21,6 +21,7 @@ use netcore::{
   negotiate::{negotiate_inbound, negotiate_outbound_interactive},
   transport::ConnectionOrigin,
 };
+use libra_logger::prelude::*;
 
 use crate::socket::{poll_read_exact, poll_write_all, NoiseSocket};
 
@@ -135,6 +136,7 @@ impl NoiseWrapper {
         let prologue = now.to_le_bytes(); // 5 -> [0, 0, 0, 0, 0, 0, 0, 5]
         poll_fn(|context| poll_write_all(context, Pin::new(&mut socket), &prologue, &mut 0))
             .await?;
+        println!("client: wrote timestamp");
 
         // create first handshake message  (-> e, es, s, ss)
         let mut rng = rand::thread_rng();
@@ -154,13 +156,16 @@ impl NoiseWrapper {
                     format!("noise: wrong input passed {}", e),
                 )
             })?;
+            println!("client: initiated connection");
 
         // write the first handshake message
         poll_fn(|context| poll_write_all(context, Pin::new(&mut socket), &first_message, &mut 0))
             .await?;
+            println!("client: wrote first handshake message");
 
         // flush
         poll_fn(|context| Pin::new(&mut socket).poll_flush(context)).await?;
+        println!("client: flushed first handshake message");
 
         // receive the server's response (<- e, ee, se)
         let mut server_response = [0u8; noise::handshake_resp_msg_len(0)];
@@ -168,6 +173,7 @@ impl NoiseWrapper {
             poll_read_exact(context, Pin::new(&mut socket), &mut server_response, &mut 0)
         })
         .await?;
+        println!("client: read second handshake message");
 
         // parse the server's response
         // TODO: security logging here? (mimoo)
@@ -193,11 +199,13 @@ impl NoiseWrapper {
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
+      println!("server: starting listener");
         // receives prologue as the client timestamp in seconds
         let mut prologue = [0u8; 8];
         poll_fn(|context| poll_read_exact(context, Pin::new(&mut socket), &mut prologue, &mut 0))
             .await?;
-        let client_timestamp_u64 = u64::from_be_bytes(prologue);
+            println!("server: read timestamp");
+        let client_timestamp_u64 = u64::from_le_bytes(prologue);
         let client_timestamp = time::Duration::from_secs(client_timestamp_u64);
 
         // check the client timestamp
@@ -209,6 +217,7 @@ impl NoiseWrapper {
             && client_timestamp - now > time::Duration::from_secs(MAX_FUTURE_TIMESTAMP)
         {
             // if the client timestamp is too far in the future, abort
+            println!("server error: 1");
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 format!(
@@ -219,6 +228,7 @@ impl NoiseWrapper {
         } else if now.checked_sub(client_timestamp).unwrap()
             > time::Duration::from_secs(EXPIRATION_TIMESTAMP)
         {
+          println!("server error: 2");
             // if the client timestamp is expired, abort
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -230,6 +240,7 @@ impl NoiseWrapper {
         }
 
         // receive the initiation message
+        println!("server: waiting for first handshake message");
         let mut client_init_message = [0u8; noise::handshake_init_msg_len(0)];
         poll_fn(|context| {
             poll_read_exact(
@@ -240,6 +251,7 @@ impl NoiseWrapper {
             )
         })
         .await?;
+        println!("server: received first handshake message");
 
         // parse it
         let (their_public_key, handshake_state, _) = self
@@ -251,6 +263,7 @@ impl NoiseWrapper {
                     format!("noise: wrong message received {}", e),
                 )
             })?;
+            println!("server: parsed first handshake message");
 
         // make sure the public key is a validator before continuing (if we're in the validator network)
         if let Some(trusted_peers) = trusted_peers {
@@ -301,8 +314,10 @@ impl NoiseWrapper {
                     format!("noise: wrong message received {}", e),
                 )
             })?;
+            println!("server: constructed the response");
         poll_fn(|context| poll_write_all(context, Pin::new(&mut socket), &server_response, &mut 0))
             .await?;
+        println!("server: wrote the response");
 
         // the connection succeeded, store the client timestamp for replay prevention
         {
