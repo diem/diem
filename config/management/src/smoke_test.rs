@@ -3,7 +3,6 @@
 
 use crate::{layout::Layout, storage_helper::StorageHelper};
 use config_builder::{BuildSwarm, SwarmConfig};
-use executor::db_bootstrapper;
 use libra_config::config::{
     DiscoveryMethod, NetworkConfig, NetworkKeyPairs, NodeConfig, OnDiskStorageConfig, RoleType,
     SecureBackend,
@@ -13,10 +12,7 @@ use libra_secure_storage::Value;
 use libra_swarm::swarm::{LibraSwarm, LibraSwarmDir};
 use libra_temppath::TempPath;
 use libra_types::account_address::AccountAddress;
-use libra_vm::LibraVM;
-use libradb::LibraDB;
 use std::{convert::TryInto, path::PathBuf};
-use storage_interface::DbReaderWriter;
 
 struct ManagementBuilder {
     configs: Vec<NodeConfig>,
@@ -112,14 +108,6 @@ fn smoke_test() {
     // Step 4) Produce genesis and introduce into node configs
     let genesis = helper.genesis().unwrap();
 
-    // Step 5) Produce a waypoint
-    // TODO(davidiw) Push this logic into this tool and not this test
-    let path = TempPath::new();
-    let db_rw = DbReaderWriter::new(LibraDB::open(&path, false, None).unwrap());
-    let waypoint = db_bootstrapper::bootstrap_db_if_empty::<LibraVM>(&db_rw, &genesis)
-        .unwrap()
-        .unwrap();
-
     // Step 6) Introduce waypoint and genesis into the configs
     let temppath = TempPath::new();
     temppath.create_as_dir().unwrap();
@@ -127,11 +115,7 @@ fn smoke_test() {
 
     for (i, mut config) in configs.iter_mut().enumerate() {
         let ns = i.to_string();
-        let waypoint_value = Value::String(waypoint.to_string());
-        helper
-            .storage(ns.clone())
-            .set(libra_global_constants::WAYPOINT, waypoint_value)
-            .unwrap();
+        let waypoint = helper.create_waypoint(&ns).unwrap();
 
         let mut to = swarm_path.clone();
         to.push("secure_store_for_".to_string() + &ns);
@@ -143,6 +127,7 @@ fn smoke_test() {
         storage_config.namespace = Some(ns);
         config.consensus.safety_rules.backend = SecureBackend::OnDiskStorage(storage_config);
 
+        // TODO: this should be exclusively acquired via secure storage
         config.base.waypoint = Some(waypoint);
         config.execution.genesis = Some(genesis.clone());
     }

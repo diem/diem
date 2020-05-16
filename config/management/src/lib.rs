@@ -10,6 +10,7 @@ mod layout;
 mod secure_backend;
 mod validator_config;
 mod verify;
+mod waypoint;
 
 #[cfg(test)]
 mod smoke_test;
@@ -19,7 +20,7 @@ mod storage_helper;
 
 use crate::{error::Error, layout::SetLayout, secure_backend::SecureBackend};
 use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_types::transaction::Transaction;
+use libra_types::{transaction::Transaction, waypoint::Waypoint};
 use structopt::StructOpt;
 
 pub mod constants {
@@ -40,6 +41,8 @@ pub mod constants {
 pub enum Command {
     #[structopt(about = "Submits an Ed25519PublicKey for the association")]
     AssociationKey(crate::key::AssociationKey),
+    #[structopt(about = "Create a waypoint and optionally place it in a store")]
+    CreateWaypoint(crate::waypoint::CreateWaypoint),
     #[structopt(about = "Retrieves data from a store to produce genesis")]
     Genesis(crate::genesis::Genesis),
     #[structopt(about = "Submits an Ed25519PublicKey for the operator")]
@@ -57,6 +60,7 @@ pub enum Command {
 #[derive(Debug, PartialEq)]
 pub enum CommandName {
     AssociationKey,
+    CreateWaypoint,
     Genesis,
     OperatorKey,
     OwnerKey,
@@ -69,6 +73,7 @@ impl From<&Command> for CommandName {
     fn from(command: &Command) -> Self {
         match command {
             Command::AssociationKey(_) => CommandName::AssociationKey,
+            Command::CreateWaypoint(_) => CommandName::CreateWaypoint,
             Command::Genesis(_) => CommandName::Genesis,
             Command::OperatorKey(_) => CommandName::OperatorKey,
             Command::OwnerKey(_) => CommandName::OwnerKey,
@@ -83,6 +88,7 @@ impl std::fmt::Display for CommandName {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let name = match self {
             CommandName::AssociationKey => "association-key",
+            CommandName::CreateWaypoint => "create-waypoint",
             CommandName::Genesis => "genesis",
             CommandName::OperatorKey => "operator-key",
             CommandName::OwnerKey => "owner-key",
@@ -98,6 +104,7 @@ impl Command {
     pub fn execute(self) -> String {
         match &self {
             Command::AssociationKey(_) => self.association_key().unwrap().to_string(),
+            Command::CreateWaypoint(_) => self.create_waypoint().unwrap().to_string(),
             Command::Genesis(_) => format!("{:?}", self.genesis().unwrap()),
             Command::OperatorKey(_) => self.operator_key().unwrap().to_string(),
             Command::OwnerKey(_) => self.owner_key().unwrap().to_string(),
@@ -113,6 +120,17 @@ impl Command {
         } else {
             Err(Error::UnexpectedCommand(
                 CommandName::AssociationKey,
+                CommandName::from(&self),
+            ))
+        }
+    }
+
+    pub fn create_waypoint(self) -> Result<Waypoint, Error> {
+        if let Command::CreateWaypoint(create_waypoint) = self {
+            create_waypoint.execute()
+        } else {
+            Err(Error::UnexpectedCommand(
+                CommandName::CreateWaypoint,
                 CommandName::from(&self),
             ))
         }
@@ -212,7 +230,7 @@ pub struct SingleBackend {
     ///     InMemory: "backend=memory"
     ///     OnDisk: "backend=disk;path=LOCAL_PATH"
     #[structopt(long, verbatim_doc_comment)]
-    backend: SecureBackend,
+    pub backend: SecureBackend,
 }
 
 /// These tests depends on running Vault, which can be done by using the provided docker run script
