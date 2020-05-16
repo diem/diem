@@ -8,6 +8,7 @@ mod genesis;
 mod layout;
 mod secure_backend;
 mod validator_config;
+mod verify;
 
 #[cfg(test)]
 mod smoke_test;
@@ -17,13 +18,9 @@ mod storage_helper;
 
 use crate::{error::Error, layout::SetLayout, secure_backend::SecureBackend};
 use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_global_constants::{
-    ASSOCIATION_KEY, CONSENSUS_KEY, EPOCH, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND, OPERATOR_KEY,
-    OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
-};
 use libra_secure_storage::{Storage, Value};
-use libra_types::{transaction::Transaction, waypoint::Waypoint};
-use std::{convert::TryInto, fmt::Write, str::FromStr};
+use libra_types::transaction::Transaction;
+use std::convert::TryInto;
 use structopt::StructOpt;
 
 pub mod constants {
@@ -54,7 +51,7 @@ pub enum Command {
     #[structopt(about = "Constructs and signs a ValidatorConfig")]
     ValidatorConfig(crate::validator_config::ValidatorConfig),
     #[structopt(about = "Verifies and prints the current configuration state")]
-    Verify(SingleBackend),
+    Verify(crate::verify::Verify),
 }
 
 #[derive(Debug, PartialEq)]
@@ -112,7 +109,7 @@ impl Command {
 
     pub fn association_key(self) -> Result<Ed25519PublicKey, Error> {
         if let Command::AssociationKey(secure_backends) = self {
-            Self::submit_key(ASSOCIATION_KEY, secure_backends)
+            Self::submit_key(libra_global_constants::ASSOCIATION_KEY, secure_backends)
         } else {
             Err(Error::UnexpectedCommand(
                 CommandName::AssociationKey,
@@ -134,7 +131,7 @@ impl Command {
 
     pub fn operator_key(self) -> Result<Ed25519PublicKey, Error> {
         if let Command::OperatorKey(secure_backends) = self {
-            Self::submit_key(OPERATOR_KEY, secure_backends)
+            Self::submit_key(libra_global_constants::OPERATOR_KEY, secure_backends)
         } else {
             Err(Error::UnexpectedCommand(
                 CommandName::OperatorKey,
@@ -145,7 +142,7 @@ impl Command {
 
     pub fn owner_key(self) -> Result<Ed25519PublicKey, Error> {
         if let Command::OwnerKey(secure_backends) = self {
-            Self::submit_key(OWNER_KEY, secure_backends)
+            Self::submit_key(libra_global_constants::OWNER_KEY, secure_backends)
         } else {
             Err(Error::UnexpectedCommand(
                 CommandName::OwnerKey,
@@ -177,75 +174,14 @@ impl Command {
     }
 
     pub fn verify(self) -> Result<String, Error> {
-        if let Command::Verify(backend) = self {
-            let storage: Box<dyn Storage> = backend.backend.try_into()?;
-            if !storage.available() {
-                return Err(Error::LocalStorageUnavailable);
-            }
-
-            let mut buffer = String::new();
-
-            writeln!(buffer, "Data stored in SecureStorage:").unwrap();
-            writeln!(buffer, "=================================================").unwrap();
-            writeln!(buffer, "Keys").unwrap();
-            writeln!(buffer, "=================================================").unwrap();
-
-            Self::write_key(storage.as_ref(), &mut buffer, CONSENSUS_KEY);
-            Self::write_key(storage.as_ref(), &mut buffer, FULLNODE_NETWORK_KEY);
-            Self::write_key(storage.as_ref(), &mut buffer, OWNER_KEY);
-            Self::write_key(storage.as_ref(), &mut buffer, OPERATOR_KEY);
-            Self::write_key(storage.as_ref(), &mut buffer, VALIDATOR_NETWORK_KEY);
-
-            writeln!(buffer, "=================================================").unwrap();
-            writeln!(buffer, "Data").unwrap();
-            writeln!(buffer, "=================================================").unwrap();
-
-            Self::write_u64(storage.as_ref(), &mut buffer, EPOCH);
-            Self::write_u64(storage.as_ref(), &mut buffer, LAST_VOTED_ROUND);
-            Self::write_u64(storage.as_ref(), &mut buffer, PREFERRED_ROUND);
-            Self::write_waypoint(storage.as_ref(), &mut buffer, WAYPOINT);
-
-            writeln!(buffer, "=================================================").unwrap();
-
-            Ok(buffer)
+        if let Command::Verify(verify) = self {
+            verify.execute()
         } else {
-            panic!("Expected Command::Verify");
+            Err(Error::UnexpectedCommand(
+                CommandName::Verify,
+                CommandName::from(&self),
+            ))
         }
-    }
-
-    fn write_key(storage: &dyn Storage, buffer: &mut String, key: &str) {
-        let value = storage
-            .get_public_key(key)
-            .map(|c| c.public_key.to_string())
-            .unwrap_or_else(|e| format!("{:?}", e));
-        writeln!(buffer, "{} - {}", key, value).unwrap();
-    }
-
-    fn write_u64(storage: &dyn Storage, buffer: &mut String, key: &str) {
-        let value = storage
-            .get(key)
-            .and_then(|c| c.value.u64())
-            .map(|c| c.to_string())
-            .unwrap_or_else(|e| format!("{:?}", e));
-        writeln!(buffer, "{} - {}", key, value).unwrap();
-    }
-
-    fn write_waypoint(storage: &dyn Storage, buffer: &mut String, key: &str) {
-        let value = storage
-            .get(key)
-            .and_then(|c| c.value.string())
-            .map(|value| {
-                if value.is_empty() {
-                    "empty".into()
-                } else {
-                    Waypoint::from_str(&value)
-                        .map(|c| c.to_string())
-                        .unwrap_or_else(|_| "Invalid waypoint".into())
-                }
-            })
-            .unwrap_or_else(|e| format!("{:?}", e));
-
-        writeln!(buffer, "{} - {}", key, value).unwrap();
     }
 
     fn submit_key(
@@ -465,12 +401,15 @@ pub mod tests {
 
     #[test]
     fn test_owner_key() {
-        test_key(OWNER_KEY, StorageHelper::owner_key);
+        test_key(libra_global_constants::OWNER_KEY, StorageHelper::owner_key);
     }
 
     #[test]
     fn test_operator_key() {
-        test_key(OPERATOR_KEY, StorageHelper::operator_key);
+        test_key(
+            libra_global_constants::OPERATOR_KEY,
+            StorageHelper::operator_key,
+        );
     }
 
     fn test_key(
