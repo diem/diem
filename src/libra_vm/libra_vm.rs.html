@@ -1076,6 +1076,25 @@
 <span id="1076">1076</span>
 <span id="1077">1077</span>
 <span id="1078">1078</span>
+<span id="1079">1079</span>
+<span id="1080">1080</span>
+<span id="1081">1081</span>
+<span id="1082">1082</span>
+<span id="1083">1083</span>
+<span id="1084">1084</span>
+<span id="1085">1085</span>
+<span id="1086">1086</span>
+<span id="1087">1087</span>
+<span id="1088">1088</span>
+<span id="1089">1089</span>
+<span id="1090">1090</span>
+<span id="1091">1091</span>
+<span id="1092">1092</span>
+<span id="1093">1093</span>
+<span id="1094">1094</span>
+<span id="1095">1095</span>
+<span id="1096">1096</span>
+<span id="1097">1097</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1090,7 +1109,7 @@
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">account_config</span>,
     <span class="ident">block_metadata</span>::<span class="ident">BlockMetadata</span>,
-    <span class="ident">on_chain_config</span>::{<span class="ident">LibraVersion</span>, <span class="ident">OnChainConfig</span>, <span class="ident">VMConfig</span>},
+    <span class="ident">on_chain_config</span>::{<span class="ident">LibraVersion</span>, <span class="ident">OnChainConfig</span>, <span class="ident">RegisteredCurrencies</span>, <span class="ident">VMConfig</span>},
     <span class="ident">transaction</span>::{
         <span class="ident">ChangeSet</span>, <span class="ident">Module</span>, <span class="ident">Script</span>, <span class="ident">SignatureCheckedTransaction</span>, <span class="ident">SignedTransaction</span>, <span class="ident">Transaction</span>,
         <span class="ident">TransactionArgument</span>, <span class="ident">TransactionOutput</span>, <span class="ident">TransactionPayload</span>, <span class="ident">TransactionStatus</span>,
@@ -1536,6 +1555,10 @@
         <span class="ident">txn_data</span>.<span class="ident">sender</span> <span class="op">=</span> <span class="ident">account_config</span>::<span class="ident">CORE_CODE_ADDRESS</span>;
         <span class="ident">txn_data</span>.<span class="ident">max_gas_amount</span> <span class="op">=</span> <span class="ident">GasUnits</span>::<span class="ident">new</span>(<span class="ident">std</span>::<span class="ident">u64</span>::<span class="ident">MAX</span>);
 
+        <span class="kw">let</span> <span class="ident">registered_currencies</span> <span class="op">=</span>
+            <span class="ident">RegisteredCurrencies</span>::<span class="ident">fetch_config</span>(<span class="ident">remote_cache</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">RemoteCache</span>)
+                .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>))<span class="question-mark">?</span>;
+
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">interpreter_context</span> <span class="op">=</span>
             <span class="ident">TransactionExecutionContext</span>::<span class="ident">new</span>(<span class="ident">txn_data</span>.<span class="ident">max_gas_amount</span>(), <span class="ident">remote_cache</span>);
         <span class="comment">// TODO: We might need a non zero cost table here so that we can at least bound the execution</span>
@@ -1561,6 +1584,21 @@
         } <span class="kw">else</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>));
         };
+
+        <span class="comment">// Now distribute the txn fees for each currency</span>
+        <span class="kw">for</span> <span class="ident">currency_code</span> <span class="kw">in</span> <span class="ident">registered_currencies</span>.<span class="ident">currency_codes</span>().<span class="ident">iter</span>() {
+            <span class="kw">let</span> <span class="ident">currency_ty</span> <span class="op">=</span> <span class="ident">account_config</span>::<span class="ident">type_tag_for_currency_code</span>(<span class="ident">currency_code</span>.<span class="ident">to_owned</span>());
+            <span class="self">self</span>.<span class="ident">move_vm</span>.<span class="ident">execute_function</span>(
+                <span class="kw-2">&amp;</span><span class="ident">TRANSACTION_FEE_MODULE</span>,
+                <span class="kw-2">&amp;</span><span class="ident">DISTRIBUTE_TXN_FEES</span>,
+                <span class="kw-2">&amp;</span><span class="ident">gas_schedule</span>,
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">interpreter_context</span>,
+                <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
+                <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">currency_ty</span>],
+                <span class="macro">vec</span><span class="macro">!</span>[],
+            )<span class="question-mark">?</span>
+        }
+
         <span class="ident">get_transaction_output</span>(
             <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">interpreter_context</span>,
             <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
