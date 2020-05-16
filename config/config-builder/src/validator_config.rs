@@ -7,7 +7,7 @@ use executor::db_bootstrapper;
 use libra_config::{
     config::{
         ConsensusType, NodeConfig, RemoteService, SafetyRulesService, SecureBackend,
-        SeedPeersConfig, VaultConfig,
+        SeedPeersConfig, Token, VaultConfig,
     },
     generator,
 };
@@ -268,11 +268,12 @@ impl ValidatorConfig {
                         .as_ref()
                         .ok_or_else(|| Error::MissingSafetyRulesHost)?
                         .clone(),
-                    token: self
-                        .safety_rules_token
-                        .as_ref()
-                        .ok_or_else(|| Error::MissingSafetyRulesToken)?
-                        .clone(),
+                    token: Token::new_config(
+                        self.safety_rules_token
+                            .as_ref()
+                            .ok_or_else(|| Error::MissingSafetyRulesToken)?
+                            .clone(),
+                    ),
                 }),
                 _ => return Err(Error::InvalidSafetyRulesBackend(backend.to_string()).into()),
             };

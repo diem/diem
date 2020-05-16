@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::error::Error;
-use libra_config::config::{self, OnDiskStorageConfig, VaultConfig};
+use libra_config::config::{self, OnDiskStorageConfig, Token, VaultConfig};
 use libra_secure_storage::Storage;
 use std::{
     collections::HashMap,
@@ -20,7 +20,7 @@ pub const VAULT: &str = "vault";
 /// Some backends require parameters others do not, so that requires a conversion into the
 /// config::SecureBackend type to parse.
 ///
-/// Example: backend=vault;server=http://127.0.0.1:8080;token=123456
+/// Example: backend=vault;server=http://127.0.0.1:8080;token=/path/to/token
 #[derive(Clone, Debug)]
 pub struct SecureBackend {
     pub backend: String,
@@ -91,8 +91,7 @@ impl TryInto<config::SecureBackend> for SecureBackend {
                 config::SecureBackend::Vault(VaultConfig {
                     namespace: self.parameters.remove("namespace"),
                     server,
-                    // TODO(davidiw) Make this a path to a file
-                    token,
+                    token: Token::new_disk(PathBuf::from(token)),
                 })
             }
             _ => panic!("Invalid backend: {}", self.backend),
@@ -120,6 +119,7 @@ impl TryInto<Box<dyn Storage>> for SecureBackend {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::{fs::File, io::Write};
 
     #[test]
     fn test_memory() {
@@ -132,8 +132,10 @@ mod tests {
 
     #[test]
     fn test_disk() {
-        let disk = "backend=disk;path=some_path";
-        storage(disk).unwrap();
+        let path = libra_temppath::TempPath::new();
+        path.create_as_file().unwrap();
+        let disk = format!("backend=disk;path={}", path.path().to_str().unwrap());
+        storage(&disk).unwrap();
 
         let disk = "backend=disk";
         assert!(storage(disk).is_err());
@@ -141,11 +143,23 @@ mod tests {
 
     #[test]
     fn test_vault() {
-        let vault = "backend=vault;server=http://127.0.0.1:8080;token=123456";
-        storage(vault).unwrap();
+        let path = libra_temppath::TempPath::new();
+        path.create_as_file().unwrap();
+        let mut file = File::create(path.path()).unwrap();
+        file.write_all(b"disk_token").unwrap();
+        let path_str = path.path().to_str().unwrap();
 
-        let vault = "backend=vault;server=http://127.0.0.1:8080;token=123456;namespace=test";
-        storage(vault).unwrap();
+        let vault = format!(
+            "backend=vault;server=http://127.0.0.1:8080;token={}",
+            path_str
+        );
+        storage(&vault).unwrap();
+
+        let vault = format!(
+            "backend=vault;server=http://127.0.0.1:8080;token={};namespace=test",
+            path_str
+        );
+        storage(&vault).unwrap();
 
         let vault = "backend=vault";
         assert!(storage(vault).is_err());

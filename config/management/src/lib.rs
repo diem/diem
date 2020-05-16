@@ -207,7 +207,7 @@ pub struct SecureBackends {
     /// The local secure backend, this is the source of data. Secure
     /// backends are represented as a semi-colon deliminted key value
     /// pair: "k0=v0;k1=v1;...".  The current supported formats are:
-    ///     Vault: "backend=vault;server=URL;token=TOKEN"
+    ///     Vault: "backend=vault;server=URL;token=PATH_TO_TOKEN"
     ///         vault has an optional namespace: "namespace=NAMESPACE"
     ///     InMemory: "backend=memory"
     ///     OnDisk: "backend=disk;path=LOCAL_PATH"
@@ -224,7 +224,7 @@ pub struct SingleBackend {
     /// The secure backend. Secure backends are represented as a semi-colon
     /// deliminted key value pair: "k0=v0;k1=v1;...".
     /// The current supported formats are:
-    ///     Vault: "backend=vault;server=URL;token=TOKEN"
+    ///     Vault: "backend=vault;server=URL;token=PATH_TO_TOKEN"
     ///         vault has an optional namespace: "namespace=NAMESPACE"
     ///     InMemory: "backend=memory"
     ///     OnDisk: "backend=disk;path=LOCAL_PATH"
