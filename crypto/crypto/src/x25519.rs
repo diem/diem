@@ -70,7 +70,7 @@ pub struct PrivateKey(x25519_dalek::StaticSecret);
 
 /// This type should be used to deserialize a received public key
 #[derive(
-    Default, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, SerializeKey, DeserializeKey,
+    Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, SerializeKey, DeserializeKey,
 )]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct PublicKey([u8; PUBLIC_KEY_SIZE]);
@@ -202,6 +202,12 @@ impl traits::ValidCryptoMaterial for PublicKey {
 }
 
 impl std::fmt::Display for PublicKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[X25519 public key: {}]", hex::encode(self.0))
+    }
+}
+
+impl std::fmt::Debug for PublicKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[X25519 public key: {}]", hex::encode(self.0))
     }
