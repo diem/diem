@@ -16,9 +16,9 @@ use vm_genesis::ValidatorRegistration;
 #[derive(Debug, StructOpt)]
 pub struct Genesis {
     #[structopt(flatten)]
-    backend: SingleBackend,
+    pub backend: SingleBackend,
     #[structopt(long)]
-    path: Option<PathBuf>,
+    pub path: Option<PathBuf>,
 }
 
 impl Genesis {

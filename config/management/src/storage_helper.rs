@@ -9,7 +9,7 @@ use libra_global_constants::{
 };
 use libra_network_address::NetworkAddress;
 use libra_secure_storage::{NamespacedStorage, OnDiskStorage, Policy, Storage, Value};
-use libra_types::{account_address::AccountAddress, transaction::Transaction};
+use libra_types::{account_address::AccountAddress, transaction::Transaction, waypoint::Waypoint};
 use std::fs::File;
 use structopt::StructOpt;
 
@@ -75,6 +75,26 @@ impl StorageHelper {
 
         let command = Command::from_iter(args.split_whitespace());
         command.association_key()
+    }
+
+    pub fn create_waypoint(&self, remote_ns: &str) -> Result<Waypoint, Error> {
+        let args = format!(
+            "
+                management
+                create-waypoint
+                --local backend={backend};\
+                    path={path}
+                --remote backend={backend};\
+                    path={path};\
+                    namespace={remote_ns}\
+            ",
+            backend = crate::secure_backend::DISK,
+            path = self.path_string(),
+            remote_ns = remote_ns,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.create_waypoint()
     }
 
     pub fn genesis(&self) -> Result<Transaction, Error> {
