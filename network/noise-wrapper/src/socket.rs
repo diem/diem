@@ -555,7 +555,7 @@ where
 mod test {
     use super::*;
 
-    use crate::noise;
+    use crate::handshake::NoiseWrapper;
     use futures::{
         executor::block_on,
         future::join,
@@ -564,6 +564,7 @@ mod test {
     use libra_crypto::{test_utils::TEST_SEED, x25519};
     use memsocket::MemorySocket;
     use std::io;
+    use std::sync::{Arc, RwLock};
     use std::collections::HashMap;
     use libra_types::PeerId;
     use libra_config::config::NetworkPeerInfo;
@@ -573,8 +574,8 @@ mod test {
 
     /// helper to setup two peers
     fn build_peers() -> (
-        (noise::NoiseConfig, x25519::PrivateKey, x25519::PublicKey),
-        (noise::NoiseConfig, x25519::PrivateKey, x25519::PublicKey),
+        (NoiseWrapper, x25519::PublicKey),
+        (NoiseWrapper, x25519::PublicKey),
     ) {
         let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
 
@@ -584,21 +585,21 @@ mod test {
         let server_private = x25519::PrivateKey::generate(&mut rng);
         let server_public = server_private.public_key();
 
-        let client = noise::NoiseConfig::new(client_private);
-        let server = noise::NoiseConfig::new(server_private);
+        let client = NoiseWrapper::new(client_private);
+        let server = NoiseWrapper::new(server_private);
 
         (
-            (client, client_private, client_public),
-            (server, server_private, server_public),
+            (client, client_public),
+            (server, server_public),
         )
     }
 
     /// helper to perform a noise handshake with two peers
     fn perform_handshake(
-        client: noise::NoiseConfig,
+        client: NoiseWrapper,
         server_public_key: x25519::PublicKey,
-        server: noise::NoiseConfig,
-        trusted_peers: Option<HashMap<PeerId, NetworkPeerInfo>>,
+        server: NoiseWrapper,
+        trusted_peers: Option<&Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>>,
     ) -> io::Result<(NoiseSocket<MemorySocket>, NoiseSocket<MemorySocket>)> {
         // create an in-memory socket for testing
         let (dialer_socket, listener_socket) = MemorySocket::new_pair();
@@ -615,7 +616,7 @@ mod test {
 
     #[test]
     fn test_handshake() {
-        let ((client, client_private, client_public), (server, server_private, server_public)) =
+        let ((client, client_public), (server, server_public)) =
             build_peers();
 
         let (client, server) = perform_handshake(client, server_public, server, None).unwrap();

@@ -1,5 +1,5 @@
 [package]
-name = "noise"
+name = "noise-wrapper"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 description = "Libra noise"

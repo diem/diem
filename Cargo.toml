@@ -86,7 +86,7 @@ members = [
     "network/memsocket",
     "network/netcore",
     "network/network-address",
-    "network/noise",
+    "network/noise-wrapper",
     "network/onchain-discovery",
     "network/socket-bench-server",
     "mempool",

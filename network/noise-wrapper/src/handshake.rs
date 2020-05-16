@@ -1,44 +1,28 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! [Noise protocol framework][noise] support for use in Libra.
-//!
-//! This crate implements wrappers around our implementation of Noise IK.
-//!
-//! For the handshake, we already know in advance what length the messages are,
-//! but post-handshake noise messages can be of variable length.
-//! For this reason, post-handshake noise messages need to be prefixed with a
-//! 2-byte length field.
-//! The [`NoiseSocket`](crate::socket::NoiseSocket) module handles this logic
-//! when reading and writing post-handshake Noise messages
-//! to a socket.
-//!
-//! [noise]: http://noiseprotocol.org/
-
 use futures::{
-    future::poll_fn,
-    io::{AsyncRead, AsyncWrite},
+  future::poll_fn,
+  io::{AsyncRead, AsyncWrite},
 };
 use once_cell::sync::Lazy;
 use std::{
-    collections::HashMap,
-    io,
-    pin::Pin,
-    sync::{Arc, Mutex, RwLock},
-    time,
+  collections::HashMap,
+  io,
+  pin::Pin,
+  sync::{Arc, Mutex, RwLock},
+  time,
 };
 
 use libra_config::config::NetworkPeerInfo;
 use libra_crypto::{noise, x25519};
 use libra_types::PeerId;
 use netcore::{
-    negotiate::{negotiate_inbound, negotiate_outbound_interactive},
-    transport::ConnectionOrigin,
+  negotiate::{negotiate_inbound, negotiate_outbound_interactive},
+  transport::ConnectionOrigin,
 };
 
-mod socket;
-
-use self::socket::{poll_read_exact, poll_write_all, NoiseSocket};
+use crate::socket::{poll_read_exact, poll_write_all, NoiseSocket};
 
 // Timestamp
 // --------
@@ -59,7 +43,7 @@ const EXPIRATION_TIMESTAMP: u64 = 60;
 
 /// hashmap to store client timestamps if a connection succeeds
 static LAST_SEEN_CLIENT_TIMESTAMPS: Lazy<Mutex<HashMap<x25519::PublicKey, u64>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
+  Lazy::new(|| Mutex::new(HashMap::new()));
 
 // Noise Wrapper
 // -------------
@@ -75,9 +59,9 @@ static LAST_SEEN_CLIENT_TIMESTAMPS: Lazy<Mutex<HashMap<x25519::PublicKey, u64>>>
 const NOISE_PROTOCOL: &[u8] = b"/noise_ik_25519_aesgcm_sha256/1.0.0";
 
 /// The Noise configuration to be used to perform a protocol upgrade on an underlying socket.
-pub struct Noise(noise::NoiseConfig);
+pub struct NoiseWrapper(noise::NoiseConfig);
 
-impl Noise {
+impl NoiseWrapper {
     /// Create a new NoiseConfig with the provided keypair
     pub fn new(key: x25519::PrivateKey) -> Self {
         Self(noise::NoiseConfig::new(key))

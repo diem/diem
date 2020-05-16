@@ -20,5 +20,5 @@ libra-network-address = { path = "../network-address", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 memsocket = { path = "../memsocket", version = "0.1.0" }
 netcore = { path = "../netcore", version = "0.1.0" }
-noise = { path = "../noise", version = "0.1.0", features = ["testing"] }
+noise-wrapper = { path = "../noise-wrapper", version = "0.1.0", features = ["testing"] }
 rand = "0.7.3"

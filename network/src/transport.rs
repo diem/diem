@@ -15,7 +15,7 @@ use libra_network_address::NetworkAddress;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
 use netcore::transport::{boxed, memory, tcp, ConnectionOrigin, TransportExt};
-use noise::NoiseConfig;
+use noise_wrapper::NoiseWrapper;
 use once_cell::sync::Lazy;
 use std::{
     collections::HashMap,
@@ -183,7 +183,7 @@ pub fn build_memory_noise_transport(
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
-    let noise_config = Arc::new(NoiseConfig::new(identity_key));
+    let noise_config = Arc::new(NoiseWrapper::new(identity_key));
     let mut own_handshake = HandshakeMsg::new();
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
@@ -224,7 +224,7 @@ pub fn build_unauthenticated_memory_noise_transport(
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
-    let noise_config = Arc::new(NoiseConfig::new(identity_key));
+    let noise_config = Arc::new(NoiseWrapper::new(identity_key));
     let mut own_handshake = HandshakeMsg::new();
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
@@ -279,7 +279,7 @@ pub fn build_tcp_noise_transport(
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
-    let noise_config = Arc::new(NoiseConfig::new(identity_key));
+    let noise_config = Arc::new(NoiseWrapper::new(identity_key));
     let mut own_handshake = HandshakeMsg::new();
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
@@ -315,7 +315,7 @@ pub fn build_unauthenticated_tcp_noise_transport(
     identity_key: x25519::PrivateKey,
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
-    let noise_config = Arc::new(NoiseConfig::new(identity_key));
+    let noise_config = Arc::new(NoiseWrapper::new(identity_key));
     let mut own_handshake = HandshakeMsg::new();
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
