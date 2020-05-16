@@ -413,10 +413,6 @@
 <span id="413">413</span>
 <span id="414">414</span>
 <span id="415">415</span>
-<span id="416">416</span>
-<span id="417">417</span>
-<span id="418">418</span>
-<span id="419">419</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -454,7 +450,7 @@
     <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">Instant</span>},
 };
 <span class="kw">use</span> <span class="ident">storage_interface</span>::{<span class="ident">DbReader</span>, <span class="ident">DbReaderWriter</span>};
-<span class="kw">use</span> <span class="ident">storage_service</span>::{<span class="ident">start_simple_storage_service_with_db</span>, <span class="ident">start_storage_service_with_db</span>};
+<span class="kw">use</span> <span class="ident">storage_service</span>::<span class="ident">start_storage_service_with_db</span>;
 <span class="kw">use</span> <span class="ident">subscription_service</span>::<span class="ident">ReconfigSubscription</span>;
 <span class="kw">use</span> <span class="ident">tokio</span>::{
     <span class="ident">runtime</span>::{<span class="ident">Builder</span>, <span class="ident">Handle</span>, <span class="ident">Runtime</span>},
@@ -471,7 +467,6 @@
     <span class="ident">_state_synchronizer</span>: <span class="ident">StateSynchronizer</span>,
     <span class="ident">_network_runtimes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,
     <span class="ident">_consensus_runtime</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Runtime</span><span class="op">&gt;</span>,
-    <span class="ident">_storage</span>: <span class="ident">Runtime</span>,
     <span class="ident">_debug</span>: <span class="ident">Runtime</span>,
     <span class="ident">_backup</span>: <span class="ident">Runtime</span>,
 }
@@ -654,14 +649,12 @@
         .<span class="ident">expect</span>(<span class="string">&quot;DB should open.&quot;</span>),
     );
     <span class="kw">let</span> <span class="ident">_simple_storage_service</span> <span class="op">=</span>
-        <span class="ident">start_simple_storage_service_with_db</span>(<span class="kw-2">&amp;</span><span class="ident">node_config</span>, <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">libra_db</span>));
+        <span class="ident">start_storage_service_with_db</span>(<span class="kw-2">&amp;</span><span class="ident">node_config</span>, <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">libra_db</span>));
     <span class="kw">let</span> <span class="ident">backup_service</span> <span class="op">=</span> <span class="ident">start_backup_service</span>(
         <span class="ident">node_config</span>.<span class="ident">storage</span>.<span class="ident">backup_service_port</span>,
         <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">libra_db</span>),
     );
 
-    <span class="comment">// Will be deprecated. Do not reference it anymore.</span>
-    <span class="kw">let</span> <span class="ident">storage</span> <span class="op">=</span> <span class="ident">start_storage_service_with_db</span>(<span class="kw-2">&amp;</span><span class="ident">node_config</span>, <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">libra_db</span>));
     <span class="ident">bootstrap_db_if_empty</span>::<span class="op">&lt;</span><span class="ident">LibraVM</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">db_rw</span>, <span class="ident">get_genesis_txn</span>(<span class="kw-2">&amp;</span><span class="ident">node_config</span>).<span class="ident">unwrap</span>())
         .<span class="ident">expect</span>(<span class="string">&quot;Db-bootstrapper should not fail.&quot;</span>);
 
@@ -832,7 +825,6 @@
         <span class="ident">_mempool</span>: <span class="ident">mempool</span>,
         <span class="ident">_state_synchronizer</span>: <span class="ident">state_synchronizer</span>,
         <span class="ident">_consensus_runtime</span>: <span class="ident">consensus_runtime</span>,
-        <span class="ident">_storage</span>: <span class="ident">storage</span>,
         <span class="ident">_debug</span>: <span class="ident">debug_if</span>,
         <span class="ident">_backup</span>: <span class="ident">backup_service</span>,
     }

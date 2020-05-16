@@ -390,15 +390,15 @@
 <span class="kw">use</span> <span class="ident">libra_vm</span>::<span class="ident">LibraVM</span>;
 <span class="kw">use</span> <span class="ident">libradb</span>::<span class="ident">LibraDB</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">rngs</span>::<span class="ident">StdRng</span>, <span class="ident">SeedableRng</span>};
-<span class="kw">use</span> <span class="ident">simple_storage_client</span>::<span class="ident">SimpleStorageClient</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">BTreeMap</span>,
     <span class="ident">convert</span>::<span class="ident">TryFrom</span>,
     <span class="ident">path</span>::<span class="ident">PathBuf</span>,
     <span class="ident">sync</span>::{<span class="ident">mpsc</span>, <span class="ident">Arc</span>},
 };
+<span class="kw">use</span> <span class="ident">storage_client</span>::<span class="ident">StorageClient</span>;
 <span class="kw">use</span> <span class="ident">storage_interface</span>::{<span class="ident">DbReader</span>, <span class="ident">DbReaderWriter</span>};
-<span class="kw">use</span> <span class="ident">storage_service</span>::<span class="ident">start_simple_storage_service_with_db</span>;
+<span class="kw">use</span> <span class="ident">storage_service</span>::<span class="ident">start_storage_service_with_db</span>;
 <span class="kw">use</span> <span class="ident">transaction_builder</span>::{<span class="ident">encode_mint_script</span>, <span class="ident">encode_transfer_with_metadata_script</span>};
 
 <span class="kw">struct</span> <span class="ident">AccountData</span> {
@@ -641,8 +641,8 @@
     );
     <span class="ident">bootstrap_db_if_empty</span>::<span class="op">&lt;</span><span class="ident">LibraVM</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">db_rw</span>, <span class="ident">get_genesis_txn</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>()).<span class="ident">unwrap</span>();
 
-    <span class="kw">let</span> <span class="ident">_handle</span> <span class="op">=</span> <span class="ident">start_simple_storage_service_with_db</span>(<span class="ident">config</span>, <span class="ident">db</span>.<span class="ident">clone</span>());
-    <span class="kw">let</span> <span class="ident">executor</span> <span class="op">=</span> <span class="ident">Executor</span>::<span class="ident">new</span>(<span class="ident">SimpleStorageClient</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">storage</span>.<span class="ident">simple_address</span>).<span class="ident">into</span>());
+    <span class="kw">let</span> <span class="ident">_handle</span> <span class="op">=</span> <span class="ident">start_storage_service_with_db</span>(<span class="ident">config</span>, <span class="ident">db</span>.<span class="ident">clone</span>());
+    <span class="kw">let</span> <span class="ident">executor</span> <span class="op">=</span> <span class="ident">Executor</span>::<span class="ident">new</span>(<span class="ident">StorageClient</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">storage</span>.<span class="ident">address</span>).<span class="ident">into</span>());
 
     (<span class="ident">db</span>, <span class="ident">executor</span>)
 }

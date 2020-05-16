@@ -68,7 +68,7 @@
             }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Unexpected ExecutionCorrectness service: {:?}&quot;</span>, <span class="ident">service</span>),
         };
-        <span class="ident">remote_service</span>::<span class="ident">execute</span>(<span class="self">self</span>.<span class="ident">config</span>.<span class="ident">storage</span>.<span class="ident">simple_address</span>, <span class="ident">server_addr</span>);
+        <span class="ident">remote_service</span>::<span class="ident">execute</span>(<span class="self">self</span>.<span class="ident">config</span>.<span class="ident">storage</span>.<span class="ident">address</span>, <span class="ident">server_addr</span>);
     }
 }
 

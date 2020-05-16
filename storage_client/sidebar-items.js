@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["StorageReadServiceClient","This provides storage read interfaces backed by real storage service."],["StorageWriteServiceClient","This provides storage write interfaces backed by real storage service."],["SyncStorageClient",""]],"trait":[["StorageRead","This trait defines interfaces to be implemented by a storage read client."],["StorageWrite","This trait defines interfaces to be implemented by a storage write client."]]});
+initSidebarItems({"struct":[["StorageClient",""]]});

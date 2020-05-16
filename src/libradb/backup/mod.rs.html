@@ -81,6 +81,12 @@
 <span id="81">81</span>
 <span id="82">82</span>
 <span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -146,7 +152,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_account_iter</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">version</span>: <span class="ident">Version</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">HashValue</span>, <span class="ident">AccountStateBlob</span>)<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">HashValue</span>, <span class="ident">AccountStateBlob</span>)<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">iterator</span> <span class="op">=</span> <span class="ident">JellyfishMerkleIterator</span>::<span class="ident">new</span>(
             <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">state_store</span>),
             <span class="ident">version</span>,
@@ -163,6 +169,12 @@
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SparseMerkleRangeProof</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">state_store</span>
             .<span class="ident">get_account_state_range_proof</span>(<span class="ident">rightmost_key</span>, <span class="ident">version</span>)
+    }
+
+    <span class="doccomment">/// Get the latest version and state root hash.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_latest_state_root</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Version</span>, <span class="ident">HashValue</span>)<span class="op">&gt;</span> {
+        <span class="kw">let</span> (<span class="ident">version</span>, <span class="ident">txn_info</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">ledger_store</span>.<span class="ident">get_latest_transaction_info</span>()<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>((<span class="ident">version</span>, <span class="ident">txn_info</span>.<span class="ident">state_root_hash</span>()))
     }
 }
 </pre></div>

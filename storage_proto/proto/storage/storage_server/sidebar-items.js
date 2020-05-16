@@ -1,1 +1,0 @@
-initSidebarItems({"trait":[["Storage","Generated trait containing gRPC methods that should be implemented for use with StorageServer."]]});

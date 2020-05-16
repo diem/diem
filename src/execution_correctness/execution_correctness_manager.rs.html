@@ -119,11 +119,11 @@
 <span class="kw">use</span> <span class="ident">executor_types</span>::<span class="ident">BlockExecutor</span>;
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="ident">ExecutionCorrectnessService</span>, <span class="ident">NodeConfig</span>};
 <span class="kw">use</span> <span class="ident">libra_vm</span>::<span class="ident">LibraVM</span>;
-<span class="kw">use</span> <span class="ident">simple_storage_client</span>::<span class="ident">SimpleStorageClient</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">net</span>::<span class="ident">SocketAddr</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>},
 };
+<span class="kw">use</span> <span class="ident">storage_client</span>::<span class="ident">StorageClient</span>;
 
 <span class="kw">enum</span> <span class="ident">ExecutionCorrectnessWrapper</span> {
     <span class="ident">Local</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">BlockExecutor</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>),
@@ -139,7 +139,7 @@
 
 <span class="kw">impl</span> <span class="ident">ExecutionCorrectnessManager</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">NodeConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">storage_address</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">storage</span>.<span class="ident">simple_address</span>;
+        <span class="kw">let</span> <span class="ident">storage_address</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">storage</span>.<span class="ident">address</span>;
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">execution</span>.<span class="ident">service</span> {
             <span class="ident">ExecutionCorrectnessService</span>::<span class="ident">Process</span>(<span class="ident">remote_service</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="self">Self</span>::<span class="ident">new_process</span>(<span class="ident">remote_service</span>.<span class="ident">server_address</span>)
@@ -153,7 +153,7 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_local</span>(<span class="ident">storage_address</span>: <span class="ident">SocketAddr</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">block_executor</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">Executor</span>::<span class="op">&lt;</span><span class="ident">LibraVM</span><span class="op">&gt;</span>::<span class="ident">new</span>(
-            <span class="ident">SimpleStorageClient</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">storage_address</span>).<span class="ident">into</span>(),
+            <span class="ident">StorageClient</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">storage_address</span>).<span class="ident">into</span>(),
         ));
         <span class="self">Self</span> {
             <span class="ident">internal_execution_correctness</span>: <span class="ident">ExecutionCorrectnessWrapper</span>::<span class="ident">Local</span>(<span class="ident">Arc</span>::<span class="ident">new</span>(
@@ -171,7 +171,7 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_serializer</span>(<span class="ident">storage_address</span>: <span class="ident">SocketAddr</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">block_executor</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">Executor</span>::<span class="op">&lt;</span><span class="ident">LibraVM</span><span class="op">&gt;</span>::<span class="ident">new</span>(
-            <span class="ident">SimpleStorageClient</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">storage_address</span>).<span class="ident">into</span>(),
+            <span class="ident">StorageClient</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">storage_address</span>).<span class="ident">into</span>(),
         ));
         <span class="kw">let</span> <span class="ident">serializer_service</span> <span class="op">=</span> <span class="ident">SerializerService</span>::<span class="ident">new</span>(<span class="ident">block_executor</span>);
         <span class="self">Self</span> {
