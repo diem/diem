@@ -192,6 +192,11 @@ pub fn setup_network(
             })
             .collect();
 
+        info!(
+            "network setup: role: {}, seed_peers: {:?}, network_peers: {:?}",
+            role, seed_peers, network_peers,
+        );
+
         let trusted_peers = if role == RoleType::Validator {
             // for validators, trusted_peers is empty will be populated from consensus
             HashMap::new()
