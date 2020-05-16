@@ -1344,7 +1344,7 @@
     <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">function_signature</span>(<span class="ident">context</span>, <span class="ident">signature</span>);
     <span class="kw">let</span> <span class="ident">acquires</span> <span class="op">=</span> <span class="ident">acquires</span>
         .<span class="ident">into_iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">struct_definition_name</span>(<span class="ident">m</span>.<span class="ident">unwrap</span>(), <span class="ident">s</span>))
+        .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">s</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">context</span>.<span class="ident">struct_definition_name</span>(<span class="ident">m</span>.<span class="ident">unwrap</span>(), <span class="ident">s</span>))
         .<span class="ident">collect</span>();
     <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">body</span>.<span class="ident">value</span> {
         <span class="ident">G</span>::<span class="ident">FunctionBody_</span>::<span class="ident">Native</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">IR</span>::<span class="ident">FunctionBody</span>::<span class="ident">Native</span>,

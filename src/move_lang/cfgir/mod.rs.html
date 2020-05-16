@@ -44,6 +44,7 @@
 <span id="44">44</span>
 <span id="45">45</span>
 <span id="46">46</span>
+<span id="47">47</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -65,12 +66,13 @@
     <span class="ident">shared</span>::<span class="ident">unique_map</span>::<span class="ident">UniqueMap</span>,
 };
 <span class="kw">use</span> <span class="ident">cfg</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">BTreeSet</span>;
+<span class="kw">use</span> <span class="ident">move_ir_types</span>::<span class="ident">location</span>::<span class="kw-2">*</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">BTreeMap</span>, <span class="ident">BTreeSet</span>};
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">refine_inference_and_verify</span>(
     <span class="ident">errors</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Errors</span>,
     <span class="ident">signature</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionSignature</span>,
-    <span class="ident">acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructName</span><span class="op">&gt;</span>,
+    <span class="ident">acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="ident">locals</span>: <span class="kw-2">&amp;</span><span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">Var</span>, <span class="ident">SingleType</span><span class="op">&gt;</span>,
     <span class="ident">cfg</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BlockCFG</span>,
     <span class="ident">infinite_loop_starts</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">Label</span><span class="op">&gt;</span>,

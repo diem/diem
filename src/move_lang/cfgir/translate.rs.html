@@ -564,7 +564,7 @@
 <span class="kw">fn</span> <span class="ident">function_body</span>(
     <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
     <span class="ident">signature</span>: <span class="kw-2">&amp;</span><span class="ident">H</span>::<span class="ident">FunctionSignature</span>,
-    <span class="ident">acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructName</span><span class="op">&gt;</span>,
+    <span class="ident">acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="macro">sp</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">tb_</span>): <span class="ident">H</span>::<span class="ident">FunctionBody</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">G</span>::<span class="ident">FunctionBody</span> {
     <span class="kw">use</span> <span class="ident">G</span>::<span class="ident">FunctionBody_</span> <span class="kw">as</span> <span class="ident">GB</span>;

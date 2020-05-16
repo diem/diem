@@ -220,10 +220,6 @@
 <span id="220">220</span>
 <span id="221">221</span>
 <span id="222">222</span>
-<span id="223">223</span>
-<span id="224">224</span>
-<span id="225">225</span>
-<span id="226">226</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -362,8 +358,6 @@
                 } <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">let</span> <span class="ident">move_lang</span>::<span class="ident">expansion</span>::<span class="ident">ast</span>::<span class="ident">Script</span> {
                         <span class="ident">loc</span>,
-                        <span class="ident">uses</span>,
-                        <span class="ident">unused_aliases</span>: <span class="ident">_unused_aliases</span>,
                         <span class="ident">function_name</span>,
                         <span class="ident">function</span>,
                         <span class="ident">specs</span>,
@@ -402,8 +396,6 @@
                     <span class="ident">function_infos</span>.<span class="ident">add</span>(<span class="ident">function_name</span>, <span class="ident">function_info</span>).<span class="ident">unwrap</span>();
                     <span class="kw">let</span> <span class="ident">expanded_module</span> <span class="op">=</span> <span class="ident">ModuleDefinition</span> {
                         <span class="ident">loc</span>,
-                        <span class="ident">uses</span>,
-                        <span class="ident">unused_aliases</span>: <span class="macro">vec</span><span class="macro">!</span>[],
                         <span class="ident">is_source_module</span>: <span class="bool-val">true</span>,
                         <span class="ident">structs</span>: <span class="ident">UniqueMap</span>::<span class="ident">new</span>(),
                         <span class="ident">functions</span>,

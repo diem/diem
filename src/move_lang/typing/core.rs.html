@@ -1382,6 +1382,12 @@
 <span id="1382">1382</span>
 <span id="1383">1383</span>
 <span id="1384">1384</span>
+<span id="1385">1385</span>
+<span id="1386">1386</span>
+<span id="1387">1387</span>
+<span id="1388">1388</span>
+<span id="1389">1389</span>
+<span id="1390">1390</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1399,7 +1405,7 @@
     <span class="ident">shared</span>::{<span class="ident">unique_map</span>::<span class="ident">UniqueMap</span>, <span class="kw-2">*</span>},
 };
 <span class="kw">use</span> <span class="ident">move_ir_types</span>::<span class="ident">location</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">BTreeSet</span>, <span class="ident">HashMap</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">BTreeMap</span>, <span class="ident">BTreeSet</span>, <span class="ident">HashMap</span>};
 
 <span class="comment">//**************************************************************************************************</span>
 <span class="comment">// Context</span>
@@ -1427,7 +1433,7 @@
     <span class="kw">pub</span> <span class="ident">defined_loc</span>: <span class="ident">Loc</span>,
     <span class="kw">pub</span> <span class="ident">visibility</span>: <span class="ident">FunctionVisibility</span>,
     <span class="kw">pub</span> <span class="ident">signature</span>: <span class="ident">FunctionSignature</span>,
-    <span class="kw">pub</span> <span class="ident">acquires</span>: <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructName</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">acquires</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ModuleInfo</span> {
@@ -1989,7 +1995,13 @@
     <span class="ident">m</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleIdent</span>,
     <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionName</span>,
     <span class="ident">ty_args_opt</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Loc</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Var</span>, <span class="ident">Type</span>)<span class="op">&gt;</span>, <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructName</span><span class="op">&gt;</span>, <span class="ident">Type</span>) {
+) <span class="op">-</span><span class="op">&gt;</span> (
+    <span class="ident">Loc</span>,
+    <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>,
+    <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Var</span>, <span class="ident">Type</span>)<span class="op">&gt;</span>,
+    <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
+    <span class="ident">Type</span>,
+) {
     <span class="kw">let</span> <span class="ident">in_current_module</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">current_module</span> {
         <span class="prelude-val">Some</span>(<span class="ident">current</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">m</span> <span class="op">=</span><span class="op">=</span> <span class="ident">current</span>,
         <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
@@ -2031,7 +2043,7 @@
     <span class="kw">let</span> <span class="ident">acquires</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">in_current_module</span> {
         <span class="ident">finfo</span>.<span class="ident">acquires</span>.<span class="ident">clone</span>()
     } <span class="kw">else</span> {
-        <span class="ident">BTreeSet</span>::<span class="ident">new</span>()
+        <span class="ident">BTreeMap</span>::<span class="ident">new</span>()
     };
     <span class="kw">let</span> <span class="ident">defined_loc</span> <span class="op">=</span> <span class="ident">finfo</span>.<span class="ident">defined_loc</span>;
     <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">finfo</span>.<span class="ident">visibility</span> {

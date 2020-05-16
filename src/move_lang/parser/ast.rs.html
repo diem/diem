@@ -1359,6 +1359,26 @@
 <span id="1359">1359</span>
 <span id="1360">1360</span>
 <span id="1361">1361</span>
+<span id="1362">1362</span>
+<span id="1363">1363</span>
+<span id="1364">1364</span>
+<span id="1365">1365</span>
+<span id="1366">1366</span>
+<span id="1367">1367</span>
+<span id="1368">1368</span>
+<span id="1369">1369</span>
+<span id="1370">1370</span>
+<span id="1371">1371</span>
+<span id="1372">1372</span>
+<span id="1373">1373</span>
+<span id="1374">1374</span>
+<span id="1375">1375</span>
+<span id="1376">1376</span>
+<span id="1377">1377</span>
+<span id="1378">1378</span>
+<span id="1379">1379</span>
+<span id="1380">1380</span>
+<span id="1381">1381</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1427,9 +1447,15 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Script</span> {
     <span class="kw">pub</span> <span class="ident">loc</span>: <span class="ident">Loc</span>,
-    <span class="kw">pub</span> <span class="ident">uses</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">ModuleIdent</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ModuleName</span><span class="op">&gt;</span>)<span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">uses</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Use</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">function</span>: <span class="ident">Function</span>,
     <span class="kw">pub</span> <span class="ident">specs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SpecBlock</span><span class="op">&gt;</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Use</span> {
+    <span class="ident">Module</span>(<span class="ident">ModuleIdent</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ModuleName</span><span class="op">&gt;</span>),
+    <span class="ident">Members</span>(<span class="ident">ModuleIdent</span>, <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Name</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Name</span><span class="op">&gt;</span>)<span class="op">&gt;</span>),
 }
 
 <span class="comment">//**************************************************************************************************</span>
@@ -1449,11 +1475,16 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ModuleDefinition</span> {
     <span class="kw">pub</span> <span class="ident">loc</span>: <span class="ident">Loc</span>,
-    <span class="kw">pub</span> <span class="ident">uses</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">ModuleIdent</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ModuleName</span><span class="op">&gt;</span>)<span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">ModuleName</span>,
-    <span class="kw">pub</span> <span class="ident">structs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">StructDefinition</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">functions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Function</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">specs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SpecBlock</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">members</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ModuleMember</span><span class="op">&gt;</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ModuleMember</span> {
+    <span class="ident">Function</span>(<span class="ident">Function</span>),
+    <span class="ident">Struct</span>(<span class="ident">StructDefinition</span>),
+    <span class="ident">Spec</span>(<span class="ident">SpecBlock</span>),
+    <span class="ident">Use</span>(<span class="ident">Use</span>),
 }
 
 <span class="comment">//**************************************************************************************************</span>
@@ -1529,7 +1560,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SpecBlock_</span> {
     <span class="kw">pub</span> <span class="ident">target</span>: <span class="ident">SpecBlockTarget</span>,
-    <span class="kw">pub</span> <span class="ident">uses</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">ModuleIdent</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ModuleName</span><span class="op">&gt;</span>)<span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">uses</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Use</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">members</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SpecBlockMember</span><span class="op">&gt;</span>,
 }
 
@@ -2087,7 +2118,11 @@
             <span class="ident">function</span>,
             <span class="ident">specs</span>,
         } <span class="op">=</span> <span class="self">self</span>;
-        <span class="ident">uses</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+        <span class="kw">for</span> <span class="ident">u</span> <span class="kw">in</span> <span class="ident">uses</span> {
+            <span class="ident">u</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+            <span class="ident">w</span>.<span class="ident">new_line</span>();
+        }
+        <span class="ident">w</span>.<span class="ident">new_line</span>();
         <span class="ident">function</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
         <span class="kw">for</span> <span class="ident">spec</span> <span class="kw">in</span> <span class="ident">specs</span> {
             <span class="ident">spec</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
@@ -2100,46 +2135,51 @@
     <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
         <span class="kw">let</span> <span class="ident">ModuleDefinition</span> {
             <span class="ident">loc</span>: <span class="ident">_loc</span>,
-            <span class="ident">uses</span>,
             <span class="ident">name</span>,
-            <span class="ident">structs</span>,
-            <span class="ident">functions</span>,
-            <span class="ident">specs</span>,
+            <span class="ident">members</span>,
         } <span class="op">=</span> <span class="self">self</span>;
         <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;module {}&quot;</span>, <span class="ident">name</span>));
         <span class="ident">w</span>.<span class="ident">block</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> {
-            <span class="ident">uses</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
-            <span class="kw">for</span> <span class="ident">sdef</span> <span class="kw">in</span> <span class="ident">structs</span> {
-                <span class="ident">sdef</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
-                <span class="ident">w</span>.<span class="ident">new_line</span>();
-            }
-            <span class="kw">for</span> <span class="ident">fdef</span> <span class="kw">in</span> <span class="ident">functions</span> {
-                <span class="ident">fdef</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
-                <span class="ident">w</span>.<span class="ident">new_line</span>();
-            }
-            <span class="kw">for</span> <span class="ident">spec</span> <span class="kw">in</span> <span class="ident">specs</span> {
-                <span class="ident">spec</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
-                <span class="ident">w</span>.<span class="ident">new_line</span>();
+            <span class="kw">for</span> <span class="ident">mem</span> <span class="kw">in</span> <span class="ident">members</span> {
+                <span class="ident">mem</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>)
             }
         });
     }
 }
 
-<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">ModuleIdent</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ModuleName</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> <span class="ident">ModuleMember</span> {
     <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
-        <span class="ident">w</span>.<span class="ident">semicolon</span>(<span class="self">self</span>, <span class="op">|</span><span class="ident">w</span>, <span class="ident">item</span><span class="op">|</span> <span class="ident">item</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>));
-        <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="string">&quot;;&quot;</span>);
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">ModuleMember</span>::<span class="ident">Function</span>(<span class="ident">f</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>),
+            <span class="ident">ModuleMember</span>::<span class="ident">Struct</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>),
+            <span class="ident">ModuleMember</span>::<span class="ident">Spec</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>),
+            <span class="ident">ModuleMember</span>::<span class="ident">Use</span>(<span class="ident">u</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">u</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>),
+        }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> (<span class="ident">ModuleIdent</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ModuleName</span><span class="op">&gt;</span>) {
+<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> <span class="ident">Use</span> {
     <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
-        <span class="kw">let</span> (<span class="ident">m</span>, <span class="ident">alias_opt</span>) <span class="op">=</span> <span class="self">self</span>;
-        <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;use {}&quot;</span>, <span class="ident">m</span>));
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">alias</span>) <span class="op">=</span> <span class="ident">alias_opt</span> {
-            <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot; as {}&quot;</span>, <span class="ident">alias</span>))
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Use</span>::<span class="ident">Module</span>(<span class="ident">m</span>, <span class="ident">alias_opt</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;use {}&quot;</span>, <span class="ident">m</span>));
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">alias</span>) <span class="op">=</span> <span class="ident">alias_opt</span> {
+                    <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot; as {}&quot;</span>, <span class="ident">alias</span>))
+                }
+            }
+            <span class="ident">Use</span>::<span class="ident">Members</span>(<span class="ident">m</span>, <span class="ident">sub_uses</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;use {}::&quot;</span>, <span class="ident">m</span>));
+                <span class="ident">w</span>.<span class="ident">block</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> {
+                    <span class="ident">w</span>.<span class="ident">comma</span>(<span class="ident">sub_uses</span>, <span class="op">|</span><span class="ident">w</span>, (<span class="ident">n</span>, <span class="ident">alias_opt</span>)<span class="op">|</span> {
+                        <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">n</span>));
+                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">alias</span>) <span class="op">=</span> <span class="ident">alias_opt</span> {
+                            <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot; as {}&quot;</span>, <span class="ident">alias</span>))
+                        }
+                    })
+                })
+            }
         }
-        <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="string">&quot;;&quot;</span>);
+        <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;;&quot;</span>)
     }
 }
 

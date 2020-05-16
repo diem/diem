@@ -943,12 +943,6 @@
 <span id="943">943</span>
 <span id="944">944</span>
 <span id="945">945</span>
-<span id="946">946</span>
-<span id="947">947</span>
-<span id="948">948</span>
-<span id="949">949</span>
-<span id="950">950</span>
-<span id="951">951</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -994,7 +988,6 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ModuleDefinition</span> {
-    <span class="kw">pub</span> <span class="ident">uses</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ModuleIdent</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">is_source_module</span>: <span class="ident">bool</span>,
     <span class="doccomment">/// `dependency_order` is the topological order/rank in the dependency graph.</span>
     <span class="doccomment">/// `dependency_order` is initialized at `0` and set in the uses pass</span>
@@ -1042,7 +1035,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Function</span> {
     <span class="kw">pub</span> <span class="ident">visibility</span>: <span class="ident">FunctionVisibility</span>,
     <span class="kw">pub</span> <span class="ident">signature</span>: <span class="ident">FunctionSignature</span>,
-    <span class="kw">pub</span> <span class="ident">acquires</span>: <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructName</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">acquires</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">body</span>: <span class="ident">FunctionBody</span>,
 }
 
@@ -1459,7 +1452,6 @@
         <span class="kw">let</span> <span class="ident">ModuleDefinition</span> {
             <span class="ident">is_source_module</span>,
             <span class="ident">dependency_order</span>,
-            <span class="ident">uses</span>,
             <span class="ident">structs</span>,
             <span class="ident">functions</span>,
         } <span class="op">=</span> <span class="self">self</span>;
@@ -1469,10 +1461,6 @@
             <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="string">&quot;source module&quot;</span>)
         }
         <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;dependency order #{}&quot;</span>, <span class="ident">dependency_order</span>));
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">uses</span>.<span class="ident">is_empty</span>() {
-            <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="string">&quot;uses: &quot;</span>);
-            <span class="ident">w</span>.<span class="ident">indent</span>(<span class="number">2</span>, <span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">w</span>.<span class="ident">comma</span>(<span class="ident">uses</span>, <span class="op">|</span><span class="ident">w</span>, (<span class="ident">m</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">m</span>))))
-        }
         <span class="kw">for</span> <span class="ident">sdef</span> <span class="kw">in</span> <span class="ident">structs</span> {
             <span class="ident">sdef</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
             <span class="ident">w</span>.<span class="ident">new_line</span>();
@@ -1534,7 +1522,7 @@
         <span class="ident">signature</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
         <span class="kw">if</span> <span class="op">!</span><span class="ident">acquires</span>.<span class="ident">is_empty</span>() {
             <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot; acquires &quot;</span>);
-            <span class="ident">w</span>.<span class="ident">comma</span>(<span class="ident">acquires</span>, <span class="op">|</span><span class="ident">w</span>, <span class="ident">s</span><span class="op">|</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">s</span>)));
+            <span class="ident">w</span>.<span class="ident">comma</span>(<span class="ident">acquires</span>.<span class="ident">keys</span>(), <span class="op">|</span><span class="ident">w</span>, <span class="ident">s</span><span class="op">|</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">s</span>)));
             <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot; &quot;</span>)
         }
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">body</span>.<span class="ident">value</span> {

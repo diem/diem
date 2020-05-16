@@ -303,9 +303,6 @@
 <span id="303">303</span>
 <span id="304">304</span>
 <span id="305">305</span>
-<span id="306">306</span>
-<span id="307">307</span>
-<span id="308">308</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -318,7 +315,7 @@
 };
 <span class="kw">use</span> <span class="ident">move_ir_types</span>::<span class="ident">location</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">petgraph</span>::{<span class="ident">algo</span>::<span class="ident">toposort</span> <span class="kw">as</span> <span class="ident">petgraph_toposort</span>, <span class="ident">graphmap</span>::<span class="ident">DiGraphMap</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">BTreeMap</span>, <span class="ident">BTreeSet</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">BTreeMap</span>;
 
 <span class="comment">//**************************************************************************************************</span>
 <span class="comment">// Entry</span>
@@ -430,9 +427,6 @@
 
 <span class="kw">fn</span> <span class="ident">module</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">mident</span>: <span class="ident">ModuleIdent</span>, <span class="ident">mdef</span>: <span class="kw-2">&amp;</span><span class="ident">N</span>::<span class="ident">ModuleDefinition</span>) {
     <span class="ident">context</span>.<span class="ident">current_module</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">mident</span>);
-    <span class="ident">mdef</span>.<span class="ident">uses</span>
-        .<span class="ident">iter</span>()
-        .<span class="ident">for_each</span>(<span class="op">|</span>(<span class="ident">mident</span>, <span class="ident">loc</span>)<span class="op">|</span> <span class="ident">context</span>.<span class="ident">add_usage</span>(<span class="ident">mident</span>, <span class="kw-2">*</span><span class="ident">loc</span>));
     <span class="ident">mdef</span>.<span class="ident">structs</span>
         .<span class="ident">iter</span>()
         .<span class="ident">for_each</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">sdef</span>)<span class="op">|</span> <span class="ident">struct_def</span>(<span class="ident">context</span>, <span class="ident">sdef</span>));
@@ -460,7 +454,7 @@
     <span class="ident">type_</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="ident">sig</span>.<span class="ident">return_type</span>)
 }
 
-<span class="kw">fn</span> <span class="ident">function_acquires</span>(<span class="ident">_context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">_acqs</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructName</span><span class="op">&gt;</span>) {}
+<span class="kw">fn</span> <span class="ident">function_acquires</span>(<span class="ident">_context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">_acqs</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>) {}
 
 <span class="comment">//**************************************************************************************************</span>
 <span class="comment">// Types</span>

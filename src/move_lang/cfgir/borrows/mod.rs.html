@@ -289,6 +289,7 @@
 <span id="289">289</span>
 <span id="290">290</span>
 <span id="291">291</span>
+<span id="292">292</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -302,8 +303,9 @@
     <span class="ident">parser</span>::<span class="ident">ast</span>::{<span class="ident">BinOp_</span>, <span class="ident">StructName</span>, <span class="ident">Var</span>},
     <span class="ident">shared</span>::<span class="ident">unique_map</span>::<span class="ident">UniqueMap</span>,
 };
+<span class="kw">use</span> <span class="ident">move_ir_types</span>::<span class="ident">location</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">state</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">BTreeMap</span>, <span class="ident">BTreeSet</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">BTreeMap</span>;
 
 <span class="comment">//**************************************************************************************************</span>
 <span class="comment">// Entry and trait bindings</span>
@@ -372,7 +374,7 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(
     <span class="ident">errors</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Errors</span>,
     <span class="ident">signature</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionSignature</span>,
-    <span class="ident">acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructName</span><span class="op">&gt;</span>,
+    <span class="ident">acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="ident">locals</span>: <span class="kw-2">&amp;</span><span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">Var</span>, <span class="ident">SingleType</span><span class="op">&gt;</span>,
     <span class="ident">cfg</span>: <span class="kw-2">&amp;</span><span class="kw">super</span>::<span class="ident">cfg</span>::<span class="ident">BlockCFG</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">BorrowState</span><span class="op">&gt;</span> {
@@ -515,7 +517,7 @@
                     <span class="kw">let</span> (<span class="ident">errors</span>, <span class="ident">values</span>) <span class="op">=</span>
                         <span class="ident">context</span>
                             .<span class="ident">borrow_state</span>
-                            .<span class="ident">call</span>(<span class="kw-2">*</span><span class="ident">eloc</span>, <span class="ident">evalues</span>, <span class="kw-2">&amp;</span><span class="ident">BTreeSet</span>::<span class="ident">new</span>(), <span class="ident">ret_ty</span>);
+                            .<span class="ident">call</span>(<span class="kw-2">*</span><span class="ident">eloc</span>, <span class="ident">evalues</span>, <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span>::<span class="ident">new</span>(), <span class="ident">ret_ty</span>);
                     <span class="ident">context</span>.<span class="ident">add_errors</span>(<span class="ident">errors</span>);
                     <span class="ident">values</span>
                 }

@@ -337,13 +337,12 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">naming</span>::<span class="ident">ast</span>::{<span class="self">self</span> <span class="kw">as</span> <span class="ident">N</span>, <span class="ident">Type</span>, <span class="ident">TypeName_</span>, <span class="ident">Type_</span>},
     <span class="ident">parser</span>::<span class="ident">ast</span>::<span class="ident">StructName</span>,
-    <span class="ident">shared</span>::<span class="kw-2">*</span>,
     <span class="ident">typing</span>::<span class="ident">ast</span> <span class="kw">as</span> <span class="ident">T</span>,
 };
 <span class="kw">use</span> <span class="ident">move_ir_types</span>::<span class="ident">location</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">BTreeSet</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">BTreeMap</span>;
 
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Seen</span> <span class="op">=</span> <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructName</span><span class="op">&gt;</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Seen</span> <span class="op">=</span> <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>;
 
 <span class="comment">//**************************************************************************************************</span>
 <span class="comment">// Functions</span>
@@ -351,7 +350,7 @@
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">function_body_</span>(
     <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
-    <span class="ident">annotated_acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructName</span><span class="op">&gt;</span>,
+    <span class="ident">annotated_acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="ident">b_</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>::<span class="ident">FunctionBody_</span>,
 ) {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">seen</span> <span class="op">=</span> <span class="ident">Seen</span>::<span class="ident">new</span>();
@@ -360,8 +359,8 @@
         <span class="ident">T</span>::<span class="ident">FunctionBody_</span>::<span class="ident">Defined</span>(<span class="ident">es</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">sequence</span>(<span class="ident">context</span>, <span class="ident">annotated_acquires</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">seen</span>, <span class="ident">es</span>),
     }
 
-    <span class="kw">for</span> <span class="ident">annotated_acquire</span> <span class="kw">in</span> <span class="ident">annotated_acquires</span> {
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">seen</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">annotated_acquire</span>) {
+    <span class="kw">for</span> (<span class="ident">annotated_acquire</span>, <span class="ident">annotated_loc</span>) <span class="kw">in</span> <span class="ident">annotated_acquires</span> {
+        <span class="kw">if</span> <span class="op">!</span><span class="ident">seen</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">annotated_acquire</span>) {
             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
                 <span class="string">&quot;Invalid &#39;acquires&#39; list. The resource &#39;{}::{}&#39; was never acquired by &#39;{}&#39;, &#39;{}&#39;, \
                  &#39;{}&#39;, or a transitive call&quot;</span>,
@@ -371,7 +370,7 @@
                 <span class="ident">N</span>::<span class="ident">BuiltinFunction_</span>::<span class="ident">BORROW_GLOBAL</span>,
                 <span class="ident">N</span>::<span class="ident">BuiltinFunction_</span>::<span class="ident">BORROW_GLOBAL_MUT</span>
             );
-            <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">annotated_acquire</span>.<span class="ident">loc</span>(), <span class="ident">msg</span>)])
+            <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="kw-2">*</span><span class="ident">annotated_loc</span>, <span class="ident">msg</span>)])
         }
     }
 }
@@ -382,7 +381,7 @@
 
 <span class="kw">fn</span> <span class="ident">sequence</span>(
     <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
-    <span class="ident">annotated_acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructName</span><span class="op">&gt;</span>,
+    <span class="ident">annotated_acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="ident">seen</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Seen</span>,
     <span class="ident">seq</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>::<span class="ident">Sequence</span>,
 ) {
@@ -393,7 +392,7 @@
 
 <span class="kw">fn</span> <span class="ident">sequence_item</span>(
     <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
-    <span class="ident">annotated_acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructName</span><span class="op">&gt;</span>,
+    <span class="ident">annotated_acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="ident">seen</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Seen</span>,
     <span class="ident">item</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>::<span class="ident">SequenceItem</span>,
 ) {
@@ -407,7 +406,7 @@
 
 <span class="kw">fn</span> <span class="ident">exp</span>(
     <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
-    <span class="ident">annotated_acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructName</span><span class="op">&gt;</span>,
+    <span class="ident">annotated_acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="ident">seen</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Seen</span>,
     <span class="ident">e</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>::<span class="ident">Exp</span>,
 ) {
@@ -434,12 +433,12 @@
             <span class="kw">let</span> <span class="ident">acquires</span> <span class="op">=</span> <span class="ident">call</span>
                 .<span class="ident">acquires</span>
                 .<span class="ident">iter</span>()
-                .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">valid_acquires_annot</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">a</span>))
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+                .<span class="ident">filter</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">valid_acquires_annot</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">a</span>))
+                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Invalid call to &#39;{}::{}&#39;&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">call</span>.<span class="ident">module</span>, <span class="kw-2">&amp;</span><span class="ident">call</span>.<span class="ident">name</span>);
-            <span class="kw">for</span> <span class="ident">sn</span> <span class="kw">in</span> <span class="ident">acquires</span> {
-                <span class="ident">check_acquire_listed</span>(<span class="ident">context</span>, <span class="ident">annotated_acquires</span>, <span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">sn</span>);
-                <span class="ident">seen</span>.<span class="ident">insert</span>(<span class="ident">sn</span>.<span class="ident">clone</span>());
+            <span class="kw">for</span> (<span class="ident">sn</span>, <span class="ident">sloc</span>) <span class="kw">in</span> <span class="ident">acquires</span> {
+                <span class="ident">check_acquire_listed</span>(<span class="ident">context</span>, <span class="ident">annotated_acquires</span>, <span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">sn</span>, <span class="kw-2">*</span><span class="ident">sloc</span>);
+                <span class="ident">seen</span>.<span class="ident">insert</span>(<span class="ident">sn</span>.<span class="ident">clone</span>(), <span class="kw-2">*</span><span class="ident">sloc</span>);
             }
 
             <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">annotated_acquires</span>, <span class="ident">seen</span>, <span class="kw-2">&amp;</span><span class="ident">call</span>.<span class="ident">arguments</span>);
@@ -488,7 +487,7 @@
 
 <span class="kw">fn</span> <span class="ident">exp_list</span>(
     <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
-    <span class="ident">annotated_acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructName</span><span class="op">&gt;</span>,
+    <span class="ident">annotated_acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="ident">seen</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Seen</span>,
     <span class="ident">items</span>: <span class="kw-2">&amp;</span>[<span class="ident">T</span>::<span class="ident">ExpListItem</span>],
 ) {
@@ -499,7 +498,7 @@
 
 <span class="kw">fn</span> <span class="ident">exp_list_item</span>(
     <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
-    <span class="ident">annotated_acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructName</span><span class="op">&gt;</span>,
+    <span class="ident">annotated_acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="ident">seen</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Seen</span>,
     <span class="ident">item</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>::<span class="ident">ExpListItem</span>,
 ) {
@@ -517,7 +516,7 @@
 
 <span class="kw">fn</span> <span class="ident">builtin_function</span>(
     <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
-    <span class="ident">annotated_acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructName</span><span class="op">&gt;</span>,
+    <span class="ident">annotated_acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="ident">seen</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Seen</span>,
     <span class="ident">loc</span>: <span class="kw-2">&amp;</span><span class="ident">Loc</span>,
     <span class="ident">b</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>::<span class="ident">BuiltinFunction</span>,
@@ -528,8 +527,8 @@
         <span class="ident">B</span>::<span class="ident">MoveFrom</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">mk_msg</span>(<span class="ident">N</span>::<span class="ident">BuiltinFunction_</span>::<span class="ident">MOVE_FROM</span>);
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">sn</span>) <span class="op">=</span> <span class="ident">check_global_access</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">bt</span>) {
-                <span class="ident">check_acquire_listed</span>(<span class="ident">context</span>, <span class="ident">annotated_acquires</span>, <span class="kw-2">*</span><span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">sn</span>);
-                <span class="ident">seen</span>.<span class="ident">insert</span>(<span class="ident">sn</span>.<span class="ident">clone</span>());
+                <span class="ident">check_acquire_listed</span>(<span class="ident">context</span>, <span class="ident">annotated_acquires</span>, <span class="kw-2">*</span><span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">sn</span>, <span class="ident">bt</span>.<span class="ident">loc</span>);
+                <span class="ident">seen</span>.<span class="ident">insert</span>(<span class="ident">sn</span>.<span class="ident">clone</span>(), <span class="ident">bt</span>.<span class="ident">loc</span>);
             }
         }
         <span class="ident">B</span>::<span class="ident">BorrowGlobal</span>(<span class="ident">mut_</span>, <span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -540,8 +539,8 @@
             };
             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">mk_msg</span>(<span class="ident">name</span>);
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">sn</span>) <span class="op">=</span> <span class="ident">check_global_access</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">bt</span>) {
-                <span class="ident">check_acquire_listed</span>(<span class="ident">context</span>, <span class="ident">annotated_acquires</span>, <span class="kw-2">*</span><span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">sn</span>);
-                <span class="ident">seen</span>.<span class="ident">insert</span>(<span class="ident">sn</span>.<span class="ident">clone</span>());
+                <span class="ident">check_acquire_listed</span>(<span class="ident">context</span>, <span class="ident">annotated_acquires</span>, <span class="kw-2">*</span><span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">sn</span>, <span class="ident">bt</span>.<span class="ident">loc</span>);
+                <span class="ident">seen</span>.<span class="ident">insert</span>(<span class="ident">sn</span>.<span class="ident">clone</span>(), <span class="ident">bt</span>.<span class="ident">loc</span>);
             }
         }
         <span class="ident">B</span>::<span class="ident">MoveToSender</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -562,21 +561,22 @@
 
 <span class="kw">fn</span> <span class="ident">check_acquire_listed</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(
     <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
-    <span class="ident">annotated_acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">StructName</span><span class="op">&gt;</span>,
+    <span class="ident">annotated_acquires</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="ident">loc</span>: <span class="ident">Loc</span>,
     <span class="ident">msg</span>: <span class="ident">F</span>,
-    <span class="ident">global_type</span>: <span class="kw-2">&amp;</span><span class="ident">StructName</span>,
+    <span class="ident">global_type_name</span>: <span class="kw-2">&amp;</span><span class="ident">StructName</span>,
+    <span class="ident">global_type_loc</span>: <span class="ident">Loc</span>,
 ) <span class="kw">where</span>
     <span class="ident">F</span>: <span class="ident">Fn</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span>,
 {
-    <span class="kw">if</span> <span class="op">!</span><span class="ident">annotated_acquires</span>.<span class="ident">contains</span>(<span class="ident">global_type</span>) {
+    <span class="kw">if</span> <span class="op">!</span><span class="ident">annotated_acquires</span>.<span class="ident">contains_key</span>(<span class="ident">global_type_name</span>) {
         <span class="kw">let</span> <span class="ident">tmsg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
             <span class="string">&quot;The call acquires &#39;{}::{}&#39;, but the &#39;acquires&#39; list for the current function does not \
             contain this type. It must be present in the calling context&#39;s acquires list&quot;</span>,
             <span class="ident">context</span>.<span class="ident">current_module</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">global_type</span>
+            <span class="ident">global_type_name</span>
         );
-        <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">loc</span>, <span class="ident">msg</span>()), (<span class="ident">global_type</span>.<span class="ident">loc</span>(), <span class="ident">tmsg</span>)]);
+        <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">loc</span>, <span class="ident">msg</span>()), (<span class="ident">global_type_loc</span>, <span class="ident">tmsg</span>)]);
     }
 }
 
