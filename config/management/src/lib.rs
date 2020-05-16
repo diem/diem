@@ -5,6 +5,7 @@
 
 mod error;
 mod genesis;
+mod key;
 mod layout;
 mod secure_backend;
 mod validator_config;
@@ -18,9 +19,7 @@ mod storage_helper;
 
 use crate::{error::Error, layout::SetLayout, secure_backend::SecureBackend};
 use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_secure_storage::{Storage, Value};
 use libra_types::transaction::Transaction;
-use std::convert::TryInto;
 use structopt::StructOpt;
 
 pub mod constants {
@@ -39,13 +38,13 @@ pub mod constants {
 #[structopt(about = "Tool used to manage Libra Validators")]
 pub enum Command {
     #[structopt(about = "Submits an Ed25519PublicKey for the association")]
-    AssociationKey(SecureBackends),
+    AssociationKey(crate::key::AssociationKey),
     #[structopt(about = "Retrieves data from a store to produce genesis")]
     Genesis(crate::genesis::Genesis),
     #[structopt(about = "Submits an Ed25519PublicKey for the operator")]
-    OperatorKey(SecureBackends),
+    OperatorKey(crate::key::OperatorKey),
     #[structopt(about = "Submits an Ed25519PublicKey for the owner")]
-    OwnerKey(SecureBackends),
+    OwnerKey(crate::key::OwnerKey),
     #[structopt(about = "Submits a Layout doc to a shared storage")]
     SetLayout(SetLayout),
     #[structopt(about = "Constructs and signs a ValidatorConfig")]
@@ -108,8 +107,8 @@ impl Command {
     }
 
     pub fn association_key(self) -> Result<Ed25519PublicKey, Error> {
-        if let Command::AssociationKey(secure_backends) = self {
-            Self::submit_key(libra_global_constants::ASSOCIATION_KEY, secure_backends)
+        if let Command::AssociationKey(association_key) = self {
+            association_key.execute()
         } else {
             Err(Error::UnexpectedCommand(
                 CommandName::AssociationKey,
@@ -130,8 +129,8 @@ impl Command {
     }
 
     pub fn operator_key(self) -> Result<Ed25519PublicKey, Error> {
-        if let Command::OperatorKey(secure_backends) = self {
-            Self::submit_key(libra_global_constants::OPERATOR_KEY, secure_backends)
+        if let Command::OperatorKey(operator_key) = self {
+            operator_key.execute()
         } else {
             Err(Error::UnexpectedCommand(
                 CommandName::OperatorKey,
@@ -141,8 +140,8 @@ impl Command {
     }
 
     pub fn owner_key(self) -> Result<Ed25519PublicKey, Error> {
-        if let Command::OwnerKey(secure_backends) = self {
-            Self::submit_key(libra_global_constants::OWNER_KEY, secure_backends)
+        if let Command::OwnerKey(owner_key) = self {
+            owner_key.execute()
         } else {
             Err(Error::UnexpectedCommand(
                 CommandName::OwnerKey,
@@ -182,35 +181,6 @@ impl Command {
                 CommandName::from(&self),
             ))
         }
-    }
-
-    fn submit_key(
-        key_name: &str,
-        secure_backends: SecureBackends,
-    ) -> Result<Ed25519PublicKey, Error> {
-        let local: Box<dyn Storage> = secure_backends.local.try_into()?;
-        if !local.available() {
-            return Err(Error::LocalStorageUnavailable);
-        }
-
-        let key = local
-            .get_public_key(key_name)
-            .map_err(|e| Error::LocalStorageReadError(e.to_string()))?
-            .public_key;
-
-        if let Some(remote) = secure_backends.remote {
-            let key = Value::Ed25519PublicKey(key.clone());
-            let mut remote: Box<dyn Storage> = remote.try_into()?;
-            if !remote.available() {
-                return Err(Error::RemoteStorageUnavailable);
-            }
-
-            remote
-                .set(key_name, key)
-                .map_err(|e| Error::RemoteStorageWriteError(e.to_string()))?;
-        }
-
-        Ok(key)
     }
 }
 
