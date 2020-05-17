@@ -23,10 +23,8 @@ use vm::errors::*;
 /// It's effectively the write set for the block.
 pub struct BlockDataCache<'block> {
     data_view: &'block dyn StateView,
-    // TODO: an AccessPath corresponds to a top level resource but that may not be the
-    // case moving forward, so we need to review this.
-    // Also need to relate this to a ResourceKey.
-    data_map: BTreeMap<AccessPath, Vec<u8>>,
+    // None indicates a value was deleted
+    data_map: BTreeMap<AccessPath, Option<Vec<u8>>>,
 }
 
 impl<'block> BlockDataCache<'block> {
@@ -39,7 +37,7 @@ impl<'block> BlockDataCache<'block> {
 
     pub fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
         match self.data_map.get(access_path) {
-            Some(data) => Ok(Some(data.clone())),
+            Some(opt_data) => Ok(opt_data.clone()),
             None => match self.data_view.get(&access_path) {
                 Ok(remote_data) => Ok(remote_data),
                 // TODO: should we forward some error info?
@@ -55,10 +53,11 @@ impl<'block> BlockDataCache<'block> {
         for (ref ap, ref write_op) in write_set.iter() {
             match write_op {
                 WriteOp::Value(blob) => {
-                    self.data_map.insert(ap.clone(), blob.clone());
+                    self.data_map.insert(ap.clone(), Some(blob.clone()));
                 }
                 WriteOp::Deletion => {
                     self.data_map.remove(ap);
+                    self.data_map.insert(ap.clone(), None);
                 }
             }
         }
