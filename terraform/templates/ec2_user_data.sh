@@ -2,6 +2,9 @@
 # Copyright (c) The Libra Core Contributors
 # SPDX-License-Identifier: Apache-2.0
 
+export log_path="/data/libra/${host_log_path}"
+export structlog_path="/data/libra/${host_structlog_path}"
+
 if [ -e /dev/nvme1n1 ]; then
 	if ! file -s /dev/nvme1n1 | grep -q filesystem; then
 		mkfs.ext4 /dev/nvme1n1
@@ -12,27 +15,31 @@ if [ -e /dev/nvme1n1 ]; then
 	EOF
 	mkdir /data
 	mount /data
+fi
 
-	export log_path="/data/libra/${host_log_path}"
-	export structlog_path="/data/libra/${host_structlog_path}"
+# non-persistent storage is managed by Docker under data-root
+if ! ${persistent} ; then
 
-	# non-persistent storage is managed by Docker under data-root
-	if ! ${persistent} ; then
+	export log_path="/data/*/_data/${host_log_path}"
+	export structlog_path="/data/*/_data/${host_structlog_path}"
+
+	# if we have a separate device, mount it in docker data-root, else just symlink
+	if [ -e /dev/nvme1n1 ]; then
 		cat >> /etc/fstab <<-EOF
 		/dev/nvme1n1  /var/lib/docker/volumes  ext4  defaults,noatime,nofail  0  2
 		EOF
 		mkdir -p /var/lib/docker/volumes
 		mount /var/lib/docker/volumes
-		export log_path="/data/*/_data/${host_log_path}"
-		export structlog_path="/data/*/_data/${host_structlog_path}"
-
-		# give some helptul tips
-		cat > /data/README <<-EOF
-		In non-persistent mode -- data is not persisted between ECS updates. Showing Docker volumes instead. To find the currently mounted Docker volume:
-		\$ docker container ls -q --filter label=com.amazonaws.ecs.container-name=validator | xargs docker inspect -f '{{ .Mounts }}' | awk '{print \$3}'
-		EOF
+	else
+		rm -rf /data
+		ln -s /var/lib/docker/volumes /data
 	fi
 
+	# give some helptul tips
+	cat > /data/README <<-EOF
+	In non-persistent mode -- data is not persisted between ECS updates. Showing Docker volumes instead. To find the currently mounted Docker volume:
+	\$ { docker container ls -q  --filter label=com.amazonaws.ecs.container-name=fullnode & docker container ls -q  --filter label=com.amazonaws.ecs.container-name=validator; } | xargs docker inspect -f '{{ .Mounts }}' | awk '{print \$3}'
+	EOF
 fi
 
 mkdir -p /opt/libra /vault
