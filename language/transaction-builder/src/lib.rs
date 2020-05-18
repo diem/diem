@@ -107,17 +107,6 @@ encode_txn_script! {
 }
 
 encode_txn_script! {
-    name: encode_approved_payment_script,
-    type_arg: type_,
-    args: [payee: Address, amount: U64, metadata: Bytes, signature: Bytes],
-    script: ApprovedPayment,
-    doc: "Encode a program that deposits `amount` LBR in `payee`'s account if the `signature` on the\
-          payment metadata matches the public key stored in the `payee`'s ApprovedPayment` resource.\
-          Aborts if the signature does not match, `payee` does not have an `ApprovedPayment` resource, or\
-          the sender's balance is less than `amount`."
-}
-
-encode_txn_script! {
     name: encode_burn_script,
     type_arg: type_,
     args: [preburn_address: Address],
@@ -257,14 +246,6 @@ encode_txn_script! {
           of the sender under the sender's address.\
           Aborts if the sender already has a `SharedEd25519PublicKey` resource.\
           Aborts if the length of `new_public_key` is not 32."
-}
-
-encode_txn_script! {
-    name: encode_register_approved_payment_script,
-    args: [public_key: Bytes],
-    script: RegisterApprovedPayment,
-    doc: "Publish a newly created `ApprovedPayment` resource under the sender's account with approval key\
-         `public_key`. Aborts if the sender already has a published `ApprovedPayment` resource."
 }
 
 encode_txn_script! {
