@@ -139,6 +139,7 @@ module LibraAccount {
         Transaction::assert(deposit_value > 0, 7);
 
         // TODO: on-chain config for travel rule limit instead of hardcoded value
+        // TODO: nail down details of limit (specified in LBR? is 1 LBR a milliLibra or microLibra?)
         let travel_rule_limit = 1000;
         // travel rule only applies for payments over a threshold
         let above_threshold =
@@ -157,8 +158,8 @@ module LibraAccount {
             // sanity check of signature validity
             Transaction::assert(Vector::length(&metadata_signature) == 64, 9001);
             // message should be metadata | sender_address | amount | domain_separator
-            // separator is the UTF8-encoded string @$LIBRA_ATTEST$@
-            let domain_separator = x"2240244c494252415f4154544553544022";
+            // separator is the UTF8-encoded string @@$$LIBRA_ATTEST$$@@
+            let domain_separator = x"404024244C494252415F41545445535424244040";
             let message = copy metadata;
             Vector::append(&mut message, LCS::to_bytes(&sender));
             Vector::append(&mut message, LCS::to_bytes(&deposit_value));

@@ -164,13 +164,13 @@ fn dual_attestation_payment() {
 
     // Do the offline protocol: generate a payment id, sign with the receiver's private key, include
     // in transaction from sender's account
-    let ref_id = lcs::to_bytes(&7777).unwrap();
+    let ref_id = lcs::to_bytes(&7777u64).unwrap();
     // choose an amount above the dual attestation threshold
     let payment_amount = 1_000_000u64;
-    // UTF8-encoded string "@$LIBRA_ATTEST$@"
+    // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
     let mut domain_separator = vec![
-        0x22, 0x40, 0x24, 0x4c, 0x49, 0x42, 0x52, 0x41, 0x5f, 0x41, 0x54, 0x54, 0x45, 0x53, 0x54,
-        0x40, 0x22,
+        0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45, 0x53,
+        0x54, 0x24, 0x24, 0x40, 0x40,
     ];
     let message = {
         let mut msg = ref_id.clone();
@@ -179,7 +179,6 @@ fn dual_attestation_payment() {
         msg.append(&mut domain_separator);
         msg
     };
-    //    let signature = private_key.sign_arbitrary_message(&message);
     let signature =
         <Ed25519PrivateKey as SigningKey>::sign_arbitrary_message(&private_key, &message);
     executor.execute_and_apply(payment_sender.signed_script_txn(
