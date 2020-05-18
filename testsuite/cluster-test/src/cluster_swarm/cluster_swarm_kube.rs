@@ -29,6 +29,7 @@ use itertools::Itertools;
 use k8s_openapi::api::batch::v1::Job;
 use kube::api::ListParams;
 use libra_config::config::DEFAULT_JSON_RPC_PORT;
+use std::process::Command;
 
 const DEFAULT_NAMESPACE: &str = "default";
 
@@ -44,8 +45,23 @@ pub struct ClusterSwarmKube {
 
 impl ClusterSwarmKube {
     pub async fn new() -> Result<Self> {
-        let result = Config::infer().await;
-        let config = result.map_err(|e| format_err!("Failed to load config: {:?}", e))?;
+        // This uses kubectl proxy locally to forward connections to kubernetes api server
+        Command::new("/usr/local/bin/kubectl")
+            .arg("proxy")
+            .spawn()?;
+        retry::retry_async(retry::fixed_retry_strategy(2000, 60), || {
+            Box::pin(async move {
+                info!("Running healthcheck on http://127.0.0.1:8001");
+                reqwest::get("http://127.0.0.1:8001").await?.text().await?;
+                info!("Healthcheck passed");
+                Ok::<(), reqwest::Error>(())
+            })
+        })
+        .await?;
+        let config = Config::new(
+            reqwest::Url::parse("http://127.0.0.1:8001")
+                .expect("Failed to parse kubernetes endpoint url"),
+        );
         let client = Client::new(config);
         let node_map = Arc::new(Mutex::new(HashMap::new()));
         Ok(Self { client, node_map })
