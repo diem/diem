@@ -522,6 +522,22 @@
 <span id="522">522</span>
 <span id="523">523</span>
 <span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -531,7 +547,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">ast</span>::<span class="ident">QualifiedSymbol</span>,
     <span class="ident">env</span>::{<span class="ident">GlobalEnv</span>, <span class="ident">ModuleId</span>, <span class="ident">StructEnv</span>, <span class="ident">StructId</span>},
-    <span class="ident">symbol</span>::<span class="ident">SymbolPool</span>,
+    <span class="ident">symbol</span>::{<span class="ident">Symbol</span>, <span class="ident">SymbolPool</span>},
 };
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">BTreeMap</span>, <span class="ident">fmt</span>, <span class="ident">fmt</span>::<span class="ident">Formatter</span>};
 
@@ -942,6 +958,7 @@
     },
     <span class="ident">WithEnv</span> {
         <span class="ident">env</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">GlobalEnv</span>,
+        <span class="ident">type_param_names</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Symbol</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     },
 }
 
@@ -1001,7 +1018,7 @@
                             <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;??unknown??&quot;</span>)<span class="question-mark">?</span>;
                         }
                     }
-                    <span class="ident">TypeDisplayContext</span>::<span class="ident">WithEnv</span> { <span class="ident">env</span> } <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">TypeDisplayContext</span>::<span class="ident">WithEnv</span> { <span class="ident">env</span>, .. } <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="kw">let</span> <span class="ident">func_env</span> <span class="op">=</span> <span class="ident">env</span>.<span class="ident">get_module</span>(<span class="kw-2">*</span><span class="ident">mid</span>).<span class="ident">into_struct</span>(<span class="kw-2">*</span><span class="ident">sid</span>);
                         <span class="macro">write</span><span class="macro">!</span>(
                             <span class="ident">f</span>,
@@ -1025,7 +1042,22 @@
                 }
                 <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">t</span>.<span class="ident">display</span>(<span class="self">self</span>.<span class="ident">context</span>))
             }
-            <span class="ident">TypeParameter</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;#{}&quot;</span>, <span class="ident">idx</span>),
+            <span class="ident">TypeParameter</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">if</span> <span class="kw">let</span> <span class="ident">TypeDisplayContext</span>::<span class="ident">WithEnv</span> {
+                    <span class="ident">env</span>,
+                    <span class="ident">type_param_names</span>: <span class="prelude-val">Some</span>(<span class="ident">names</span>),
+                } <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>
+                {
+                    <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">idx</span> <span class="kw">as</span> <span class="ident">usize</span>;
+                    <span class="kw">if</span> <span class="ident">idx</span> <span class="op">&lt;</span> <span class="ident">names</span>.<span class="ident">len</span>() {
+                        <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">names</span>[<span class="ident">idx</span>].<span class="ident">display</span>(<span class="ident">env</span>.<span class="ident">symbol_pool</span>()))
+                    } <span class="kw">else</span> {
+                        <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;#{}&quot;</span>, <span class="ident">idx</span>)
+                    }
+                } <span class="kw">else</span> {
+                    <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;#{}&quot;</span>, <span class="ident">idx</span>)
+                }
+            }
             <span class="ident">Var</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;?{}&quot;</span>, <span class="ident">idx</span>),
             <span class="ident">Error</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;?error&quot;</span>),
         }

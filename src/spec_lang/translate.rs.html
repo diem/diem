@@ -3981,6 +3981,68 @@
 <span id="3981">3981</span>
 <span id="3982">3982</span>
 <span id="3983">3983</span>
+<span id="3984">3984</span>
+<span id="3985">3985</span>
+<span id="3986">3986</span>
+<span id="3987">3987</span>
+<span id="3988">3988</span>
+<span id="3989">3989</span>
+<span id="3990">3990</span>
+<span id="3991">3991</span>
+<span id="3992">3992</span>
+<span id="3993">3993</span>
+<span id="3994">3994</span>
+<span id="3995">3995</span>
+<span id="3996">3996</span>
+<span id="3997">3997</span>
+<span id="3998">3998</span>
+<span id="3999">3999</span>
+<span id="4000">4000</span>
+<span id="4001">4001</span>
+<span id="4002">4002</span>
+<span id="4003">4003</span>
+<span id="4004">4004</span>
+<span id="4005">4005</span>
+<span id="4006">4006</span>
+<span id="4007">4007</span>
+<span id="4008">4008</span>
+<span id="4009">4009</span>
+<span id="4010">4010</span>
+<span id="4011">4011</span>
+<span id="4012">4012</span>
+<span id="4013">4013</span>
+<span id="4014">4014</span>
+<span id="4015">4015</span>
+<span id="4016">4016</span>
+<span id="4017">4017</span>
+<span id="4018">4018</span>
+<span id="4019">4019</span>
+<span id="4020">4020</span>
+<span id="4021">4021</span>
+<span id="4022">4022</span>
+<span id="4023">4023</span>
+<span id="4024">4024</span>
+<span id="4025">4025</span>
+<span id="4026">4026</span>
+<span id="4027">4027</span>
+<span id="4028">4028</span>
+<span id="4029">4029</span>
+<span id="4030">4030</span>
+<span id="4031">4031</span>
+<span id="4032">4032</span>
+<span id="4033">4033</span>
+<span id="4034">4034</span>
+<span id="4035">4035</span>
+<span id="4036">4036</span>
+<span id="4037">4037</span>
+<span id="4038">4038</span>
+<span id="4039">4039</span>
+<span id="4040">4040</span>
+<span id="4041">4041</span>
+<span id="4042">4042</span>
+<span id="4043">4043</span>
+<span id="4044">4044</span>
+<span id="4045">4045</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -4016,11 +4078,12 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">ast</span>::{
         <span class="ident">Condition</span>, <span class="ident">ConditionKind</span>, <span class="ident">Exp</span>, <span class="ident">LocalVarDecl</span>, <span class="ident">ModuleName</span>, <span class="ident">Operation</span>, <span class="ident">QualifiedSymbol</span>, <span class="ident">Spec</span>,
-        <span class="ident">SpecFunDecl</span>, <span class="ident">SpecVarDecl</span>, <span class="ident">Value</span>,
+        <span class="ident">SpecBlockInfo</span>, <span class="ident">SpecBlockTarget</span>, <span class="ident">SpecFunDecl</span>, <span class="ident">SpecVarDecl</span>, <span class="ident">Value</span>,
     },
     <span class="ident">env</span>::{
-        <span class="ident">FieldId</span>, <span class="ident">FunId</span>, <span class="ident">FunctionData</span>, <span class="ident">GlobalEnv</span>, <span class="ident">Loc</span>, <span class="ident">ModuleId</span>, <span class="ident">MoveIrLoc</span>, <span class="ident">NodeId</span>, <span class="ident">SpecFunId</span>,
-        <span class="ident">SpecVarId</span>, <span class="ident">StructData</span>, <span class="ident">StructId</span>, <span class="ident">SCRIPT_AST_FUN_NAME</span>, <span class="ident">SCRIPT_BYTECODE_FUN_NAME</span>,
+        <span class="ident">FieldId</span>, <span class="ident">FunId</span>, <span class="ident">FunctionData</span>, <span class="ident">GlobalEnv</span>, <span class="ident">Loc</span>, <span class="ident">ModuleId</span>, <span class="ident">MoveIrLoc</span>, <span class="ident">NodeId</span>, <span class="ident">SchemaId</span>,
+        <span class="ident">SpecFunId</span>, <span class="ident">SpecVarId</span>, <span class="ident">StructData</span>, <span class="ident">StructId</span>, <span class="ident">TypeConstraint</span>, <span class="ident">TypeParameter</span>,
+        <span class="ident">SCRIPT_AST_FUN_NAME</span>, <span class="ident">SCRIPT_BYTECODE_FUN_NAME</span>,
     },
     <span class="ident">project_1st</span>, <span class="ident">project_2nd</span>,
     <span class="ident">symbol</span>::{<span class="ident">Symbol</span>, <span class="ident">SymbolPool</span>},
@@ -4625,6 +4688,8 @@
     <span class="ident">struct_specs</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">Symbol</span>, <span class="ident">Spec</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Translated module spec</span>
     <span class="ident">module_spec</span>: <span class="ident">Spec</span>,
+    <span class="doccomment">/// Spec block infos.</span>
+    <span class="ident">spec_block_infos</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SpecBlockInfo</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// # Entry Points</span>
@@ -4649,6 +4714,7 @@
             <span class="ident">fun_specs</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
             <span class="ident">struct_specs</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
             <span class="ident">module_spec</span>: <span class="ident">Spec</span>::<span class="ident">default</span>(),
+            <span class="ident">spec_block_infos</span>: <span class="ident">Default</span>::<span class="ident">default</span>(),
         }
     }
 
@@ -4679,6 +4745,7 @@
     ) {
         <span class="self">self</span>.<span class="ident">decl_ana</span>(<span class="kw-2">&amp;</span><span class="ident">module_def</span>);
         <span class="self">self</span>.<span class="ident">def_ana</span>(<span class="kw-2">&amp;</span><span class="ident">module_def</span>, <span class="ident">function_infos</span>);
+        <span class="self">self</span>.<span class="ident">collect_spec_block_infos</span>(<span class="kw-2">&amp;</span><span class="ident">module_def</span>);
         <span class="self">self</span>.<span class="ident">populate_env_from_result</span>(<span class="ident">loc</span>, <span class="ident">compiled_module</span>, <span class="ident">source_map</span>);
     }
 }
@@ -6437,6 +6504,63 @@
     }
 }
 
+<span class="doccomment">/// # Spec Block Infos</span>
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;env</span>, <span class="lifetime">&#39;translator</span><span class="op">&gt;</span> <span class="ident">ModuleTranslator</span><span class="op">&lt;</span><span class="lifetime">&#39;env</span>, <span class="lifetime">&#39;translator</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Collect location and target information for all spec blocks. This is used for documentation</span>
+    <span class="doccomment">/// generation.</span>
+    <span class="kw">fn</span> <span class="ident">collect_spec_block_infos</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">module_def</span>: <span class="kw-2">&amp;</span><span class="ident">EA</span>::<span class="ident">ModuleDefinition</span>) {
+        <span class="kw">for</span> <span class="ident">block</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">module_def</span>.<span class="ident">specs</span> {
+            <span class="kw">let</span> <span class="ident">block_loc</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">parent</span>.<span class="ident">to_loc</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>.<span class="ident">loc</span>);
+            <span class="kw">let</span> <span class="ident">member_locs</span> <span class="op">=</span> <span class="ident">block</span>
+                .<span class="ident">value</span>
+                .<span class="ident">members</span>
+                .<span class="ident">iter</span>()
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">m</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">parent</span>.<span class="ident">to_loc</span>(<span class="kw-2">&amp;</span><span class="ident">m</span>.<span class="ident">loc</span>))
+                .<span class="ident">collect_vec</span>();
+            <span class="kw">let</span> <span class="ident">target</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">get_spec_block_context</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>.<span class="ident">value</span>.<span class="ident">target</span>) {
+                <span class="prelude-val">Some</span>(<span class="ident">SpecBlockContext</span>::<span class="ident">Module</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SpecBlockTarget</span>::<span class="ident">Module</span>,
+                <span class="prelude-val">Some</span>(<span class="ident">SpecBlockContext</span>::<span class="ident">Function</span>(<span class="ident">qsym</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">SpecBlockTarget</span>::<span class="ident">Function</span>(<span class="self">self</span>.<span class="ident">module_id</span>, <span class="ident">FunId</span>::<span class="ident">new</span>(<span class="ident">qsym</span>.<span class="ident">symbol</span>))
+                }
+                <span class="prelude-val">Some</span>(<span class="ident">SpecBlockContext</span>::<span class="ident">FunctionCode</span>(<span class="ident">qsym</span>, <span class="ident">info</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SpecBlockTarget</span>::<span class="ident">FunctionCode</span>(
+                    <span class="self">self</span>.<span class="ident">module_id</span>,
+                    <span class="ident">FunId</span>::<span class="ident">new</span>(<span class="ident">qsym</span>.<span class="ident">symbol</span>),
+                    <span class="ident">info</span>.<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">usize</span>,
+                ),
+                <span class="prelude-val">Some</span>(<span class="ident">SpecBlockContext</span>::<span class="ident">Struct</span>(<span class="ident">qsym</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">SpecBlockTarget</span>::<span class="ident">Struct</span>(<span class="self">self</span>.<span class="ident">module_id</span>, <span class="ident">StructId</span>::<span class="ident">new</span>(<span class="ident">qsym</span>.<span class="ident">symbol</span>))
+                }
+                <span class="prelude-val">Some</span>(<span class="ident">SpecBlockContext</span>::<span class="ident">Schema</span>(<span class="ident">qsym</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">let</span> <span class="ident">entry</span> <span class="op">=</span> <span class="self">self</span>
+                        .<span class="ident">parent</span>
+                        .<span class="ident">spec_schema_table</span>
+                        .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">qsym</span>)
+                        .<span class="ident">expect</span>(<span class="string">&quot;schema defined&quot;</span>);
+                    <span class="ident">SpecBlockTarget</span>::<span class="ident">Schema</span>(
+                        <span class="self">self</span>.<span class="ident">module_id</span>,
+                        <span class="ident">SchemaId</span>::<span class="ident">new</span>(<span class="ident">qsym</span>.<span class="ident">symbol</span>),
+                        <span class="ident">entry</span>
+                            .<span class="ident">type_params</span>
+                            .<span class="ident">iter</span>()
+                            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">TypeParameter</span>(<span class="kw-2">*</span><span class="ident">name</span>, <span class="ident">TypeConstraint</span>::<span class="prelude-val">None</span>))
+                            .<span class="ident">collect_vec</span>(),
+                    )
+                }
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="comment">// This has been reported as an error. Choose a dummy target.</span>
+                    <span class="ident">SpecBlockTarget</span>::<span class="ident">Module</span>
+                }
+            };
+            <span class="self">self</span>.<span class="ident">spec_block_infos</span>.<span class="ident">push</span>(<span class="ident">SpecBlockInfo</span> {
+                <span class="ident">loc</span>: <span class="ident">block_loc</span>,
+                <span class="ident">member_locs</span>,
+                <span class="ident">target</span>,
+            })
+        }
+    }
+}
+
 <span class="doccomment">/// # Environment Population</span>
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;env</span>, <span class="lifetime">&#39;translator</span><span class="op">&gt;</span> <span class="ident">ModuleTranslator</span><span class="op">&lt;</span><span class="lifetime">&#39;env</span>, <span class="lifetime">&#39;translator</span><span class="op">&gt;</span> {
@@ -6462,7 +6586,6 @@
                         .<span class="ident">struct_specs</span>
                         .<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">name</span>)
                         .<span class="ident">unwrap_or_else</span>(<span class="ident">Spec</span>::<span class="ident">default</span>);
-                    <span class="comment">// Ensure that all invariant kinds</span>
                     <span class="prelude-val">Some</span>((
                         <span class="ident">StructId</span>::<span class="ident">new</span>(<span class="ident">name</span>),
                         <span class="self">self</span>.<span class="ident">parent</span>.<span class="ident">env</span>.<span class="ident">create_struct_data</span>(
@@ -6529,6 +6652,7 @@
             <span class="ident">std</span>::<span class="ident">mem</span>::<span class="ident">take</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">loc_map</span>),
             <span class="ident">std</span>::<span class="ident">mem</span>::<span class="ident">take</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">type_map</span>),
             <span class="ident">std</span>::<span class="ident">mem</span>::<span class="ident">take</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">instantiation_map</span>),
+            <span class="ident">std</span>::<span class="ident">mem</span>::<span class="ident">take</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">spec_block_infos</span>),
         );
     }
 }

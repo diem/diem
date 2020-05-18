@@ -246,6 +246,22 @@
 <span id="246">246</span>
 <span id="247">247</span>
 <span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -256,16 +272,16 @@
     <span class="ident">boogie_wrapper</span>::<span class="ident">BoogieWrapper</span>,
     <span class="ident">bytecode_translator</span>::<span class="ident">BoogieTranslator</span>,
     <span class="ident">cli</span>::{<span class="ident">Options</span>, <span class="ident">INLINE_PRELUDE</span>},
-    <span class="ident">code_writer</span>::<span class="ident">CodeWriter</span>,
     <span class="ident">prelude_template_helpers</span>::<span class="ident">StratificationHelper</span>,
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">anyhow</span>;
 <span class="kw">use</span> <span class="ident">codespan_reporting</span>::<span class="ident">term</span>::<span class="ident">termcolor</span>::<span class="ident">WriteColor</span>;
+<span class="kw">use</span> <span class="ident">docgen</span>::<span class="ident">docgen</span>::<span class="ident">Docgen</span>;
 <span class="kw">use</span> <span class="ident">handlebars</span>::<span class="ident">Handlebars</span>;
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_imports</span>)]</span>
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">regex</span>::<span class="ident">Regex</span>;
-<span class="kw">use</span> <span class="ident">spec_lang</span>::{<span class="ident">env</span>::<span class="ident">GlobalEnv</span>, <span class="ident">run_spec_lang_compiler</span>};
+<span class="kw">use</span> <span class="ident">spec_lang</span>::{<span class="ident">code_writer</span>::<span class="ident">CodeWriter</span>, <span class="ident">emit</span>, <span class="ident">emitln</span>, <span class="ident">env</span>::<span class="ident">GlobalEnv</span>, <span class="ident">run_spec_lang_compiler</span>};
 <span class="kw">use</span> <span class="ident">stackless_bytecode_generator</span>::{
     <span class="ident">borrow_analysis</span>::<span class="ident">BorrowAnalysisProcessor</span>,
     <span class="ident">eliminate_imm_refs</span>::<span class="ident">EliminateImmRefsProcessor</span>,
@@ -283,9 +299,6 @@
     <span class="ident">path</span>::{<span class="ident">Path</span>, <span class="ident">PathBuf</span>},
     <span class="ident">time</span>::<span class="ident">Instant</span>,
 };
-
-<span class="attribute">#[<span class="ident">macro_use</span>]</span>
-<span class="kw">mod</span> <span class="ident">code_writer</span>;
 
 <span class="kw">mod</span> <span class="ident">boogie_helpers</span>;
 <span class="kw">mod</span> <span class="ident">boogie_wrapper</span>;
@@ -321,6 +334,10 @@
     <span class="kw">if</span> <span class="ident">env</span>.<span class="ident">has_errors</span>() {
         <span class="ident">env</span>.<span class="ident">report_errors</span>(<span class="ident">error_writer</span>);
         <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;exiting with transformation errors&quot;</span>));
+    }
+    <span class="comment">// Until this point, prover and docgen have same code. Here we part ways.</span>
+    <span class="kw">if</span> <span class="ident">options</span>.<span class="ident">docgen</span> {
+        <span class="kw">return</span> <span class="ident">run_docgen</span>(<span class="kw-2">&amp;</span><span class="ident">env</span>, <span class="kw-2">&amp;</span><span class="ident">options</span>, <span class="kw-2">&amp;</span><span class="ident">targets</span>);
     }
     <span class="kw">let</span> <span class="ident">writer</span> <span class="op">=</span> <span class="ident">CodeWriter</span>::<span class="ident">new</span>(<span class="ident">env</span>.<span class="ident">internal_loc</span>());
     <span class="ident">add_prelude</span>(<span class="kw-2">&amp;</span><span class="ident">options</span>, <span class="kw-2">&amp;</span><span class="ident">writer</span>)<span class="question-mark">?</span>;
@@ -365,6 +382,21 @@
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;exiting with boogie verification errors&quot;</span>));
         }
     }
+    <span class="prelude-val">Ok</span>(())
+}
+
+<span class="kw">fn</span> <span class="ident">run_docgen</span>(
+    <span class="ident">env</span>: <span class="kw-2">&amp;</span><span class="ident">GlobalEnv</span>,
+    <span class="ident">options</span>: <span class="kw-2">&amp;</span><span class="ident">Options</span>,
+    <span class="ident">_func_targets</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionTargetsHolder</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">Path</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">options</span>.<span class="ident">output_path</span>).<span class="ident">with_extension</span>(<span class="string">&quot;md&quot;</span>);
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">generator</span> <span class="op">=</span> <span class="ident">Docgen</span>::<span class="ident">new</span>(<span class="ident">env</span>, <span class="kw-2">&amp;</span><span class="ident">options</span>.<span class="ident">docgen_options</span>);
+    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;generating documentation&quot;</span>);
+    <span class="ident">generator</span>.<span class="ident">gen</span>();
+    <span class="ident">generator</span>
+        .<span class="ident">into_code_writer</span>()
+        .<span class="ident">process_result</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">content</span><span class="op">|</span> <span class="ident">fs</span>::<span class="ident">write</span>(<span class="ident">path</span>.<span class="ident">as_path</span>(), <span class="ident">content</span>))<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
 }
 
@@ -482,7 +514,7 @@
 <span class="doccomment">/// Extracts matches out of some text file. `pat` must be a regular expression with one anonymous</span>
 <span class="doccomment">/// group. The list of the content of this group is returned. Use as in in</span>
 <span class="doccomment">/// `extract_matches(file, &quot;use 0x0::([a-zA-Z_]+)&quot;)`</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">extract_matches</span>(<span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>, <span class="ident">pat</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">extract_matches</span>(<span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>, <span class="ident">pat</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">rex</span> <span class="op">=</span> <span class="ident">Regex</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;(?m){}&quot;</span>, <span class="ident">pat</span>))<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">content</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">new</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">File</span>::<span class="ident">open</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;

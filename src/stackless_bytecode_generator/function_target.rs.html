@@ -338,6 +338,7 @@
 <span id="338">338</span>
 <span id="339">339</span>
 <span id="340">340</span>
+<span id="341">341</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -624,6 +625,7 @@
         }
         <span class="kw">let</span> <span class="ident">tctx</span> <span class="op">=</span> <span class="ident">TypeDisplayContext</span>::<span class="ident">WithEnv</span> {
             <span class="ident">env</span>: <span class="self">self</span>.<span class="ident">global_env</span>(),
+            <span class="ident">type_param_names</span>: <span class="prelude-val">None</span>,
         };
         <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;(&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="self">self</span>.<span class="ident">get_parameter_count</span>() {

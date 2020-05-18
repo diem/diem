@@ -220,6 +220,13 @@
 <span id="220">220</span>
 <span id="221">221</span>
 <span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -243,6 +250,7 @@
 };
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">ast</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">code_writer</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">env</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">symbol</span>;
 <span class="kw">mod</span> <span class="ident">translate</span>;
@@ -277,6 +285,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">env</span> <span class="op">=</span> <span class="ident">GlobalEnv</span>::<span class="ident">new</span>();
     <span class="comment">// First pass: compile move code.</span>
     <span class="kw">let</span> (<span class="ident">files</span>, <span class="ident">units_or_errors</span>) <span class="op">=</span> <span class="ident">move_compile_no_report</span>(<span class="kw-2">&amp;</span><span class="ident">all_sources</span>, <span class="kw-2">&amp;</span>[], <span class="ident">address_opt</span>)<span class="question-mark">?</span>;
+    <span class="comment">// Enter sources into env, remember file ids as</span>
     <span class="kw">for</span> (<span class="ident">fname</span>, <span class="ident">fsrc</span>) <span class="kw">in</span> <span class="ident">files</span> {
         <span class="ident">env</span>.<span class="ident">add_source</span>(<span class="ident">fname</span>, <span class="kw-2">&amp;</span><span class="ident">fsrc</span>, <span class="ident">deps</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">fname</span>.<span class="ident">to_string</span>()));
     }
@@ -295,7 +304,12 @@
                 <span class="comment">// AST clonable and tee it somehow out of the regular compile chain.</span>
                 <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">eprog_or_errors</span>) <span class="op">=</span>
                     <span class="ident">move_compile_to_expansion_no_report</span>(<span class="kw-2">&amp;</span><span class="ident">all_sources</span>, <span class="kw-2">&amp;</span>[], <span class="ident">address_opt</span>)<span class="question-mark">?</span>;
-                <span class="kw">let</span> <span class="ident">eprog</span> <span class="op">=</span> <span class="ident">eprog_or_errors</span>.<span class="ident">expect</span>(<span class="string">&quot;no compilation errors&quot;</span>).<span class="number">0</span>;
+                <span class="kw">let</span> (<span class="ident">eprog</span>, <span class="ident">comment_map</span>) <span class="op">=</span> <span class="ident">eprog_or_errors</span>.<span class="ident">expect</span>(<span class="string">&quot;no compilation errors&quot;</span>);
+                <span class="comment">// Add any documentation comments found by the move compiler to the env.</span>
+                <span class="kw">for</span> (<span class="ident">fname</span>, <span class="ident">documentation</span>) <span class="kw">in</span> <span class="ident">comment_map</span> {
+                    <span class="kw">let</span> <span class="ident">file_id</span> <span class="op">=</span> <span class="ident">env</span>.<span class="ident">get_file_id</span>(<span class="ident">fname</span>).<span class="ident">expect</span>(<span class="string">&quot;file name defined&quot;</span>);
+                    <span class="ident">env</span>.<span class="ident">add_documentation</span>(<span class="ident">file_id</span>, <span class="ident">documentation</span>);
+                }
                 <span class="comment">// Run the spec checker on verified units plus expanded AST. This will</span>
                 <span class="comment">// populate the environment including any errors.</span>
                 <span class="ident">run_spec_checker</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">env</span>, <span class="ident">verified_units</span>, <span class="ident">eprog</span>)<span class="question-mark">?</span>;

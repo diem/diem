@@ -1200,7 +1200,6 @@
 <span id="1200">1200</span>
 <span id="1201">1201</span>
 <span id="1202">1202</span>
-<span id="1203">1203</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1217,17 +1216,16 @@
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_imports</span>)]</span>
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>, <span class="ident">warn</span>};
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">boogie_helpers</span>::{
-        <span class="ident">boogie_byte_blob</span>, <span class="ident">boogie_declare_global</span>, <span class="ident">boogie_field_name</span>, <span class="ident">boogie_global_declarator</span>,
-        <span class="ident">boogie_local_type</span>, <span class="ident">boogie_spec_fun_name</span>, <span class="ident">boogie_spec_var_name</span>, <span class="ident">boogie_struct_name</span>,
-        <span class="ident">boogie_type_value</span>, <span class="ident">boogie_well_formed_expr</span>, <span class="ident">WellFormedMode</span>,
-    },
-    <span class="ident">code_writer</span>::<span class="ident">CodeWriter</span>,
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">boogie_helpers</span>::{
+    <span class="ident">boogie_byte_blob</span>, <span class="ident">boogie_declare_global</span>, <span class="ident">boogie_field_name</span>, <span class="ident">boogie_global_declarator</span>,
+    <span class="ident">boogie_local_type</span>, <span class="ident">boogie_spec_fun_name</span>, <span class="ident">boogie_spec_var_name</span>, <span class="ident">boogie_struct_name</span>,
+    <span class="ident">boogie_type_value</span>, <span class="ident">boogie_well_formed_expr</span>, <span class="ident">WellFormedMode</span>,
 };
 <span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
 <span class="kw">use</span> <span class="ident">spec_lang</span>::{
     <span class="ident">ast</span>::{<span class="ident">Condition</span>, <span class="ident">ConditionKind</span>, <span class="ident">Exp</span>, <span class="ident">LocalVarDecl</span>, <span class="ident">Operation</span>, <span class="ident">Value</span>},
+    <span class="ident">code_writer</span>::<span class="ident">CodeWriter</span>,
+    <span class="ident">emit</span>, <span class="ident">emitln</span>,
     <span class="ident">env</span>::<span class="ident">GlobalEnv</span>,
     <span class="ident">symbol</span>::<span class="ident">Symbol</span>,
 };

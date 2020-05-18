@@ -1615,6 +1615,7 @@
 <span id="1615">1615</span>
 <span id="1616">1616</span>
 <span id="1617">1617</span>
+<span id="1618">1618</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1628,6 +1629,8 @@
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>, <span class="ident">log</span>, <span class="ident">warn</span>, <span class="ident">Level</span>};
 
 <span class="kw">use</span> <span class="ident">spec_lang</span>::{
+    <span class="ident">code_writer</span>::<span class="ident">CodeWriter</span>,
+    <span class="ident">emit</span>, <span class="ident">emitln</span>,
     <span class="ident">env</span>::{<span class="ident">GlobalEnv</span>, <span class="ident">Loc</span>, <span class="ident">ModuleEnv</span>, <span class="ident">StructEnv</span>, <span class="ident">TypeParameter</span>},
     <span class="ident">ty</span>::{<span class="ident">PrimitiveType</span>, <span class="ident">Type</span>},
 };
@@ -1649,7 +1652,6 @@
         <span class="ident">boogie_well_formed_check</span>, <span class="ident">WellFormedMode</span>,
     },
     <span class="ident">cli</span>::{<span class="ident">Options</span>, <span class="ident">VerificationScope</span>},
-    <span class="ident">code_writer</span>::<span class="ident">CodeWriter</span>,
     <span class="ident">spec_translator</span>::<span class="ident">SpecTranslator</span>,
 };
 

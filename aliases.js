@@ -20,6 +20,7 @@ ALIASES["crash_handler"] = {};
 ALIASES["datatest_stable"] = {};
 ALIASES["debug_interface"] = {};
 ALIASES["disassembler"] = {};
+ALIASES["docgen"] = {};
 ALIASES["execution_correctness"] = {};
 ALIASES["executor"] = {};
 ALIASES["executor_benchmark"] = {};

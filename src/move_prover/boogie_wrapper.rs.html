@@ -1217,6 +1217,7 @@
 <span id="1217">1217</span>
 <span id="1218">1218</span>
 <span id="1219">1219</span>
+<span id="1220">1220</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1241,11 +1242,12 @@
 <span class="kw">use</span> <span class="ident">regex</span>::<span class="ident">Regex</span>;
 
 <span class="kw">use</span> <span class="ident">spec_lang</span>::{
+    <span class="ident">code_writer</span>::<span class="ident">CodeWriter</span>,
     <span class="ident">env</span>::{<span class="ident">FunId</span>, <span class="ident">GlobalEnv</span>, <span class="ident">Loc</span>, <span class="ident">ModuleId</span>, <span class="ident">StructId</span>},
     <span class="ident">ty</span>::{<span class="ident">PrimitiveType</span>, <span class="ident">Type</span>},
 };
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">cli</span>::<span class="ident">Options</span>, <span class="ident">code_writer</span>::<span class="ident">CodeWriter</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">cli</span>::<span class="ident">Options</span>;
 <span class="comment">// DENUG</span>
 <span class="comment">// use backtrace::Backtrace;</span>
 <span class="kw">use</span> <span class="ident">stackless_bytecode_generator</span>::{
