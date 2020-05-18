@@ -71,6 +71,7 @@ enum Container {
     U64(Vec<u64>),
     U128(Vec<u128>),
     Bool(Vec<bool>),
+    Address(Vec<AccountAddress>),
 }
 
 /// A ContainerRef is a direct reference to a container, which could live either in the frame
@@ -190,6 +191,7 @@ impl Container {
             U64(v) => v.len(),
             U128(v) => v.len(),
             Bool(v) => v.len(),
+            Address(v) => v.len(),
         }
     }
 }
@@ -342,6 +344,7 @@ impl Container {
             U64(v) => U64(v.clone()),
             U128(v) => U128(v.clone()),
             Bool(v) => Bool(v.clone()),
+            Address(v) => Address(v.clone()),
         }
     }
 }
@@ -438,6 +441,7 @@ impl Container {
                 (U64(l), U64(r)) => l == r,
                 (U128(l), U128(r)) => l == r,
                 (Bool(l), Bool(r)) => l == r,
+                (Address(l), Address(r)) => l == r,
                 _ => {
                     return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(
                         format!("cannot compare container values: {:?}, {:?}", self, other),
@@ -468,6 +472,7 @@ impl IndexedRef {
             (U64(v1), U64(v2)) => v1[self.idx] == v2[other.idx],
             (U128(v1), U128(v2)) => v1[self.idx] == v2[other.idx],
             (Bool(v1), Bool(v2)) => v1[self.idx] == v2[other.idx],
+            (Address(v1), Address(v2)) => v1[self.idx] == v2[other.idx],
 
             // Equality between a generic and a specialized container.
             (General(v1), U8(v2)) => *v1[self.idx].as_value_ref::<u8>()? == v2[other.idx],
@@ -481,6 +486,13 @@ impl IndexedRef {
 
             (General(v1), Bool(v2)) => *v1[self.idx].as_value_ref::<bool>()? == v2[other.idx],
             (Bool(v1), General(v2)) => v1[self.idx] == *v2[other.idx].as_value_ref::<bool>()?,
+
+            (General(v1), Address(v2)) => {
+                *v1[self.idx].as_value_ref::<AccountAddress>()? == v2[other.idx]
+            }
+            (Address(v1), General(v2)) => {
+                v1[self.idx] == *v2[other.idx].as_value_ref::<AccountAddress>()?
+            }
 
             // All other combinations are illegal.
             _ => {
@@ -522,6 +534,7 @@ impl IndexedRef {
             U64(v) => ValueImpl::U64(v[self.idx]),
             U128(v) => ValueImpl::U128(v[self.idx]),
             Bool(v) => ValueImpl::Bool(v[self.idx]),
+            Address(v) => ValueImpl::Address(v[self.idx]),
         };
 
         Ok(Value(res))
@@ -967,6 +980,7 @@ impl VMValueCast<Vec<Value>> for Value {
                 Container::U64(vs) => vs.into_iter().map(Value::u64).collect(),
                 Container::U128(vs) => vs.into_iter().map(Value::u128).collect(),
                 Container::Bool(vs) => vs.into_iter().map(Value::bool).collect(),
+                Container::Address(vs) => vs.into_iter().map(Value::address).collect(),
             }),
             v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot cast {:?} to vector of values", v,))),
@@ -1385,7 +1399,7 @@ pub mod vector {
             | (Type::U64, Container::U64(_))
             | (Type::U128, Container::U128(_))
             | (Type::Bool, Container::Bool(_))
-            | (Type::Address, Container::General(_))
+            | (Type::Address, Container::Address(_))
             | (Type::Signer, Container::General(_))
             | (Type::Vector(_), Container::General(_))
             | (Type::Struct(_), Container::General(_)) => Ok(()),
@@ -1429,12 +1443,11 @@ pub mod vector {
             Type::U64 => Container::U64(vec![]),
             Type::U128 => Container::U128(vec![]),
             Type::Bool => Container::Bool(vec![]),
+            Type::Address => Container::Address(vec![]),
 
-            Type::Address
-            | Type::Signer
-            | Type::Vector(_)
-            | Type::Struct(_)
-            | Type::StructInstantiation(_, _) => Container::General(vec![]),
+            Type::Signer | Type::Vector(_) | Type::Struct(_) | Type::StructInstantiation(_, _) => {
+                Container::General(vec![])
+            }
 
             Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
                 return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
@@ -1467,6 +1480,7 @@ pub mod vector {
             Container::U64(v) => v.len(),
             Container::U128(v) => v.len(),
             Container::Bool(v) => v.len(),
+            Container::Address(v) => v.len(),
             Container::General(v) => v.len(),
         };
 
@@ -1497,6 +1511,7 @@ pub mod vector {
             Container::U64(v) => v.push(e.value_as()?),
             Container::U128(v) => v.push(e.value_as()?),
             Container::Bool(v) => v.push(e.value_as()?),
+            Container::Address(v) => v.push(e.value_as()?),
             Container::General(v) => v.push(e.0),
         }
 
@@ -1571,6 +1586,10 @@ pub mod vector {
                 Some(x) => Value::bool(x),
                 None => err_pop_empty_vec!(),
             },
+            Container::Address(v) => match v.pop() {
+                Some(x) => Value::address(x),
+                None => err_pop_empty_vec!(),
+            },
 
             Container::General(v) => match v.pop() {
                 Some(x) => Value(x),
@@ -1599,6 +1618,7 @@ pub mod vector {
             Container::U64(v) => v.is_empty(),
             Container::U128(v) => v.is_empty(),
             Container::Bool(v) => v.is_empty(),
+            Container::Address(v) => v.is_empty(),
 
             Container::General(v) => v.is_empty(),
         };
@@ -1648,6 +1668,7 @@ pub mod vector {
             Container::U64(v) => swap!(v),
             Container::U128(v) => swap!(v),
             Container::Bool(v) => swap!(v),
+            Container::Address(v) => swap!(v),
             Container::General(v) => swap!(v),
         }
 
@@ -1673,6 +1694,9 @@ impl Container {
             Self::U64(v) => AbstractMemorySize::new((v.len() * size_of::<u64>()) as u64),
             Self::U128(v) => AbstractMemorySize::new((v.len() * size_of::<u128>()) as u64),
             Self::Bool(v) => AbstractMemorySize::new((v.len() * size_of::<bool>()) as u64),
+            Self::Address(v) => {
+                AbstractMemorySize::new((v.len() * size_of::<AccountAddress>()) as u64)
+            }
         }
     }
 }
@@ -1753,7 +1777,11 @@ impl Struct {
     pub fn unpack(self) -> VMResult<impl Iterator<Item = Value>> {
         match self.0 {
             Container::General(v) => Ok(v.into_iter().map(Value)),
-            Container::U8(_) | Container::U64(_) | Container::U128(_) | Container::Bool(_) => {
+            Container::U8(_)
+            | Container::U64(_)
+            | Container::U128(_)
+            | Container::Bool(_)
+            | Container::Address(_) => {
                 Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                     .with_message("not a struct".to_string()))
             }
@@ -1891,6 +1919,7 @@ impl Display for Container {
             Self::U64(v) => display_list_of_items(v, f),
             Self::U128(v) => display_list_of_items(v, f),
             Self::Bool(v) => display_list_of_items(v, f),
+            Self::Address(v) => display_list_of_items(v, f),
         }
     }
 }
@@ -2258,6 +2287,7 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, FatType, ValueImpl> {
                     (FatType::U64, Container::U64(v)) => v.serialize(serializer),
                     (FatType::U128, Container::U128(v)) => v.serialize(serializer),
                     (FatType::Bool, Container::Bool(v)) => v.serialize(serializer),
+                    (FatType::Address, Container::Address(v)) => v.serialize(serializer),
 
                     (_, Container::General(v)) => {
                         let mut t = serializer.serialize_seq(Some(v.len()))?;
@@ -2331,6 +2361,7 @@ impl<'d> serde::de::DeserializeSeed<'d> for &FatType {
                     FatType::U64 => Container::U64(Vec::deserialize(deserializer)?),
                     FatType::U128 => Container::U128(Vec::deserialize(deserializer)?),
                     FatType::Bool => Container::Bool(Vec::deserialize(deserializer)?),
+                    FatType::Address => Container::Address(Vec::deserialize(deserializer)?),
                     layout => Container::General(
                         deserializer.deserialize_seq(VectorElementVisitor(layout))?,
                     ),
@@ -2477,6 +2508,9 @@ pub mod prop {
                 FatType::Bool => vec(any::<bool>(), 0..10)
                     .prop_map(|vals| Value(ValueImpl::new_container(Container::Bool(vals))))
                     .boxed(),
+                FatType::Address => vec(any::<AccountAddress>(), 0..10)
+                    .prop_map(|vals| Value(ValueImpl::new_container(Container::Address(vals))))
+                    .boxed(),
                 layout => vec(value_strategy_with_layout(layout), 0..10)
                     .prop_map(|vals| {
                         Value(ValueImpl::new_container(Container::General(
@@ -2540,6 +2574,7 @@ pub mod prop {
                         Container::U64(v) => v.iter().map(|u| MoveValue::U64(*u)).collect(),
                         Container::U128(v) => v.iter().map(|u| MoveValue::U128(*u)).collect(),
                         Container::Bool(b) => b.iter().map(|u| MoveValue::Bool(*u)).collect(),
+                        Container::Address(v) => v.iter().map(|u| MoveValue::Address(*u)).collect(),
                         Container::General(v) => v
                             .iter()
                             .map(|v| v.as_move_value(inner_ty.as_ref()))
