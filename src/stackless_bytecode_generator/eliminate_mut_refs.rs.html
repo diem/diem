@@ -337,6 +337,10 @@
 <span id="337">337</span>
 <span id="338">338</span>
 <span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -373,6 +377,9 @@
         <span class="ident">func_env</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionEnv</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
         <span class="kw-2">mut</span> <span class="ident">data</span>: <span class="ident">FunctionTargetData</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">FunctionTargetData</span> {
+        <span class="kw">if</span> <span class="ident">func_env</span>.<span class="ident">is_native</span>() {
+            <span class="kw">return</span> <span class="ident">data</span>;
+        }
         <span class="kw">let</span> <span class="ident">local_types</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>.<span class="ident">local_types</span>;
         <span class="kw">let</span> <span class="ident">return_types</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>.<span class="ident">return_types</span>;
 
@@ -385,6 +392,7 @@
                 <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">local_types</span>[<span class="ident">idx</span>].<span class="ident">clone</span>();
                 <span class="ident">ref_param_proxy_map</span>.<span class="ident">insert</span>(<span class="ident">idx</span>, <span class="ident">local_types</span>.<span class="ident">len</span>());
                 <span class="ident">local_types</span>.<span class="ident">push</span>(<span class="ident">ty</span>.<span class="ident">clone</span>());
+                <span class="ident">data</span>.<span class="ident">ref_param_map</span>.<span class="ident">insert</span>(<span class="ident">idx</span>, <span class="ident">return_types</span>.<span class="ident">len</span>());
                 <span class="ident">return_types</span>.<span class="ident">push</span>(<span class="ident">EliminateMutRefs</span>::<span class="ident">transform_type</span>(<span class="ident">ty</span>));
             }
         }

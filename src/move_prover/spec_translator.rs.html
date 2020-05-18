@@ -1201,16 +1201,13 @@
 <span id="1201">1201</span>
 <span id="1202">1202</span>
 <span id="1203">1203</span>
-<span id="1204">1204</span>
-<span id="1205">1205</span>
-<span id="1206">1206</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="doccomment">//! This module translates specification conditions to Boogie code.</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">cell</span>::<span class="ident">RefCell</span>, <span class="ident">collections</span>::<span class="ident">BTreeMap</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">cell</span>::<span class="ident">RefCell</span>, <span class="ident">rc</span>::<span class="ident">Rc</span>};
 
 <span class="kw">use</span> <span class="ident">spec_lang</span>::{
     <span class="ident">env</span>::{<span class="ident">FieldId</span>, <span class="ident">Loc</span>, <span class="ident">ModuleEnv</span>, <span class="ident">ModuleId</span>, <span class="ident">NodeId</span>, <span class="ident">SpecFunId</span>, <span class="ident">StructEnv</span>, <span class="ident">StructId</span>},
@@ -1252,13 +1249,13 @@
     <span class="ident">supports_native_old</span>: <span class="ident">bool</span>,
     <span class="doccomment">/// Whether we are currently in the context of translating an `old(...)` expression.</span>
     <span class="ident">in_old</span>: <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Whether we are currently translating an ensures specification.</span>
+    <span class="ident">in_ensures</span>: <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The current target for invariant fields, a pair of strings for current and old value.</span>
     <span class="ident">invariant_target</span>: <span class="ident">RefCell</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">String</span>)<span class="op">&gt;</span>,
     <span class="doccomment">/// Counter for generating fresh variables.  It&#39;s a RefCell so we can increment it without</span>
     <span class="doccomment">/// making a ton of &amp;self arguments mutable.</span>
     <span class="ident">fresh_var_count</span>: <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Local variable name to local index in bytecode</span>
-    <span class="ident">name_to_idx_map</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">Symbol</span>, <span class="ident">usize</span><span class="op">&gt;</span>,
     <span class="comment">// If we are translating in the context of a type instantiation, the type arguments.</span>
     <span class="ident">type_args_opt</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
@@ -1296,9 +1293,9 @@
             <span class="ident">writer</span>,
             <span class="ident">supports_native_old</span>,
             <span class="ident">in_old</span>: <span class="ident">RefCell</span>::<span class="ident">new</span>(<span class="bool-val">false</span>),
+            <span class="ident">in_ensures</span>: <span class="ident">RefCell</span>::<span class="ident">new</span>(<span class="bool-val">false</span>),
             <span class="ident">invariant_target</span>: <span class="ident">RefCell</span>::<span class="ident">new</span>((<span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(), <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>())),
             <span class="ident">fresh_var_count</span>: <span class="ident">RefCell</span>::<span class="ident">new</span>(<span class="number">0</span>),
-            <span class="ident">name_to_idx_map</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
             <span class="ident">type_args_opt</span>: <span class="prelude-val">None</span>,
         }
     }
@@ -1314,11 +1311,9 @@
             <span class="ident">writer</span>,
             <span class="ident">supports_native_old</span>,
             <span class="ident">in_old</span>: <span class="ident">RefCell</span>::<span class="ident">new</span>(<span class="bool-val">false</span>),
+            <span class="ident">in_ensures</span>: <span class="ident">RefCell</span>::<span class="ident">new</span>(<span class="bool-val">false</span>),
             <span class="ident">invariant_target</span>: <span class="ident">RefCell</span>::<span class="ident">new</span>((<span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(), <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>())),
             <span class="ident">fresh_var_count</span>: <span class="ident">RefCell</span>::<span class="ident">new</span>(<span class="number">0</span>),
-            <span class="ident">name_to_idx_map</span>: (<span class="number">0</span>..<span class="ident">func_target</span>.<span class="ident">get_local_count</span>())
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">idx</span><span class="op">|</span> (<span class="ident">func_target</span>.<span class="ident">get_local_name</span>(<span class="ident">idx</span>), <span class="ident">idx</span>))
-                .<span class="ident">collect</span>(),
             <span class="ident">type_args_opt</span>: <span class="prelude-val">None</span>,
         }
     }
@@ -1575,12 +1570,14 @@
         <span class="comment">// Generate ensures</span>
         <span class="kw">let</span> <span class="ident">ensures</span> <span class="op">=</span> <span class="ident">spec</span>.<span class="ident">filter_kind</span>(<span class="ident">ConditionKind</span>::<span class="ident">Ensures</span>).<span class="ident">collect_vec</span>();
         <span class="kw">if</span> <span class="op">!</span><span class="ident">ensures</span>.<span class="ident">is_empty</span>() {
+            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_ensures</span>.<span class="ident">borrow_mut</span>() <span class="op">=</span> <span class="bool-val">true</span>;
             <span class="self">self</span>.<span class="ident">translate_seq</span>(<span class="ident">ensures</span>.<span class="ident">iter</span>(), <span class="string">&quot;\n&quot;</span>, <span class="op">|</span><span class="ident">cond</span><span class="op">|</span> {
                 <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">set_location</span>(<span class="kw-2">&amp;</span><span class="ident">cond</span>.<span class="ident">loc</span>);
                 <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;ensures !$abort_flag ==&gt; (b#Boolean(&quot;</span>);
                 <span class="self">self</span>.<span class="ident">translate_exp</span>(<span class="kw-2">&amp;</span><span class="ident">cond</span>.<span class="ident">exp</span>);
                 <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;));&quot;</span>)
             });
+            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_ensures</span>.<span class="ident">borrow_mut</span>() <span class="op">=</span> <span class="bool-val">false</span>;
             <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>);
         }
     }
@@ -1702,20 +1699,13 @@
     }
 
     <span class="doccomment">/// Determines whether a before-update invariant is generated for this struct.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// We currently support two models for dealing with global spec var updates.</span>
-    <span class="doccomment">/// If the specification has explicitly provided update invariants for spec vars, we use those.</span>
-    <span class="doccomment">/// If not, we use the unpack invariants before the update, and the pack invariants</span>
-    <span class="doccomment">/// after. This function is only true for the later case.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">has_before_update_invariant</span>(<span class="ident">struct_env</span>: <span class="kw-2">&amp;</span><span class="ident">StructEnv</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="kw">let</span> <span class="ident">spec</span> <span class="op">=</span> <span class="ident">struct_env</span>.<span class="ident">get_spec</span>();
-        <span class="kw">let</span> <span class="ident">no_explict_update</span> <span class="op">=</span> <span class="op">!</span><span class="ident">spec</span>.<span class="ident">any</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="ident">c</span>.<span class="ident">kind</span>, <span class="ident">ConditionKind</span>::<span class="ident">VarUpdate</span>(..)));
-        <span class="kw">let</span> <span class="ident">has_pack</span> <span class="op">=</span> <span class="ident">spec</span>.<span class="ident">any</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="ident">c</span>.<span class="ident">kind</span>, <span class="ident">ConditionKind</span>::<span class="ident">VarPack</span>(..)));
-        <span class="ident">no_explict_update</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">has_pack</span>
-            <span class="comment">// If any of the fields has it, it inherits to the struct.</span>
-            <span class="op">|</span><span class="op">|</span> <span class="ident">struct_env</span>.<span class="ident">get_fields</span>().<span class="ident">any</span>(<span class="op">|</span><span class="ident">fe</span><span class="op">|</span> {
-                <span class="self">Self</span>::<span class="ident">has_before_update_invariant_ty</span>(<span class="ident">struct_env</span>.<span class="ident">module_env</span>.<span class="ident">env</span>, <span class="kw-2">&amp;</span><span class="ident">fe</span>.<span class="ident">get_type</span>())
-            })
+        <span class="kw">use</span> <span class="ident">ConditionKind</span>::<span class="kw-2">*</span>;
+        <span class="ident">struct_env</span>.<span class="ident">get_spec</span>().<span class="ident">any</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="ident">c</span>.<span class="ident">kind</span>, <span class="ident">VarUpdate</span>(..)<span class="op">|</span><span class="ident">VarUnpack</span>(..)<span class="op">|</span><span class="ident">Invariant</span>))
+                <span class="comment">// If any of the fields has it, it inherits to the struct.</span>
+                <span class="op">|</span><span class="op">|</span> <span class="ident">struct_env</span>.<span class="ident">get_fields</span>().<span class="ident">any</span>(<span class="op">|</span><span class="ident">fe</span><span class="op">|</span> {
+                    <span class="self">Self</span>::<span class="ident">has_before_update_invariant_ty</span>(<span class="ident">struct_env</span>.<span class="ident">module_env</span>.<span class="ident">env</span>, <span class="kw-2">&amp;</span><span class="ident">fe</span>.<span class="ident">get_type</span>())
+                })
     }
 
     <span class="doccomment">/// Determines whether a before-update invariant is generated for this type.</span>
@@ -1773,6 +1763,15 @@
             }
         }
 
+        <span class="comment">// Emit data invariants for this struct.</span>
+        <span class="kw">let</span> <span class="ident">spec</span> <span class="op">=</span> <span class="ident">struct_env</span>.<span class="ident">get_spec</span>();
+        <span class="self">self</span>.<span class="ident">emit_invariants_assume_or_assert</span>(
+            <span class="string">&quot;$before&quot;</span>,
+            <span class="string">&quot;&quot;</span>,
+            <span class="bool-val">true</span>,
+            <span class="ident">spec</span>.<span class="ident">filter_kind</span>(<span class="ident">ConditionKind</span>::<span class="ident">Invariant</span>),
+        );
+
         <span class="comment">// Emit call to spec var updates via unpack invariants.</span>
         <span class="self">self</span>.<span class="ident">emit_spec_var_updates</span>(
             <span class="string">&quot;$before&quot;</span>,
@@ -1818,7 +1817,7 @@
             <span class="ident">boogie_struct_name</span>(<span class="ident">struct_env</span>),
             <span class="self">Self</span>::<span class="ident">translate_type_parameters</span>(<span class="ident">struct_env</span>)
                 .<span class="ident">into_iter</span>()
-                .<span class="ident">chain</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;$before: Value, $after: Value&quot;</span>.<span class="ident">to_string</span>()])
+                .<span class="ident">chain</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;$after: Value&quot;</span>.<span class="ident">to_string</span>()])
                 .<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>),
         );
         <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">indent</span>();
@@ -1833,13 +1832,7 @@
                     <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="ident">ty_args</span>
                         .<span class="ident">iter</span>()
                         .<span class="ident">map</span>(<span class="op">|</span><span class="ident">ty</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">translate_type</span>(<span class="ident">ty</span>))
-                        .<span class="ident">chain</span>(
-                            <span class="macro">vec</span><span class="macro">!</span>[<span class="macro">format</span><span class="macro">!</span>(
-                                <span class="string">&quot;$SelectField($before, {}), $SelectField($after, {})&quot;</span>,
-                                <span class="ident">field_name</span>, <span class="ident">field_name</span>
-                            )]
-                            .<span class="ident">into_iter</span>(),
-                        )
+                        .<span class="ident">chain</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$SelectField($after, {})&quot;</span>, <span class="ident">field_name</span>)].<span class="ident">into_iter</span>())
                         .<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>);
                     <span class="macro">emitln</span><span class="macro">!</span>(
                         <span class="self">self</span>.<span class="ident">writer</span>,
@@ -2067,17 +2060,20 @@
 
     <span class="kw">fn</span> <span class="ident">translate_local_var</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">node_id</span>: <span class="ident">NodeId</span>, <span class="ident">name</span>: <span class="ident">Symbol</span>) {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ty</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module_env</span>().<span class="ident">get_node_type</span>(<span class="ident">node_id</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">var_name</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">module_env</span>().<span class="ident">symbol_pool</span>().<span class="ident">string</span>(<span class="ident">name</span>);
         <span class="comment">// overwrite ty if func_target provides a binding for name</span>
         <span class="kw">if</span> <span class="kw">let</span> <span class="ident">SpecEnv</span>::<span class="ident">Function</span>(<span class="ident">func_target</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">spec_env</span> {
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">local_index</span>) <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_index</span>(<span class="ident">name</span>) {
                 <span class="ident">ty</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_type</span>(<span class="kw-2">*</span><span class="ident">local_index</span>);
+                <span class="kw">if</span> <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_ensures</span>.<span class="ident">borrow</span>() <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_old</span>.<span class="ident">borrow</span>() {
+                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">return_index</span>) <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_return_index</span>(<span class="kw-2">*</span><span class="ident">local_index</span>) {
+                        <span class="ident">var_name</span> <span class="op">=</span> <span class="ident">Rc</span>::<span class="ident">new</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$ret{}&quot;</span>, <span class="ident">return_index</span>));
+                    }
+                }
             }
         };
         <span class="self">self</span>.<span class="ident">auto_dref</span>(<span class="ident">ty</span>, <span class="op">|</span><span class="op">|</span> {
-            <span class="macro">emit</span><span class="macro">!</span>(
-                <span class="self">self</span>.<span class="ident">writer</span>,
-                <span class="self">self</span>.<span class="ident">module_env</span>().<span class="ident">symbol_pool</span>().<span class="ident">string</span>(<span class="ident">name</span>).<span class="ident">as_ref</span>()
-            );
+            <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="ident">var_name</span>.<span class="ident">as_ref</span>());
         });
     }
 
@@ -2087,7 +2083,7 @@
     {
         <span class="kw">if</span> <span class="ident">ty</span>.<span class="ident">is_reference</span>() {
             <span class="comment">// Automatically dereference</span>
-            <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;$Dereference($m, &quot;</span>);
+            <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;$Dereference(&quot;</span>);
         }
         <span class="ident">f</span>();
         <span class="kw">if</span> <span class="ident">ty</span>.<span class="ident">is_reference</span>() {
@@ -2124,11 +2120,7 @@
                 <span class="self">self</span>.<span class="ident">translate_select</span>(<span class="kw-2">*</span><span class="ident">module_id</span>, <span class="kw-2">*</span><span class="ident">struct_id</span>, <span class="kw-2">*</span><span class="ident">field_id</span>, <span class="ident">args</span>)
             }
             <span class="ident">Operation</span>::<span class="ident">Local</span>(<span class="ident">sym</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">emit</span><span class="macro">!</span>(
-                    <span class="self">self</span>.<span class="ident">writer</span>,
-                    <span class="string">&quot;$GetLocal($m, $frame + {})&quot;</span>,
-                    <span class="self">self</span>.<span class="ident">name_to_idx_map</span>[<span class="ident">sym</span>],
-                );
+                <span class="self">self</span>.<span class="ident">translate_local_var</span>(<span class="ident">node_id</span>, <span class="kw-2">*</span><span class="ident">sym</span>);
             }
             <span class="ident">Operation</span>::<span class="prelude-ty">Result</span>(<span class="ident">pos</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="self">self</span>.<span class="ident">auto_dref</span>(<span class="self">self</span>.<span class="ident">function_target</span>().<span class="ident">get_return_type</span>(<span class="kw-2">*</span><span class="ident">pos</span>), <span class="op">|</span><span class="op">|</span> {
@@ -2357,7 +2349,9 @@
 
     <span class="kw">fn</span> <span class="ident">translate_old</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="kw-2">&amp;</span>[<span class="ident">Exp</span>]) {
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">supports_native_old</span> {
+            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_old</span>.<span class="ident">borrow_mut</span>() <span class="op">=</span> <span class="bool-val">true</span>;
             <span class="self">self</span>.<span class="ident">translate_primitive_call</span>(<span class="string">&quot;old&quot;</span>, <span class="ident">args</span>);
+            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_old</span>.<span class="ident">borrow_mut</span>() <span class="op">=</span> <span class="bool-val">false</span>;
         } <span class="kw">else</span> {
             <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_old</span>.<span class="ident">borrow_mut</span>() <span class="op">=</span> <span class="bool-val">true</span>;
             <span class="self">self</span>.<span class="ident">translate_exp</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>[<span class="number">0</span>]);

@@ -1078,6 +1078,7 @@
 <span id="1078">1078</span>
 <span id="1079">1079</span>
 <span id="1080">1080</span>
+<span id="1081">1081</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1184,6 +1185,7 @@
             <span class="ident">code</span>: <span class="self">self</span>.<span class="ident">code</span>,
             <span class="ident">local_types</span>: <span class="self">self</span>.<span class="ident">local_types</span>,
             <span class="ident">return_types</span>: <span class="self">self</span>.<span class="ident">func_env</span>.<span class="ident">get_return_types</span>(),
+            <span class="ident">ref_param_map</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
             <span class="ident">acquires_global_resources</span>: <span class="self">self</span>.<span class="ident">func_env</span>.<span class="ident">get_acquires_global_resources</span>(),
             <span class="ident">locations</span>: <span class="self">self</span>.<span class="ident">location_table</span>,
             <span class="ident">annotations</span>: <span class="ident">Annotations</span>::<span class="ident">default</span>(),

@@ -625,6 +625,9 @@
 <span id="625">625</span>
 <span id="626">626</span>
 <span id="627">627</span>
+<span id="628">628</span>
+<span id="629">629</span>
+<span id="630">630</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -851,11 +854,10 @@
     <span class="ident">Nop</span>(<span class="ident">AttrId</span>),
 
     <span class="ident">WriteBack</span>(<span class="ident">AttrId</span>, <span class="ident">BorrowNode</span>, <span class="ident">TempIndex</span>),
+    <span class="ident">Splice</span>(<span class="ident">AttrId</span>, <span class="ident">TempIndex</span>, <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">usize</span>, <span class="ident">TempIndex</span><span class="op">&gt;</span>),
 
     <span class="ident">UnpackRef</span>(<span class="ident">AttrId</span>, <span class="ident">TempIndex</span>),
     <span class="ident">PackRef</span>(<span class="ident">AttrId</span>, <span class="ident">TempIndex</span>),
-
-    <span class="ident">Splice</span>(<span class="ident">AttrId</span>, <span class="ident">TempIndex</span>, <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">usize</span>, <span class="ident">TempIndex</span><span class="op">&gt;</span>),
 }
 
 <span class="kw">impl</span> <span class="ident">Bytecode</span> {
@@ -877,6 +879,10 @@
             <span class="op">|</span> <span class="ident">PackRef</span>(<span class="ident">id</span>, ..)
             <span class="op">|</span> <span class="ident">Splice</span>(<span class="ident">id</span>, ..) <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="ident">id</span>,
         }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_exit</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+        <span class="macro">matches</span><span class="macro">!</span>(<span class="self">self</span>, <span class="ident">Bytecode</span>::<span class="ident">Ret</span>(..) <span class="op">|</span> <span class="ident">Bytecode</span>::<span class="ident">Abort</span>(..))
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_return</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {

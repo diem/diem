@@ -210,7 +210,7 @@
             <span class="ident">entry_block_ids</span>: <span class="ident">blocks</span>
                 .<span class="ident">iter</span>()
                 .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">block_id</span>, <span class="ident">block</span>)<span class="op">|</span> {
-                    <span class="kw">if</span> <span class="ident">code</span>[<span class="ident">block</span>.<span class="ident">upper</span> <span class="kw">as</span> <span class="ident">usize</span>].<span class="ident">is_return</span>() {
+                    <span class="kw">if</span> <span class="ident">code</span>[<span class="ident">block</span>.<span class="ident">upper</span> <span class="kw">as</span> <span class="ident">usize</span>].<span class="ident">is_exit</span>() {
                         <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">block_id</span>)
                     } <span class="kw">else</span> {
                         <span class="prelude-val">None</span>

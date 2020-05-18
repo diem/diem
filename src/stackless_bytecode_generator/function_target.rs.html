@@ -328,6 +328,16 @@
 <span id="328">328</span>
 <span id="329">329</span>
 <span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -367,6 +377,7 @@
     <span class="kw">pub</span> <span class="ident">code</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Bytecode</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">local_types</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">return_types</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">ref_param_map</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">usize</span>, <span class="ident">usize</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">acquires_global_resources</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">StructId</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">locations</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">AttrId</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">annotations</span>: <span class="ident">Annotations</span>,
@@ -543,6 +554,15 @@
     <span class="doccomment">/// Gets acquired resources</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_acquires_global_resources</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span>[<span class="ident">StructId</span>] {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data</span>.<span class="ident">acquires_global_resources</span>
+    }
+
+    <span class="doccomment">/// Gets index of return parameter for a reference input parameter</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_return_index</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">idx</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">usize</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">data</span>.<span class="ident">ref_param_map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">idx</span>)
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">call_ends_lifetime</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+        <span class="self">self</span>.<span class="ident">is_public</span>() <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">get_return_types</span>().<span class="ident">iter</span>().<span class="ident">all</span>(<span class="op">|</span><span class="ident">ty</span><span class="op">|</span> <span class="op">!</span><span class="ident">ty</span>.<span class="ident">is_reference</span>())
     }
 }
 
