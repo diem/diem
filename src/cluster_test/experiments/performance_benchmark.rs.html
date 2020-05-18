@@ -207,6 +207,11 @@
 <span id="207">207</span>
 <span id="208">208</span>
 <span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -363,11 +368,16 @@
         }
         <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">unix_timestamp_now</span>() <span class="op">-</span> <span class="ident">buffer</span>;
         <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">end</span> <span class="op">-</span> <span class="ident">window</span> <span class="op">+</span> <span class="number">2</span> <span class="op">*</span> <span class="ident">buffer</span>;
-        <span class="kw">let</span> (<span class="ident">avg_tps</span>, <span class="ident">avg_latency</span>) <span class="op">=</span> <span class="ident">stats</span>::<span class="ident">txn_stats</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">prometheus</span>, <span class="ident">start</span>, <span class="ident">end</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> (<span class="ident">avg_tps</span>, <span class="ident">_avg_latency</span>) <span class="op">=</span> <span class="ident">stats</span>::<span class="ident">txn_stats</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">prometheus</span>, <span class="ident">start</span>, <span class="ident">end</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">avg_txns_per_block</span> <span class="op">=</span> <span class="ident">stats</span>::<span class="ident">avg_txns_per_block</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">prometheus</span>, <span class="ident">start</span>, <span class="ident">end</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">avg_latency_client</span> <span class="op">=</span> <span class="ident">stats</span>.<span class="ident">latency</span> <span class="op">/</span> <span class="ident">stats</span>.<span class="ident">committed</span>;
         <span class="macro">info</span><span class="macro">!</span>(
             <span class="string">&quot;Link to dashboard : {}&quot;</span>,
             <span class="ident">context</span>.<span class="ident">prometheus</span>.<span class="ident">link_to_dashboard</span>(<span class="ident">start</span>, <span class="ident">end</span>)
+        );
+        <span class="macro">info</span><span class="macro">!</span>(
+            <span class="string">&quot;Tx status from client side: txn {}, avg latency {}&quot;</span>,
+            <span class="ident">stats</span>.<span class="ident">committed</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="ident">avg_latency_client</span>
         );
         <span class="kw">let</span> <span class="ident">instance_configs</span> <span class="op">=</span> <span class="ident">instance</span>::<span class="ident">instance_configs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">down_validators</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">futures</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">instance_configs</span>
@@ -389,7 +399,7 @@
         <span class="ident">context</span>.<span class="ident">report</span>.<span class="ident">report_metric</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="string">&quot;avg_tps&quot;</span>, <span class="ident">avg_tps</span>);
         <span class="ident">context</span>
             .<span class="ident">report</span>
-            .<span class="ident">report_metric</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="string">&quot;avg_latency&quot;</span>, <span class="ident">avg_latency</span>);
+            .<span class="ident">report_metric</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="string">&quot;avg_latency&quot;</span>, <span class="ident">avg_latency_client</span> <span class="kw">as</span> <span class="ident">f64</span>);
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;avg_txns_per_block: {}&quot;</span>, <span class="ident">avg_txns_per_block</span>);
         <span class="kw">let</span> <span class="ident">expired_text</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">expired_txn</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
             <span class="string">&quot;no expired txns&quot;</span>.<span class="ident">to_string</span>()
@@ -398,7 +408,7 @@
         };
         <span class="ident">context</span>.<span class="ident">report</span>.<span class="ident">report_text</span>(<span class="macro">format</span><span class="macro">!</span>(
             <span class="string">&quot;{} : {:.0} TPS, {:.1} ms latency, {}&quot;</span>,
-            <span class="self">self</span>, <span class="ident">avg_tps</span>, <span class="ident">avg_latency</span>, <span class="ident">expired_text</span>
+            <span class="self">self</span>, <span class="ident">avg_tps</span>, <span class="ident">avg_latency_client</span>, <span class="ident">expired_text</span>
         ));
         <span class="prelude-val">Ok</span>(())
     }
