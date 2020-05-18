@@ -30,10 +30,8 @@ const KEYWORDS: &[&str] = &[
     "continue",
     "copy",
     "copyable",
-    "",
     "else",
     "false",
-    "fun",
     "if",
     "invariant",
     "let",
@@ -49,6 +47,8 @@ const KEYWORDS: &[&str] = &[
     "true",
     "use",
     "while",
+    "fun",
+    "script",
 ];
 
 const WEAK_KEYWORDS: &[&str] = &[
@@ -86,7 +86,7 @@ pub struct DocgenOptions {
     pub specs_inlined: bool,
     /// Whether to include Move implementations.
     pub include_impl: bool,
-    /// Max depth of entries in table-of-contents
+    /// Max depth to which sections are displayed in table-of-contents.
     pub toc_depth: usize,
     /// Whether to use collapsed sections (<details>) for impl and specs
     pub collapsed_sections: bool,
@@ -114,7 +114,7 @@ pub struct Docgen<'env> {
     toc: RefCell<VecDeque<Vec<TocEntry>>>,
 }
 
-/// A table-of-content entry.
+/// A table-of-contents entry.
 #[derive(Debug, Default)]
 struct TocEntry {
     label: String,
@@ -148,7 +148,7 @@ impl<'env> Docgen<'env> {
     pub fn gen(&mut self) {
         emitln!(
             self.writer,
-            "{} Table of Content",
+            "{} Table of Contents",
             self.repeat_str("#", self.options.section_level_start + 1)
         );
         let toc_label = self.writer.create_label();
@@ -437,7 +437,7 @@ impl<'env> Docgen<'env> {
                 block.target,
                 SpecBlockTarget::Schema(..) | SpecBlockTarget::Module
             ) {
-                // Switch target if its not a schema or module. Those will be associated with
+                // Switch target if it's not a schema or module. Those will be associated with
                 // the last target.
                 current_target = block.target.clone();
             }

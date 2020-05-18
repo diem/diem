@@ -47,31 +47,31 @@ fragments are all equivalent and associate documentation with function `f`:
 
 ```move
 struct T {}
-/// This is a line
+/// This is a documentation comment for `f`.
 
-/// This is another line
+/// This is another documentation comment for `f`.
 fun f() { ... }
 ```
 
 ```move
 struct T {}
-/// This is a line
-/// This is another line
+/// This is a documentation comment for `f`.
+/// This is another documentation comment for `f`.
 fun f() { ... }
 ```
 
 ```move
 struct T {}
-/// This is a line
-/** This is another line */
+/// This is a documentation comment for `f`.
+/** This is another documentation comment for `f`. */
 fun f() { ... }
 ```
 
 ```move
 struct T {}
 /**
-This is a line
-This is another line
+This is a documentation comment for `f`.
+This is another documentation comment for `f`.
 */
 fun f() { ... }
 ```
@@ -176,7 +176,7 @@ module M {
 ```
 
 Notice that one can enforce an association of subsequent spec blocks by introducing a dummy, empty spec block.
-Because such blocks don't declare properties, they are not appearing in the generated docs:
+Because such blocks don't declare properties, they do not appear in the generated docs:
 
 ```move
 module M {

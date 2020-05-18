@@ -1,4 +1,4 @@
-## Table of Content
+## Table of Contents
 -  [Module `0x0::LibraDocTest`](#0x0_LibraDocTest)
     -  [Struct `T`](#0x0_LibraDocTest_T)
     -  [Struct `MintCapability`](#0x0_LibraDocTest_MintCapability)

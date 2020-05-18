@@ -43,7 +43,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
 
     options.docgen_options.specs_inlined = true;
     options.docgen_options.collapsed_sections = false;
-    test_docgen(path, options.clone(), "spec_inline_no_fold.md")?;
+    test_docgen(path, options, "spec_inline_no_fold.md")?;
 
     Ok(())
 }
