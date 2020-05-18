@@ -526,6 +526,54 @@
 <span id="526">526</span>
 <span id="527">527</span>
 <span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
+<span id="562">562</span>
+<span id="563">563</span>
+<span id="564">564</span>
+<span id="565">565</span>
+<span id="566">566</span>
+<span id="567">567</span>
+<span id="568">568</span>
+<span id="569">569</span>
+<span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
+<span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
+<span id="576">576</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -549,7 +597,7 @@
     <span class="ident">protocols</span>::{
         <span class="ident">discovery</span>::{<span class="self">self</span>, <span class="ident">Discovery</span>},
         <span class="ident">health_checker</span>::{<span class="self">self</span>, <span class="ident">HealthChecker</span>},
-        <span class="ident">wire</span>::<span class="ident">handshake</span>::<span class="ident">v1</span>::<span class="ident">SupportedProtocols</span>,
+        <span class="ident">wire</span>::<span class="ident">handshake</span>::<span class="ident">v1</span>::{<span class="ident">MessagingProtocolVersion</span>, <span class="ident">SupportedProtocols</span>},
     },
     <span class="ident">transport</span>,
     <span class="ident">transport</span>::<span class="kw-2">*</span>,
@@ -595,15 +643,39 @@
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MAX_CONCURRENT_NETWORK_NOTIFS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">100</span>;
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MAX_CONNECTION_DELAY_MS</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">10</span> <span class="op">*</span> <span class="number">60</span> <span class="op">*</span> <span class="number">1000</span> <span class="comment">/* 10 minutes */</span>;
 
-<span class="doccomment">/// The type of the transport layer, i.e., running on memory or TCP stream,</span>
-<span class="doccomment">/// with or without Noise encryption</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">TransportType</span> {
-    <span class="ident">Memory</span>,
-    <span class="ident">MemoryNoise</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">x25519</span>::<span class="ident">PrivateKey</span><span class="op">&gt;</span>),
-    <span class="ident">PermissionlessMemoryNoise</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">x25519</span>::<span class="ident">PrivateKey</span><span class="op">&gt;</span>),
-    <span class="ident">Tcp</span>,
-    <span class="ident">TcpNoise</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">x25519</span>::<span class="ident">PrivateKey</span><span class="op">&gt;</span>),
-    <span class="ident">PermissionlessTcpNoise</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">x25519</span>::<span class="ident">PrivateKey</span><span class="op">&gt;</span>),
+<span class="comment">// TODO(philiphayes): remove when transport returns fully rendered network address</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">HANDSHAKE_VERSION</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="ident">MessagingProtocolVersion</span>::<span class="ident">V1</span> <span class="kw">as</span> <span class="ident">u8</span>;
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">AuthenticationMode</span> {
+    <span class="doccomment">/// Inbound and outbound connections are unauthenticated and unencrypted, using</span>
+    <span class="doccomment">/// a simple PeerId exchange protocol to share each peer&#39;s PeerId in-band.</span>
+    <span class="doccomment">/// This mode is obviously insecure and should never be used in production.</span>
+    <span class="comment">// TODO(philiphayes): remove? gate with cfg(test)? should never use this in prod.</span>
+    <span class="ident">Unauthenticated</span>,
+    <span class="doccomment">/// Inbound and outbound connections are secured with NoiseIK; however, only</span>
+    <span class="doccomment">/// clients/dialers will authenticate the servers/listeners. More specifically,</span>
+    <span class="doccomment">/// dialers will pin the connection to a specific, expected pubkey while</span>
+    <span class="doccomment">/// listeners will accept any inbound dialer&#39;s pubkey.</span>
+    <span class="ident">ServerOnly</span>(<span class="ident">x25519</span>::<span class="ident">PrivateKey</span>),
+    <span class="doccomment">/// Inbound and outbound connections are secured with NoiseIK. Both dialer and</span>
+    <span class="doccomment">/// listener will only accept connections that successfully authenticate to a</span>
+    <span class="doccomment">/// pubkey in their &quot;trusted peers&quot; set.</span>
+    <span class="ident">Mutual</span>(<span class="ident">x25519</span>::<span class="ident">PrivateKey</span>),
+}
+
+<span class="doccomment">/// Append the correct libranet protocols to the given base address, depending on</span>
+<span class="doccomment">/// the configured authentication mode.</span>
+<span class="kw">fn</span> <span class="ident">append_libranet_protocols</span>(
+    <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>,
+    <span class="ident">auth_mode</span>: <span class="kw-2">&amp;</span><span class="ident">AuthenticationMode</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NetworkAddress</span> {
+    <span class="kw">match</span> <span class="ident">auth_mode</span> {
+        <span class="ident">AuthenticationMode</span>::<span class="ident">Unauthenticated</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">addr</span>.<span class="ident">append_test_protos</span>(<span class="ident">HANDSHAKE_VERSION</span>),
+        <span class="ident">AuthenticationMode</span>::<span class="ident">ServerOnly</span>(<span class="ident">key</span>) <span class="op">|</span> <span class="ident">AuthenticationMode</span>::<span class="ident">Mutual</span>(<span class="ident">key</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">addr</span>.<span class="ident">append_prod_protos</span>(<span class="ident">key</span>.<span class="ident">public_key</span>(), <span class="ident">HANDSHAKE_VERSION</span>)
+        }
+    }
 }
 
 <span class="doccomment">/// Build Network module with custom configuration values.</span>
@@ -611,15 +683,18 @@
 <span class="doccomment">/// MempoolNetworkHandler and ConsensusNetworkHandler are constructed by calling</span>
 <span class="doccomment">/// [`NetworkBuilder::build`].  New instances of `NetworkBuilder` are obtained</span>
 <span class="doccomment">/// via [`NetworkBuilder::new`].</span>
+<span class="comment">// TODO(philiphayes): refactor NetworkBuilder and libra-node; current config is</span>
+<span class="comment">// pretty tangled.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NetworkBuilder</span> {
     <span class="ident">executor</span>: <span class="ident">Handle</span>,
     <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
-    <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>,
     <span class="ident">role</span>: <span class="ident">RoleType</span>,
+    <span class="comment">// TODO(philiphayes): better support multiple listening addrs</span>
+    <span class="ident">listen_address</span>: <span class="ident">NetworkAddress</span>,
     <span class="ident">advertised_address</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span>,
     <span class="ident">seed_peers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">trusted_peers</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">NetworkPublicKeys</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">transport</span>: <span class="ident">TransportType</span>,
+    <span class="ident">authentication_mode</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AuthenticationMode</span><span class="op">&gt;</span>,
     <span class="ident">channel_size</span>: <span class="ident">usize</span>,
     <span class="ident">direct_send_protocols</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ProtocolId</span><span class="op">&gt;</span>,
     <span class="ident">rpc_protocols</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ProtocolId</span><span class="op">&gt;</span>,
@@ -643,7 +718,6 @@
     <span class="ident">max_concurrent_network_notifs</span>: <span class="ident">usize</span>,
     <span class="ident">max_connection_delay_ms</span>: <span class="ident">u64</span>,
     <span class="ident">signing_keypair</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">Ed25519PrivateKey</span>, <span class="ident">Ed25519PublicKey</span>)<span class="op">&gt;</span>,
-    <span class="ident">enable_remote_authentication</span>: <span class="ident">bool</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">NetworkBuilder</span> {
@@ -651,8 +725,8 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">executor</span>: <span class="ident">Handle</span>,
         <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
-        <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>,
         <span class="ident">role</span>: <span class="ident">RoleType</span>,
+        <span class="ident">listen_address</span>: <span class="ident">NetworkAddress</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NetworkBuilder</span> {
         <span class="comment">// Setup channel to send requests to peer manager.</span>
         <span class="kw">let</span> (<span class="ident">pm_reqs_tx</span>, <span class="ident">pm_reqs_rx</span>) <span class="op">=</span> <span class="ident">libra_channel</span>::<span class="ident">new</span>(
@@ -669,11 +743,12 @@
         <span class="ident">NetworkBuilder</span> {
             <span class="ident">executor</span>,
             <span class="ident">peer_id</span>,
-            <span class="ident">addr</span>,
             <span class="ident">role</span>,
+            <span class="ident">listen_address</span>,
             <span class="ident">advertised_address</span>: <span class="prelude-val">None</span>,
             <span class="ident">seed_peers</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
             <span class="ident">trusted_peers</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">RwLock</span>::<span class="ident">new</span>(<span class="ident">HashMap</span>::<span class="ident">new</span>())),
+            <span class="ident">authentication_mode</span>: <span class="prelude-val">None</span>,
             <span class="ident">channel_size</span>: <span class="ident">NETWORK_CHANNEL_SIZE</span>,
             <span class="ident">direct_send_protocols</span>: <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="ident">rpc_protocols</span>: <span class="macro">vec</span><span class="macro">!</span>[],
@@ -684,7 +759,6 @@
             <span class="ident">connection_reqs_tx</span>,
             <span class="ident">connection_reqs_rx</span>,
             <span class="ident">conn_mgr_reqs_tx</span>: <span class="prelude-val">None</span>,
-            <span class="ident">transport</span>: <span class="ident">TransportType</span>::<span class="ident">Memory</span>,
             <span class="ident">discovery_interval_ms</span>: <span class="ident">DISCOVERY_INTERVAL_MS</span>,
             <span class="ident">ping_interval_ms</span>: <span class="ident">PING_INTERVAL_MS</span>,
             <span class="ident">ping_timeout_ms</span>: <span class="ident">PING_TIMEOUT_MS</span>,
@@ -697,17 +771,16 @@
             <span class="ident">max_concurrent_network_notifs</span>: <span class="ident">MAX_CONCURRENT_NETWORK_NOTIFS</span>,
             <span class="ident">max_connection_delay_ms</span>: <span class="ident">MAX_CONNECTION_DELAY_MS</span>,
             <span class="ident">signing_keypair</span>: <span class="prelude-val">None</span>,
-            <span class="ident">enable_remote_authentication</span>: <span class="bool-val">true</span>,
         }
     }
 
-    <span class="doccomment">/// Set transport type, i.e., Memory or Tcp transports.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">transport</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">transport</span>: <span class="ident">TransportType</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">transport</span> <span class="op">=</span> <span class="ident">transport</span>;
+    <span class="doccomment">/// Set network authentication mode.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">authentication_mode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">authentication_mode</span>: <span class="ident">AuthenticationMode</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+        <span class="self">self</span>.<span class="ident">authentication_mode</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">authentication_mode</span>);
         <span class="self">self</span>
     }
 
-    <span class="doccomment">/// Set and address to advertise, if different from the listen address</span>
+    <span class="doccomment">/// Set an address to advertise, if different from the listen address</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">advertised_address</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">advertised_address</span>: <span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
         <span class="self">self</span>.<span class="ident">advertised_address</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">advertised_address</span>);
         <span class="self">self</span>
@@ -814,15 +887,6 @@
         <span class="self">self</span>
     }
 
-    <span class="doccomment">/// Set the enable_remote_authentication flag to make the network operate with remote authentication.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">enable_remote_authentication</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">enable_remote_authentication</span>: <span class="ident">bool</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">enable_remote_authentication</span> <span class="op">=</span> <span class="ident">enable_remote_authentication</span>;
-        <span class="self">self</span>
-    }
-
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">conn_mgr_reqs_tx</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">ConnectivityRequest</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">conn_mgr_reqs_tx</span>.<span class="ident">clone</span>()
     }
@@ -925,9 +989,6 @@
     <span class="doccomment">/// by exchanging the full set of known peer network addresses with connected</span>
     <span class="doccomment">/// peers as a network protocol.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_gossip_discovery</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="comment">// Note: We use the `enable_remote_authentication` flag as a proxy for</span>
-        <span class="comment">// whether we need to run the discovery module or not. We should make this</span>
-        <span class="comment">// more explicit eventually.</span>
         <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">peer_id</span>;
         <span class="kw">let</span> <span class="ident">conn_mgr_reqs_tx</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">conn_mgr_reqs_tx</span>()
@@ -936,10 +997,29 @@
             <span class="self">self</span>.<span class="ident">signing_keypair</span>.<span class="ident">take</span>().<span class="ident">expect</span>(<span class="string">&quot;Signing keys not set&quot;</span>);
         <span class="comment">// Get handles for network events and sender.</span>
         <span class="kw">let</span> (<span class="ident">discovery_network_tx</span>, <span class="ident">discovery_network_rx</span>) <span class="op">=</span> <span class="ident">discovery</span>::<span class="ident">add_to_network</span>(<span class="self">self</span>);
-        <span class="kw">let</span> <span class="ident">addrs</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="self">self</span>
+
+        <span class="comment">// TODO(philiphayes): the current setup for gossip discovery doesn&#39;t work</span>
+        <span class="comment">// when we don&#39;t have an `advertised_address` set, since it uses the</span>
+        <span class="comment">// `listen_address`, which might not be bound to a port yet. For example,</span>
+        <span class="comment">// if our `listen_address` is &quot;/ip6/::1/tcp/0&quot; and `advertised_address` is</span>
+        <span class="comment">// `None`, then this will set our `advertised_address` to something like</span>
+        <span class="comment">// &quot;/ip6/::1/tcp/0/ln-noise-ik/&lt;pubkey&gt;/ln-handshake/0&quot;, which is wrong</span>
+        <span class="comment">// since the actual bound port will be something &gt; 0.</span>
+
+        <span class="comment">// TODO(philiphayes): in network_builder setup, only bind the channels.</span>
+        <span class="comment">// wait until PeerManager is running to actual setup gossip discovery.</span>
+
+        <span class="kw">let</span> <span class="ident">advertised_address</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">advertised_address</span>
             .<span class="ident">clone</span>()
-            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">addr</span>.<span class="ident">clone</span>())];
+            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>());
+        <span class="kw">let</span> <span class="ident">authentication_mode</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">authentication_mode</span>
+            .<span class="ident">as_ref</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;Authentication Mode not set&quot;</span>);
+        <span class="kw">let</span> <span class="ident">advertised_address</span> <span class="op">=</span> <span class="ident">append_libranet_protocols</span>(<span class="ident">advertised_address</span>, <span class="ident">authentication_mode</span>);
+
+        <span class="kw">let</span> <span class="ident">addrs</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">advertised_address</span>];
         <span class="kw">let</span> <span class="ident">trusted_peers</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">trusted_peers</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">role</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">role</span>;
         <span class="kw">let</span> <span class="ident">discovery_interval_ms</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">discovery_interval_ms</span>;
@@ -984,48 +1064,60 @@
     <span class="doccomment">/// Create the configured transport and start PeerManager.</span>
     <span class="doccomment">/// Return the actual NetworkAddress over which this peer is listening.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build</span>(<span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NetworkAddress</span> {
+        <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">Protocol</span>::<span class="kw-2">*</span>;
+
         <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">peer_id</span>;
-        <span class="kw">let</span> <span class="ident">supported_protocols</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">supported_protocols</span>();
-        <span class="comment">// Build network based on the transport type</span>
+        <span class="kw">let</span> <span class="ident">protos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">supported_protocols</span>();
+
         <span class="kw">let</span> <span class="ident">trusted_peers</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">trusted_peers</span>.<span class="ident">clone</span>();
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">transport</span> {
-            <span class="ident">TransportType</span>::<span class="ident">Memory</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="self">self</span>.<span class="ident">build_with_transport</span>(<span class="ident">build_memory_transport</span>(<span class="ident">peer_id</span>, <span class="ident">supported_protocols</span>))
-            }
-            <span class="ident">TransportType</span>::<span class="ident">MemoryNoise</span>(<span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">keys</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">keys</span> <span class="op">=</span> <span class="ident">keys</span>.<span class="ident">take</span>().<span class="ident">expect</span>(<span class="string">&quot;Identity keys not set&quot;</span>);
-                <span class="self">self</span>.<span class="ident">build_with_transport</span>(<span class="ident">build_memory_noise_transport</span>(
-                    <span class="ident">keys</span>,
-                    <span class="ident">trusted_peers</span>,
-                    <span class="ident">supported_protocols</span>,
-                ))
-            }
-            <span class="ident">TransportType</span>::<span class="ident">PermissionlessMemoryNoise</span>(<span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">keys</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">keys</span> <span class="op">=</span> <span class="ident">keys</span>.<span class="ident">take</span>().<span class="ident">expect</span>(<span class="string">&quot;Identity keys not set&quot;</span>);
-                <span class="self">self</span>.<span class="ident">build_with_transport</span>(<span class="ident">build_unauthenticated_memory_noise_transport</span>(
-                    <span class="ident">keys</span>,
-                    <span class="ident">supported_protocols</span>,
-                ))
-            }
-            <span class="ident">TransportType</span>::<span class="ident">Tcp</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="self">self</span>.<span class="ident">build_with_transport</span>(<span class="ident">build_tcp_transport</span>(<span class="ident">peer_id</span>, <span class="ident">supported_protocols</span>))
-            }
-            <span class="ident">TransportType</span>::<span class="ident">TcpNoise</span>(<span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">keys</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">keys</span> <span class="op">=</span> <span class="ident">keys</span>.<span class="ident">take</span>().<span class="ident">expect</span>(<span class="string">&quot;Identity keys not set&quot;</span>);
-                <span class="self">self</span>.<span class="ident">build_with_transport</span>(<span class="ident">build_tcp_noise_transport</span>(
-                    <span class="ident">keys</span>,
-                    <span class="ident">trusted_peers</span>,
-                    <span class="ident">supported_protocols</span>,
-                ))
-            }
-            <span class="ident">TransportType</span>::<span class="ident">PermissionlessTcpNoise</span>(<span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">keys</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">keys</span> <span class="op">=</span> <span class="ident">keys</span>.<span class="ident">take</span>().<span class="ident">expect</span>(<span class="string">&quot;Identity keys not set&quot;</span>);
-                <span class="self">self</span>.<span class="ident">build_with_transport</span>(<span class="ident">build_unauthenticated_tcp_noise_transport</span>(
-                    <span class="ident">keys</span>,
-                    <span class="ident">supported_protocols</span>,
-                ))
-            }
-        }
+        <span class="kw">let</span> <span class="ident">authentication_mode</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">authentication_mode</span>
+            .<span class="ident">take</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;Authentication Mode not set&quot;</span>);
+
+        <span class="comment">// formatting the listen address here is a temporary hack until `transport.rs`</span>
+        <span class="comment">// gets refactored and returns the fully rendered listen_addr in</span>
+        <span class="comment">// `Transport::listen_on()`.</span>
+
+        <span class="comment">// would like to do this in `build_with_transport` but ownership is very</span>
+        <span class="comment">// tricky here since the private keys aren&#39;t cloneable and we don&#39;t have</span>
+        <span class="comment">// a safe key container yet...</span>
+        <span class="kw">let</span> <span class="ident">unbound_listen_addr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">unbound_len</span> <span class="op">=</span> <span class="ident">unbound_listen_addr</span>.<span class="ident">len</span>();
+        <span class="kw">let</span> <span class="ident">unbound_listen_addr</span> <span class="op">=</span>
+            <span class="ident">append_libranet_protocols</span>(<span class="ident">unbound_listen_addr</span>, <span class="kw-2">&amp;</span><span class="ident">authentication_mode</span>);
+
+        <span class="kw">let</span> <span class="ident">bound_listen_addr</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">listen_address</span>.<span class="ident">as_slice</span>() {
+            [<span class="ident">Ip4</span>(<span class="kw">_</span>), <span class="ident">Tcp</span>(<span class="kw">_</span>)] <span class="op">|</span> [<span class="ident">Ip6</span>(<span class="kw">_</span>), <span class="ident">Tcp</span>(<span class="kw">_</span>)] <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">authentication_mode</span> {
+                <span class="ident">AuthenticationMode</span>::<span class="ident">Unauthenticated</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="self">self</span>.<span class="ident">build_with_transport</span>(<span class="ident">build_tcp_transport</span>(<span class="ident">peer_id</span>, <span class="ident">protos</span>))
+                }
+                <span class="ident">AuthenticationMode</span>::<span class="ident">ServerOnly</span>(<span class="ident">key</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>
+                    .<span class="ident">build_with_transport</span>(<span class="ident">build_unauthenticated_tcp_noise_transport</span>(<span class="ident">key</span>, <span class="ident">protos</span>)),
+                <span class="ident">AuthenticationMode</span>::<span class="ident">Mutual</span>(<span class="ident">key</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="self">self</span>.<span class="ident">build_with_transport</span>(<span class="ident">build_tcp_noise_transport</span>(<span class="ident">key</span>, <span class="ident">trusted_peers</span>, <span class="ident">protos</span>))
+                }
+            },
+            [<span class="ident">Memory</span>(<span class="kw">_</span>)] <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">authentication_mode</span> {
+                <span class="ident">AuthenticationMode</span>::<span class="ident">Unauthenticated</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="self">self</span>.<span class="ident">build_with_transport</span>(<span class="ident">build_memory_transport</span>(<span class="ident">peer_id</span>, <span class="ident">protos</span>))
+                }
+                <span class="ident">AuthenticationMode</span>::<span class="ident">ServerOnly</span>(<span class="ident">key</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">build_with_transport</span>(
+                    <span class="ident">build_unauthenticated_memory_noise_transport</span>(<span class="ident">key</span>, <span class="ident">protos</span>),
+                ),
+                <span class="ident">AuthenticationMode</span>::<span class="ident">Mutual</span>(<span class="ident">key</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>
+                    .<span class="ident">build_with_transport</span>(<span class="ident">build_memory_noise_transport</span>(<span class="ident">key</span>, <span class="ident">trusted_peers</span>, <span class="ident">protos</span>)),
+            },
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(
+                <span class="string">&quot;Unsupported listen_address: &#39;{}&#39;, expected &#39;/memory/&lt;port&gt;&#39;, \
+                 &#39;/ip4/&lt;addr&gt;/tcp/&lt;port&gt;&#39;, or &#39;/ip6/&lt;addr&gt;/tcp/&lt;port&gt;&#39;.&quot;</span>,
+                <span class="self">self</span>.<span class="ident">listen_address</span>
+            ),
+        };
+
+        <span class="comment">// do some surgery here...</span>
+        <span class="kw">let</span> <span class="ident">libranet_protos</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">unbound_listen_addr</span>.<span class="ident">as_slice</span>()[<span class="ident">unbound_len</span>..];
+        <span class="ident">bound_listen_addr</span>.<span class="ident">extend_from_slice</span>(<span class="ident">libranet_protos</span>)
     }
 
     <span class="doccomment">/// Given a transport build and launch PeerManager.</span>
@@ -1040,7 +1132,9 @@
             <span class="ident">transport</span>,
             <span class="self">self</span>.<span class="ident">peer_id</span>,
             <span class="self">self</span>.<span class="ident">role</span>,
-            <span class="self">self</span>.<span class="ident">addr</span>,
+            <span class="comment">// TODO(philiphayes): peer manager should take `Vec&lt;NetworkAddress&gt;`</span>
+            <span class="comment">// (which could be empty, like in client use case)</span>
+            <span class="self">self</span>.<span class="ident">listen_address</span>,
             <span class="self">self</span>.<span class="ident">pm_reqs_rx</span>,
             <span class="self">self</span>.<span class="ident">connection_reqs_rx</span>,
             <span class="self">self</span>.<span class="ident">upstream_handlers</span>,
@@ -1050,8 +1144,10 @@
             <span class="self">self</span>.<span class="ident">channel_size</span>,
         );
         <span class="kw">let</span> <span class="ident">listen_addr</span> <span class="op">=</span> <span class="ident">peer_mgr</span>.<span class="ident">listen_addr</span>().<span class="ident">clone</span>();
+
         <span class="self">self</span>.<span class="ident">executor</span>.<span class="ident">spawn</span>(<span class="ident">peer_mgr</span>.<span class="ident">start</span>());
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Started peer manager&quot;</span>);
+
         <span class="ident">listen_addr</span>
     }
 }

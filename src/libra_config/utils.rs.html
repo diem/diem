@@ -81,8 +81,6 @@
 <span id="81">81</span>
 <span id="82">82</span>
 <span id="83">83</span>
-<span id="84">84</span>
-<span id="85">85</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -143,9 +141,7 @@
     } <span class="kw">else</span> {
         <span class="ident">Protocol</span>::<span class="ident">Ip6</span>(<span class="string">&quot;::1&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())
     };
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">NetworkAddress</span>::<span class="ident">from</span>(<span class="ident">ip_proto</span>);
-    <span class="ident">addr</span>.<span class="ident">push</span>(<span class="ident">Protocol</span>::<span class="ident">Tcp</span>(<span class="ident">get_available_port</span>()));
-    <span class="ident">addr</span>
+    <span class="ident">NetworkAddress</span>::<span class="ident">from</span>(<span class="ident">ip_proto</span>).<span class="ident">push</span>(<span class="ident">Protocol</span>::<span class="ident">Tcp</span>(<span class="ident">get_available_port</span>()))
 }
 
 <span class="doccomment">/// Serialize HashMaps as BTreeMaps for consistent ordering</span>

@@ -400,6 +400,17 @@
 <span id="400">400</span>
 <span id="401">401</span>
 <span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -439,6 +450,9 @@
 <span class="kw">const</span> <span class="ident">GENESIS_SEED</span>: [<span class="ident">u8</span>; <span class="number">32</span>] <span class="op">=</span> [<span class="number">42</span>; <span class="number">32</span>];
 
 <span class="kw">const</span> <span class="ident">GENESIS_MODULE_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;Genesis&quot;</span>;
+
+<span class="comment">// TODO(philiphayes): probably not the right place to put this...</span>
+<span class="kw">const</span> <span class="ident">HANDSHAKE_VERSION</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="number">0</span>;
 
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">GENESIS_KEYPAIR</span>: <span class="ident">Lazy</span><span class="op">&lt;</span>(<span class="ident">Ed25519PrivateKey</span>, <span class="ident">Ed25519PublicKey</span>)<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">StdRng</span>::<span class="ident">from_seed</span>(<span class="ident">GENESIS_SEED</span>);
@@ -788,15 +802,23 @@
             <span class="kw">let</span> <span class="ident">network</span> <span class="op">=</span> <span class="ident">n</span>.<span class="ident">validator_network</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
             <span class="kw">let</span> <span class="ident">network_keypairs</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">network_keypairs</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
             <span class="kw">let</span> <span class="ident">signing_key</span> <span class="op">=</span> <span class="ident">network_keypairs</span>.<span class="ident">signing_keypair</span>.<span class="ident">public_key</span>();
-            <span class="kw">let</span> <span class="ident">raw_advertised_address</span> <span class="op">=</span>
-                <span class="ident">RawNetworkAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">advertised_address</span>).<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">identity_key</span> <span class="op">=</span> <span class="ident">network_keypairs</span>.<span class="ident">identity_keypair</span>.<span class="ident">public_key</span>();
+
+            <span class="kw">let</span> <span class="ident">advertised_address</span> <span class="op">=</span> <span class="ident">network</span>
+                .<span class="ident">advertised_address</span>
+                .<span class="ident">clone</span>()
+                .<span class="ident">append_prod_protos</span>(<span class="ident">identity_key</span>, <span class="ident">HANDSHAKE_VERSION</span>);
+            <span class="kw">let</span> <span class="ident">raw_advertised_address</span> <span class="op">=</span> <span class="ident">RawNetworkAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span><span class="ident">advertised_address</span>).<span class="ident">unwrap</span>();
+
+            <span class="comment">// TODO(philiphayes): do something with n.full_node_networks instead</span>
+            <span class="comment">// of ignoring them?</span>
 
             <span class="kw">let</span> <span class="ident">script</span> <span class="op">=</span> <span class="ident">transaction_builder</span>::<span class="ident">encode_register_validator_script</span>(
                 <span class="ident">consensus_key</span>.<span class="ident">to_bytes</span>().<span class="ident">to_vec</span>(),
                 <span class="ident">signing_key</span>.<span class="ident">to_bytes</span>().<span class="ident">to_vec</span>(),
-                <span class="ident">network_keypairs</span>.<span class="ident">identity_keypair</span>.<span class="ident">public_key</span>().<span class="ident">to_bytes</span>(),
+                <span class="ident">identity_key</span>.<span class="ident">to_bytes</span>(),
                 <span class="ident">raw_advertised_address</span>.<span class="ident">clone</span>().<span class="ident">into</span>(),
-                <span class="ident">network_keypairs</span>.<span class="ident">identity_keypair</span>.<span class="ident">public_key</span>().<span class="ident">to_bytes</span>(),
+                <span class="ident">identity_key</span>.<span class="ident">to_bytes</span>(),
                 <span class="ident">raw_advertised_address</span>.<span class="ident">into</span>(),
             );
             (<span class="ident">account_key</span>, <span class="ident">script</span>)
