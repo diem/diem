@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{ensure, Error, Result};
-use bytes::Bytes;
 use libra_crypto::{
     hash::{CryptoHash, CryptoHasher},
     HashValue,
@@ -170,20 +169,6 @@ impl From<AccountAddress> for [u8; AccountAddress::LENGTH] {
 impl From<&AccountAddress> for [u8; AccountAddress::LENGTH] {
     fn from(addr: &AccountAddress) -> Self {
         addr.0
-    }
-}
-
-impl TryFrom<Bytes> for AccountAddress {
-    type Error = Error;
-
-    fn try_from(bytes: Bytes) -> Result<AccountAddress> {
-        AccountAddress::try_from(bytes.as_ref())
-    }
-}
-
-impl From<AccountAddress> for Bytes {
-    fn from(addr: AccountAddress) -> Bytes {
-        Bytes::copy_from_slice(addr.0.as_ref())
     }
 }
 
