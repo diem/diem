@@ -380,9 +380,12 @@ impl SubmissionWorker {
             let requests = self.gen_requests();
             let num_requests = requests.len();
             let start_time = Instant::now();
+            let mut tx_offset_time = 0u64;
             for request in requests {
+                let cur_time = Instant::now();
+                let wait_util = cur_time + wait;
+                tx_offset_time += (cur_time - start_time).as_millis() as u64;
                 self.stats.submitted.fetch_add(1, Ordering::Relaxed);
-                let wait_util = Instant::now() + wait;
                 let resp = self.client.submit_transaction(request).await;
                 if let Err(e) = resp {
                     warn!("[{:?}] Failed to submit request: {:?}", self.client, e);
@@ -396,14 +399,19 @@ impl SubmissionWorker {
                 if let Err(uncommitted) =
                     wait_for_accounts_sequence(&self.client, &mut self.accounts).await
                 {
+                    let end_time = (Instant::now() - start_time).as_millis() as u64;
+                    let num_committed = (num_requests - uncommitted.len()) as u64;
                     self.stats
                         .committed
-                        .fetch_add((num_requests - uncommitted.len()) as u64, Ordering::Relaxed);
+                        .fetch_add(num_committed, Ordering::Relaxed);
                     self.stats
                         .expired
                         .fetch_add(uncommitted.len() as u64, Ordering::Relaxed);
                     self.stats.latency.fetch_add(
-                        (Instant::now() - start_time).as_millis() as u64,
+                        // To avoid negative result caused by uncommitted tx occur
+                        // Simplified from:
+                        // end_time * num_committed - (tx_offset_time/num_requests) * num_committed
+                        (end_time - tx_offset_time / num_requests as u64) * num_committed as u64,
                         Ordering::Relaxed,
                     );
                     info!(
@@ -411,11 +419,12 @@ impl SubmissionWorker {
                         self.client, uncommitted
                     );
                 } else {
+                    let end_time = (Instant::now() - start_time).as_millis() as u64;
                     self.stats
                         .committed
                         .fetch_add(num_requests as u64, Ordering::Relaxed);
                     self.stats.latency.fetch_add(
-                        (Instant::now() - start_time).as_millis() as u64,
+                        end_time * num_requests as u64 - tx_offset_time,
                         Ordering::Relaxed,
                     );
                 }
