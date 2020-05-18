@@ -155,9 +155,14 @@ impl Experiment for PerformanceBenchmark {
         let start = end - window + 2 * buffer;
         let (avg_tps, avg_latency) = stats::txn_stats(&context.prometheus, start, end)?;
         let avg_txns_per_block = stats::avg_txns_per_block(&context.prometheus, start, end)?;
+        let avg_latency_client = stats.latency as u64 / stats.committed as u64;
         info!(
             "Link to dashboard : {}",
             context.prometheus.link_to_dashboard(start, end)
+        );
+        info!(
+            "Tx status from client side: txn {}, avg latency {}",
+            stats.committed as u64, avg_latency_client
         );
         let instance_configs = instance::instance_configs(&self.down_validators)?;
         let futures: Vec<_> = instance_configs
@@ -187,8 +192,8 @@ impl Experiment for PerformanceBenchmark {
             format!("(!) expired {} out of {} txns", expired_txn, submitted_txn)
         };
         context.report.report_text(format!(
-            "{} : {:.0} TPS, {:.1} ms latency, {}",
-            self, avg_tps, avg_latency, expired_text
+            "{} : {:.0} TPS, {:.1} ms prometheus side latency, {:.1} ms client side latency, {}",
+            self, avg_tps, avg_latency, avg_latency_client, expired_text
         ));
         Ok(())
     }

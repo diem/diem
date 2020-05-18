@@ -13,6 +13,7 @@ use crate::{
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::future::try_join_all;
+use libra_logger::info;
 use std::{
     fmt::{Display, Error, Formatter},
     time::Duration,
@@ -70,7 +71,7 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
                 context.global_emit_job_request,
             )
         };
-        context
+        let stats = context
             .tx_emitter
             .emit_txn_for(window, emit_job_request)
             .await?;
@@ -78,14 +79,19 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
         let end = unix_timestamp_now() - buffer;
         let start = end - window + 2 * buffer;
         let (avg_tps, avg_latency) = stats::txn_stats(&context.prometheus, start, end)?;
+        let avg_latency_client = stats.latency as u64 / stats.committed as u64;
+        info!(
+            "Tx status from client side: txn {}, avg latency {}",
+            stats.committed as u64, avg_latency_client
+        );
         context.cluster_swarm.remove_all_network_effects().await?;
         context.report.report_metric(&self, "avg_tps", avg_tps);
         context
             .report
             .report_metric(&self, "avg_latency", avg_latency);
         context.report.report_text(format!(
-            "{} : {:.0} TPS, {:.1} ms latency",
-            self, avg_tps, avg_latency
+            "{} : {:.0} TPS, {:.1} ms prometheus side latency, {:.1} ms client side latency",
+            self, avg_tps, avg_latency, avg_latency_client
         ));
         Ok(())
     }
