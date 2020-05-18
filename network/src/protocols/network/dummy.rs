@@ -10,7 +10,9 @@ use crate::{
         network::{Event, NetworkEvents, NetworkSender},
         rpc::error::RpcError,
     },
-    validator_network::network_builder::{AuthMode, NetworkBuilder, NETWORK_CHANNEL_SIZE},
+    validator_network::network_builder::{
+        AuthenticationMode, NetworkBuilder, NETWORK_CHANNEL_SIZE,
+    },
     NetworkPublicKeys, ProtocolId,
 };
 use channel::message_queues::QueueStyle;
@@ -145,7 +147,7 @@ pub fn setup_network() -> DummyNetwork {
         listener_addr,
     );
     network_builder
-        .auth_mode(AuthMode::Mutual(listener_identity_private_key))
+        .authentication_mode(AuthenticationMode::Mutual(listener_identity_private_key))
         .trusted_peers(trusted_peers.clone())
         .add_connectivity_manager();
     let (listener_sender, mut listener_events) = add_to_network(&mut network_builder);
@@ -159,7 +161,7 @@ pub fn setup_network() -> DummyNetwork {
         dialer_addr,
     );
     network_builder
-        .auth_mode(AuthMode::Mutual(dialer_identity_private_key))
+        .authentication_mode(AuthenticationMode::Mutual(dialer_identity_private_key))
         .trusted_peers(trusted_peers)
         .seed_peers(
             [(listener_peer_id, vec![listener_addr])]

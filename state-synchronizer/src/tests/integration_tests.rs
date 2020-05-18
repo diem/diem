@@ -23,7 +23,7 @@ use libra_types::{
     validator_verifier::random_validator_verifier, waypoint::Waypoint,
 };
 use network::{
-    validator_network::network_builder::{AuthMode, NetworkBuilder},
+    validator_network::network_builder::{AuthenticationMode, NetworkBuilder},
     NetworkPublicKeys,
 };
 use rand::{rngs::StdRng, SeedableRng};
@@ -254,7 +254,7 @@ impl SynchronizerEnv {
             addr,
         );
         network_builder
-            .auth_mode(AuthMode::Unauthed)
+            .authentication_mode(AuthenticationMode::Unauthenticated)
             .trusted_peers(trusted_peers)
             .seed_peers(seed_peers)
             .signing_keypair((

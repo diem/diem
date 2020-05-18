@@ -22,7 +22,9 @@ use libra_metrics::metric_server;
 use libra_types::{on_chain_config::ON_CHAIN_CONFIG_REGISTRY, waypoint::Waypoint, PeerId};
 use libra_vm::LibraVM;
 use libradb::LibraDB;
-use network::validator_network::network_builder::{AuthMode, NetworkBuilder, HANDSHAKE_VERSION};
+use network::validator_network::network_builder::{
+    AuthenticationMode, NetworkBuilder, HANDSHAKE_VERSION,
+};
 use onchain_discovery::{client::OnchainDiscovery, service::OnchainDiscoveryService};
 use state_synchronizer::StateSynchronizer;
 use std::{
@@ -206,7 +208,7 @@ pub fn setup_network(
 
         network_builder
             .advertised_address(config.advertised_address.clone())
-            .auth_mode(AuthMode::Mutual(identity_key))
+            .authentication_mode(AuthenticationMode::Mutual(identity_key))
             .trusted_peers(trusted_peers)
             .seed_peers(seed_peers)
             .signing_keypair((signing_private, signing_public))
@@ -225,12 +227,12 @@ pub fn setup_network(
         // its identity to another peer it connects to. For this, we use TCP + Noise but without
         // enforcing a trusted peers set.
         network_builder
-            .auth_mode(AuthMode::ClientOnly(identity_key))
+            .authentication_mode(AuthenticationMode::ServerOnly(identity_key))
             .advertised_address(config.advertised_address.clone());
     } else {
         // TODO(philiphayes): probably remove this branch since there are no
         // current no noise or no client auth use cases.
-        network_builder.auth_mode(AuthMode::Unauthed);
+        network_builder.authentication_mode(AuthenticationMode::Unauthenticated);
     }
 
     match config.discovery_method {

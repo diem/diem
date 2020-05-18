@@ -157,7 +157,7 @@ fn expect_noise_pubkey(
         let expected_remote_static_key = addr.find_noise_proto().ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::InvalidData,
-                format!("Invalid NetworkAddress, no NoiseIk protocol: '{}'", addr),
+                format!("Invalid NetworkAddress, no NoiseIK protocol: '{}'", addr),
             )
         })?;
 

@@ -70,17 +70,17 @@ pub const MAX_CONNECTION_DELAY_MS: u64 = 10 * 60 * 1000 /* 10 minutes */;
 pub const HANDSHAKE_VERSION: u8 = MessagingProtocolVersion::V1 as u8;
 
 #[derive(Debug)]
-pub enum AuthMode {
+pub enum AuthenticationMode {
     /// Inbound and outbound connections are unauthenticated and unencrypted, using
     /// a simple PeerId exchange protocol to share each peer's PeerId in-band.
     /// This mode is obviously insecure and should never be used in production.
     // TODO(philiphayes): remove? gate with cfg(test)? should never use this in prod.
-    Unauthed,
+    Unauthenticated,
     /// Inbound and outbound connections are secured with NoiseIK; however, only
     /// clients/dialers will authenticate the servers/listeners. More specifically,
     /// dialers will pin the connection to a specific, expected pubkey while
     /// listeners will accept any inbound dialer's pubkey.
-    ClientOnly(x25519::PrivateKey),
+    ServerOnly(x25519::PrivateKey),
     /// Inbound and outbound connections are secured with NoiseIK. Both dialer and
     /// listener will only accept connections that successfully authenticate to a
     /// pubkey in their "trusted peers" set.
@@ -89,10 +89,13 @@ pub enum AuthMode {
 
 /// Append the correct libranet protocols to the given base address, depending on
 /// the configured authentication mode.
-fn append_libranet_protocols(addr: NetworkAddress, auth_mode: &AuthMode) -> NetworkAddress {
+fn append_libranet_protocols(
+    addr: NetworkAddress,
+    auth_mode: &AuthenticationMode,
+) -> NetworkAddress {
     match auth_mode {
-        AuthMode::Unauthed => addr.append_test_protos(HANDSHAKE_VERSION),
-        AuthMode::ClientOnly(key) | AuthMode::Mutual(key) => {
+        AuthenticationMode::Unauthenticated => addr.append_test_protos(HANDSHAKE_VERSION),
+        AuthenticationMode::ServerOnly(key) | AuthenticationMode::Mutual(key) => {
             addr.append_prod_protos(key.public_key(), HANDSHAKE_VERSION)
         }
     }
@@ -114,7 +117,7 @@ pub struct NetworkBuilder {
     advertised_address: Option<NetworkAddress>,
     seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
-    auth_mode: Option<AuthMode>,
+    authentication_mode: Option<AuthenticationMode>,
     channel_size: usize,
     direct_send_protocols: Vec<ProtocolId>,
     rpc_protocols: Vec<ProtocolId>,
@@ -168,7 +171,7 @@ impl NetworkBuilder {
             advertised_address: None,
             seed_peers: HashMap::new(),
             trusted_peers: Arc::new(RwLock::new(HashMap::new())),
-            auth_mode: None,
+            authentication_mode: None,
             channel_size: NETWORK_CHANNEL_SIZE,
             direct_send_protocols: vec![],
             rpc_protocols: vec![],
@@ -195,8 +198,8 @@ impl NetworkBuilder {
     }
 
     /// Set network authentication mode.
-    pub fn auth_mode(&mut self, auth_mode: AuthMode) -> &mut Self {
-        self.auth_mode = Some(auth_mode);
+    pub fn authentication_mode(&mut self, authentication_mode: AuthenticationMode) -> &mut Self {
+        self.authentication_mode = Some(authentication_mode);
         self
     }
 
@@ -433,11 +436,11 @@ impl NetworkBuilder {
             .advertised_address
             .clone()
             .unwrap_or_else(|| self.listen_address.clone());
-        let auth_mode = self
-            .auth_mode
+        let authentication_mode = self
+            .authentication_mode
             .as_ref()
             .expect("Authentication Mode not set");
-        let advertised_address = append_libranet_protocols(advertised_address, auth_mode);
+        let advertised_address = append_libranet_protocols(advertised_address, authentication_mode);
 
         let addrs = vec![advertised_address];
         let trusted_peers = self.trusted_peers.clone();
@@ -490,7 +493,10 @@ impl NetworkBuilder {
         let protos = self.supported_protocols();
 
         let trusted_peers = self.trusted_peers.clone();
-        let auth_mode = self.auth_mode.take().expect("Authentication Mode not set");
+        let authentication_mode = self
+            .authentication_mode
+            .take()
+            .expect("Authentication Mode not set");
 
         // formatting the listen address here is a temporary hack until `transport.rs`
         // gets refactored and returns the fully rendered listen_addr in
@@ -501,32 +507,30 @@ impl NetworkBuilder {
         // a safe key container yet...
         let unbound_listen_addr = self.listen_address.clone();
         let unbound_len = unbound_listen_addr.len();
-        let unbound_listen_addr = append_libranet_protocols(unbound_listen_addr, &auth_mode);
+        let unbound_listen_addr =
+            append_libranet_protocols(unbound_listen_addr, &authentication_mode);
 
         let bound_listen_addr = match self.listen_address.as_slice() {
-            [Ip4(_), Tcp(_)] | [Ip6(_), Tcp(_)] => match auth_mode {
-                AuthMode::Unauthed => {
+            [Ip4(_), Tcp(_)] | [Ip6(_), Tcp(_)] => match authentication_mode {
+                AuthenticationMode::Unauthenticated => {
                     self.build_with_transport(build_tcp_transport(peer_id, protos))
                 }
-                AuthMode::ClientOnly(key) => self
+                AuthenticationMode::ServerOnly(key) => self
                     .build_with_transport(build_unauthenticated_tcp_noise_transport(key, protos)),
-                AuthMode::Mutual(key) => {
+                AuthenticationMode::Mutual(key) => {
                     self.build_with_transport(build_tcp_noise_transport(key, trusted_peers, protos))
                 }
             },
-            [Memory(_)] => {
-                match auth_mode {
-                    AuthMode::Unauthed => {
-                        self.build_with_transport(build_memory_transport(peer_id, protos))
-                    }
-                    AuthMode::ClientOnly(key) => self.build_with_transport(
-                        build_unauthenticated_memory_noise_transport(key, protos),
-                    ),
-                    AuthMode::Mutual(key) => self.build_with_transport(
-                        build_memory_noise_transport(key, trusted_peers, protos),
-                    ),
+            [Memory(_)] => match authentication_mode {
+                AuthenticationMode::Unauthenticated => {
+                    self.build_with_transport(build_memory_transport(peer_id, protos))
                 }
-            }
+                AuthenticationMode::ServerOnly(key) => self.build_with_transport(
+                    build_unauthenticated_memory_noise_transport(key, protos),
+                ),
+                AuthenticationMode::Mutual(key) => self
+                    .build_with_transport(build_memory_noise_transport(key, trusted_peers, protos)),
+            },
             _ => panic!(
                 "Unsupported listen_address: '{}', expected '/memory/<port>', \
                  '/ip4/<addr>/tcp/<port>', or '/ip6/<addr>/tcp/<port>'.",

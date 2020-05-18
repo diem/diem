@@ -97,7 +97,7 @@ Protocol:
       Memory:
         NEWTYPE: U16
     7:
-      NoiseIk:
+      NoiseIK:
         NEWTYPE:
           TYPENAME: PublicKey
     8:

@@ -134,7 +134,7 @@ pub enum Protocol {
     Tcp(u16),
     Memory(u16),
     // human-readable x25519::PublicKey is lower-case hex encoded
-    NoiseIk(x25519::PublicKey),
+    NoiseIK(x25519::PublicKey),
     // TODO(philiphayes): use actual handshake::MessagingProtocolVersion. we
     // probably need to move network wire into its own crate to avoid circular
     // dependency b/w network and types.
@@ -303,7 +303,7 @@ impl NetworkAddress {
         network_pubkey: x25519::PublicKey,
         handshake_version: u8,
     ) -> Self {
-        self.push(Protocol::NoiseIk(network_pubkey))
+        self.push(Protocol::NoiseIK(network_pubkey))
             .push(Protocol::Handshake(handshake_version))
     }
 
@@ -326,7 +326,7 @@ impl NetworkAddress {
     /// "monolithic" transport model.
     pub fn find_noise_proto(&self) -> Option<&x25519::PublicKey> {
         self.0.iter().find_map(|proto| match proto {
-            Protocol::NoiseIk(pubkey) => Some(pubkey),
+            Protocol::NoiseIK(pubkey) => Some(pubkey),
             _ => None,
         })
     }
@@ -497,7 +497,7 @@ impl fmt::Display for Protocol {
             Dns6(domain) => write!(f, "/dns6/{}", domain),
             Tcp(port) => write!(f, "/tcp/{}", port),
             Memory(port) => write!(f, "/memory/{}", port),
-            NoiseIk(pubkey) => write!(
+            NoiseIK(pubkey) => write!(
                 f,
                 "/ln-noise-ik/{}",
                 pubkey
@@ -532,7 +532,7 @@ impl Protocol {
             "dns6" => Protocol::Dns6(parse_one(args)?),
             "tcp" => Protocol::Tcp(parse_one(args)?),
             "memory" => Protocol::Memory(parse_one(args)?),
-            "ln-noise-ik" => Protocol::NoiseIk(x25519::PublicKey::from_encoded_string(
+            "ln-noise-ik" => Protocol::NoiseIK(x25519::PublicKey::from_encoded_string(
                 args.next().ok_or(ParseError::UnexpectedEnd)?,
             )?),
             "ln-handshake" => Protocol::Handshake(parse_one(args)?),
@@ -704,7 +704,7 @@ mod test {
                 vec![
                     Dns(DnsName("example.com".to_owned())),
                     Tcp(1234),
-                    NoiseIk(pubkey),
+                    NoiseIK(pubkey),
                     Handshake(5),
                 ],
             ),
