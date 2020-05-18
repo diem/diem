@@ -593,6 +593,22 @@
 <span id="593">593</span>
 <span id="594">594</span>
 <span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -625,6 +641,7 @@
 <span class="kw">use</span> <span class="ident">k8s_openapi</span>::<span class="ident">api</span>::<span class="ident">batch</span>::<span class="ident">v1</span>::<span class="ident">Job</span>;
 <span class="kw">use</span> <span class="ident">kube</span>::<span class="ident">api</span>::<span class="ident">ListParams</span>;
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">DEFAULT_JSON_RPC_PORT</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">process</span>::<span class="ident">Command</span>;
 
 <span class="kw">const</span> <span class="ident">DEFAULT_NAMESPACE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;default&quot;</span>;
 
@@ -640,8 +657,23 @@
 
 <span class="kw">impl</span> <span class="ident">ClusterSwarmKube</span> {
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">Config</span>::<span class="ident">infer</span>().<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">result</span>.<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Failed to load config: {:?}&quot;</span>, <span class="ident">e</span>))<span class="question-mark">?</span>;
+        <span class="comment">// This uses kubectl proxy locally to forward connections to kubernetes api server</span>
+        <span class="ident">Command</span>::<span class="ident">new</span>(<span class="string">&quot;/usr/local/bin/kubectl&quot;</span>)
+            .<span class="ident">arg</span>(<span class="string">&quot;proxy&quot;</span>)
+            .<span class="ident">spawn</span>()<span class="question-mark">?</span>;
+        <span class="ident">retry</span>::<span class="ident">retry_async</span>(<span class="ident">retry</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">2000</span>, <span class="number">60</span>), <span class="op">|</span><span class="op">|</span> {
+            <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
+                <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Running healthcheck on http://127.0.0.1:8001&quot;</span>);
+                <span class="ident">reqwest</span>::<span class="ident">get</span>(<span class="string">&quot;http://127.0.0.1:8001&quot;</span>).<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">text</span>().<span class="kw">await</span><span class="question-mark">?</span>;
+                <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Healthcheck passed&quot;</span>);
+                <span class="prelude-val">Ok</span>::<span class="op">&lt;</span>(), <span class="ident">reqwest</span>::<span class="ident">Error</span><span class="op">&gt;</span>(())
+            })
+        })
+        .<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Config</span>::<span class="ident">new</span>(
+            <span class="ident">reqwest</span>::<span class="ident">Url</span>::<span class="ident">parse</span>(<span class="string">&quot;http://127.0.0.1:8001&quot;</span>)
+                .<span class="ident">expect</span>(<span class="string">&quot;Failed to parse kubernetes endpoint url&quot;</span>),
+        );
         <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client</span>::<span class="ident">new</span>(<span class="ident">config</span>);
         <span class="kw">let</span> <span class="ident">node_map</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">HashMap</span>::<span class="ident">new</span>()));
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">client</span>, <span class="ident">node_map</span> })
