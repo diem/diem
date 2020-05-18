@@ -86,7 +86,8 @@ impl NetworkClient {
             let mut stream = TcpStream::connect(self.server);
 
             let sleeptime = time::Duration::from_millis(100);
-            while stream.is_err() {
+            while let Err(e) = stream {
+                debug!("Failed to connect to upstream {} {:?}", self.server, e);
                 thread::sleep(sleeptime);
                 stream = TcpStream::connect(self.server);
             }
