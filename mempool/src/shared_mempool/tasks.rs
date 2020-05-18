@@ -92,6 +92,7 @@ where
         .get_mut(&peer.network_id())
         .expect("[shared mempool] missing network sender");
 
+    debug!("[mempool] sending batch {}:{}", timeline_id, new_timeline_id);
     let request_id = create_request_id(timeline_id, new_timeline_id);
     let txns_ct = transactions.len();
     if let Err(e) = send_mempool_sync_msg(
@@ -319,6 +320,7 @@ pub(crate) fn process_broadcast_ack(
 
     match parse_request_id(request_id) {
         Ok((start_id, end_id)) => {
+            debug!("[mempool] received ACK {}:{}", start_id, end_id);
             let mut mempool = mempool
                 .lock()
                 .expect("[shared mempool] failed to acquire mempool lock");
