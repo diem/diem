@@ -846,7 +846,7 @@ dependencies = [
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
  "structopt 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
  "vm-genesis 0.1.0",
 ]
@@ -895,7 +895,7 @@ dependencies = [
  "storage-interface 0.1.0",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "termion 1.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm-genesis 0.1.0",
  "vm-validator 0.1.0",
@@ -1320,7 +1320,7 @@ dependencies = [
  "storage-interface 0.1.0",
  "storage-service 0.1.0",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
  "workspace-builder 0.1.0",
 ]
@@ -1398,7 +1398,7 @@ dependencies = [
  "scratchpad 0.1.0",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1507,7 +1507,7 @@ dependencies = [
  "regex 1.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
  "termcolor 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
 ]
 
@@ -2018,7 +2018,7 @@ dependencies = [
  "move-core-types 0.1.0",
  "move-ir-types 0.1.0",
  "move-vm-types 0.1.0",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
 ]
 
@@ -2083,7 +2083,7 @@ dependencies = [
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2172,7 +2172,7 @@ dependencies = [
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_yaml 0.8.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2283,7 +2283,7 @@ dependencies = [
  "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2304,7 +2304,7 @@ dependencies = [
  "mirai-annotations 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2340,7 +2340,7 @@ dependencies = [
  "sha2 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha3 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "static_assertions 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "tiny-keccak 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "x25519-dalek 0.6.0 (git+https://github.com/calibra/x25519-dalek.git?branch=fiat2)",
 ]
@@ -2424,7 +2424,7 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "ureq 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2523,7 +2523,7 @@ dependencies = [
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm-validator 0.1.0",
 ]
@@ -2563,7 +2563,7 @@ dependencies = [
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
  "structopt 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
  "vm-genesis 0.1.0",
@@ -2629,7 +2629,7 @@ dependencies = [
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_bytes 0.11.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2715,7 +2715,7 @@ dependencies = [
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "ureq 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm-validator 0.1.0",
@@ -2728,7 +2728,7 @@ dependencies = [
  "libra-config 0.1.0",
  "libra-logger 0.1.0",
  "libra-workspace-hack 0.1.0",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2758,7 +2758,7 @@ dependencies = [
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2818,7 +2818,7 @@ dependencies = [
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "structopt 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "workspace-builder 0.1.0",
 ]
 
@@ -2867,7 +2867,7 @@ dependencies = [
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_bytes 0.11.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "tiny-keccak 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2888,7 +2888,7 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "ureq 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2936,7 +2936,7 @@ dependencies = [
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha3 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2983,7 +2983,7 @@ dependencies = [
  "schemadb 0.1.0",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3206,7 +3206,7 @@ dependencies = [
  "regex 1.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3473,7 +3473,7 @@ dependencies = [
  "serial_test 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "socket-bench-server 0.1.0",
  "stream-ratelimiter 0.1.0",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-retry 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-util 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4012,7 +4012,7 @@ dependencies = [
  "fnv 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "spin 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4737,7 +4737,7 @@ dependencies = [
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "workspace-builder 0.1.0",
 ]
 
@@ -4851,7 +4851,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -5213,7 +5213,7 @@ dependencies = [
  "move-core-types 0.1.0",
  "scratchpad 0.1.0",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -5491,15 +5491,15 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.17"
+version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "thiserror-impl 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror-impl 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.17"
+version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "proc-macro2 1.0.12 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6902,8 +6902,8 @@ dependencies = [
 "checksum termcolor 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "bb6bfa289a4d7c5766392812c0a1f4c1ba45afa1ad47803c11e1f407d846d75f"
 "checksum termion 1.5.5 (registry+https://github.com/rust-lang/crates.io-index)" = "c22cec9d8978d906be5ac94bceb5a010d885c626c4c8855721a4dbd20e3ac905"
 "checksum textwrap 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d326610f408c7a4eb6f51c37c330e496b08506c9457c9d34287ecc38809fb060"
-"checksum thiserror 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)" = "467e5ff447618a916519a4e0d62772ab14f434897f3d63f05d8700ef1e9b22c1"
-"checksum thiserror-impl 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)" = "e63c1091225b9834089b429bc4a2e01223470e3183e891582909e9d1c4cb55d9"
+"checksum thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)" = "5976891d6950b4f68477850b5b9e5aa64d955961466f9e174363f573e54e8ca7"
+"checksum thiserror-impl 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)" = "ab81dbd1cd69cd2ce22ecfbdd3bdb73334ba25350649408cc6c085f46d89573d"
 "checksum thread_local 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "d40c6d1b69745a6ec6fb1ca717914848da4b44ae29d9b3080cbee91d72a69b14"
 "checksum time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)" = "db8dcfca086c1143c9270ac42a2bbd8a7ee477b78ac8e45b19abfb0cbede4b6f"
 "checksum time 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)" = "3043ac959c44dccc548a57417876c8fe241502aed69d880efc91166c02717a93"
