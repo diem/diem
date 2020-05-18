@@ -56,10 +56,18 @@ script {
 use 0x0::LBR;
 use 0x0::LCS;
 use 0x0::LibraAccount;
+use 0x0::Transaction;
 fun main() {
+    let sender_address = 0xa4a46d1b1421502568a4a6ac326d7250;
+    // if the sender address changes, signature below will need to updated
+    Transaction::assert(Transaction::sender() == sender_address, 999);
     let ref_id = LCS::to_bytes(&7777);
-    let signature = x"8d83d481068a7b73a914e7d53f84cbfb8d55cdbd2306e17dae14fa0e6fa8ab0cea9f4c1bab22b701e57aa2e0e3f15bb6b40d62a32b7e158a384b6529f6463a09";
-
+    // the sad scheme to regenerate this signature:
+    // (1) Go to language/e2e_tests/src/tests/transaction_builder, "dual_attestation_payment"
+    // (2) replace the Rust `payment_sender.address()` with
+    //     libra_types::account_address::AccountAddress::from_hex_literal(<literal bound to sender_address above>)
+    // (3) Add a debug print to grab the new signature, paste it here
+    let signature = x"4e597148bdb68de6a5f32e1ccd7e4f27044724b69f99328fdfb3c14c63d37d6c63d95a9a549a59ad30320fbd6ce375fbfc275e941e133bf90d4064fdf8aca903";
     LibraAccount::pay_from_sender_with_metadata<LBR::T>({{payee}}, 1000000, ref_id, signature);
 }
 }
