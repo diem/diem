@@ -1200,6 +1200,28 @@
 <span id="1200">1200</span>
 <span id="1201">1201</span>
 <span id="1202">1202</span>
+<span id="1203">1203</span>
+<span id="1204">1204</span>
+<span id="1205">1205</span>
+<span id="1206">1206</span>
+<span id="1207">1207</span>
+<span id="1208">1208</span>
+<span id="1209">1209</span>
+<span id="1210">1210</span>
+<span id="1211">1211</span>
+<span id="1212">1212</span>
+<span id="1213">1213</span>
+<span id="1214">1214</span>
+<span id="1215">1215</span>
+<span id="1216">1216</span>
+<span id="1217">1217</span>
+<span id="1218">1218</span>
+<span id="1219">1219</span>
+<span id="1220">1220</span>
+<span id="1221">1221</span>
+<span id="1222">1222</span>
+<span id="1223">1223</span>
+<span id="1224">1224</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2128,6 +2150,7 @@
             <span class="ident">Operation</span>::<span class="ident">Index</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">translate_primitive_call</span>(<span class="string">&quot;$select_vector_by_value&quot;</span>, <span class="ident">args</span>),
             <span class="ident">Operation</span>::<span class="ident">Slice</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">translate_primitive_call</span>(<span class="string">&quot;$slice_vector&quot;</span>, <span class="ident">args</span>),
             <span class="ident">Operation</span>::<span class="ident">Range</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">translate_primitive_call</span>(<span class="string">&quot;$Range&quot;</span>, <span class="ident">args</span>),
+            <span class="ident">Operation</span>::<span class="ident">Addresses</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">translate_primitive_call</span>(<span class="string">&quot;Addresses&quot;</span>, <span class="ident">args</span>),
 
             <span class="comment">// Binary operators</span>
             <span class="ident">Operation</span>::<span class="ident">Add</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">translate_arith_op</span>(<span class="string">&quot;+&quot;</span>, <span class="ident">args</span>),
@@ -2273,57 +2296,78 @@
         <span class="comment">//      (var $r := v; exists $i: int :: $InVectorRange($v, $i) &amp;&amp; (var x:=$r[$i]; x &gt; 0))</span>
         <span class="comment">// any(r, |x| x &gt; 0) --&gt;</span>
         <span class="comment">//      (var $r := r; exists $i: int :: $InRange($r, $i) &amp;&amp; (var x:=$i; x &gt; 0))</span>
+        <span class="comment">// all(addresses, |a| P(a)) --&gt;</span>
+        <span class="comment">//      (forall $a: Value :: is#Address(Value) ==&gt; P(a))</span>
+        <span class="comment">// any(addresses, |a| P(a)) --&gt;</span>
+        <span class="comment">//      (exists $a: Value :: is#Address(Value) &amp;&amp; P(a))</span>
         <span class="kw">let</span> <span class="ident">quant_ty</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">module_env</span>().<span class="ident">get_node_type</span>(<span class="ident">args</span>[<span class="number">0</span>].<span class="ident">node_id</span>());
         <span class="kw">let</span> <span class="ident">connective</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">is_all</span> { <span class="string">&quot;==&gt;&quot;</span> } <span class="kw">else</span> { <span class="string">&quot;&amp;&amp;&quot;</span> };
         <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Exp</span>::<span class="ident">Lambda</span>(<span class="kw">_</span>, <span class="ident">vars</span>, <span class="ident">exp</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">args</span>[<span class="number">1</span>] {
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">var</span>, <span class="kw">_</span>)) <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_decl_var</span>(<span class="ident">loc</span>, <span class="ident">vars</span>) {
                 <span class="kw">let</span> <span class="ident">var_name</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">module_env</span>().<span class="ident">symbol_pool</span>().<span class="ident">string</span>(<span class="ident">var</span>);
                 <span class="kw">let</span> <span class="ident">quant_var</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">fresh_var_name</span>(<span class="string">&quot;i&quot;</span>);
-                <span class="kw">let</span> <span class="ident">is_vector</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">quant_ty</span> {
-                    <span class="ident">Type</span>::<span class="ident">Vector</span>(..) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
-                    <span class="ident">Type</span>::<span class="ident">Primitive</span>(<span class="ident">PrimitiveType</span>::<span class="ident">Range</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">is_vector</span> <span class="op">=</span> <span class="bool-val">false</span>;
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">is_addresses</span> <span class="op">=</span> <span class="bool-val">false</span>;
+                <span class="kw">match</span> <span class="ident">quant_ty</span> {
+                    <span class="ident">Type</span>::<span class="ident">Vector</span>(..) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">is_vector</span> <span class="op">=</span> <span class="bool-val">true</span>,
+                    <span class="ident">Type</span>::<span class="ident">Primitive</span>(<span class="ident">PrimitiveType</span>::<span class="ident">Range</span>) <span class="op">=</span><span class="op">&gt;</span> (),
+                    <span class="ident">Type</span>::<span class="ident">Primitive</span>(<span class="ident">PrimitiveType</span>::<span class="ident">Addresses</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">is_addresses</span> <span class="op">=</span> <span class="bool-val">true</span>,
                     <span class="ident">Type</span>::<span class="ident">Reference</span>(<span class="kw">_</span>, <span class="ident">b</span>) <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Type</span>::<span class="ident">Vector</span>(..) <span class="op">=</span> <span class="kw-2">*</span><span class="ident">b</span> {
-                            <span class="bool-val">true</span>
+                            <span class="ident">is_vector</span> <span class="op">=</span> <span class="bool-val">true</span>
                         } <span class="kw">else</span> {
                             <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;unexpected type&quot;</span>)
                         }
                     }
                     <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;unexpected type&quot;</span>),
                 };
-                <span class="kw">let</span> <span class="ident">range_tmp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">fresh_var_name</span>(<span class="string">&quot;range&quot;</span>);
-                <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;Boolean((var {} := &quot;</span>, <span class="ident">range_tmp</span>);
-                <span class="self">self</span>.<span class="ident">translate_exp</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>[<span class="number">0</span>]);
-                <span class="kw">if</span> <span class="ident">is_all</span> {
-                    <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;; (forall {}: int :: &quot;</span>, <span class="ident">quant_var</span>);
-                } <span class="kw">else</span> {
-                    <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;; (exists {}: int :: &quot;</span>, <span class="ident">quant_var</span>);
-                }
-                <span class="kw">if</span> <span class="ident">is_vector</span> {
+                <span class="kw">if</span> <span class="ident">is_addresses</span> {
                     <span class="macro">emit</span><span class="macro">!</span>(
                         <span class="self">self</span>.<span class="ident">writer</span>,
-                        <span class="string">&quot;$InVectorRange({}, {}) {} (var {} := $select_vector({}, {}); &quot;</span>,
-                        <span class="ident">range_tmp</span>,
-                        <span class="ident">quant_var</span>,
-                        <span class="ident">connective</span>,
+                        <span class="string">&quot;Boolean(({} {}: Value :: is#Address({}) {} &quot;</span>,
+                        <span class="kw">if</span> <span class="ident">is_all</span> { <span class="string">&quot;forall&quot;</span> } <span class="kw">else</span> { <span class="string">&quot;exists&quot;</span> },
                         <span class="ident">var_name</span>,
-                        <span class="ident">range_tmp</span>,
-                        <span class="ident">quant_var</span>,
+                        <span class="ident">var_name</span>,
+                        <span class="ident">connective</span>
                     );
+                    <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;b#Boolean(&quot;</span>);
+                    <span class="self">self</span>.<span class="ident">translate_exp</span>(<span class="ident">exp</span>.<span class="ident">as_ref</span>());
+                    <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;)))&quot;</span>);
                 } <span class="kw">else</span> {
-                    <span class="macro">emit</span><span class="macro">!</span>(
-                        <span class="self">self</span>.<span class="ident">writer</span>,
-                        <span class="string">&quot;$InRange({}, {}) {} (var {} := Integer({}); &quot;</span>,
-                        <span class="ident">range_tmp</span>,
-                        <span class="ident">quant_var</span>,
-                        <span class="ident">connective</span>,
-                        <span class="ident">var_name</span>,
-                        <span class="ident">quant_var</span>,
-                    );
+                    <span class="kw">let</span> <span class="ident">range_tmp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">fresh_var_name</span>(<span class="string">&quot;range&quot;</span>);
+                    <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;Boolean((var {} := &quot;</span>, <span class="ident">range_tmp</span>);
+                    <span class="self">self</span>.<span class="ident">translate_exp</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>[<span class="number">0</span>]);
+                    <span class="kw">if</span> <span class="ident">is_all</span> {
+                        <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;; (forall {}: int :: &quot;</span>, <span class="ident">quant_var</span>);
+                    } <span class="kw">else</span> {
+                        <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;; (exists {}: int :: &quot;</span>, <span class="ident">quant_var</span>);
+                    }
+                    <span class="kw">if</span> <span class="ident">is_vector</span> {
+                        <span class="macro">emit</span><span class="macro">!</span>(
+                            <span class="self">self</span>.<span class="ident">writer</span>,
+                            <span class="string">&quot;$InVectorRange({}, {}) {} (var {} := $select_vector({}, {}); &quot;</span>,
+                            <span class="ident">range_tmp</span>,
+                            <span class="ident">quant_var</span>,
+                            <span class="ident">connective</span>,
+                            <span class="ident">var_name</span>,
+                            <span class="ident">range_tmp</span>,
+                            <span class="ident">quant_var</span>,
+                        );
+                    } <span class="kw">else</span> {
+                        <span class="macro">emit</span><span class="macro">!</span>(
+                            <span class="self">self</span>.<span class="ident">writer</span>,
+                            <span class="string">&quot;$InRange({}, {}) {} (var {} := Integer({}); &quot;</span>,
+                            <span class="ident">range_tmp</span>,
+                            <span class="ident">quant_var</span>,
+                            <span class="ident">connective</span>,
+                            <span class="ident">var_name</span>,
+                            <span class="ident">quant_var</span>,
+                        );
+                    }
+                    <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;b#Boolean(&quot;</span>);
+                    <span class="self">self</span>.<span class="ident">translate_exp</span>(<span class="ident">exp</span>.<span class="ident">as_ref</span>());
+                    <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;)))))&quot;</span>);
                 }
-                <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;b#Boolean(&quot;</span>);
-                <span class="self">self</span>.<span class="ident">translate_exp</span>(<span class="ident">exp</span>.<span class="ident">as_ref</span>());
-                <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;)))))&quot;</span>);
             } <span class="kw">else</span> {
                 <span class="comment">// error reported</span>
             }

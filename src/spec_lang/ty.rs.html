@@ -538,6 +538,7 @@
 <span id="538">538</span>
 <span id="539">539</span>
 <span id="540">540</span>
+<span id="541">541</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -583,7 +584,7 @@
     <span class="ident">U128</span>,
     <span class="ident">Address</span>,
     <span class="ident">Signer</span>,
-
+    <span class="ident">Addresses</span>, <span class="comment">// set of addresses, for quantification</span>
     <span class="comment">// Types only appearing in specifications</span>
     <span class="ident">Num</span>,
     <span class="ident">Range</span>,
@@ -1074,6 +1075,7 @@
             <span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;u128&quot;</span>),
             <span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;address&quot;</span>),
             <span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;signer&quot;</span>),
+            <span class="ident">Addresses</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;addresses&quot;</span>),
             <span class="ident">Range</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;range&quot;</span>),
             <span class="ident">Num</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;num&quot;</span>),
         }
