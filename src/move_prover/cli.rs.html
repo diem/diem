@@ -517,7 +517,6 @@
 <span id="517">517</span>
 <span id="518">518</span>
 <span id="519">519</span>
-<span id="520">520</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -986,8 +985,7 @@
                 .<span class="ident">set_level_padding</span>(<span class="ident">LevelPadding</span>::<span class="ident">Off</span>)
                 .<span class="ident">build</span>(),
             <span class="ident">TerminalMode</span>::<span class="ident">Mixed</span>,
-        )
-        .<span class="ident">expect</span>(<span class="string">&quot;Unexpected TermLogger init failure&quot;</span>)])
+        )])
         .<span class="ident">expect</span>(<span class="string">&quot;Unexpected CombinedLogger init failure&quot;</span>);
     }
 
