@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["parse_type_tags",""]]});
+initSidebarItems({"fn":[["parse_transaction_argument",""],["parse_transaction_arguments",""],["parse_type_tags",""]]});

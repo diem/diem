@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["ErrorKind",""],["TransactionArgument",""]],"fn":[["parse_as_address","Parses the given string as address."],["parse_as_bool","Parses the given string as a bool."],["parse_as_transaction_argument","Parses the given string as any transaction argument type."],["parse_as_u64","Parses the given string as u64."],["parse_as_u8_vector","Parses the given string as bytearray."]]});
+initSidebarItems({"enum":[["TransactionArgument",""]]});

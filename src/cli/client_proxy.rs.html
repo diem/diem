@@ -1484,7 +1484,7 @@
     <span class="ident">transaction</span>::{
         <span class="ident">authenticator</span>::<span class="ident">AuthenticationKey</span>,
         <span class="ident">helpers</span>::{<span class="ident">create_unsigned_txn</span>, <span class="ident">create_user_txn</span>, <span class="ident">TransactionSigner</span>},
-        <span class="ident">parse_as_transaction_argument</span>, <span class="ident">Module</span>, <span class="ident">RawTransaction</span>, <span class="ident">Script</span>, <span class="ident">SignedTransaction</span>,
+        <span class="ident">parse_transaction_argument</span>, <span class="ident">Module</span>, <span class="ident">RawTransaction</span>, <span class="ident">Script</span>, <span class="ident">SignedTransaction</span>,
         <span class="ident">TransactionArgument</span>, <span class="ident">TransactionPayload</span>, <span class="ident">Version</span>,
     },
     <span class="ident">waypoint</span>::<span class="ident">Waypoint</span>,
@@ -2242,7 +2242,7 @@
         <span class="kw">let</span> <span class="ident">script_bytes</span> <span class="op">=</span> <span class="ident">fs</span>::<span class="ident">read</span>(<span class="ident">space_delim_strings</span>[<span class="number">2</span>])<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">arguments</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">space_delim_strings</span>[<span class="number">3</span>..]
             .<span class="ident">iter</span>()
-            .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">arg</span><span class="op">|</span> <span class="ident">parse_as_transaction_argument_for_client</span>(<span class="ident">arg</span>).<span class="ident">ok</span>())
+            .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">arg</span><span class="op">|</span> <span class="ident">parse_transaction_argument_for_client</span>(<span class="ident">arg</span>).<span class="ident">ok</span>())
             .<span class="ident">collect</span>();
         <span class="comment">// TODO: support type arguments in the client.</span>
         <span class="self">self</span>.<span class="ident">submit_program</span>(
@@ -2759,12 +2759,12 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">parse_as_transaction_argument_for_client</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TransactionArgument</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">parse_transaction_argument_for_client</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TransactionArgument</span><span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="ident">is_address</span>(<span class="ident">s</span>) {
         <span class="kw">let</span> <span class="ident">account_address</span> <span class="op">=</span> <span class="ident">ClientProxy</span>::<span class="ident">address_from_strings</span>(<span class="ident">s</span>)<span class="question-mark">?</span>;
         <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">TransactionArgument</span>::<span class="ident">Address</span>(<span class="ident">account_address</span>));
     }
-    <span class="ident">parse_as_transaction_argument</span>(<span class="ident">s</span>)
+    <span class="ident">parse_transaction_argument</span>(<span class="ident">s</span>)
 }
 
 <span class="kw">fn</span> <span class="ident">format_parse_data_error</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span><span class="op">&gt;</span>(
