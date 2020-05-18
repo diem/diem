@@ -51,22 +51,13 @@ impl ContentLinter for RootToml {
         };
 
         if workspace.members != expected.members {
-            // Serialize and compute the diff between them.
-            let expected = to_toml_string(&expected)
-                .map_err(|err| SystemError::ser("serializing expected workspace members", err))?;
-            let actual = to_toml_string(&workspace)
-                .map_err(|err| SystemError::ser("serializing actual workspace members", err))?;
-            // TODO: print out a context diff instead of the full diff.
-            out.write_kind(
-                LintKind::File(Path::new("Cargo.toml")),
+            out.write(
                 LintLevel::Error,
-                format!(
-                    "workspace member list not canonical:\n\n{}",
-                    PrettyDifference {
-                        expected: &expected,
-                        actual: &actual
-                    }
-                ),
+                toml_mismatch_message(
+                    &expected,
+                    &workspace,
+                    "workspace member list not canonical",
+                )?,
             );
         }
 
@@ -74,6 +65,27 @@ impl ContentLinter for RootToml {
 
         Ok(RunStatus::Executed)
     }
+}
+
+/// Creates a lint message indicating the differences between the two TOML structs.
+pub(super) fn toml_mismatch_message<T: Serialize>(
+    expected: &T,
+    actual: &T,
+    header: &str,
+) -> Result<String> {
+    let expected = to_toml_string(expected)
+        .map_err(|err| SystemError::ser("serializing expected workspace members", err))?;
+    let actual = to_toml_string(actual)
+        .map_err(|err| SystemError::ser("serializing actual workspace members", err))?;
+    // TODO: print out a context diff instead of the full diff.
+    Ok(format!(
+        "{}:\n\n{}",
+        header,
+        PrettyDifference {
+            expected: &expected,
+            actual: &actual
+        }
+    ))
 }
 
 /// Serializes some data to toml using this project's standard code style.

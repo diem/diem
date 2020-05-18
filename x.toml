@@ -20,3 +20,45 @@ lazy_static = "use once_cell::sync::Lazy instead"
 
 [workspace.overlay]
 features = ["fuzzing"]
+
+# This is a list of test-only members. These are workspace members that do not form part of the main
+# Libra production codebase, and are only used to verify correctness and/or performance.
+#
+# *** IMPORTANT ***
+#
+# Published developer tools (e.g. Move compiler) ARE part of the production Libra codebase.
+# They should be listed in the root Cargo.toml's default-members, not here!
+#
+# Before adding a new crate to this list, ensure that it is *actually* test-only. If not, add it
+# (or a crate that depends on it) to the root Cargo.toml's default-members list!
+#
+# For more, see the "Conditional compilation for tests" section in documentation/coding_guidelines.md.
+[workspace.test-only]
+members = [
+    "common/proptest-helpers",
+    "common/prost-test-helpers",
+    "common/retrier",
+    "common/workspace-builder",
+    "devtools/x",
+    "devtools/x-core",
+    "devtools/x-lint",
+    "execution/executor-benchmark",
+    "execution/executor-test-helpers",
+    "language/benchmarks",
+    "language/bytecode-verifier/bytecode-verifier-tests",
+    "language/bytecode-verifier/invalid-mutations",
+    "language/e2e-tests",
+    "language/functional-tests",
+    "language/ir-testsuite",
+    "language/move-prover/test-utils",
+    "language/tools/test-generation",
+    "language/tools/utils",
+    "language/vm/serializer-tests",
+    "network/socket-bench-server",
+    "testsuite",
+    "testsuite/cluster-test",
+    "testsuite/generate-format",
+    "testsuite/libra-fuzzer",
+    "testsuite/libra-fuzzer/fuzz",
+    "testsuite/libra-swarm",
+]

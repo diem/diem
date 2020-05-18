@@ -23,6 +23,7 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
     let project_linters: &[&dyn ProjectLinter] = &[
         &guppy::BannedDirectDeps::new(&workspace_config.banned_direct_deps),
         &guppy::DirectDepDups,
+        &guppy::TestOnlyMembers::new(&workspace_config.test_only),
     ];
 
     let package_linters: &[&dyn PackageLinter] = &[
