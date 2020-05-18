@@ -2518,6 +2518,46 @@
 <span id="2518">2518</span>
 <span id="2519">2519</span>
 <span id="2520">2520</span>
+<span id="2521">2521</span>
+<span id="2522">2522</span>
+<span id="2523">2523</span>
+<span id="2524">2524</span>
+<span id="2525">2525</span>
+<span id="2526">2526</span>
+<span id="2527">2527</span>
+<span id="2528">2528</span>
+<span id="2529">2529</span>
+<span id="2530">2530</span>
+<span id="2531">2531</span>
+<span id="2532">2532</span>
+<span id="2533">2533</span>
+<span id="2534">2534</span>
+<span id="2535">2535</span>
+<span id="2536">2536</span>
+<span id="2537">2537</span>
+<span id="2538">2538</span>
+<span id="2539">2539</span>
+<span id="2540">2540</span>
+<span id="2541">2541</span>
+<span id="2542">2542</span>
+<span id="2543">2543</span>
+<span id="2544">2544</span>
+<span id="2545">2545</span>
+<span id="2546">2546</span>
+<span id="2547">2547</span>
+<span id="2548">2548</span>
+<span id="2549">2549</span>
+<span id="2550">2550</span>
+<span id="2551">2551</span>
+<span id="2552">2552</span>
+<span id="2553">2553</span>
+<span id="2554">2554</span>
+<span id="2555">2555</span>
+<span id="2556">2556</span>
+<span id="2557">2557</span>
+<span id="2558">2558</span>
+<span id="2559">2559</span>
+<span id="2560">2560</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -4961,12 +5001,6 @@
         <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">constant_sig_token_to_type</span>(<span class="kw-2">&amp;</span><span class="ident">constant</span>.<span class="ident">type_</span>)<span class="question-mark">?</span>;
         <span class="ident">Value</span>::<span class="ident">simple_deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">constant</span>.<span class="ident">data</span>, <span class="kw-2">&amp;</span><span class="ident">ty</span>).<span class="ident">ok</span>()
     }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">serialize_constant</span>(<span class="ident">type_</span>: <span class="ident">SignatureToken</span>, <span class="ident">value</span>: <span class="ident">Value</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Constant</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">constant_sig_token_to_type</span>(<span class="kw-2">&amp;</span><span class="ident">type_</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">simple_serialize</span>(<span class="kw-2">&amp;</span><span class="ident">ty</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Some</span>(<span class="ident">Constant</span> { <span class="ident">data</span>, <span class="ident">type_</span> })
-    }
 }
 
 <span class="comment">/***************************************************************************************
@@ -4979,6 +5013,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">prop</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">value</span>::{<span class="ident">MoveStruct</span>, <span class="ident">MoveValue</span>};
     <span class="kw">use</span> <span class="ident">proptest</span>::{<span class="ident">collection</span>::<span class="ident">vec</span>, <span class="ident">prelude</span>::<span class="kw-2">*</span>};
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">value_strategy_with_layout</span>(<span class="ident">layout</span>: <span class="kw-2">&amp;</span><span class="ident">FatType</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&gt;</span> {
@@ -5037,6 +5072,51 @@
             <span class="kw">let</span> <span class="ident">value_strategy</span> <span class="op">=</span> <span class="ident">value_strategy_with_layout</span>(<span class="kw-2">&amp;</span><span class="ident">layout</span>);
             (<span class="ident">Just</span>(<span class="ident">layout</span>), <span class="ident">value_strategy</span>)
         })
+    }
+
+    <span class="kw">impl</span> <span class="ident">ValueImpl</span> {
+        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_move_value</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ty</span>: <span class="kw-2">&amp;</span><span class="ident">FatType</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MoveValue</span> {
+            <span class="kw">match</span> (<span class="ident">ty</span>, <span class="kw-2">&amp;</span><span class="self">self</span>) {
+                (<span class="ident">FatType</span>::<span class="ident">U8</span>, <span class="ident">ValueImpl</span>::<span class="ident">U8</span>(<span class="ident">x</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MoveValue</span>::<span class="ident">U8</span>(<span class="kw-2">*</span><span class="ident">x</span>),
+                (<span class="ident">FatType</span>::<span class="ident">U64</span>, <span class="ident">ValueImpl</span>::<span class="ident">U64</span>(<span class="ident">x</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MoveValue</span>::<span class="ident">U64</span>(<span class="kw-2">*</span><span class="ident">x</span>),
+                (<span class="ident">FatType</span>::<span class="ident">U128</span>, <span class="ident">ValueImpl</span>::<span class="ident">U128</span>(<span class="ident">x</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MoveValue</span>::<span class="ident">U128</span>(<span class="kw-2">*</span><span class="ident">x</span>),
+                (<span class="ident">FatType</span>::<span class="ident">Bool</span>, <span class="ident">ValueImpl</span>::<span class="ident">Bool</span>(<span class="ident">x</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MoveValue</span>::<span class="ident">Bool</span>(<span class="kw-2">*</span><span class="ident">x</span>),
+                (<span class="ident">FatType</span>::<span class="ident">Address</span>, <span class="ident">ValueImpl</span>::<span class="ident">Address</span>(<span class="ident">x</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MoveValue</span>::<span class="ident">Address</span>(<span class="kw-2">*</span><span class="ident">x</span>),
+                (<span class="ident">FatType</span>::<span class="ident">Signer</span>, <span class="ident">ValueImpl</span>::<span class="ident">Signer</span>(<span class="ident">x</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MoveValue</span>::<span class="ident">Signer</span>(<span class="kw-2">*</span><span class="ident">x</span>),
+
+                (<span class="ident">FatType</span>::<span class="ident">Struct</span>(<span class="ident">ty</span>), <span class="ident">ValueImpl</span>::<span class="ident">Container</span>(<span class="ident">r</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">r</span>.<span class="ident">borrow</span>() {
+                    <span class="ident">Container</span>::<span class="ident">General</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">fields</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+                        <span class="kw">for</span> (<span class="ident">v</span>, <span class="ident">field_ty</span>) <span class="kw">in</span> <span class="ident">v</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">ty</span>.<span class="ident">layout</span>.<span class="ident">iter</span>()) {
+                            <span class="ident">fields</span>.<span class="ident">push</span>(<span class="ident">v</span>.<span class="ident">as_move_value</span>(<span class="ident">field_ty</span>));
+                        }
+                        <span class="ident">MoveValue</span>::<span class="ident">Struct</span>(<span class="ident">MoveStruct</span>::<span class="ident">new</span>(<span class="ident">fields</span>))
+                    }
+                    <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Unexpected Container&quot;</span>),
+                },
+
+                (<span class="ident">FatType</span>::<span class="ident">Vector</span>(<span class="ident">inner_ty</span>), <span class="ident">ValueImpl</span>::<span class="ident">Container</span>(<span class="ident">r</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">MoveValue</span>::<span class="ident">Vector</span>(<span class="kw">match</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">r</span>.<span class="ident">borrow</span>() {
+                        <span class="ident">Container</span>::<span class="ident">U8</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">u</span><span class="op">|</span> <span class="ident">MoveValue</span>::<span class="ident">U8</span>(<span class="kw-2">*</span><span class="ident">u</span>)).<span class="ident">collect</span>(),
+                        <span class="ident">Container</span>::<span class="ident">U64</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">u</span><span class="op">|</span> <span class="ident">MoveValue</span>::<span class="ident">U64</span>(<span class="kw-2">*</span><span class="ident">u</span>)).<span class="ident">collect</span>(),
+                        <span class="ident">Container</span>::<span class="ident">U128</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">u</span><span class="op">|</span> <span class="ident">MoveValue</span>::<span class="ident">U128</span>(<span class="kw-2">*</span><span class="ident">u</span>)).<span class="ident">collect</span>(),
+                        <span class="ident">Container</span>::<span class="ident">Bool</span>(<span class="ident">b</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">b</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">u</span><span class="op">|</span> <span class="ident">MoveValue</span>::<span class="ident">Bool</span>(<span class="kw-2">*</span><span class="ident">u</span>)).<span class="ident">collect</span>(),
+                        <span class="ident">Container</span>::<span class="ident">General</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>
+                            .<span class="ident">iter</span>()
+                            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">as_move_value</span>(<span class="ident">inner_ty</span>.<span class="ident">as_ref</span>()))
+                            .<span class="ident">collect</span>(),
+                    })
+                }
+
+                (<span class="ident">ty</span>, <span class="ident">val</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;cannot serialize value {:?} as {:?}&quot;</span>, <span class="ident">val</span>, <span class="ident">ty</span>),
+            }
+        }
+    }
+
+    <span class="kw">impl</span> <span class="ident">Value</span> {
+        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_move_value</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ty</span>: <span class="kw-2">&amp;</span><span class="ident">FatType</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MoveValue</span> {
+            <span class="self">self</span>.<span class="number">0</span>.<span class="ident">as_move_value</span>(<span class="ident">ty</span>)
+        }
     }
 }
 </pre></div>

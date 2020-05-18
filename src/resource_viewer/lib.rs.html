@@ -244,26 +244,25 @@
 <span id="244">244</span>
 <span id="245">245</span>
 <span id="246">246</span>
-<span id="247">247</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">cached_access_path_table</span>::<span class="ident">resource_vec_to_type_tag</span>,
-    <span class="ident">resolver</span>::<span class="ident">Resolver</span>,
-    <span class="ident">value</span>::{<span class="ident">MoveStruct</span>, <span class="ident">MoveStructLayout</span>, <span class="ident">MoveTypeLayout</span>, <span class="ident">MoveValue</span>},
-};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">cached_access_path_table</span>::<span class="ident">resource_vec_to_type_tag</span>, <span class="ident">resolver</span>::<span class="ident">Resolver</span>};
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">libra_state_view</span>::<span class="ident">StateView</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>, <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">account_state</span>::<span class="ident">AccountState</span>,
     <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>,
 };
-<span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">identifier</span>::<span class="ident">Identifier</span>, <span class="ident">language_storage</span>::<span class="ident">StructTag</span>};
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">identifier</span>::<span class="ident">Identifier</span>,
+    <span class="ident">language_storage</span>::<span class="ident">StructTag</span>,
+    <span class="ident">value</span>::{<span class="ident">MoveStruct</span>, <span class="ident">MoveValue</span>},
+};
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">btree_map</span>::<span class="ident">BTreeMap</span>,
-    <span class="ident">convert</span>::<span class="ident">TryFrom</span>,
+    <span class="ident">convert</span>::<span class="ident">TryInto</span>,
     <span class="ident">fmt</span>::{<span class="ident">Display</span>, <span class="ident">Formatter</span>},
 };
 
@@ -273,7 +272,6 @@
 <span class="kw">mod</span> <span class="ident">cached_access_path_table</span>;
 <span class="kw">mod</span> <span class="ident">module_cache</span>;
 <span class="kw">mod</span> <span class="ident">resolver</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">value</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AnnotatedAccountStateBlob</span>(<span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructTag</span>, <span class="ident">AnnotatedMoveStruct</span><span class="op">&gt;</span>);
@@ -320,14 +318,14 @@
         <span class="ident">blob</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AnnotatedMoveStruct</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">resource_vec_to_type_tag</span>(<span class="kw-2">&amp;</span><span class="ident">access_path</span>.<span class="ident">path</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">struct_def</span> <span class="op">=</span> <span class="ident">MoveStructLayout</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span><span class="ident">ty</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">struct_def</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="ident">ty</span>).<span class="ident">try_into</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">move_struct</span> <span class="op">=</span> <span class="ident">MoveStruct</span>::<span class="ident">simple_deserialize</span>(<span class="ident">blob</span>, <span class="kw-2">&amp;</span><span class="ident">struct_def</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">annotate_struct</span>(<span class="kw-2">&amp;</span><span class="ident">move_struct</span>, <span class="kw-2">&amp;</span><span class="ident">ty</span>)
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">view_contract_event</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">event</span>: <span class="kw-2">&amp;</span><span class="ident">ContractEvent</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AnnotatedMoveValue</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">cache</span>.<span class="ident">resolve_type</span>(<span class="ident">event</span>.<span class="ident">type_tag</span>())<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">move_ty</span> <span class="op">=</span> <span class="ident">MoveTypeLayout</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span><span class="ident">ty</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">move_ty</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="ident">ty</span>).<span class="ident">try_into</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">move_value</span> <span class="op">=</span> <span class="ident">MoveValue</span>::<span class="ident">simple_deserialize</span>(<span class="ident">event</span>.<span class="ident">event_data</span>(), <span class="kw-2">&amp;</span><span class="ident">move_ty</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">annotate_value</span>(<span class="kw-2">&amp;</span><span class="ident">move_value</span>, <span class="kw-2">&amp;</span><span class="ident">ty</span>)
     }
@@ -336,7 +334,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
         <span class="kw">for</span> (<span class="ident">k</span>, <span class="ident">v</span>) <span class="kw">in</span> <span class="ident">state</span>.<span class="ident">iter</span>() {
             <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">resource_vec_to_type_tag</span>(<span class="ident">k</span>.<span class="ident">as_slice</span>())<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">struct_def</span> <span class="op">=</span> <span class="ident">MoveStructLayout</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span><span class="ident">ty</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">struct_def</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="ident">ty</span>).<span class="ident">try_into</span>()<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">move_struct</span> <span class="op">=</span> <span class="ident">MoveStruct</span>::<span class="ident">simple_deserialize</span>(<span class="ident">v</span>.<span class="ident">as_slice</span>(), <span class="kw-2">&amp;</span><span class="ident">struct_def</span>)<span class="question-mark">?</span>;
             <span class="ident">output</span>.<span class="ident">insert</span>(<span class="ident">ty</span>.<span class="ident">struct_tag</span>()<span class="question-mark">?</span>, <span class="self">self</span>.<span class="ident">annotate_struct</span>(<span class="kw-2">&amp;</span><span class="ident">move_struct</span>, <span class="kw-2">&amp;</span><span class="ident">ty</span>)<span class="question-mark">?</span>);
         }
