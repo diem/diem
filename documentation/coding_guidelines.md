@@ -274,7 +274,11 @@ References:
 * [An introduction to property-based testing](https://fsharpforfunandprofit.com/posts/property-based-testing/)
 * [Choosing properties for property-based testing](https://fsharpforfunandprofit.com/posts/property-based-testing-2/)
 
-*Conditional compilation of tests*
+*Fuzzing*
+
+Libra contains harnesses for fuzzing crash-prone code like deserializers, using [`libFuzzer`](https://llvm.org/docs/LibFuzzer.html) through [`cargo fuzz`](https://rust-fuzz.github.io/book/cargo-fuzz.html). For more examples, see the `testsuite/libra_fuzzer` directory.
+
+### Conditional compilation of tests
 
 Libra [conditionally
 compiles](https://doc.rust-lang.org/stable/reference/conditional-compilation.html)
@@ -286,38 +290,70 @@ in tests/benchmarks](https://github.com/rust-lang/cargo/issues/2911), we rely on
 conditions to perform this conditional compilation:
 - the test flag, which is activated by dependent test code in the same crate
   as the conditional test-only code.
-- the "fuzzing" custom feature, which is used to enable fuzzing and testing
+- the `fuzzing` custom feature, which is used to enable fuzzing and testing
 related code in downstream crates. Note that this must be passed explicitly to
 `cargo xtest` and `cargo x bench`. Never use this in `[dependencies]` or
 `[dev-dependencies]` unless the crate is only for testing, otherwise Cargo's
 feature unification may pollute production code with the extra testing/fuzzing code.
 
-As a consequence, it is recommended that you set up your test-only code in the following fashion. For the sake of example, we'll consider you are defining a test-only helper function `foo` in `foo_crate`:
-1. Define the "testing" flag in `foo_crate/Cargo.toml` and make it non-default:
-    ```
+As a consequence, it is recommended that you set up your test-only code in the following fashion.
+
+**For production crates:**
+
+Production crates are defined as the set of crates that create externally published artifacts, e.g. the Libra validator,
+the Move compiler, and so on.
+
+For the sake of example, we'll consider you are defining a test-only helper function `foo` in `foo_crate`:
+
+1. Define the `fuzzing` flag in `foo_crate/Cargo.toml` and make it non-default:
+    ```toml
     [features]
     default = []
     fuzzing = []
     ```
 2. Annotate your test-only helper `foo` with both the `test` flag (for in-crate callers) and the `"fuzzing"` custom feature (for out-of-crate callers):
-    ```
+    ```rust
     #[cfg(any(test, feature = "fuzzing"))]
     fn foo() { ... }
     ```
 3. (optional) Use `cfg_attr` to make test-only trait derivations conditional:
-    ```
+    ```rust
     #[cfg_attr(any(test, feature = "testing"), derive(FooTrait))]
     #[derive(Debug, Display, ...)] // inconditional derivations
     struct Foo { ... }
     ```
-4. (optional) Set up feature transitivitity for crates that call crates that have test-only members. Let's say it's the case of `bar_crate`, which, through its test helpers, calls into `foo_crate` to use your test-only `foo`. Here's how you would set up `bar_crate/Cargo.toml`:
-    ```
+4. (optional) Set up feature transitivity for crates that call crates that have test-only members. Let's say it's the case of `bar_crate`, which, through its test helpers, calls into `foo_crate` to use your test-only `foo`. Here's how you would set up `bar_crate/Cargo.toml`:
+    ```toml
     [features]
     default = []
-    testing = ["foo_crate/testing"]
+    fuzzing = ["foo_crate/fuzzing"]
     ```
-5. Update `x/src/test_unit.rs` to run the unit tests passing in the
-   features if needed.
+5. Update `x.toml` to run the unit tests passing in the features if needed.
+
+**Special case:** If a test-only crate (see below) is a dev-dependency of a production crate listed in the root
+`Cargo.toml`'s `default-members`, it needs to be marked optional for feature resolution to work properly. Do this by
+marking the dependency as optional and moving it to the `[dependencies]` section.
+
+```toml
+[dependencies]
+foo_crate = { path = "...", optional = true }
+```
+
+(This is a temporary workaround for a Cargo issue and is expected to be addressed with Cargo's [new feature
+resolver](https://github.com/rust-lang/cargo/pull/7820)).
+
+**For test-only crates:**
+
+Test-only crates do not create published artifacts. They consist of tests, benchmarks or other code that verifies
+the correctness or performance of published artifacts. Test-only crates are explicitly listed in `x.toml`.
+
+These crates do not need to use the above setup. Instead, they can enable the `fuzzing` feature in production crates
+directly.
+
+```toml
+[dependencies]
+foo_crate = { path = "...", features = ["fuzzing"] }
+```
 
 *A final note on integration tests*: All tests that use conditional test-only
 elements in another crate need to activate the "fuzzing" feature through the
@@ -326,11 +362,7 @@ tests](https://doc.rust-lang.org/rust-by-example/testing/integration_testing.htm
 can neither rely on the `test` flag nor do they have a proper `Cargo.toml` for
 feature activation. In the Libra codebase, we therefore recommend that
 *integration tests which depend on test-only code in their tested crate* be
-extracted to their own crate. You can look at `language/vm/serializer_tests`
+extracted to their own test-only crate. See `language/vm/serializer_tests`
 for an example of such an extracted integration test.
 
 *Note for developers*: The reason we use a feature re-export (in the `[features]` section of the `Cargo.toml` is that a profile is not enough to activate the `"fuzzing"` feature flag. See [cargo-issue #291](https://github.com/rust-lang/cargo/issues/2911) for details).
-
-*Fuzzing*
-
-Libra contains harnesses for fuzzing crash-prone code like deserializers, using [`libFuzzer`](https://llvm.org/docs/LibFuzzer.html) through [`cargo fuzz`](https://rust-fuzz.github.io/book/cargo-fuzz.html). For more examples, see the `testsuite/libra_fuzzer` directory.

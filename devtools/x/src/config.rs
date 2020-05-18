@@ -44,6 +44,8 @@ pub struct WorkspaceConfig {
     pub banned_direct_deps: HashMap<String, String>,
     /// Overlay config in this workspace
     pub overlay: OverlayConfig,
+    /// Test-only config in this workspace
+    pub test_only: TestOnlyConfig,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -60,6 +62,13 @@ pub struct EnforcedAttributesConfig {
 pub struct OverlayConfig {
     /// A list of overlay feature names
     pub features: Vec<String>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub struct TestOnlyConfig {
+    /// A list of test-only members
+    pub members: Vec<PathBuf>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]

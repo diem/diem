@@ -35,5 +35,7 @@ backup-service = { path = "../backup-service", version = "0.1.0" }
 libra-config = { path = "../../../config", version = "0.1.0" }
 libra-proptest-helpers = { path = "../../../common/proptest-helpers" }
 libra-temppath = { path = "../../../common/temppath", version = "0.1.0" }
-libradb = { path = "../../libradb", version = "0.1.0", features = ["fuzzing"]}
 storage-interface = { path = "../../storage-interface", version = "0.1.0" }
+
+[features]
+fuzzing = ["libradb/fuzzing"]
