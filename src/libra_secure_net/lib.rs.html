@@ -351,6 +351,7 @@
 <span id="351">351</span>
 <span id="352">352</span>
 <span id="353">353</span>
+<span id="354">354</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -440,7 +441,8 @@
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stream</span> <span class="op">=</span> <span class="ident">TcpStream</span>::<span class="ident">connect</span>(<span class="self">self</span>.<span class="ident">server</span>);
 
             <span class="kw">let</span> <span class="ident">sleeptime</span> <span class="op">=</span> <span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">100</span>);
-            <span class="kw">while</span> <span class="ident">stream</span>.<span class="ident">is_err</span>() {
+            <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">stream</span> {
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Failed to connect to upstream {} {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">server</span>, <span class="ident">e</span>);
                 <span class="ident">thread</span>::<span class="ident">sleep</span>(<span class="ident">sleeptime</span>);
                 <span class="ident">stream</span> <span class="op">=</span> <span class="ident">TcpStream</span>::<span class="ident">connect</span>(<span class="self">self</span>.<span class="ident">server</span>);
             }
