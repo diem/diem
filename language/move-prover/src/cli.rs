@@ -465,8 +465,7 @@ impl Options {
                 .set_level_padding(LevelPadding::Off)
                 .build(),
             TerminalMode::Mixed,
-        )
-        .expect("Unexpected TermLogger init failure")])
+        )])
         .expect("Unexpected CombinedLogger init failure");
     }
 
