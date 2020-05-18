@@ -156,12 +156,26 @@
 <span id="156">156</span>
 <span id="157">157</span>
 <span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">error</span>::<span class="ident">Error</span>;
-<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="self">self</span>, <span class="ident">OnDiskStorageConfig</span>, <span class="ident">VaultConfig</span>};
+<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="self">self</span>, <span class="ident">OnDiskStorageConfig</span>, <span class="ident">Token</span>, <span class="ident">VaultConfig</span>};
 <span class="kw">use</span> <span class="ident">libra_secure_storage</span>::<span class="ident">Storage</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">HashMap</span>,
@@ -179,7 +193,7 @@
 <span class="doccomment">/// Some backends require parameters others do not, so that requires a conversion into the</span>
 <span class="doccomment">/// config::SecureBackend type to parse.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// Example: backend=vault;server=http://127.0.0.1:8080;token=123456</span>
+<span class="doccomment">/// Example: backend=vault;server=http://127.0.0.1:8080;token=/path/to/token</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SecureBackend</span> {
     <span class="kw">pub</span> <span class="ident">backend</span>: <span class="ident">String</span>,
@@ -250,8 +264,7 @@
                 <span class="ident">config</span>::<span class="ident">SecureBackend</span>::<span class="ident">Vault</span>(<span class="ident">VaultConfig</span> {
                     <span class="ident">namespace</span>: <span class="self">self</span>.<span class="ident">parameters</span>.<span class="ident">remove</span>(<span class="string">&quot;namespace&quot;</span>),
                     <span class="ident">server</span>,
-                    <span class="comment">// TODO(davidiw) Make this a path to a file</span>
-                    <span class="ident">token</span>,
+                    <span class="ident">token</span>: <span class="ident">Token</span>::<span class="ident">new_disk</span>(<span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="ident">token</span>)),
                 })
             }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Invalid backend: {}&quot;</span>, <span class="self">self</span>.<span class="ident">backend</span>),
@@ -279,6 +292,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fs</span>::<span class="ident">File</span>, <span class="ident">io</span>::<span class="ident">Write</span>};
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_memory</span>() {
@@ -291,8 +305,10 @@
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_disk</span>() {
-        <span class="kw">let</span> <span class="ident">disk</span> <span class="op">=</span> <span class="string">&quot;backend=disk;path=some_path&quot;</span>;
-        <span class="ident">storage</span>(<span class="ident">disk</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">libra_temppath</span>::<span class="ident">TempPath</span>::<span class="ident">new</span>();
+        <span class="ident">path</span>.<span class="ident">create_as_file</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">disk</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;backend=disk;path={}&quot;</span>, <span class="ident">path</span>.<span class="ident">path</span>().<span class="ident">to_str</span>().<span class="ident">unwrap</span>());
+        <span class="ident">storage</span>(<span class="kw-2">&amp;</span><span class="ident">disk</span>).<span class="ident">unwrap</span>();
 
         <span class="kw">let</span> <span class="ident">disk</span> <span class="op">=</span> <span class="string">&quot;backend=disk&quot;</span>;
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">storage</span>(<span class="ident">disk</span>).<span class="ident">is_err</span>());
@@ -300,11 +316,23 @@
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_vault</span>() {
-        <span class="kw">let</span> <span class="ident">vault</span> <span class="op">=</span> <span class="string">&quot;backend=vault;server=http://127.0.0.1:8080;token=123456&quot;</span>;
-        <span class="ident">storage</span>(<span class="ident">vault</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">libra_temppath</span>::<span class="ident">TempPath</span>::<span class="ident">new</span>();
+        <span class="ident">path</span>.<span class="ident">create_as_file</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">File</span>::<span class="ident">create</span>(<span class="ident">path</span>.<span class="ident">path</span>()).<span class="ident">unwrap</span>();
+        <span class="ident">file</span>.<span class="ident">write_all</span>(<span class="string">b&quot;disk_token&quot;</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">path_str</span> <span class="op">=</span> <span class="ident">path</span>.<span class="ident">path</span>().<span class="ident">to_str</span>().<span class="ident">unwrap</span>();
 
-        <span class="kw">let</span> <span class="ident">vault</span> <span class="op">=</span> <span class="string">&quot;backend=vault;server=http://127.0.0.1:8080;token=123456;namespace=test&quot;</span>;
-        <span class="ident">storage</span>(<span class="ident">vault</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">vault</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+            <span class="string">&quot;backend=vault;server=http://127.0.0.1:8080;token={}&quot;</span>,
+            <span class="ident">path_str</span>
+        );
+        <span class="ident">storage</span>(<span class="kw-2">&amp;</span><span class="ident">vault</span>).<span class="ident">unwrap</span>();
+
+        <span class="kw">let</span> <span class="ident">vault</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+            <span class="string">&quot;backend=vault;server=http://127.0.0.1:8080;token={};namespace=test&quot;</span>,
+            <span class="ident">path_str</span>
+        );
+        <span class="ident">storage</span>(<span class="kw-2">&amp;</span><span class="ident">vault</span>).<span class="ident">unwrap</span>();
 
         <span class="kw">let</span> <span class="ident">vault</span> <span class="op">=</span> <span class="string">&quot;backend=vault&quot;</span>;
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">storage</span>(<span class="ident">vault</span>).<span class="ident">is_err</span>());

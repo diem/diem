@@ -339,6 +339,7 @@
 <span id="339">339</span>
 <span id="340">340</span>
 <span id="341">341</span>
+<span id="342">342</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -349,7 +350,7 @@
 <span class="kw">use</span> <span class="ident">libra_config</span>::{
     <span class="ident">config</span>::{
         <span class="ident">ConsensusType</span>, <span class="ident">NodeConfig</span>, <span class="ident">RemoteService</span>, <span class="ident">SafetyRulesService</span>, <span class="ident">SecureBackend</span>,
-        <span class="ident">SeedPeersConfig</span>, <span class="ident">VaultConfig</span>,
+        <span class="ident">SeedPeersConfig</span>, <span class="ident">Token</span>, <span class="ident">VaultConfig</span>,
     },
     <span class="ident">generator</span>,
 };
@@ -610,11 +611,12 @@
                         .<span class="ident">as_ref</span>()
                         .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">MissingSafetyRulesHost</span>)<span class="question-mark">?</span>
                         .<span class="ident">clone</span>(),
-                    <span class="ident">token</span>: <span class="self">self</span>
-                        .<span class="ident">safety_rules_token</span>
-                        .<span class="ident">as_ref</span>()
-                        .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">MissingSafetyRulesToken</span>)<span class="question-mark">?</span>
-                        .<span class="ident">clone</span>(),
+                    <span class="ident">token</span>: <span class="ident">Token</span>::<span class="ident">new_config</span>(
+                        <span class="self">self</span>.<span class="ident">safety_rules_token</span>
+                            .<span class="ident">as_ref</span>()
+                            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">MissingSafetyRulesToken</span>)<span class="question-mark">?</span>
+                            .<span class="ident">clone</span>(),
+                    ),
                 }),
                 <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">InvalidSafetyRulesBackend</span>(<span class="ident">backend</span>.<span class="ident">to_string</span>()).<span class="ident">into</span>()),
             };
