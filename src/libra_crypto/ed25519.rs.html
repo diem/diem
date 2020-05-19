@@ -481,6 +481,41 @@
 <span id="481">481</span>
 <span id="482">482</span>
 <span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -600,6 +635,41 @@
             <span class="prelude-val">Ok</span>(<span class="ident">dalek_public_key</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Ed25519PublicKey</span>(<span class="ident">dalek_public_key</span>)),
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">CryptoMaterialError</span>::<span class="ident">DeserializationError</span>),
         }
+    }
+
+    <span class="doccomment">/// Deserialize an Ed25519PublicKey from its representation as an x25519</span>
+    <span class="doccomment">/// public key, along with an indication of sign. This is meant to</span>
+    <span class="doccomment">/// compensate for the poor key storage capabilities of key management</span>
+    <span class="doccomment">/// solutions, and NOT to promote double usage of keys under several</span>
+    <span class="doccomment">/// schemes, which would lead to BAD vulnerabilities.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Arguments:</span>
+    <span class="doccomment">/// - `x25519_bytes`: bit representation of a public key in clamped</span>
+    <span class="doccomment">///            Montgomery form, a.k.a. the x25519 public key format.</span>
+    <span class="doccomment">/// - `negative`: whether to interpret the given point as a negative point,</span>
+    <span class="doccomment">///               as the Montgomery form erases the sign byte. By XEdDSA</span>
+    <span class="doccomment">///               convention, if you expect to ever convert this back to an</span>
+    <span class="doccomment">///               x25519 public key, you should pass `false` for this</span>
+    <span class="doccomment">///               argument.</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">from_x25519_public_bytes</span>(
+        <span class="ident">x25519_bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+        <span class="ident">negative</span>: <span class="ident">bool</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">CryptoMaterialError</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="ident">x25519_bytes</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">32</span> {
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">CryptoMaterialError</span>::<span class="ident">DeserializationError</span>);
+        }
+        <span class="kw">let</span> <span class="ident">key_bits</span> <span class="op">=</span> {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bits</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="number">32</span>];
+            <span class="ident">bits</span>.<span class="ident">copy_from_slice</span>(<span class="ident">x25519_bytes</span>);
+            <span class="ident">bits</span>
+        };
+        <span class="kw">let</span> <span class="ident">mtg_point</span> <span class="op">=</span> <span class="ident">curve25519_dalek</span>::<span class="ident">montgomery</span>::<span class="ident">MontgomeryPoint</span>(<span class="ident">key_bits</span>);
+        <span class="kw">let</span> <span class="ident">sign</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">negative</span> { <span class="number">1u8</span> } <span class="kw">else</span> { <span class="number">0u8</span> };
+        <span class="kw">let</span> <span class="ident">ed_point</span> <span class="op">=</span> <span class="ident">mtg_point</span>
+            .<span class="ident">to_edwards</span>(<span class="ident">sign</span>)
+            .<span class="ident">ok_or</span>(<span class="ident">CryptoMaterialError</span>::<span class="ident">DeserializationError</span>)<span class="question-mark">?</span>;
+        <span class="ident">Ed25519PublicKey</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span><span class="ident">ed_point</span>.<span class="ident">compress</span>().<span class="ident">as_bytes</span>()[..])
     }
 }
 
