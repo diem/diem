@@ -1,14 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{adapter::Adapter, FileHandle, ReadRecordBytes};
+use crate::{
+    storage::{BackupHandleRef, BackupStorage, FileHandle},
+    ReadRecordBytes,
+};
 use anyhow::Result;
 use bytes::Bytes;
-use futures::{stream, stream::TryStreamExt};
+use futures::stream::TryStreamExt;
 use libra_crypto::HashValue;
 use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
 use std::mem::size_of;
-use tokio::io::{AsyncRead, AsyncReadExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 use tokio_util::compat::FuturesAsyncReadCompatExt;
 
 pub struct BackupServiceClient {
@@ -60,70 +63,105 @@ impl BackupServiceClient {
     }
 }
 
+fn backup_name(version: Version) -> String {
+    format!("state_ver_{}", version)
+}
+
+fn chunk_name(first_idx: usize) -> String {
+    format!("{}-.chunk", first_idx)
+}
+
+fn chunk_proof_name(first_idx: usize, last_idx: usize) -> String {
+    format!("{}-{}.proof", first_idx, last_idx)
+}
+
 pub async fn backup_account_state(
     client: &BackupServiceClient,
     version: Version,
-    adapter: &impl Adapter,
+    storage: &impl BackupStorage,
     max_chunk_size: usize,
 ) -> Result<Vec<(FileHandle, FileHandle)>> {
-    let mut chunk = vec![];
+    let backup_handle = storage.create_backup(&backup_name(version)).await?;
+
+    let mut chunk_bytes = vec![];
     let mut ret = vec![];
+    let mut current_idx: usize = 0;
+    let mut chunk_first_idx: usize = 0;
 
-    let mut state_snapshot_stream = client.get_state_snapshot(version).await?;
+    let mut state_snapshot_file = client.get_state_snapshot(version).await?;
     let mut prev_record_bytes: Option<Bytes> = None;
-    while let Some(record_bytes) = state_snapshot_stream.read_record_bytes().await? {
-        if chunk.len() + size_of::<u32>() + record_bytes.len() > max_chunk_size {
-            assert!(chunk.len() <= max_chunk_size);
-            let account_state_file = adapter
-                .write_new_file(stream::once(async move { chunk }))
-                .await?;
+    while let Some(record_bytes) = state_snapshot_file.read_record_bytes().await? {
+        if chunk_bytes.len() + size_of::<u32>() + record_bytes.len() > max_chunk_size {
+            assert!(chunk_bytes.len() <= max_chunk_size);
+            println!("Reached max_chunk_size.");
 
-            let prb =
-                prev_record_bytes.expect("max_chunk_size should be larger than account size.");
-            let (prev_key, _): (HashValue, AccountStateBlob) = lcs::from_bytes(&prb)?;
-            println!(
-                "Reached max_chunk_size. Asking proof for key: {:?}",
-                prev_key,
-            );
-            let proof_file = get_proof_and_write(client, adapter, prev_key, version).await?;
-            ret.push((account_state_file, proof_file));
-            chunk = vec![];
+            let (chunk_handle, proof_handle) = write_chunk(
+                client,
+                version,
+                storage,
+                &backup_handle,
+                &chunk_bytes,
+                chunk_first_idx,
+                current_idx,
+                &prev_record_bytes.expect("max_chunk_size should be larger than account size."),
+            )
+            .await?;
+            ret.push((chunk_handle, proof_handle));
+            chunk_bytes = vec![];
+            chunk_first_idx = current_idx + 1;
         }
 
-        chunk.extend(&(record_bytes.len() as u32).to_be_bytes());
-        chunk.extend(&record_bytes);
+        current_idx += 1;
+        chunk_bytes.extend(&(record_bytes.len() as u32).to_be_bytes());
+        chunk_bytes.extend(&record_bytes);
         prev_record_bytes = Some(record_bytes);
     }
 
-    assert!(!chunk.is_empty());
-    assert!(chunk.len() <= max_chunk_size);
-    let account_state_file = adapter
-        .write_new_file(stream::once(async move { chunk }))
-        .await?;
-
-    let prb = prev_record_bytes.expect("Should have at least one account.");
-    let (prev_key, _): (HashValue, AccountStateBlob) = lcs::from_bytes(&prb)?;
-    println!("Asking proof for last key: {:x}", prev_key);
-    let proof_file = get_proof_and_write(client, adapter, prev_key, version).await?;
-    ret.push((account_state_file, proof_file));
+    assert!(!chunk_bytes.is_empty());
+    assert!(chunk_bytes.len() <= max_chunk_size);
+    println!("Last chunk.");
+    let (chunk_handle, proof_handle) = write_chunk(
+        client,
+        version,
+        storage,
+        &backup_handle,
+        &chunk_bytes,
+        chunk_first_idx,
+        current_idx,
+        &prev_record_bytes.expect("Should have at least one account."),
+    )
+    .await?;
+    ret.push((chunk_handle, proof_handle));
 
     Ok(ret)
 }
 
-async fn get_proof_and_write(
+async fn write_chunk(
     client: &BackupServiceClient,
-    adapter: &impl Adapter,
-    key: HashValue,
-    version: Version,
-) -> Result<FileHandle> {
-    let mut proof_bytes = Vec::new();
-    client
-        .get_account_range_proof(key, version)
-        .await?
-        .read_to_end(&mut proof_bytes)
+    version: u64,
+    storage: &impl BackupStorage,
+    backup_handle: &BackupHandleRef,
+    chunk_bytes: &[u8],
+    chunk_first_idx: usize,
+    current_idx: usize,
+    prev_record_bytes: &Bytes,
+) -> Result<(FileHandle, FileHandle)> {
+    let (prev_key, _): (HashValue, AccountStateBlob) = lcs::from_bytes(prev_record_bytes)?;
+    println!("Asking proof for key: {:?}", prev_key,);
+    let (chunk_handle, mut chunk_file) = storage
+        .create_for_write(&backup_handle, &chunk_name(chunk_first_idx))
         .await?;
-    let file = adapter
-        .write_new_file(stream::once(async move { proof_bytes }))
+    chunk_file.write_all(&chunk_bytes).await?;
+    let (proof_handle, mut proof_file) = storage
+        .create_for_write(
+            &backup_handle,
+            &chunk_proof_name(chunk_first_idx, current_idx),
+        )
         .await?;
-    Ok(file)
+    tokio::io::copy(
+        &mut client.get_account_range_proof(prev_key, version).await?,
+        &mut proof_file,
+    )
+    .await?;
+    Ok((chunk_handle, proof_handle))
 }

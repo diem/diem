@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-pub mod adapter;
 pub mod backup;
 pub mod restore;
+pub mod storage;
 
 #[cfg(test)]
 mod tests;
@@ -13,8 +13,6 @@ use async_trait::async_trait;
 use bytes::{Bytes, BytesMut};
 use std::convert::TryInto;
 use tokio::io::{AsyncRead, AsyncReadExt};
-
-pub type FileHandle = String;
 
 #[async_trait]
 trait ReadRecordBytes {
