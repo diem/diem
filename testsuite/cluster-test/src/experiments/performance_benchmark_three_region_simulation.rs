@@ -6,9 +6,7 @@ use crate::{
     cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
     experiments::{Context, Experiment, ExperimentParam},
     instance::Instance,
-    stats,
     tx_emitter::EmitJobRequest,
-    util::unix_timestamp_now,
 };
 use anyhow::Result;
 use async_trait::async_trait;
@@ -75,17 +73,16 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
             .tx_emitter
             .emit_txn_for(window, emit_job_request)
             .await?;
-        let buffer = Duration::from_secs(30);
-        let end = unix_timestamp_now() - buffer;
-        let start = end - window + 2 * buffer;
-        let (avg_tps, _avg_latency) = stats::txn_stats(&context.prometheus, start, end)?;
+        let avg_tps = stats.committed / window.as_secs();
         let avg_latency_client = stats.latency / stats.committed;
         info!(
             "Tx status from client side: txn {}, avg latency {}",
             stats.committed as u64, avg_latency_client
         );
         context.cluster_swarm.remove_all_network_effects().await?;
-        context.report.report_metric(&self, "avg_tps", avg_tps);
+        context
+            .report
+            .report_metric(&self, "avg_tps", avg_tps as f64);
         context
             .report
             .report_metric(&self, "avg_latency", avg_latency_client as f64);
