@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use std::{future::Future, pin::Pin, thread, time::Duration};
 
 /// Given an operation retries it successfully sleeping everytime it fails

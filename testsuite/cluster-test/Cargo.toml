@@ -30,7 +30,7 @@ rusoto_sts =  "0.43.0"
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0"}
 libra-json-rpc-client = { path = "../../client/json-rpc", version = "0.1.0"}
 admission-control-proto = { path = "../../admission-control/admission-control-proto", version = "0.1.0" }
-util = { path = "../../common/util", version = "0.1.0", package = "libra-util" }
+libra-retrier = { path = "../../common/retrier", version = "0.1.0" }
 num_cpus = "1.13.0"
 
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }

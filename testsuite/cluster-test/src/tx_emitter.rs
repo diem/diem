@@ -43,7 +43,6 @@ use std::{
     sync::atomic::{AtomicBool, AtomicU64, Ordering},
 };
 use tokio::{task::JoinHandle, time};
-use util::retry;
 
 const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempool
 
@@ -646,7 +645,7 @@ async fn execute_and_wait_transactions(
         account.address
     );
     for request in txn {
-        retry::retry_async(retry::fixed_retry_strategy(5_000, 20), || {
+        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5_000, 20), || {
             let request = request.clone();
             let c = client.clone();
             let client_name = format!("{:?}", client);

@@ -186,7 +186,6 @@ Error handling suggestions follow the [Rust book guidance](https://doc.rust-lang
 
 *Panic*
 
-* `unrecoverable!()` - Causes a panic. Should only be used when the resulting state cannot be processed going forward.
 * `unwrap()` - Unwrap should only be used for mutexes (e.g. `lock().unwrap()`) and test code.  For all other use cases, prefer `expect()`. The only exception is if the error message is custom-generated, in which case use `.unwrap_or_else(|| panic!("error: {}", foo))`
 * `expect()` - Expect should be invoked when a system invariant is expected to be preserved.  `expect()` is preferred over `unwrap()` and should contain a detailed error message on failure in most cases.
 * `assert!()` - This macro is kept in both debug/release and should be used to protect invariants of the system as necessary

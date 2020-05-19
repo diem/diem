@@ -16,7 +16,6 @@ use kube::{
     Config,
 };
 use libra_logger::*;
-use util::retry;
 
 use crate::{cluster_swarm::ClusterSwarm, instance::Instance};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
@@ -49,7 +48,7 @@ impl ClusterSwarmKube {
         Command::new("/usr/local/bin/kubectl")
             .arg("proxy")
             .spawn()?;
-        retry::retry_async(retry::fixed_retry_strategy(2000, 60), || {
+        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(2000, 60), || {
             Box::pin(async move {
                 info!("Running healthcheck on http://127.0.0.1:8001");
                 reqwest::get("http://127.0.0.1:8001").await?.text().await?;
@@ -147,7 +146,7 @@ impl ClusterSwarmKube {
     }
 
     async fn wait_job_completion(&self, job_name: &str, back_off_limit: u32) -> Result<bool> {
-        retry::retry_async(retry::fixed_retry_strategy(5000, 20), || {
+        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 20), || {
             let job_api: Api<Job> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
             let job_name = job_name.to_string();
             Box::pin(async move {
@@ -205,7 +204,7 @@ impl ClusterSwarmKube {
     }
 
     async fn get_pod_node_and_ip(&self, pod_name: &str) -> Result<(String, String)> {
-        retry::retry_async(retry::fixed_retry_strategy(10000, 60), || {
+        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(10000, 60), || {
             let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
             let pod_name = pod_name.to_string();
             Box::pin(async move {
@@ -255,7 +254,7 @@ impl ClusterSwarmKube {
         debug!("Deleting {} {}", T::KIND, name);
         let resource_api: Api<T> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         resource_api.delete(name, &Default::default()).await?;
-        retry::retry_async(retry::fixed_retry_strategy(5000, 30), || {
+        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 30), || {
             let pod_api = resource_api.clone();
             let name = name.to_string();
             Box::pin(async move {
@@ -340,7 +339,7 @@ impl ClusterSwarmKube {
 #[async_trait]
 impl ClusterSwarm for ClusterSwarmKube {
     async fn remove_all_network_effects(&self) -> Result<()> {
-        retry::retry_async(retry::fixed_retry_strategy(5000, 3), || {
+        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 3), || {
             Box::pin(async move { self.remove_all_network_effects_helper().await })
         })
         .await

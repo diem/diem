@@ -769,8 +769,8 @@ dependencies = [
  "libra-crypto 0.1.0",
  "libra-json-rpc-client 0.1.0",
  "libra-logger 0.1.0",
+ "libra-retrier 0.1.0",
  "libra-types 0.1.0",
- "libra-util 0.1.0",
  "libra-workspace-hack 0.1.0",
  "num_cpus 1.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2739,6 +2739,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-retrier"
+version = "0.1.0"
+dependencies = [
+ "libra-workspace-hack 0.1.0",
+ "tokio 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "libra-secure-json-rpc"
 version = "0.1.0"
 dependencies = [
@@ -2910,14 +2918,6 @@ dependencies = [
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "tiny-keccak 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "libra-util"
-version = "0.1.0"
-dependencies = [
- "libra-workspace-hack 0.1.0",
- "tokio 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
