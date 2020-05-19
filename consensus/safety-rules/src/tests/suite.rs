@@ -64,6 +64,7 @@ pub fn run_test_suite(round_func: RoundCallback, byte_func: ByteArrayCallback) {
     test_sign_timeout(round_func);
     test_voting(round_func);
     test_voting_potential_commit_id(round_func);
+    test_voting_bad_epoch(round_func);
 }
 
 fn test_bad_execution_output(func: RoundCallback) {
@@ -405,6 +406,32 @@ fn test_voting(func: RoundCallback) {
     assert_eq!(
         safety_rules.construct_and_sign_vote(&b4),
         Err(Error::ProposalRoundLowerThenPreferredBlock { preferred_round: 4 })
+    );
+}
+
+fn test_voting_bad_epoch(func: RoundCallback) {
+    // Test to verify epoch is the same between parent and proposed in a vote proposal
+    // genesis--a1 -> a2 fails due to jumping to a different epoch
+    let (mut safety_rules, signer) = func();
+
+    let (proof, genesis_qc) = make_genesis::<Round>(&signer);
+    let round = genesis_qc.certified_block().round();
+
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
+    let a2 = test_utils::make_proposal_with_parent_and_overrides(
+        round + 3,
+        round + 3,
+        &a1,
+        None,
+        &signer,
+        Some(21),
+    );
+    safety_rules.initialize(&proof).unwrap();
+    safety_rules.update(a1.block().quorum_cert()).unwrap();
+
+    assert_eq!(
+        safety_rules.construct_and_sign_vote(&a2),
+        Err(Error::IncorrectEpoch(21, 1))
     );
 }
 
