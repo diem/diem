@@ -26,8 +26,6 @@ module VASP {
         base_url: vector<u8>,
         // Expiration date in microseconds from unix epoch. Mutable, but only by Association
         expiration_date: u64,
-        // Certificate used for TLS keys off-chain. Mutable
-        ca_cert: vector<u8>,
         // 32 byte Ed25519 public key whose counterpart must be used to sign
         // (1) the payment metadata for on-chain travel rule transactions
         // (2) the KYC information exchanged in the off-chain travel rule protocol.
@@ -106,16 +104,6 @@ module VASP {
         AccountType::update<RootVASP>(addr, root_vasp);
     }
 
-    // Update the CA certificate of the root VASP at `root_vasp_addr` with
-    // the new `ca_cert`. Must be sent from an association account.
-    // TODO: allow a VASP to rotate its CA cert
-    public fun update_ca_cert(root_vasp_addr: address, ca_cert: vector<u8>) {
-        Transaction::assert(is_root_vasp(root_vasp_addr), 7001);
-        let root_vasp = AccountType::account_metadata<RootVASP>(root_vasp_addr);
-        root_vasp.ca_cert = ca_cert;
-        AccountType::update<RootVASP>(root_vasp_addr, root_vasp);
-    }
-
     // Rotate the compliance public key for `root_vasp_addr` to `new_public_key`.
     // TODO: allow a VASP to rotate its own compliance key
     public fun rotate_compliance_public_key(root_vasp_addr: address, new_public_key: vector<u8>) {
@@ -132,7 +120,6 @@ module VASP {
     public fun create_root_vasp_credential(
         human_name: vector<u8>,
         base_url: vector<u8>,
-        ca_cert: vector<u8>,
         compliance_public_key: vector<u8>
     ): RootVASP {
         // NOTE: Only callable in testnet
@@ -142,7 +129,6 @@ module VASP {
            expiration_date: 18446744073709551615,
            human_name,
            base_url,
-           ca_cert,
            compliance_public_key,
         }
     }
@@ -154,7 +140,6 @@ module VASP {
     public fun apply_for_vasp_root_credential(
         human_name: vector<u8>,
         base_url: vector<u8>,
-        ca_cert: vector<u8>,
         compliance_public_key: vector<u8>
     ) {
         // Sanity check for key validity
@@ -163,7 +148,6 @@ module VASP {
             expiration_date: current_time() + cert_lifetime(),
             human_name,
             base_url,
-            ca_cert,
             compliance_public_key,
         }, singleton_addr());
         AccountType::apply_for_granting_capability<ChildVASP>();
@@ -331,13 +315,6 @@ module VASP {
     //.........................................................................
     // These work on all valid (child, parent, root) VASP accounts.
     //.........................................................................
-
-    // Return the CA certificate for the VASP account at `addr`.
-    public fun ca_cert(addr: address): vector<u8> {
-        let root_vasp_addr = root_vasp_address(addr);
-        let root_vasp = AccountType::account_metadata<RootVASP>(root_vasp_addr);
-        *&root_vasp.ca_cert
-    }
 
     // Return the human-readable name for the VASP account at `addr`.
     public fun human_name(addr: address): vector<u8> {

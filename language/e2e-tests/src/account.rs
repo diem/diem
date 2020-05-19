@@ -532,7 +532,6 @@ impl AccountType {
                 FatType::Vector(Box::new(FatType::U8)),
                 FatType::U64,
                 FatType::Vector(Box::new(FatType::U8)),
-                FatType::Vector(Box::new(FatType::U8)),
             ],
         };
         FatStructType {
@@ -566,7 +565,6 @@ impl AccountType {
                 Value::vector_u8(vec![]),
                 Value::vector_u8(vec![]),
                 Value::u64(u64::MAX),
-                Value::vector_u8(vec![]),
                 Value::vector_u8(vec![0u8; 16]),
             ]))]),
             AccountTypeSpecifier::Unhosted => {

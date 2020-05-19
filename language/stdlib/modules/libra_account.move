@@ -406,7 +406,6 @@ module LibraAccount {
               x"746573746E6574",
               // "https://libra.org"
               x"68747470733A2F2F6C696272612E6F72672F",
-              x"",
               // An empty travel-rule key
               x"00000000000000000000000000000000",
          );
