@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 /// unique and private token for another service. Hence get and set internally will pass the
 /// current service private token to the backend to gain its permissions.
 pub trait KVStorage: Send + Sync {
-    /// Returns true if the backend service is online and available.
-    fn available(&self) -> bool;
+    /// Returns an error if the backend service is not online and available.
+    fn available(&self) -> Result<(), Error>;
 
     /// Retrieves a value from storage and fails if the backend is unavailable or the process has
     /// invalid permissions.

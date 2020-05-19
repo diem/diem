@@ -19,7 +19,7 @@ impl<T> Storage for T where T: KVStorage + CryptoStorage {}
 pub struct BoxStorage(pub Box<dyn Storage>);
 
 impl KVStorage for BoxStorage {
-    fn available(&self) -> bool {
+    fn available(&self) -> Result<(), Error> {
         self.0.available()
     }
 

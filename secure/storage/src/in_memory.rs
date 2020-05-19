@@ -40,8 +40,8 @@ impl<T: TimeService> InMemoryStorageInternal<T> {
 }
 
 impl<T: Send + Sync + TimeService> KVStorage for InMemoryStorageInternal<T> {
-    fn available(&self) -> bool {
-        true
+    fn available(&self) -> Result<(), Error> {
+        Ok(())
     }
 
     fn get(&self, key: &str) -> Result<GetResponse, Error> {

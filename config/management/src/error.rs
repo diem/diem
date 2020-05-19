@@ -12,8 +12,8 @@ pub enum Error {
     BackendMissingBackendKey,
     #[error("Backend parsing error: {0}")]
     BackendParsingError(String),
-    #[error("Local storage unavailable, please check your configuration")]
-    LocalStorageUnavailable,
+    #[error("Local storage unavailable, please check your configuration: {0}")]
+    LocalStorageUnavailable(String),
     #[error("Failed to read from local storage: {0}")]
     LocalStorageReadError(String),
     #[error("Failed to sign data using local storage: {0}")]
@@ -22,8 +22,8 @@ pub enum Error {
     RemoteStorageReadError(String),
     #[error("Failed to write to remote storage: {0}")]
     RemoteStorageWriteError(String),
-    #[error("Remote storage unavailable, please check your configuration")]
-    RemoteStorageUnavailable,
+    #[error("Remote storage unavailable, please check your configuration: {0}")]
+    RemoteStorageUnavailable(String),
     #[error("Unexpected command, expected {0}, found {1}")]
     UnexpectedCommand(CommandName, CommandName),
     #[error("Unexpected error: {0}")]

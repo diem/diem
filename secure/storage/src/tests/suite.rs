@@ -164,10 +164,7 @@ fn test_hash_value(storage: &mut dyn Storage) {
 
 /// This test verifies the storage engine is up and running.
 fn test_ensure_storage_is_available(storage: &mut dyn Storage) {
-    assert!(
-        storage.available(),
-        eprintln!("Backend storage is not available")
-    );
+    storage.available().unwrap();
 }
 
 /// This test creates a new named key pair and attempts to get a non-existent version of the public

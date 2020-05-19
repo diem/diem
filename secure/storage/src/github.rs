@@ -22,10 +22,11 @@ impl GitHubStorage {
 }
 
 impl KVStorage for GitHubStorage {
-    fn available(&self) -> bool {
-        match self.client.get_branches() {
-            Ok(branches) => !branches.is_empty(),
-            _ => false,
+    fn available(&self) -> Result<(), Error> {
+        if !self.client.get_branches()?.is_empty() {
+            Ok(())
+        } else {
+            Err(Error::InternalError("No branches found.".into()))
         }
     }
 

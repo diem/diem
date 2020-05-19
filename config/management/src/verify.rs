@@ -17,10 +17,9 @@ pub struct Verify {
 impl Verify {
     pub fn execute(self) -> Result<String, Error> {
         let storage: Box<dyn Storage> = self.backend.backend.try_into()?;
-        if !storage.available() {
-            return Err(Error::LocalStorageUnavailable);
-        }
-
+        storage
+            .available()
+            .map_err(|e| Error::LocalStorageUnavailable(e.to_string()))?;
         let mut buffer = String::new();
 
         writeln!(buffer, "Data stored in SecureStorage:").unwrap();
