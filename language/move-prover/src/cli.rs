@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-//! Functionality related to the command line interface of the move prover.
+//! Functionality related to the command line interface of the Move prover.
 
 use clap::{App, Arg};
 use docgen::docgen::DocgenOptions;
@@ -62,13 +62,11 @@ pub struct Options {
     pub account_address: String,
     /// Verbosity level for logging.
     pub verbosity_level: LevelFilter,
-    /// The paths to the move sources.
+    /// The paths to the Move sources.
     pub move_sources: Vec<String>,
-    /// The paths to any dependencies for the move sources. Those will not be verified but
+    /// The paths to any dependencies for the Move sources. Those will not be verified but
     /// can be used by `move_sources`.
     pub move_deps: Vec<String>,
-    /// Paths to directories where dependencies are looked up automatically.
-    pub search_path: Vec<String>,
     /// Path to the boogie executable.
     pub boogie_exe: String,
     /// Path to the z3 executable.
@@ -140,7 +138,6 @@ impl Default for Options {
             verbosity_level: LevelFilter::Info,
             move_sources: vec![],
             move_deps: vec![],
-            search_path: vec![],
             boogie_exe: "".to_string(),
             z3_exe: "".to_string(),
             use_cvc4: false,
@@ -416,31 +413,21 @@ impl Options {
                     ),
             )
             .arg(
-                Arg::with_name("search-path")
-                    .long("search-path")
-                    .short("s")
-                    .multiple(true)
-                    .number_of_values(1)
-                    .takes_value(true)
-                    .value_name("PATH")
-                    .help("path to a directory where dependencies are looked up automatically")
-            )
-            .arg(
                 Arg::with_name("dependencies")
-                    .long("dep")
+                    .long("dependency")
                     .short("d")
                     .multiple(true)
                     .number_of_values(1)
                     .takes_value(true)
-                    .value_name("MOVE_FILE")
-                    .help("path to a move file dependency, which will not be verified")
+                    .value_name("PATH_TO_DEPENDENCY_FILE")
+                    .help("the Move library files, which will not be verified")
             )
             .arg(
                 Arg::with_name("sources")
                     .multiple(true)
-                    .value_name("MOVE_FILE")
+                    .value_name("PATH_TO_SOURCE_FILE")
                     .min_values(1)
-                    .help("path to a move file (with embedded spec)"),
+                    .help("the source files to verify"),
             );
 
         // Parse the arguments. This will abort the program on parsing errors and print help.
@@ -476,7 +463,6 @@ impl Options {
         self.boogie_flags = get_vec("boogie-flags");
         self.move_sources = get_vec("sources");
         self.move_deps = get_vec("dependencies");
-        self.search_path = get_vec("search-path");
         self.stable_test_output = matches.is_present("stable-test-output");
         self.verify_scope = match get_with_default("verify").as_str() {
             "public" => VerificationScope::Public,
