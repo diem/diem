@@ -67,6 +67,10 @@ impl<T: Payload> LivenessStorageData<T> {
     }
 }
 
+// @REVIEW: FWIW, before I read any code I assumed that an "EventProcessor" is global and that it
+// delegates to an EpochManager that is spawned per epoch. If other people are confused could be
+// worth considering the name
+
 // Manager the components that shared across epoch and spawn per-epoch EventProcessor with
 // epoch-specific input.
 pub struct EpochManager<T> {
@@ -151,6 +155,7 @@ impl<T: Payload> EpochManager<T> {
             .verifier
             .get_ordered_account_addresses_iter()
             .collect::<Vec<_>>();
+        // @REVIEW: Do we use all these?
         match self.config.proposer_type {
             ConsensusProposerType::MultipleOrderedProposers => {
                 Box::new(MultiProposer::new(epoch_info.epoch, proposers, 2))
@@ -206,6 +211,7 @@ impl<T: Payload> EpochManager<T> {
         };
     }
 
+    // @REVIEW: Different epochs for what? Method name could use more context
     async fn process_different_epoch(&mut self, different_epoch: u64, peer_id: AccountAddress) {
         match different_epoch.cmp(&self.epoch()) {
             // We try to help nodes that have lower epoch than us
@@ -286,6 +292,9 @@ impl<T: Payload> EpochManager<T> {
 
         info!("Update SafetyRules");
 
+        // @REVIEW: the "safety rules" system also has data that's required for liveness. Seems like it'd be nice
+        // to be able to recover just based on the consensus db / storage systems (at least if an operator chooses)
+
         let mut safety_rules = self.safety_rules_manager.client();
         let consensus_state = safety_rules
             .consensus_state()
@@ -342,6 +351,8 @@ impl<T: Payload> EpochManager<T> {
         info!("EventProcessor started");
     }
 
+    // @REVIEW: Under what circumstances would consensusdb not have enough data?
+
     // Depending on what data we can extract from consensusdb, we may or may not have an
     // event processor at startup. If we need to sync up with peers for blocks to construct
     // a valid block store, which is required to construct an event processor, we will take
@@ -351,6 +362,9 @@ impl<T: Payload> EpochManager<T> {
         ledger_recovery_data: LedgerRecoveryData,
         epoch_info: EpochInfo,
     ) {
+        // @REVIEW: might it be necessary to update the network config as sync happens?
+        // What if we are so far out of date that the network info is invalid? Is there a way
+        // to bootstrap?
         let network_sender = NetworkSender::new(
             self.author,
             self.network_sender.clone(),
@@ -377,6 +391,8 @@ impl<T: Payload> EpochManager<T> {
         };
         let validator_keys = validator_set.payload().to_vec();
         info!("Update Network about new validators");
+        // @REVIEW: Why does this use a different method to subscribe to onchain config changes than
+        // e.g., mempool (the reconfig_events system)
         self.network_sender
             .update_eligible_nodes(validator_keys)
             .await
@@ -495,6 +511,9 @@ impl<T: Payload> EpochManager<T> {
         mut network_receivers: NetworkReceivers<T>,
         mut reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     ) {
+        // @REVIEW: Seems like you're trying to prioritize these events. Why
+        // only the first time when the processor is started?
+
         // initial start of the processor
         if let Some(payload) = reconfig_events.next().await {
             self.start_processor(payload).await;

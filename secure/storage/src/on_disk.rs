@@ -71,6 +71,11 @@ impl<T: TimeService> OnDiskStorageInternal<T> {
         let contents = serde_json::to_vec(data)?;
         let mut file = File::create(self.temp_path.path())?;
         file.write_all(&contents)?;
+        // @REVIEW: many filesystems will not guarantee that the contents of the file will be stored
+        // to disk before the rename happens. We should also consider if fsync() is needed here.
+        // Super interesting thread:
+        //  https://fb.workplace.com/groups/linux.fbk/permalink/3027492113950278/
+        //  D20153864
         fs::rename(&self.temp_path, &self.file_path)?;
         Ok(())
     }

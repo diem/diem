@@ -39,6 +39,8 @@ pub fn start_consensus(
         .enable_all()
         .build()
         .expect("Failed to create Tokio runtime!");
+    // REVIEW: Should MempoolProxy etc be the object passed to this function (vs passing a channel
+    // to send messages on).
     let storage = Arc::new(StorageWriteProxy::new(node_config, libra_db));
     let txn_manager = Box::new(MempoolProxy::new(consensus_to_mempool_sender));
     let execution_correctness_manager = ExecutionCorrectnessManager::new(node_config);
@@ -48,6 +50,8 @@ pub fn start_consensus(
     ));
     let time_service = Arc::new(ClockTimeService::new(runtime.handle().clone()));
 
+
+    // REVIEW: what bugs could arise if we hit the backpressure of 1024 elements? Is a deadlock possible?
     let (timeout_sender, timeout_receiver) =
         channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
     let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);

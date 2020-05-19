@@ -18,6 +18,8 @@ pub struct PersistentSafetyStorage {
     internal_store: Box<dyn Storage>,
 }
 
+// @REVIEW: it seems that updates are made on a per key basis. What happens if the process crashes
+// mid update? Is there a need for atomic updates?
 impl PersistentSafetyStorage {
     pub fn in_memory(private_key: Ed25519PrivateKey) -> Self {
         let storage = InMemoryStorage::new_storage();

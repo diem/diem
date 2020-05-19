@@ -55,6 +55,9 @@ impl ConsensusDB {
     )> {
         let last_vote = self.get_last_vote()?;
         let highest_timeout_certificate = self.get_highest_timeout_certificate()?;
+        // @REVIEW: seems that we don't record the executed state ID of the block in storage. So
+        // in theory, a block without a QC could be executed with state hash X, then after restart
+        // (due to an error) we recompute it with state Y.
         let consensus_blocks = self
             .get_blocks()?
             .into_iter()

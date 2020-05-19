@@ -29,6 +29,9 @@ pub struct LibraDBBackend {
     window: Mutex<Vec<(u64, NewBlockEvent)>>,
 }
 
+// REVIEW: I couldn't understand how this worked from the comments. For example, how do you make sure that
+// for round R, everybody is using the same view (even if they are synced up to different points)
+
 impl LibraDBBackend {
     pub fn new(window_size: usize, libra_db: Arc<dyn DbReader>) -> Self {
         Self {

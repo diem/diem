@@ -84,6 +84,8 @@ fn update_counters_for_committed_blocks<T>(blocks_to_commit: &[Arc<ExecutedBlock
 ///             ├--------> C2
 ///             ╰--------------> D3
 pub struct BlockStore<T> {
+    // @REVIEW: is there actually concurrent access to this data structure? This is one of the few
+    // places that has concurrency in consensus?
     inner: Arc<RwLock<BlockTree<T>>>,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
     /// The persistent storage backing up the in-memory data structure, every write should go
@@ -333,6 +335,8 @@ impl<T: Payload> BlockStore<T> {
             Some(executed_block) => {
                 ensure!(
                     executed_block.block_info() == *qc.certified_block(),
+                    // @REVIEW: As noted elsewhere -- this check doesn't seem to happen at restart
+                    // because we don't record the blockinfo that we vote on.
                     "QC for block {} has different {:?} than local {:?}",
                     qc.certified_block().id(),
                     qc.certified_block(),
@@ -342,6 +346,8 @@ impl<T: Payload> BlockStore<T> {
             None => bail!("Insert {} without having the block in store first", qc),
         }
 
+        // @REVIEW: is it actually necessary to save a QC that's not attached to a block on disk?
+        // i.e., is liveness threatened if this data is lost?
         self.storage
             .save_tree(vec![], vec![qc.clone()])
             .context("Insert block failed when saving quorum")?;
@@ -355,6 +361,8 @@ impl<T: Payload> BlockStore<T> {
         if tc.round() <= cur_tc_round {
             return Ok(());
         }
+        // @REVIEW: is liveness threatened if this data isn't fsync(). What would the consequence
+        // be if this data wasn't saved?
         self.storage
             .save_highest_timeout_cert(tc.as_ref().clone())
             .context("Timeout certificate insert failed when persisting to DB")?;

@@ -225,6 +225,9 @@ where
         // qc1 == qc2 || qc1.round != qc2.round
         // The invariant is quadratic but can be maintained in linear time by the check
         // below.
+
+        // @REVIEW: If this is true, is there a reason this data structure isn't indexed by round?
+        // Also, What if this invariant is violated (e.g., due to byzantine cases? what would happen?)
         precondition!({
             let qc_round = qc.certified_block().round();
             self.id_to_quorum_cert.values().all(|x| {
@@ -254,6 +257,10 @@ where
 
         Ok(())
     }
+
+    // @REVIEW: Would it be simpler just to prune all blocks that have round < committed round?
+    // This seems like a lot of fairly complex code to optimize for purning slightly earlier when
+    // there are forks
 
     /// Find the blocks to prune up to next_root_id (keep next_root_id's block). Any branches not
     /// part of the next_root_id's tree should be removed as well.
@@ -298,6 +305,7 @@ where
     /// Note that we do not necessarily remove the pruned blocks: they're kept in a separate buffer
     /// for some time in order to enable other peers to retrieve the blocks even after they've
     /// been committed.
+    // REVIEW: How long do we need to persist them? Is this for correctness or an optimization?
     pub(super) fn process_pruned_blocks(
         &mut self,
         root_id: HashValue,

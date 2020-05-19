@@ -189,6 +189,8 @@ impl<T: Payload> BlockStore<T> {
         Ok(())
     }
 
+
+    // @REVIEW: It feels like some comments would help here.
     pub async fn fast_forward_sync<'a>(
         highest_commit_cert: &'a QuorumCert,
         retriever: &'a mut BlockRetriever<T>,

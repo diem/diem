@@ -373,6 +373,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
             highest_timeout_certificate,
         ) {
             Ok(mut initial_data) => {
+                // @REVIEW: Why do we have to clean these things up at startup?
                 (self as &dyn PersistentLivenessStorage<T>)
                     .prune_tree(initial_data.take_blocks_to_prune())
                     .expect("unable to prune dangling blocks during restart");
@@ -395,6 +396,8 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
                 LivenessStorageData::RecoveryData(initial_data)
             }
             Err(e) => {
+                // @REVIEW: It seems like on this path you can potentially be byzantine (e.g., forget
+                // a previous vote). Should we allow this to happen without operator intervention?
                 error!("Failed to construct recovery data: {}", e);
                 LivenessStorageData::LedgerRecoveryData(ledger_recovery_data)
             }

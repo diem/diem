@@ -159,6 +159,10 @@ impl StateSyncClient {
                 ))
                 .await?;
 
+            // @REVIEW: Is one second reasonable? What happens if there is an error?
+            // in block_store this seems to cause a panic. Imagine that there was swapping / slow disk
+            // seems like this would cause a panic.
+            // Does this actually need to be synchronous?
             match timeout(Duration::from_secs(1), callback_rcv).await {
                 Err(_) => {
                     Err(format_err!("[state sync client] failed to receive commit ACK from state synchronizer on time"))

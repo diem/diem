@@ -10,6 +10,8 @@ use std::{
 use thiserror::Error;
 use tokio::{runtime::Handle, time::delay_for};
 
+// REVIEW: note the existence of a TimeService in secure/time/src/lib.rs
+
 /// Time service is an abstraction for operations that depend on time
 /// It supports implementations that can simulated time or depend on actual time
 /// We can use simulated time in tests so tests can run faster and be more stable.

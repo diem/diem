@@ -158,6 +158,8 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
         }
     }
 
+    // @REVIEW Which of these TODOs are necessary for safety? Are all of the checks in this method
+    // strictly necessary for safety?
     /// @TODO verify signature on vote proposal
     /// @TODO verify QC correctness
     /// @TODO verify epoch on vote proposal
@@ -218,6 +220,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
         ))
     }
 
+    // @REVIEW: does this only impact liveness?
     /// @TODO only sign blocks that are later than last_voted_round and match the current epoch
     /// @TODO verify QC correctness
     /// @TODO verify QC matches preferred round
@@ -229,6 +232,8 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
             &self.validator_signer,
         ))
     }
+
+    // @REVIEW: does this only impact liveness?
 
     /// Only sign the timeout if it is greater than or equal to the last_voted_round and ahead of
     /// the preferred_round. We may end up signing timeouts for rounds without first signing votes

@@ -312,6 +312,8 @@ impl<T: Payload> EventProcessor<T> {
     /// and fetch all the blocks from the committed state to the HQC
     /// 2. forwarding the proposals to the ProposerElection queue,
     /// which is going to eventually trigger one winning proposal per round
+    // REVIEW: Maybe add to the comment "and returns the block within the proposal if the
+    // it is the primary proposer for the round"
     async fn pre_process_proposal(&mut self, proposal_msg: ProposalMsg<T>) -> Option<Block<T>> {
         trace_event!("event_processor::pre_process_proposal", {"block", proposal_msg.proposal().id()});
         // Pacemaker is going to be updated with all the proposal certificates later,
@@ -649,6 +651,8 @@ impl<T: Payload> EventProcessor<T> {
         }
         let block = executed_block.block();
 
+        // REVIEW: is this true now that we block during block retrieval?
+
         // Checking pacemaker round again, because multiple proposed_block can now race
         // during async block retrieval
         ensure!(
@@ -722,6 +726,7 @@ impl<T: Payload> EventProcessor<T> {
                 return;
             }
         } else {
+            // REVIEW: why?
             // Sync up for timeout votes only.
             if self
                 .sync_up(vote_msg.sync_info(), vote_msg.vote().author(), true)
@@ -840,6 +845,11 @@ impl<T: Payload> EventProcessor<T> {
                 .certified_block()
                 .round(),
         );
+        // @REVIEW: The strategy taken here (where you bootstrap by replaying old events) is very
+        // different than the one taken by EpochManager::start_event_processor (which does a fair
+        // bit of manual reconstruction). I wonder if start_event_processor would benefit from a similar
+        // design
+
         let htc_round = self.block_store.highest_timeout_cert().map(|tc| tc.round());
         let last_committed_round = Some(self.block_store.root().round());
         let new_round_event = self
