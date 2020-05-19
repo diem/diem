@@ -92,7 +92,11 @@ where
         .get_mut(&peer.network_id())
         .expect("[shared mempool] missing network sender");
 
-    debug!("[mempool] sending batch {}:{}", timeline_id, new_timeline_id);
+    let mut txn_log = "".to_owned();
+    for txn in &transactions {
+        txn_log = txn_log + &format!("{}:{} ", txn.sender(), txn.sequence_number());
+    }
+    debug!("[mempool] sending batch {}:{}: {:?}", timeline_id, new_timeline_id, txn_log);
     let request_id = create_request_id(timeline_id, new_timeline_id);
     let txns_ct = transactions.len();
     if let Err(e) = send_mempool_sync_msg(
@@ -171,7 +175,11 @@ pub(crate) async fn process_transaction_broadcast<V>(
     V: TransactionValidation,
 {
     if timeline_state == TimelineState::NotReady {
-        debug!("[mempool] received {:?} txns for range {:?}", transactions.len(), request_id);
+        let mut txn_log = "".to_owned();
+        for txn in &transactions {
+            txn_log = txn_log + &format!("{}:{} ", txn.sender(), txn.sequence_number());
+        }
+        debug!("[mempool] received range {:?} txns {:?}", request_id, txn_log);
     }
     let results = process_incoming_transactions(&smp, transactions, timeline_state).await;
     log_txn_process_results(results, Some(peer.peer_id()));
