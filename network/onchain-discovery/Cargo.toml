@@ -15,7 +15,7 @@ bytes = "0.5.4"
 futures = "0.3.5"
 rand = "0.7.3"
 serde = { version = "1.0.110", features = ["derive"] }
-tokio = { version = "0.2.13", features = ["full"] }
+tokio = { version = "0.2.21", features = ["full"] }
 
 bounded-executor = { path = "../../common/bounded-executor", version = "0.1.0" }
 channel = { path = "../../common/channel", version = "0.1.0" }
