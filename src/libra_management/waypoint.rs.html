@@ -98,9 +98,9 @@
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">remote</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">secure_backends</span>.<span class="ident">remote</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">remote</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Storage</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">remote</span>.<span class="ident">try_into</span>()<span class="question-mark">?</span>;
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">remote</span>.<span class="ident">available</span>() {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">RemoteStorageUnavailable</span>);
-            }
+            <span class="ident">remote</span>
+                .<span class="ident">available</span>()
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">RemoteStorageUnavailable</span>(<span class="ident">e</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
 
             <span class="kw">let</span> <span class="ident">waypoint_value</span> <span class="op">=</span> <span class="ident">Value</span>::<span class="ident">String</span>(<span class="ident">waypoint</span>.<span class="ident">to_string</span>());
             <span class="ident">remote</span>

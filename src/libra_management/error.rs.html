@@ -44,8 +44,8 @@
     <span class="ident">BackendMissingBackendKey</span>,
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Backend parsing error: {0}&quot;</span>)]</span>
     <span class="ident">BackendParsingError</span>(<span class="ident">String</span>),
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Local storage unavailable, please check your configuration&quot;</span>)]</span>
-    <span class="ident">LocalStorageUnavailable</span>,
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Local storage unavailable, please check your configuration: {0}&quot;</span>)]</span>
+    <span class="ident">LocalStorageUnavailable</span>(<span class="ident">String</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Failed to read from local storage: {0}&quot;</span>)]</span>
     <span class="ident">LocalStorageReadError</span>(<span class="ident">String</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Failed to sign data using local storage: {0}&quot;</span>)]</span>
@@ -54,8 +54,8 @@
     <span class="ident">RemoteStorageReadError</span>(<span class="ident">String</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Failed to write to remote storage: {0}&quot;</span>)]</span>
     <span class="ident">RemoteStorageWriteError</span>(<span class="ident">String</span>),
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Remote storage unavailable, please check your configuration&quot;</span>)]</span>
-    <span class="ident">RemoteStorageUnavailable</span>,
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Remote storage unavailable, please check your configuration: {0}&quot;</span>)]</span>
+    <span class="ident">RemoteStorageUnavailable</span>(<span class="ident">String</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Unexpected command, expected {0}, found {1}&quot;</span>)]</span>
     <span class="ident">UnexpectedCommand</span>(<span class="ident">CommandName</span>, <span class="ident">CommandName</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Unexpected error: {0}&quot;</span>)]</span>

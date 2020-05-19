@@ -51,6 +51,7 @@
 <span id="51">51</span>
 <span id="52">52</span>
 <span id="53">53</span>
+<span id="54">54</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -76,10 +77,11 @@
 }
 
 <span class="kw">impl</span> <span class="ident">KVStorage</span> <span class="kw">for</span> <span class="ident">GitHubStorage</span> {
-    <span class="kw">fn</span> <span class="ident">available</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">get_branches</span>() {
-            <span class="prelude-val">Ok</span>(<span class="ident">branches</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="op">!</span><span class="ident">branches</span>.<span class="ident">is_empty</span>(),
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
+    <span class="kw">fn</span> <span class="ident">available</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">client</span>.<span class="ident">get_branches</span>()<span class="question-mark">?</span>.<span class="ident">is_empty</span>() {
+            <span class="prelude-val">Ok</span>(())
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">InternalError</span>(<span class="string">&quot;No branches found.&quot;</span>.<span class="ident">into</span>()))
         }
     }
 

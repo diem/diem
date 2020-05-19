@@ -114,7 +114,6 @@
 <span id="114">114</span>
 <span id="115">115</span>
 <span id="116">116</span>
-<span id="117">117</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -135,10 +134,9 @@
 <span class="kw">impl</span> <span class="ident">Verify</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">storage</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Storage</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">backend</span>.<span class="ident">backend</span>.<span class="ident">try_into</span>()<span class="question-mark">?</span>;
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">storage</span>.<span class="ident">available</span>() {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">LocalStorageUnavailable</span>);
-        }
-
+        <span class="ident">storage</span>
+            .<span class="ident">available</span>()
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">LocalStorageUnavailable</span>(<span class="ident">e</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">new</span>();
 
         <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">buffer</span>, <span class="string">&quot;Data stored in SecureStorage:&quot;</span>).<span class="ident">unwrap</span>();

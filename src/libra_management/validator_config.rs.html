@@ -134,7 +134,6 @@
 <span id="134">134</span>
 <span id="135">135</span>
 <span id="136">136</span>
-<span id="137">137</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -173,9 +172,9 @@
 <span class="kw">impl</span> <span class="ident">ValidatorConfig</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Transaction</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">local</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Storage</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">backends</span>.<span class="ident">local</span>.<span class="ident">try_into</span>()<span class="question-mark">?</span>;
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">local</span>.<span class="ident">available</span>() {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">LocalStorageUnavailable</span>);
-        }
+        <span class="ident">local</span>
+            .<span class="ident">available</span>()
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">LocalStorageUnavailable</span>(<span class="ident">e</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
 
         <span class="comment">// Step 1) Retrieve keys from local storage</span>
         <span class="kw">let</span> <span class="ident">consensus_key</span> <span class="op">=</span> <span class="ident">ed25519_from_storage</span>(<span class="ident">CONSENSUS_KEY</span>, <span class="ident">local</span>.<span class="ident">as_mut</span>())<span class="question-mark">?</span>;
@@ -238,10 +237,9 @@
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">remote</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">backends</span>.<span class="ident">remote</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">remote</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Storage</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">remote</span>.<span class="ident">try_into</span>()<span class="question-mark">?</span>;
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">remote</span>.<span class="ident">available</span>() {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">RemoteStorageUnavailable</span>);
-            }
-
+            <span class="ident">remote</span>
+                .<span class="ident">available</span>()
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">RemoteStorageUnavailable</span>(<span class="ident">e</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">txn</span> <span class="op">=</span> <span class="ident">Value</span>::<span class="ident">Transaction</span>(<span class="ident">txn</span>.<span class="ident">clone</span>());
             <span class="ident">remote</span>
                 .<span class="ident">set</span>(<span class="kw">crate</span>::<span class="ident">constants</span>::<span class="ident">VALIDATOR_CONFIG</span>, <span class="ident">txn</span>)
