@@ -1345,8 +1345,8 @@ dependencies = [
  "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "config-builder 0.1.0",
  "executor 0.1.0",
+ "executor-test-helpers 0.1.0",
  "executor-types 0.1.0",
- "executor-utils 0.1.0",
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
@@ -1376,8 +1376,8 @@ dependencies = [
  "config-builder 0.1.0",
  "consensus-types 0.1.0",
  "debug-interface 0.1.0",
+ "executor-test-helpers 0.1.0",
  "executor-types 0.1.0",
- "executor-utils 0.1.0",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
@@ -1410,7 +1410,6 @@ dependencies = [
  "config-builder 0.1.0",
  "executor 0.1.0",
  "executor-types 0.1.0",
- "executor-utils 0.1.0",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
@@ -1429,6 +1428,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "executor-test-helpers"
+version = "0.1.0"
+dependencies = [
+ "executor-types 0.1.0",
+ "libra-config 0.1.0",
+ "libra-crypto 0.1.0",
+ "libra-types 0.1.0",
+ "libra-workspace-hack 0.1.0",
+]
+
+[[package]]
 name = "executor-types"
 version = "0.1.0"
 dependencies = [
@@ -1442,23 +1452,6 @@ dependencies = [
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
  "thiserror 1.0.19 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "executor-utils"
-version = "0.1.0"
-dependencies = [
- "executor 0.1.0",
- "executor-types 0.1.0",
- "libra-config 0.1.0",
- "libra-crypto 0.1.0",
- "libra-types 0.1.0",
- "libra-vm 0.1.0",
- "libra-workspace-hack 0.1.0",
- "storage-client 0.1.0",
- "storage-interface 0.1.0",
- "storage-service 0.1.0",
- "tokio 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -5164,8 +5157,8 @@ dependencies = [
  "channel 0.1.0",
  "config-builder 0.1.0",
  "executor 0.1.0",
+ "executor-test-helpers 0.1.0",
  "executor-types 0.1.0",
- "executor-utils 0.1.0",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",

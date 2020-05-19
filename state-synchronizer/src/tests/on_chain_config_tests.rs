@@ -3,10 +3,10 @@
 
 use crate::executor_proxy::{ExecutorProxy, ExecutorProxyTrait};
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
-use executor_types::BlockExecutor;
-use executor_utils::test_helpers::{
+use executor_test_helpers::{
     gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
 };
+use executor_types::BlockExecutor;
 use futures::{future::FutureExt, stream::StreamExt};
 use libra_config::utils::get_genesis_txn;
 use libra_crypto::{
