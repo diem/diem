@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::proto;
-use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
+use libra_prost_test_helpers::assert_protobuf_encode_decode;
 use libra_types::get_with_proof::{
     RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
 };

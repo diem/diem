@@ -36,7 +36,7 @@ macro_rules! proto_fuzz_target {
                 _idx: usize,
                 gen: &mut ::libra_proptest_helpers::ValueGenerator,
             ) -> Option<Vec<u8>> {
-                use libra_prost_ext::MessageExt;
+                use libra_prost_test_helpers::MessageExt;
 
                 let value: $prototy = gen.generate(::proptest::arbitrary::any::<$ty>()).into();
 

@@ -1770,7 +1770,7 @@ dependencies = [
  "libra-crypto 0.1.0",
  "libra-network-address 0.1.0",
  "libra-proptest-helpers 0.1.0",
- "libra-prost-ext 0.1.0",
+ "libra-prost-test-helpers 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
@@ -2438,7 +2438,7 @@ dependencies = [
  "libra-canonical-serialization 0.1.0",
  "libra-json-rpc 0.1.0",
  "libra-proptest-helpers 0.1.0",
- "libra-prost-ext 0.1.0",
+ "libra-prost-test-helpers 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "libradb 0.1.0",
@@ -2730,7 +2730,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "libra-prost-ext"
+name = "libra-prost-test-helpers"
 version = "0.1.0"
 dependencies = [
  "bytes 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2895,7 +2895,7 @@ dependencies = [
  "libra-crypto-derive 0.1.0",
  "libra-network-address 0.1.0",
  "libra-proptest-helpers 0.1.0",
- "libra-prost-ext 0.1.0",
+ "libra-prost-test-helpers 0.1.0",
  "libra-workspace-hack 0.1.0",
  "mirai-annotations 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "move-core-types 0.1.0",
