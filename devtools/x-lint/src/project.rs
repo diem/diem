@@ -51,7 +51,7 @@ impl<'l> ProjectContext<'l> {
     ///
     /// This includes all packages included by default in the default workspace members, but not
     /// those that Cargo would ignore.
-    pub fn default_workspace_members(&self) -> Result<&WorkspaceSubset> {
+    pub fn default_members(&self) -> Result<&WorkspaceSubset> {
         self.core.default_members()
     }
 }

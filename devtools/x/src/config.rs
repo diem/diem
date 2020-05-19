@@ -40,8 +40,8 @@ fn default_as_true() -> bool {
 pub struct WorkspaceConfig {
     /// Attributes to enforce on workspace crates
     pub enforced_attributes: EnforcedAttributesConfig,
-    /// Banned direct dependencies
-    pub banned_direct_deps: HashMap<String, String>,
+    /// Banned dependencies
+    pub banned_deps: BannedDepsConfig,
     /// Overlay config in this workspace
     pub overlay: OverlayConfig,
     /// Test-only config in this workspace
@@ -55,6 +55,15 @@ pub struct EnforcedAttributesConfig {
     pub authors: Option<Vec<String>>,
     /// Ensure the `license` field of every workspace crate is set to this.
     pub license: Option<String>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub struct BannedDepsConfig {
+    /// Banned direct dependencies
+    pub direct: HashMap<String, String>,
+    /// Banned dependencies in the default build set
+    pub default_build: HashMap<String, String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]

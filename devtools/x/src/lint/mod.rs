@@ -21,7 +21,7 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
     let workspace_config = xctx.config().workspace_config();
 
     let project_linters: &[&dyn ProjectLinter] = &[
-        &guppy::BannedDirectDeps::new(&workspace_config.banned_direct_deps),
+        &guppy::BannedDeps::new(&workspace_config.banned_deps),
         &guppy::DirectDepDups,
         &guppy::TestOnlyMembers::new(&workspace_config.test_only),
     ];
