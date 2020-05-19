@@ -570,6 +570,65 @@ module Libra {
     fun assert_is_coin<CoinType>() {
         Transaction::assert(is_currency<CoinType>(), 1);
     }
-}
 
+    // **************** SPECIFICATIONS ****************
+    // Only a few of the specifications appear at this time. More to come.
+
+    // Verify this module
+    spec module {
+        pragma verify = true;
+    }
+
+    spec module {
+        // Address at which currencies should be registered (mirrors currency_addr)
+        define spec_currency_addr(): address { 0xA550C18 }
+
+        // Checks whether currency is registered.
+        // Mirrors is_currency<CoinType> in Move, above.
+        define spec_is_currency<CoinType>(): bool {
+            exists<CurrencyInfo<CoinType>>(spec_currency_addr())
+        }
+    }
+
+    spec fun register_currency {
+        // This doesn't verify because:
+        //  1. is_registered assumes the currency is registered at the fixed
+        //     currency_addr()  (0xA550C18).
+        //  2. The address where the CurrencyInfo<CoinType>> is stored is
+        //     determined in Association::initialize()
+        //     (address of AddCurrency privilege) and
+        //     Genesis::initialize_association(association_root_addr).
+        // If the AddCurrency privilege is on an address different from
+        // currency_addr(), the currency will appear not to be registered.
+        // TODO: There are many more aborts conditions and I don't want
+        // to specify them all yet.
+        // aborts_if is_registered<CoinType>();
+        // if you change next to "true", prover will report an error.
+        pragma verify = false;
+
+        // SPEC: After register_currency, the currency is an official currency.
+        ensures spec_is_currency<CoinType>();
+    }
+
+    spec fun is_currency {
+        ensures result == spec_is_currency<CoinType>();
+    }
+
+    // Move code
+    spec fun assert_is_coin {
+        aborts_if !spec_is_currency<CoinType>();
+    }
+
+    // Maintain a ghost variable representing the sum of
+    // all coins of a currency type.
+    spec module {
+        global sum_of_coin_values<CoinType>: num;
+    }
+    spec struct T {
+        invariant pack sum_of_coin_values<CoinType> = sum_of_coin_values<CoinType> + value;
+        invariant unpack sum_of_coin_values<CoinType> = sum_of_coin_values<CoinType> - value;
+    }
+
+
+}
 }
