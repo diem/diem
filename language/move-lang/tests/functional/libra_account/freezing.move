@@ -43,6 +43,10 @@ fun main() {
     LibraAccount::freeze_account({{bob}});
 }
 }
+
+// check: FreezeAccountEvent
+// check: UnfreezeAccountEvent
+// check: FreezeAccountEvent
 // check: EXECUTED
 
 //! new-transaction
@@ -60,6 +64,8 @@ fun main() {
     LibraAccount::unfreeze_account({{bob}});
 }
 }
+
+// check: UnfreezeAccountEvent
 
 //! new-transaction
 //! sender: bob
@@ -159,4 +165,7 @@ fun main() {
     Transaction::assert(!LibraAccount::account_is_frozen({{vasp}}), 8);
 }
 }
+
+// check: FreezeAccountEvent
+// check: UnfreezeAccountEvent
 // check: EXECUTED

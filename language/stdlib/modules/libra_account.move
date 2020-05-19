@@ -83,9 +83,28 @@ module LibraAccount {
     // A privilege to allow the freezing of accounts.
     struct FreezingPrivilege { }
 
+    // Message for freeze account events
+    struct FreezeAccountEvent {
+        // The address that initiated freeze txn
+        initiator_address: address,
+        // The address that was frozen
+        frozen_address: address,
+    }
+
+
+    // Message for freeze account events
+    struct UnfreezeAccountEvent {
+        // The address that initiated unfreeze txn
+        initiator_address: address,
+        // The address that was unfrozen
+        unfrozen_address: address,
+    }
+
     resource struct AccountOperationsCapability {
         tracking_cap: AccountTrack::CallingCapability,
         event_creation_cap: Event::EventHandleGeneratorCreationCapability,
+        freeze_event_handle: Event::EventHandle<FreezeAccountEvent>,
+        unfreeze_event_handle: Event::EventHandle<UnfreezeAccountEvent>,
     }
 
     public fun initialize() {
@@ -93,6 +112,8 @@ module LibraAccount {
         move_to_sender(AccountOperationsCapability {
             tracking_cap: AccountTrack::grant_calling_capability(),
             event_creation_cap: Event::grant_event_handle_creation_operation(),
+            freeze_event_handle: Event::new_event_handle<FreezeAccountEvent>(),
+            unfreeze_event_handle: Event::new_event_handle<UnfreezeAccountEvent>(),
         });
     }
 
@@ -543,18 +564,32 @@ module LibraAccount {
 
     // Freeze the account at `addr`.
     public fun freeze_account(addr: address)
-    acquires T {
+    acquires T, AccountOperationsCapability {
         assert_can_freeze(Transaction::sender());
         // The root association account cannot be frozen
         Transaction::assert(addr != Association::root_address(), 14);
         borrow_global_mut<T>(addr).is_frozen = true;
+        Event::emit_event<FreezeAccountEvent>(
+            &mut borrow_global_mut<AccountOperationsCapability>(0xA550C18).freeze_event_handle,
+            FreezeAccountEvent {
+                initiator_address: Transaction::sender(),
+                frozen_address: addr
+            },
+        );
     }
 
     // Unfreeze the account at `addr`.
     public fun unfreeze_account(addr: address)
-    acquires T {
+    acquires T, AccountOperationsCapability {
         assert_can_freeze(Transaction::sender());
         borrow_global_mut<T>(addr).is_frozen = false;
+        Event::emit_event<UnfreezeAccountEvent>(
+            &mut borrow_global_mut<AccountOperationsCapability>(0xA550C18).unfreeze_event_handle,
+            UnfreezeAccountEvent {
+                initiator_address: Transaction::sender(),
+                unfrozen_address: addr
+            },
+        );
     }
 
     // Returns if the account at `addr` is frozen.
