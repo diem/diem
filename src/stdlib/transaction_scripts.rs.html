@@ -278,6 +278,12 @@
 <span id="278">278</span>
 <span id="279">279</span>
 <span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -317,6 +323,7 @@
     <span class="ident">CreateAccount</span>,
     <span class="ident">CreateEmptyAccount</span>,
     <span class="ident">EmptyScript</span>,
+    <span class="ident">FreezeAccount</span>,
     <span class="ident">GrantAssociationAddress</span>,
     <span class="ident">GrantAssociationPrivilege</span>,
     <span class="ident">GrantChildAccount</span>,
@@ -341,6 +348,7 @@
     <span class="ident">RotateCompliancePublicKey</span>,
     <span class="ident">RotateConsensusPubkey</span>,
     <span class="ident">RotateSharedEd2551PublicKey</span>,
+    <span class="ident">UnfreezeAccount</span>,
     <span class="ident">UnmintLbr</span>,
     <span class="ident">UpdateLibraVersion</span>,
     <span class="ident">UpdateExchangeRate</span>,
@@ -368,6 +376,7 @@
             <span class="ident">CreateAccount</span>,
             <span class="ident">CreateEmptyAccount</span>,
             <span class="ident">EmptyScript</span>,
+            <span class="ident">FreezeAccount</span>,
             <span class="ident">GrantAssociationAddress</span>,
             <span class="ident">GrantAssociationPrivilege</span>,
             <span class="ident">GrantChildAccount</span>,
@@ -392,6 +401,7 @@
             <span class="ident">RotateCompliancePublicKey</span>,
             <span class="ident">RotateConsensusPubkey</span>,
             <span class="ident">RotateSharedEd2551PublicKey</span>,
+            <span class="ident">UnfreezeAccount</span>,
             <span class="ident">UnmintLbr</span>,
             <span class="ident">UpdateLibraVersion</span>,
             <span class="ident">UpdateExchangeRate</span>,
@@ -497,6 +507,7 @@
                 <span class="ident">CreateAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_account&quot;</span>,
                 <span class="ident">CreateEmptyAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_empty_account&quot;</span>,
                 <span class="ident">EmptyScript</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;empty_script&quot;</span>,
+                <span class="ident">FreezeAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;freeze_account&quot;</span>,
                 <span class="ident">GrantAssociationAddress</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;grant_association_address&quot;</span>,
                 <span class="ident">GrantAssociationPrivilege</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;grant_association_privilege&quot;</span>,
                 <span class="ident">GrantChildAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;grant_child_account&quot;</span>,
@@ -521,6 +532,7 @@
                 <span class="ident">RotateCompliancePublicKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_compliance_public_key&quot;</span>,
                 <span class="ident">RotateConsensusPubkey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_consensus_pubkey&quot;</span>,
                 <span class="ident">RotateSharedEd2551PublicKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_shared_ed25519_public_key&quot;</span>,
+                <span class="ident">UnfreezeAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;unfreeze_account&quot;</span>,
                 <span class="ident">UnmintLbr</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;unmint_lbr&quot;</span>,
                 <span class="ident">UpdateLibraVersion</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;update_libra_version&quot;</span>,
                 <span class="ident">UpdateExchangeRate</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;update_exchange_rate&quot;</span>,
