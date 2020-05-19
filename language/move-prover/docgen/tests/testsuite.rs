@@ -18,7 +18,7 @@ const FLAGS: &[&str] = &[
     "--verbose=warn",
     // This currently points to the legacy stdlib copy in prover tests. Replace this
     // by real stdlib once we have a good example based on it.
-    "--search-path=../tests/sources/stdlib/modules",
+    "--dependency=../tests/sources/stdlib/modules",
     "--docgen",
 ];
 

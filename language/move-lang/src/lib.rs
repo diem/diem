@@ -252,8 +252,14 @@ fn parse_program(
     FilesSourceText,
     Result<(parser::ast::Program, CommentMap), Errors>,
 )> {
-    let targets = find_and_intern_move_filenames(targets)?;
-    let deps = find_and_intern_move_filenames(deps)?;
+    let targets = find_move_filenames(targets)?
+        .iter()
+        .map(|s| leak_str(s))
+        .collect::<Vec<&'static str>>();
+    let deps = find_move_filenames(deps)?
+        .iter()
+        .map(|s| leak_str(s))
+        .collect::<Vec<&'static str>>();
     let mut files: FilesSourceText = HashMap::new();
     let mut source_definitions = Vec::new();
     let mut source_comments = CommentMap::new();
@@ -287,8 +293,12 @@ fn parse_program(
     Ok((files, res))
 }
 
-fn find_and_intern_move_filenames(files: &[String]) -> anyhow::Result<Vec<&'static str>> {
+pub fn find_move_filenames(files: &[String]) -> anyhow::Result<Vec<String>> {
     let mut result = vec![];
+    let has_move_extension = |path: &Path| match path.extension().and_then(|s| s.to_str()) {
+        Some(extension) => extension == MOVE_EXTENSION,
+        None => false,
+    };
     for file in files {
         let path = Path::new(file);
         if !path.exists() {
@@ -297,7 +307,7 @@ fn find_and_intern_move_filenames(files: &[String]) -> anyhow::Result<Vec<&'stat
         if !path.is_dir() {
             // If the filename is specified directly, add it to the list, regardless
             // of whether it has a ".move" extension.
-            result.push(leak_str(file));
+            result.push(file.clone());
             continue;
         }
         for entry in walkdir::WalkDir::new(path)
@@ -309,7 +319,7 @@ fn find_and_intern_move_filenames(files: &[String]) -> anyhow::Result<Vec<&'stat
                 continue;
             }
             match entry_path.to_str() {
-                Some(p) => result.push(leak_str(p)),
+                Some(p) => result.push(p.to_string()),
                 None => {
                     return Err(anyhow!("non-Unicode file name"));
                 }
@@ -317,13 +327,6 @@ fn find_and_intern_move_filenames(files: &[String]) -> anyhow::Result<Vec<&'stat
         }
     }
     Ok(result)
-}
-
-fn has_move_extension(path: &Path) -> bool {
-    match path.extension().and_then(|s| s.to_str()) {
-        Some(extension) => extension == MOVE_EXTENSION,
-        None => false,
-    }
 }
 
 // TODO replace with some sort of intern table

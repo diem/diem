@@ -1,4 +1,4 @@
-// flag: --dep=tests/sources/functional/script_provider.move
+// flag: --dependency=tests/sources/functional/script_provider.move
 script {
 use 0x0::ScriptProvider;
 

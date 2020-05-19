@@ -15,6 +15,7 @@ use docgen::docgen::Docgen;
 use handlebars::Handlebars;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
+use move_lang::find_move_filenames;
 use regex::Regex;
 use spec_lang::{code_writer::CodeWriter, emit, emitln, env::GlobalEnv, run_spec_lang_compiler};
 use stackless_bytecode_generator::{
@@ -53,11 +54,8 @@ pub fn run_move_prover<W: WriteColor>(
     options: Options,
 ) -> anyhow::Result<()> {
     let now = Instant::now();
-    let sources = options.move_sources.clone();
-    let mut deps = options.move_deps.clone();
-    if !options.search_path.is_empty() {
-        calculate_deps(&sources, &options.search_path, &mut deps)?;
-    }
+    let sources = find_move_filenames(&options.move_sources)?;
+    let deps = calculate_deps(&sources, &find_move_filenames(&options.move_deps)?)?;
     let address = Some(options.account_address.as_ref());
     debug!("parsing and checking sources");
     let mut env: GlobalEnv = run_spec_lang_compiler(sources, deps, address)?;
@@ -191,19 +189,14 @@ fn create_bytecode_processing_pipeline(_options: &Options) -> FunctionTargetPipe
 }
 
 /// Calculates transitive dependencies of the given move sources.
-fn calculate_deps(
-    sources: &[String],
-    search_path: &[String],
-    deps: &mut Vec<String>,
-) -> anyhow::Result<()> {
-    let file_map = calculate_file_map(search_path)?;
+fn calculate_deps(sources: &[String], input_deps: &[String]) -> anyhow::Result<Vec<String>> {
+    let file_map = calculate_file_map(input_deps)?;
+    let mut deps = vec![];
     let mut visited = BTreeSet::new();
-    // Iterate both over sources and what is initial in deps, as provided via the --dep flag.
-    for src in sources.iter().chain(deps.clone().iter()) {
-        let path = Path::new(src);
-        calculate_deps_recursively(path, &file_map, &mut visited, deps)?;
+    for src in sources.iter() {
+        calculate_deps_recursively(Path::new(src), &file_map, &mut visited, &mut deps)?;
     }
-    Ok(())
+    Ok(deps)
 }
 
 /// Recursively calculate dependencies.
@@ -229,18 +222,12 @@ fn calculate_deps_recursively(
 }
 
 /// Calculate a map of module names to files which define those modules.
-fn calculate_file_map(search_path: &[String]) -> anyhow::Result<BTreeMap<String, PathBuf>> {
+fn calculate_file_map(deps: &[String]) -> anyhow::Result<BTreeMap<String, PathBuf>> {
     let mut module_to_file = BTreeMap::new();
-    for dir_str in search_path {
-        let dir = Path::new(dir_str);
-        for entry in dir.read_dir()? {
-            let cand = entry?.path();
-            if !cand.to_string_lossy().ends_with(".move") {
-                continue;
-            }
-            for module in extract_matches(cand.as_path(), r"module\s+(\w+)\s*\{")? {
-                module_to_file.insert(module, cand.clone());
-            }
+    for dep in deps {
+        let dep_path = PathBuf::from(dep);
+        for module in extract_matches(dep_path.as_path(), r"module\s+(\w+)\s*\{")? {
+            module_to_file.insert(module, dep_path.clone());
         }
     }
     Ok(module_to_file)
