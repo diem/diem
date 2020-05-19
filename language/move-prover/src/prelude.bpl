@@ -1150,16 +1150,11 @@ function {:inline} $LCS_serialize($m: Memory, $txn: Transaction, ta: TypeValue, 
 }
 
 function $LCS_serialize_core(v: Value): Value;
-
-// This says that $serialize respects isEquals (substitution property)
-// Without this, Boogie will get false positives where v1, v2 differ at invalid
-// indices.
-axiom (forall v1,v2: Value :: IsEqual(v1, v2) ==> IsEqual($LCS_serialize_core(v1), $LCS_serialize_core(v2)));
-
-
-// This says that serialize is an injection
-axiom (forall v1, v2: Value ::  IsEqual($LCS_serialize_core(v1), $LCS_serialize_core(v2))
-           ==> IsEqual(v1, v2));
+function $LCS_serialize_core_inv(v: Value): Value;
+// Needed only because IsEqual(v1, v2) is weaker than v1 == v2 in case there is a vector nested inside v1 or v2.
+axiom (forall v1, v2: Value :: IsEqual(v1, v2) ==> $LCS_serialize_core(v1) == $LCS_serialize_core(v2));
+// Injectivity
+axiom (forall v: Value :: $LCS_serialize_core_inv($LCS_serialize_core(v)) == v);
 
 // This says that serialize returns a non-empty vec<u8>
 {{#if (eq serialize_bound 0)}}
