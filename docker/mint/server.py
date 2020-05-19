@@ -56,12 +56,14 @@ def send_transaction():
         return 'Bad amount', 400
 
     if amount > MAX_MINT:
-        return 'Exceeded max amount of {}'.format(MAX_MINT / (10 ** 6)), 400
+        return 'Exceeded max amount of {}'.format(MAX_MINT), 400
+
+    currency_code = flask.request.args['currency_code']
 
     try:
         create_client()
         application.client.sendline(
-            "a m {} {}".format(auth_key, amount / (10 ** 6)))
+            "a m {} {} {} use_base_units".format(auth_key, amount, currency_code))
         application.client.expect("Mint request submitted", timeout=2)
 
         application.client.sendline("a la")
