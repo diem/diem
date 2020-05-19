@@ -3,17 +3,39 @@
 
 use generate_format::Corpus;
 use serde_reflection::Registry;
+use std::collections::{btree_map::Entry, BTreeMap};
 
 #[test]
-fn test_that_recorded_formats_did_not_change() {
+fn analyze_serde_formats() {
+    let mut all_corpuses = BTreeMap::new();
+
     for corpus in Corpus::values() {
+        // Compute the Serde formats of this corpus by analyzing the codebase.
         let registry = corpus.get_registry();
 
-        // Some corpus may not be recorded on disk.
+        // If the corpus was recorded on disk, test that the formats have not changed since then.
         if let Some(path) = corpus.output_file() {
             let content = std::fs::read_to_string(path).unwrap();
             let expected = serde_yaml::from_str::<Registry>(content.as_str()).unwrap();
-            assert_registry_has_not_changed(&corpus.to_string(), path, registry, expected);
+            assert_registry_has_not_changed(&corpus.to_string(), path, registry.clone(), expected);
+        }
+
+        // Test that the definitions in all corpus are unique.
+        for (key, value) in registry {
+            match all_corpuses.entry(key.clone()) {
+                Entry::Vacant(e) => {
+                    e.insert(value);
+                }
+                Entry::Occupied(e) => assert_eq!(
+                    e.get(),
+                    &value,
+                    "Type {} in corpus {} differs with previous definition in another corpus: {:?} vs {:?}",
+                    key,
+                    corpus.to_string(),
+                    e.get(),
+                    &value,
+                ),
+            }
         }
     }
 }
