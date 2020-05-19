@@ -41,8 +41,8 @@
 //! ```
 //! use libra_crypto::hash::CryptoHash;
 //! use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
-//! use serde::Serialize;
-//! #[derive(Serialize, CryptoHasher, LCSCryptoHash)]
+//! use serde::{Serialize, Deserialize};
+//! #[derive(Serialize, Deserialize, CryptoHasher, LCSCryptoHash)]
 //! struct MyNewStruct { /*...*/ }
 //!
 //! let value = MyNewStruct { /*...*/ };
@@ -62,16 +62,18 @@
 //! For any new structure `MyNewStruct` that needs to be hashed, it is recommended to simply
 //! use the derive macro [`CryptoHasher`](https://doc.rust-lang.org/reference/procedural-macros.html).
 //!
-//! ```ignore
-//! #[derive(CryptoHasher)]
-//! struct MyNewStruct {
-//!   ...
-//! }
+//! ```
+//! # use libra_crypto_derive::CryptoHasher;
+//! # use serde::Deserialize;
+//! #[derive(Deserialize, CryptoHasher)]
+//! #[serde(rename = "OptionalCustomSerdeName")]
+//! struct MyNewStruct { /*...*/ }
 //! ```
 //!
-//! The macro will define a hasher automatically called `MyNewStructHasher`, and pick a salt
-//! equal to the full module path + "::"  + structure name, i.e. if
-//! `MyNewStruct` is defined in `bar::baz::quux`, the salt will be `b"bar::baz::quux::MyNewStruct"`.
+//! The macro will define a hasher automatically called `MyNewStructHasher`, and derive a salt
+//! using the name of the type as seen by the Serde library. In the example above, this name
+//! was changed using the Serde parameter `rename`: the salt will be based on the value `OptionalCustomSerdeName`
+//! instead of the default name `MyNewStruct`.
 //!
 //! ## Customized hashers
 //!
@@ -109,7 +111,7 @@ use serde::{de, ser};
 use std::{self, convert::AsRef, fmt, str::FromStr};
 use tiny_keccak::{Hasher, Sha3};
 
-pub(crate) const LIBRA_HASH_SUFFIX: &[u8] = b"@@$$LIBRA$$@@";
+pub(crate) const LIBRA_HASH_PREFIX: &[u8] = b"LIBRA::";
 const SHORT_STRING_LENGTH: usize = 4;
 
 /// Output value of our hash function. Intentionally opaque for safety and modularity.
@@ -459,8 +461,8 @@ impl DefaultHasher {
     pub fn new(typename: &[u8]) -> Self {
         let mut state = Sha3::v256();
         if !typename.is_empty() {
-            let mut salt = typename.to_vec();
-            salt.extend_from_slice(LIBRA_HASH_SUFFIX);
+            let mut salt = LIBRA_HASH_PREFIX.to_vec();
+            salt.extend_from_slice(typename);
             state.update(HashValue::from_sha3_256(&salt[..]).as_ref());
         }
         DefaultHasher { state }
