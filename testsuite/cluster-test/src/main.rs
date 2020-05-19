@@ -375,7 +375,7 @@ impl BasicSwarmUtil {
             prev_stats = Some(stats);
             println!("{}", delta.rate(window));
         }
-        let stats = emitter.stop_job(job);
+        let stats = emitter.stop_job(job).await;
         println!("Total stats: {}", stats);
         println!("Average rate: {}", stats.rate(duration));
     }
