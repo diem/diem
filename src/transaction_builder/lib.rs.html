@@ -561,25 +561,6 @@
 <span id="561">561</span>
 <span id="562">562</span>
 <span id="563">563</span>
-<span id="564">564</span>
-<span id="565">565</span>
-<span id="566">566</span>
-<span id="567">567</span>
-<span id="568">568</span>
-<span id="569">569</span>
-<span id="570">570</span>
-<span id="571">571</span>
-<span id="572">572</span>
-<span id="573">573</span>
-<span id="574">574</span>
-<span id="575">575</span>
-<span id="576">576</span>
-<span id="577">577</span>
-<span id="578">578</span>
-<span id="579">579</span>
-<span id="580">580</span>
-<span id="581">581</span>
-<span id="582">582</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -687,17 +668,6 @@
     <span class="ident">doc</span>: <span class="string">&quot;Encode a program adding `new_validator` to the pending validator set. Fails if the\
           `new_validator` address is already in the validator set, already in the pending validator set,\
           or does not have a `ValidatorConfig` resource stored at the address&quot;</span>
-}
-
-<span class="macro">encode_txn_script</span><span class="macro">!</span> {
-    <span class="ident">name</span>: <span class="ident">encode_approved_payment_script</span>,
-    <span class="ident">type_arg</span>: <span class="ident">type_</span>,
-    <span class="ident">args</span>: [<span class="ident">payee</span>: <span class="ident">Address</span>, <span class="ident">amount</span>: <span class="ident">U64</span>, <span class="ident">metadata</span>: <span class="ident">Bytes</span>, <span class="ident">signature</span>: <span class="ident">Bytes</span>],
-    <span class="ident">script</span>: <span class="ident">ApprovedPayment</span>,
-    <span class="ident">doc</span>: <span class="string">&quot;Encode a program that deposits `amount` LBR in `payee`&#39;s account if the `signature` on the\
-          payment metadata matches the public key stored in the `payee`&#39;s ApprovedPayment` resource.\
-          Aborts if the signature does not match, `payee` does not have an `ApprovedPayment` resource, or\
-          the sender&#39;s balance is less than `amount`.&quot;</span>
 }
 
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {
@@ -840,14 +810,6 @@
           of the sender under the sender&#39;s address.\
           Aborts if the sender already has a `SharedEd25519PublicKey` resource.\
           Aborts if the length of `new_public_key` is not 32.&quot;</span>
-}
-
-<span class="macro">encode_txn_script</span><span class="macro">!</span> {
-    <span class="ident">name</span>: <span class="ident">encode_register_approved_payment_script</span>,
-    <span class="ident">args</span>: [<span class="ident">public_key</span>: <span class="ident">Bytes</span>],
-    <span class="ident">script</span>: <span class="ident">RegisterApprovedPayment</span>,
-    <span class="ident">doc</span>: <span class="string">&quot;Publish a newly created `ApprovedPayment` resource under the sender&#39;s account with approval key\
-         `public_key`. Aborts if the sender already has a published `ApprovedPayment` resource.&quot;</span>
 }
 
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {
