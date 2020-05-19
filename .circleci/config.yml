@@ -222,7 +222,7 @@ jobs:
       - run:
           command: |
             rustup target add powerpc-unknown-linux-gnu
-            RUST_BACKTRACE=1 cargo build -j 16 -p transaction-builder --target powerpc-unknown-linux-gnu
+            RUST_BACKTRACE=1 cargo build -j 16 -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
       - build_teardown
   build-release:
     executor: test-executor
