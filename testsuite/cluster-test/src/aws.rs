@@ -10,7 +10,6 @@ use rusoto_autoscaling::{
 };
 use rusoto_core::Region;
 use rusoto_sts::WebIdentityProvider;
-use util::retry;
 
 /// set_asg_size sets the size of the given autoscaling group
 pub async fn set_asg_size(
@@ -39,7 +38,7 @@ pub async fn set_asg_size(
     if !wait_for_completion {
         return Ok(());
     }
-    retry::retry_async(retry::fixed_retry_strategy(10_000, 30), || {
+    libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(10_000, 30), || {
         let asc_clone = asc.clone();
         Box::pin(async move {
             let auto_scaling_group_names_type = AutoScalingGroupNamesType {
