@@ -35,9 +35,9 @@ pub struct ValidatorConfig {
 impl ValidatorConfig {
     pub fn execute(self) -> Result<Transaction, Error> {
         let mut local: Box<dyn Storage> = self.backends.local.try_into()?;
-        if !local.available() {
-            return Err(Error::LocalStorageUnavailable);
-        }
+        local
+            .available()
+            .map_err(|e| Error::LocalStorageUnavailable(e.to_string()))?;
 
         // Step 1) Retrieve keys from local storage
         let consensus_key = ed25519_from_storage(CONSENSUS_KEY, local.as_mut())?;
@@ -100,10 +100,9 @@ impl ValidatorConfig {
 
         if let Some(remote) = self.backends.remote {
             let mut remote: Box<dyn Storage> = remote.try_into()?;
-            if !remote.available() {
-                return Err(Error::RemoteStorageUnavailable);
-            }
-
+            remote
+                .available()
+                .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
             let txn = Value::Transaction(txn.clone());
             remote
                 .set(crate::constants::VALIDATOR_CONFIG, txn)

@@ -41,9 +41,9 @@ impl CreateWaypoint {
 
         if let Some(remote) = self.secure_backends.remote {
             let mut remote: Box<dyn Storage> = remote.try_into()?;
-            if !remote.available() {
-                return Err(Error::RemoteStorageUnavailable);
-            }
+            remote
+                .available()
+                .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
 
             let waypoint_value = Value::String(waypoint.to_string());
             remote

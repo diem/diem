@@ -13,7 +13,7 @@ pub struct NamespacedStorage<T> {
 }
 
 impl<T: KVStorage> KVStorage for NamespacedStorage<T> {
-    fn available(&self) -> bool {
+    fn available(&self) -> Result<(), Error> {
         self.inner.available()
     }
 

@@ -60,9 +60,9 @@ impl SetLayout {
         let data = layout.to_toml()?;
 
         let mut remote: Box<dyn Storage> = self.backend.backend.try_into()?;
-        if !remote.available() {
-            return Err(Error::RemoteStorageUnavailable);
-        }
+        remote
+            .available()
+            .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
 
         let value = Value::String(data);
         remote
