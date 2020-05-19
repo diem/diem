@@ -11,10 +11,10 @@ edition = "2018"
 
 [dependencies]
 futures = "0.3.5"
-tokio = { version = "0.2.13", features = ["time", "stream"] }
+tokio = { version = "0.2.21", features = ["time", "stream"] }
 pin-project = "0.4.17"
 futures-semaphore = { path = "../futures-semaphore" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 [dev-dependencies]
-tokio = { version = "0.2.13", features = ["full"] }
+tokio = { version = "0.2.21", features = ["full"] }
