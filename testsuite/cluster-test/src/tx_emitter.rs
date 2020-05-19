@@ -34,7 +34,7 @@ use rand::{
 };
 use tokio::runtime::{Handle, Runtime};
 
-use futures::{executor::block_on, future::FutureExt};
+use futures::future::FutureExt;
 use libra_json_rpc_client::JsonRpcAsyncClient;
 use libra_types::transaction::SignedTransaction;
 use reqwest::{Client, Url};
@@ -216,6 +216,7 @@ impl TxEmitter {
                 workers.push(Worker { join_handle });
             }
         }
+        info!("Tx emitter workers started");
         Ok(EmitJob {
             workers,
             stop,
@@ -313,11 +314,13 @@ impl TxEmitter {
         job.stats.accumulate()
     }
 
-    pub fn stop_job(&mut self, job: EmitJob) -> TxStats {
+    pub async fn stop_job(&mut self, job: EmitJob) -> TxStats {
         job.stop.store(true, Ordering::Relaxed);
         for worker in job.workers {
-            let mut accounts =
-                block_on(worker.join_handle).expect("TxEmitter worker thread failed");
+            let mut accounts = worker
+                .join_handle
+                .await
+                .expect("TxEmitter worker thread failed");
             self.accounts.append(&mut accounts);
         }
         job.stats.accumulate()
@@ -338,7 +341,7 @@ impl TxEmitter {
     ) -> Result<TxStats> {
         let job = self.start_job(emit_job_request).await?;
         tokio::time::delay_for(duration).await;
-        let stats = self.stop_job(job);
+        let stats = self.stop_job(job).await;
         Ok(stats)
     }
 
@@ -430,6 +433,7 @@ impl SubmissionWorker {
                 }
             }
         }
+        info!("Worker terminating");
         self.accounts
     }
 
