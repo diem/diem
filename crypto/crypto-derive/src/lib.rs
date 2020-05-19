@@ -15,15 +15,14 @@
 //! - the derive macro for `libra_crypto::hash::CryptoHasher`, which defines
 //!   the domain-separation hasher structures described in `libra_crypto::hash`
 //!   (look there for details). This derive macro has for sole difference that it
-//!   automatically picks a unique salt for you, using the path of the structure
-//!   + its name. I.e. for a Structure Foo defined in bar::baz::quux, it will
-//!   define the equivalent of:
+//!   automatically picks a unique salt for you, using the Serde name. For a container `Foo`,
+//!   this is usually equivalent to:
 //!   ```ignore
 //!   define_hasher! {
 //!    (
 //!         FooHasher,
 //!         FOO_HASHER,
-//!         b"bar::baz::quux::Foo"
+//!         b"Foo"
 //!     )
 //!   }
 //!   ```
@@ -107,6 +106,7 @@ use hasher::camel_to_snake;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
+use std::iter::FromIterator;
 use syn::{parse_macro_input, Data, DeriveInput, Ident};
 use unions::*;
 
@@ -321,7 +321,7 @@ pub fn derive_enum_signature(input: TokenStream) -> TokenStream {
 // There is a unit test for this logic in the crypto crate, at
 // libra_crypto::unit_tests::cryptohasher — you may have to modify it if you
 // edit the below.
-#[proc_macro_derive(CryptoHasher, attributes(CryptoHasherSalt))]
+#[proc_macro_derive(CryptoHasher)]
 pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
     let item = parse_macro_input!(input as DeriveInput);
     let hasher_name = Ident::new(
@@ -333,8 +333,15 @@ pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
         &format!("{}_HASHER", snake_name.to_uppercase()),
         Span::call_site(),
     );
-    let fn_name = get_type_from_attrs(&item.attrs, "CryptoHasherSalt")
-        .unwrap_or_else(|_| syn::LitStr::new(&item.ident.to_string(), Span::call_site()));
+    let type_name = &item.ident;
+    let param = if item.generics.params.is_empty() {
+        quote!()
+    } else {
+        let args = proc_macro2::TokenStream::from_iter(
+            std::iter::repeat(quote!(())).take(item.generics.params.len()),
+        );
+        quote!(<#args>)
+    };
 
     let out = quote!(
         #[derive(Clone)]
@@ -342,11 +349,10 @@ pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
 
         impl #hasher_name {
             fn new() -> Self {
-                let mp = module_path!();
-                let f_name = #fn_name;
-
+                let name = libra_crypto::_serde_name::trace_name::<#type_name #param>()
+                    .expect("The `CryptoHasher` macro only applies to structs and enums");
                 #hasher_name(
-                    libra_crypto::hash::DefaultHasher::new(&format!("{}::{}", mp, f_name).as_bytes()))
+                    libra_crypto::hash::DefaultHasher::new(&name.as_bytes()))
             }
         }
 
