@@ -41,7 +41,7 @@
 //! ```
 //! use libra_crypto::hash::CryptoHash;
 //! use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
-//! use serde::{Serialize, Deserialize};
+//! use serde::{Deserialize, Serialize};
 //! #[derive(Serialize, Deserialize, CryptoHasher, LCSCryptoHash)]
 //! struct MyNewStruct { /*...*/ }
 //!
@@ -63,14 +63,14 @@
 //! use the derive macro [`CryptoHasher`](https://doc.rust-lang.org/reference/procedural-macros.html).
 //!
 //! ```
-//! # use libra_crypto_derive::CryptoHasher;
-//! # use serde::Deserialize;
+//! use libra_crypto_derive::CryptoHasher;
+//! use serde::Deserialize;
 //! #[derive(Deserialize, CryptoHasher)]
 //! #[serde(rename = "OptionalCustomSerdeName")]
 //! struct MyNewStruct { /*...*/ }
 //! ```
 //!
-//! The macro will define a hasher automatically called `MyNewStructHasher`, and derive a salt
+//! The macro `CryptoHasher` will define a hasher automatically called `MyNewStructHasher`, and derive a salt
 //! using the name of the type as seen by the Serde library. In the example above, this name
 //! was changed using the Serde parameter `rename`: the salt will be based on the value `OptionalCustomSerdeName`
 //! instead of the default name `MyNewStruct`.

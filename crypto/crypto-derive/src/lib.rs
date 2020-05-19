@@ -107,7 +107,7 @@ use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
 use std::iter::FromIterator;
-use syn::{parse_macro_input, Data, DeriveInput, Ident};
+use syn::{parse_macro_input, parse_quote, Data, DeriveInput, Ident};
 use unions::*;
 
 #[proc_macro_derive(SilentDisplay)]
@@ -402,8 +402,10 @@ pub fn lcs_crypto_hash_dispatch(input: TokenStream) -> TokenStream {
         &format!("LCS serialization of {} should not fail", name.to_string()),
         Span::call_site(),
     );
+    let generics = add_trait_bounds(ast.generics);
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let out = quote!(
-        impl libra_crypto::hash::CryptoHash for #name {
+        impl #impl_generics libra_crypto::hash::CryptoHash for #name #ty_generics #where_clause {
             type Hasher = #hasher_name;
 
             fn hash(&self) -> libra_crypto::hash::HashValue {
@@ -416,4 +418,13 @@ pub fn lcs_crypto_hash_dispatch(input: TokenStream) -> TokenStream {
         }
     );
     out.into()
+}
+
+fn add_trait_bounds(mut generics: syn::Generics) -> syn::Generics {
+    for param in generics.params.iter_mut() {
+        if let syn::GenericParam::Type(type_param) = param {
+            type_param.bounds.push(parse_quote!(Serialize));
+        }
+    }
+    generics
 }
