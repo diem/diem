@@ -1,0 +1,16 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/regression/generic_invariant200518.move:63:9 ───
+    │
+ 63 │         invariant spec_addr_is_association(sender());
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/regression/generic_invariant200518.move:24:5: remove_privilege (entry)
+    =     at tests/sources/regression/generic_invariant200518.move:40:5: root_address (entry)
+    =     at tests/sources/regression/generic_invariant200518.move:40:5: root_address (exit)
+    =         result = <redacted>
+    =     at tests/sources/regression/generic_invariant200518.move:26:9: remove_privilege
+    =         $t1 = <redacted>
+    =     at tests/sources/regression/generic_invariant200518.move:28:46: remove_privilege
+    =     at tests/sources/regression/generic_invariant200518.move:24:5: remove_privilege (exit)
