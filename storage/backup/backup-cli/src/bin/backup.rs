@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use backup_cli::{
-    adapter::local_storage::LocalStorage,
     backup::{backup_account_state, BackupServiceClient},
+    storage::local_fs::LocalFs,
 };
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -39,7 +39,7 @@ async fn main() {
     println!("Latest version: {}", version);
     println!("State root hash: {:x}", state_root_hash);
 
-    let adapter = LocalStorage::new(opt.local_dir);
+    let adapter = LocalFs::new(opt.local_dir);
     let file_handles = backup_account_state(&client, version, &adapter, opt.state_chunk_size)
         .await
         .expect("Failed to backup account state.");

@@ -2,17 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    adapter::{local_storage::LocalStorage, Adapter},
-    FileHandle, ReadRecordBytes,
+    storage::{local_fs::LocalFs, BackupStorage, FileHandle},
+    ReadRecordBytes,
 };
 use anyhow::Result;
-use futures::TryStreamExt;
 use libra_crypto::HashValue;
 use libra_types::{account_state_blob::AccountStateBlob, proof::SparseMerkleRangeProof};
 use libradb::LibraDB;
 use std::path::Path;
-use tokio::io::{AsyncRead, AsyncReadExt};
-use tokio_util::compat::FuturesAsyncReadCompatExt;
+use tokio::io::AsyncReadExt;
 
 pub async fn restore_account_state<P, I>(
     version: u64,
@@ -41,7 +39,7 @@ where
 async fn read_account_state_chunk(
     file_handle: FileHandle,
 ) -> Result<Vec<(HashValue, AccountStateBlob)>> {
-    let mut file = open_file(&file_handle);
+    let mut file = LocalFs::open_for_read(&file_handle).await?;
 
     let mut chunk = vec![];
 
@@ -53,18 +51,10 @@ async fn read_account_state_chunk(
 }
 
 async fn read_proof(file_handle: FileHandle) -> Result<SparseMerkleRangeProof> {
-    let mut file = open_file(&file_handle);
+    let mut file = LocalFs::open_for_read(&file_handle).await?;
     let mut buf = Vec::new();
     file.read_to_end(&mut buf).await?;
 
     let proof = lcs::from_bytes(&buf)?;
     Ok(proof)
-}
-
-#[allow(clippy::ptr_arg)]
-fn open_file<'a>(file: &'a FileHandle) -> impl 'a + AsyncRead {
-    LocalStorage::read_file_content(file)
-        .map_err(|e| futures::io::Error::new(futures::io::ErrorKind::Other, e))
-        .into_async_read()
-        .compat()
 }
