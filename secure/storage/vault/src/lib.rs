@@ -383,21 +383,6 @@ impl Client {
             _ => Err(resp.into()),
         }
     }
-
-    /// Returns whether or not transit is enabled at the default location "transit/"
-    pub fn transit_enabled(&self) -> Result<bool, Error> {
-        let resp = ureq::get(&format!("{}/v1/sys/mounts", self.host))
-            .set("X-Vault-Token", &self.token)
-            .timeout_connect(TIMEOUT)
-            .call();
-        match resp.status() {
-            200 => {
-                let resp: SysMountsResponse = serde_json::from_str(&resp.into_string()?)?;
-                Ok(resp.transit.is_some())
-            }
-            _ => Err(resp.into()),
-        }
-    }
 }
 
 /// Provides a simple wrapper for all read APIs.
@@ -713,37 +698,4 @@ struct Signature {
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 struct SealStatusResponse {
     sealed: bool,
-}
-
-/// Below is an example of SysMountsResponse. Only the fields leveraged by this framework are
-/// decoded.
-/// {
-///   "sys/": {
-///     "type": "system",
-///     "description": "system endpoint",
-///     "config": {
-///       "default_lease_ttl": 0,
-///       "max_lease_ttl": 0,
-///       "force_no_cache": false,
-///       "seal_wrap": false,
-///     }
-///   }
-/// }
-/// Note: there are some other fields that are not in the same format, hence the data structure
-/// below.
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
-struct SysMountsResponse {
-    #[serde(rename = "data/")]
-    data: Option<SysMountInfo>,
-    #[serde(rename = "sys/")]
-    sys: Option<SysMountInfo>,
-    #[serde(rename = "transit/")]
-    transit: Option<SysMountInfo>,
-}
-
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
-struct SysMountInfo {
-    #[serde(rename = "type")]
-    sys_type: String,
-    description: String,
 }
