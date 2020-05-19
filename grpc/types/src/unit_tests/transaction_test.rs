@@ -5,7 +5,7 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519Signature},
     PrivateKey, Uniform,
 };
-use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
+use libra_prost_test_helpers::assert_protobuf_encode_decode;
 use libra_types::{
     account_address::AccountAddress,
     account_config::LBR_NAME,

@@ -23,7 +23,7 @@ rand = "0.7.3"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
-libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }
+libra-prost-test-helpers = { path = "../../common/prost-test-helpers", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 # List out modules with data structures being fuzzed here.

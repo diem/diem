@@ -22,7 +22,7 @@ libra-types = {path = "../../types", version = "0.1.0"}
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 [dev-dependencies]
-libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }
+libra-prost-test-helpers = { path = "../../common/prost-test-helpers", version = "0.1.0" }
 
 
 [build-dependencies]

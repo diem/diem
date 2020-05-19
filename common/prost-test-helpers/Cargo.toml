@@ -1,8 +1,8 @@
 [package]
-name = "libra-prost-ext"
+name = "libra-prost-test-helpers"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra build helpers"
+description = "Libra test helpers for prost"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"
