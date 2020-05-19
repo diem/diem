@@ -800,6 +800,9 @@
 <span id="800">800</span>
 <span id="801">801</span>
 <span id="802">802</span>
+<span id="803">803</span>
+<span id="804">804</span>
+<span id="805">805</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -837,7 +840,7 @@
 };
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::{<span class="ident">Handle</span>, <span class="ident">Runtime</span>};
 
-<span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">executor</span>::<span class="ident">block_on</span>, <span class="ident">future</span>::<span class="ident">FutureExt</span>};
+<span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">future</span>::<span class="ident">FutureExt</span>;
 <span class="kw">use</span> <span class="ident">libra_json_rpc_client</span>::<span class="ident">JsonRpcAsyncClient</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>;
 <span class="kw">use</span> <span class="ident">reqwest</span>::{<span class="ident">Client</span>, <span class="ident">Url</span>};
@@ -1019,6 +1022,7 @@
                 <span class="ident">workers</span>.<span class="ident">push</span>(<span class="ident">Worker</span> { <span class="ident">join_handle</span> });
             }
         }
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Tx emitter workers started&quot;</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">EmitJob</span> {
             <span class="ident">workers</span>,
             <span class="ident">stop</span>,
@@ -1116,11 +1120,13 @@
         <span class="ident">job</span>.<span class="ident">stats</span>.<span class="ident">accumulate</span>()
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stop_job</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">job</span>: <span class="ident">EmitJob</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TxStats</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">stop_job</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">job</span>: <span class="ident">EmitJob</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TxStats</span> {
         <span class="ident">job</span>.<span class="ident">stop</span>.<span class="ident">store</span>(<span class="bool-val">true</span>, <span class="ident">Ordering</span>::<span class="ident">Relaxed</span>);
         <span class="kw">for</span> <span class="ident">worker</span> <span class="kw">in</span> <span class="ident">job</span>.<span class="ident">workers</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">accounts</span> <span class="op">=</span>
-                <span class="ident">block_on</span>(<span class="ident">worker</span>.<span class="ident">join_handle</span>).<span class="ident">expect</span>(<span class="string">&quot;TxEmitter worker thread failed&quot;</span>);
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">accounts</span> <span class="op">=</span> <span class="ident">worker</span>
+                .<span class="ident">join_handle</span>
+                .<span class="kw">await</span>
+                .<span class="ident">expect</span>(<span class="string">&quot;TxEmitter worker thread failed&quot;</span>);
             <span class="self">self</span>.<span class="ident">accounts</span>.<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">accounts</span>);
         }
         <span class="ident">job</span>.<span class="ident">stats</span>.<span class="ident">accumulate</span>()
@@ -1141,7 +1147,7 @@
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TxStats</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">job</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">start_job</span>(<span class="ident">emit_job_request</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="ident">tokio</span>::<span class="ident">time</span>::<span class="ident">delay_for</span>(<span class="ident">duration</span>).<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">stats</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">stop_job</span>(<span class="ident">job</span>);
+        <span class="kw">let</span> <span class="ident">stats</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">stop_job</span>(<span class="ident">job</span>).<span class="kw">await</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">stats</span>)
     }
 
