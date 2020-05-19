@@ -2,19 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{prelude::*, LintContext};
-use guppy::{
-    graph::{DependencyDirection, PackageGraph},
-    PackageId,
-};
-use once_cell::sync::OnceCell;
-use serde::Deserialize;
-use std::{
-    collections::HashSet,
-    fs,
-    path::{Path, PathBuf},
-};
-use toml::de;
-use x_core::XCoreContext;
+use guppy::graph::PackageGraph;
+use std::path::{Path, PathBuf};
+use x_core::{WorkspaceSubset, XCoreContext};
 
 /// Represents a linter that checks some property for the overall project.
 ///
@@ -35,15 +25,11 @@ pub trait ProjectLinter: Linter {
 #[derive(Debug)]
 pub struct ProjectContext<'l> {
     core: &'l XCoreContext,
-    default_workspace_members: OnceCell<HashSet<PackageId>>,
 }
 
 impl<'l> ProjectContext<'l> {
     pub fn new(core: &'l XCoreContext) -> Self {
-        Self {
-            core,
-            default_workspace_members: OnceCell::new(),
-        }
+        Self { core }
     }
 
     /// Returns the project root.
@@ -61,55 +47,12 @@ impl<'l> ProjectContext<'l> {
         self.core.project_root().join(path.as_ref())
     }
 
-    /// Returns the default workspace members as a list of paths.
+    /// Returns information about the default workspace members.
     ///
-    /// TODO: This should be part of cargo metadata and made available through PackageGraph; see
-    /// https://github.com/rust-lang/cargo/issues/8033.
-    pub fn default_workspace_members(&self) -> Result<&HashSet<PackageId>> {
-        self.default_workspace_members
-            .get_or_try_init::<_, SystemError>(|| {
-                #[derive(Deserialize)]
-                struct RootToml<'a> {
-                    #[serde(borrow)]
-                    workspace: Workspace<'a>,
-                }
-
-                #[derive(Deserialize)]
-                struct Workspace<'a> {
-                    #[serde(borrow)]
-                    #[serde(rename = "default-members")]
-                    default_members: Vec<&'a Path>,
-                }
-
-                let root_toml = self.full_path("Cargo.toml");
-                let contents = fs::read(&root_toml)
-                    .map_err(|err| SystemError::io("reading root Cargo.toml", err))?;
-                let contents: RootToml = de::from_slice(&contents)
-                    .map_err(|err| SystemError::de("deserializing root Cargo.toml", err))?;
-                let default_members = contents.workspace.default_members;
-
-                // For each workspace member, match the path to a package ID.
-                let package_graph = self.package_graph()?;
-                let workspace = package_graph.workspace();
-                let default_package_ids = default_members.iter().map(|path| {
-                    workspace
-                        .member_by_path(path)
-                        .unwrap_or_else(|| {
-                            panic!("unknown workspace member by path: {}", path.display())
-                        })
-                        .id()
-                });
-                let query = package_graph.query_forward(default_package_ids)?;
-                let package_set = query.resolve_with_fn(|_, link| {
-                    // Get all workspace IDs that are reachable from the default one. (Do not
-                    // include dev-only dependencies).
-                    !link.dev_only() && link.to().in_workspace()
-                });
-                Ok(package_set
-                    .package_ids(DependencyDirection::Forward)
-                    .cloned()
-                    .collect())
-            })
+    /// This includes all packages included by default in the default workspace members, but not
+    /// those that Cargo would ignore.
+    pub fn default_workspace_members(&self) -> Result<&WorkspaceSubset> {
+        self.core.default_members()
     }
 }
 
