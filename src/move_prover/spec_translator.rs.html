@@ -1218,10 +1218,6 @@
 <span id="1218">1218</span>
 <span id="1219">1219</span>
 <span id="1220">1220</span>
-<span id="1221">1221</span>
-<span id="1222">1222</span>
-<span id="1223">1223</span>
-<span id="1224">1224</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1607,10 +1603,6 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assume_preconditions</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;assume $ExistsTxnSenderAccount($m, $txn);&quot;</span>);
         <span class="kw">let</span> <span class="ident">func_target</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">function_target</span>();
-        <span class="comment">// Assume abstract types for type parameters.</span>
-        <span class="kw">for</span> (<span class="ident">i</span>, <span class="kw">_</span>) <span class="kw">in</span> <span class="ident">func_target</span>.<span class="ident">get_type_parameters</span>().<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-            <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;assume is#AbstractType($tv{});&quot;</span>, <span class="ident">i</span>);
-        }
         <span class="comment">// Assume requires.</span>
         <span class="kw">let</span> <span class="ident">requires</span> <span class="op">=</span> <span class="ident">func_target</span>
             .<span class="ident">get_spec</span>()
