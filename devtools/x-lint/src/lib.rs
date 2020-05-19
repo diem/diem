@@ -7,13 +7,11 @@
 //! [Arcanist](https://secure.phabricator.com/book/phabricator/article/arcanist_lint)'s lint engine.
 
 pub mod content;
-mod errors;
 pub mod file;
 pub mod package;
 pub mod project;
 mod runner;
 
-pub use errors::*;
 pub use runner::*;
 
 use guppy::PackageId;
@@ -190,7 +188,7 @@ pub mod prelude {
         file::FileContext,
         package::{PackageContext, PackageLinter},
         project::{ProjectContext, ProjectLinter},
-        LintFormatter, LintKind, LintLevel, LintMessage, LintSource, Linter, Result, RunStatus,
-        SkipReason, SystemError,
+        LintFormatter, LintKind, LintLevel, LintMessage, LintSource, Linter, RunStatus, SkipReason,
     };
+    pub use x_core::{Result, SystemError};
 }

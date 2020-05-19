@@ -5,6 +5,10 @@ use guppy::{graph::PackageGraph, MetadataCommand};
 use once_cell::sync::OnceCell;
 use std::path::Path;
 
+mod errors;
+
+pub use errors::*;
+
 /// Core context shared across all of x.
 #[derive(Debug)]
 pub struct XCoreContext {
