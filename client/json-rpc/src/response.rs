@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::views::{
-    AccountStateWithProofView, AccountView, BlockMetadata, EventView, StateProofView,
-    TransactionView,
+    AccountStateWithProofView, AccountView, BlockMetadata, CurrencyInfoView, EventView,
+    StateProofView, TransactionView,
 };
 use anyhow::{ensure, format_err, Error, Result};
 
@@ -20,6 +20,7 @@ pub enum JsonRpcResponse {
     TransactionsResponse(Vec<TransactionView>),
     EventsResponse(Vec<EventView>),
     BlockMetadataResponse(BlockMetadata),
+    CurrenciesResponse(Vec<CurrencyInfoView>),
     AccountStateWithProofResponse(AccountStateWithProofView),
     UnknownResponse(Value),
 }
@@ -54,6 +55,10 @@ impl TryFrom<(String, Value)> for JsonRpcResponse {
             "get_metadata" => {
                 let metadata: BlockMetadata = serde_json::from_value(value)?;
                 Ok(JsonRpcResponse::BlockMetadataResponse(metadata))
+            }
+            "currencies_info" => {
+                let info: Vec<CurrencyInfoView> = serde_json::from_value(value)?;
+                Ok(JsonRpcResponse::CurrenciesResponse(info))
             }
             "get_account_state_with_proof" => {
                 let account_with_proof: AccountStateWithProofView = serde_json::from_value(value)?;
@@ -130,6 +135,16 @@ impl ResponseAsView for BlockMetadata {
             Ok(metadata)
         } else {
             Self::unexpected_response_error::<Self>(response)
+        }
+    }
+}
+
+impl ResponseAsView for CurrencyInfoView {
+    fn vec_from_response(response: JsonRpcResponse) -> Result<Vec<Self>> {
+        if let JsonRpcResponse::CurrenciesResponse(info) = response {
+            Ok(info)
+        } else {
+            Self::unexpected_response_error::<Vec<Self>>(response)
         }
     }
 }

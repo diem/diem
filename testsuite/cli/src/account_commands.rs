@@ -23,6 +23,7 @@ impl Command for AccountCommand {
             Box::new(AccountCommandRecoverWallet {}),
             Box::new(AccountCommandWriteRecovery {}),
             Box::new(AccountCommandMint {}),
+            Box::new(AccountCommandAddCurrency {}),
         ];
 
         subcommand_execute(&params[0], commands, client, &params[1..]);
@@ -127,13 +128,13 @@ impl Command for AccountCommandMint {
         vec!["mint", "mintb", "m", "mb"]
     }
     fn get_params_help(&self) -> &'static str {
-        "<receiver_account_ref_id>|<receiver_account_address> <number_of_coins>"
+        "<receiver_account_ref_id>|<receiver_account_address> <number_of_coins> <currency_code> [use_base_units (default=false)]"
     }
     fn get_description(&self) -> &'static str {
         "Mint coins to the account. Suffix 'b' is for blocking"
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
-        if params.len() != 3 {
+        if params.len() < 4 || params.len() > 5 {
             println!("Invalid number of arguments for mint");
             return;
         }
@@ -150,6 +151,41 @@ impl Command for AccountCommandMint {
                 }
             }
             Err(e) => report_error("Error minting coins", e),
+        }
+    }
+}
+
+/// Sub command for adding a currency to an account
+pub struct AccountCommandAddCurrency {}
+
+impl Command for AccountCommandAddCurrency {
+    fn get_aliases(&self) -> Vec<&'static str> {
+        vec!["addc", "addcb", "ac", "acb"]
+    }
+    fn get_params_help(&self) -> &'static str {
+        "<account_address> <currency_code>"
+    }
+    fn get_description(&self) -> &'static str {
+        "Add specified currency to the account. Suffix 'b' is for blocking"
+    }
+    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
+        if params.len() < 3 {
+            println!("Invalid number of arguments for adding currency");
+            return;
+        }
+        println!(">> Adding currency");
+        let is_blocking = blocking_cmd(params[0]);
+        match client.add_currency(&params, is_blocking) {
+            Ok(_) => {
+                if is_blocking {
+                    println!("Finished adding currency!");
+                } else {
+                    // If this value is updated, it must also be changed in
+                    // setup_scripts/docker/mint/server.py
+                    println!("Currency addition request submitted");
+                }
+            }
+            Err(e) => report_error("Error adding currency", e),
         }
     }
 }

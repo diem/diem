@@ -7,8 +7,8 @@ use libra_json_rpc_client::{
     errors::JsonRpcError,
     get_response_from_batch,
     views::{
-        AccountStateWithProofView, AccountView, BlockMetadata, BytesView, EventView,
-        StateProofView, TransactionView,
+        AccountStateWithProofView, AccountView, BlockMetadata, BytesView, CurrencyInfoView,
+        EventView, StateProofView, TransactionView,
     },
     JsonRpcBatch, JsonRpcClient, JsonRpcResponse, ResponseAsView,
 };
@@ -191,6 +191,17 @@ impl LibraClient {
         match get_response_from_batch(0, &responses)? {
             Ok(resp) => Ok(BlockMetadata::from_response(resp.clone())?),
             Err(e) => bail!("Failed to get block metadata with error: {:?}", e),
+        }
+    }
+
+    /// Gets the currency info stored on-chain
+    pub fn get_currency_info(&mut self) -> Result<Vec<CurrencyInfoView>> {
+        let mut batch = JsonRpcBatch::new();
+        batch.add_get_currencies_info();
+        let responses = self.client.execute(batch)?;
+        match get_response_from_batch(0, &responses)? {
+            Ok(resp) => Ok(CurrencyInfoView::vec_from_response(resp.clone())?),
+            Err(e) => bail!("Failed to get currencies info with error: {:?}", e),
         }
     }
 

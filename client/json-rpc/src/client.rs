@@ -51,6 +51,10 @@ impl JsonRpcBatch {
         self.add_request("get_metadata".to_string(), vec![]);
     }
 
+    pub fn add_get_currencies_info(&mut self) {
+        self.add_request("currencies_info".to_string(), vec![]);
+    }
+
     pub fn add_get_transactions_request(
         &mut self,
         start_version: u64,

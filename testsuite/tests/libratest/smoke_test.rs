@@ -13,8 +13,11 @@ use libra_secure_storage::{Policy, Storage, Value};
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
 use libra_types::{
-    account_address::AccountAddress, account_config::association_address, ledger_info::LedgerInfo,
-    transaction::authenticator::AuthenticationKey, waypoint::Waypoint,
+    account_address::AccountAddress,
+    account_config::{association_address, LBR_NAME},
+    ledger_info::LedgerInfo,
+    transaction::authenticator::AuthenticationKey,
+    waypoint::Waypoint,
 };
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
@@ -240,16 +243,18 @@ fn setup_swarm_and_client_proxy(
 fn test_smoke_script(mut client_proxy: ClientProxy) {
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "0", "10"], true)
+        .mint_coins(&["mintb", "0", "10", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(10.0, "LBR".to_string())],
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     client_proxy.create_next_account(false).unwrap();
-    client_proxy.mint_coins(&["mintb", "1", "1"], true).unwrap();
     client_proxy
-        .transfer_coins(&["tb", "0", "1", "3"], true)
+        .mint_coins(&["mintb", "1", "1", "LBR"], true)
+        .unwrap();
+    client_proxy
+        .transfer_coins(&["tb", "0", "1", "3", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(7.0, "LBR".to_string())],
@@ -261,7 +266,7 @@ fn test_smoke_script(mut client_proxy: ClientProxy) {
     ));
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "2", "15"], true)
+        .mint_coins(&["mintb", "2", "15", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(15.0, "LBR".to_string())],
@@ -274,7 +279,7 @@ fn test_execute_custom_module_and_script() {
     let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "0", "50"], true)
+        .mint_coins(&["mintb", "0", "50", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(50.0, "LBR".to_string())],
@@ -282,7 +287,9 @@ fn test_execute_custom_module_and_script() {
     ));
 
     let recipient_address = client_proxy.create_next_account(false).unwrap().address;
-    client_proxy.mint_coins(&["mintb", "1", "1"], true).unwrap();
+    client_proxy
+        .mint_coins(&["mintb", "1", "1", "LBR"], true)
+        .unwrap();
 
     let (sender_account, _) = client_proxy
         .get_account_address_from_parameter("0")
@@ -387,16 +394,16 @@ fn test_concurrent_transfers_single_node() {
     let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "0", "100"], true)
+        .mint_coins(&["mintb", "0", "100", "LBR"], true)
         .unwrap();
     client_proxy.create_next_account(false).unwrap();
     for _ in 0..20 {
         client_proxy
-            .transfer_coins(&["t", "0", "1", "1"], false)
+            .transfer_coins(&["t", "0", "1", "1", "LBR"], false)
             .unwrap();
     }
     client_proxy
-        .transfer_coins(&["tb", "0", "1", "1"], true)
+        .transfer_coins(&["tb", "0", "1", "1", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(79.0, "LBR".to_string())],
@@ -414,11 +421,11 @@ fn test_trace() {
     let mut debug_client = swarm.get_validator_debug_interface_client(0);
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "0", "100"], true)
+        .mint_coins(&["mintb", "0", "100", "LBR"], true)
         .unwrap();
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .transfer_coins(&["t", "0", "1", "1"], false)
+        .transfer_coins(&["t", "0", "1", "1", "LBR"], false)
         .unwrap();
     let events = parse_events(
         debug_client
@@ -446,9 +453,11 @@ fn test_basic_restartability() {
     let (mut env, mut client_proxy) = setup_swarm_and_client_proxy(4, 0);
     client_proxy.create_next_account(false).unwrap();
     client_proxy.create_next_account(false).unwrap();
-    client_proxy.mint_coins(&["mb", "0", "100"], true).unwrap();
     client_proxy
-        .transfer_coins(&["tb", "0", "1", "10"], true)
+        .mint_coins(&["mb", "0", "100", "LBR"], true)
+        .unwrap();
+    client_proxy
+        .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(90.0, "LBR".to_string())],
@@ -474,7 +483,7 @@ fn test_basic_restartability() {
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
     client_proxy
-        .transfer_coins(&["tb", "0", "1", "10"], true)
+        .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(80.0, "LBR".to_string())],
@@ -492,10 +501,10 @@ fn test_startup_sync_state() {
     client_proxy_1.create_next_account(false).unwrap();
     client_proxy_1.create_next_account(false).unwrap();
     client_proxy_1
-        .mint_coins(&["mb", "0", "100"], true)
+        .mint_coins(&["mb", "0", "100", "LBR"], true)
         .unwrap();
     client_proxy_1
-        .transfer_coins(&["tb", "0", "1", "10"], true)
+        .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(90.0, "LBR".to_string())],
@@ -543,7 +552,7 @@ fn test_startup_sync_state() {
         client_proxy_0.get_balances(&["b", "1"]).unwrap()
     ));
     client_proxy_1
-        .transfer_coins(&["tb", "0", "1", "10"], true)
+        .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
         .unwrap();
     client_proxy_0.wait_for_transaction(sender_address, 2);
     assert!(compare_balances(
@@ -562,10 +571,10 @@ fn test_startup_sync_state_with_empty_consensus_db() {
     client_proxy_1.create_next_account(false).unwrap();
     client_proxy_1.create_next_account(false).unwrap();
     client_proxy_1
-        .mint_coins(&["mb", "0", "100"], true)
+        .mint_coins(&["mb", "0", "100", "LBR"], true)
         .unwrap();
     client_proxy_1
-        .transfer_coins(&["tb", "0", "1", "10"], true)
+        .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(90.0, "LBR".to_string())],
@@ -610,7 +619,7 @@ fn test_startup_sync_state_with_empty_consensus_db() {
         client_proxy_0.get_balances(&["b", "1"]).unwrap()
     ));
     client_proxy_1
-        .transfer_coins(&["tb", "0", "1", "10"], true)
+        .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
         .unwrap();
     client_proxy_0.wait_for_transaction(sender_address, 2);
     assert!(compare_balances(
@@ -633,9 +642,11 @@ fn test_basic_state_synchronization() {
     let (mut env, mut client_proxy) = setup_swarm_and_client_proxy(5, 1);
     client_proxy.create_next_account(false).unwrap();
     client_proxy.create_next_account(false).unwrap();
-    client_proxy.mint_coins(&["mb", "0", "100"], true).unwrap();
     client_proxy
-        .transfer_coins(&["tb", "0", "1", "10"], true)
+        .mint_coins(&["mb", "0", "100", "LBR"], true)
+        .unwrap();
+    client_proxy
+        .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(90.0, "LBR".to_string())],
@@ -659,7 +670,7 @@ fn test_basic_state_synchronization() {
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
     client_proxy
-        .transfer_coins(&["tb", "0", "1", "1"], true)
+        .transfer_coins(&["tb", "0", "1", "1", "LBR"], true)
         .unwrap();
 
     // Reconnect and synchronize the state
@@ -696,7 +707,7 @@ fn test_basic_state_synchronization() {
     ));
     for _ in 0..10 {
         client_proxy
-            .transfer_coins(&["tb", "0", "1", "1"], true)
+            .transfer_coins(&["tb", "0", "1", "1", "LBR"], true)
             .unwrap();
     }
 
@@ -743,19 +754,24 @@ fn test_external_transaction_signer() {
         "Failed to look up receiver auth key from parameter"
     );
     let receiver_auth_key = receiver_auth_key_opt.unwrap();
-    let amount = ClientProxy::convert_to_micro_libras("1").unwrap();
+    let amount = 1_000_000;
     let gas_unit_price = 123;
     let max_gas_amount = 1000;
 
     // mint to the sender address
     client_proxy
-        .mint_coins(&["mintb", &format!("{}", sender_auth_key), "10"], true)
+        .mint_coins(
+            &["mintb", &format!("{}", sender_auth_key), "10", "LBR"],
+            true,
+        )
         .unwrap();
 
     // prepare transfer transaction
     let sequence_number = client_proxy
         .get_sequence_number(&["sequence", &format!("{}", sender_address)])
         .unwrap();
+
+    let currency_code = LBR_NAME;
 
     let unsigned_txn = client_proxy
         .prepare_transfer_coins(
@@ -764,8 +780,10 @@ fn test_external_transaction_signer() {
             receiver_address,
             receiver_auth_key.prefix().to_vec(),
             amount,
+            currency_code.to_owned(),
             Some(gas_unit_price),
             Some(max_gas_amount),
+            Some(currency_code.to_owned()),
         )
         .unwrap();
 
@@ -887,7 +905,7 @@ fn test_full_node_basic_flow() {
         .get_sequence_number(&sequence_reset_command)
         .unwrap();
     full_node_client
-        .mint_coins(&["mintb", "3", "10"], true)
+        .mint_coins(&["mintb", "3", "10", "LBR"], true)
         .expect("Fail to mint!");
 
     assert!(compare_balances(
@@ -917,7 +935,7 @@ fn test_full_node_basic_flow() {
     full_node_client_2.create_next_account(false).unwrap();
 
     validator_ac_client
-        .mint_coins(&["mintb", "4", "10"], true)
+        .mint_coins(&["mintb", "4", "10", "LBR"], true)
         .unwrap();
     let sequence = validator_ac_client
         .get_sequence_number(&sequence_reset_command)
@@ -935,12 +953,12 @@ fn test_full_node_basic_flow() {
 
     // minting again on validator doesn't cause error since client sequence has been updated
     validator_ac_client
-        .mint_coins(&["mintb", "4", "10"], true)
+        .mint_coins(&["mintb", "4", "10", "LBR"], true)
         .unwrap();
 
     // test transferring balance from 0 to 1 through full node proxy
     full_node_client
-        .transfer_coins(&["tb", "3", "4", "10"], true)
+        .transfer_coins(&["tb", "3", "4", "10", "LBR"], true)
         .unwrap();
 
     assert!(compare_balances(
@@ -974,7 +992,7 @@ fn test_e2e_reconfiguration() {
     client_proxy_1.create_next_account(false).unwrap();
     client_proxy_0.set_accounts(client_proxy_1.copy_all_accounts());
     client_proxy_1
-        .mint_coins(&["mintb", "0", "10"], true)
+        .mint_coins(&["mintb", "0", "10", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(10.0, "LBR".to_string())],
@@ -997,7 +1015,7 @@ fn test_e2e_reconfiguration() {
         .unwrap();
     // mint another 10 coins after remove node 0
     client_proxy_1
-        .mint_coins(&["mintb", "0", "10"], true)
+        .mint_coins(&["mintb", "0", "10", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(20.0, "LBR".to_string())],
@@ -1026,7 +1044,7 @@ fn test_e2e_modify_publishing_option() {
     client_proxy.create_next_account(false).unwrap();
 
     client_proxy
-        .mint_coins(&["mintb", "0", "10"], true)
+        .mint_coins(&["mintb", "0", "10", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(10.0, "LBR".to_string())],
@@ -1064,7 +1082,7 @@ fn test_e2e_modify_publishing_option() {
 
     // mint another 10 coins after restart
     client_proxy
-        .mint_coins(&["mintb", "0", "10"], true)
+        .mint_coins(&["mintb", "0", "10", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(20.0, "LBR".to_string())],
@@ -1095,7 +1113,7 @@ fn test_client_waypoints() {
     // Make sure some txns are committed
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "0", "10"], true)
+        .mint_coins(&["mintb", "0", "10", "LBR"], true)
         .unwrap();
 
     // Create the waypoint for the initial epoch
@@ -1125,7 +1143,7 @@ fn test_client_waypoints() {
         .remove_validator(&["remove_validator", &peer_id], true)
         .unwrap();
     client_proxy
-        .mint_coins(&["mintb", "0", "10"], true)
+        .mint_coins(&["mintb", "0", "10", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(20.0, "LBR".to_string())],
@@ -1159,7 +1177,7 @@ fn test_malformed_script() {
     let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "0", "100"], true)
+        .mint_coins(&["mintb", "0", "100", "LBR"], true)
         .unwrap();
 
     let script_path = workspace_builder::workspace_root()
@@ -1182,7 +1200,7 @@ fn test_malformed_script() {
 
     // Previous transaction should not choke the system.
     client_proxy
-        .mint_coins(&["mintb", "0", "10"], true)
+        .mint_coins(&["mintb", "0", "10", "LBR"], true)
         .unwrap();
 }
 
