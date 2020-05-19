@@ -43,11 +43,10 @@ libradb = { path = "../storage/libradb", version = "0.1.0" }
 vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }
 transaction-builder = { path = "../language/transaction-builder", version = "0.1.0" }
 channel = { path = "../common/channel", version = "0.1.0" }
-executor-utils = { path = "../execution/executor-utils", version = "0.1.0" }
+executor-test-helpers = { path = "../execution/executor-test-helpers", version = "0.1.0" }
 stdlib = { path = "../language/stdlib", version = "0.1.0" }
 storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 
 [features]
 default = []
 fuzzing = ["libra-mempool/fuzzing", "libra-types/fuzzing", "libradb/fuzzing"]
-testing = ["executor-utils/testing"]

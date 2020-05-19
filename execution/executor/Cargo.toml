@@ -36,7 +36,7 @@ proptest = "0.9.6"
 rand = "0.7.3"
 
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
-executor-utils = { path = "../executor-utils", version = "0.1.0" }
+executor-test-helpers = { path = "../executor-test-helpers", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
 libradb = { path = "../../storage/libradb", version = "0.1.0" }
@@ -47,4 +47,3 @@ vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }
 [features]
 default = []
 fuzzing = ["consensus-types/fuzzing", "libra-config/fuzzing", "libra-crypto/fuzzing", "libra-types/fuzzing", "libradb/fuzzing"]
-testing = ["executor-utils/testing"]

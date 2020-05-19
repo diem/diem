@@ -18,7 +18,6 @@ structopt = "0.3"
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 executor = { path = "../executor", version = "0.1.0" }
 executor-types = { path = "../executor-types", version = "0.1.0" }
-executor-utils = { path = "../executor-utils", version = "0.1.0" }
 libradb = { path = "../../storage/libradb", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
