@@ -22,6 +22,14 @@ pub struct Foo {
 // Used for testing the seed in FooHasher.
 pub struct Bar {}
 
+// Complex example with generics and serde-rename.
+#[derive(Serialize, Deserialize, CryptoHasher, LCSCryptoHash)]
+#[serde(rename = "Foo")]
+pub struct Baz<T> {
+    a: T,
+    b: u32,
+}
+
 impl CryptoHash for Bar {
     type Hasher = FooHasher;
 
@@ -45,7 +53,7 @@ fn test_cryptohasher_name() {
         hasher_bytes
     };
     let actual = CryptoHash::hash(&value);
-    assert_eq!(&expected, actual.as_ref(),);
+    assert_eq!(&expected, actual.as_ref());
 }
 
 #[test]
@@ -63,5 +71,13 @@ fn test_lcs_cryptohash() {
         hasher_bytes
     };
     let actual = CryptoHash::hash(&value);
-    assert_eq!(&expected, actual.as_ref(),);
+    assert_eq!(&expected, actual.as_ref());
+}
+
+#[test]
+fn test_lcs_cryptohash_with_generics() {
+    let value = Baz { a: 5u64, b: 1025 };
+    let expected = CryptoHash::hash(&Foo { a: 5, b: 1025 });
+    let actual = CryptoHash::hash(&value);
+    assert_eq!(expected, actual);
 }
