@@ -126,6 +126,16 @@ impl<T: Payload> SafetyRules<T> {
 
         Ok(())
     }
+
+    /// This checks the epoch given against storage for consistent verification
+    fn verify_epoch(&self, epoch: u64) -> Result<(), Error> {
+        let expected_epoch = self.persistent_storage.epoch()?;
+        if epoch != expected_epoch {
+            Err(Error::IncorrectEpoch(epoch, expected_epoch))
+        } else {
+            Ok(())
+        }
+    }
 }
 
 impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
@@ -161,10 +171,11 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
 
     /// @TODO verify signature on vote proposal
     /// @TODO verify QC correctness
-    /// @TODO verify epoch on vote proposal
     fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal<T>) -> Result<Vote, Error> {
         debug!("Incoming vote proposal to sign.");
         let proposed_block = vote_proposal.block();
+
+        self.verify_epoch(proposed_block.epoch())?;
 
         let last_voted_round = self.persistent_storage.last_voted_round()?;
         if proposed_block.round() <= last_voted_round {
@@ -240,10 +251,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
         debug!("Incoming timeout message for round {}", timeout.round());
         COUNTERS.requested_sign_timeout.inc();
 
-        let expected_epoch = self.persistent_storage.epoch()?;
-        if timeout.epoch() != expected_epoch {
-            return Err(Error::IncorrectEpoch(timeout.epoch(), expected_epoch));
-        }
+        self.verify_epoch(timeout.epoch())?;
 
         let preferred_round = self.persistent_storage.preferred_round()?;
         if timeout.round() <= preferred_round {

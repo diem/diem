@@ -64,13 +64,19 @@ pub fn make_proposal_with_qc<P: Payload>(
     make_proposal_with_qc_and_proof(P::default(), round, empty_proof(), qc, validator_signer)
 }
 
-pub fn make_proposal_with_parent<P: Payload>(
+pub fn make_proposal_with_parent_and_overrides<P: Payload>(
     payload: P,
     round: Round,
     parent: &VoteProposal<P>,
     committed: Option<&VoteProposal<P>>,
     validator_signer: &ValidatorSigner,
+    epoch: Option<u64>,
 ) -> VoteProposal<P> {
+    let block_epoch = match epoch {
+        Some(e) => e,
+        _ => parent.block().epoch(),
+    };
+
     let parent_output = parent
         .accumulator_extension_proof()
         .verify(
@@ -88,10 +94,18 @@ pub fn make_proposal_with_parent<P: Payload>(
         vec![Timeout::new(0, round).hash()],
     );
 
+    let proposed_block = BlockInfo::new(
+        block_epoch,
+        parent.block().round(),
+        parent.block().id(),
+        parent_output.root_hash(),
+        parent_output.version(),
+        parent.block().timestamp_usecs(),
+        None,
+    );
+
     let vote_data = VoteData::new(
-        parent
-            .block()
-            .gen_block_info(parent_output.root_hash(), parent_output.version(), None),
+        proposed_block,
         parent.block().quorum_cert().certified_block().clone(),
     );
 
@@ -136,6 +150,23 @@ pub fn make_proposal_with_parent<P: Payload>(
     let qc = QuorumCert::new(vote_data, ledger_info_with_signatures);
 
     make_proposal_with_qc_and_proof(payload, round, proof, qc, validator_signer)
+}
+
+pub fn make_proposal_with_parent<P: Payload>(
+    payload: P,
+    round: Round,
+    parent: &VoteProposal<P>,
+    committed: Option<&VoteProposal<P>>,
+    validator_signer: &ValidatorSigner,
+) -> VoteProposal<P> {
+    make_proposal_with_parent_and_overrides(
+        payload,
+        round,
+        parent,
+        committed,
+        validator_signer,
+        None,
+    )
 }
 
 pub fn validator_signers_to_ledger_info(signers: &[&ValidatorSigner]) -> LedgerInfo {
