@@ -33,7 +33,7 @@ impl<'l> PackageContext<'l> {
         workspace_path: &'l Path,
         metadata: PackageMetadata<'l>,
     ) -> Result<Self> {
-        let default_members = project_ctx.default_workspace_members()?;
+        let default_members = project_ctx.default_members()?;
         Ok(Self {
             project_ctx,
             package_graph,

@@ -15,8 +15,12 @@ allowed = [
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
 
-[workspace.banned-direct-deps]
+[workspace.banned-deps.direct]
 lazy_static = "use once_cell::sync::Lazy instead"
+
+[workspace.banned-deps.default-build]
+criterion = "criterion is only for benchmarks"
+proptest = "proptest is only for testing and fuzzing"
 
 [workspace.overlay]
 features = ["fuzzing"]
@@ -62,3 +66,5 @@ members = [
     "testsuite/libra-fuzzer/fuzz",
     "testsuite/libra-swarm",
 ]
+
+[workspace.banned-default-deps]

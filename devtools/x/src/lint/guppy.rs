@@ -4,7 +4,7 @@
 //! Project and package linters that run queries on guppy.
 
 use crate::{
-    config::{EnforcedAttributesConfig, OverlayConfig, TestOnlyConfig},
+    config::{BannedDepsConfig, EnforcedAttributesConfig, OverlayConfig, TestOnlyConfig},
     lint::toml::toml_mismatch_message,
 };
 use guppy::{graph::feature::FeatureFilterFn, Version};
@@ -16,40 +16,42 @@ use std::{
 };
 use x_lint::prelude::*;
 
-/// Ban certain crates from being used as direct dependencies.
+/// Ban certain crates from being used as direct dependencies or in the default build.
 #[derive(Debug)]
-pub struct BannedDirectDeps<'cfg> {
-    banned_deps: &'cfg HashMap<String, String>,
+pub struct BannedDeps<'cfg> {
+    config: &'cfg BannedDepsConfig,
 }
 
-impl<'cfg> BannedDirectDeps<'cfg> {
-    pub fn new(banned_deps: &'cfg HashMap<String, String>) -> Self {
-        Self { banned_deps }
+impl<'cfg> BannedDeps<'cfg> {
+    pub fn new(config: &'cfg BannedDepsConfig) -> Self {
+        Self { config }
     }
 }
 
-impl<'cfg> Linter for BannedDirectDeps<'cfg> {
+impl<'cfg> Linter for BannedDeps<'cfg> {
     fn name(&self) -> &'static str {
-        "banned-direct-deps"
+        "banned-deps"
     }
 }
 
-// This could be done either as a project linter or as a package linter -- doing it as a project
-// linter is slightly cheaper empirically.
-impl<'cfg> ProjectLinter for BannedDirectDeps<'cfg> {
+impl<'cfg> ProjectLinter for BannedDeps<'cfg> {
     fn run<'l>(
         &self,
         ctx: &ProjectContext<'l>,
         out: &mut LintFormatter<'l, '_>,
     ) -> Result<RunStatus<'l>> {
         let package_graph = ctx.package_graph()?;
-        let banned_packages = package_graph.packages().filter_map(|package| {
-            self.banned_deps
-                .get(package.name())
-                .map(|message| (package, message))
-        });
 
-        for (package, message) in banned_packages {
+        let filter_ban = |banned: &'cfg HashMap<String, String>| {
+            package_graph.packages().filter_map(move |package| {
+                banned
+                    .get(package.name())
+                    .map(move |message| (package, message))
+            })
+        };
+
+        let banned_direct = &self.config.direct;
+        for (package, message) in filter_ban(banned_direct) {
             // Look at the reverse direct dependencies of this package.
             for link in package.reverse_direct_links() {
                 let from = link.from();
@@ -63,6 +65,22 @@ impl<'cfg> ProjectLinter for BannedDirectDeps<'cfg> {
                         format!("banned direct dependency '{}': {}", package.name(), message),
                     );
                 }
+            }
+        }
+
+        let default_members = ctx.default_members()?;
+
+        let banned_default_build = &self.config.default_build;
+        for (package, message) in filter_ban(banned_default_build) {
+            if default_members.contains(package.id()) {
+                out.write(
+                    LintLevel::Error,
+                    format!(
+                        "banned dependency in default build '{}': {}",
+                        package.name(),
+                        message
+                    ),
+                );
             }
         }
 
@@ -97,7 +115,7 @@ impl<'cfg> ProjectLinter for TestOnlyMembers<'cfg> {
         // Set of test-only members is all workspace members minus default ones.
         let pkg_graph = ctx.package_graph()?;
         let workspace = pkg_graph.workspace();
-        let default_members = ctx.default_workspace_members()?;
+        let default_members = ctx.default_members()?;
         let mut expected: Vec<_> = workspace
             .members()
             .filter_map(|(path, package)| {
