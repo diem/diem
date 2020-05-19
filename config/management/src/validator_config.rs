@@ -127,10 +127,7 @@ fn x25519_from_storage(
     key_name: &str,
     storage: &mut dyn Storage,
 ) -> Result<x25519::PublicKey, Error> {
-    let edkey = storage
-        .export_private_key(key_name)
-        .map_err(|e| Error::LocalStorageReadError(e.to_string()))?;
-    let xkey: Result<x25519::PrivateKey, _> = edkey.to_bytes().as_ref().try_into();
-    xkey.map(|k| k.public_key())
-        .map_err(|e| Error::UnexpectedError(format!("({}) {}", key_name, e)))
+    let edkey = ed25519_from_storage(key_name, storage)?;
+    x25519::PublicKey::from_ed25519_public_bytes(&edkey.to_bytes())
+        .map_err(|e| Error::UnexpectedError(e.to_string()))
 }
