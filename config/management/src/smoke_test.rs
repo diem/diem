@@ -12,7 +12,7 @@ use libra_secure_storage::Value;
 use libra_swarm::swarm::{LibraSwarm, LibraSwarmDir};
 use libra_temppath::TempPath;
 use libra_types::account_address::AccountAddress;
-use std::{convert::TryInto, path::PathBuf};
+use std::path::PathBuf;
 
 struct ManagementBuilder {
     configs: Vec<NodeConfig>,
@@ -76,7 +76,8 @@ fn smoke_test() {
         let identity_key = storage
             .export_private_key(libra_global_constants::VALIDATOR_NETWORK_KEY)
             .unwrap();
-        let identity_key: x25519::PrivateKey = identity_key.to_bytes().as_ref().try_into().unwrap();
+        let identity_key =
+            x25519::PrivateKey::from_ed25519_private_bytes(&identity_key.to_bytes()).unwrap();
         // This is a deprecated field
         let signing_key = Ed25519PrivateKey::generate_for_testing();
         validator_network.network_keypairs = Some(NetworkKeyPairs::load(identity_key, signing_key));
@@ -85,7 +86,8 @@ fn smoke_test() {
         let identity_key = storage
             .export_private_key(libra_global_constants::FULLNODE_NETWORK_KEY)
             .unwrap();
-        let identity_key = identity_key.to_bytes().as_ref().try_into().unwrap();
+        let identity_key =
+            x25519::PrivateKey::from_ed25519_private_bytes(&identity_key.to_bytes()).unwrap();
         // This is a deprecated field
         let signing_key = Ed25519PrivateKey::generate_for_testing();
         fullnode_network.network_keypairs = Some(NetworkKeyPairs::load(identity_key, signing_key));
