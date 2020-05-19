@@ -4,8 +4,8 @@
 //! This module has definition of various proofs.
 
 use super::{
-    position::Position, verify_transaction_info, MerkleTreeInternalNode, SparseMerkleInternalNode,
-    SparseMerkleLeafNode,
+    accumulator::InMemoryAccumulator, position::Position, verify_transaction_info,
+    MerkleTreeInternalNode, SparseMerkleInternalNode, SparseMerkleLeafNode,
 };
 use crate::{
     account_state_blob::AccountStateBlob,
@@ -752,5 +752,52 @@ impl TransactionListProof {
             &txn_info_hashes,
         )?;
         Ok(())
+    }
+}
+
+/// A proof that first verifies that establishes correct computation of the root and then
+/// returns the new tree to acquire a new root and version. Note: this is used internally by
+/// VoteProposal hence why it exists within consensus-types andd not libra-types.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct AccumulatorExtensionProof<H> {
+    /// Represents the roots of all the full subtrees from left to right in the original accumulator.
+    frozen_subtree_roots: Vec<HashValue>,
+    /// The total number of leaves in original accumulator.
+    num_leaves: LeafCount,
+    /// The values representing the newly appended leaves.
+    leaves: Vec<HashValue>,
+
+    hasher: PhantomData<H>,
+}
+
+impl<H: CryptoHasher> AccumulatorExtensionProof<H> {
+    pub fn new(
+        frozen_subtree_roots: Vec<HashValue>,
+        num_leaves: LeafCount,
+        leaves: Vec<HashValue>,
+    ) -> Self {
+        Self {
+            frozen_subtree_roots,
+            num_leaves,
+            leaves,
+            hasher: PhantomData,
+        }
+    }
+
+    pub fn verify(&self, original_root: HashValue) -> anyhow::Result<InMemoryAccumulator<H>> {
+        let original_tree =
+            InMemoryAccumulator::<H>::new(self.frozen_subtree_roots.clone(), self.num_leaves)?;
+        ensure!(
+            original_tree.root_hash() == original_root,
+            "Root hashes do not match. Actual root hash: {:x}. Expected root hash: {:x}.",
+            original_tree.root_hash(),
+            original_root
+        );
+
+        Ok(original_tree.append(self.leaves.as_slice()))
+    }
+
+    pub fn leaves(&self) -> &Vec<HashValue> {
+        &self.leaves
     }
 }

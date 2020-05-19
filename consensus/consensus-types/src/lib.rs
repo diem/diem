@@ -3,7 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-pub mod accumulator_extension_proof;
 pub mod block;
 pub mod block_data;
 pub mod block_retrieval;

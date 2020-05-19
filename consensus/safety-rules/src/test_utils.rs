@@ -3,7 +3,6 @@
 
 use crate::persistent_safety_storage::PersistentSafetyStorage;
 use consensus_types::{
-    accumulator_extension_proof::AccumulatorExtensionProof,
     block::Block,
     common::{Payload, Round},
     quorum_cert::QuorumCert,
@@ -18,6 +17,7 @@ use libra_types::{
     block_info::BlockInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::ValidatorSet,
+    proof::AccumulatorExtensionProof,
     validator_info::ValidatorInfo,
     validator_signer::ValidatorSigner,
     waypoint::Waypoint,

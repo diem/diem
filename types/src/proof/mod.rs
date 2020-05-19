@@ -29,10 +29,10 @@ use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
 pub use self::definition::{
-    AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, AccumulatorRangeProof,
-    EventAccumulatorProof, EventProof, SparseMerkleProof, SparseMerkleRangeProof,
-    TransactionAccumulatorProof, TransactionAccumulatorRangeProof, TransactionInfoWithProof,
-    TransactionListProof,
+    AccountStateProof, AccumulatorConsistencyProof, AccumulatorExtensionProof, AccumulatorProof,
+    AccumulatorRangeProof, EventAccumulatorProof, EventProof, SparseMerkleProof,
+    SparseMerkleRangeProof, TransactionAccumulatorProof, TransactionAccumulatorRangeProof,
+    TransactionInfoWithProof, TransactionListProof,
 };
 
 #[cfg(any(test, feature = "fuzzing"))]
