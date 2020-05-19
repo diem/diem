@@ -170,6 +170,9 @@ pub(crate) async fn process_transaction_broadcast<V>(
 ) where
     V: TransactionValidation,
 {
+    if timeline_state == TimelineState::NotReady {
+        debug!("[mempool] received {:?} txns for range {:?}", transactions.len(), request_id);
+    }
     let results = process_incoming_transactions(&smp, transactions, timeline_state).await;
     log_txn_process_results(results, Some(peer.peer_id()));
     // send back ACK
@@ -310,7 +313,7 @@ fn log_txn_process_results(results: Vec<SubmissionStatus>, sender: Option<PeerId
 
 /// processes ACK from peer node regarding txn submission to that node
 pub(crate) fn process_broadcast_ack(
-    mempool: &Mutex<CoreMempool>,
+    _mempool: &Mutex<CoreMempool>,
     request_id: String,
     is_validator: bool, // whether this node is a validator or not
 ) {
@@ -321,13 +324,13 @@ pub(crate) fn process_broadcast_ack(
     match parse_request_id(request_id) {
         Ok((start_id, end_id)) => {
             debug!("[mempool] received ACK {}:{}", start_id, end_id);
-            let mut mempool = mempool
-                .lock()
-                .expect("[shared mempool] failed to acquire mempool lock");
-
-            for txn in mempool.timeline_range(start_id, end_id).iter() {
-                mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
-            }
+//            let mut mempool = mempool
+//                .lock()
+//                .expect("[shared mempool] failed to acquire mempool lock");
+//
+//            for txn in mempool.timeline_range(start_id, end_id).iter() {
+//                mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
+//            }
         }
         Err(err) => warn!("[shared mempool] ACK with invalid request_id: {:?}", err),
     }

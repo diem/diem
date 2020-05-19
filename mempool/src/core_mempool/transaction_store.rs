@@ -293,27 +293,27 @@ impl TransactionStore {
         (batch, last_timeline_id)
     }
 
-    /// Returns block of transactions with timeline id in the range `start_timeline_id` exclusive to `end_timeline_id` inclusive
-    pub(crate) fn timeline_range(
-        &mut self,
-        start_timeline_id: u64,
-        end_timeline_id: u64,
-    ) -> Vec<SignedTransaction> {
-        let mut batch = vec![];
-        for (address, sequence_number) in self
-            .timeline_index
-            .range(start_timeline_id, end_timeline_id)
-        {
-            if let Some(txn) = self
-                .transactions
-                .get_mut(&address)
-                .and_then(|txns| txns.get(&sequence_number))
-            {
-                batch.push(txn.txn.clone());
-            }
-        }
-        batch
-    }
+//    /// Returns block of transactions with timeline id in the range `start_timeline_id` exclusive to `end_timeline_id` inclusive
+//    pub(crate) fn timeline_range(
+//        &mut self,
+//        start_timeline_id: u64,
+//        end_timeline_id: u64,
+//    ) -> Vec<SignedTransaction> {
+//        let mut batch = vec![];
+//        for (address, sequence_number) in self
+//            .timeline_index
+//            .range(start_timeline_id, end_timeline_id)
+//        {
+//            if let Some(txn) = self
+//                .transactions
+//                .get_mut(&address)
+//                .and_then(|txns| txns.get(&sequence_number))
+//            {
+//                batch.push(txn.txn.clone());
+//            }
+//        }
+//        batch
+//    }
 
     /// GC old transactions
     pub(crate) fn gc_by_system_ttl(&mut self) {
