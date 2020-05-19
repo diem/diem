@@ -505,7 +505,7 @@ encode_txn_script! {
 
 encode_txn_script! {
     name: encode_apply_for_root_vasp,
-    args: [human_name: Bytes, base_url: Bytes, ca_cert: Bytes, travel_rule_public_key: Bytes],
+    args: [human_name: Bytes, base_url: Bytes, travel_rule_public_key: Bytes],
     script: ApplyForRootVasp,
     doc: "Applies for the sending account to be added as a root VASP account."
 }

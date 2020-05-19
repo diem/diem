@@ -153,7 +153,7 @@ fn dual_attestation_payment() {
     let (private_key, public_key) = keygen.generate_keypair();
     // apply for the recipient to be a vasp
     executor.execute_and_apply(payment_receiver.signed_script_txn(
-        encode_apply_for_root_vasp(vec![], vec![], vec![], public_key.to_bytes().to_vec()),
+        encode_apply_for_root_vasp(vec![], vec![], public_key.to_bytes().to_vec()),
         0,
     ));
 

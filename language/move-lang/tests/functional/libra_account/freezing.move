@@ -90,7 +90,6 @@ fun main() {
     VASP::apply_for_vasp_root_credential(
         LCS::to_bytes<address>(&0xAAA),
         LCS::to_bytes<address>(&0xBBB),
-        LCS::to_bytes<address>(&0xCCC),
         pubkey,
     );
 }

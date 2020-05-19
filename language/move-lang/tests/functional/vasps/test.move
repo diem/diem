@@ -12,7 +12,7 @@ script {
 use 0x0::VASP;
 fun main() {
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
-    VASP::apply_for_vasp_root_credential(x"AAA", x"BBB", x"CCC", pubkey);
+    VASP::apply_for_vasp_root_credential(x"AAA", x"BBB", pubkey);
 }
 }
 // check: EXECUTED
@@ -323,36 +323,6 @@ use 0x0::Transaction;
 fun main() {
     VASP::decertify_child_account({{child1}});
     Transaction::assert(!VASP::is_child_vasp({{child1}}), 19);
-}
-}
-// check: EXECUTED
-
-///////////////////////////////////////////////////////////////////////////
-// VASP root ca cert renewal
-///////////////////////////////////////////////////////////////////////////
-
-//! new-transaction
-//! sender: root
-script {
-use 0x0::VASP;
-// Only the association can update the CA cert
-fun main() {
-    VASP::update_ca_cert({{root}}, x"DDD");
-}
-}
-// check: ABORTED
-// check: 2005
-
-//! new-transaction
-//! sender: association
-script {
-use 0x0::VASP;
-use 0x0::Transaction;
-// Make sure the CA cert is updated.
-fun main() {
-    Transaction::assert(VASP::ca_cert({{root}}) == x"CCC", 20);
-    VASP::update_ca_cert({{root}}, x"DDD");
-    Transaction::assert(VASP::ca_cert({{root}}) == x"DDD", 21);
 }
 }
 // check: EXECUTED

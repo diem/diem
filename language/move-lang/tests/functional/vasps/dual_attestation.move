@@ -13,7 +13,7 @@ script {
 use 0x0::VASP;
 fun main() {
     let pubkey = x"0000000d7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
-    VASP::apply_for_vasp_root_credential(x"AAA", x"BBB", x"CCC", pubkey);
+    VASP::apply_for_vasp_root_credential(x"AAA", x"BBB", pubkey);
 }
 }
 // check: EXECUTED
@@ -25,7 +25,7 @@ script {
 use 0x0::VASP;
 fun main() {
     let pubkey = x"e14c7ddb7713c9c7315f337393f4261d1713a5f8c6c6e14c4986e616460251e6";
-    VASP::apply_for_vasp_root_credential(x"DDD", x"EEE", x"FFF", pubkey);
+    VASP::apply_for_vasp_root_credential(x"DDD", x"EEE", pubkey);
 }
 }
 // check: EXECUTED
