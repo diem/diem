@@ -7,9 +7,9 @@ use crate::{
     block_info::BlockInfo,
     ledger_info::LedgerInfo,
     proof::{
-        definition::MAX_ACCUMULATOR_PROOF_DEPTH, AccountStateProof, EventAccumulatorInternalNode,
-        EventAccumulatorProof, EventProof, SparseMerkleInternalNode, SparseMerkleLeafNode,
-        SparseMerkleProof, TestAccumulatorInternalNode, TestAccumulatorProof,
+        definition::MAX_ACCUMULATOR_PROOF_DEPTH, AccountStateProof, AccumulatorExtensionProof,
+        EventAccumulatorInternalNode, EventAccumulatorProof, EventProof, SparseMerkleInternalNode,
+        SparseMerkleLeafNode, SparseMerkleProof, TestAccumulatorInternalNode, TestAccumulatorProof,
         TransactionAccumulatorInternalNode, TransactionAccumulatorProof, TransactionInfoWithProof,
     },
     transaction::{RawTransaction, Script, Transaction, TransactionInfo},
@@ -18,7 +18,7 @@ use crate::{
 use libra_crypto::{
     ed25519::Ed25519PrivateKey,
     hash::{
-        CryptoHash, TestOnlyHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID,
+        CryptoHash, TestOnlyHash, TestOnlyHasher, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID,
         SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
     HashValue, PrivateKey, Uniform,
@@ -459,4 +459,44 @@ fn test_verify_account_state_and_event() {
             /* event_version_within_transaction = */ 0,
         )
         .is_err());
+}
+
+// This test does the following:
+// 1) Test that empty has a well defined definition
+// 2) Test a single value
+// 3) Test multiple values
+// 4) Random nonsense returns an error
+#[test]
+fn test_accumulator_extension_proof() {
+    // Test empty
+    let empty = AccumulatorExtensionProof::<TestOnlyHasher>::new(vec![], 0, vec![]);
+
+    let derived_tree = empty.verify(*ACCUMULATOR_PLACEHOLDER_HASH).unwrap();
+    assert_eq!(*ACCUMULATOR_PLACEHOLDER_HASH, derived_tree.root_hash());
+    assert_eq!(derived_tree.version(), 0);
+
+    // Test a single value
+    HashValue::zero();
+    let one_tree =
+        AccumulatorExtensionProof::<TestOnlyHasher>::new(vec![], 0, vec![HashValue::zero()]);
+
+    let derived_tree = one_tree.verify(*ACCUMULATOR_PLACEHOLDER_HASH).unwrap();
+    assert_eq!(HashValue::zero(), derived_tree.root_hash());
+    assert_eq!(derived_tree.version(), 0);
+
+    // Test multiple values
+    let two_tree = AccumulatorExtensionProof::<TestOnlyHasher>::new(
+        vec![HashValue::zero()],
+        1,
+        vec![HashValue::zero()],
+    );
+
+    let derived_tree = two_tree.verify(HashValue::zero()).unwrap();
+    let two_hash = TestAccumulatorInternalNode::new(HashValue::zero(), HashValue::zero()).hash();
+    assert_eq!(two_hash, derived_tree.root_hash());
+    assert_eq!(derived_tree.version(), 1);
+
+    // Test nonsense breaks
+    let derived_tree_err = two_tree.verify(*ACCUMULATOR_PLACEHOLDER_HASH);
+    assert!(derived_tree_err.is_err());
 }

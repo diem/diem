@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{accumulator_extension_proof::AccumulatorExtensionProof, block::Block};
+use crate::block::Block;
 use libra_crypto::hash::TransactionAccumulatorHasher;
-use libra_types::epoch_state::EpochState;
+use libra_types::{epoch_state::EpochState, proof::AccumulatorExtensionProof};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 

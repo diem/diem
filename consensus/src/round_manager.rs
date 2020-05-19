@@ -7,7 +7,6 @@ use anyhow::{ensure, format_err, Context, Result};
 use termion::color::*;
 
 use consensus_types::{
-    accumulator_extension_proof::AccumulatorExtensionProof,
     block::Block,
     block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus},
     common::{Author, Payload, Round},
@@ -23,7 +22,10 @@ use debug_interface::prelude::*;
 use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
-use libra_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier};
+use libra_types::{
+    epoch_state::EpochState, proof::AccumulatorExtensionProof,
+    validator_verifier::ValidatorVerifier,
+};
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
