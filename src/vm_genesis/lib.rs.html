@@ -406,11 +406,6 @@
 <span id="406">406</span>
 <span id="407">407</span>
 <span id="408">408</span>
-<span id="409">409</span>
-<span id="410">410</span>
-<span id="411">411</span>
-<span id="412">412</span>
-<span id="413">413</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -549,7 +544,7 @@
     <span class="kw">let</span> <span class="ident">genesis_auth_key</span> <span class="op">=</span> <span class="ident">AuthenticationKey</span>::<span class="ident">ed25519</span>(<span class="ident">public_key</span>).<span class="ident">to_vec</span>();
 
     <span class="kw">let</span> <span class="ident">root_association_address</span> <span class="op">=</span> <span class="ident">account_config</span>::<span class="ident">association_address</span>();
-    <span class="kw">let</span> <span class="ident">burn_account_address</span> <span class="op">=</span> <span class="ident">account_config</span>::<span class="ident">burn_account_address</span>();
+    <span class="kw">let</span> <span class="ident">tc_account_address</span> <span class="op">=</span> <span class="ident">account_config</span>::<span class="ident">treasury_compliance_account_address</span>();
     <span class="kw">let</span> <span class="ident">fee_account_address</span> <span class="op">=</span> <span class="ident">account_config</span>::<span class="ident">transaction_fee_address</span>();
 
     <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">root_association_address</span>);
@@ -581,31 +576,26 @@
         <span class="macro">vec</span><span class="macro">!</span>[],
         <span class="macro">vec</span><span class="macro">!</span>[
             <span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">root_association_address</span>),
-            <span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">burn_account_address</span>),
+            <span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">tc_account_address</span>),
             <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">genesis_auth_key</span>.<span class="ident">clone</span>()),
         ],
     );
 
-    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">burn_account_address</span>);
-    <span class="ident">context</span>.<span class="ident">exec</span>(
-        <span class="ident">GENESIS_MODULE_NAME</span>,
-        <span class="string">&quot;initalize_burn_account&quot;</span>,
-        <span class="macro">vec</span><span class="macro">!</span>[],
-        <span class="macro">vec</span><span class="macro">!</span>[],
-    );
+    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">tc_account_address</span>);
+    <span class="ident">context</span>.<span class="ident">exec</span>(<span class="ident">GENESIS_MODULE_NAME</span>, <span class="string">&quot;initalize_tc_account&quot;</span>, <span class="macro">vec</span><span class="macro">!</span>[], <span class="macro">vec</span><span class="macro">!</span>[]);
 
     <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">root_association_address</span>);
     <span class="ident">context</span>.<span class="ident">exec</span>(
         <span class="ident">GENESIS_MODULE_NAME</span>,
-        <span class="string">&quot;grant_burn_account&quot;</span>,
+        <span class="string">&quot;grant_tc_account&quot;</span>,
         <span class="macro">vec</span><span class="macro">!</span>[],
-        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">burn_account_address</span>)],
+        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">tc_account_address</span>)],
     );
 
-    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">burn_account_address</span>);
+    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">tc_account_address</span>);
     <span class="ident">context</span>.<span class="ident">exec</span>(
         <span class="ident">GENESIS_MODULE_NAME</span>,
-        <span class="string">&quot;grant_burn_capabilities_for_sender&quot;</span>,
+        <span class="string">&quot;grant_tc_capabilities_for_sender&quot;</span>,
         <span class="macro">vec</span><span class="macro">!</span>[],
         <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">genesis_auth_key</span>.<span class="ident">clone</span>())],
     );
