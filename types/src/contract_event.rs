@@ -3,7 +3,8 @@
 
 use crate::{
     account_config::{
-        BurnEvent, CancelBurnEvent, MintEvent, PreburnEvent, ReceivedPaymentEvent, SentPaymentEvent,
+        BurnEvent, CancelBurnEvent, MintEvent, NewBlockEvent, NewEpochEvent, PreburnEvent,
+        ReceivedPaymentEvent, SentPaymentEvent, UpgradeEvent,
     },
     event::EventKey,
     ledger_info::LedgerInfo,
@@ -160,6 +161,39 @@ impl TryFrom<&ContractEvent> for CancelBurnEvent {
     fn try_from(event: &ContractEvent) -> Result<Self> {
         if event.type_tag != TypeTag::Struct(CancelBurnEvent::struct_tag()) {
             anyhow::bail!("Expected CancelBurnEvent")
+        }
+        Self::try_from_bytes(&event.event_data)
+    }
+}
+
+impl TryFrom<&ContractEvent> for UpgradeEvent {
+    type Error = Error;
+
+    fn try_from(event: &ContractEvent) -> Result<Self> {
+        if event.type_tag != TypeTag::Struct(Self::struct_tag()) {
+            anyhow::bail!("Expected UpgradeEvent")
+        }
+        Self::try_from_bytes(&event.event_data)
+    }
+}
+
+impl TryFrom<&ContractEvent> for NewBlockEvent {
+    type Error = Error;
+
+    fn try_from(event: &ContractEvent) -> Result<Self> {
+        if event.type_tag != TypeTag::Struct(Self::struct_tag()) {
+            anyhow::bail!("Expected NewBlockEvent")
+        }
+        Self::try_from_bytes(&event.event_data)
+    }
+}
+
+impl TryFrom<&ContractEvent> for NewEpochEvent {
+    type Error = Error;
+
+    fn try_from(event: &ContractEvent) -> Result<Self> {
+        if event.type_tag != TypeTag::Struct(Self::struct_tag()) {
+            anyhow::bail!("Expected NewEpochEvent")
         }
         Self::try_from_bytes(&event.event_data)
     }
