@@ -4122,6 +4122,8 @@
 <span id="4122">4122</span>
 <span id="4123">4123</span>
 <span id="4124">4124</span>
+<span id="4125">4125</span>
+<span id="4126">4126</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -7124,6 +7126,8 @@
                 <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">type_name</span>.<span class="ident">value</span> {
                     <span class="ident">Builtin</span>(<span class="ident">builtin_type_name</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">builtin_type_name</span>.<span class="ident">value</span> {
                         <span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">new_prim</span>(<span class="ident">PrimitiveType</span>::<span class="ident">Address</span>),
+                        <span class="comment">// TODO fix this for a real signer type</span>
+                        <span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">new_prim</span>(<span class="ident">PrimitiveType</span>::<span class="ident">Address</span>),
                         <span class="ident">U8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">new_prim</span>(<span class="ident">PrimitiveType</span>::<span class="ident">U8</span>),
                         <span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">new_prim</span>(<span class="ident">PrimitiveType</span>::<span class="ident">U64</span>),
                         <span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">new_prim</span>(<span class="ident">PrimitiveType</span>::<span class="ident">U128</span>),

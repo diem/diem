@@ -907,6 +907,7 @@
 <span id="907">907</span>
 <span id="908">908</span>
 <span id="909">909</span>
+<span id="910">910</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1762,6 +1763,7 @@
     <span class="kw">use</span> <span class="ident">N</span>::{<span class="ident">BuiltinFunction_</span> <span class="kw">as</span> <span class="ident">B</span>, <span class="ident">BuiltinFunction_</span>::<span class="kw-2">*</span>};
     <span class="prelude-val">Some</span>(<span class="kw">match</span> <span class="ident">b</span>.<span class="ident">value</span>.<span class="ident">as_str</span>() {
         <span class="ident">B</span>::<span class="ident">MOVE_TO_SENDER</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MoveToSender</span>(<span class="ident">check_builtin_ty_arg</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">b</span>, <span class="ident">ty_args</span>)),
+        <span class="ident">B</span>::<span class="ident">MOVE_TO</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MoveTo</span>(<span class="ident">check_builtin_ty_arg</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">b</span>, <span class="ident">ty_args</span>)),
         <span class="ident">B</span>::<span class="ident">MOVE_FROM</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MoveFrom</span>(<span class="ident">check_builtin_ty_arg</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">b</span>, <span class="ident">ty_args</span>)),
         <span class="ident">B</span>::<span class="ident">BORROW_GLOBAL</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BorrowGlobal</span>(<span class="bool-val">false</span>, <span class="ident">check_builtin_ty_arg</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">b</span>, <span class="ident">ty_args</span>)),
         <span class="ident">B</span>::<span class="ident">BORROW_GLOBAL_MUT</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BorrowGlobal</span>(<span class="bool-val">true</span>, <span class="ident">check_builtin_ty_arg</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">b</span>, <span class="ident">ty_args</span>)),

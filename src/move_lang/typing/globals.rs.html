@@ -329,6 +329,10 @@
 <span id="329">329</span>
 <span id="330">330</span>
 <span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -545,6 +549,10 @@
         }
         <span class="ident">B</span>::<span class="ident">MoveToSender</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">mk_msg</span>(<span class="ident">N</span>::<span class="ident">BuiltinFunction_</span>::<span class="ident">MOVE_TO_SENDER</span>);
+            <span class="ident">check_global_access</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">bt</span>);
+        }
+        <span class="ident">B</span>::<span class="ident">MoveTo</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">mk_msg</span>(<span class="ident">N</span>::<span class="ident">BuiltinFunction_</span>::<span class="ident">MOVE_TO</span>);
             <span class="ident">check_global_access</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">bt</span>);
         }
         <span class="ident">B</span>::<span class="ident">Exists</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> {

@@ -333,6 +333,7 @@
 <span id="333">333</span>
 <span id="334">334</span>
 <span id="335">335</span>
+<span id="336">336</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -641,6 +642,7 @@
     <span class="kw">use</span> <span class="ident">T</span>::<span class="ident">BuiltinFunction_</span> <span class="kw">as</span> <span class="ident">B</span>;
     <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">b</span>.<span class="ident">value</span> {
         <span class="ident">B</span>::<span class="ident">MoveToSender</span>(<span class="ident">bt</span>)
+        <span class="op">|</span> <span class="ident">B</span>::<span class="ident">MoveTo</span>(<span class="ident">bt</span>)
         <span class="op">|</span> <span class="ident">B</span>::<span class="ident">MoveFrom</span>(<span class="ident">bt</span>)
         <span class="op">|</span> <span class="ident">B</span>::<span class="ident">BorrowGlobal</span>(<span class="kw">_</span>, <span class="ident">bt</span>)
         <span class="op">|</span> <span class="ident">B</span>::<span class="ident">Exists</span>(<span class="ident">bt</span>)

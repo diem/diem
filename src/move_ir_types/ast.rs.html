@@ -1838,6 +1838,8 @@
 <span id="1838">1838</span>
 <span id="1839">1839</span>
 <span id="1840">1840</span>
+<span id="1841">1841</span>
+<span id="1842">1842</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2505,6 +2507,7 @@
     <span class="ident">Exists</span>(<span class="ident">StructName</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
     <span class="ident">MoveFrom</span>(<span class="ident">StructName</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
     <span class="ident">MoveToSender</span>(<span class="ident">StructName</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
+    <span class="ident">MoveTo</span>(<span class="ident">StructName</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
     <span class="ident">Shl</span>,
     <span class="ident">Shr</span>,
 }
@@ -3674,6 +3677,7 @@
             <span class="ident">Bytecode_</span>::<span class="ident">MoveToSender</span>(<span class="ident">n</span>, <span class="ident">tys</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;MoveToSender {}{}&quot;</span>, <span class="ident">n</span>, <span class="ident">format_type_actuals</span>(<span class="ident">tys</span>))
             }
+            <span class="ident">Bytecode_</span>::<span class="ident">MoveTo</span>(<span class="ident">n</span>, <span class="ident">tys</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;MoveTo {}{}&quot;</span>, <span class="ident">n</span>, <span class="ident">format_type_actuals</span>(<span class="ident">tys</span>)),
             <span class="ident">Bytecode_</span>::<span class="ident">Shl</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Shl&quot;</span>),
             <span class="ident">Bytecode_</span>::<span class="ident">Shr</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Shr&quot;</span>),
         }

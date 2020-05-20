@@ -1011,6 +1011,9 @@
 <span id="1011">1011</span>
 <span id="1012">1012</span>
 <span id="1013">1013</span>
+<span id="1014">1014</span>
+<span id="1015">1015</span>
+<span id="1016">1016</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1230,6 +1233,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">BuiltinFunction_</span> {
     <span class="ident">MoveToSender</span>(<span class="ident">BaseType</span>),
+    <span class="ident">MoveTo</span>(<span class="ident">BaseType</span>),
     <span class="ident">MoveFrom</span>(<span class="ident">BaseType</span>),
     <span class="ident">BorrowGlobal</span>(<span class="ident">bool</span>, <span class="ident">BaseType</span>),
     <span class="ident">Exists</span>(<span class="ident">BaseType</span>),
@@ -1368,6 +1372,7 @@
 
         <span class="kw">let</span> <span class="ident">kind</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">b_</span> {
             <span class="ident">U8</span> <span class="op">|</span> <span class="ident">U64</span> <span class="op">|</span> <span class="ident">U128</span> <span class="op">|</span> <span class="ident">Bool</span> <span class="op">|</span> <span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">Kind_</span>::<span class="ident">Copyable</span>),
+            <span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">Kind_</span>::<span class="ident">Resource</span>),
             <span class="ident">Vector</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">assert</span><span class="macro">!</span>(
                     <span class="ident">ty_args</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">1</span>,
@@ -1963,6 +1968,7 @@
         <span class="kw">use</span> <span class="ident">BuiltinFunction_</span> <span class="kw">as</span> <span class="ident">F</span>;
         <span class="kw">let</span> (<span class="ident">n</span>, <span class="ident">bt</span>) <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">F</span>::<span class="ident">MoveToSender</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">MOVE_TO_SENDER</span>, <span class="ident">bt</span>),
+            <span class="ident">F</span>::<span class="ident">MoveTo</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">MOVE_TO</span>, <span class="ident">bt</span>),
             <span class="ident">F</span>::<span class="ident">MoveFrom</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">MOVE_FROM</span>, <span class="ident">bt</span>),
             <span class="ident">F</span>::<span class="ident">BorrowGlobal</span>(<span class="bool-val">true</span>, <span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">BORROW_GLOBAL_MUT</span>, <span class="ident">bt</span>),
             <span class="ident">F</span>::<span class="ident">BorrowGlobal</span>(<span class="bool-val">false</span>, <span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">BORROW_GLOBAL</span>, <span class="ident">bt</span>),

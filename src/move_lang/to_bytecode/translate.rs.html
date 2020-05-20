@@ -968,6 +968,11 @@
 <span id="968">968</span>
 <span id="969">969</span>
 <span id="970">970</span>
+<span id="971">971</span>
+<span id="972">972</span>
+<span id="973">973</span>
+<span id="974">974</span>
+<span id="975">975</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1560,6 +1565,7 @@
             <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;ICE should not have reached compilation if there are errors&quot;</span>)
         }
         <span class="ident">B</span>::<span class="ident">Apply</span>(<span class="kw">_</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">TN</span>::<span class="ident">Builtin</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">BT</span>::<span class="ident">Address</span>))), <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">IRT</span>::<span class="ident">Address</span>,
+        <span class="ident">B</span>::<span class="ident">Apply</span>(<span class="kw">_</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">TN</span>::<span class="ident">Builtin</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">BT</span>::<span class="ident">Signer</span>))), <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">IRT</span>::<span class="ident">Signer</span>,
         <span class="ident">B</span>::<span class="ident">Apply</span>(<span class="kw">_</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">TN</span>::<span class="ident">Builtin</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">BT</span>::<span class="ident">U8</span>))), <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">IRT</span>::<span class="ident">U8</span>,
         <span class="ident">B</span>::<span class="ident">Apply</span>(<span class="kw">_</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">TN</span>::<span class="ident">Builtin</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">BT</span>::<span class="ident">U64</span>))), <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">IRT</span>::<span class="ident">U64</span>,
         <span class="ident">B</span>::<span class="ident">Apply</span>(<span class="kw">_</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">TN</span>::<span class="ident">Builtin</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">BT</span>::<span class="ident">U128</span>))), <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">IRT</span>::<span class="ident">U128</span>,
@@ -1874,6 +1880,10 @@
             <span class="ident">HB</span>::<span class="ident">MoveToSender</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> (<span class="ident">n</span>, <span class="ident">tys</span>) <span class="op">=</span> <span class="ident">struct_definition_name_base</span>(<span class="ident">context</span>, <span class="ident">bt</span>);
                 <span class="ident">B</span>::<span class="ident">MoveToSender</span>(<span class="ident">n</span>, <span class="ident">tys</span>)
+            }
+            <span class="ident">HB</span>::<span class="ident">MoveTo</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> (<span class="ident">n</span>, <span class="ident">tys</span>) <span class="op">=</span> <span class="ident">struct_definition_name_base</span>(<span class="ident">context</span>, <span class="ident">bt</span>);
+                <span class="ident">B</span>::<span class="ident">MoveTo</span>(<span class="ident">n</span>, <span class="ident">tys</span>)
             }
             <span class="ident">HB</span>::<span class="ident">MoveFrom</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> (<span class="ident">n</span>, <span class="ident">tys</span>) <span class="op">=</span> <span class="ident">struct_definition_name_base</span>(<span class="ident">context</span>, <span class="ident">bt</span>);

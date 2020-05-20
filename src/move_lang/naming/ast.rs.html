@@ -943,6 +943,22 @@
 <span id="943">943</span>
 <span id="944">944</span>
 <span id="945">945</span>
+<span id="946">946</span>
+<span id="947">947</span>
+<span id="948">948</span>
+<span id="949">949</span>
+<span id="950">950</span>
+<span id="951">951</span>
+<span id="952">952</span>
+<span id="953">953</span>
+<span id="954">954</span>
+<span id="955">955</span>
+<span id="956">956</span>
+<span id="957">957</span>
+<span id="958">958</span>
+<span id="959">959</span>
+<span id="960">960</span>
+<span id="961">961</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1047,6 +1063,8 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">BuiltinTypeName_</span> {
     <span class="comment">// address</span>
     <span class="ident">Address</span>,
+    <span class="comment">// signer</span>
+    <span class="ident">Signer</span>,
     <span class="comment">// u8</span>
     <span class="ident">U8</span>,
     <span class="comment">// u64</span>
@@ -1120,6 +1138,7 @@
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">large_enum_variant</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">BuiltinFunction_</span> {
     <span class="ident">MoveToSender</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
+    <span class="ident">MoveTo</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
     <span class="ident">MoveFrom</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
     <span class="ident">BorrowGlobal</span>(<span class="ident">bool</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
     <span class="ident">Exists</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
@@ -1201,6 +1220,7 @@
 
 <span class="kw">impl</span> <span class="ident">BuiltinTypeName_</span> {
     <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">ADDRESS</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;address&quot;</span>;
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SIGNER</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;signer&quot;</span>;
     <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">U_8</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;u8&quot;</span>;
     <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">U_64</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;u64&quot;</span>;
     <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">U_128</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;u128&quot;</span>;
@@ -1210,6 +1230,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">all_names</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">BTreeSet</span>::<span class="ident">new</span>();
         <span class="ident">s</span>.<span class="ident">insert</span>(<span class="self">Self</span>::<span class="ident">ADDRESS</span>);
+        <span class="ident">s</span>.<span class="ident">insert</span>(<span class="self">Self</span>::<span class="ident">SIGNER</span>);
         <span class="ident">s</span>.<span class="ident">insert</span>(<span class="self">Self</span>::<span class="ident">U_8</span>);
         <span class="ident">s</span>.<span class="ident">insert</span>(<span class="self">Self</span>::<span class="ident">U_64</span>);
         <span class="ident">s</span>.<span class="ident">insert</span>(<span class="self">Self</span>::<span class="ident">U_128</span>);
@@ -1244,6 +1265,7 @@
         <span class="kw">use</span> <span class="ident">BuiltinTypeName_</span> <span class="kw">as</span> <span class="ident">BT</span>;
         <span class="kw">match</span> <span class="ident">name_str</span> {
             <span class="ident">BT</span>::<span class="ident">ADDRESS</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">BT</span>::<span class="ident">Address</span>),
+            <span class="ident">BT</span>::<span class="ident">SIGNER</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">BT</span>::<span class="ident">Signer</span>),
             <span class="ident">BT</span>::<span class="ident">U_8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">BT</span>::<span class="ident">U8</span>),
             <span class="ident">BT</span>::<span class="ident">U_64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">BT</span>::<span class="ident">U64</span>),
             <span class="ident">BT</span>::<span class="ident">U_128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">BT</span>::<span class="ident">U128</span>),
@@ -1257,7 +1279,7 @@
         <span class="kw">use</span> <span class="ident">BuiltinTypeName_</span>::<span class="kw-2">*</span>;
         <span class="comment">// Match here to make sure this function is fixed when collections are added</span>
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Address</span> <span class="op">|</span> <span class="ident">U8</span> <span class="op">|</span> <span class="ident">U64</span> <span class="op">|</span> <span class="ident">U128</span> <span class="op">|</span> <span class="ident">Bool</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="ident">Address</span> <span class="op">|</span> <span class="ident">Signer</span> <span class="op">|</span> <span class="ident">U8</span> <span class="op">|</span> <span class="ident">U64</span> <span class="op">|</span> <span class="ident">U128</span> <span class="op">|</span> <span class="ident">Bool</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="ident">Vector</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Spanned</span>::<span class="ident">new</span>(<span class="ident">loc</span>, <span class="ident">Kind_</span>::<span class="ident">Unknown</span>)],
         }
     }
@@ -1277,6 +1299,7 @@
 
 <span class="kw">impl</span> <span class="ident">BuiltinFunction_</span> {
     <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MOVE_TO_SENDER</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;move_to_sender&quot;</span>;
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MOVE_TO</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;move_to&quot;</span>;
     <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MOVE_FROM</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;move_from&quot;</span>;
     <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">BORROW_GLOBAL</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;borrow_global&quot;</span>;
     <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">BORROW_GLOBAL_MUT</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;borrow_global_mut&quot;</span>;
@@ -1286,6 +1309,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">all_names</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">BTreeSet</span>::<span class="ident">new</span>();
         <span class="ident">s</span>.<span class="ident">insert</span>(<span class="self">Self</span>::<span class="ident">MOVE_TO_SENDER</span>);
+        <span class="ident">s</span>.<span class="ident">insert</span>(<span class="self">Self</span>::<span class="ident">MOVE_TO</span>);
         <span class="ident">s</span>.<span class="ident">insert</span>(<span class="self">Self</span>::<span class="ident">MOVE_FROM</span>);
         <span class="ident">s</span>.<span class="ident">insert</span>(<span class="self">Self</span>::<span class="ident">BORROW_GLOBAL</span>);
         <span class="ident">s</span>.<span class="ident">insert</span>(<span class="self">Self</span>::<span class="ident">BORROW_GLOBAL_MUT</span>);
@@ -1298,6 +1322,7 @@
         <span class="kw">use</span> <span class="ident">BuiltinFunction_</span> <span class="kw">as</span> <span class="ident">BF</span>;
         <span class="kw">match</span> <span class="ident">name_str</span> {
             <span class="ident">BF</span>::<span class="ident">MOVE_TO_SENDER</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">BF</span>::<span class="ident">MoveToSender</span>(<span class="ident">arg</span>)),
+            <span class="ident">BF</span>::<span class="ident">MOVE_TO</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">BF</span>::<span class="ident">MoveTo</span>(<span class="ident">arg</span>)),
             <span class="ident">BF</span>::<span class="ident">MOVE_FROM</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">BF</span>::<span class="ident">MoveFrom</span>(<span class="ident">arg</span>)),
             <span class="ident">BF</span>::<span class="ident">BORROW_GLOBAL</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">BF</span>::<span class="ident">BorrowGlobal</span>(<span class="bool-val">false</span>, <span class="ident">arg</span>)),
             <span class="ident">BF</span>::<span class="ident">BORROW_GLOBAL_MUT</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">BF</span>::<span class="ident">BorrowGlobal</span>(<span class="bool-val">true</span>, <span class="ident">arg</span>)),
@@ -1314,6 +1339,7 @@
 
         <span class="kw">let</span> <span class="ident">kind</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">b</span>.<span class="ident">value</span> {
             <span class="ident">U8</span> <span class="op">|</span> <span class="ident">U64</span> <span class="op">|</span> <span class="ident">U128</span> <span class="op">|</span> <span class="ident">Address</span> <span class="op">|</span> <span class="ident">Bool</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">sp</span>(<span class="ident">b</span>.<span class="ident">loc</span>, <span class="ident">Kind_</span>::<span class="ident">Copyable</span>)),
+            <span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">sp</span>(<span class="ident">b</span>.<span class="ident">loc</span>, <span class="ident">Kind_</span>::<span class="ident">Resource</span>)),
             <span class="ident">Vector</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
         };
         <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">b</span>.<span class="ident">loc</span>, <span class="ident">TypeName_</span>::<span class="ident">Builtin</span>(<span class="ident">b</span>));
@@ -1330,6 +1356,10 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">address</span>(<span class="ident">loc</span>: <span class="ident">Loc</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Type</span> {
         <span class="self">Self</span>::<span class="ident">builtin</span>(<span class="ident">loc</span>, <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">BuiltinTypeName_</span>::<span class="ident">Address</span>), <span class="macro">vec</span><span class="macro">!</span>[])
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">signer</span>(<span class="ident">loc</span>: <span class="ident">Loc</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Type</span> {
+        <span class="self">Self</span>::<span class="ident">builtin</span>(<span class="ident">loc</span>, <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">BuiltinTypeName_</span>::<span class="ident">Signer</span>), <span class="macro">vec</span><span class="macro">!</span>[])
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">u8</span>(<span class="ident">loc</span>: <span class="ident">Loc</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Type</span> {
@@ -1394,6 +1424,7 @@
             <span class="string">&quot;{}&quot;</span>,
             <span class="kw">match</span> <span class="self">self</span> {
                 <span class="ident">BT</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BT</span>::<span class="ident">ADDRESS</span>,
+                <span class="ident">BT</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BT</span>::<span class="ident">SIGNER</span>,
                 <span class="ident">BT</span>::<span class="ident">U8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BT</span>::<span class="ident">U_8</span>,
                 <span class="ident">BT</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BT</span>::<span class="ident">U_64</span>,
                 <span class="ident">BT</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BT</span>::<span class="ident">U_128</span>,
@@ -1824,6 +1855,7 @@
         <span class="kw">use</span> <span class="ident">BuiltinFunction_</span> <span class="kw">as</span> <span class="ident">F</span>;
         <span class="kw">let</span> (<span class="ident">n</span>, <span class="ident">bt</span>) <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">F</span>::<span class="ident">MoveToSender</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">F</span>::<span class="ident">MOVE_TO_SENDER</span>, <span class="ident">bt</span>),
+            <span class="ident">F</span>::<span class="ident">MoveTo</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">F</span>::<span class="ident">MOVE_TO</span>, <span class="ident">bt</span>),
             <span class="ident">F</span>::<span class="ident">MoveFrom</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">F</span>::<span class="ident">MOVE_FROM</span>, <span class="ident">bt</span>),
             <span class="ident">F</span>::<span class="ident">BorrowGlobal</span>(<span class="bool-val">true</span>, <span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">F</span>::<span class="ident">BORROW_GLOBAL_MUT</span>, <span class="ident">bt</span>),
             <span class="ident">F</span>::<span class="ident">BorrowGlobal</span>(<span class="bool-val">false</span>, <span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">F</span>::<span class="ident">BORROW_GLOBAL</span>, <span class="ident">bt</span>),
