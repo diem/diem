@@ -795,14 +795,6 @@
 <span id="795">795</span>
 <span id="796">796</span>
 <span id="797">797</span>
-<span id="798">798</span>
-<span id="799">799</span>
-<span id="800">800</span>
-<span id="801">801</span>
-<span id="802">802</span>
-<span id="803">803</span>
-<span id="804">804</span>
-<span id="805">805</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -813,7 +805,6 @@
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">fmt</span>, <span class="ident">slice</span>,
     <span class="ident">sync</span>::<span class="ident">Arc</span>,
-    <span class="ident">thread</span>,
     <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">Instant</span>},
 };
 
@@ -838,9 +829,9 @@
     <span class="ident">seq</span>::{<span class="ident">IteratorRandom</span>, <span class="ident">SliceRandom</span>},
     <span class="ident">Rng</span>, <span class="ident">SeedableRng</span>,
 };
-<span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::{<span class="ident">Handle</span>, <span class="ident">Runtime</span>};
+<span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Handle</span>;
 
-<span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">future</span>::<span class="ident">FutureExt</span>;
+<span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">future</span>::{<span class="ident">try_join_all</span>, <span class="ident">FutureExt</span>};
 <span class="kw">use</span> <span class="ident">libra_json_rpc_client</span>::<span class="ident">JsonRpcAsyncClient</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>;
 <span class="kw">use</span> <span class="ident">reqwest</span>::{<span class="ident">Client</span>, <span class="ident">Url</span>};
@@ -1066,7 +1057,8 @@
             <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">faucet_account</span>,
             <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">mint_txn</span>],
         )
-        .<span class="kw">await</span><span class="question-mark">?</span>;
+        .<span class="kw">await</span>
+        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Failed to mint into faucet account: {}&quot;</span>, <span class="ident">e</span>))<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">libra_per_seed</span> <span class="op">=</span>
             (<span class="ident">LIBRA_PER_NEW_ACCOUNT</span> <span class="op">*</span> <span class="ident">num_accounts</span> <span class="kw">as</span> <span class="ident">u64</span>) <span class="op">/</span> <span class="ident">req</span>.<span class="ident">instances</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>;
         <span class="comment">// Create seed accounts with which we can create actual accounts concurrently</span>
@@ -1080,38 +1072,29 @@
         .<span class="kw">await</span>
         .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Failed to mint seed_accounts: {}&quot;</span>, <span class="ident">e</span>))<span class="question-mark">?</span>;
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Completed minting seed accounts&quot;</span>);
-        <span class="comment">// For each seed account, create a thread and transfer libra from that seed account to new accounts</span>
-        <span class="self">self</span>.<span class="ident">accounts</span> <span class="op">=</span> <span class="ident">seed_accounts</span>
+        <span class="comment">// For each seed account, create a future and transfer libra from that seed account to new accounts</span>
+        <span class="kw">let</span> <span class="ident">account_futures</span> <span class="op">=</span> <span class="ident">seed_accounts</span>
             .<span class="ident">into_iter</span>()
             .<span class="ident">enumerate</span>()
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">i</span>, <span class="kw-2">mut</span> <span class="ident">seed_account</span>)<span class="op">|</span> {
+            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">i</span>, <span class="ident">seed_account</span>)<span class="op">|</span> {
                 <span class="comment">// Spawn new threads</span>
                 <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">req</span>.<span class="ident">instances</span>[<span class="ident">i</span>].<span class="ident">clone</span>();
                 <span class="kw">let</span> <span class="ident">num_new_accounts</span> <span class="op">=</span> <span class="ident">num_accounts</span> <span class="op">/</span> <span class="ident">req</span>.<span class="ident">instances</span>.<span class="ident">len</span>();
                 <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">make_client</span>(<span class="kw-2">&amp;</span><span class="ident">instance</span>);
-                <span class="ident">thread</span>::<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rt</span> <span class="op">=</span> <span class="ident">Runtime</span>::<span class="ident">new</span>().<span class="ident">unwrap</span>();
-                    <span class="ident">rt</span>.<span class="ident">block_on</span>(<span class="ident">create_new_accounts</span>(
-                        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">seed_account</span>,
-                        <span class="ident">num_new_accounts</span>,
-                        <span class="ident">LIBRA_PER_NEW_ACCOUNT</span>,
-                        <span class="number">20</span>,
-                        <span class="ident">client</span>,
-                    ))
-                })
-            })
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">fold</span>(<span class="macro">vec</span><span class="macro">!</span>[], <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">accumulator</span>, <span class="ident">join_handle</span><span class="op">|</span> {
-                <span class="comment">// Join threads and accumulate results</span>
-                <span class="ident">accumulator</span>.<span class="ident">extend</span>(
-                    <span class="ident">join_handle</span>
-                        .<span class="ident">join</span>()
-                        .<span class="ident">expect</span>(<span class="string">&quot;Failed to join thread&quot;</span>)
-                        .<span class="ident">expect</span>(<span class="string">&quot;Failed to mint accounts&quot;</span>),
-                );
-                <span class="ident">accumulator</span>
+                <span class="ident">create_new_accounts</span>(
+                    <span class="ident">seed_account</span>,
+                    <span class="ident">num_new_accounts</span>,
+                    <span class="ident">LIBRA_PER_NEW_ACCOUNT</span>,
+                    <span class="number">20</span>,
+                    <span class="ident">client</span>,
+                )
             });
+        <span class="self">self</span>.<span class="ident">accounts</span> <span class="op">=</span> <span class="ident">try_join_all</span>(<span class="ident">account_futures</span>)
+            .<span class="kw">await</span>
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Failed to mint accounts {}&quot;</span>, <span class="ident">e</span>))<span class="question-mark">?</span>
+            .<span class="ident">into_iter</span>()
+            .<span class="ident">flatten</span>()
+            .<span class="ident">collect</span>();
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Mint is done&quot;</span>);
         <span class="prelude-val">Ok</span>(())
     }
@@ -1496,7 +1479,7 @@
 <span class="doccomment">/// Create `num_new_accounts` by transferring libra from `source_account`. Return Vec of created</span>
 <span class="doccomment">/// accounts</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_new_accounts</span>(
-    <span class="ident">source_account</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AccountData</span>,
+    <span class="kw-2">mut</span> <span class="ident">source_account</span>: <span class="ident">AccountData</span>,
     <span class="ident">num_new_accounts</span>: <span class="ident">usize</span>,
     <span class="ident">libra_per_new_account</span>: <span class="ident">u64</span>,
     <span class="ident">max_num_accounts_per_batch</span>: <span class="ident">u64</span>,
@@ -1509,8 +1492,9 @@
             <span class="ident">max_num_accounts_per_batch</span> <span class="kw">as</span> <span class="ident">usize</span>,
             <span class="ident">min</span>(<span class="ident">MAX_TXN_BATCH_SIZE</span>, <span class="ident">num_new_accounts</span> <span class="op">-</span> <span class="ident">i</span>),
         ));
-        <span class="kw">let</span> <span class="ident">requests</span> <span class="op">=</span> <span class="ident">gen_transfer_txn_requests</span>(<span class="ident">source_account</span>, <span class="kw-2">&amp;</span><span class="ident">batch</span>, <span class="ident">libra_per_new_account</span>);
-        <span class="ident">execute_and_wait_transactions</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">client</span>, <span class="ident">source_account</span>, <span class="ident">requests</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">requests</span> <span class="op">=</span>
+            <span class="ident">gen_transfer_txn_requests</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">source_account</span>, <span class="kw-2">&amp;</span><span class="ident">batch</span>, <span class="ident">libra_per_new_account</span>);
+        <span class="ident">execute_and_wait_transactions</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">client</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">source_account</span>, <span class="ident">requests</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="ident">i</span> <span class="op">+</span><span class="op">=</span> <span class="ident">batch</span>.<span class="ident">len</span>();
         <span class="ident">accounts</span>.<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">batch</span>);
     }
