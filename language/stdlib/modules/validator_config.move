@@ -1,155 +1,154 @@
+// Error codes:
+// 1100 -> OPERATOR_ACCOUNT_DOES_NOT_EXIST
+// 1101 -> INVALID_TRANSACTION_SENDER
+// 1102 -> VALIDATOR_NOT_CERTIFIED
+// 1103 -> VALIDATOR_OPERATOR_NOT_CERTIFIED
+// 1104 -> VALIDATOR_CONFIG_IS_NOT_SET
+// 1105 -> VALIDATOR_OPERATOR_IS_NOT_SET
+// 1106 -> VALIDATOR_RESOURCE_DOES_NOT_EXIST
+// 1107 -> INVALID_NET
 address 0x0 {
 
 module ValidatorConfig {
-    use 0x0::LibraAccount;
     use 0x0::Option;
     use 0x0::Transaction;
+    use 0x0::Signer;
 
     struct Config {
         consensus_pubkey: vector<u8>,
         // TODO(philiphayes): restructure
+        //   1) make validator_network_address[es] of type vector<vector<u8>>,
+        //   2) make fullnodes_network_address[es] of type vector<vector<u8>>,
+        //   3) remove validator_network_identity_pubkey
+        //   4) remove full_node_network_identity_pubkey
         validator_network_identity_pubkey: vector<u8>,
         validator_network_address: vector<u8>,
         full_node_network_identity_pubkey: vector<u8>,
         full_node_network_address: vector<u8>,
     }
 
-    // A current or prospective validator should publish one of these under their accounts.
-    // If delegation is enabled, only the delegated_account can change the config.
-    // If delegation is disabled, only the owner of this resource can change the config.
-    // The entity that can change the config is called a "validator operator".
-    // The owner of this resource can enable delegation and set delegated account.
-    // The owner can also disable delegation at any time.
     resource struct T {
-        config: Config,
-        delegated_account: Option::T<address>,
+        // set and rotated by the operator_account
+        config: Option::T<Config>,
+        operator_account: Option::T<address>,
     }
 
     // TODO(valerini): add events here
 
-    // Returns true if addr has a published ValidatorConfig::T resource
-    public fun has(addr: address): bool {
-        exists<T>(addr)
+    ///////////////////////////////////////////////////////////////////////////
+    // Validator setup methods
+    ///////////////////////////////////////////////////////////////////////////
+
+    public fun publish(signer: &signer) {
+        Transaction::assert(Transaction::sender() == 0xA550C18, 1101);
+        move_to(signer, T {
+            config: Option::none(),
+            operator_account: Option::none(),
+        });
     }
 
-    // Get Config
-    public fun get_config(addr: address): Config acquires T {
-        *&borrow_global<T>(addr).config
+    ///////////////////////////////////////////////////////////////////////////
+    // Rotation methods callable by ValidatorConfig::T owner
+    ///////////////////////////////////////////////////////////////////////////
+
+    // Sets a new operator account, preserving the old config.
+    public fun set_operator(operator_account: address) acquires T {
+        (borrow_global_mut<T>(Transaction::sender())).operator_account = Option::some(operator_account);
     }
 
-    // Get consensus_pubkey from Config
-    public fun get_consensus_pubkey(config_ref: &Config): vector<u8> {
-        *&config_ref.consensus_pubkey
+    // Removes an operator account, setting a corresponding field to Opetion::none.
+    // The old config is preserved.
+    public fun remove_operator() acquires T {
+        // Config field remains set
+        (borrow_global_mut<T>(Transaction::sender())).operator_account = Option::none();
     }
 
-    // Returns the address of the entity who is now in charge of managing the config.
-    public fun get_validator_operator_account(addr: address): address acquires T {
-        Option::get_with_default(&borrow_global<T>(addr).delegated_account, addr)
-    }
+    ///////////////////////////////////////////////////////////////////////////
+    // Rotation methods callable by ValidatorConfig::T.operator_account
+    ///////////////////////////////////////////////////////////////////////////
 
-    // Register the transaction sender as a candidate validator by creating a ValidatorConfig
-    // resource under their account. Note that only one such resource can be
-    // instantiated under an account.
-    public fun register_candidate_validator(
-        candidate: &signer,
+    // Rotate the config in the validator_account
+    // NB! Once the config is set, it can not go to Option::none - this is crucial for validity
+    //     of the LibraSystem's code
+    public fun set_config(
+        signer: &signer,
+        validator_account: address,
         consensus_pubkey: vector<u8>,
         validator_network_identity_pubkey: vector<u8>,
         validator_network_address: vector<u8>,
         full_node_network_identity_pubkey: vector<u8>,
-        full_node_network_address: vector<u8>
-    ) {
-        move_to<T>(
-            candidate,
-            T {
-                config: Config {
-                    consensus_pubkey: consensus_pubkey,
-                    validator_network_identity_pubkey,
-                    validator_network_address,
-                    full_node_network_identity_pubkey,
-                    full_node_network_address,
-                },
-                delegated_account: Option::none()
-            }
-        );
-    }
-
-    // If the sender of the transaction has a ValidatorConfig::T resource,
-    // this function will delegate management of the ValidatorConfig::T resource
-    // to a delegated_account.
-    public fun set_delegated_account(delegated_account: address) acquires T {
-        Transaction::assert(LibraAccount::exists(delegated_account), 5);
-        // check delegated address is different from transaction's sender
-        Transaction::assert(delegated_account != Transaction::sender(), 6);
-        let t_ref = borrow_global_mut<T>(Transaction::sender());
-        t_ref.delegated_account = Option::some(delegated_account)
-    }
-
-    // If the sender of the transaction has a ValidatorConfig::T resource,
-    // this function will revoke management capabilities from the delegated_account account.
-    public fun remove_delegated_account() acquires T {
-        let t_ref = borrow_global_mut<T>(Transaction::sender());
-        t_ref.delegated_account = Option::none()
-    }
-
-    // Rotate validator's config.
-    // Here validator_account - is the account of the validator whose
-    // consensus_pubkey is going to be rotated.
-    public fun rotate_consensus_pubkey(
-        validator_account: address,
-        new_consensus_pubkey: vector<u8>,
-        // _proof: vector<u8>
+        full_node_network_address: vector<u8>,
     ) acquires T {
-        let addr = get_validator_operator_account(validator_account);
-        Transaction::assert(Transaction::sender() == addr, 1);
-
-        // TODO(valerini): verify the proof of posession of new_consensus_secretkey
-
+        Transaction::assert(Signer::address_of(signer) ==
+                            get_operator(validator_account), 1101);
+        // TODO(valerini): verify the validity of new_config.consensus_pubkey and
+        // the proof of posession
         let t_ref = borrow_global_mut<T>(validator_account);
-        // Set the new key
-        t_ref.config.consensus_pubkey = new_consensus_pubkey;
+        t_ref.config = Option::some(Config {
+            consensus_pubkey,
+            validator_network_identity_pubkey,
+            validator_network_address,
+            full_node_network_identity_pubkey,
+            full_node_network_address,
+        });
     }
 
-    // Simplified arguments when the sender is the validators itself
-    public fun rotate_consensus_pubkey_of_sender(new_consensus_pubkey: vector<u8>) acquires T {
-        rotate_consensus_pubkey(Transaction::sender(), new_consensus_pubkey);
-    }
-
-    // TODO(philiphayes): add other rotation methods
-
-    // Public accessor for validator's network_identity_pubkey
-    public fun get_validator_network_identity_pubkey(config_ref: &Config): vector<u8> {
-        *&config_ref.validator_network_identity_pubkey
-    }
-
-    // Public accessor for validator_network_address
-    public fun get_validator_network_address(config_ref: &Config): vector<u8> {
-        *&config_ref.validator_network_address
-    }
-
-    // Rotate the network public key for validator. This change will be
-    // committed in the next reconfiguration.
-    public fun rotate_validator_network_identity_pubkey(
+    // TODO(valerini): to remove and call into set_config instead
+    public fun set_consensus_pubkey(
         validator_account: address,
-        validator_network_identity_pubkey: vector<u8>
+        consensus_pubkey: vector<u8>,
     ) acquires T {
-        let addr = get_validator_operator_account(validator_account);
-        Transaction::assert(Transaction::sender() == addr, 1);
-
-        let t_ref = borrow_global_mut<T>(validator_account);
-        t_ref.config.validator_network_identity_pubkey = *&validator_network_identity_pubkey;
+        Transaction::assert(Transaction::sender() ==
+                            get_operator(validator_account), 1101);
+        let t_config_ref = Option::borrow_mut(&mut borrow_global_mut<T>(validator_account).config);
+        t_config_ref.consensus_pubkey = consensus_pubkey;
     }
 
-    // Rotate the network address for validator. This change will be
-    // committed in the next reconfiguration.
-    public fun rotate_validator_network_address(
-        validator_account: address,
-        validator_network_address: vector<u8>
-    ) acquires T {
-        let addr = get_validator_operator_account(validator_account);
-        Transaction::assert(Transaction::sender() == addr, 1);
+    ///////////////////////////////////////////////////////////////////////////
+    // Publicly callable APIs: getters
+    ///////////////////////////////////////////////////////////////////////////
 
-        let t_ref = borrow_global_mut<T>(validator_account);
-        t_ref.config.validator_network_address = validator_network_address;
+    // Returns true if all of the following is true:
+    // 1) there is a ValidatorConfig resource under the address, and
+    // 2) the config is set, and
+    // NB! currently we do not require the the operator_account to be set
+    public fun is_valid(addr: address): bool acquires T {
+        exists<T>(addr) && Option::is_some(&borrow_global<T>(addr).config)
+    }
+
+    // Get Config
+    // Aborts if there is no ValidatorConfig::T resource of if its config is empty
+    public fun get_config(addr: address): Config acquires T {
+        Transaction::assert(exists<T>(addr), 1106);
+        let config = &borrow_global<T>(addr).config;
+        *Option::borrow(config)
+    }
+
+    // Get operator's account
+    // Aborts if there is no ValidatorConfig::T resouce, if its operator_account is
+    // empty, returns the input
+    public fun get_operator(addr: address): address acquires T {
+        Transaction::assert(exists<T>(addr), 1106);
+        let t_ref = borrow_global<T>(addr);
+        *Option::borrow_with_default(&t_ref.operator_account, &addr)
+    }
+
+    // Get consensus_pubkey from Config
+    // Never aborts
+    public fun get_consensus_pubkey(config_ref: &Config): &vector<u8> {
+        &config_ref.consensus_pubkey
+    }
+
+    // Get validator's network identity pubkey from Config
+    // Never aborts
+    public fun get_validator_network_identity_pubkey(config_ref: &Config): &vector<u8> {
+        &config_ref.validator_network_identity_pubkey
+    }
+
+    // Get validator's network address from Config
+    // Never aborts
+    public fun get_validator_network_address(config_ref: &Config): &vector<u8> {
+        &config_ref.validator_network_address
     }
 }
 }

@@ -54,6 +54,29 @@ pub fn create_account_txn(
     )
 }
 
+/// Returns a transaction to create a validator account with the given arguments.
+pub fn create_validator_account_txn(
+    sender: &Account,
+    new_account: &Account,
+    seq_num: u64,
+) -> SignedTransaction {
+    let mut args: Vec<TransactionArgument> = Vec::new();
+    args.push(TransactionArgument::Address(*new_account.address()));
+    args.push(TransactionArgument::U8Vector(new_account.auth_key_prefix()));
+
+    sender.create_signed_txn_with_args(
+        StdlibScript::CreateValidatorAccount
+            .compiled_bytes()
+            .into_vec(),
+        vec![lbr_type_tag()],
+        args,
+        seq_num,
+        gas_costs::TXN_RESERVED * 3,
+        0,
+        LBR_NAME.to_owned(),
+    )
+}
+
 /// Returns a transaction to transfer coin from one account to another (possibly new) one, with the
 /// given arguments.
 pub fn peer_to_peer_txn(
@@ -105,7 +128,7 @@ pub fn register_validator_txn(
         vec![],
         args,
         seq_num,
-        gas_costs::TXN_RESERVED,
+        gas_costs::TXN_RESERVED * 3,
         0,
         LBR_NAME.to_owned(),
     )
@@ -162,7 +185,7 @@ pub fn rotate_consensus_pubkey_txn(
         vec![],
         args,
         seq_num,
-        gas_costs::TXN_RESERVED * 3,
+        gas_costs::TXN_RESERVED * 4,
         1,
         LBR_NAME.to_owned(),
     )

@@ -8,18 +8,18 @@
 -  [Struct `ValidatorInfo`](#0x0_LibraSystem_ValidatorInfo)
 -  [Struct `CapabilityHolder`](#0x0_LibraSystem_CapabilityHolder)
 -  [Struct `T`](#0x0_LibraSystem_T)
--  [Function `get_validator_config`](#0x0_LibraSystem_get_validator_config)
 -  [Function `initialize_validator_set`](#0x0_LibraSystem_initialize_validator_set)
--  [Function `get_validator_set`](#0x0_LibraSystem_get_validator_set)
 -  [Function `set_validator_set`](#0x0_LibraSystem_set_validator_set)
 -  [Function `add_validator`](#0x0_LibraSystem_add_validator)
 -  [Function `remove_validator`](#0x0_LibraSystem_remove_validator)
 -  [Function `update_and_reconfigure`](#0x0_LibraSystem_update_and_reconfigure)
+-  [Function `get_validator_set`](#0x0_LibraSystem_get_validator_set)
 -  [Function `is_validator`](#0x0_LibraSystem_is_validator)
--  [Function `get_validator_info`](#0x0_LibraSystem_get_validator_info)
+-  [Function `get_validator_config`](#0x0_LibraSystem_get_validator_config)
 -  [Function `validator_set_size`](#0x0_LibraSystem_validator_set_size)
 -  [Function `get_ith_validator_address`](#0x0_LibraSystem_get_ith_validator_address)
--  [Function `is_sender_authorized_`](#0x0_LibraSystem_is_sender_authorized_)
+-  [Function `is_valid_and_certified`](#0x0_LibraSystem_is_valid_and_certified)
+-  [Function `is_sender_authorized_to_reconfigure_`](#0x0_LibraSystem_is_sender_authorized_to_reconfigure_)
 -  [Function `get_validator_index_`](#0x0_LibraSystem_get_validator_index_)
 -  [Function `update_ith_validator_info_`](#0x0_LibraSystem_update_ith_validator_info_)
 -  [Function `is_validator_`](#0x0_LibraSystem_is_validator_)
@@ -131,32 +131,6 @@
 
 </details>
 
-<a name="0x0_LibraSystem_get_validator_config"></a>
-
-## Function `get_validator_config`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_get_validator_config">get_validator_config</a>(addr: address): <a href="validator_config.md#0x0_ValidatorConfig_Config">ValidatorConfig::Config</a>
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_get_validator_config">get_validator_config</a>(addr: address): <a href="validator_config.md#0x0_ValidatorConfig_Config">ValidatorConfig::Config</a> {
-    <b>let</b> validator_set = <a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>();
-    <b>let</b> validator_index_vec = <a href="#0x0_LibraSystem_get_validator_index_">get_validator_index_</a>(&validator_set.validators, addr);
-    *&(*<a href="vector.md#0x0_Vector_borrow">Vector::borrow</a>(&validator_set.validators, *<a href="vector.md#0x0_Vector_borrow">Vector::borrow</a>(&validator_index_vec, 0))).config
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x0_LibraSystem_initialize_validator_set"></a>
 
 ## Function `initialize_validator_set`
@@ -183,30 +157,6 @@
         },
     );
     move_to(config_account, <a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a> { cap })
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x0_LibraSystem_get_validator_set"></a>
-
-## Function `get_validator_set`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>(): <a href="#0x0_LibraSystem_T">LibraSystem::T</a>
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>(): <a href="#0x0_LibraSystem_T">T</a> {
-    <a href="libra_configs.md#0x0_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x0_LibraSystem_T">T</a>&gt;()
 }
 </code></pre>
 
@@ -254,14 +204,18 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_add_validator">add_validator</a>(account_address: address) <b>acquires</b> <a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
-    Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+    // Validator's operator can add its certified validator <b>to</b> the validator set
+    Transaction::assert(Transaction::sender() ==
+                        <a href="validator_config.md#0x0_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(account_address), 22);
+
     // A prospective validator must have a validator config <b>resource</b>
-    Transaction::assert(<a href="validator_config.md#0x0_ValidatorConfig_has">ValidatorConfig::has</a>(account_address), 17);
+    Transaction::assert(<a href="#0x0_LibraSystem_is_valid_and_certified">is_valid_and_certified</a>(account_address), 33);
 
     <b>let</b> validator_set = <a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>();
     // Ensure that this address is not already a validator
     Transaction::assert(!<a href="#0x0_LibraSystem_is_validator_">is_validator_</a>(account_address, &validator_set.validators), 18);
-
+    // Since <a href="validator_config.md#0x0_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(account_address) == <b>true</b>,
+    // it is guaranteed that the config is non-empty
     <b>let</b> config = <a href="validator_config.md#0x0_ValidatorConfig_get_config">ValidatorConfig::get_config</a>(account_address);
     <a href="vector.md#0x0_Vector_push_back">Vector::push_back</a>(&<b>mut</b> validator_set.validators, <a href="#0x0_LibraSystem_ValidatorInfo">ValidatorInfo</a> {
         addr: account_address,
@@ -293,13 +247,15 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_remove_validator">remove_validator</a>(account_address: address) <b>acquires</b> <a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
-    Transaction::assert(Transaction::sender() == 0xA550C18, 1);
-    <b>let</b> validator_set = <a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>();
+    // Validator's operator can remove its certified validator from the validator set
+    Transaction::assert(Transaction::sender() ==
+                        <a href="validator_config.md#0x0_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(account_address), 22);
 
+    <b>let</b> validator_set = <a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>();
     // Ensure that this address is an active validator
     <b>let</b> to_remove_index_vec = <a href="#0x0_LibraSystem_get_validator_index_">get_validator_index_</a>(&validator_set.validators, account_address);
-    Transaction::assert(!<a href="vector.md#0x0_Vector_is_empty">Vector::is_empty</a>(&to_remove_index_vec), 21);
-    <b>let</b> to_remove_index = *<a href="vector.md#0x0_Vector_borrow">Vector::borrow</a>(&to_remove_index_vec, 0);
+    Transaction::assert(<a href="option.md#0x0_Option_is_some">Option::is_some</a>(&to_remove_index_vec), 21);
+    <b>let</b> to_remove_index = *<a href="option.md#0x0_Option_borrow">Option::borrow</a>(&to_remove_index_vec);
     // Remove corresponding <a href="#0x0_LibraSystem_ValidatorInfo">ValidatorInfo</a> from the validator set
     _  = <a href="vector.md#0x0_Vector_swap_remove">Vector::swap_remove</a>(&<b>mut</b> validator_set.validators, to_remove_index);
 
@@ -327,7 +283,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_update_and_reconfigure">update_and_reconfigure</a>() <b>acquires</b> <a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
-    Transaction::assert(<a href="#0x0_LibraSystem_is_sender_authorized_">is_sender_authorized_</a>(), 22);
+    Transaction::assert(<a href="#0x0_LibraSystem_is_sender_authorized_to_reconfigure_">is_sender_authorized_to_reconfigure_</a>(), 22);
 
     <b>let</b> validator_set = <a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>();
     <b>let</b> validators = &<b>mut</b> validator_set.validators;
@@ -337,17 +293,47 @@
         <b>return</b>
     };
 
-    <b>let</b> i = 0;
+    <b>let</b> i = size;
     <b>let</b> configs_changed = <b>false</b>;
-    <b>while</b> (i &lt; size) {
-        <b>let</b> validator_info_update = <a href="#0x0_LibraSystem_update_ith_validator_info_">update_ith_validator_info_</a>(validators, i);
-
-        configs_changed = configs_changed || validator_info_update;
-        i = i + 1;
+    <b>while</b> (i &gt; 0) {
+        i = i - 1;
+        // <b>if</b> the validator is invalid, remove it from the set
+        <b>let</b> validator_address = <a href="vector.md#0x0_Vector_borrow">Vector::borrow</a>(validators, i).addr;
+        <b>if</b> (<a href="#0x0_LibraSystem_is_valid_and_certified">is_valid_and_certified</a>(validator_address)) {
+            <b>let</b> validator_info_update = <a href="#0x0_LibraSystem_update_ith_validator_info_">update_ith_validator_info_</a>(validators, i);
+            configs_changed = configs_changed || validator_info_update;
+        } <b>else</b> {
+            _  = <a href="vector.md#0x0_Vector_swap_remove">Vector::swap_remove</a>(validators, i);
+            configs_changed = <b>true</b>;
+        }
     };
     <b>if</b> (configs_changed) {
         <a href="#0x0_LibraSystem_set_validator_set">set_validator_set</a>(validator_set);
     };
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_LibraSystem_get_validator_set"></a>
+
+## Function `get_validator_set`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>(): <a href="#0x0_LibraSystem_T">LibraSystem::T</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>(): <a href="#0x0_LibraSystem_T">T</a> {
+    <a href="libra_configs.md#0x0_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x0_LibraSystem_T">T</a>&gt;()
 }
 </code></pre>
 
@@ -379,13 +365,13 @@
 
 </details>
 
-<a name="0x0_LibraSystem_get_validator_info"></a>
+<a name="0x0_LibraSystem_get_validator_config"></a>
 
-## Function `get_validator_info`
+## Function `get_validator_config`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_get_validator_info">get_validator_info</a>(addr: address): <a href="#0x0_LibraSystem_ValidatorInfo">LibraSystem::ValidatorInfo</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_get_validator_config">get_validator_config</a>(addr: address): <a href="validator_config.md#0x0_ValidatorConfig_Config">ValidatorConfig::Config</a>
 </code></pre>
 
 
@@ -394,12 +380,11 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_get_validator_info">get_validator_info</a>(addr: address): <a href="#0x0_LibraSystem_ValidatorInfo">ValidatorInfo</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_get_validator_config">get_validator_config</a>(addr: address): <a href="validator_config.md#0x0_ValidatorConfig_Config">ValidatorConfig::Config</a> {
     <b>let</b> validator_set = <a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>();
     <b>let</b> validator_index_vec = <a href="#0x0_LibraSystem_get_validator_index_">get_validator_index_</a>(&validator_set.validators, addr);
-    Transaction::assert(!<a href="vector.md#0x0_Vector_is_empty">Vector::is_empty</a>(&validator_index_vec), 19);
-
-    *<a href="vector.md#0x0_Vector_borrow">Vector::borrow</a>(&validator_set.validators, *<a href="vector.md#0x0_Vector_borrow">Vector::borrow</a>(&validator_index_vec, 0))
+    Transaction::assert(<a href="option.md#0x0_Option_is_some">Option::is_some</a>(&validator_index_vec), 33);
+    *&(<a href="vector.md#0x0_Vector_borrow">Vector::borrow</a>(&validator_set.validators, *<a href="option.md#0x0_Option_borrow">Option::borrow</a>(&validator_index_vec))).config
 }
 </code></pre>
 
@@ -455,13 +440,13 @@
 
 </details>
 
-<a name="0x0_LibraSystem_is_sender_authorized_"></a>
+<a name="0x0_LibraSystem_is_valid_and_certified"></a>
 
-## Function `is_sender_authorized_`
+## Function `is_valid_and_certified`
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraSystem_is_sender_authorized_">is_sender_authorized_</a>(): bool
+<pre><code><b>fun</b> <a href="#0x0_LibraSystem_is_valid_and_certified">is_valid_and_certified</a>(addr: address): bool
 </code></pre>
 
 
@@ -470,7 +455,34 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraSystem_is_sender_authorized_">is_sender_authorized_</a>(): bool {
+<pre><code><b>fun</b> <a href="#0x0_LibraSystem_is_valid_and_certified">is_valid_and_certified</a>(addr: address): bool {
+    <a href="validator_config.md#0x0_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(addr) &&
+        <a href="libra_account.md#0x0_LibraAccount_is_certified">LibraAccount::is_certified</a>&lt;<a href="libra_account.md#0x0_LibraAccount_ValidatorRole">LibraAccount::ValidatorRole</a>&gt;(addr)
+        // TODO(valerini): only allow certified operators, i.e. uncomment the line
+        // && <a href="libra_account.md#0x0_LibraAccount_is_certified">LibraAccount::is_certified</a>&lt;<a href="libra_account.md#0x0_LibraAccount_ValidatorOperatorRole">LibraAccount::ValidatorOperatorRole</a>&gt;(<a href="validator_config.md#0x0_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(addr))
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_LibraSystem_is_sender_authorized_to_reconfigure_"></a>
+
+## Function `is_sender_authorized_to_reconfigure_`
+
+
+
+<pre><code><b>fun</b> <a href="#0x0_LibraSystem_is_sender_authorized_to_reconfigure_">is_sender_authorized_to_reconfigure_</a>(): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="#0x0_LibraSystem_is_sender_authorized_to_reconfigure_">is_sender_authorized_to_reconfigure_</a>(): bool {
     // succeed fast
     <b>if</b> (Transaction::sender() == 0xA550C18 || Transaction::sender() == 0x0) {
         <b>return</b> <b>true</b>
@@ -482,7 +494,10 @@
 
     <b>let</b> i = 0;
     <b>while</b> (i &lt; size) {
-        <b>if</b> (<a href="validator_config.md#0x0_ValidatorConfig_get_validator_operator_account">ValidatorConfig::get_validator_operator_account</a>(<a href="vector.md#0x0_Vector_borrow">Vector::borrow</a>(validators, i).addr) ==
+        <b>if</b> (<a href="vector.md#0x0_Vector_borrow">Vector::borrow</a>(validators, i).addr == Transaction::sender()) {
+            <b>return</b> <b>true</b>
+        };
+        <b>if</b> (<a href="validator_config.md#0x0_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(<a href="vector.md#0x0_Vector_borrow">Vector::borrow</a>(validators, i).addr) ==
             Transaction::sender()) {
             <b>return</b> <b>true</b>
         };
@@ -502,7 +517,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraSystem_get_validator_index_">get_validator_index_</a>(validators: &vector&lt;<a href="#0x0_LibraSystem_ValidatorInfo">LibraSystem::ValidatorInfo</a>&gt;, addr: address): vector&lt;u64&gt;
+<pre><code><b>fun</b> <a href="#0x0_LibraSystem_get_validator_index_">get_validator_index_</a>(validators: &vector&lt;<a href="#0x0_LibraSystem_ValidatorInfo">LibraSystem::ValidatorInfo</a>&gt;, addr: address): <a href="option.md#0x0_Option_T">Option::T</a>&lt;u64&gt;
 </code></pre>
 
 
@@ -511,24 +526,22 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraSystem_get_validator_index_">get_validator_index_</a>(validators: &vector&lt;<a href="#0x0_LibraSystem_ValidatorInfo">ValidatorInfo</a>&gt;, addr: address): vector&lt;u64&gt; {
+<pre><code><b>fun</b> <a href="#0x0_LibraSystem_get_validator_index_">get_validator_index_</a>(validators: &vector&lt;<a href="#0x0_LibraSystem_ValidatorInfo">ValidatorInfo</a>&gt;, addr: address): <a href="option.md#0x0_Option_T">Option::T</a>&lt;u64&gt; {
     <b>let</b> size = <a href="vector.md#0x0_Vector_length">Vector::length</a>(validators);
-    <b>let</b> result: vector&lt;u64&gt; = <a href="vector.md#0x0_Vector_empty">Vector::empty</a>();
     <b>if</b> (size == 0) {
-        <b>return</b> result
+        <b>return</b> <a href="option.md#0x0_Option_none">Option::none</a>()
     };
 
     <b>let</b> i = 0;
     <b>while</b> (i &lt; size) {
         <b>let</b> validator_info_ref = <a href="vector.md#0x0_Vector_borrow">Vector::borrow</a>(validators, i);
         <b>if</b> (validator_info_ref.addr == addr) {
-            <a href="vector.md#0x0_Vector_push_back">Vector::push_back</a>(&<b>mut</b> result, i);
-            <b>return</b> result
+            <b>return</b> <a href="option.md#0x0_Option_some">Option::some</a>(i)
         };
         i = i + 1;
     };
 
-    result
+    <b>return</b> <a href="option.md#0x0_Option_none">Option::none</a>()
 }
 </code></pre>
 
@@ -564,7 +577,7 @@
     <b>if</b> (config_ref == &new_validator_config) {
         <b>return</b> <b>false</b>
     };
-    *config_ref = *&new_validator_config;
+    *config_ref = new_validator_config;
 
     <b>true</b>
 }
@@ -590,7 +603,7 @@
 
 
 <pre><code><b>fun</b> <a href="#0x0_LibraSystem_is_validator_">is_validator_</a>(addr: address, validators_vec_ref: &vector&lt;<a href="#0x0_LibraSystem_ValidatorInfo">ValidatorInfo</a>&gt;): bool {
-    !<a href="vector.md#0x0_Vector_is_empty">Vector::is_empty</a>(&<a href="#0x0_LibraSystem_get_validator_index_">get_validator_index_</a>(validators_vec_ref, addr))
+    <a href="option.md#0x0_Option_is_some">Option::is_some</a>(&<a href="#0x0_LibraSystem_get_validator_index_">get_validator_index_</a>(validators_vec_ref, addr))
 }
 </code></pre>
 

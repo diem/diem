@@ -23,25 +23,25 @@ fun main() {
 // check: 22
 
 //! new-transaction
+//! sender: bob
 script {
 use 0x0::ValidatorConfig;
 fun main() {
-    ValidatorConfig::set_delegated_account(0x0);
+    ValidatorConfig::set_operator(0x0);
 }
 }
-// check: ABORTED
-// check: 5
+// check: EXECUTED
 
 //! new-transaction
+//! sender: bob
 script {
 use 0x0::ValidatorConfig;
 use 0x0::Transaction;
 fun main() {
-    ValidatorConfig::set_delegated_account(Transaction::sender());
+    ValidatorConfig::set_operator(Transaction::sender());
 }
 }
-// check: ABORTED
-// check: 6
+// check: EXECUTED
 
 //! new-transaction
 //! sender: bob
@@ -49,31 +49,30 @@ script {
 use 0x0::ValidatorConfig;
 // delegate to alice
 fun main() {
-    ValidatorConfig::set_delegated_account({{alice}});
-    ValidatorConfig::remove_delegated_account();
+    ValidatorConfig::set_operator({{alice}});
+    ValidatorConfig::remove_operator();
 }
 }
+// check: EXECUTED
 
 //! new-transaction
 //! sender: bob
 script {
 use 0x0::ValidatorConfig;
-// delegate to alice
 fun main() {
-    ValidatorConfig::rotate_validator_network_identity_pubkey({{vivian}}, x"");
+    ValidatorConfig::set_consensus_pubkey({{vivian}}, x"");
 }
 }
 // check: ABORTED
-// check: 1
+// check: 1101
 
 //! new-transaction
 //! sender: bob
 script {
 use 0x0::ValidatorConfig;
-// delegate to alice
-fun main() {
-    ValidatorConfig::rotate_validator_network_address({{vivian}}, x"");
+fun main(account: &signer) {
+    ValidatorConfig::set_config(account, {{vivian}}, x"", x"", x"", x"", x"");
 }
 }
 // check: ABORTED
-// check: 1
+// check: 1101
