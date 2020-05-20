@@ -271,6 +271,14 @@
 <span id="271">271</span>
 <span id="272">272</span>
 <span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -400,6 +408,16 @@
 
         <span class="prelude-val">Ok</span>(())
     }
+
+    <span class="doccomment">/// This checks the epoch given against storage for consistent verification</span>
+    <span class="kw">fn</span> <span class="ident">verify_epoch</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">epoch</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">expected_epoch</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">persistent_storage</span>.<span class="ident">epoch</span>()<span class="question-mark">?</span>;
+        <span class="kw">if</span> <span class="ident">epoch</span> <span class="op">!</span><span class="op">=</span> <span class="ident">expected_epoch</span> {
+            <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">IncorrectEpoch</span>(<span class="ident">epoch</span>, <span class="ident">expected_epoch</span>))
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Ok</span>(())
+        }
+    }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">TSafetyRules</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">SafetyRules</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
@@ -435,10 +453,11 @@
 
     <span class="doccomment">/// @TODO verify signature on vote proposal</span>
     <span class="doccomment">/// @TODO verify QC correctness</span>
-    <span class="doccomment">/// @TODO verify epoch on vote proposal</span>
     <span class="kw">fn</span> <span class="ident">construct_and_sign_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">vote_proposal</span>: <span class="kw-2">&amp;</span><span class="ident">VoteProposal</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vote</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Incoming vote proposal to sign.&quot;</span>);
         <span class="kw">let</span> <span class="ident">proposed_block</span> <span class="op">=</span> <span class="ident">vote_proposal</span>.<span class="ident">block</span>();
+
+        <span class="self">self</span>.<span class="ident">verify_epoch</span>(<span class="ident">proposed_block</span>.<span class="ident">epoch</span>())<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">last_voted_round</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">persistent_storage</span>.<span class="ident">last_voted_round</span>()<span class="question-mark">?</span>;
         <span class="kw">if</span> <span class="ident">proposed_block</span>.<span class="ident">round</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="ident">last_voted_round</span> {
@@ -514,10 +533,7 @@
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Incoming timeout message for round {}&quot;</span>, <span class="ident">timeout</span>.<span class="ident">round</span>());
         <span class="ident">COUNTERS</span>.<span class="ident">requested_sign_timeout</span>.<span class="ident">inc</span>();
 
-        <span class="kw">let</span> <span class="ident">expected_epoch</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">persistent_storage</span>.<span class="ident">epoch</span>()<span class="question-mark">?</span>;
-        <span class="kw">if</span> <span class="ident">timeout</span>.<span class="ident">epoch</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">expected_epoch</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">IncorrectEpoch</span>(<span class="ident">timeout</span>.<span class="ident">epoch</span>(), <span class="ident">expected_epoch</span>));
-        }
+        <span class="self">self</span>.<span class="ident">verify_epoch</span>(<span class="ident">timeout</span>.<span class="ident">epoch</span>())<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">preferred_round</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">persistent_storage</span>.<span class="ident">preferred_round</span>()<span class="question-mark">?</span>;
         <span class="kw">if</span> <span class="ident">timeout</span>.<span class="ident">round</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="ident">preferred_round</span> {
