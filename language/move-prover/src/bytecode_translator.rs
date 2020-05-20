@@ -29,8 +29,8 @@ use vm::file_format::CodeOffset;
 use crate::{
     boogie_helpers::{
         boogie_byte_blob, boogie_field_name, boogie_function_name, boogie_local_type,
-        boogie_struct_name, boogie_struct_type_value, boogie_type_value, boogie_type_values,
-        boogie_well_formed_check, WellFormedMode,
+        boogie_requires_well_formed, boogie_struct_name, boogie_struct_type_value,
+        boogie_type_value, boogie_type_values, boogie_well_formed_check, WellFormedMode,
     },
     cli::{Options, VerificationScope},
     spec_translator::SpecTranslator,
@@ -380,6 +380,7 @@ impl<'env> ModuleTranslator<'env> {
 
         // generate inline function with function body
         self.generate_function_sig(func_target, true); // inlined version of function
+        self.generate_function_args_requires_well_formed(func_target);
         self.generate_function_spec(func_target);
         self.generate_inline_function_body(func_target);
         emitln!(self.writer);
@@ -392,6 +393,7 @@ impl<'env> ModuleTranslator<'env> {
         // generate the _verify version of the function which calls inline version for standalone
         // verification.
         self.generate_function_sig(func_target, false); // no inline
+        self.generate_function_args_requires_well_formed(func_target);
         self.generate_verify_function_body(func_target); // function body just calls inlined version
     }
 
@@ -468,9 +470,34 @@ impl<'env> ModuleTranslator<'env> {
         (args, rets)
     }
 
+    /// Generate preconditions to make sure procedure parameters are well formed
+    fn generate_function_args_requires_well_formed(&self, func_target: &FunctionTarget<'_>) {
+        emitln!(self.writer);
+        let num_args = func_target.get_parameter_count();
+        let mode = if func_target.is_public() {
+            // For public functions, we always include invariants in type assumptions for parameters,
+            // even for mutable references.
+            WellFormedMode::WithInvariant
+        } else {
+            WellFormedMode::Default
+        };
+        for i in 0..num_args {
+            let local_name = func_target.get_local_name(i);
+            let local_str = format!("{}", local_name.display(func_target.symbol_pool()));
+            let local_type = func_target.get_local_type(i);
+            let type_check = boogie_requires_well_formed(
+                self.module_env.env,
+                &local_str,
+                local_type,
+                mode,
+                &self.options.template_context.type_requires,
+            );
+            emit!(self.writer, &type_check);
+        }
+    }
+
     /// Emit code for the function specification.
     fn generate_function_spec(&self, func_target: &FunctionTarget<'_>) {
-        emitln!(self.writer);
         SpecTranslator::new_for_spec_in_impl(self.writer, func_target, true).translate_conditions();
     }
 
@@ -618,23 +645,6 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "\n// initialize function execution");
         emitln!(self.writer, "assert !$abort_flag;");
         emitln!(self.writer, "$saved_m := $m;");
-
-        emitln!(self.writer, "\n// process and type check arguments");
-        let mode = if func_target.is_public() {
-            // For public functions, we always include invariants in type assumptions for parameters,
-            // even for mutable references.
-            WellFormedMode::WithInvariant
-        } else {
-            WellFormedMode::Default
-        };
-        for i in 0..num_args {
-            let local_name = func_target.get_local_name(i);
-            let local_str = format!("{}", local_name.display(func_target.symbol_pool()));
-            let local_type = func_target.get_local_type(i);
-            let type_check =
-                boogie_well_formed_check(self.module_env.env, &local_str, local_type, mode);
-            emit!(self.writer, &type_check);
-        }
 
         emitln!(self.writer, "\n// bytecode translation starts here");
 

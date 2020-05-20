@@ -259,6 +259,23 @@ pub fn boogie_well_formed_check(
     }
 }
 
+/// Create boogie well-formed preconditions. The result will be either an empty
+/// string or a newline-terminated requires statement.
+pub fn boogie_requires_well_formed(
+    env: &GlobalEnv,
+    name: &str,
+    ty: &Type,
+    mode: WellFormedMode,
+    type_requires_str: &str,
+) -> String {
+    let expr = boogie_well_formed_expr(env, name, ty, mode);
+    if !expr.is_empty() {
+        format!("{} {};\n", type_requires_str, expr)
+    } else {
+        "".to_string()
+    }
+}
+
 /// Create boogie global variable with type constraint. No references allowed.
 pub fn boogie_declare_global(env: &GlobalEnv, name: &str, param_count: usize, ty: &Type) -> String {
     let declarator = boogie_global_declarator(env, name, param_count, ty);
