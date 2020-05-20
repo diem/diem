@@ -48,7 +48,9 @@ impl CreateWaypoint {
             let waypoint_value = Value::String(waypoint.to_string());
             remote
                 .set(libra_global_constants::WAYPOINT, waypoint_value)
-                .map_err(|e| Error::RemoteStorageWriteError(e.to_string()))?;
+                .map_err(|e| {
+                    Error::RemoteStorageWriteError(libra_global_constants::WAYPOINT, e.to_string())
+                })?;
         }
 
         Ok(waypoint)

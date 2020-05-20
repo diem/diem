@@ -46,7 +46,10 @@ impl OwnerKey {
     }
 }
 
-fn submit_key(key_name: &str, secure_backends: SecureBackends) -> Result<Ed25519PublicKey, Error> {
+fn submit_key(
+    key_name: &'static str,
+    secure_backends: SecureBackends,
+) -> Result<Ed25519PublicKey, Error> {
     let local: Box<dyn Storage> = secure_backends.local.try_into()?;
     local
         .available()
@@ -54,7 +57,7 @@ fn submit_key(key_name: &str, secure_backends: SecureBackends) -> Result<Ed25519
 
     let key = local
         .get_public_key(key_name)
-        .map_err(|e| Error::LocalStorageReadError(e.to_string()))?
+        .map_err(|e| Error::LocalStorageReadError(key_name, e.to_string()))?
         .public_key;
 
     if let Some(remote) = secure_backends.remote {
@@ -66,7 +69,7 @@ fn submit_key(key_name: &str, secure_backends: SecureBackends) -> Result<Ed25519
 
         remote
             .set(key_name, key)
-            .map_err(|e| Error::RemoteStorageWriteError(e.to_string()))?;
+            .map_err(|e| Error::RemoteStorageWriteError(key_name, e.to_string()))?;
     }
 
     Ok(key)
