@@ -15,7 +15,7 @@ futures = "0.3.5"
 hyper = "0.13"
 serde = { version = "1.0.110", default-features = false }
 tokio = { version = "0.2", features=["full"]}
-warp = "0.2.2"
+warp = "0.2.3"
 
 lcs = { path = "../../../common/lcs", package = "libra-canonical-serialization", version = "0.1.0" }
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
