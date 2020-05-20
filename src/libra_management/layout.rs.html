@@ -98,7 +98,7 @@
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">error</span>::<span class="ident">Error</span>, <span class="ident">SingleBackend</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">constants</span>, <span class="ident">error</span>::<span class="ident">Error</span>, <span class="ident">SingleBackend</span>};
 <span class="kw">use</span> <span class="ident">libra_secure_storage</span>::{<span class="ident">Storage</span>, <span class="ident">Value</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -163,8 +163,8 @@
 
         <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">Value</span>::<span class="ident">String</span>(<span class="ident">data</span>);
         <span class="ident">remote</span>
-            .<span class="ident">set</span>(<span class="kw">crate</span>::<span class="ident">constants</span>::<span class="ident">LAYOUT</span>, <span class="ident">value</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">RemoteStorageWriteError</span>(<span class="ident">e</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
+            .<span class="ident">set</span>(<span class="ident">constants</span>::<span class="ident">LAYOUT</span>, <span class="ident">value</span>)
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">RemoteStorageWriteError</span>(<span class="ident">constants</span>::<span class="ident">LAYOUT</span>, <span class="ident">e</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">layout</span>)
     }

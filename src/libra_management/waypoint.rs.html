@@ -54,6 +54,8 @@
 <span id="54">54</span>
 <span id="55">55</span>
 <span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -105,7 +107,9 @@
             <span class="kw">let</span> <span class="ident">waypoint_value</span> <span class="op">=</span> <span class="ident">Value</span>::<span class="ident">String</span>(<span class="ident">waypoint</span>.<span class="ident">to_string</span>());
             <span class="ident">remote</span>
                 .<span class="ident">set</span>(<span class="ident">libra_global_constants</span>::<span class="ident">WAYPOINT</span>, <span class="ident">waypoint_value</span>)
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">RemoteStorageWriteError</span>(<span class="ident">e</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
+                    <span class="ident">Error</span>::<span class="ident">RemoteStorageWriteError</span>(<span class="ident">libra_global_constants</span>::<span class="ident">WAYPOINT</span>, <span class="ident">e</span>.<span class="ident">to_string</span>())
+                })<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(<span class="ident">waypoint</span>)
