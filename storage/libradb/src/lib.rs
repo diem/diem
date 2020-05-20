@@ -48,7 +48,7 @@ use crate::{
 };
 use anyhow::{ensure, format_err, Result};
 use itertools::{izip, zip_eq};
-use jellyfish_merkle::restore::JellyfishMerkleRestore;
+use jellyfish_merkle::{restore::JellyfishMerkleRestore, TreeReader, TreeWriter};
 use libra_crypto::hash::{CryptoHash, HashValue, SPARSE_MERKLE_PLACEHOLDER_HASH};
 use libra_logger::prelude::*;
 use libra_metrics::{
@@ -402,6 +402,14 @@ impl LibraDB {
         }
         restore.finish()?;
         Ok(())
+    }
+
+    pub fn get_state_restore_receiver(
+        &self,
+        version: Version,
+        expected_root_hash: HashValue,
+    ) -> Result<JellyfishMerkleRestore<impl TreeReader + TreeWriter>> {
+        JellyfishMerkleRestore::new(&*self.state_store, version, expected_root_hash)
     }
 
     // ================================== Private APIs ==================================

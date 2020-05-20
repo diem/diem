@@ -1,11 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::Result;
 use backup_cli::restore::restore_account_state;
 use itertools::Itertools;
 use libra_crypto::HashValue;
-use std::{io::BufRead, path::PathBuf};
+use std::path::PathBuf;
 use structopt::StructOpt;
+use tokio::{
+    io::{AsyncBufReadExt, BufReader},
+    stream::StreamExt,
+};
 
 #[derive(Debug, StructOpt)]
 struct Opt {
@@ -13,15 +18,16 @@ struct Opt {
     db_dir: PathBuf,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let opt = Opt::from_args();
 
-    let stdin = std::io::stdin();
-    let mut iter = stdin.lock().lines();
+    let mut lines = BufReader::new(tokio::io::stdin()).lines();
 
     println!("Input version:");
-    let version = iter
+    let version = lines
         .next()
+        .await
         .expect("Must provide version.")
         .expect("Failed to read from stdin.")
         .parse::<u64>()
@@ -29,8 +35,9 @@ fn main() {
     println!("Version: {}", version);
 
     println!("Input state root hash:");
-    let root_hash_hex = iter
+    let root_hash_hex = lines
         .next()
+        .await
         .expect("Must provide state root hash.")
         .expect("Failed to read from stdin.");
     let root_hash = HashValue::from_slice(
@@ -39,8 +46,16 @@ fn main() {
     .expect("Invalid root hash.");
     println!("State root hash: {:x}", root_hash);
 
-    let iter = iter.tuples().map(|(a, b)| Ok((a?, b?)));
-    restore_account_state(version, root_hash, &opt.db_dir, iter);
+    let file_handle_pair_iter = lines
+        .collect::<Result<Vec<_>, _>>()
+        .await
+        .expect("Failed reading file handles.")
+        .into_iter()
+        .tuples::<(_, _)>();
+
+    restore_account_state(version, root_hash, &opt.db_dir, file_handle_pair_iter)
+        .await
+        .expect("Failed restoring state.");
 
     println!("Finished restoring account state.");
 }

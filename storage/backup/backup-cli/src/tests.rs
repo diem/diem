@@ -62,12 +62,13 @@ fn end_to_end() {
         ))
         .unwrap();
 
-    restore_account_state(
+    rt.block_on(restore_account_state(
         PRE_GENESIS_VERSION,
         state_root_hash,
         &tgt_db_dir,
-        handles.into_iter().map(Ok),
-    );
+        handles.into_iter(),
+    ))
+    .unwrap();
     let tgt_db = LibraDB::open(
         &tgt_db_dir,
         true, /* readonly */
