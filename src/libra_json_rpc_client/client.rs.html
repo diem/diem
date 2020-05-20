@@ -261,6 +261,10 @@
 <span id="261">261</span>
 <span id="262">262</span>
 <span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -313,6 +317,10 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_get_metadata_request</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="self">self</span>.<span class="ident">add_request</span>(<span class="string">&quot;get_metadata&quot;</span>.<span class="ident">to_string</span>(), <span class="macro">vec</span><span class="macro">!</span>[]);
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_get_currencies_info</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="self">self</span>.<span class="ident">add_request</span>(<span class="string">&quot;currencies_info&quot;</span>.<span class="ident">to_string</span>(), <span class="macro">vec</span><span class="macro">!</span>[]);
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_get_transactions_request</span>(

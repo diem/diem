@@ -153,6 +153,42 @@
 <span id="153">153</span>
 <span id="154">154</span>
 <span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -179,6 +215,7 @@
             <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">AccountCommandRecoverWallet</span> {}),
             <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">AccountCommandWriteRecovery</span> {}),
             <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">AccountCommandMint</span> {}),
+            <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">AccountCommandAddCurrency</span> {}),
         ];
 
         <span class="ident">subcommand_execute</span>(<span class="kw-2">&amp;</span><span class="ident">params</span>[<span class="number">0</span>], <span class="ident">commands</span>, <span class="ident">client</span>, <span class="kw-2">&amp;</span><span class="ident">params</span>[<span class="number">1</span>..]);
@@ -283,13 +320,13 @@
         <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;mint&quot;</span>, <span class="string">&quot;mintb&quot;</span>, <span class="string">&quot;m&quot;</span>, <span class="string">&quot;mb&quot;</span>]
     }
     <span class="kw">fn</span> <span class="ident">get_params_help</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
-        <span class="string">&quot;&lt;receiver_account_ref_id&gt;|&lt;receiver_account_address&gt; &lt;number_of_coins&gt;&quot;</span>
+        <span class="string">&quot;&lt;receiver_account_ref_id&gt;|&lt;receiver_account_address&gt; &lt;number_of_coins&gt; &lt;currency_code&gt; [use_base_units (default=false)]&quot;</span>
     }
     <span class="kw">fn</span> <span class="ident">get_description</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
         <span class="string">&quot;Mint coins to the account. Suffix &#39;b&#39; is for blocking&quot;</span>
     }
     <span class="kw">fn</span> <span class="ident">execute</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">client</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ClientProxy</span>, <span class="ident">params</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>]) {
-        <span class="kw">if</span> <span class="ident">params</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">3</span> {
+        <span class="kw">if</span> <span class="ident">params</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="number">4</span> <span class="op">|</span><span class="op">|</span> <span class="ident">params</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">5</span> {
             <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Invalid number of arguments for mint&quot;</span>);
             <span class="kw">return</span>;
         }
@@ -306,6 +343,41 @@
                 }
             }
             <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">report_error</span>(<span class="string">&quot;Error minting coins&quot;</span>, <span class="ident">e</span>),
+        }
+    }
+}
+
+<span class="doccomment">/// Sub command for adding a currency to an account</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AccountCommandAddCurrency</span> {}
+
+<span class="kw">impl</span> <span class="ident">Command</span> <span class="kw">for</span> <span class="ident">AccountCommandAddCurrency</span> {
+    <span class="kw">fn</span> <span class="ident">get_aliases</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
+        <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;addc&quot;</span>, <span class="string">&quot;addcb&quot;</span>, <span class="string">&quot;ac&quot;</span>, <span class="string">&quot;acb&quot;</span>]
+    }
+    <span class="kw">fn</span> <span class="ident">get_params_help</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
+        <span class="string">&quot;&lt;account_address&gt; &lt;currency_code&gt;&quot;</span>
+    }
+    <span class="kw">fn</span> <span class="ident">get_description</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
+        <span class="string">&quot;Add specified currency to the account. Suffix &#39;b&#39; is for blocking&quot;</span>
+    }
+    <span class="kw">fn</span> <span class="ident">execute</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">client</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ClientProxy</span>, <span class="ident">params</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>]) {
+        <span class="kw">if</span> <span class="ident">params</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="number">3</span> {
+            <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Invalid number of arguments for adding currency&quot;</span>);
+            <span class="kw">return</span>;
+        }
+        <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;&gt;&gt; Adding currency&quot;</span>);
+        <span class="kw">let</span> <span class="ident">is_blocking</span> <span class="op">=</span> <span class="ident">blocking_cmd</span>(<span class="ident">params</span>[<span class="number">0</span>]);
+        <span class="kw">match</span> <span class="ident">client</span>.<span class="ident">add_currency</span>(<span class="kw-2">&amp;</span><span class="ident">params</span>, <span class="ident">is_blocking</span>) {
+            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">if</span> <span class="ident">is_blocking</span> {
+                    <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Finished adding currency!&quot;</span>);
+                } <span class="kw">else</span> {
+                    <span class="comment">// If this value is updated, it must also be changed in</span>
+                    <span class="comment">// setup_scripts/docker/mint/server.py</span>
+                    <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Currency addition request submitted&quot;</span>);
+                }
+            }
+            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">report_error</span>(<span class="string">&quot;Error adding currency&quot;</span>, <span class="ident">e</span>),
         }
     }
 }
