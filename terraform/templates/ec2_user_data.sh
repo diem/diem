@@ -45,6 +45,7 @@ fi
 mkdir -p /opt/libra /vault
 
 echo ECS_CLUSTER=${ecs_cluster} >> /etc/ecs/ecs.config
+echo ECS_ENGINE_TASK_CLEANUP_WAIT_DURATION=8h >>/etc/ecs/ecs.config
 systemctl try-restart ecs --no-block
 
 curl -o /tmp/node_exporter.rpm https://copr-be.cloud.fedoraproject.org/results/ibotty/prometheus-exporters/epel-7-x86_64/00935314-golang-github-prometheus-node_exporter/golang-github-prometheus-node_exporter-0.18.1-6.el7.x86_64.rpm
