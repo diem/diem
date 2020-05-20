@@ -254,7 +254,13 @@ impl LibraInterface for MockLibraInterface {
         Ok(account_state
             .get_validator_config_resource()?
             .ok_or_else(|| Error::DataDoesNotExist("ValidatorConfigResource".into()))?
-            .validator_config)
+            .validator_config
+            .ok_or_else(|| {
+                Error::DataDoesNotExist(format!(
+                    "ValidatorConfigResource not found for account: {:?}",
+                    account
+                ))
+            })?)
     }
 
     fn retrieve_validator_info(

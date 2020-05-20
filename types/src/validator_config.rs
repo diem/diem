@@ -11,8 +11,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ValidatorConfigResource {
-    pub validator_config: ValidatorConfig,
-    pub delegated_account: Vec<AccountAddress>,
+    pub validator_config: Option<ValidatorConfig>,
+    pub delegated_account: Option<AccountAddress>,
 }
 
 impl MoveResource for ValidatorConfigResource {

@@ -502,7 +502,7 @@ impl ClientProxy {
         }
     }
 
-    /// Remove a existing validator.
+    /// Remove an existing validator from Validator Set.
     pub fn remove_validator(
         &mut self,
         space_delim_strings: &[&str],
@@ -514,21 +514,35 @@ impl ClientProxy {
             space_delim_strings[0]
         );
         ensure!(
-            space_delim_strings.len() == 2,
+            space_delim_strings.len() == 3,
             "Invalid number of arguments for removing validator"
         );
         let (account_address, _) =
             self.get_account_address_from_parameter(space_delim_strings[1])?;
-        match self.faucet_account {
-            Some(_) => self.association_transaction_with_local_faucet_account(
-                transaction_builder::encode_remove_validator_script(account_address),
-                is_blocking,
-            ),
-            None => unimplemented!(),
+        let private_key = Ed25519PrivateKey::from_encoded_string(space_delim_strings[2])?;
+        let program = transaction_builder::encode_remove_validator_script(account_address);
+        let mut sender = Self::get_account_data_from_address(
+            &mut self.client,
+            account_address,
+            true,
+            Some(KeyPair::from(private_key)),
+            None,
+        )?;
+        let txn = self.create_txn_to_submit(
+            TransactionPayload::Script(program),
+            &sender,
+            None,
+            None,
+            None,
+        )?;
+        self.client.submit_transaction(Some(&mut sender), txn)?;
+        if is_blocking {
+            self.wait_for_transaction(sender.address, sender.sequence_number)?;
         }
+        Ok(())
     }
 
-    /// Add a new validator.
+    /// Add a new validator to the Validator Set.
     pub fn add_validator(&mut self, space_delim_strings: &[&str], is_blocking: bool) -> Result<()> {
         ensure!(
             space_delim_strings[0] == "add_validator",
@@ -536,18 +550,32 @@ impl ClientProxy {
             space_delim_strings[0]
         );
         ensure!(
-            space_delim_strings.len() == 2,
+            space_delim_strings.len() == 3,
             "Invalid number of arguments for adding validator"
         );
         let (account_address, _) =
             self.get_account_address_from_parameter(space_delim_strings[1])?;
-        match self.faucet_account {
-            Some(_) => self.association_transaction_with_local_faucet_account(
-                transaction_builder::encode_add_validator_script(account_address),
-                is_blocking,
-            ),
-            None => unimplemented!(),
+        let private_key = Ed25519PrivateKey::from_encoded_string(space_delim_strings[2])?;
+        let mut sender = Self::get_account_data_from_address(
+            &mut self.client,
+            account_address,
+            true,
+            Some(KeyPair::from(private_key)),
+            None,
+        )?;
+        let program = transaction_builder::encode_add_validator_script(account_address);
+        let txn = self.create_txn_to_submit(
+            TransactionPayload::Script(program),
+            &sender,
+            None,
+            None,
+            None,
+        )?;
+        self.client.submit_transaction(Some(&mut sender), txn)?;
+        if is_blocking {
+            self.wait_for_transaction(sender.address, sender.sequence_number)?;
         }
+        Ok(())
     }
 
     /// Register an account as validator candidate with ValidatorConfig

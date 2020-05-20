@@ -100,7 +100,7 @@ module ValidatorConfig {
 
     // Rotate a validator candidate's consensus public key. The change will not take effect until
     // the next reconfiguration.
-    public rotate_consensus_pubkey(consensus_pubkey: vector<u8>) acquires T
+    public set_consensus_pubkey(consensus_pubkey: vector<u8>) acquires T
         aborts_if !global_exists<Self.T>(txn_sender)
         ensures global<Self.T>(txn_sender).config.consensus_pubkey == consensus_pubkey
     {
