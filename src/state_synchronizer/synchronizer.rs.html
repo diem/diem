@@ -186,6 +186,17 @@
 <span id="186">186</span>
 <span id="187">187</span>
 <span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -208,7 +219,12 @@
     <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>, <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>, <span class="ident">transaction</span>::<span class="ident">Transaction</span>,
     <span class="ident">waypoint</span>::<span class="ident">Waypoint</span>, <span class="ident">PeerId</span>,
 };
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">boxed</span>::<span class="ident">Box</span>, <span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">boxed</span>::<span class="ident">Box</span>,
+    <span class="ident">collections</span>::<span class="ident">HashMap</span>,
+    <span class="ident">sync</span>::<span class="ident">Arc</span>,
+    <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">SystemTime</span>},
+};
 <span class="kw">use</span> <span class="ident">storage_interface</span>::<span class="ident">DbReader</span>;
 <span class="kw">use</span> <span class="ident">subscription_service</span>::<span class="ident">ReconfigSubscription</span>;
 <span class="kw">use</span> <span class="ident">tokio</span>::{
@@ -323,9 +339,15 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">sync_to</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">target</span>: <span class="ident">LedgerInfoWithSignatures</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sender</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">coordinator_sender</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> (<span class="ident">callback</span>, <span class="ident">cb_receiver</span>) <span class="op">=</span> <span class="ident">oneshot</span>::<span class="ident">channel</span>();
-        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">SyncRequest</span> { <span class="ident">callback</span>, <span class="ident">target</span> };
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">SyncRequest</span> {
+            <span class="ident">callback</span>,
+            <span class="ident">target</span>,
+            <span class="ident">last_progress_tst</span>: <span class="ident">SystemTime</span>::<span class="ident">now</span>(),
+        };
         <span class="kw">async</span> <span class="kw">move</span> {
-            <span class="ident">sender</span>.<span class="ident">send</span>(<span class="ident">CoordinatorMessage</span>::<span class="ident">Request</span>(<span class="ident">request</span>)).<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="ident">sender</span>
+                .<span class="ident">send</span>(<span class="ident">CoordinatorMessage</span>::<span class="ident">Request</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">request</span>)))
+                .<span class="kw">await</span><span class="question-mark">?</span>;
             <span class="ident">cb_receiver</span>.<span class="kw">await</span><span class="question-mark">?</span>
         }
     }

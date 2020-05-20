@@ -920,6 +920,31 @@
 <span id="920">920</span>
 <span id="921">921</span>
 <span id="922">922</span>
+<span id="923">923</span>
+<span id="924">924</span>
+<span id="925">925</span>
+<span id="926">926</span>
+<span id="927">927</span>
+<span id="928">928</span>
+<span id="929">929</span>
+<span id="930">930</span>
+<span id="931">931</span>
+<span id="932">932</span>
+<span id="933">933</span>
+<span id="934">934</span>
+<span id="935">935</span>
+<span id="936">936</span>
+<span id="937">937</span>
+<span id="938">938</span>
+<span id="939">939</span>
+<span id="940">940</span>
+<span id="941">941</span>
+<span id="942">942</span>
+<span id="943">943</span>
+<span id="944">944</span>
+<span id="945">945</span>
+<span id="946">946</span>
+<span id="947">947</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -961,12 +986,13 @@
     <span class="comment">// reach the target (the LI in the storage remains unchanged as if nothing happened).</span>
     <span class="kw">pub</span> <span class="ident">callback</span>: <span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">target</span>: <span class="ident">LedgerInfoWithSignatures</span>,
+    <span class="kw">pub</span> <span class="ident">last_progress_tst</span>: <span class="ident">SystemTime</span>,
 }
 
 <span class="doccomment">/// message used by StateSyncClient for communication with Coordinator</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum</span> <span class="ident">CoordinatorMessage</span> {
     <span class="comment">// used to initiate new sync</span>
-    <span class="ident">Request</span>(<span class="ident">SyncRequest</span>),
+    <span class="ident">Request</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">SyncRequest</span><span class="op">&gt;</span>),
     <span class="comment">// used to notify about new txn commit</span>
     <span class="ident">Commit</span>(
         <span class="comment">// committed transactions</span>
@@ -1082,7 +1108,7 @@
                 <span class="ident">msg</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client_events</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">match</span> <span class="ident">msg</span> {
                         <span class="ident">CoordinatorMessage</span>::<span class="ident">Request</span>(<span class="ident">request</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">request_sync</span>(<span class="ident">request</span>) {
+                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">request_sync</span>(<span class="kw-2">*</span><span class="ident">request</span>) {
                                 <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;[state sync] request sync fail: {}&quot;</span>, <span class="ident">e</span>);
                             }
                         }
@@ -1305,6 +1331,9 @@
         <span class="self">self</span>.<span class="ident">check_subscriptions</span>();
         <span class="self">self</span>.<span class="ident">peer_manager</span>.<span class="ident">remove_requests</span>(<span class="ident">local_version</span>);
 
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">mut</span> <span class="ident">req</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">sync_request</span>.<span class="ident">as_mut</span>() {
+            <span class="ident">req</span>.<span class="ident">last_progress_tst</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
+        }
         <span class="kw">let</span> <span class="ident">sync_request_complete</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">sync_request</span>.<span class="ident">as_ref</span>().<span class="ident">map_or</span>(<span class="bool-val">false</span>, <span class="op">|</span><span class="ident">sync_req</span><span class="op">|</span> {
             <span class="comment">// Each `ChunkResponse` is verified to make sure it never goes beyond the requested</span>
             <span class="comment">// target version, hence, the local version should never go beyond sync req target.</span>
@@ -1721,6 +1750,27 @@
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">role</span> <span class="op">=</span><span class="op">=</span> <span class="ident">RoleType</span>::<span class="ident">Validator</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">sync_request</span>.<span class="ident">is_none</span>() <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">is_initialized</span>()
         {
             <span class="kw">return</span>;
+        }
+
+        <span class="comment">// check that we made progress in fulfilling consensus sync request</span>
+        <span class="kw">let</span> <span class="ident">sync_request_expired</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">sync_request</span>.<span class="ident">as_ref</span>().<span class="ident">map_or</span>(<span class="bool-val">false</span>, <span class="op">|</span><span class="ident">req</span><span class="op">|</span> {
+            <span class="kw">let</span> <span class="ident">default_timeout</span> <span class="op">=</span> <span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="self">self</span>.<span class="ident">config</span>.<span class="ident">sync_request_timeout_ms</span>);
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tst</span>) <span class="op">=</span> <span class="ident">req</span>.<span class="ident">last_progress_tst</span>.<span class="ident">checked_add</span>(<span class="ident">default_timeout</span>) {
+                <span class="kw">return</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>().<span class="ident">duration_since</span>(<span class="ident">tst</span>).<span class="ident">is_ok</span>();
+            }
+            <span class="bool-val">false</span>
+        });
+        <span class="comment">// notify consensus if sync request timed out</span>
+        <span class="kw">if</span> <span class="ident">sync_request_expired</span> {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">sync_request</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">sync_request</span>.<span class="ident">take</span>() {
+                <span class="kw">if</span> <span class="ident">sync_request</span>
+                    .<span class="ident">callback</span>
+                    .<span class="ident">send</span>(<span class="prelude-val">Err</span>(<span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;request timed out&quot;</span>)))
+                    .<span class="ident">is_err</span>()
+                {
+                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;[state sync] Failed to notify consensus&quot;</span>);
+                }
+            }
         }
 
         <span class="kw">let</span> <span class="ident">known_version</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">local_state</span>.<span class="ident">highest_version_in_local_storage</span>();

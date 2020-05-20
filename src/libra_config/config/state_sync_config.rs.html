@@ -29,6 +29,9 @@
 <span id="29">29</span>
 <span id="30">30</span>
 <span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -48,6 +51,8 @@
     <span class="kw">pub</span> <span class="ident">max_chunk_limit</span>: <span class="ident">u64</span>,
     <span class="comment">// valid maximum timeout limit for sanity check</span>
     <span class="kw">pub</span> <span class="ident">max_timeout_ms</span>: <span class="ident">u64</span>,
+    <span class="comment">// default timeout for sync request</span>
+    <span class="kw">pub</span> <span class="ident">sync_request_timeout_ms</span>: <span class="ident">u64</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">StateSyncConfig</span> {
@@ -58,6 +63,7 @@
             <span class="ident">long_poll_timeout_ms</span>: <span class="number">30000</span>,
             <span class="ident">max_chunk_limit</span>: <span class="number">1000</span>,
             <span class="ident">max_timeout_ms</span>: <span class="number">120_000</span>,
+            <span class="ident">sync_request_timeout_ms</span>: <span class="number">60_000</span>,
         }
     }
 }
