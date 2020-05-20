@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, layout::Layout, SingleBackend};
+use crate::{constants, error::Error, layout::Layout, SingleBackend};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{ASSOCIATION_KEY, OPERATOR_KEY};
 use libra_secure_storage::Storage;
@@ -45,11 +45,11 @@ impl Genesis {
 
         let association_key = association
             .get(ASSOCIATION_KEY)
-            .map_err(|e| Error::RemoteStorageReadError(e.to_string()))?;
+            .map_err(|e| Error::RemoteStorageReadError(ASSOCIATION_KEY, e.to_string()))?;
         association_key
             .value
             .ed25519_public_key()
-            .map_err(|e| Error::RemoteStorageReadError(e.to_string()))
+            .map_err(|e| Error::RemoteStorageReadError(ASSOCIATION_KEY, e.to_string()))
     }
 
     /// Retrieves a layout from the remote storage.
@@ -57,16 +57,15 @@ impl Genesis {
         let mut common_config = self.backend.backend.clone();
         common_config
             .parameters
-            .insert("namespace".into(), crate::constants::COMMON_NS.into());
+            .insert("namespace".into(), constants::COMMON_NS.into());
         let common: Box<dyn Storage> = common_config.try_into()?;
 
         let layout = common
-            .get(crate::constants::LAYOUT)
-            .map_err(|e| Error::RemoteStorageReadError(e.to_string()))?
-            .value
-            .string()
-            .map_err(|e| Error::RemoteStorageReadError(e.to_string()))?;
-        Layout::parse(&layout).map_err(|e| Error::RemoteStorageReadError(e.to_string()))
+            .get(constants::LAYOUT)
+            .and_then(|v| v.value.string())
+            .map_err(|e| Error::RemoteStorageReadError(constants::LAYOUT, e.to_string()))?;
+        Layout::parse(&layout)
+            .map_err(|e| Error::RemoteStorageReadError(constants::LAYOUT, e.to_string()))
     }
 
     /// Produces a set of ValidatorRegistration from the remote storage.
@@ -81,14 +80,16 @@ impl Genesis {
 
             let key = validator
                 .get(OPERATOR_KEY)
-                .map_err(|e| Error::RemoteStorageReadError(e.to_string()))?
+                .map_err(|e| Error::RemoteStorageReadError(OPERATOR_KEY, e.to_string()))?
                 .value
                 .ed25519_public_key()
-                .map_err(|e| Error::RemoteStorageReadError(e.to_string()))?;
+                .map_err(|e| Error::RemoteStorageReadError(OPERATOR_KEY, e.to_string()))?;
 
             let txn = validator
-                .get(crate::constants::VALIDATOR_CONFIG)
-                .map_err(|e| Error::RemoteStorageReadError(e.to_string()))?
+                .get(constants::VALIDATOR_CONFIG)
+                .map_err(|e| {
+                    Error::RemoteStorageReadError(constants::VALIDATOR_CONFIG, e.to_string())
+                })?
                 .value;
             let txn = txn.transaction().unwrap();
             let txn = txn.as_signed_user_txn().unwrap().payload();

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, SingleBackend};
+use crate::{constants, error::Error, SingleBackend};
 use libra_secure_storage::{Storage, Value};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -66,8 +66,8 @@ impl SetLayout {
 
         let value = Value::String(data);
         remote
-            .set(crate::constants::LAYOUT, value)
-            .map_err(|e| Error::RemoteStorageWriteError(e.to_string()))?;
+            .set(constants::LAYOUT, value)
+            .map_err(|e| Error::RemoteStorageWriteError(constants::LAYOUT, e.to_string()))?;
 
         Ok(layout)
     }
