@@ -1226,6 +1226,14 @@
 <span id="1226">1226</span>
 <span id="1227">1227</span>
 <span id="1228">1228</span>
+<span id="1229">1229</span>
+<span id="1230">1230</span>
+<span id="1231">1231</span>
+<span id="1232">1232</span>
+<span id="1233">1233</span>
+<span id="1234">1234</span>
+<span id="1235">1235</span>
+<span id="1236">1236</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2392,8 +2400,12 @@
                     }
                     <span class="ident">Bytecode</span>::<span class="ident">MoveTo</span>(<span class="ident">sd_idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="kw">let</span> <span class="ident">resource</span> <span class="op">=</span> <span class="ident">interpreter</span>.<span class="ident">operand_stack</span>.<span class="ident">pop_as</span>::<span class="op">&lt;</span><span class="ident">Struct</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
-                        <span class="kw">let</span> <span class="ident">signer_reference</span> <span class="op">=</span> <span class="ident">interpreter</span>.<span class="ident">operand_stack</span>.<span class="ident">pop_as</span>::<span class="op">&lt;</span><span class="ident">Reference</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
-                        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">signer_reference</span>.<span class="ident">read_ref</span>()<span class="question-mark">?</span>.<span class="ident">value_as</span>::<span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+                        <span class="kw">let</span> <span class="ident">signer_reference</span> <span class="op">=</span> <span class="ident">interpreter</span>.<span class="ident">operand_stack</span>.<span class="ident">pop_as</span>::<span class="op">&lt;</span><span class="ident">StructRef</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+                        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">signer_reference</span>
+                            .<span class="ident">borrow_field</span>(<span class="number">0</span>)<span class="question-mark">?</span>
+                            .<span class="ident">value_as</span>::<span class="op">&lt;</span><span class="ident">Reference</span><span class="op">&gt;</span>()<span class="question-mark">?</span>
+                            .<span class="ident">read_ref</span>()<span class="question-mark">?</span>
+                            .<span class="ident">value_as</span>::<span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
                         <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">interpreter</span>.<span class="ident">global_data_op</span>(
                             <span class="ident">resolver</span>,
                             <span class="ident">context</span>,
@@ -2405,8 +2417,12 @@
                     }
                     <span class="ident">Bytecode</span>::<span class="ident">MoveToGeneric</span>(<span class="ident">si_idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="kw">let</span> <span class="ident">resource</span> <span class="op">=</span> <span class="ident">interpreter</span>.<span class="ident">operand_stack</span>.<span class="ident">pop_as</span>::<span class="op">&lt;</span><span class="ident">Struct</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
-                        <span class="kw">let</span> <span class="ident">signer_reference</span> <span class="op">=</span> <span class="ident">interpreter</span>.<span class="ident">operand_stack</span>.<span class="ident">pop_as</span>::<span class="op">&lt;</span><span class="ident">Reference</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
-                        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">signer_reference</span>.<span class="ident">read_ref</span>()<span class="question-mark">?</span>.<span class="ident">value_as</span>::<span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+                        <span class="kw">let</span> <span class="ident">signer_reference</span> <span class="op">=</span> <span class="ident">interpreter</span>.<span class="ident">operand_stack</span>.<span class="ident">pop_as</span>::<span class="op">&lt;</span><span class="ident">StructRef</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+                        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">signer_reference</span>
+                            .<span class="ident">borrow_field</span>(<span class="number">0</span>)<span class="question-mark">?</span>
+                            .<span class="ident">value_as</span>::<span class="op">&lt;</span><span class="ident">Reference</span><span class="op">&gt;</span>()<span class="question-mark">?</span>
+                            .<span class="ident">read_ref</span>()<span class="question-mark">?</span>
+                            .<span class="ident">value_as</span>::<span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
                         <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">interpreter</span>.<span class="ident">global_data_op_generic</span>(
                             <span class="ident">resolver</span>,
                             <span class="ident">context</span>,

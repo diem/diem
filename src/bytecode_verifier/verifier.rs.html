@@ -376,6 +376,10 @@
 <span id="376">376</span>
 <span id="377">377</span>
 <span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -544,7 +548,7 @@
 
 <span class="doccomment">/// This function checks the extra requirements on the signature of the main function of a script.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_main_signature</span>(<span class="ident">script</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledScript</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">is_valid_arg_type</span>(<span class="ident">arg_type</span>: <span class="kw-2">&amp;</span><span class="ident">SignatureToken</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="kw">fn</span> <span class="ident">is_valid_arg_type</span>(<span class="ident">idx</span>: <span class="ident">usize</span>, <span class="ident">arg_type</span>: <span class="kw-2">&amp;</span><span class="ident">SignatureToken</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="kw">use</span> <span class="ident">SignatureToken</span> <span class="kw">as</span> <span class="ident">S</span>;
         <span class="kw">match</span> <span class="ident">arg_type</span> {
             <span class="ident">S</span>::<span class="ident">Bool</span> <span class="op">|</span> <span class="ident">S</span>::<span class="ident">U8</span> <span class="op">|</span> <span class="ident">S</span>::<span class="ident">U64</span> <span class="op">|</span> <span class="ident">S</span>::<span class="ident">U128</span> <span class="op">|</span> <span class="ident">S</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
@@ -562,18 +566,22 @@
                 <span class="op">|</span> <span class="ident">S</span>::<span class="ident">MutableReference</span>(<span class="kw">_</span>)
                 <span class="op">|</span> <span class="ident">S</span>::<span class="ident">TypeParameter</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
             },
+
+            <span class="comment">// &amp;signer is a type that can only be populated by the Move VM. And its value is filled</span>
+            <span class="comment">// based on the sender of the transaction</span>
+            <span class="ident">S</span>::<span class="ident">Reference</span>(<span class="ident">inner</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">idx</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">inner</span>, <span class="ident">S</span>::<span class="ident">Signer</span>),
+
             <span class="ident">S</span>::<span class="ident">Signer</span>
             <span class="op">|</span> <span class="ident">S</span>::<span class="ident">Struct</span>(<span class="kw">_</span>)
             <span class="op">|</span> <span class="ident">S</span>::<span class="ident">StructInstantiation</span>(<span class="kw">_</span>, <span class="kw">_</span>)
-            <span class="op">|</span> <span class="ident">S</span>::<span class="ident">Reference</span>(<span class="kw">_</span>)
             <span class="op">|</span> <span class="ident">S</span>::<span class="ident">MutableReference</span>(<span class="kw">_</span>)
             <span class="op">|</span> <span class="ident">S</span>::<span class="ident">TypeParameter</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
         }
     }
 
     <span class="kw">let</span> <span class="ident">arguments</span> <span class="op">=</span> <span class="ident">script</span>.<span class="ident">signature_at</span>(<span class="ident">script</span>.<span class="ident">as_inner</span>().<span class="ident">parameters</span>);
-    <span class="kw">for</span> <span class="ident">arg_type</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">arguments</span>.<span class="number">0</span> {
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">is_valid_arg_type</span>(<span class="ident">arg_type</span>) {
+    <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">arg_type</span>) <span class="kw">in</span> <span class="ident">arguments</span>.<span class="number">0</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
+        <span class="kw">if</span> <span class="op">!</span><span class="ident">is_valid_arg_type</span>(<span class="ident">idx</span>, <span class="ident">arg_type</span>) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">INVALID_MAIN_FUNCTION_SIGNATURE</span>));
         }
     }
