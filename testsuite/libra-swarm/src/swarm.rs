@@ -50,6 +50,15 @@ impl Drop for LibraNode {
 }
 
 impl LibraNode {
+    /// Prior to using LibraSwarm this should be run. LibraSwarm will acquire ephemeral networking
+    /// ports that are only reserved in a safe state for a brief period of time.
+    /// workspace_builder::get_bin actually compiles all of the Libra code base which can take
+    /// substantially longer time than the networking ports are reserved. Calling prior to
+    /// reserving those ports will reduce the liklihood of issues.
+    pub fn prepare() {
+        Command::new(workspace_builder::get_bin(LIBRA_NODE_BIN));
+    }
+
     pub fn launch(
         node_id: String,
         role: RoleType,
@@ -289,6 +298,8 @@ impl LibraSwarm {
         template: Option<NodeConfig>,
         upstream_config_dir: Option<String>,
     ) -> Result<LibraSwarm> {
+        LibraNode::prepare();
+
         let swarm_config_dir = Self::setup_config_dir(&config_dir);
         info!("logs at {:?}", swarm_config_dir);
 

@@ -9,7 +9,7 @@ use libra_config::config::{
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, x25519, Uniform};
 use libra_secure_storage::Value;
-use libra_swarm::swarm::{LibraSwarm, LibraSwarmDir};
+use libra_swarm::swarm::{LibraNode, LibraSwarm, LibraSwarmDir};
 use libra_temppath::TempPath;
 use libra_types::account_address::AccountAddress;
 use std::path::PathBuf;
@@ -27,6 +27,7 @@ impl BuildSwarm for ManagementBuilder {
 
 #[test]
 fn smoke_test() {
+    LibraNode::prepare();
     let helper = StorageHelper::new();
     let num_validators = 5;
     let shared = "_shared";
