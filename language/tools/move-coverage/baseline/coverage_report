@@ -1,0 +1,80 @@
++-------------------------+
+| Move Coverage Summary   |
++-------------------------+
+Module 00000000000000000000000000000000::Debug
+>>> % Module coverage: NaN
+Module 00000000000000000000000000000000::Testnet
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::LibraTimestamp
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::Association
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::AccountLimits
+>>> % Module coverage: 96.87
+Module 00000000000000000000000000000000::Vector
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::Empty
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::AccountType
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::VASP
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::Unhosted
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::AccountTrack
+>>> % Module coverage: 88.96
+Module 00000000000000000000000000000000::LCS
+>>> % Module coverage: NaN
+Module 00000000000000000000000000000000::Hash
+>>> % Module coverage: NaN
+Module 00000000000000000000000000000000::Authenticator
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::Offer
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::Event
+>>> % Module coverage: 92.25
+Module 00000000000000000000000000000000::LibraConfig
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::RegisteredCurrencies
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::FixedPoint32
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::Libra
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::Coin1
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::Coin2
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::Compare
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::Option
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::Signature
+>>> % Module coverage: NaN
+Module 00000000000000000000000000000000::LibraTransactionTimeout
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::LibraAccount
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::ValidatorConfig
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::LibraSystem
+>>> % Module coverage: 98.98
+Module 00000000000000000000000000000000::TransactionFee
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::LibraWriteSetManager
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::LibraBlock
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::LBR
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::Genesis
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::LibraVMConfig
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::LibraVersion
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::SharedEd25519PublicKey
+>>> % Module coverage: 100.00
++-------------------------+
+| % Move Coverage: 99.14  |
++-------------------------+

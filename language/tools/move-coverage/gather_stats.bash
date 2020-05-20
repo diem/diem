@@ -6,6 +6,12 @@ TRACE_PATH=$HOME/trace
 
 export MOVE_VM_TRACE=$TRACE_PATH
 
+echo "Removing account universe from test..."
+pushd ../../e2e-tests || exit 1
+sed -i.bak '/mod account_universe;$/d' src/tests.rs
+rm -rf src/tests.rs.bak
+popd || exit 1
+
 echo "Rebuilding stdlib..."
 pushd ../../stdlib || exit 1
 cargo run
@@ -30,7 +36,8 @@ popd || exit 1
 echo "Converting trace file..."
 cargo run --bin move-trace-conversion -- -f "$TRACE_PATH" -o trace.mvcov
 echo "Producing coverage summaries..."
-cargo run --bin coverage-summaries -- -t trace.mvcov -s ../../stdlib/staged/stdlib.mv -c -o new_coverage_summary.csv
+cargo run --bin coverage-summaries -- -t trace.mvcov -s ../../stdlib/staged/stdlib.mv -o "$1"
+cat ./baseline/coverage_report > "$2"
 
 unset MOVE_VM_TRACE
 
