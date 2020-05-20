@@ -715,7 +715,7 @@ dependencies = [
  "structopt 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "tonic 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
- "ureq 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ureq 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "walkdir 2.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2444,7 +2444,7 @@ dependencies = [
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
- "ureq 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ureq 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2736,7 +2736,7 @@ dependencies = [
  "storage-interface 0.1.0",
  "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ureq 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ureq 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm-validator 0.1.0",
 ]
 
@@ -2756,7 +2756,7 @@ version = "0.1.0"
 dependencies = [
  "libra-logger 0.1.0",
  "libra-workspace-hack 0.1.0",
- "ureq 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ureq 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2908,7 +2908,7 @@ dependencies = [
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
- "ureq 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ureq 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -6078,7 +6078,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "ureq"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "base64 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6964,7 +6964,7 @@ dependencies = [
 "checksum unicode-xid 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "826e7639553986605ec5979c7dd957c7895e93eabed50ab2ffa7f6128a75097c"
 "checksum universal-hash 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "df0c900f2f9b4116803415878ff48b63da9edb268668e08cf9292d7503114a01"
 "checksum untrusted 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "60369ef7a31de49bcb3f6ca728d4ba7300d9a1658f94c727d4cab8c8d9f4aece"
-"checksum ureq 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "46083c7583f798dbd460f08677fdb9708a74fde2c02ef1010882d13e69dd5590"
+"checksum ureq 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2ad41a72bad884f588abe7eee1a161681d74f5ff1f9e9f81e073f6c600b92ca4"
 "checksum url 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "829d4a8476c35c9bf0bbce5a3b23f4106f79728039b726d292bb93bc106787cb"
 "checksum urlencoding 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3df3561629a8bb4c57e5a2e4c43348d9e29c7c29d9b1c4c1f47166deca8f37ed"
 "checksum utf-8 0.7.5 (registry+https://github.com/rust-lang/crates.io-index)" = "05e42f7c18b8f902290b009cde6d651262f956c98bc51bca4cd1d511c9cd85c7"
