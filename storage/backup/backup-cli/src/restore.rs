@@ -3,65 +3,68 @@
 
 use crate::{
     adapter::{local_storage::LocalStorage, Adapter},
-    FileHandle,
+    FileHandle, ReadRecordBytes,
 };
 use anyhow::Result;
-use byteorder::{BigEndian, ReadBytesExt};
-use futures::executor::block_on_stream;
+use futures::TryStreamExt;
 use libra_crypto::HashValue;
 use libra_types::{account_state_blob::AccountStateBlob, proof::SparseMerkleRangeProof};
 use libradb::LibraDB;
-use std::{io::Read, path::Path};
+use std::path::Path;
+use tokio::io::{AsyncRead, AsyncReadExt};
+use tokio_util::compat::FuturesAsyncReadCompatExt;
 
-pub fn restore_account_state<P, I>(version: u64, root_hash: HashValue, db_dir: P, iter: I)
+pub async fn restore_account_state<P, I>(
+    version: u64,
+    root_hash: HashValue,
+    db_dir: P,
+    iter: I,
+) -> Result<()>
 where
     P: AsRef<Path> + Clone,
-    I: Iterator<Item = Result<(FileHandle, FileHandle)>>,
+    I: Iterator<Item = (FileHandle, FileHandle)>,
 {
-    let libradb =
-        LibraDB::open(db_dir, false /* read_only */, None /* pruner */).expect("DB should open.");
-    let chunk_and_proofs = iter.map(|res| {
-        let (account_state_file, proof_file) = res.expect("Input iter yielded error.");
-        let accounts = read_account_state_chunk(account_state_file)
-            .expect("Failed to read account state file.");
-        let proof = read_proof(proof_file).expect("Failed to read proof file.");
+    let libradb = LibraDB::open(db_dir, false /* read_only */, None /* pruner */)?;
+    let mut receiver = libradb.get_state_restore_receiver(version, root_hash)?;
 
-        (accounts, proof)
-    });
+    for (chunk_handle, proof_handle) in iter {
+        let chunk = read_account_state_chunk(chunk_handle).await?;
+        let proof = read_proof(proof_handle).await?;
 
-    libradb
-        .restore_account_state(chunk_and_proofs, version, root_hash)
-        .expect("Failed to restore account state.");
+        receiver.add_chunk(chunk, proof)?;
+    }
+
+    receiver.finish()?;
+    Ok(())
 }
 
-fn read_account_state_chunk(file: FileHandle) -> Result<Vec<(HashValue, AccountStateBlob)>> {
-    let content = read_file(file)?;
+async fn read_account_state_chunk(
+    file_handle: FileHandle,
+) -> Result<Vec<(HashValue, AccountStateBlob)>> {
+    let mut file = open_file(&file_handle);
 
     let mut chunk = vec![];
-    let mut reader = std::io::Cursor::new(content);
-    loop {
-        let record_size = match reader.read_u32::<BigEndian>() {
-            Ok(n) => n as usize,
-            Err(_) => return Ok(chunk),
-        };
 
-        let mut record_buf = vec![0u8; record_size];
-        reader.read_exact(&mut record_buf)?;
-        let (key, blob): (HashValue, AccountStateBlob) = lcs::from_bytes(&record_buf)?;
-        chunk.push((key, blob));
+    while let Some(record_bytes) = file.read_record_bytes().await? {
+        chunk.push(lcs::from_bytes(&record_bytes)?);
     }
+
+    Ok(chunk)
 }
 
-fn read_proof(file: FileHandle) -> Result<SparseMerkleRangeProof> {
-    let content = read_file(file)?;
-    let proof = lcs::from_bytes(&content)?;
+async fn read_proof(file_handle: FileHandle) -> Result<SparseMerkleRangeProof> {
+    let mut file = open_file(&file_handle);
+    let mut buf = Vec::new();
+    file.read_to_end(&mut buf).await?;
+
+    let proof = lcs::from_bytes(&buf)?;
     Ok(proof)
 }
 
-fn read_file(file: FileHandle) -> Result<Vec<u8>> {
-    let mut content = vec![];
-    for bytes_res in block_on_stream(LocalStorage::read_file_content(&file)) {
-        content.extend(bytes_res?);
-    }
-    Ok(content)
+#[allow(clippy::ptr_arg)]
+fn open_file<'a>(file: &'a FileHandle) -> impl 'a + AsyncRead {
+    LocalStorage::read_file_content(file)
+        .map_err(|e| futures::io::Error::new(futures::io::ErrorKind::Other, e))
+        .into_async_read()
+        .compat()
 }

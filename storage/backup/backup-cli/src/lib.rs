@@ -12,7 +12,7 @@ use anyhow::{bail, Result};
 use async_trait::async_trait;
 use bytes::{Bytes, BytesMut};
 use std::convert::TryInto;
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncRead, AsyncReadExt};
 
 pub type FileHandle = String;
 
@@ -23,7 +23,7 @@ trait ReadRecordBytes {
 }
 
 #[async_trait]
-impl<R: AsyncReadExt + Send + Unpin> ReadRecordBytes for R {
+impl<R: AsyncRead + Send + Unpin> ReadRecordBytes for R {
     async fn read_full_buf_or_none(&mut self, buf: &mut BytesMut) -> Result<()> {
         assert_eq!(buf.len(), 0);
         let n_expected = buf.capacity();
