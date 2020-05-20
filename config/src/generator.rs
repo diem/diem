@@ -4,7 +4,7 @@
 //! Convenience structs and functions for generating a random set of Libra ndoes without the
 //! genesis.blob.
 
-use crate::config::{NodeConfig, SeedPeersConfig, TestConfig};
+use crate::config::{NodeConfig, TestConfig};
 use rand::{rngs::StdRng, SeedableRng};
 
 pub struct ValidatorSwarm {
@@ -33,11 +33,12 @@ pub fn validator_swarm(
         nodes.push(node);
     }
 
-    let mut seed_peers = SeedPeersConfig::default();
-    let network = nodes[0].validator_network.as_ref().unwrap();
-    seed_peers
-        .seed_peers
-        .insert(network.peer_id, vec![network.listen_address.clone()]);
+    // set the first validator as every validators' initial configured seed peer.
+
+    let seed_config = nodes[0].validator_network.as_ref().unwrap();
+    let seed_peers = seed_config
+        .build_seed_peers(seed_config.advertised_address.clone())
+        .expect("Failed to build seed_peers");
 
     for node in &mut nodes {
         let network = node.validator_network.as_mut().unwrap();

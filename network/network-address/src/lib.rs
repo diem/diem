@@ -321,6 +321,45 @@ impl NetworkAddress {
             .push(Protocol::Handshake(handshake_version))
     }
 
+    /// Check that a `NetworkAddress` looks like a typical LibraNet address with
+    /// associated protocols.
+    pub fn is_libranet_addr(&self) -> bool {
+        use Protocol::*;
+
+        let suffix = if self.len() == 3 {
+            let (prefix, suffix) = self.as_slice().split_at(1);
+
+            match prefix {
+                [Memory(_)] => (),
+                _ => return false,
+            }
+
+            suffix
+        } else if self.len() == 4 {
+            let (prefix, suffix) = self.as_slice().split_at(2);
+
+            match prefix {
+                [Ip4(_), Tcp(_)]
+                | [Ip6(_), Tcp(_)]
+                | [Dns4(_), Tcp(_)]
+                | [Dns6(_), Tcp(_)]
+                | [Dns(_), Tcp(_)] => (),
+                _ => return false,
+            }
+
+            suffix
+        } else {
+            return false;
+        };
+
+        match suffix {
+            [NoiseIK(_), Handshake(_)] | [PeerIdExchange, Handshake(_)] => (),
+            _ => return false,
+        }
+
+        true
+    }
+
     /// A temporary, hacky function to parse out the first `/ln-noise-ik/<pubkey>` from
     /// a `NetworkAddress`. We can remove this soon, when we move to the interim
     /// "monolithic" transport model.
