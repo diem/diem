@@ -8,6 +8,7 @@ module LibraAccount {
     use 0x0::Empty;
     use 0x0::Event;
     use 0x0::Hash;
+    use 0x0::LBR;
     use 0x0::LCS;
     use 0x0::Libra;
     use 0x0::LibraTransactionTimeout;
@@ -219,16 +220,26 @@ module LibraAccount {
         );
     }
 
-    // mint_to_address can only be called by accounts with MintCapability (see Libra)
-    // and those accounts will be charged for gas. If those accounts don't have enough gas to pay
-    // for the transaction cost they will fail minting.
-    // However those account can also mint to themselves so that is a decent workaround
+    // Create `amount` coins of type `Token` and send them to `payee`.
+    // `mint_to_address` can only be called by accounts with Libra::MintCapability<Token> and with
+    // Token=Coin1 or Token=Coin2. `mint_lbr_to_address` should be used for minting LBR
     public fun mint_to_address<Token>(
         payee: address,
         amount: u64
     ) acquires T, Balance, AccountOperationsCapability {
         // Mint and deposit the coin
         deposit(payee, Libra::mint<Token>(amount));
+    }
+
+    // Create `amount` LBR and send them to `payee`.
+    // `mint_lbr_to_address` can only be called by accounts with Libra::MintCapability<Coin1> and
+    // Libra::MintCapability<Coin2>
+    public fun mint_lbr_to_address(
+        payee: address,
+        amount: u64
+    ) acquires T, Balance, AccountOperationsCapability {
+        // Mint and deposit the coin
+        deposit(payee, LBR::mint(amount));
     }
 
     // Cancel the oldest burn request from `preburn_address` and return the funds.

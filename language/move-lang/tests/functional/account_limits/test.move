@@ -49,9 +49,8 @@ script {
 //! sender: association
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
     fun main() {
-        LibraAccount::mint_to_address<LBR::T>({{bob}}, 1);
+        LibraAccount::mint_lbr_to_address({{bob}}, 1);
     }
 }
 // check: ABORTED
@@ -146,9 +145,8 @@ script {
 //! sender: association
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
     fun main() {
-        LibraAccount::mint_to_address<LBR::T>({{bob}}, 2);
+        LibraAccount::mint_lbr_to_address({{bob}}, 2);
     }
 }
 // check: EXECUTED
@@ -182,9 +180,8 @@ script {
 //! sender: association
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
     fun main() {
-        LibraAccount::mint_to_address<LBR::T>({{bob}}, 2);
+        LibraAccount::mint_lbr_to_address({{bob}}, 2);
     }
 }
 // check: EXECUTED
@@ -250,9 +247,8 @@ script {
 //! sender: association
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
     fun main() {
-        LibraAccount::mint_to_address<LBR::T>({{bob}}, 100);
+        LibraAccount::mint_lbr_to_address({{bob}}, 100);
     }
 }
 // check: EXECUTED
@@ -261,9 +257,8 @@ script {
 //! sender: association
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
     fun main() {
-        LibraAccount::mint_to_address<LBR::T>({{bob}}, 1);
+        LibraAccount::mint_lbr_to_address({{bob}}, 1);
     }
 }
 // check: ABORTED
@@ -309,9 +304,8 @@ script {
 //! sender: association
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
     fun main() {
-        LibraAccount::mint_to_address<LBR::T>({{bob}}, 1);
+        LibraAccount::mint_lbr_to_address({{bob}}, 1);
     }
 }
 // check: ABORTED

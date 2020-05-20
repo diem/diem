@@ -156,10 +156,11 @@ impl FakeExecutor {
         balance_currency_code: Identifier,
     ) -> Option<BalanceResource> {
         let ap = account.make_balance_access_path(balance_currency_code);
-        let data_blob = StateView::get(&self.data_store, &ap)
-            .expect("account must exist in data store")
-            .expect("data must exist in data store");
-        lcs::from_bytes(data_blob.as_slice()).ok()
+        StateView::get(&self.data_store, &ap)
+            .unwrap_or_else(|_| panic!("account {:?} must exist in data store", account.address()))
+            .map(|data_blob| {
+                lcs::from_bytes(data_blob.as_slice()).expect("Failure decoding balance resource")
+            })
     }
 
     /// Executes the given block of transactions.

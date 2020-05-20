@@ -44,7 +44,9 @@ use move_core_types::move_resource::MoveResource;
 use rand::SeedableRng;
 use std::convert::TryFrom;
 use storage_interface::{DbReader, DbReaderWriter};
-use transaction_builder::{encode_mint_script, encode_transfer_with_metadata_script};
+use transaction_builder::{
+    encode_mint_lbr_to_address_script, encode_transfer_with_metadata_script,
+};
 
 #[test]
 fn test_empty_db() {
@@ -137,8 +139,7 @@ fn get_mint_transaction(
         /* sequence_number = */ association_seq_num,
         association_key.clone(),
         association_key.public_key(),
-        Some(encode_mint_script(
-            lbr_type_tag(),
+        Some(encode_mint_lbr_to_address_script(
             &account,
             account_auth_key.prefix().to_vec(),
             amount,
