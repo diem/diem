@@ -14,7 +14,7 @@ anyhow = "1.0"
 futures = "0.3.5"
 once_cell = "1.4.0"
 serde = { version = "1.0.110", default-features = false }
-tokio = { version = "0.2.21", features = ["full"] }
+tokio = { version = "0.2.13", features = ["full"] }
 
 bounded-executor = { path = "../common/bounded-executor", version = "0.1.0" }
 channel = { path = "../common/channel", version = "0.1.0" }

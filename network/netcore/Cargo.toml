@@ -14,7 +14,7 @@ async-trait = "0.1"
 bytes = "0.5.4"
 futures = { version = "0.3.5"  }
 pin-project = "0.4.17"
-tokio = { version = "0.2.21", features = ["full"] }
+tokio = { version = "0.2.13", features = ["full"] }
 
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 memsocket = { path = "../memsocket", version = "0.1.0" }

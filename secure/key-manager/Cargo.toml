@@ -30,7 +30,7 @@ libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0"
 anyhow = "1.0"
 futures = "0.3.5"
 rand = "0.7.3"
-tokio = { version = "0.2.21", features = ["full"] }
+tokio = { version = "0.2.13", features = ["full"] }
 
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 executor = { path = "../../execution/executor", version = "0.1.0" }

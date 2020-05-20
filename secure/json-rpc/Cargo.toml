@@ -24,7 +24,7 @@ serde = { version = "1.0.110", features = ["derive"], default-features = false }
 [dev-dependencies]
 anyhow = "1.0"
 futures = "0.3.5"
-tokio = { version = "0.2.21", features = ["full"] }
+tokio = { version = "0.2.13", features = ["full"] }
 
 libra-config = { path = "../../config", version = "0.1.0" }
 libra-json-rpc = { path = "../../json-rpc", version = "0.1.0" }
