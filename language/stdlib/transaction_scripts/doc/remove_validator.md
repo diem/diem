@@ -15,7 +15,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(new_validator: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(validator_address: address)
 </code></pre>
 
 
@@ -24,8 +24,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(new_validator: address) {
-  <a href="../../modules/doc/libra_system.md#0x0_LibraSystem_remove_validator">LibraSystem::remove_validator</a>(new_validator)
+<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(validator_address: address) {
+    <a href="../../modules/doc/libra_system.md#0x0_LibraSystem_remove_validator">LibraSystem::remove_validator</a>(validator_address);
 }
 </code></pre>
 

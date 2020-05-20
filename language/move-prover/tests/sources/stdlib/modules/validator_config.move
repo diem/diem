@@ -81,7 +81,7 @@ module ValidatorConfig {
 
     // Rotate a validator candidate's consensus public key. The change will not take effect until
     // the next reconfiguration.
-    public fun rotate_consensus_pubkey(consensus_pubkey: vector<u8>) acquires T {
+    public fun set_consensus_pubkey(consensus_pubkey: vector<u8>) acquires T {
         let t_ref = borrow_global_mut<T>(Transaction::sender());
         let key_ref = &mut t_ref.config.consensus_pubkey;
         *key_ref = consensus_pubkey;

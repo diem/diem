@@ -20,6 +20,7 @@ module LibraAccount {
     use 0x0::Testnet;
     use 0x0::Transaction;
     use 0x0::Unhosted;
+    use 0x0::ValidatorConfig;
     use 0x0::VASP;
     use 0x0::Vector;
     use 0x0::DesignatedDealer;
@@ -947,6 +948,56 @@ module LibraAccount {
         let sender_account = borrow_global_mut<T>(Signer::address_of(signer));
         sender_account.sequence_number = sender_account.sequence_number + 1;
     }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Proof of concept code used for Validator and ValidatorOperator roles management
+    ///////////////////////////////////////////////////////////////////////////
+
+    // Defines an alternative role type for the proof-of-concept implementation
+    // that will avoid wrappers around module's functions.
+    resource struct Role_temp<RoleType: copyable> {
+        role_type: RoleType,
+        is_certified: bool, // this flag serves for the purpose of role's revocation
+    }
+    // Role types. This approach effectively mimics the enum,
+    // we could alternatively use type names
+    // May also define ParentVaspRole, ChildVaspRole, etc. to have
+    // definitions of all the possible roles in a single place.
+    struct ValidatorRole {}
+    struct ValidatorOperatorRole {}
+
+    // Return true if `addr` has a resource of type Role<RoleType>
+    // and if this role is certified
+    public fun is_certified<RoleType: copyable>(addr: address): bool acquires Role_temp {
+        ::exists<Role_temp<RoleType>>(addr) && borrow_global<Role_temp<RoleType>>(addr).is_certified
+    }
+
+    public fun decertify<RoleType: copyable>(addr: address) acquires Role_temp {
+        Transaction::assert(Association::addr_is_association(Transaction::sender()), 1002);
+        borrow_global_mut<Role_temp<RoleType>>(addr).is_certified = false;
+    }
+
+    public fun certify<RoleType: copyable>(addr: address) acquires Role_temp {
+        Transaction::assert(Association::addr_is_association(Transaction::sender()), 1002);
+        // Role can be only published under the account at its creation
+        borrow_global_mut<Role_temp<RoleType>>(addr).is_certified = true;
+    }
+
+    public fun create_validator_account<Token>(
+        new_account_address: address,
+        auth_key_prefix: vector<u8>,
+    ) {
+        Transaction::assert(Association::addr_is_association(Transaction::sender()), 1002);
+        let new_account = create_signer(new_account_address);
+        Event::publish_generator(&new_account);
+        ValidatorConfig::publish(&new_account);
+        move_to(&new_account, Role_temp<ValidatorRole> { role_type: ValidatorRole { }, is_certified: true });
+        make_account<Token, Empty::T>(new_account, auth_key_prefix, Empty::create(), false)
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // End of the proof of concept code
+    ///////////////////////////////////////////////////////////////////////////
 }
 
 }

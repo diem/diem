@@ -16,6 +16,9 @@
 -  [Struct `FreezeAccountEvent`](#0x0_LibraAccount_FreezeAccountEvent)
 -  [Struct `UnfreezeAccountEvent`](#0x0_LibraAccount_UnfreezeAccountEvent)
 -  [Struct `AccountOperationsCapability`](#0x0_LibraAccount_AccountOperationsCapability)
+-  [Struct `Role_temp`](#0x0_LibraAccount_Role_temp)
+-  [Struct `ValidatorRole`](#0x0_LibraAccount_ValidatorRole)
+-  [Struct `ValidatorOperatorRole`](#0x0_LibraAccount_ValidatorOperatorRole)
 -  [Function `is`](#0x0_LibraAccount_is)
 -  [Function `is_unhosted`](#0x0_LibraAccount_is_unhosted)
 -  [Function `is_parent_vasp`](#0x0_LibraAccount_is_parent_vasp)
@@ -83,6 +86,10 @@
 -  [Function `prologue`](#0x0_LibraAccount_prologue)
 -  [Function `epilogue`](#0x0_LibraAccount_epilogue)
 -  [Function `bump_sequence_number`](#0x0_LibraAccount_bump_sequence_number)
+-  [Function `is_certified`](#0x0_LibraAccount_is_certified)
+-  [Function `decertify`](#0x0_LibraAccount_decertify)
+-  [Function `certify`](#0x0_LibraAccount_certify)
+-  [Function `create_validator_account`](#0x0_LibraAccount_create_validator_account)
 
 
 
@@ -497,6 +504,97 @@
 <dt>
 
 <code>unfreeze_event_handle: <a href="event.md#0x0_Event_EventHandle">Event::EventHandle</a>&lt;<a href="#0x0_LibraAccount_UnfreezeAccountEvent">LibraAccount::UnfreezeAccountEvent</a>&gt;</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
+
+<a name="0x0_LibraAccount_Role_temp"></a>
+
+## Struct `Role_temp`
+
+
+
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_LibraAccount_Role_temp">Role_temp</a>&lt;RoleType: <b>copyable</b>&gt;
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>role_type: RoleType</code>
+</dt>
+<dd>
+
+</dd>
+<dt>
+
+<code>is_certified: bool</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
+
+<a name="0x0_LibraAccount_ValidatorRole"></a>
+
+## Struct `ValidatorRole`
+
+
+
+<pre><code><b>struct</b> <a href="#0x0_LibraAccount_ValidatorRole">ValidatorRole</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>dummy_field: bool</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
+
+<a name="0x0_LibraAccount_ValidatorOperatorRole"></a>
+
+## Struct `ValidatorOperatorRole`
+
+
+
+<pre><code><b>struct</b> <a href="#0x0_LibraAccount_ValidatorOperatorRole">ValidatorOperatorRole</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>dummy_field: bool</code>
 </dt>
 <dd>
 
@@ -2616,6 +2714,113 @@ also be added. This account will be a child of
 <pre><code><b>fun</b> <a href="#0x0_LibraAccount_bump_sequence_number">bump_sequence_number</a>(signer: &signer) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
     <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(signer));
     sender_account.sequence_number = sender_account.sequence_number + 1;
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_LibraAccount_is_certified"></a>
+
+## Function `is_certified`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_is_certified">is_certified</a>&lt;RoleType: <b>copyable</b>&gt;(addr: address): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_is_certified">is_certified</a>&lt;RoleType: <b>copyable</b>&gt;(addr: address): bool <b>acquires</b> <a href="#0x0_LibraAccount_Role_temp">Role_temp</a> {
+    ::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount_Role_temp">Role_temp</a>&lt;RoleType&gt;&gt;(addr) && borrow_global&lt;<a href="#0x0_LibraAccount_Role_temp">Role_temp</a>&lt;RoleType&gt;&gt;(addr).is_certified
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_LibraAccount_decertify"></a>
+
+## Function `decertify`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_decertify">decertify</a>&lt;RoleType: <b>copyable</b>&gt;(addr: address)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_decertify">decertify</a>&lt;RoleType: <b>copyable</b>&gt;(addr: address) <b>acquires</b> <a href="#0x0_LibraAccount_Role_temp">Role_temp</a> {
+    Transaction::assert(<a href="association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(Transaction::sender()), 1002);
+    borrow_global_mut&lt;<a href="#0x0_LibraAccount_Role_temp">Role_temp</a>&lt;RoleType&gt;&gt;(addr).is_certified = <b>false</b>;
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_LibraAccount_certify"></a>
+
+## Function `certify`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_certify">certify</a>&lt;RoleType: <b>copyable</b>&gt;(addr: address)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_certify">certify</a>&lt;RoleType: <b>copyable</b>&gt;(addr: address) <b>acquires</b> <a href="#0x0_LibraAccount_Role_temp">Role_temp</a> {
+    Transaction::assert(<a href="association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(Transaction::sender()), 1002);
+    // <a href="#0x0_LibraAccount_Role">Role</a> can be only published under the account at its creation
+    borrow_global_mut&lt;<a href="#0x0_LibraAccount_Role_temp">Role_temp</a>&lt;RoleType&gt;&gt;(addr).is_certified = <b>true</b>;
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_LibraAccount_create_validator_account"></a>
+
+## Function `create_validator_account`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_validator_account">create_validator_account</a>&lt;Token&gt;(new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_validator_account">create_validator_account</a>&lt;Token&gt;(
+    new_account_address: address,
+    auth_key_prefix: vector&lt;u8&gt;,
+) {
+    Transaction::assert(<a href="association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(Transaction::sender()), 1002);
+    <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
+    <a href="event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
+    <a href="validator_config.md#0x0_ValidatorConfig_publish">ValidatorConfig::publish</a>(&new_account);
+    move_to(&new_account, <a href="#0x0_LibraAccount_Role_temp">Role_temp</a>&lt;<a href="#0x0_LibraAccount_ValidatorRole">ValidatorRole</a>&gt; { role_type: <a href="#0x0_LibraAccount_ValidatorRole">ValidatorRole</a> { }, is_certified: <b>true</b> });
+    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="empty.md#0x0_Empty_T">Empty::T</a>&gt;(new_account, auth_key_prefix, <a href="empty.md#0x0_Empty_create">Empty::create</a>(), <b>false</b>)
 }
 </code></pre>
 

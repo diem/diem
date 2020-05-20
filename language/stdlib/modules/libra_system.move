@@ -1,7 +1,12 @@
+// Error codes:
+// 1100 -> OPERATOR_ACCOUNT_DOES_NOT_EXIST
+// 1101 -> INVALID_TRANSACTION_SENDER
 address 0x0 {
 
 module LibraSystem {
+    use 0x0::LibraAccount;
     use 0x0::LibraConfig;
+    use 0x0::Option;
     use 0x0::Transaction;
     use 0x0::Signer;
     use 0x0::ValidatorConfig;
@@ -24,13 +29,9 @@ module LibraSystem {
         validators: vector<ValidatorInfo>,
     }
 
-    // ValidatorInfo public accessors
-
-    public fun get_validator_config(addr: address): ValidatorConfig::Config {
-        let validator_set = get_validator_set();
-        let validator_index_vec = get_validator_index_(&validator_set.validators, addr);
-        *&(*Vector::borrow(&validator_set.validators, *Vector::borrow(&validator_index_vec, 0))).config
-    }
+    ///////////////////////////////////////////////////////////////////////////
+    // Setup methods
+    ///////////////////////////////////////////////////////////////////////////
 
     // This can only be invoked by the ValidatorSet address to instantiate
     // the resource under that address.
@@ -48,26 +49,31 @@ module LibraSystem {
         move_to(config_account, CapabilityHolder { cap })
     }
 
-    // This returns a copy of the current validator set.
-    public fun get_validator_set(): T {
-        LibraConfig::get<T>()
-    }
-
     // This copies the vector of validators into the LibraConfig's resource
     // under ValidatorSet address
     fun set_validator_set(value: T) acquires CapabilityHolder {
         LibraConfig::set_with_capability<T>(&borrow_global<CapabilityHolder>(LibraConfig::default_config_address()).cap, value)
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+    // Methods operating the Validator Set config
+    // callable by Validator's operators
+    ///////////////////////////////////////////////////////////////////////////
+
+    // Adds a new validator, this validator should met the validity conditions
     public fun add_validator(account_address: address) acquires CapabilityHolder {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+        // Validator's operator can add its certified validator to the validator set
+        Transaction::assert(Transaction::sender() ==
+                            ValidatorConfig::get_operator(account_address), 22);
+
         // A prospective validator must have a validator config resource
-        Transaction::assert(ValidatorConfig::has(account_address), 17);
+        Transaction::assert(is_valid_and_certified(account_address), 33);
 
         let validator_set = get_validator_set();
         // Ensure that this address is not already a validator
         Transaction::assert(!is_validator_(account_address, &validator_set.validators), 18);
-
+        // Since ValidatorConfig::is_valid(account_address) == true,
+        // it is guaranteed that the config is non-empty
         let config = ValidatorConfig::get_config(account_address);
         Vector::push_back(&mut validator_set.validators, ValidatorInfo {
             addr: account_address,
@@ -80,28 +86,34 @@ module LibraSystem {
 
     // Removes a validator, only callable by the LibraAssociation address
     public fun remove_validator(account_address: address) acquires CapabilityHolder {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
-        let validator_set = get_validator_set();
+        // Validator's operator can remove its certified validator from the validator set
+        Transaction::assert(Transaction::sender() ==
+                            ValidatorConfig::get_operator(account_address), 22);
 
+        let validator_set = get_validator_set();
         // Ensure that this address is an active validator
         let to_remove_index_vec = get_validator_index_(&validator_set.validators, account_address);
-        Transaction::assert(!Vector::is_empty(&to_remove_index_vec), 21);
-        let to_remove_index = *Vector::borrow(&to_remove_index_vec, 0);
+        Transaction::assert(Option::is_some(&to_remove_index_vec), 21);
+        let to_remove_index = *Option::borrow(&to_remove_index_vec);
         // Remove corresponding ValidatorInfo from the validator set
         _  = Vector::swap_remove(&mut validator_set.validators, to_remove_index);
 
         set_validator_set(validator_set);
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+    // Methods operating the Validator Set config callable
+    // by the Validator's operators and the Association
+    ///////////////////////////////////////////////////////////////////////////
+
     // This function can be invoked by the LibraAssociation or by the 0x0 LibraVM address in
     // block_prologue to facilitate reconfigurations at regular intervals.
     // Here for all of the validators the information from ValidatorConfig will
     // get copied into the ValidatorSet.
-    // Here validators' consensus_pubkey, validator's networking information and/or
-    // validator's full-node information may change.
+    // Invalid or decertified validators will get removed from the Validator Set.
     // NewEpochEvent event will be fired.
     public fun update_and_reconfigure() acquires CapabilityHolder {
-        Transaction::assert(is_sender_authorized_(), 22);
+        Transaction::assert(is_sender_authorized_to_reconfigure_(), 22);
 
         let validator_set = get_validator_set();
         let validators = &mut validator_set.validators;
@@ -111,34 +123,46 @@ module LibraSystem {
             return
         };
 
-        let i = 0;
+        let i = size;
         let configs_changed = false;
-        while (i < size) {
-            let validator_info_update = update_ith_validator_info_(validators, i);
-
-            configs_changed = configs_changed || validator_info_update;
-            i = i + 1;
+        while (i > 0) {
+            i = i - 1;
+            // if the validator is invalid, remove it from the set
+            let validator_address = Vector::borrow(validators, i).addr;
+            if (is_valid_and_certified(validator_address)) {
+                let validator_info_update = update_ith_validator_info_(validators, i);
+                configs_changed = configs_changed || validator_info_update;
+            } else {
+                _  = Vector::swap_remove(validators, i);
+                configs_changed = true;
+            }
         };
         if (configs_changed) {
             set_validator_set(validator_set);
         };
     }
 
-    // Public getters
+    ///////////////////////////////////////////////////////////////////////////
+    // Publicly callable APIs: getters
+    ///////////////////////////////////////////////////////////////////////////
+
+    // This returns a copy of the current validator set.
+    public fun get_validator_set(): T {
+        LibraConfig::get<T>()
+    }
 
     // Return true if addr is a current validator
     public fun is_validator(addr: address): bool {
         is_validator_(addr, &get_validator_set().validators)
     }
 
-    // Returns validator info
+    // Returns validator config
     // If the address is not a validator, abort
-    public fun get_validator_info(addr: address): ValidatorInfo {
+    public fun get_validator_config(addr: address): ValidatorConfig::Config {
         let validator_set = get_validator_set();
         let validator_index_vec = get_validator_index_(&validator_set.validators, addr);
-        Transaction::assert(!Vector::is_empty(&validator_index_vec), 19);
-
-        *Vector::borrow(&validator_set.validators, *Vector::borrow(&validator_index_vec, 0))
+        Transaction::assert(Option::is_some(&validator_index_vec), 33);
+        *&(Vector::borrow(&validator_set.validators, *Option::borrow(&validator_index_vec))).config
     }
 
     // Return the size of the current validator set
@@ -151,11 +175,20 @@ module LibraSystem {
         Vector::borrow(&get_validator_set().validators, i).addr
     }
 
-    // Private helper functions
+    ///////////////////////////////////////////////////////////////////////////
+    // Private functions
+    ///////////////////////////////////////////////////////////////////////////
 
-    // The Association, the VM and the validator operator from the current validator set
-    // are authorized to update the set of validator infos
-    fun is_sender_authorized_(): bool {
+    fun is_valid_and_certified(addr: address): bool {
+        ValidatorConfig::is_valid(addr) &&
+            LibraAccount::is_certified<LibraAccount::ValidatorRole>(addr)
+            // TODO(valerini): only allow certified operators, i.e. uncomment the line
+            // && LibraAccount::is_certified<LibraAccount::ValidatorOperatorRole>(ValidatorConfig::get_operator(addr))
+    }
+
+    // The Association, the VM, the validator operator or the validator from the current validator set
+    // are authorized to update the set of validator infos and add/remove validators
+    fun is_sender_authorized_to_reconfigure_(): bool {
         // succeed fast
         if (Transaction::sender() == 0xA550C18 || Transaction::sender() == 0x0) {
             return true
@@ -167,7 +200,10 @@ module LibraSystem {
 
         let i = 0;
         while (i < size) {
-            if (ValidatorConfig::get_validator_operator_account(Vector::borrow(validators, i).addr) ==
+            if (Vector::borrow(validators, i).addr == Transaction::sender()) {
+                return true
+            };
+            if (ValidatorConfig::get_operator(Vector::borrow(validators, i).addr) ==
                 Transaction::sender()) {
                 return true
             };
@@ -177,27 +213,26 @@ module LibraSystem {
     }
 
     // Get the index of the validator by address in the `validators` vector
-    fun get_validator_index_(validators: &vector<ValidatorInfo>, addr: address): vector<u64> {
+    fun get_validator_index_(validators: &vector<ValidatorInfo>, addr: address): Option::T<u64> {
         let size = Vector::length(validators);
-        let result: vector<u64> = Vector::empty();
         if (size == 0) {
-            return result
+            return Option::none()
         };
 
         let i = 0;
         while (i < size) {
             let validator_info_ref = Vector::borrow(validators, i);
             if (validator_info_ref.addr == addr) {
-                Vector::push_back(&mut result, i);
-                return result
+                return Option::some(i)
             };
             i = i + 1;
         };
 
-        result
+        return Option::none()
     }
 
-    // Updates ith validator info, if nothing changed, return false
+    // Updates ith validator info, if nothing changed, return false.
+    // This function should never throw an assertion.
     fun update_ith_validator_info_(validators: &mut vector<ValidatorInfo>, i: u64): bool {
         let size = Vector::length(validators);
         if (i >= size) {
@@ -211,13 +246,13 @@ module LibraSystem {
         if (config_ref == &new_validator_config) {
             return false
         };
-        *config_ref = *&new_validator_config;
+        *config_ref = new_validator_config;
 
         true
     }
 
     fun is_validator_(addr: address, validators_vec_ref: &vector<ValidatorInfo>): bool {
-        !Vector::is_empty(&get_validator_index_(validators_vec_ref, addr))
+        Option::is_some(&get_validator_index_(validators_vec_ref, addr))
     }
 
 }

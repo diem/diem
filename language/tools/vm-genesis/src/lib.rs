@@ -210,7 +210,7 @@ fn initialize_validators(
 
         context.exec(
             "LibraAccount",
-            "create_testnet_account",
+            "create_validator_account",
             vec![lbr_ty.clone()],
             vec![
                 Value::address(account),
@@ -220,15 +220,6 @@ fn initialize_validators(
 
         context.set_sender(account);
         context.exec_script(registration);
-
-        context.set_sender(account_config::association_address());
-        // Finally, add the account to the validator set
-        context.exec(
-            "LibraSystem",
-            "add_validator",
-            vec![],
-            vec![Value::address(account)],
-        );
     }
 }
 

@@ -1,9 +1,8 @@
 script {
-use 0x0::LibraSystem;
+    use 0x0::LibraSystem;
 
-// Script for adding a new validator
-// Will only succeed when run by the Association address
-fun main(new_validator: address) {
-  LibraSystem::add_validator(new_validator);
-}
+    // Add Validator to the set, called by the validator's operator
+    fun main(validator_address: address) {
+        LibraSystem::add_validator(validator_address);
+    }
 }

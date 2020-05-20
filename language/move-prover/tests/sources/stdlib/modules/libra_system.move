@@ -279,7 +279,7 @@ module LibraSystem {
        emit_discovery_set_change();
    }
 
-   public fun rotate_consensus_pubkey(consensus_pubkey: vector<u8>) acquires ValidatorSet {
+   public fun set_consensus_pubkey(consensus_pubkey: vector<u8>) acquires ValidatorSet {
        let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
        let account_address = Transaction::sender();
 
@@ -289,7 +289,7 @@ module LibraSystem {
            21
        );
 
-       ValidatorConfig::rotate_consensus_pubkey(consensus_pubkey);
+       ValidatorConfig::set_consensus_pubkey(consensus_pubkey);
 
        let validator_index = get_validator_index(
            &validator_set_ref.validators,
