@@ -149,7 +149,7 @@ module Association {
         // in a schema and as a post-condition to `initialize`
         // Informally: "Only the root address has a Root{} resource."
         define only_root_addr_has_root_privilege(): bool {
-            all(addresses(), |addr| exists<Root>(addr) ==> (addr == spec_root_address()))
+            all(domain<address>(), |addr| exists<Root>(addr) ==> (addr == spec_root_address()))
         }
     }
     spec schema OnlyRootAddressHasRootPrivilege {
@@ -171,7 +171,7 @@ module Association {
         // "initialize" establishes the invariant, so it's a special case.
         // Before initialize, no addresses have a Root{} resource.
         // Afterwards, only Root {} has the root resource.
-        requires all(addresses(), |addr| !exists<Root>(addr));
+        requires all(domain<address>(), |addr| !exists<Root>(addr));
         ensures only_root_addr_has_root_privilege();
     }
 
@@ -194,7 +194,7 @@ module Association {
     // state, or, even if it did exist in the old state, it is deleted by
     // "remove_privilege."
     spec schema OnlyGrantCanCertify<Privilege> {
-       ensures all(addresses(),
+       ensures all(domain<address>(),
                    |addr1| old(!exists<PrivilegedCapability<Privilege>>(addr1)
                               || !global<PrivilegedCapability<Privilege>>(addr1).is_certified)
                         ==> (!exists<PrivilegedCapability<Privilege>>(addr1)
@@ -212,7 +212,7 @@ module Association {
 
     // *Informally:* Only remove_privilege can remove privileges
     spec schema OnlyRemoveCanRemovePrivileges<Privilege> {
-         ensures any(addresses(), |a| (old(exists<PrivilegedCapability<Privilege>>(a))
+         ensures any(domain<address>(), |a| (old(exists<PrivilegedCapability<Privilege>>(a))
                                        && !exists<PrivilegedCapability<Privilege>>(a))
                                        ==> sender() == spec_root_address());
     }
@@ -238,7 +238,7 @@ module Association {
     // > remove_privilege<T>(root_address()).
     // > I have therefore commented out the "apply"
     spec schema RootAddressIsAssociationAddress {
-        invariant all(addresses(), |a| exists<Root>(a) ==> spec_addr_is_association(a));
+        invariant all(domain<address>(), |a| exists<Root>(a) ==> spec_addr_is_association(a));
     }
     spec module {
         // except functions called from initialize before invariant is established.
