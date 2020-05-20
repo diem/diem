@@ -33,12 +33,8 @@ pub fn validator_swarm(
         nodes.push(node);
     }
 
-    let mut seed_peers = SeedPeersConfig::default();
-    let network = nodes[0].validator_network.as_ref().unwrap();
-    seed_peers
-        .seed_peers
-        .insert(network.peer_id, vec![network.listen_address.clone()]);
-
+    // set the first validator as every validators' initial configured seed peer.
+    let seed_peers = build_seed_peers(&nodes[0]);
     for node in &mut nodes {
         let network = node.validator_network.as_mut().unwrap();
         network.seed_peers = seed_peers.clone();
@@ -51,4 +47,23 @@ pub fn validator_swarm_for_testing(nodes: usize) -> ValidatorSwarm {
     let mut config = NodeConfig::default();
     config.test = Some(TestConfig::open_module());
     validator_swarm(&NodeConfig::default(), nodes, [1u8; 32], true)
+}
+
+fn build_seed_peers(config: &NodeConfig) -> SeedPeersConfig {
+    let seed_config = config.validator_network.as_ref().unwrap();
+    let seed_handshake = 0;
+    let seed_pubkey = seed_config
+        .network_keypairs
+        .as_ref()
+        .unwrap()
+        .identity_keypair
+        .public_key();
+    let seed_base_addr = seed_config.advertised_address.clone();
+    let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, seed_handshake);
+
+    let mut seed_peers = SeedPeersConfig::default();
+    seed_peers
+        .seed_peers
+        .insert(seed_config.peer_id, vec![seed_addr]);
+    seed_peers
 }

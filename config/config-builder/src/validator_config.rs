@@ -18,7 +18,7 @@ use libra_types::waypoint::Waypoint;
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::{collections::HashMap, net::SocketAddr, str::FromStr};
+use std::{net::SocketAddr, str::FromStr};
 use storage_interface::DbReaderWriter;
 
 const DEFAULT_SEED: [u8; 32] = [13u8; 32];
@@ -140,24 +140,19 @@ impl ValidatorConfig {
 
     pub fn build(&self) -> Result<NodeConfig> {
         let mut configs = self.build_set()?;
-        let first_peer_id = configs[0]
-            .validator_network
-            .as_ref()
-            .ok_or(Error::MissingValidatorNetwork)?
-            .peer_id;
-        let mut config = configs.swap_remove(self.index);
 
+        // Extract and format first node's advertised address for the cluster
+        // bootstrap.
+        let seed_peers = self.build_seed_peers(&configs[0])?;
+
+        let mut config = configs.swap_remove(self.index);
         let validator_network = config
             .validator_network
             .as_mut()
             .ok_or(Error::MissingValidatorNetwork)?;
         validator_network.listen_address = self.listen.clone();
         validator_network.advertised_address = self.advertised.clone();
-
-        let mut seed_peers = HashMap::new();
-        seed_peers.insert(first_peer_id, vec![self.bootstrap.clone()]);
-        let seed_peers_config = SeedPeersConfig { seed_peers };
-        validator_network.seed_peers = seed_peers_config;
+        validator_network.seed_peers = seed_peers;
 
         self.build_safety_rules(&mut config)?;
 
@@ -282,6 +277,29 @@ impl ValidatorConfig {
 
         Ok(())
     }
+
+    fn build_seed_peers(&self, config: &NodeConfig) -> Result<SeedPeersConfig> {
+        let seed_config = config
+            .validator_network
+            .as_ref()
+            .ok_or(Error::MissingValidatorNetwork)?;
+
+        let seed_handshake = 0;
+        let seed_pubkey = seed_config
+            .network_keypairs
+            .as_ref()
+            .ok_or(Error::MissingNetworkKeyPairs)?
+            .identity_keypair
+            .public_key();
+        let seed_base_addr = self.bootstrap.clone();
+        let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, seed_handshake);
+
+        let mut seed_peers = SeedPeersConfig::default();
+        seed_peers
+            .seed_peers
+            .insert(seed_config.peer_id, vec![seed_addr]);
+        Ok(seed_peers)
+    }
 }
 
 impl BuildSwarm for ValidatorConfig {
@@ -309,10 +327,13 @@ mod test {
             .build()
             .unwrap();
         let network = config.validator_network.as_ref().unwrap();
-        let (seed_peer_id, seed_peer_ips) = network.seed_peers.seed_peers.iter().next().unwrap();
-        assert!(&network.peer_id != seed_peer_id);
-        // These equal cause we didn't set
-        assert_eq!(network.advertised_address, seed_peer_ips[0]);
+
+        network.seed_peers.verify_libranet_addrs().unwrap();
+        let (seed_peer_id, seed_addrs) = network.seed_peers.seed_peers.iter().next().unwrap();
+        assert_eq!(seed_addrs.len(), 1);
+        assert_ne!(&network.peer_id, seed_peer_id);
+        assert_ne!(&network.advertised_address, &seed_addrs[0]);
+
         assert_eq!(
             network.advertised_address,
             NetworkAddress::from_str(DEFAULT_ADVERTISED).unwrap()
@@ -321,6 +342,7 @@ mod test {
             network.listen_address,
             NetworkAddress::from_str(DEFAULT_LISTEN).unwrap()
         );
+
         assert!(config.execution.genesis.is_some());
     }
 

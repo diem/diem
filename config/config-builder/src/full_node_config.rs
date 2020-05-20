@@ -247,13 +247,26 @@ impl FullNodeConfig {
     }
 
     fn build_seed_peers(&self, config: &NodeConfig) -> Result<SeedPeersConfig> {
-        let network = config
+        let seed_config = config
             .full_node_networks
             .last()
             .ok_or(Error::MissingFullNodeNetwork)?;
-        let mut seed_peers = HashMap::new();
-        seed_peers.insert(network.peer_id, vec![self.bootstrap.clone()]);
-        Ok(SeedPeersConfig { seed_peers })
+
+        let seed_handshake = 0;
+        let seed_pubkey = seed_config
+            .network_keypairs
+            .as_ref()
+            .ok_or(Error::MissingNetworkKeyPairs)?
+            .identity_keypair
+            .public_key();
+        let seed_base_addr = self.bootstrap.clone();
+        let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, seed_handshake);
+
+        let mut seed_peers = SeedPeersConfig::default();
+        seed_peers
+            .seed_peers
+            .insert(seed_config.peer_id, vec![seed_addr]);
+        Ok(seed_peers)
     }
 }
 
@@ -275,10 +288,13 @@ mod test {
         // should be the bootstrap
         let config = FullNodeConfig::new().build().unwrap();
         let network = &config.full_node_networks[0];
-        let (seed_peer_id, seed_peer_ips) = network.seed_peers.seed_peers.iter().next().unwrap();
+
+        network.seed_peers.verify_libranet_addrs().unwrap();
+        let (seed_peer_id, seed_addrs) = network.seed_peers.seed_peers.iter().next().unwrap();
+        assert_eq!(seed_addrs.len(), 1);
         assert_ne!(&network.peer_id, seed_peer_id);
-        // This is true because  we didn't update the DEFAULT_ADVERTISED
-        assert_eq!(network.advertised_address, seed_peer_ips[0]);
+        assert_ne!(&network.advertised_address, &seed_addrs[0]);
+
         assert_eq!(
             network.advertised_address,
             NetworkAddress::from_str(DEFAULT_ADVERTISED).unwrap()
@@ -287,6 +303,7 @@ mod test {
             network.listen_address,
             NetworkAddress::from_str(DEFAULT_LISTEN).unwrap()
         );
+
         assert!(config.execution.genesis.is_some());
     }
 
