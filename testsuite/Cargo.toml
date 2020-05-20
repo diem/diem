@@ -15,7 +15,7 @@ edition = "2018"
 [dev-dependencies]
 num = "0.2.0"
 num-traits = "0.2"
-rust_decimal = "1.5.0"
+rust_decimal = "1.6.0"
 statistical = "1"
 
 cli = { path = "cli", version = "0.1.0" }
