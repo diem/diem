@@ -154,6 +154,38 @@
 <span id="154">154</span>
 <span id="155">155</span>
 <span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -249,8 +281,40 @@
         }
     }
 
-    <span class="doccomment">/// Summarizes the modules coverage, and returns the total module coverage</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">summarize</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">Write</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">summary_writer</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">W</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">u64</span>, <span class="ident">u64</span>)<span class="op">&gt;</span> {
+    <span class="doccomment">/// Summarizes the modules coverage in CSV format</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">summarize_csv</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">Write</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">summary_writer</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">W</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">module</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+            <span class="string">&quot;{}::{}&quot;</span>,
+            <span class="self">self</span>.<span class="ident">module_name</span>.<span class="ident">address</span>(),
+            <span class="self">self</span>.<span class="ident">module_name</span>.<span class="ident">name</span>()
+        );
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">format_line</span> <span class="op">=</span> <span class="op">|</span><span class="ident">fn_name</span>, <span class="ident">covered</span>, <span class="ident">uncovered</span><span class="op">|</span> {
+            <span class="macro">writeln</span><span class="macro">!</span>(
+                <span class="ident">summary_writer</span>,
+                <span class="string">&quot;{},{},{},{}&quot;</span>,
+                <span class="ident">module</span>, <span class="ident">fn_name</span>, <span class="ident">covered</span>, <span class="ident">uncovered</span>
+            )
+        };
+
+        <span class="kw">for</span> (<span class="ident">fn_name</span>, <span class="ident">fn_summary</span>) <span class="kw">in</span> <span class="self">self</span>
+            .<span class="ident">function_summaries</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">filter</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">summary</span>)<span class="op">|</span> <span class="op">!</span><span class="ident">summary</span>.<span class="ident">fn_is_native</span>)
+        {
+            <span class="ident">format_line</span>(
+                <span class="ident">fn_name</span>,
+                <span class="ident">fn_summary</span>.<span class="ident">covered_instructions</span>,
+                <span class="ident">fn_summary</span>.<span class="ident">total_number_of_instructions</span>,
+            )<span class="question-mark">?</span>;
+        }
+
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="doccomment">/// Summarizes the modules coverage, and returns the total module coverage in a human-readable</span>
+    <span class="doccomment">/// format.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">summarize_human</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">Write</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">summary_writer</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">W</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">u64</span>, <span class="ident">u64</span>)<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">total_covered</span> <span class="op">=</span> <span class="number">0</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">total_instructions</span> <span class="op">=</span> <span class="number">0</span>;
 

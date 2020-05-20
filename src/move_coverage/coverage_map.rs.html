@@ -98,6 +98,14 @@
 <span id="98"> 98</span>
 <span id="99"> 99</span>
 <span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -130,10 +138,9 @@
 }
 
 <span class="kw">impl</span> <span class="ident">CoverageMap</span> {
-    <span class="doccomment">/// Takes in a file containing a raw VM trace, and returns a coverage map.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_trace_file</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">Path</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">filename</span>: <span class="ident">P</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="doccomment">/// Takes in a file containing a raw VM trace, and returns an updated coverage map.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">update_coverage_from_trace_file</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">Path</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">filename</span>: <span class="ident">P</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">File</span>::<span class="ident">open</span>(<span class="ident">filename</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">module_maps</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
         <span class="kw">for</span> <span class="ident">line</span> <span class="kw">in</span> <span class="ident">BufReader</span>::<span class="ident">new</span>(<span class="ident">file</span>).<span class="ident">lines</span>() {
             <span class="kw">let</span> <span class="ident">line</span> <span class="op">=</span> <span class="ident">line</span>.<span class="ident">unwrap</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">splits</span> <span class="op">=</span> <span class="ident">line</span>.<span class="ident">split</span>(<span class="string">&#39;,&#39;</span>);
@@ -147,13 +154,22 @@
                 <span class="kw">let</span> <span class="ident">func_name</span> <span class="op">=</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="ident">context_segs</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>()).<span class="ident">unwrap</span>();
                 <span class="kw">let</span> <span class="ident">module_name</span> <span class="op">=</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="ident">context_segs</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>()).<span class="ident">unwrap</span>();
                 <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">from_hex_literal</span>(<span class="ident">context_segs</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>()).<span class="ident">unwrap</span>();
-                <span class="kw">let</span> <span class="ident">entry</span> <span class="op">=</span> <span class="ident">module_maps</span>
+                <span class="kw">let</span> <span class="ident">entry</span> <span class="op">=</span> <span class="self">self</span>
+                    .<span class="ident">module_maps</span>
                     .<span class="ident">entry</span>((<span class="ident">addr</span>, <span class="ident">module_name</span>.<span class="ident">clone</span>()))
                     .<span class="ident">or_insert_with</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ModuleCoverageMap</span>::<span class="ident">new</span>(<span class="ident">addr</span>, <span class="ident">module_name</span>));
                 <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="ident">func_name</span>, <span class="ident">pc</span>);
             }
         }
-        <span class="ident">CoverageMap</span> { <span class="ident">module_maps</span> }
+        <span class="self">self</span>
+    }
+
+    <span class="doccomment">/// Takes in a file containing a raw VM trace, and returns a coverage map.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_trace_file</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">Path</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">filename</span>: <span class="ident">P</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">empty_module_map</span> <span class="op">=</span> <span class="ident">CoverageMap</span> {
+            <span class="ident">module_maps</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
+        };
+        <span class="ident">empty_module_map</span>.<span class="ident">update_coverage_from_trace_file</span>(<span class="ident">filename</span>)
     }
 
     <span class="doccomment">/// Takes in a file containing a serialized coverage map and returns a coverage map.</span>

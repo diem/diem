@@ -76,18 +76,42 @@
 <span id="76">76</span>
 <span id="77">77</span>
 <span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
+<span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">common</span>::<span class="ident">strip</span>, <span class="ident">config</span>::<span class="ident">global</span>::<span class="ident">Config</span> <span class="kw">as</span> <span class="ident">GlobalConfig</span>, <span class="ident">errors</span>::<span class="kw-2">*</span>};
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">HashValue</span>;
-<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">block_metadata</span>::<span class="ident">BlockMetadata</span>;
+<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">block_metadata</span>::<span class="ident">BlockMetadata</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Proposer</span> {
+    <span class="ident">Account</span>(<span class="ident">String</span>),
+    <span class="ident">Address</span>(<span class="ident">AccountAddress</span>),
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Entry</span> {
-    <span class="ident">Proposer</span>(<span class="ident">String</span>),
+    <span class="ident">Proposer</span>(<span class="ident">Proposer</span>),
     <span class="ident">Timestamp</span>(<span class="ident">u64</span>),
 }
 
@@ -104,7 +128,16 @@
             <span class="kw">if</span> <span class="ident">s</span>.<span class="ident">is_empty</span>() {
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ErrorKind</span>::<span class="ident">Other</span>(<span class="string">&quot;sender cannot be empty&quot;</span>.<span class="ident">to_string</span>()).<span class="ident">into</span>());
             }
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">Entry</span>::<span class="ident">Proposer</span>(<span class="ident">s</span>.<span class="ident">to_string</span>()));
+            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">Entry</span>::<span class="ident">Proposer</span>(<span class="ident">Proposer</span>::<span class="ident">Account</span>(<span class="ident">s</span>.<span class="ident">to_string</span>())));
+        }
+
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">s</span>) <span class="op">=</span> <span class="ident">strip</span>(<span class="ident">s</span>, <span class="string">&quot;proposer-address:&quot;</span>) {
+            <span class="kw">if</span> <span class="ident">s</span>.<span class="ident">is_empty</span>() {
+                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ErrorKind</span>::<span class="ident">Other</span>(<span class="string">&quot;sender address cannot be empty&quot;</span>.<span class="ident">to_string</span>()).<span class="ident">into</span>());
+            }
+            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">Entry</span>::<span class="ident">Proposer</span>(<span class="ident">Proposer</span>::<span class="ident">Address</span>(
+                <span class="ident">AccountAddress</span>::<span class="ident">from_hex_literal</span>(<span class="ident">s</span>)<span class="question-mark">?</span>,
+            )));
         }
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">s</span>) <span class="op">=</span> <span class="ident">strip</span>(<span class="ident">s</span>, <span class="string">&quot;block-time:&quot;</span>) {
@@ -143,7 +176,10 @@
     <span class="kw">for</span> <span class="ident">entry</span> <span class="kw">in</span> <span class="ident">entries</span> {
         <span class="kw">match</span> <span class="ident">entry</span> {
             <span class="ident">Entry</span>::<span class="ident">Proposer</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">proposer</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">config</span>.<span class="ident">get_account_for_name</span>(<span class="ident">s</span>)<span class="question-mark">?</span>.<span class="ident">address</span>());
+                <span class="ident">proposer</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">s</span> {
+                    <span class="ident">Proposer</span>::<span class="ident">Account</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">config</span>.<span class="ident">get_account_for_name</span>(<span class="ident">s</span>)<span class="question-mark">?</span>.<span class="ident">address</span>()),
+                    <span class="ident">Proposer</span>::<span class="ident">Address</span>(<span class="ident">addr</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">addr</span>),
+                };
             }
             <span class="ident">Entry</span>::<span class="ident">Timestamp</span>(<span class="ident">new_timestamp</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">timestamp</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">new_timestamp</span>),
         }
