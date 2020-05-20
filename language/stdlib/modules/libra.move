@@ -146,7 +146,7 @@ module Libra {
     }
 
     public fun grant_burn_capability_for_sender<CoinType>() {
-        Transaction::assert(Transaction::sender() == 0xD1E, 0);
+        Transaction::assert(Transaction::sender() == 0xB1E55ED, 0);
         move_to_sender(grant_burn_capability<CoinType>());
     }
 

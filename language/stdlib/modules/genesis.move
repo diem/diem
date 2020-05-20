@@ -77,15 +77,17 @@ module Genesis {
         LibraAccount::rotate_authentication_key(genesis_auth_key);
     }
 
-    fun initalize_burn_account() {
+    fun initalize_tc_account() {
         Association::apply_for_association();
+        Association::apply_for_privilege<LibraAccount::FreezingPrivilege>();
     }
 
-    fun grant_burn_account(burn_addr: address) {
-        Association::grant_association_address(burn_addr)
+    fun grant_tc_account(tc_addr: address) {
+        Association::grant_association_address(tc_addr);
+        Association::grant_privilege<LibraAccount::FreezingPrivilege>(tc_addr);
     }
 
-    fun grant_burn_capabilities_for_sender(auth_key: vector<u8>) {
+    fun grant_tc_capabilities_for_sender(auth_key: vector<u8>) {
         Libra::grant_burn_capability_for_sender<Coin1::T>();
         Libra::grant_burn_capability_for_sender<Coin2::T>();
         Libra::grant_burn_capability_for_sender<LBR::T>();
