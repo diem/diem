@@ -579,6 +579,8 @@ module Libra {
         pragma verify = true;
     }
 
+    // ## Currency registration
+
     spec module {
         // Address at which currencies should be registered (mirrors currency_addr)
         define spec_currency_addr(): address { 0xA550C18 }
@@ -590,6 +592,7 @@ module Libra {
         }
     }
 
+    // Sanity check -- after register_currency is called, currency should be registered.
     spec fun register_currency {
         // This doesn't verify because:
         //  1. is_registered assumes the currency is registered at the fixed
@@ -600,10 +603,7 @@ module Libra {
         //     Genesis::initialize_association(association_root_addr).
         // If the AddCurrency privilege is on an address different from
         // currency_addr(), the currency will appear not to be registered.
-        // TODO: There are many more aborts conditions and I don't want
-        // to specify them all yet.
-        // aborts_if is_registered<CoinType>();
-        // if you change next to "true", prover will report an error.
+        // If you change next to "true", prover will report an error.
         pragma verify = false;
 
         // SPEC: After register_currency, the currency is an official currency.
