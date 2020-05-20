@@ -24,6 +24,8 @@ pub enum Type {
 
     // Types only appearing in specifications
     Fun(Vec<Type>, Box<Type>),
+    TypeDomain(Box<Type>),
+    TypeLocal(Symbol),
 
     // Temporary types used during type checking
     Error,
@@ -42,10 +44,10 @@ pub enum PrimitiveType {
     U128,
     Address,
     Signer,
-    Addresses, // set of addresses, for quantification
     // Types only appearing in specifications
     Num,
     Range,
+    TypeValue,
 }
 
 /// A type substitution.
@@ -173,6 +175,7 @@ impl Type {
             }
             Type::Tuple(args) => Type::Tuple(replace_vec(args)),
             Type::Vector(et) => Type::Vector(Box::new(et.replace(params, subs))),
+            Type::TypeDomain(et) => Type::TypeDomain(Box::new(et.replace(params, subs))),
             _ => self.clone(),
         }
     }
@@ -323,6 +326,14 @@ impl Substitution {
             (Type::Vector(e1), Type::Vector(e2)) => {
                 return self.unify(display_context, &*e1, &*e2);
             }
+            (Type::TypeDomain(e1), Type::TypeDomain(e2)) => {
+                return self.unify(display_context, &*e1, &*e2);
+            }
+            (Type::TypeLocal(s1), Type::TypeLocal(s2)) => {
+                if s1 == s2 {
+                    return Ok(t1.clone());
+                }
+            }
             _ => {}
         }
 
@@ -421,6 +432,15 @@ pub enum TypeDisplayContext<'a> {
     },
 }
 
+impl<'a> TypeDisplayContext<'a> {
+    pub fn symbol_pool(&self) -> &SymbolPool {
+        match self {
+            TypeDisplayContext::WithEnv { env, .. } => env.symbol_pool(),
+            TypeDisplayContext::WithoutEnv { symbol_pool, .. } => symbol_pool,
+        }
+    }
+}
+
 /// Helper for type displays.
 pub struct TypeDisplay<'a> {
     type_: &'a Type,
@@ -459,6 +479,8 @@ impl<'a> fmt::Display for TypeDisplay<'a> {
                 f.write_str(")")
             }
             Vector(t) => write!(f, "vector<{}>", t.display(self.context)),
+            TypeDomain(t) => write!(f, "domain<{}>", t.display(self.context)),
+            TypeLocal(s) => write!(f, "{}", s.display(self.context.symbol_pool())),
             Fun(ts, t) => {
                 f.write_str("|")?;
                 comma_list(f, ts)?;
@@ -533,9 +555,9 @@ impl fmt::Display for PrimitiveType {
             U128 => f.write_str("u128"),
             Address => f.write_str("address"),
             Signer => f.write_str("signer"),
-            Addresses => f.write_str("addresses"),
             Range => f.write_str("range"),
             Num => f.write_str("num"),
+            TypeValue => f.write_str("type"),
         }
     }
 }

@@ -281,7 +281,6 @@ pub enum Operation {
     Result(usize),
     Index,
     Slice,
-    Addresses,
 
     // Binary operators
     Range,
@@ -312,6 +311,8 @@ pub enum Operation {
     Len,
     All,
     Any,
+    TypeValue,
+    TypeDomain,
     Global,
     Exists,
     Old,

@@ -13,13 +13,13 @@ module AddressQuant {
     spec module {
        // helper functions
        define atMostOne(): bool {
-            all(addresses(),
-                |a| all(addresses(),
+            all(domain<address>(),
+                |a| all(domain<address>(),
                         |b| exists<R>(a) && exists<R>(b) ==> a == b))
 
         }
         define atLeastOne(): bool {
-            any(addresses(),
+            any(domain<address>(),
                 |a| exists<R>(a))
         }
     }
@@ -29,8 +29,8 @@ module AddressQuant {
         move_to_sender<R>(R{x:1});
     }
     spec fun initialize {
-        requires all(addresses(), |a| !exists<R>(a)); // forall a: address :: !exists<R>(a)
-        ensures all(addresses(), |a| exists<R>(a) ==> a == special_addr);
+        requires all(domain<address>(), |a| !exists<R>(a)); // forall a: address :: !exists<R>(a)
+        ensures all(domain<address>(), |a| exists<R>(a) ==> a == special_addr);
         ensures atMostOne();
         ensures atLeastOne();
     }

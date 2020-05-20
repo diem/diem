@@ -82,6 +82,7 @@ function {:constructor} AddressType() : TypeValue;
 function {:constructor} StrType() : TypeValue;
 function {:constructor} VectorType(t: TypeValue) : TypeValue;
 function {:constructor} StructType(name: TypeName, ps: TypeValueArray, ts: TypeValueArray) : TypeValue;
+function {:constructor} $TypeType(): TypeValue;
 function {:constructor} ErrorType() : TypeValue;
 const DefaultTypeValue: TypeValue;
 axiom DefaultTypeValue == ErrorType();
@@ -111,6 +112,7 @@ function {:constructor} Integer(i: int): Value;
 function {:constructor} Address(a: int): Value;
 function {:constructor} Vector(v: ValueArray): Value; // used to both represent move Struct and Vector
 function {:constructor} $Range(lb: Value, ub: Value): Value;
+function {:constructor} $Type(t: TypeValue): Value;
 function {:constructor} Error(): Value;
 const DefaultValue: Value;
 axiom DefaultValue == Error();

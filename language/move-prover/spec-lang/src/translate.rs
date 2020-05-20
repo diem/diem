@@ -322,7 +322,6 @@ impl<'env> Translator<'env> {
         let num_t = &Type::new_prim(PrimitiveType::Num);
         let range_t = &Type::new_prim(PrimitiveType::Range);
         let address_t = &Type::new_prim(PrimitiveType::Address);
-        let addresses_t = &Type::new_prim(PrimitiveType::Addresses);
 
         let param_t = &Type::TypeParameter(0);
         let add_builtin = |trans: &mut Translator, name: QualifiedSymbol, entry: SpecFunEntry| {
@@ -415,9 +414,10 @@ impl<'env> Translator<'env> {
         {
             // Builtin functions.
             let vector_t = &Type::Vector(Box::new(param_t.clone()));
+            let type_t = &Type::Primitive(PrimitiveType::TypeValue);
+            let domain_t = &Type::TypeDomain(Box::new(param_t.clone()));
             let pred_t = &Type::Fun(vec![param_t.clone()], Box::new(bool_t.clone()));
             let pred_num_t = &Type::Fun(vec![num_t.clone()], Box::new(bool_t.clone()));
-            let pred_address_t = &Type::Fun(vec![address_t.clone()], Box::new(bool_t.clone()));
 
             // Transaction metadata
             add_builtin(
@@ -563,28 +563,37 @@ impl<'env> Translator<'env> {
                 },
             );
 
-            // address quantifiers
-            // addresses() is set of all addresses
+            // Type values, domains and quantifiers
             add_builtin(
                 self,
-                self.builtin_fun_symbol("addresses"),
+                self.builtin_fun_symbol("type"),
                 SpecFunEntry {
                     loc: loc.clone(),
-                    oper: Operation::Addresses,
-                    type_params: vec![],
+                    oper: Operation::TypeValue,
+                    type_params: vec![param_t.clone()],
                     arg_types: vec![],
-                    result_type: addresses_t.clone(),
+                    result_type: type_t.clone(),
                 },
             );
-
+            add_builtin(
+                self,
+                self.builtin_fun_symbol("domain"),
+                SpecFunEntry {
+                    loc: loc.clone(),
+                    oper: Operation::TypeDomain,
+                    type_params: vec![param_t.clone()],
+                    arg_types: vec![],
+                    result_type: domain_t.clone(),
+                },
+            );
             add_builtin(
                 self,
                 self.builtin_fun_symbol("all"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::All,
-                    type_params: vec![],
-                    arg_types: vec![addresses_t.clone(), pred_address_t.clone()],
+                    type_params: vec![param_t.clone()],
+                    arg_types: vec![domain_t.clone(), pred_t.clone()],
                     result_type: bool_t.clone(),
                 },
             );
@@ -594,8 +603,8 @@ impl<'env> Translator<'env> {
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Any,
-                    type_params: vec![],
-                    arg_types: vec![addresses_t.clone(), pred_address_t.clone()],
+                    type_params: vec![param_t.clone()],
+                    arg_types: vec![domain_t.clone(), pred_t.clone()],
                     result_type: bool_t.clone(),
                 },
             );
@@ -3041,15 +3050,34 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         match &ty.value {
             Apply(access, args) => {
                 if let EA::ModuleAccess_::Name(n) = &access.value {
-                    // Attempt to resolve as primitive type.
+                    let check_zero_args = |et: &mut Self, ty: Type| {
+                        if args.is_empty() {
+                            ty
+                        } else {
+                            et.error(&et.to_loc(&n.loc), "expected no type arguments");
+                            Type::Error
+                        }
+                    };
+                    // Attempt to resolve as builtin type.
                     match n.value.as_str() {
-                        "bool" => return Type::new_prim(PrimitiveType::Bool),
-                        "u8" => return Type::new_prim(PrimitiveType::U8),
-                        "u64" => return Type::new_prim(PrimitiveType::U64),
-                        "u128" => return Type::new_prim(PrimitiveType::U128),
-                        "num" => return Type::new_prim(PrimitiveType::Num),
-                        "range" => return Type::new_prim(PrimitiveType::Range),
-                        "address" => return Type::new_prim(PrimitiveType::Address),
+                        "bool" => {
+                            return check_zero_args(self, Type::new_prim(PrimitiveType::Bool))
+                        }
+                        "u8" => return check_zero_args(self, Type::new_prim(PrimitiveType::U8)),
+                        "u64" => return check_zero_args(self, Type::new_prim(PrimitiveType::U64)),
+                        "u128" => {
+                            return check_zero_args(self, Type::new_prim(PrimitiveType::U128))
+                        }
+                        "num" => return check_zero_args(self, Type::new_prim(PrimitiveType::Num)),
+                        "range" => {
+                            return check_zero_args(self, Type::new_prim(PrimitiveType::Range))
+                        }
+                        "address" => {
+                            return check_zero_args(self, Type::new_prim(PrimitiveType::Address))
+                        }
+                        "type" => {
+                            return check_zero_args(self, Type::new_prim(PrimitiveType::TypeValue))
+                        }
                         "vector" => {
                             if args.len() != 1 {
                                 self.error(
@@ -3065,8 +3093,19 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     }
                     // Attempt to resolve as a type parameter.
                     let sym = self.symbol_pool().make(n.value.as_str());
-                    if let Some(ty) = self.type_params_table.get(&sym) {
-                        return ty.clone();
+                    if let Some(ty) = self.type_params_table.get(&sym).cloned() {
+                        return check_zero_args(self, ty);
+                    }
+                    // Attempt to resolve as a type value.
+                    if let Some(entry) = self.lookup_local(sym) {
+                        let ty = entry.type_.clone();
+                        self.check_type(
+                            &self.to_loc(&n.loc),
+                            &ty,
+                            &Type::new_prim(PrimitiveType::TypeValue),
+                            "in type",
+                        );
+                        return check_zero_args(self, Type::TypeLocal(sym));
                     }
                 }
                 let loc = self.to_loc(&access.loc);
