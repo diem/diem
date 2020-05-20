@@ -25,6 +25,7 @@ use spec_lang::{
     emit, emitln,
     env::GlobalEnv,
     symbol::Symbol,
+    ty::TypeDisplayContext,
 };
 use stackless_bytecode_generator::{
     function_target::FunctionTarget, stackless_bytecode::SpecBlockId,
@@ -921,7 +922,6 @@ impl<'env> SpecTranslator<'env> {
             Operation::Index => self.translate_primitive_call("$select_vector_by_value", args),
             Operation::Slice => self.translate_primitive_call("$slice_vector", args),
             Operation::Range => self.translate_primitive_call("$Range", args),
-            Operation::Addresses => self.translate_primitive_call("Addresses", args),
 
             // Binary operators
             Operation::Add => self.translate_arith_op("+", args),
@@ -954,6 +954,12 @@ impl<'env> SpecTranslator<'env> {
             Operation::Sender => emit!(self.writer, "$TxnSender($txn)"),
             Operation::All => self.translate_all_or_exists(&loc, true, args),
             Operation::Any => self.translate_all_or_exists(&loc, false, args),
+            Operation::TypeValue => self.translate_type_value(node_id),
+            Operation::TypeDomain => self.error(
+                &loc,
+                "the `domain<T>()` function can only be used as the 1st \
+                 parameter of `all` or `any`",
+            ),
             Operation::Update => self.translate_primitive_call("$update_vector_by_value", args),
             Operation::Old => self.translate_old(args),
             Operation::MaxU8 => emit!(self.writer, "Integer(MAX_U8)"),
@@ -1042,6 +1048,12 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, ", {})", field_name);
     }
 
+    fn translate_type_value(&self, node_id: NodeId) {
+        let ty = &self.module_env().get_node_instantiation(node_id)[0];
+        let type_value = self.translate_type(ty);
+        emit!(self.writer, "$Type({})", type_value);
+    }
+
     fn translate_resource_access(&self, node_id: NodeId, args: &[Exp]) {
         let rty = &self.module_env().get_node_instantiation(node_id)[0];
         let type_value = self.translate_type(rty);
@@ -1067,10 +1079,10 @@ impl<'env> SpecTranslator<'env> {
         //      (var $r := v; exists $i: int :: $InVectorRange($v, $i) && (var x:=$r[$i]; x > 0))
         // any(r, |x| x > 0) -->
         //      (var $r := r; exists $i: int :: $InRange($r, $i) && (var x:=$i; x > 0))
-        // all(addresses, |a| P(a)) -->
-        //      (forall $a: Value :: is#Address(Value) ==> P(a))
-        // any(addresses, |a| P(a)) -->
-        //      (exists $a: Value :: is#Address(Value) && P(a))
+        // all(domain<T>(), |a| P(a)) -->
+        //      (forall $a: Value :: is#T($a) ==> P($a))
+        // any(domain<T>(), |a| P(a)) -->
+        //      (exists $a: Value :: is#T($a) && P($a))
         let quant_ty = self.module_env().get_node_type(args[0].node_id());
         let connective = if is_all { "==>" } else { "&&" };
         if let Exp::Lambda(_, vars, exp) = &args[1] {
@@ -1078,11 +1090,11 @@ impl<'env> SpecTranslator<'env> {
                 let var_name = self.module_env().symbol_pool().string(var);
                 let quant_var = self.fresh_var_name("i");
                 let mut is_vector = false;
-                let mut is_addresses = false;
+                let mut is_domain: Option<Type> = None;
                 match quant_ty {
                     Type::Vector(..) => is_vector = true,
+                    Type::TypeDomain(t) => is_domain = Some(t.as_ref().clone()),
                     Type::Primitive(PrimitiveType::Range) => (),
-                    Type::Primitive(PrimitiveType::Addresses) => is_addresses = true,
                     Type::Reference(_, b) => {
                         if let Type::Vector(..) = *b {
                             is_vector = true
@@ -1092,18 +1104,38 @@ impl<'env> SpecTranslator<'env> {
                     }
                     _ => panic!("unexpected type"),
                 };
-                if is_addresses {
-                    emit!(
-                        self.writer,
-                        "Boolean(({} {}: Value :: is#Address({}) {} ",
-                        if is_all { "forall" } else { "exists" },
-                        var_name,
-                        var_name,
-                        connective
+                if let Some(domain_ty) = is_domain {
+                    let type_check = boogie_well_formed_expr(
+                        self.module_env().env,
+                        &var_name,
+                        &domain_ty,
+                        WellFormedMode::Default,
                     );
-                    emit!(self.writer, "b#Boolean(");
-                    self.translate_exp(exp.as_ref());
-                    emit!(self.writer, ")))");
+                    if type_check.is_empty() {
+                        let tctx = TypeDisplayContext::WithEnv {
+                            env: self.module_env().env,
+                            type_param_names: None,
+                        };
+                        self.error(
+                            loc,
+                            &format!(
+                                "cannot quantify over `{}` because the type is not concrete",
+                                Type::TypeDomain(Box::new(domain_ty)).display(&tctx)
+                            ),
+                        );
+                    } else {
+                        emit!(
+                            self.writer,
+                            "Boolean(({} {}: Value :: {} {} ",
+                            if is_all { "forall" } else { "exists" },
+                            var_name,
+                            type_check,
+                            connective
+                        );
+                        emit!(self.writer, "b#Boolean(");
+                        self.translate_exp(exp.as_ref());
+                        emit!(self.writer, ")))");
+                    }
                 } else {
                     let range_tmp = self.fresh_var_name("range");
                     emit!(self.writer, "Boolean((var {} := ", range_tmp);

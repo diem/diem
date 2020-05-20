@@ -1,0 +1,23 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/functional/type_values.move:25:9 ───
+    │
+ 25 │         invariant all(domain<type>(), |t| resource_invariant_globally_defined(t));
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/type_values.move:37:5: add_R_incorrect (entry)
+    =     at tests/sources/functional/type_values.move:38:9: add_R_incorrect
+    =     at tests/sources/functional/type_values.move:37:5: add_R_incorrect (exit)
+
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/functional/type_values.move:18:9 ───
+    │
+ 18 │         ensures result == (type<T1>() != type<T2>());
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/type_values.move:14:5: simple_type_equality_incorrect (entry)
+    =     at tests/sources/functional/type_values.move:15:9: simple_type_equality_incorrect
+    =         result = <redacted>
+    =     at tests/sources/functional/type_values.move:14:5: simple_type_equality_incorrect (exit)
