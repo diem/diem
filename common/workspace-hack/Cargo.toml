@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 bytes = { version = "0.5.4", features = ["serde", "std"] }
-cc = { version = "1.0.53", features = ["jobserver", "parallel"] }
+cc = { version = "1.0.54", features = ["jobserver", "parallel"] }
 log = { version = "0.4.8", features = ["serde", "std"] }
 memchr = { version = "2.3.3", features = ["std", "use_std"] }
 num-traits = { version = "0.2.11", features = ["std"] }
