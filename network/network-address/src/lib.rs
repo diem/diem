@@ -295,8 +295,20 @@ impl NetworkAddress {
     ///
     /// ### Example
     ///
-    /// `/dns/example.com/tcp/6180` =>
-    /// `/dns/example.com/tcp/6180/ln-noise-ik/<network_pubkey>/ln-handshake/<handshake_version>`
+    /// ```rust
+    /// use libra_crypto::{traits::ValidCryptoMaterialStringExt, x25519};
+    /// use libra_network_address::NetworkAddress;
+    /// use std::str::FromStr;
+    ///
+    /// let pubkey_str = "080e287879c918794170e258bfaddd75acac5b3e350419044655e4983a487120";
+    /// let pubkey = x25519::PublicKey::from_encoded_string(pubkey_str).unwrap();
+    /// let addr = NetworkAddress::from_str("/dns/example.com/tcp/6180").unwrap();
+    /// let addr = addr.append_prod_protos(pubkey, 0);
+    /// assert_eq!(
+    ///     addr.to_string(),
+    ///     "/dns/example.com/tcp/6180/ln-noise-ik/080e287879c918794170e258bfaddd75acac5b3e350419044655e4983a487120/ln-handshake/0",
+    /// );
+    /// ```
     // TODO(philiphayes): use handshake version enum
     pub fn append_prod_protos(
         self,
@@ -312,8 +324,14 @@ impl NetworkAddress {
     ///
     /// ### Example
     ///
-    /// `/ip4/127.0.0.1/tcp/6180` =>
-    /// `/ip4/127.0.0.1/tcp/6180/ln-peerid-ex/ln-handshake/<handshake_version>`
+    /// ```rust
+    /// use libra_network_address::NetworkAddress;
+    /// use std::str::FromStr;
+    ///
+    /// let addr = NetworkAddress::from_str("/memory/123").unwrap();
+    /// let addr = addr.append_test_protos(0);
+    /// assert_eq!(addr.to_string(), "/memory/123/ln-peerid-ex/ln-handshake/0");
+    /// ```
     // TODO(philiphayes): gate with cfg(test)
     // TODO(philiphayes): use handshake version enum
     pub fn append_test_protos(self, handshake_version: u8) -> Self {
@@ -323,6 +341,31 @@ impl NetworkAddress {
 
     /// Check that a `NetworkAddress` looks like a typical LibraNet address with
     /// associated protocols.
+    ///
+    /// "typical" LibraNet addresses begin with a transport protocol:
+    ///
+    /// `"/memory/<port>"` or
+    /// `"/ip4/<addr>/tcp/<port>"` or
+    /// `"/ip6/<addr>/tcp/<port>"` or
+    /// `"/dns4/<domain>/tcp/<port>"` or
+    /// `"/dns6/<domain>/tcp/<port>"` or
+    /// `"/dns/<domain>/tcp/<port>"`
+    ///
+    /// followed by transport upgrade handshake protocols:
+    ///
+    /// `"/ln-noise-ik/<pubkey>/ln-handshake/<version>"` or
+    /// `"/ln-peerid-ex/ln-handshake/<version>"`
+    ///
+    /// ### Example
+    ///
+    /// ```rust
+    /// use libra_network_address::NetworkAddress;
+    /// use std::str::FromStr;
+    ///
+    /// let addr_str = "/ip4/1.2.3.4/tcp/6180/ln-noise-ik/080e287879c918794170e258bfaddd75acac5b3e350419044655e4983a487120/ln-handshake/0";
+    /// let addr = NetworkAddress::from_str(addr_str).unwrap();
+    /// assert!(addr.is_libranet_addr());
+    /// ```
     pub fn is_libranet_addr(&self) -> bool {
         use Protocol::*;
 
