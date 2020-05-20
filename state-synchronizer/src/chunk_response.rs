@@ -62,6 +62,12 @@ impl GetChunkResponse {
 
 impl fmt::Display for GetChunkResponse {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut txns_list = "".to_owned();
+        for txn in &self.txn_list_with_proof.transactions {
+            if let Ok(user_txn) = txn.as_signed_user_txn() {
+                txns_list = txns_list + &format!("{}:{} ", user_txn.sender(), user_txn.sequence_number());
+            }
+        }
         let txns_repr = match self.txn_list_with_proof.first_transaction_version {
             None => "empty".to_string(),
             Some(first_ver) => format!(
@@ -87,8 +93,8 @@ impl fmt::Display for GetChunkResponse {
         };
         write!(
             f,
-            "[ChunkResponse: response li: {}, txns: {}]",
-            response_li_repr, txns_repr,
+            "[ChunkResponse: response li: {}, txns: {}, list: {}]",
+            response_li_repr, txns_repr, txns_list,
         )
     }
 }

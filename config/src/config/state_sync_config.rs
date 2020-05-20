@@ -23,7 +23,7 @@ impl Default for StateSyncConfig {
         Self {
             chunk_limit: 250,
             tick_interval_ms: 100,
-            long_poll_timeout_ms: 5_000,
+            long_poll_timeout_ms: 30_000,
             max_chunk_limit: 1000,
             max_timeout_ms: 120_000,
         }
