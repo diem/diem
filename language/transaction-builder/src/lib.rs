@@ -345,6 +345,24 @@ pub fn encode_mint_script(
     )
 }
 
+/// Encode a program creating `amount` LBR for `address`
+pub fn encode_mint_lbr_to_address_script(
+    address: &AccountAddress,
+    auth_key_prefix: Vec<u8>,
+    amount: u64,
+) -> Script {
+    validate_auth_key_prefix(&auth_key_prefix);
+    Script::new(
+        StdlibScript::MintLbrToAddress.compiled_bytes().into_vec(),
+        vec![],
+        vec![
+            TransactionArgument::Address(*address),
+            TransactionArgument::U8Vector(auth_key_prefix),
+            TransactionArgument::U64(amount),
+        ],
+    )
+}
+
 pub fn encode_publishing_option_script(config: VMPublishingOption) -> Script {
     let bytes = lcs::to_bytes(&config).expect("Cannot deserialize VMPublishingOption");
     Script::new(

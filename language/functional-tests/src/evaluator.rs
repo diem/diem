@@ -285,7 +285,7 @@ fn get_transaction_parameters<'a>(
             config.sender,
             account_config::from_currency_code_string(&gas_currency_code).unwrap(),
         )
-        .unwrap();
+        .unwrap_or_else(|| panic!("Couldn't read balance of type {:?} for account {:?}; did you forget to specify //! gas-currency: {:?} ?", config.sender.address(), gas_currency_code, gas_currency_code));
     let max_number_of_gas_units = GasConstants::default().maximum_number_of_gas_units;
     let max_gas_amount = config.max_gas.unwrap_or_else(|| {
         if gas_unit_price == 0 {

@@ -423,15 +423,23 @@ impl ClientProxy {
         ensure!(num_coins > 0, "Invalid number of coins to mint.");
 
         match self.faucet_account {
-            Some(_) => self.association_transaction_with_local_faucet_account(
-                transaction_builder::encode_mint_script(
-                    type_tag_for_currency_code(currency_code),
-                    &receiver,
-                    receiver_auth_key.prefix().to_vec(),
-                    num_coins,
-                ),
-                is_blocking,
-            ),
+            Some(_) => {
+                let script = if mint_currency == "LBR" {
+                    transaction_builder::encode_mint_lbr_to_address_script(
+                        &receiver,
+                        receiver_auth_key.prefix().to_vec(),
+                        num_coins,
+                    )
+                } else {
+                    transaction_builder::encode_mint_script(
+                        type_tag_for_currency_code(currency_code),
+                        &receiver,
+                        receiver_auth_key.prefix().to_vec(),
+                        num_coins,
+                    )
+                };
+                self.association_transaction_with_local_faucet_account(script, is_blocking)
+            }
             None => self.mint_coins_with_faucet_service(
                 receiver_auth_key,
                 num_coins,

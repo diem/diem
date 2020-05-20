@@ -165,27 +165,3 @@ pub fn rotate_consensus_pubkey_txn(
         LBR_NAME.to_owned(),
     )
 }
-
-/// Returns a transaction to mint new funds with the given arguments.
-pub fn mint_txn(
-    sender: &Account,
-    receiver: &Account,
-    seq_num: u64,
-    transfer_amount: u64,
-) -> SignedTransaction {
-    let mut args: Vec<TransactionArgument> = Vec::new();
-    args.push(TransactionArgument::Address(*receiver.address()));
-    args.push(TransactionArgument::U8Vector(receiver.auth_key_prefix()));
-    args.push(TransactionArgument::U64(transfer_amount));
-
-    // get a SignedTransaction
-    sender.create_signed_txn_with_args(
-        StdlibScript::Mint.compiled_bytes().into_vec(),
-        vec![lbr_type_tag()],
-        args,
-        seq_num,
-        gas_costs::TXN_RESERVED, // this is a default for gas
-        0,                       // this is a default for gas
-        LBR_NAME.to_owned(),
-    )
-}

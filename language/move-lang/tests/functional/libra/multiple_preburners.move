@@ -5,7 +5,7 @@
 //! account: alice, 0Coin1
 //! account: bob, 0Coin1
 //! account: carol, 0Coin1
-//! account: libraalice, 0LBR
+//! account: dawn, 0Coin2
 
 // allocate funds to alice, bob and carol
 //! sender: association
@@ -218,40 +218,42 @@ fun main() {
 //! sender: association
 //! max-gas: 1000000
 script {
-use 0x0::LBR;
+use 0x0::Coin2;
 use 0x0::LibraAccount;
 fun main() {
-    LibraAccount::mint_to_address<LBR::T>({{libraalice}}, 200);
+    LibraAccount::mint_to_address<Coin2::T>({{dawn}}, 200);
 }
 }
 // check: EXECUTED
 
-// publish preburn resource for LBR to alice's account
+// publish preburn resource for Coin2 to alice's account
 //! new-transaction
-//! sender: libraalice
+//! sender: dawn
 //! max-gas: 1000000
+//! gas-currency: Coin2
 script {
-use 0x0::LBR;
+use 0x0::Coin2;
 use 0x0::Libra;
 use 0x0::LibraAccount;
 fun main() {
-    Libra::publish_preburn(Libra::new_preburn<LBR::T>());
-    let coin = LibraAccount::withdraw_from_sender<LBR::T>(100);
-    Libra::preburn_to_sender<LBR::T>(coin);
+    Libra::publish_preburn(Libra::new_preburn<Coin2::T>());
+    let coin = LibraAccount::withdraw_from_sender<Coin2::T>(100);
+    Libra::preburn_to_sender<Coin2::T>(coin);
 }
 }
 
 // Try to destroy the preburn, but it will fail since there is an
 // outstanding preburn request.
 //! new-transaction
-//! sender: libraalice
+//! sender: dawn
 //! max-gas: 1000000
+//! gas-currency: Coin2
 script {
-use 0x0::LBR;
+use 0x0::Coin2;
 use 0x0::Libra;
 fun main() {
     Libra::destroy_preburn(
-        Libra::remove_preburn<LBR::T>()
+        Libra::remove_preburn<Coin2::T>()
     );
 }
 }
@@ -262,24 +264,25 @@ fun main() {
 //! sender: association
 //! max-gas: 1000000
 script {
-use 0x0::LBR;
+use 0x0::Coin2;
 use 0x0::LibraAccount;
 fun main() {
-    LibraAccount::cancel_burn<LBR::T>({{libraalice}});
+    LibraAccount::cancel_burn<Coin2::T>({{dawn}});
 }
 }
 // check: EXECUTED
 
 // Now destroy the preburn
 //! new-transaction
-//! sender: libraalice
+//! sender: dawn
 //! max-gas: 1000000
+//! gas-currency: Coin2
 script {
-use 0x0::LBR;
+use 0x0::Coin2;
 use 0x0::Libra;
 fun main() {
     Libra::destroy_preburn(
-        Libra::remove_preburn<LBR::T>()
+        Libra::remove_preburn<Coin2::T>()
     );
 }
 }
