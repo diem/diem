@@ -311,6 +311,7 @@
 <span id="311">311</span>
 <span id="312">312</span>
 <span id="313">313</span>
+<span id="314">314</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -413,19 +414,20 @@
             <span class="ident">PrimitiveType</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;AddressType()&quot;</span>.<span class="ident">to_string</span>(),
             <span class="comment">// TODO fix this for a real boogie type</span>
             <span class="ident">PrimitiveType</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;AddressType()&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">PrimitiveType</span>::<span class="ident">Addresses</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;AddressesType()&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">PrimitiveType</span>::<span class="ident">Range</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;RangeType()&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="ident">PrimitiveType</span>::<span class="ident">TypeValue</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;$TypeType()&quot;</span>.<span class="ident">to_string</span>(),
         },
         <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">t</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$Vector_type_value({})&quot;</span>, <span class="ident">boogie_type_value</span>(<span class="ident">env</span>, <span class="ident">t</span>)),
         <span class="ident">Type</span>::<span class="ident">Reference</span>(<span class="kw">_</span>, <span class="ident">t</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;ReferenceType({})&quot;</span>, <span class="ident">boogie_type_value</span>(<span class="ident">env</span>, <span class="ident">t</span>)),
         <span class="ident">Type</span>::<span class="ident">TypeParameter</span>(<span class="ident">index</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$tv{}&quot;</span>, <span class="ident">index</span>),
+        <span class="ident">Type</span>::<span class="ident">TypeLocal</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;t#$Type({})&quot;</span>, <span class="ident">s</span>.<span class="ident">display</span>(<span class="ident">env</span>.<span class="ident">symbol_pool</span>())),
         <span class="ident">Type</span>::<span class="ident">Struct</span>(<span class="ident">module_id</span>, <span class="ident">struct_id</span>, <span class="ident">args</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">boogie_struct_type_value</span>(<span class="ident">env</span>, <span class="kw-2">*</span><span class="ident">module_id</span>, <span class="kw-2">*</span><span class="ident">struct_id</span>, <span class="ident">args</span>)
         }
         <span class="comment">// TODO: function and tuple types?</span>
         <span class="ident">Type</span>::<span class="ident">Tuple</span>(<span class="ident">_args</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;Tuple_type_value()&quot;</span>.<span class="ident">to_string</span>(),
         <span class="ident">Type</span>::<span class="ident">Fun</span>(<span class="ident">_args</span>, <span class="ident">_result</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;Function_type_value()&quot;</span>.<span class="ident">to_string</span>(),
-        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;unexpected transient type&quot;</span>),
+        <span class="ident">Type</span>::<span class="ident">Error</span> <span class="op">|</span> <span class="ident">Type</span>::<span class="ident">Var</span>(..) <span class="op">|</span> <span class="ident">Type</span>::<span class="ident">TypeDomain</span>(..) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;unexpected transient type&quot;</span>),
     }
 }
 
@@ -500,8 +502,8 @@
             <span class="ident">PrimitiveType</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;is#Address({})&quot;</span>, <span class="ident">name</span>)),
             <span class="comment">// TODO fix this for a real boogie check</span>
             <span class="ident">PrimitiveType</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;is#Address({})&quot;</span>, <span class="ident">name</span>)),
-            <span class="ident">PrimitiveType</span>::<span class="ident">Addresses</span> <span class="op">=</span><span class="op">&gt;</span> (), <span class="comment">// not needed</span>
             <span class="ident">PrimitiveType</span>::<span class="ident">Range</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$IsValidRange({})&quot;</span>, <span class="ident">name</span>)),
+            <span class="ident">PrimitiveType</span>::<span class="ident">TypeValue</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;is#$Type({})&quot;</span>, <span class="ident">name</span>)),
         },
         <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">elem_ty</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$Vector_is_well_formed({})&quot;</span>, <span class="ident">name</span>));
@@ -549,9 +551,9 @@
         <span class="comment">// TODO: tuple and functions?</span>
         <span class="ident">Type</span>::<span class="ident">Fun</span>(<span class="ident">_args</span>, <span class="ident">_result</span>) <span class="op">=</span><span class="op">&gt;</span> {}
         <span class="ident">Type</span>::<span class="ident">Tuple</span>(<span class="ident">_elems</span>) <span class="op">=</span><span class="op">&gt;</span> {}
-        <span class="comment">// A type parameter is opaque, so no type check here.</span>
-        <span class="ident">Type</span>::<span class="ident">TypeParameter</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {}
-        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;unexpected transient type&quot;</span>),
+        <span class="comment">// A type parameter or type value is opaque, so no type check here.</span>
+        <span class="ident">Type</span>::<span class="ident">TypeParameter</span>(..) <span class="op">|</span> <span class="ident">Type</span>::<span class="ident">TypeLocal</span>(..) <span class="op">=</span><span class="op">&gt;</span> {}
+        <span class="ident">Type</span>::<span class="ident">Error</span> <span class="op">|</span> <span class="ident">Type</span>::<span class="ident">Var</span>(..) <span class="op">|</span> <span class="ident">Type</span>::<span class="ident">TypeDomain</span>(..) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;unexpected transient type&quot;</span>),
     }
     <span class="ident">conds</span>.<span class="ident">iter</span>().<span class="ident">filter</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="op">!</span><span class="ident">s</span>.<span class="ident">is_empty</span>()).<span class="ident">join</span>(<span class="string">&quot; &amp;&amp; &quot;</span>)
 }

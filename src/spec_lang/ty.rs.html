@@ -539,6 +539,28 @@
 <span id="539">539</span>
 <span id="540">540</span>
 <span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
+<span id="562">562</span>
+<span id="563">563</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -566,6 +588,8 @@
 
     <span class="comment">// Types only appearing in specifications</span>
     <span class="ident">Fun</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
+    <span class="ident">TypeDomain</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
+    <span class="ident">TypeLocal</span>(<span class="ident">Symbol</span>),
 
     <span class="comment">// Temporary types used during type checking</span>
     <span class="ident">Error</span>,
@@ -584,10 +608,10 @@
     <span class="ident">U128</span>,
     <span class="ident">Address</span>,
     <span class="ident">Signer</span>,
-    <span class="ident">Addresses</span>, <span class="comment">// set of addresses, for quantification</span>
     <span class="comment">// Types only appearing in specifications</span>
     <span class="ident">Num</span>,
     <span class="ident">Range</span>,
+    <span class="ident">TypeValue</span>,
 }
 
 <span class="doccomment">/// A type substitution.</span>
@@ -715,6 +739,7 @@
             }
             <span class="ident">Type</span>::<span class="ident">Tuple</span>(<span class="ident">args</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">Tuple</span>(<span class="ident">replace_vec</span>(<span class="ident">args</span>)),
             <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">et</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">et</span>.<span class="ident">replace</span>(<span class="ident">params</span>, <span class="ident">subs</span>))),
+            <span class="ident">Type</span>::<span class="ident">TypeDomain</span>(<span class="ident">et</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">TypeDomain</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">et</span>.<span class="ident">replace</span>(<span class="ident">params</span>, <span class="ident">subs</span>))),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">clone</span>(),
         }
     }
@@ -865,6 +890,14 @@
             (<span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">e1</span>), <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">e2</span>)) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">return</span> <span class="self">self</span>.<span class="ident">unify</span>(<span class="ident">display_context</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">e1</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">e2</span>);
             }
+            (<span class="ident">Type</span>::<span class="ident">TypeDomain</span>(<span class="ident">e1</span>), <span class="ident">Type</span>::<span class="ident">TypeDomain</span>(<span class="ident">e2</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">return</span> <span class="self">self</span>.<span class="ident">unify</span>(<span class="ident">display_context</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">e1</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">e2</span>);
+            }
+            (<span class="ident">Type</span>::<span class="ident">TypeLocal</span>(<span class="ident">s1</span>), <span class="ident">Type</span>::<span class="ident">TypeLocal</span>(<span class="ident">s2</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">if</span> <span class="ident">s1</span> <span class="op">=</span><span class="op">=</span> <span class="ident">s2</span> {
+                    <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">t1</span>.<span class="ident">clone</span>());
+                }
+            }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {}
         }
 
@@ -963,6 +996,15 @@
     },
 }
 
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">TypeDisplayContext</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">symbol_pool</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">SymbolPool</span> {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">TypeDisplayContext</span>::<span class="ident">WithEnv</span> { <span class="ident">env</span>, .. } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">env</span>.<span class="ident">symbol_pool</span>(),
+            <span class="ident">TypeDisplayContext</span>::<span class="ident">WithoutEnv</span> { <span class="ident">symbol_pool</span>, .. } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">symbol_pool</span>,
+        }
+    }
+}
+
 <span class="doccomment">/// Helper for type displays.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TypeDisplay</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="ident">type_</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Type</span>,
@@ -1001,6 +1043,8 @@
                 <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;)&quot;</span>)
             }
             <span class="ident">Vector</span>(<span class="ident">t</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;vector&lt;{}&gt;&quot;</span>, <span class="ident">t</span>.<span class="ident">display</span>(<span class="self">self</span>.<span class="ident">context</span>)),
+            <span class="ident">TypeDomain</span>(<span class="ident">t</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;domain&lt;{}&gt;&quot;</span>, <span class="ident">t</span>.<span class="ident">display</span>(<span class="self">self</span>.<span class="ident">context</span>)),
+            <span class="ident">TypeLocal</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">s</span>.<span class="ident">display</span>(<span class="self">self</span>.<span class="ident">context</span>.<span class="ident">symbol_pool</span>())),
             <span class="ident">Fun</span>(<span class="ident">ts</span>, <span class="ident">t</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;|&quot;</span>)<span class="question-mark">?</span>;
                 <span class="ident">comma_list</span>(<span class="ident">f</span>, <span class="ident">ts</span>)<span class="question-mark">?</span>;
@@ -1075,9 +1119,9 @@
             <span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;u128&quot;</span>),
             <span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;address&quot;</span>),
             <span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;signer&quot;</span>),
-            <span class="ident">Addresses</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;addresses&quot;</span>),
             <span class="ident">Range</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;range&quot;</span>),
             <span class="ident">Num</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;num&quot;</span>),
+            <span class="ident">TypeValue</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;type&quot;</span>),
         }
     }
 }
