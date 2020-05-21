@@ -256,6 +256,7 @@
 <span id="256">256</span>
 <span id="257">257</span>
 <span id="258">258</span>
+<span id="259">259</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -415,10 +416,11 @@
         <span class="ident">balance_currency_code</span>: <span class="ident">Identifier</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">BalanceResource</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">ap</span> <span class="op">=</span> <span class="ident">account</span>.<span class="ident">make_balance_access_path</span>(<span class="ident">balance_currency_code</span>);
-        <span class="kw">let</span> <span class="ident">data_blob</span> <span class="op">=</span> <span class="ident">StateView</span>::<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data_store</span>, <span class="kw-2">&amp;</span><span class="ident">ap</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;account must exist in data store&quot;</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;data must exist in data store&quot;</span>);
-        <span class="ident">lcs</span>::<span class="ident">from_bytes</span>(<span class="ident">data_blob</span>.<span class="ident">as_slice</span>()).<span class="ident">ok</span>()
+        <span class="ident">StateView</span>::<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data_store</span>, <span class="kw-2">&amp;</span><span class="ident">ap</span>)
+            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;account {:?} must exist in data store&quot;</span>, <span class="ident">account</span>.<span class="ident">address</span>()))
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">data_blob</span><span class="op">|</span> {
+                <span class="ident">lcs</span>::<span class="ident">from_bytes</span>(<span class="ident">data_blob</span>.<span class="ident">as_slice</span>()).<span class="ident">expect</span>(<span class="string">&quot;Failure decoding balance resource&quot;</span>)
+            })
     }
 
     <span class="doccomment">/// Executes the given block of transactions.</span>
