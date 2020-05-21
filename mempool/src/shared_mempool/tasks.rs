@@ -351,6 +351,11 @@ pub(crate) async fn process_state_sync_request(
     mempool: Arc<Mutex<CoreMempool>>,
     req: CommitNotification,
 ) {
+    let mut txns_rep = "".to_owned();
+    for txn in &req.transactions {
+        txns_rep = txns_rep + &format!("{}:{} ", txn.sender, txn.sequence_number);
+    }
+    debug!("[mempool] committed txns {}", txns_rep);
     commit_txns(&mempool, req.transactions, req.block_timestamp_usecs, false).await;
     // send back to callback
     if let Err(e) = req
