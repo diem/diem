@@ -2634,6 +2634,30 @@
 <span id="2634">2634</span>
 <span id="2635">2635</span>
 <span id="2636">2636</span>
+<span id="2637">2637</span>
+<span id="2638">2638</span>
+<span id="2639">2639</span>
+<span id="2640">2640</span>
+<span id="2641">2641</span>
+<span id="2642">2642</span>
+<span id="2643">2643</span>
+<span id="2644">2644</span>
+<span id="2645">2645</span>
+<span id="2646">2646</span>
+<span id="2647">2647</span>
+<span id="2648">2648</span>
+<span id="2649">2649</span>
+<span id="2650">2650</span>
+<span id="2651">2651</span>
+<span id="2652">2652</span>
+<span id="2653">2653</span>
+<span id="2654">2654</span>
+<span id="2655">2655</span>
+<span id="2656">2656</span>
+<span id="2657">2657</span>
+<span id="2658">2658</span>
+<span id="2659">2659</span>
+<span id="2660">2660</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -4326,6 +4350,30 @@
         }
 
         <span class="prelude-val">Ok</span>(<span class="ident">NativeResult</span>::<span class="ident">ok</span>(<span class="ident">cost</span>, <span class="macro">vec</span><span class="macro">!</span>[]))
+    }
+}
+
+<span class="comment">/***************************************************************************************
+*
+* Signer
+*
+*   Native function imeplementations of the Signer module.
+**************************************************************************************/</span>
+
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">signer</span> {
+    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">loaded_data</span>::<span class="ident">runtime_types</span>::<span class="ident">Type</span>, <span class="ident">natives</span>::<span class="ident">function</span>::<span class="ident">NativeContext</span>};
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">native_borrow_address</span>(
+        <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw">impl</span> <span class="ident">NativeContext</span>,
+        <span class="ident">_ty_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>,
+        <span class="kw-2">mut</span> <span class="ident">arguments</span>: <span class="ident">VecDeque</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">NativeResult</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">arg</span> <span class="op">=</span> <span class="ident">arguments</span>.<span class="ident">pop_front</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">signer_reference</span> <span class="op">=</span> <span class="ident">arg</span>.<span class="ident">value_as</span>::<span class="op">&lt;</span><span class="ident">ContainerRef</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">address_reference</span> <span class="op">=</span> <span class="ident">Value</span>(<span class="ident">signer_reference</span>.<span class="ident">borrow_elem</span>(<span class="number">0</span>)<span class="question-mark">?</span>);
+        <span class="kw">let</span> <span class="ident">cost</span> <span class="op">=</span> <span class="ident">native_gas</span>(<span class="ident">context</span>.<span class="ident">cost_table</span>(), <span class="ident">NativeCostIndex</span>::<span class="ident">SIGNER_BORROW</span>, <span class="number">1</span>);
+        <span class="prelude-val">Ok</span>(<span class="ident">NativeResult</span>::<span class="ident">ok</span>(<span class="ident">cost</span>, <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">address_reference</span>]))
     }
 }
 

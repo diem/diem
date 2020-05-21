@@ -177,6 +177,9 @@
 <span id="177">177</span>
 <span id="178">178</span>
 <span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -193,7 +196,7 @@
     <span class="ident">gas_schedule</span>::<span class="ident">CostStrategy</span>,
     <span class="ident">loaded_data</span>::{<span class="ident">runtime_types</span>::<span class="ident">Type</span>, <span class="ident">types</span>::<span class="ident">FatType</span>},
     <span class="ident">natives</span>::<span class="ident">function</span>::{<span class="ident">NativeContext</span>, <span class="ident">NativeResult</span>},
-    <span class="ident">values</span>::{<span class="ident">debug</span>, <span class="ident">vector</span>, <span class="ident">Struct</span>, <span class="ident">Value</span>},
+    <span class="ident">values</span>::{<span class="ident">debug</span>, <span class="ident">signer</span>, <span class="ident">vector</span>, <span class="ident">Struct</span>, <span class="ident">Value</span>},
 };
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">VecDeque</span>, <span class="ident">fmt</span>::<span class="ident">Write</span>};
 <span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">errors</span>::<span class="ident">VMResult</span>;
@@ -224,6 +227,7 @@
     <span class="ident">AccountSaveAccount</span>,
     <span class="ident">DebugPrint</span>,
     <span class="ident">DebugPrintStackTrace</span>,
+    <span class="ident">SignerBorrowAddress</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">NativeFunction</span> {
@@ -256,6 +260,7 @@
             (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;LibraAccount&quot;</span>, <span class="string">&quot;save_account&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AccountSaveAccount</span>,
             (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;Debug&quot;</span>, <span class="string">&quot;print&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">DebugPrint</span>,
             (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;Debug&quot;</span>, <span class="string">&quot;print_stack_trace&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">DebugPrintStackTrace</span>,
+            (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;Signer&quot;</span>, <span class="string">&quot;borrow_address&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SignerBorrowAddress</span>,
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">None</span>,
         })
     }
@@ -289,6 +294,7 @@
             <span class="self">Self</span>::<span class="ident">LCSToBytes</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">lcs</span>::<span class="ident">native_to_bytes</span>(<span class="ident">ctx</span>, <span class="ident">t</span>, <span class="ident">v</span>),
             <span class="self">Self</span>::<span class="ident">DebugPrint</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">debug</span>::<span class="ident">native_print</span>(<span class="ident">ctx</span>, <span class="ident">t</span>, <span class="ident">v</span>),
             <span class="self">Self</span>::<span class="ident">DebugPrintStackTrace</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">debug</span>::<span class="ident">native_print_stack_trace</span>(<span class="ident">ctx</span>, <span class="ident">t</span>, <span class="ident">v</span>),
+            <span class="self">Self</span>::<span class="ident">SignerBorrowAddress</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">signer</span>::<span class="ident">native_borrow_address</span>(<span class="ident">ctx</span>, <span class="ident">t</span>, <span class="ident">v</span>),
         }
     }
 }
