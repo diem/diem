@@ -542,7 +542,9 @@ fn test_startup_sync_state() {
     let mut client_proxy_0 = env.get_validator_ac_client(0, None);
     let sender_address = accounts[0].address;
     client_proxy_0.set_accounts(accounts);
-    client_proxy_0.wait_for_transaction(sender_address, 1);
+    client_proxy_0
+        .wait_for_transaction(sender_address, 1)
+        .unwrap();
     assert!(compare_balances(
         vec![(90.0, "LBR".to_string())],
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
@@ -554,7 +556,9 @@ fn test_startup_sync_state() {
     client_proxy_1
         .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
         .unwrap();
-    client_proxy_0.wait_for_transaction(sender_address, 2);
+    client_proxy_0
+        .wait_for_transaction(sender_address, 2)
+        .unwrap();
     assert!(compare_balances(
         vec![(80.0, "LBR".to_string())],
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
@@ -609,7 +613,9 @@ fn test_startup_sync_state_with_empty_consensus_db() {
     let mut client_proxy_0 = env.get_validator_ac_client(0, None);
     let sender_address = accounts[0].address;
     client_proxy_0.set_accounts(accounts);
-    client_proxy_0.wait_for_transaction(sender_address, 1);
+    client_proxy_0
+        .wait_for_transaction(sender_address, 1)
+        .unwrap();
     assert!(compare_balances(
         vec![(90.0, "LBR".to_string())],
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
@@ -621,7 +627,9 @@ fn test_startup_sync_state_with_empty_consensus_db() {
     client_proxy_1
         .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
         .unwrap();
-    client_proxy_0.wait_for_transaction(sender_address, 2);
+    client_proxy_0
+        .wait_for_transaction(sender_address, 2)
+        .unwrap();
     assert!(compare_balances(
         vec![(80.0, "LBR".to_string())],
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
@@ -755,8 +763,8 @@ fn test_external_transaction_signer() {
     );
     let receiver_auth_key = receiver_auth_key_opt.unwrap();
     let amount = 1_000_000;
-    let gas_unit_price = 123;
-    let max_gas_amount = 1000;
+    let gas_unit_price = 1;
+    let max_gas_amount = 1000000;
 
     // mint to the sender address
     client_proxy
@@ -876,7 +884,9 @@ fn test_full_node_basic_flow() {
 
     // ensure the client has up-to-date sequence number after test_smoke_script(3 minting)
     let sender_account = association_address();
-    full_node_client.wait_for_transaction(sender_account, 4);
+    full_node_client
+        .wait_for_transaction(sender_account, 4)
+        .unwrap();
     for idx in 0..3 {
         validator_ac_client.create_next_account(false).unwrap();
         full_node_client.create_next_account(false).unwrap();
@@ -915,7 +925,9 @@ fn test_full_node_basic_flow() {
     let sequence = full_node_client
         .get_sequence_number(&sequence_reset_command)
         .unwrap();
-    validator_ac_client.wait_for_transaction(sender_account, sequence);
+    validator_ac_client
+        .wait_for_transaction(sender_account, sequence)
+        .unwrap();
     assert!(compare_balances(
         vec![(10.0, "LBR".to_string())],
         validator_ac_client.get_balances(&["b", "3"]).unwrap()
@@ -940,7 +952,9 @@ fn test_full_node_basic_flow() {
     let sequence = validator_ac_client
         .get_sequence_number(&sequence_reset_command)
         .unwrap();
-    full_node_client.wait_for_transaction(sender_account, sequence);
+    full_node_client
+        .wait_for_transaction(sender_account, sequence)
+        .unwrap();
 
     assert!(compare_balances(
         vec![(10.0, "LBR".to_string())],
@@ -973,7 +987,9 @@ fn test_full_node_basic_flow() {
     let sequence = validator_ac_client
         .get_sequence_number(&["sequence", &format!("{}", account3), "true"])
         .unwrap();
-    full_node_client_2.wait_for_transaction(account3, sequence);
+    full_node_client_2
+        .wait_for_transaction(account3, sequence)
+        .unwrap();
     assert!(compare_balances(
         vec![(0.0, "LBR".to_string())],
         full_node_client_2.get_balances(&["b", "3"]).unwrap()
@@ -999,7 +1015,9 @@ fn test_e2e_reconfiguration() {
         client_proxy_1.get_balances(&["b", "0"]).unwrap()
     ));
     // wait for the mint txn in node 0
-    client_proxy_0.wait_for_transaction(association_address(), 2);
+    client_proxy_0
+        .wait_for_transaction(association_address(), 2)
+        .unwrap();
     assert!(compare_balances(
         vec![(10.0, "LBR".to_string())],
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
@@ -1031,7 +1049,9 @@ fn test_e2e_reconfiguration() {
         .add_validator(&["add_validator", &peer_id], true)
         .unwrap();
     // Wait for it catches up, mint1 + remove + mint2 + add => seq == 5
-    client_proxy_0.wait_for_transaction(association_address(), 5);
+    client_proxy_0
+        .wait_for_transaction(association_address(), 5)
+        .unwrap();
     assert!(compare_balances(
         vec![(20.0, "LBR".to_string())],
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
@@ -1196,7 +1216,7 @@ fn test_malformed_script() {
     // the script expects two arguments. Passing only one in the test, which will cause a failure.
     client_proxy
         .execute_script(&["execute", "0", &script_compiled_path[..], "10"])
-        .unwrap();
+        .expect_err("malformed script did not fail!");
 
     // Previous transaction should not choke the system.
     client_proxy
