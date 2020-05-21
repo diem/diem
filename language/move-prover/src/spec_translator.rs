@@ -431,7 +431,7 @@ impl<'env> SpecTranslator<'env> {
             .get_spec()
             .filter(|c| match c.kind {
                 ConditionKind::Requires => true,
-                ConditionKind::RequiresModule => func_target.is_public(),
+                ConditionKind::RequiresModule => true,
                 _ => false,
             })
             .collect_vec();
