@@ -608,6 +608,17 @@
 <span id="608">608</span>
 <span id="609">609</span>
 <span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
+<span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
+<span id="620">620</span>
+<span id="621">621</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -661,6 +672,15 @@
 }
 
 <span class="kw">impl</span> <span class="ident">LibraNode</span> {
+    <span class="doccomment">/// Prior to using LibraSwarm this should be run. LibraSwarm will acquire ephemeral networking</span>
+    <span class="doccomment">/// ports that are only reserved in a safe state for a brief period of time.</span>
+    <span class="doccomment">/// workspace_builder::get_bin actually compiles all of the Libra code base which can take</span>
+    <span class="doccomment">/// substantially longer time than the networking ports are reserved. Calling prior to</span>
+    <span class="doccomment">/// reserving those ports will reduce the liklihood of issues.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">prepare</span>() {
+        <span class="ident">Command</span>::<span class="ident">new</span>(<span class="ident">workspace_builder</span>::<span class="ident">get_bin</span>(<span class="ident">LIBRA_NODE_BIN</span>));
+    }
+
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">launch</span>(
         <span class="ident">node_id</span>: <span class="ident">String</span>,
         <span class="ident">role</span>: <span class="ident">RoleType</span>,
@@ -900,6 +920,8 @@
         <span class="ident">template</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeConfig</span><span class="op">&gt;</span>,
         <span class="ident">upstream_config_dir</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LibraSwarm</span><span class="op">&gt;</span> {
+        <span class="ident">LibraNode</span>::<span class="ident">prepare</span>();
+
         <span class="kw">let</span> <span class="ident">swarm_config_dir</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">setup_config_dir</span>(<span class="kw-2">&amp;</span><span class="ident">config_dir</span>);
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;logs at {:?}&quot;</span>, <span class="ident">swarm_config_dir</span>);
 
