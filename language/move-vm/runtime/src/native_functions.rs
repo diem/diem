@@ -45,6 +45,8 @@ pub(crate) enum NativeFunction {
     DebugPrint,
     DebugPrintStackTrace,
     SignerBorrowAddress,
+    CreateSigner,
+    DestroySigner,
 }
 
 impl NativeFunction {
@@ -74,6 +76,8 @@ impl NativeFunction {
             (&CORE_CODE_ADDRESS, "Vector", "destroy_empty") => VectorDestroyEmpty,
             (&CORE_CODE_ADDRESS, "Vector", "swap") => VectorSwap,
             (&CORE_CODE_ADDRESS, "Event", "write_to_event_store") => AccountWriteEvent,
+            (&CORE_CODE_ADDRESS, "LibraAccount", "create_signer") => CreateSigner,
+            (&CORE_CODE_ADDRESS, "LibraAccount", "destroy_signer") => DestroySigner,
             (&CORE_CODE_ADDRESS, "LibraAccount", "save_account") => AccountSaveAccount,
             (&CORE_CODE_ADDRESS, "Debug", "print") => DebugPrint,
             (&CORE_CODE_ADDRESS, "Debug", "print_stack_trace") => DebugPrintStackTrace,
@@ -112,6 +116,8 @@ impl NativeFunction {
             Self::DebugPrint => debug::native_print(ctx, t, v),
             Self::DebugPrintStackTrace => debug::native_print_stack_trace(ctx, t, v),
             Self::SignerBorrowAddress => signer::native_borrow_address(ctx, t, v),
+            Self::CreateSigner => account::native_create_signer(ctx, t, v),
+            Self::DestroySigner => account::native_destroy_signer(ctx, t, v),
         }
     }
 }
