@@ -108,7 +108,7 @@ impl<'env> ModuleTranslator<'env> {
     /// Translates this module.
     fn translate(&mut self) {
         log!(
-            if self.module_env.is_in_dependency() {
+            if self.module_env.is_dependency() {
                 Level::Debug
             } else {
                 Level::Info
@@ -351,7 +351,7 @@ impl<'env> ModuleTranslator<'env> {
             self.writer.set_location(&func_env.get_loc());
             self.translate_function(&self.targets.get_target(&func_env));
         }
-        if num_fun > 0 && !self.module_env.is_in_dependency() {
+        if num_fun > 0 && !self.module_env.is_dependency() {
             debug!(
                 "{} out of {} functions have (directly or indirectly) \
                  specifications in module `{}`",
@@ -400,7 +400,7 @@ impl<'env> ModuleTranslator<'env> {
     /// Determines whether we should generate the `_verify` entry point for a function, which
     /// triggers its standalone verification.
     fn should_generate_verify(&self, func_target: &FunctionTarget<'_>) -> bool {
-        if func_target.func_env.module_env.is_in_dependency() {
+        if func_target.func_env.module_env.is_dependency() {
             // Never generate verify method for functions from dependencies.
             return false;
         }

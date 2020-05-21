@@ -10,12 +10,13 @@ use crate::{
     prelude_template_helpers::StratificationHelper,
 };
 use anyhow::anyhow;
-use codespan_reporting::term::termcolor::WriteColor;
+use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
 use docgen::docgen::Docgen;
 use handlebars::Handlebars;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 use move_lang::find_move_filenames;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use spec_lang::{code_writer::CodeWriter, emit, emitln, env::GlobalEnv, run_spec_lang_compiler};
 use stackless_bytecode_generator::{
@@ -63,14 +64,14 @@ pub fn run_move_prover<W: WriteColor>(
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with checking errors"));
     }
+    // Until this point, prover and docgen have same code. Here we part ways.
+    if options.docgen {
+        return run_docgen(&env, &options, now);
+    }
     let targets = create_and_process_bytecode(&options, &env);
     if env.has_errors() {
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with transformation errors"));
-    }
-    // Until this point, prover and docgen have same code. Here we part ways.
-    if options.docgen {
-        return run_docgen(&env, &options, &targets);
     }
     let writer = CodeWriter::new(env.internal_loc());
     add_prelude(&options, &writer)?;
@@ -118,18 +119,27 @@ pub fn run_move_prover<W: WriteColor>(
     Ok(())
 }
 
-fn run_docgen(
-    env: &GlobalEnv,
-    options: &Options,
-    _func_targets: &FunctionTargetsHolder,
-) -> anyhow::Result<()> {
-    let path = Path::new(&options.output_path).with_extension("md");
+pub fn run_move_prover_errors_to_stderr(options: Options) -> anyhow::Result<()> {
+    let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
+    run_move_prover(&mut error_writer, options)
+}
+
+fn run_docgen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Result<()> {
     let mut generator = Docgen::new(env, &options.docgen_options);
+    let checking_elapsed = now.elapsed();
     info!("generating documentation");
     generator.gen();
-    generator
-        .into_code_writer()
-        .process_result(move |content| fs::write(path.as_path(), content))?;
+    for (file, content) in generator.into_result() {
+        let path = PathBuf::from(&file);
+        fs::create_dir_all(path.parent().unwrap())?;
+        fs::write(path.as_path(), content)?;
+    }
+    let generating_elapsed = now.elapsed();
+    info!(
+        "{:.3}s checking, {:.3}s generating",
+        checking_elapsed.as_secs_f64(),
+        (generating_elapsed - checking_elapsed).as_secs_f64()
+    );
     Ok(())
 }
 
@@ -206,10 +216,12 @@ fn calculate_deps_recursively(
     visited: &mut BTreeSet<String>,
     deps: &mut Vec<String>,
 ) -> anyhow::Result<()> {
+    static REX: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"(?m)0x[0-9abcdefABCDEF]+::\s*(\w+)").unwrap());
     if !visited.insert(path.to_string_lossy().to_string()) {
         return Ok(());
     }
-    for dep in extract_matches(path, r"0x[0-9,a,b,c,d,e,f,A,B,C,D,E,F]+::\s*(\w+)")? {
+    for dep in extract_matches(path, &*REX)? {
         if let Some(dep_path) = file_map.get(&dep) {
             let dep_str = dep_path.to_string_lossy().to_string();
             if !deps.contains(&dep_str) {
@@ -223,21 +235,20 @@ fn calculate_deps_recursively(
 
 /// Calculate a map of module names to files which define those modules.
 fn calculate_file_map(deps: &[String]) -> anyhow::Result<BTreeMap<String, PathBuf>> {
+    static REX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?m)module\s+(\w+)\s*\{").unwrap());
     let mut module_to_file = BTreeMap::new();
     for dep in deps {
         let dep_path = PathBuf::from(dep);
-        for module in extract_matches(dep_path.as_path(), r"module\s+(\w+)\s*\{")? {
+        for module in extract_matches(dep_path.as_path(), &*REX)? {
             module_to_file.insert(module, dep_path.clone());
         }
     }
     Ok(module_to_file)
 }
 
-/// Extracts matches out of some text file. `pat` must be a regular expression with one anonymous
-/// group. The list of the content of this group is returned. Use as in in
-/// `extract_matches(file, "use 0x0::([a-zA-Z_]+)")`
-fn extract_matches(path: &Path, pat: &str) -> anyhow::Result<Vec<String>> {
-    let rex = Regex::new(&format!("(?m){}", pat))?;
+/// Extracts matches out of some text file. `rex` must be a regular expression with one anonymous
+/// group.
+fn extract_matches(path: &Path, rex: &Regex) -> anyhow::Result<Vec<String>> {
     let mut content = String::new();
     let mut file = File::open(path)?;
     file.read_to_string(&mut content)?;

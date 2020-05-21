@@ -131,7 +131,7 @@ impl Default for Options {
     fn default() -> Self {
         Options {
             prelude_path: INLINE_PRELUDE.to_string(),
-            output_path: "output.bpl".to_string(),
+            output_path: "".to_string(),
             docgen: false,
             docgen_options: DocgenOptions::default(),
             account_address: "0x234567".to_string(),
@@ -187,7 +187,6 @@ impl Options {
                     .short("o")
                     .long("output")
                     .value_name("BOOGIE_FILE")
-                    .default_value("output.bpl")
                     .help("path to the boogie output which represents the verification problem"),
             )
             .arg(
@@ -216,7 +215,7 @@ impl Options {
                 Arg::with_name("docgen")
                     .long("docgen")
                     .help("run the documentation generator instead of the prover. \
-                    Generated docs will be written to `--output=<path>`"),
+                    Generated docs will be written into the directory at `--output=<path>`"),
             )
             .arg(
                 Arg::with_name("doc-include-impl")
@@ -254,6 +253,15 @@ impl Options {
                     .possible_values(&["true", "false"])
                     .require_equals(true)
                     .help("whether to use collapsed sections for some details")
+            )
+            .arg(
+                Arg::with_name("doc-path")
+                    .long("doc-path")
+                    .multiple(true)
+                    .number_of_values(1)
+                    .takes_value(true)
+                    .value_name("PATH")
+                    .help("path to a directory where documentation is looked up")
             )
             .arg(
                 Arg::with_name("verify")
@@ -444,7 +452,6 @@ impl Options {
         };
 
         self.prelude_path = get_with_default("prelude");
-        self.output_path = get_with_default("output");
         self.account_address = get_with_default("address");
         self.verbosity_level = match get_with_default("verbosity").as_str() {
             "error" => LevelFilter::Error,
@@ -495,6 +502,15 @@ impl Options {
         self.docgen_options.include_private_fun = get_bool("doc-include-private")?;
         self.docgen_options.specs_inlined = get_bool("doc-spec-inline")?;
         self.docgen_options.collapsed_sections = get_bool("doc-collapsed-sections")?;
+        self.output_path = if matches.is_present("output") {
+            get_with_default("output")
+        } else if self.docgen {
+            "doc".to_string()
+        } else {
+            "ouput.bpl".to_string()
+        };
+        self.docgen_options.output_directory = self.output_path.clone();
+        self.docgen_options.doc_path = get_vec("doc-path");
         Ok(())
     }
 
