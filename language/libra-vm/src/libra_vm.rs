@@ -178,12 +178,12 @@ impl LibraVM {
         if below_min_bound {
             let error_str = format!(
                 "gas unit min price: {}, submitted price: {}",
-                gas_constants.min_transaction_gas_units.get(),
+                gas_constants.min_price_per_gas_unit.get(),
                 txn.gas_unit_price()
             );
             warn!(
                 "[VM] Gas unit error; min {}, submitted {}",
-                gas_constants.min_transaction_gas_units.get(),
+                gas_constants.min_price_per_gas_unit.get(),
                 txn.gas_unit_price()
             );
             return Err(
