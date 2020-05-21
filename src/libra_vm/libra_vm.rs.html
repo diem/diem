@@ -1278,12 +1278,12 @@
         <span class="kw">if</span> <span class="ident">below_min_bound</span> {
             <span class="kw">let</span> <span class="ident">error_str</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
                 <span class="string">&quot;gas unit min price: {}, submitted price: {}&quot;</span>,
-                <span class="ident">gas_constants</span>.<span class="ident">min_transaction_gas_units</span>.<span class="ident">get</span>(),
+                <span class="ident">gas_constants</span>.<span class="ident">min_price_per_gas_unit</span>.<span class="ident">get</span>(),
                 <span class="ident">txn</span>.<span class="ident">gas_unit_price</span>()
             );
             <span class="macro">warn</span><span class="macro">!</span>(
                 <span class="string">&quot;[VM] Gas unit error; min {}, submitted {}&quot;</span>,
-                <span class="ident">gas_constants</span>.<span class="ident">min_transaction_gas_units</span>.<span class="ident">get</span>(),
+                <span class="ident">gas_constants</span>.<span class="ident">min_price_per_gas_unit</span>.<span class="ident">get</span>(),
                 <span class="ident">txn</span>.<span class="ident">gas_unit_price</span>()
             );
             <span class="kw">return</span> <span class="prelude-val">Err</span>(
