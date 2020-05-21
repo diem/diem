@@ -245,8 +245,6 @@ jobs:
       MESSAGE_PAYLOAD_FILE: "/tmp/message_payload"
     steps:
       - build_setup
-      - attach_workspace:
-          at: /home/circleci/project
       - restore_cargo_package_cache
       - run:
           name: Determine test targets for this container.
