@@ -25,7 +25,7 @@
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(to_freeze_account: address) {
-    <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_freeze_account">LibraAccount::freeze_account</a>(to_freeze_account)
+    <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_freeze_account">LibraAccount::freeze_account</a>(to_freeze_account);
 }
 </code></pre>
 
