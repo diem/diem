@@ -540,7 +540,7 @@ impl<'a> fmt::Display for TypeDisplay<'a> {
                 }
             }
             Var(idx) => write!(f, "?{}", idx),
-            Error => f.write_str("?error"),
+            Error => f.write_str("*error*"),
         }
     }
 }

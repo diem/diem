@@ -13,6 +13,7 @@ publish = false
 anyhow = "1.0"
 bytecode-verifier = { path = "../bytecode-verifier", version = "0.1.0" }
 move-lang = { path = "../move-lang" }
+move-prover = { path = "../move-prover" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
@@ -21,6 +22,8 @@ lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical
 vm = { path = "../vm", version = "0.1.0" }
 once_cell = "1.4.0"
 include_dir = "0.6.0"
+clap = "2.33.1"
+log = "0.4.8"
 
 [features]
 default = []

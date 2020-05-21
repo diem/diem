@@ -1,42 +1,49 @@
-## Table of Contents
--  [Module `0x0::LibraDocTest`](#0x0_LibraDocTest)
-    -  [Struct `T`](#0x0_LibraDocTest_T)
-    -  [Struct `MintCapability`](#0x0_LibraDocTest_MintCapability)
-    -  [Struct `Info`](#0x0_LibraDocTest_Info)
-    -  [Struct `Preburn`](#0x0_LibraDocTest_Preburn)
-    -  [Function `register`](#0x0_LibraDocTest_register)
-    -  [Function `assert_is_registered`](#0x0_LibraDocTest_assert_is_registered)
-    -  [Function `mint`](#0x0_LibraDocTest_mint)
-    -  [Function `burn`](#0x0_LibraDocTest_burn)
-    -  [Function `cancel_burn`](#0x0_LibraDocTest_cancel_burn)
-    -  [Function `new_preburn`](#0x0_LibraDocTest_new_preburn)
-    -  [Function `mint_with_capability`](#0x0_LibraDocTest_mint_with_capability)
-    -  [Function `preburn`](#0x0_LibraDocTest_preburn)
-    -  [Function `preburn_to_sender`](#0x0_LibraDocTest_preburn_to_sender)
-    -  [Function `burn_with_capability`](#0x0_LibraDocTest_burn_with_capability)
-    -  [Function `cancel_burn_with_capability`](#0x0_LibraDocTest_cancel_burn_with_capability)
-    -  [Function `publish_preburn`](#0x0_LibraDocTest_publish_preburn)
-    -  [Function `remove_preburn`](#0x0_LibraDocTest_remove_preburn)
-    -  [Function `destroy_preburn`](#0x0_LibraDocTest_destroy_preburn)
-    -  [Function `publish_mint_capability`](#0x0_LibraDocTest_publish_mint_capability)
-    -  [Function `remove_mint_capability`](#0x0_LibraDocTest_remove_mint_capability)
-    -  [Function `market_cap`](#0x0_LibraDocTest_market_cap)
-    -  [Function `preburn_value`](#0x0_LibraDocTest_preburn_value)
-    -  [Function `zero`](#0x0_LibraDocTest_zero)
-    -  [Function `value`](#0x0_LibraDocTest_value)
-    -  [Function `split`](#0x0_LibraDocTest_split)
-    -  [Function `withdraw`](#0x0_LibraDocTest_withdraw)
-    -  [Function `join`](#0x0_LibraDocTest_join)
-    -  [Function `deposit`](#0x0_LibraDocTest_deposit)
-    -  [Function `destroy_zero`](#0x0_LibraDocTest_destroy_zero)
 
 <a name="0x0_LibraDocTest"></a>
 
-## Module `0x0::LibraDocTest`
+# Module `0x0::LibraDocTest`
+
+### Table of Contents
+
+-  [Note](#0x0_LibraDocTest_@Note)
+-  [Settings for Verification](#0x0_LibraDocTest_@Settings_for_Verification)
+-  [Struct `T`](#0x0_LibraDocTest_T)
+-  [Struct `MintCapability`](#0x0_LibraDocTest_MintCapability)
+-  [Struct `Info`](#0x0_LibraDocTest_Info)
+-  [Struct `Preburn`](#0x0_LibraDocTest_Preburn)
+-  [Function `register`](#0x0_LibraDocTest_register)
+-  [Function `assert_is_registered`](#0x0_LibraDocTest_assert_is_registered)
+-  [Function `mint`](#0x0_LibraDocTest_mint)
+-  [Function `burn`](#0x0_LibraDocTest_burn)
+-  [Function `cancel_burn`](#0x0_LibraDocTest_cancel_burn)
+-  [Function `new_preburn`](#0x0_LibraDocTest_new_preburn)
+-  [Function `mint_with_capability`](#0x0_LibraDocTest_mint_with_capability)
+-  [Function `preburn`](#0x0_LibraDocTest_preburn)
+-  [Function `preburn_to_sender`](#0x0_LibraDocTest_preburn_to_sender)
+-  [Function `burn_with_capability`](#0x0_LibraDocTest_burn_with_capability)
+-  [Function `cancel_burn_with_capability`](#0x0_LibraDocTest_cancel_burn_with_capability)
+-  [Function `publish_preburn`](#0x0_LibraDocTest_publish_preburn)
+-  [Function `remove_preburn`](#0x0_LibraDocTest_remove_preburn)
+-  [Function `destroy_preburn`](#0x0_LibraDocTest_destroy_preburn)
+-  [Function `publish_mint_capability`](#0x0_LibraDocTest_publish_mint_capability)
+-  [Function `remove_mint_capability`](#0x0_LibraDocTest_remove_mint_capability)
+-  [Function `market_cap`](#0x0_LibraDocTest_market_cap)
+-  [Function `preburn_value`](#0x0_LibraDocTest_preburn_value)
+-  [Function `zero`](#0x0_LibraDocTest_zero)
+-  [Function `value`](#0x0_LibraDocTest_value)
+-  [Function `split`](#0x0_LibraDocTest_split)
+-  [Function `withdraw`](#0x0_LibraDocTest_withdraw)
+-  [Function `join`](#0x0_LibraDocTest_join)
+-  [Function `deposit`](#0x0_LibraDocTest_deposit)
+-  [Function `destroy_zero`](#0x0_LibraDocTest_destroy_zero)
 
 The Libra module defines basic functionality around coins.
 
-### Note
+
+<a name="0x0_LibraDocTest_@Note"></a>
+
+## Note
+
 
 This is not a consistent and up-to-date implementation, specification, or documentation
 of the
@@ -48,7 +55,11 @@ of the
 <code><a href="#0x0_LibraDocTest">LibraDocTest</a></code> -- if it is unambiguous -- or like
 <code><a href="#0x0_LibraDocTest">0x0::LibraDocTest</a></code>.
 
-### Settings for Verification
+
+<a name="0x0_LibraDocTest_@Settings_for_Verification"></a>
+
+## Settings for Verification
+
 
 > Spec module blocks which are associated with the module do not have an implicit header and
 > are directly included in the module doc (or Specification sub-section if
@@ -65,7 +76,7 @@ Verify also private functions.
 
 <a name="0x0_LibraDocTest_T"></a>
 
-### Struct `T`
+## Struct `T`
 
 A resource representing a fungible token
 
@@ -98,8 +109,8 @@ A resource representing a fungible token
 Maintains sum_of_token
 
 
-<pre><code><b>invariant</b> <b>pack</b> sum_of_token_values&lt;Token&gt; = sum_of_token_values&lt;Token&gt; + value;
-<b>invariant</b> <b>unpack</b> sum_of_token_values&lt;Token&gt; = sum_of_token_values&lt;Token&gt; - value;
+<pre><code><b>invariant</b> <b>pack</b> <a href="#0x0_LibraDocTest_sum_of_token_values">sum_of_token_values</a>&lt;Token&gt; = <a href="#0x0_LibraDocTest_sum_of_token_values">sum_of_token_values</a>&lt;Token&gt; + value;
+<b>invariant</b> <b>unpack</b> <a href="#0x0_LibraDocTest_sum_of_token_values">sum_of_token_values</a>&lt;Token&gt; = <a href="#0x0_LibraDocTest_sum_of_token_values">sum_of_token_values</a>&lt;Token&gt; - value;
 </code></pre>
 
 
@@ -107,14 +118,20 @@ Maintains sum_of_token
 This ghost variable is defined to have the true sum values of all instances of Token
 
 
-<pre><code><b>global</b> sum_of_token_values&lt;Token&gt;: num;
+<a name="0x0_LibraDocTest_sum_of_token_values"></a>
+
+
+<pre><code><b>global</b> <a href="#0x0_LibraDocTest_sum_of_token_values">sum_of_token_values</a>&lt;Token&gt;: num;
 </code></pre>
 
 
 
 
-<pre><code><b>schema</b> SumRemainsSame&lt;Token&gt; {
-    <b>ensures</b> sum_of_token_values&lt;Token&gt; == <b>old</b>(sum_of_token_values&lt;Token&gt;);
+<a name="0x0_LibraDocTest_SumRemainsSame"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x0_LibraDocTest_SumRemainsSame">SumRemainsSame</a>&lt;Token&gt; {
+    <b>ensures</b> <a href="#0x0_LibraDocTest_sum_of_token_values">sum_of_token_values</a>&lt;Token&gt; == <b>old</b>(<a href="#0x0_LibraDocTest_sum_of_token_values">sum_of_token_values</a>&lt;Token&gt;);
 }
 </code></pre>
 
@@ -125,10 +142,13 @@ skip mint, burn, mint_with_capability, burn_with_capability.
 Burn always aborts because Preburn.is_approved is always false.
 
 
-<pre><code><b>apply</b> SumRemainsSame&lt;Token&gt; <b>to</b> *&lt;Token&gt; <b>except</b> mint*&lt;Token&gt;, burn*&lt;Token&gt;;
+<pre><code><b>apply</b> <a href="#0x0_LibraDocTest_SumRemainsSame">SumRemainsSame</a>&lt;Token&gt; <b>to</b> *&lt;Token&gt; <b>except</b> mint*&lt;Token&gt;, burn*&lt;Token&gt;;
 </code></pre>
 
 
+
+
+<a name="0x0_LibraDocTest_SumOfTokenValuesInvariant"></a>
 
 SPEC: MarketCap == Sum of all the instances of a particular token.
 Note: this works even though the verifier does not
@@ -138,17 +158,17 @@ Note: What is the value of a ghost variable in the genesis state?
 State machine with two states (not registered/registered), so write as two invariants.
 
 
-<pre><code><b>schema</b> SumOfTokenValuesInvariant&lt;Token&gt; {
-    <b>invariant</b> <b>module</b> !token_is_registered&lt;Token&gt;() ==&gt; sum_of_token_values&lt;Token&gt; == 0;
-    <b>invariant</b> <b>module</b> token_is_registered&lt;Token&gt;()
-                   ==&gt; sum_of_token_values&lt;Token&gt; == <b>global</b>&lt;<a href="#0x0_LibraDocTest_Info">Info</a>&lt;Token&gt;&gt;(0xA550C18).total_value;
+<pre><code><b>schema</b> <a href="#0x0_LibraDocTest_SumOfTokenValuesInvariant">SumOfTokenValuesInvariant</a>&lt;Token&gt; {
+    <b>invariant</b> <b>module</b> !<a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;() ==&gt; <a href="#0x0_LibraDocTest_sum_of_token_values">sum_of_token_values</a>&lt;Token&gt; == 0;
+    <b>invariant</b> <b>module</b> <a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;()
+          ==&gt; <a href="#0x0_LibraDocTest_sum_of_token_values">sum_of_token_values</a>&lt;Token&gt; == <b>global</b>&lt;<a href="#0x0_LibraDocTest_Info">Info</a>&lt;Token&gt;&gt;(0xA550C18).total_value;
 }
 </code></pre>
 
 
 
 
-<pre><code><b>apply</b> SumOfTokenValuesInvariant&lt;Token&gt; <b>to</b> <b>public</b> *&lt;Token&gt;;
+<pre><code><b>apply</b> <a href="#0x0_LibraDocTest_SumOfTokenValuesInvariant">SumOfTokenValuesInvariant</a>&lt;Token&gt; <b>to</b> <b>public</b> *&lt;Token&gt;;
 </code></pre>
 
 
@@ -157,7 +177,7 @@ State machine with two states (not registered/registered), so write as two invar
 
 <a name="0x0_LibraDocTest_MintCapability"></a>
 
-### Struct `MintCapability`
+## Struct `MintCapability`
 
 A singleton resource that grants access to
 <code><a href="#0x0_LibraDocTest_mint">LibraDocTest::mint</a></code>. Only the Association has one.
@@ -198,8 +218,8 @@ A singleton resource that grants access to
 Maintain mint_capability_count
 
 
-<pre><code><b>invariant</b> <b>pack</b> mint_capability_count&lt;Token&gt; = mint_capability_count&lt;Token&gt; + 1;
-<b>invariant</b> <b>unpack</b> mint_capability_count&lt;Token&gt; = mint_capability_count&lt;Token&gt; - 1;
+<pre><code><b>invariant</b> <b>pack</b> <a href="#0x0_LibraDocTest_mint_capability_count">mint_capability_count</a>&lt;Token&gt; = <a href="#0x0_LibraDocTest_mint_capability_count">mint_capability_count</a>&lt;Token&gt; + 1;
+<b>invariant</b> <b>unpack</b> <a href="#0x0_LibraDocTest_mint_capability_count">mint_capability_count</a>&lt;Token&gt; = <a href="#0x0_LibraDocTest_mint_capability_count">mint_capability_count</a>&lt;Token&gt; - 1;
 </code></pre>
 
 
@@ -207,14 +227,20 @@ Maintain mint_capability_count
 Ghost variable representing the total number of MintCapability instances for Token (0 or 1).
 
 
-<pre><code><b>global</b> mint_capability_count&lt;Token&gt;: num;
+<a name="0x0_LibraDocTest_mint_capability_count"></a>
+
+
+<pre><code><b>global</b> <a href="#0x0_LibraDocTest_mint_capability_count">mint_capability_count</a>&lt;Token&gt;: num;
 </code></pre>
 
 
 Helper to check whether sender has MintCapability.
 
 
-<pre><code>define exists_sender_mint_capability&lt;Token&gt;(): bool { exists&lt;<a href="#0x0_LibraDocTest_MintCapability">MintCapability</a>&lt;Token&gt;&gt;(sender()) }
+<a name="0x0_LibraDocTest_exists_sender_mint_capability"></a>
+
+
+<pre><code><b>define</b> <a href="#0x0_LibraDocTest_exists_sender_mint_capability">exists_sender_mint_capability</a>&lt;Token&gt;(): bool { exists&lt;<a href="#0x0_LibraDocTest_MintCapability">MintCapability</a>&lt;Token&gt;&gt;(sender()) }
 </code></pre>
 
 
@@ -224,11 +250,14 @@ There is a MintCapability for Token iff the token is registered
 > attached member documentation into the section. For schemas this is not possible.
 > So we repeat a schema declaration multiple times, "extending" it.
 
+
+<a name="0x0_LibraDocTest_MintCapabilityCountInvariant"></a>
+
 If token is not registered, there can be no capability.
 
 
-<pre><code><b>schema</b> MintCapabilityCountInvariant&lt;Token&gt; {
-    <b>invariant</b> <b>module</b> !token_is_registered&lt;Token&gt;() ==&gt; mint_capability_count&lt;Token&gt; == 0;
+<pre><code><b>schema</b> <a href="#0x0_LibraDocTest_MintCapabilityCountInvariant">MintCapabilityCountInvariant</a>&lt;Token&gt; {
+    <b>invariant</b> <b>module</b> !<a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;() ==&gt; <a href="#0x0_LibraDocTest_mint_capability_count">mint_capability_count</a>&lt;Token&gt; == 0;
 }
 </code></pre>
 
@@ -236,15 +265,15 @@ If token is not registered, there can be no capability.
 If token is registered, there is exactly one capability.
 
 
-<pre><code><b>schema</b> MintCapabilityCountInvariant&lt;Token&gt; {
-    <b>invariant</b> <b>module</b> token_is_registered&lt;Token&gt;() ==&gt; mint_capability_count&lt;Token&gt; == 1;
+<pre><code><b>schema</b> <a href="#0x0_LibraDocTest_MintCapabilityCountInvariant">MintCapabilityCountInvariant</a>&lt;Token&gt; {
+    <b>invariant</b> <b>module</b> <a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;() ==&gt; <a href="#0x0_LibraDocTest_mint_capability_count">mint_capability_count</a>&lt;Token&gt; == 1;
 }
 </code></pre>
 
 
 
 
-<pre><code><b>apply</b> MintCapabilityCountInvariant&lt;Token&gt; <b>to</b> <b>public</b> *&lt;Token&gt;;
+<pre><code><b>apply</b> <a href="#0x0_LibraDocTest_MintCapabilityCountInvariant">MintCapabilityCountInvariant</a>&lt;Token&gt; <b>to</b> <b>public</b> *&lt;Token&gt;;
 </code></pre>
 
 
@@ -253,7 +282,7 @@ If token is registered, there is exactly one capability.
 
 <a name="0x0_LibraDocTest_Info"></a>
 
-### Struct `Info`
+## Struct `Info`
 
 
 
@@ -294,24 +323,32 @@ If token is registered, there is exactly one capability.
 Specifications helpers for working with Info<Token> at association address.
 
 
-<pre><code>define association_address(): address { 0xA550C18 }
-define token_is_registered&lt;Token&gt;(): bool { exists&lt;<a href="#0x0_LibraDocTest_Info">Info</a>&lt;Token&gt;&gt;(association_address()) }
-define info&lt;Token&gt;(): <a href="#0x0_LibraDocTest_Info">Info</a>&lt;Token&gt; { <b>global</b>&lt;<a href="#0x0_LibraDocTest_Info">Info</a>&lt;Token&gt;&gt;(association_address()) }
+<a name="0x0_LibraDocTest_association_address"></a>
+
+
+<pre><code><b>define</b> <a href="#0x0_LibraDocTest_association_address">association_address</a>(): address { 0xA550C18 }
+<a name="0x0_LibraDocTest_token_is_registered"></a>
+<b>define</b> <a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;(): bool { exists&lt;<a href="#0x0_LibraDocTest_Info">Info</a>&lt;Token&gt;&gt;(<a href="#0x0_LibraDocTest_association_address">association_address</a>()) }
+<a name="0x0_LibraDocTest_info"></a>
+<b>define</b> <a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;(): <a href="#0x0_LibraDocTest_Info">Info</a>&lt;Token&gt; { <b>global</b>&lt;<a href="#0x0_LibraDocTest_Info">Info</a>&lt;Token&gt;&gt;(<a href="#0x0_LibraDocTest_association_address">association_address</a>()) }
 </code></pre>
 
 
 Once registered, a token stays registered forever.
 
 
-<pre><code><b>schema</b> RegistrationPersists&lt;Token&gt; {
-    <b>ensures</b> <b>old</b>(token_is_registered&lt;Token&gt;()) ==&gt; token_is_registered&lt;Token&gt;();
+<a name="0x0_LibraDocTest_RegistrationPersists"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x0_LibraDocTest_RegistrationPersists">RegistrationPersists</a>&lt;Token&gt; {
+    <b>ensures</b> <b>old</b>(<a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;()) ==&gt; <a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;();
 }
 </code></pre>
 
 
 
 
-<pre><code><b>apply</b> RegistrationPersists&lt;Token&gt; <b>to</b> *&lt;Token&gt;;
+<pre><code><b>apply</b> <a href="#0x0_LibraDocTest_RegistrationPersists">RegistrationPersists</a>&lt;Token&gt; <b>to</b> *&lt;Token&gt;;
 </code></pre>
 
 
@@ -320,7 +357,7 @@ Once registered, a token stays registered forever.
 
 <a name="0x0_LibraDocTest_Preburn"></a>
 
-### Struct `Preburn`
+## Struct `Preburn`
 
 A holding area where funds that will subsequently be burned wait while their underyling
 assets are sold off-chain.
@@ -365,7 +402,7 @@ resolved in FIFO order.
 
 <a name="0x0_LibraDocTest_register"></a>
 
-### Function `register`
+## Function `register`
 
 
 
@@ -379,20 +416,23 @@ resolved in FIFO order.
 
 
 
-<pre><code><b>include</b> RegisterAbortsIf&lt;Token&gt;;
-<b>ensures</b> exists_sender_mint_capability&lt;Token&gt;();
-<b>ensures</b> token_is_registered&lt;Token&gt;();
-<b>ensures</b> info&lt;Token&gt;().total_value == 0;
-<b>ensures</b> info&lt;Token&gt;().preburn_value == 0;
+<pre><code><b>include</b> <a href="#0x0_LibraDocTest_RegisterAbortsIf">RegisterAbortsIf</a>&lt;Token&gt;;
+<b>ensures</b> <a href="#0x0_LibraDocTest_exists_sender_mint_capability">exists_sender_mint_capability</a>&lt;Token&gt;();
+<b>ensures</b> <a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;();
+<b>ensures</b> <a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().total_value == 0;
+<b>ensures</b> <a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().preburn_value == 0;
 </code></pre>
 
 
 
 
-<pre><code><b>schema</b> RegisterAbortsIf&lt;Token&gt; {
-    <b>aborts_if</b> sender() != association_address();
-    <b>aborts_if</b> exists_sender_mint_capability&lt;Token&gt;();
-    <b>aborts_if</b> token_is_registered&lt;Token&gt;();
+<a name="0x0_LibraDocTest_RegisterAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x0_LibraDocTest_RegisterAbortsIf">RegisterAbortsIf</a>&lt;Token&gt; {
+    <b>aborts_if</b> sender() != <a href="#0x0_LibraDocTest_association_address">association_address</a>();
+    <b>aborts_if</b> <a href="#0x0_LibraDocTest_exists_sender_mint_capability">exists_sender_mint_capability</a>&lt;Token&gt;();
+    <b>aborts_if</b> <a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;();
 }
 </code></pre>
 
@@ -418,7 +458,7 @@ resolved in FIFO order.
 
 <a name="0x0_LibraDocTest_assert_is_registered"></a>
 
-### Function `assert_is_registered`
+## Function `assert_is_registered`
 
 
 
@@ -432,7 +472,7 @@ resolved in FIFO order.
 
 
 
-<pre><code><b>aborts_if</b> !token_is_registered&lt;Token&gt;();
+<pre><code><b>aborts_if</b> !<a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;();
 </code></pre>
 
 
@@ -454,7 +494,7 @@ resolved in FIFO order.
 
 <a name="0x0_LibraDocTest_mint"></a>
 
-### Function `mint`
+## Function `mint`
 
 Return
 <code>amount</code> coins.
@@ -471,29 +511,35 @@ Fails if the sender does not have a published MintCapability.
 
 
 
-<pre><code><b>include</b> MintAbortsIf&lt;Token&gt;;
-<b>aborts_if</b> !exists_sender_mint_capability&lt;Token&gt;();
-<b>include</b> MintEnsures&lt;Token&gt;;
+<pre><code><b>include</b> <a href="#0x0_LibraDocTest_MintAbortsIf">MintAbortsIf</a>&lt;Token&gt;;
+<b>aborts_if</b> !<a href="#0x0_LibraDocTest_exists_sender_mint_capability">exists_sender_mint_capability</a>&lt;Token&gt;();
+<b>include</b> <a href="#0x0_LibraDocTest_MintEnsures">MintEnsures</a>&lt;Token&gt;;
 </code></pre>
 
 
 
 
-<pre><code><b>schema</b> MintAbortsIf&lt;Token&gt; {
+<a name="0x0_LibraDocTest_MintAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x0_LibraDocTest_MintAbortsIf">MintAbortsIf</a>&lt;Token&gt; {
     amount: u64;
-    <b>aborts_if</b> !token_is_registered&lt;Token&gt;();
+    <b>aborts_if</b> !<a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;();
     <b>aborts_if</b> amount &gt; 1000000000 * 1000000;
-    <b>aborts_if</b> info&lt;Token&gt;().total_value + amount &gt; max_u128();
+    <b>aborts_if</b> <a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().total_value + amount &gt; max_u128();
 }
 </code></pre>
 
 
 
 
-<pre><code><b>schema</b> MintEnsures&lt;Token&gt; {
+<a name="0x0_LibraDocTest_MintEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x0_LibraDocTest_MintEnsures">MintEnsures</a>&lt;Token&gt; {
     amount: u64;
     result: <a href="#0x0_LibraDocTest_T">T</a>&lt;Token&gt;;
-    <b>ensures</b> info&lt;Token&gt;().total_value == <b>old</b>(info&lt;Token&gt;().total_value) + amount;
+    <b>ensures</b> <a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().total_value == <b>old</b>(<a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().total_value) + amount;
     <b>ensures</b> result.value == amount;
 }
 </code></pre>
@@ -517,7 +563,7 @@ Fails if the sender does not have a published MintCapability.
 
 <a name="0x0_LibraDocTest_burn"></a>
 
-### Function `burn`
+## Function `burn`
 
 Burn the coins currently held in the preburn holding area under
 <code>preburn_address</code>.
@@ -534,48 +580,57 @@ Fails if the sender does not have a published MintCapability.
 
 
 
-<pre><code><b>aborts_if</b> !exists_sender_mint_capability&lt;Token&gt;();
-<b>include</b> BurnAbortsIf&lt;Token&gt;;
-<b>include</b> BurnEnsures&lt;Token&gt;;
+<pre><code><b>aborts_if</b> !<a href="#0x0_LibraDocTest_exists_sender_mint_capability">exists_sender_mint_capability</a>&lt;Token&gt;();
+<b>include</b> <a href="#0x0_LibraDocTest_BurnAbortsIf">BurnAbortsIf</a>&lt;Token&gt;;
+<b>include</b> <a href="#0x0_LibraDocTest_BurnEnsures">BurnEnsures</a>&lt;Token&gt;;
 </code></pre>
 
 
 Properties applying both to burn and to burn_cancel functions.
 
 
-<pre><code><b>schema</b> BasicBurnAbortsIf&lt;Token&gt; {
+<a name="0x0_LibraDocTest_BasicBurnAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x0_LibraDocTest_BasicBurnAbortsIf">BasicBurnAbortsIf</a>&lt;Token&gt; {
     preburn_address: address;
     <b>aborts_if</b> !exists&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address);
     <b>aborts_if</b> len(<b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests) == 0;
-    <b>aborts_if</b> !token_is_registered&lt;Token&gt;();
-    <b>aborts_if</b> info&lt;Token&gt;().<a href="#0x0_LibraDocTest_preburn_value">preburn_value</a> &lt; <b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests[0].value;
+    <b>aborts_if</b> !<a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;();
+    <b>aborts_if</b> <a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().<a href="#0x0_LibraDocTest_preburn_value">preburn_value</a> &lt; <b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests[0].value;
 }
 </code></pre>
 
 
 
 
-<pre><code><b>schema</b> BurnAbortsIf&lt;Token&gt; {
-    <b>include</b> BasicBurnAbortsIf&lt;Token&gt;;
-    <b>aborts_if</b> info&lt;Token&gt;().total_value &lt; <b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests[0].value;
+<a name="0x0_LibraDocTest_BurnAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x0_LibraDocTest_BurnAbortsIf">BurnAbortsIf</a>&lt;Token&gt; {
+    <b>include</b> <a href="#0x0_LibraDocTest_BasicBurnAbortsIf">BasicBurnAbortsIf</a>&lt;Token&gt;;
+    <b>aborts_if</b> <a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().total_value &lt; <b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests[0].value;
 }
 </code></pre>
 
 
 
 
-<pre><code><b>schema</b> BurnEnsures&lt;Token&gt; {
+<a name="0x0_LibraDocTest_BurnEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x0_LibraDocTest_BurnEnsures">BurnEnsures</a>&lt;Token&gt; {
     preburn_address: address;
-    <b>ensures</b> Vector::eq_pop_front(
-                <b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests,
-                <b>old</b>(<b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests)
-            );
-    <b>ensures</b> info&lt;Token&gt;().total_value ==
-                <b>old</b>(info&lt;Token&gt;().total_value)
-                    - <b>old</b>(<b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests[0].value);
-    <b>ensures</b> info&lt;Token&gt;().preburn_value ==
-                <b>old</b>(info&lt;Token&gt;().preburn_value)
-                    - <b>old</b>(<b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests[0].value);
+    <b>ensures</b> <a href="#0x0_Vector_eq_pop_front">Vector::eq_pop_front</a>(
+        <b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests,
+        <b>old</b>(<b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests)
+    );
+    <b>ensures</b> <a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().total_value ==
+        <b>old</b>(<a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().total_value)
+            - <b>old</b>(<b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests[0].value);
+    <b>ensures</b> <a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().preburn_value ==
+        <b>old</b>(<a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().preburn_value)
+            - <b>old</b>(<b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests[0].value);
 }
 </code></pre>
 
@@ -603,7 +658,7 @@ Properties applying both to burn and to burn_cancel functions.
 
 <a name="0x0_LibraDocTest_cancel_burn"></a>
 
-### Function `cancel_burn`
+## Function `cancel_burn`
 
 Cancel the oldest burn request from
 <code>preburn_address</code>
@@ -620,23 +675,26 @@ Fails if the sender does not have a published MintCapability.
 
 
 
-<pre><code><b>aborts_if</b> !exists_sender_mint_capability&lt;Token&gt;();
-<b>include</b> BasicBurnAbortsIf&lt;Token&gt;;
-<b>include</b> CancelBurnEnsures&lt;Token&gt;;
+<pre><code><b>aborts_if</b> !<a href="#0x0_LibraDocTest_exists_sender_mint_capability">exists_sender_mint_capability</a>&lt;Token&gt;();
+<b>include</b> <a href="#0x0_LibraDocTest_BasicBurnAbortsIf">BasicBurnAbortsIf</a>&lt;Token&gt;;
+<b>include</b> <a href="#0x0_LibraDocTest_CancelBurnEnsures">CancelBurnEnsures</a>&lt;Token&gt;;
 </code></pre>
 
 
 
 
-<pre><code><b>schema</b> CancelBurnEnsures&lt;Token&gt; {
+<a name="0x0_LibraDocTest_CancelBurnEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x0_LibraDocTest_CancelBurnEnsures">CancelBurnEnsures</a>&lt;Token&gt; {
     preburn_address: address;
     result: <a href="#0x0_LibraDocTest_T">T</a>&lt;Token&gt;;
-    <b>ensures</b> Vector::eq_pop_front(
-                <b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests,
-                <b>old</b>(<b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests)
-            );
-    <b>ensures</b> info&lt;Token&gt;().preburn_value ==
-                <b>old</b>(info&lt;Token&gt;().preburn_value) - <b>old</b>(<b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests[0].value);
+    <b>ensures</b> <a href="#0x0_Vector_eq_pop_front">Vector::eq_pop_front</a>(
+        <b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests,
+        <b>old</b>(<b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests)
+    );
+    <b>ensures</b> <a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().preburn_value ==
+        <b>old</b>(<a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().preburn_value) - <b>old</b>(<b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests[0].value);
     <b>ensures</b> result == <b>old</b>(<b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests[0]);
 }
 </code></pre>
@@ -665,7 +723,7 @@ Fails if the sender does not have a published MintCapability.
 
 <a name="0x0_LibraDocTest_new_preburn"></a>
 
-### Function `new_preburn`
+## Function `new_preburn`
 
 Create a new Preburn resource
 
@@ -680,7 +738,7 @@ Create a new Preburn resource
 
 
 
-<pre><code><b>aborts_if</b> !token_is_registered&lt;Token&gt;();
+<pre><code><b>aborts_if</b> !<a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;();
 <b>ensures</b> len(result.requests) == 0;
 <b>ensures</b> result.is_approved == <b>false</b>;
 </code></pre>
@@ -695,7 +753,7 @@ Create a new Preburn resource
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraDocTest_new_preburn">new_preburn</a>&lt;Token&gt;(): <a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt; {
     <a href="#0x0_LibraDocTest_assert_is_registered">assert_is_registered</a>&lt;Token&gt;();
-    <a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt; { requests: Vector::empty(), is_approved: <b>false</b>, }
+    <a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt; { requests: <a href="#0x0_Vector_empty">Vector::empty</a>(), is_approved: <b>false</b>, }
 }
 </code></pre>
 
@@ -705,7 +763,7 @@ Create a new Preburn resource
 
 <a name="0x0_LibraDocTest_mint_with_capability"></a>
 
-### Function `mint_with_capability`
+## Function `mint_with_capability`
 
 Mint a new
 <code><a href="#0x0_LibraDocTest_T">LibraDocTest::T</a></code> worth
@@ -724,8 +782,8 @@ Only the Association account can acquire such a reference, and it can do so only
 
 
 
-<pre><code><b>include</b> MintAbortsIf&lt;Token&gt;{amount: value};
-<b>include</b> MintEnsures&lt;Token&gt;{amount: value};
+<pre><code><b>include</b> <a href="#0x0_LibraDocTest_MintAbortsIf">MintAbortsIf</a>&lt;Token&gt;{amount: value};
+<b>include</b> <a href="#0x0_LibraDocTest_MintEnsures">MintEnsures</a>&lt;Token&gt;{amount: value};
 </code></pre>
 
 
@@ -761,7 +819,7 @@ Only the Association account can acquire such a reference, and it can do so only
 
 <a name="0x0_LibraDocTest_preburn"></a>
 
-### Function `preburn`
+## Function `preburn`
 
 Send coin to the preburn holding area
 <code>preburn_ref</code>, where it will wait to be burned.
@@ -777,28 +835,34 @@ Send coin to the preburn holding area
 
 
 
-<pre><code><b>include</b> PreburnAbortsIf&lt;Token&gt;;
-<b>include</b> PreburnEnsures&lt;Token&gt;;
+<pre><code><b>include</b> <a href="#0x0_LibraDocTest_PreburnAbortsIf">PreburnAbortsIf</a>&lt;Token&gt;;
+<b>include</b> <a href="#0x0_LibraDocTest_PreburnEnsures">PreburnEnsures</a>&lt;Token&gt;;
 </code></pre>
 
 
 
 
-<pre><code><b>schema</b> PreburnAbortsIf&lt;Token&gt; {
+<a name="0x0_LibraDocTest_PreburnAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x0_LibraDocTest_PreburnAbortsIf">PreburnAbortsIf</a>&lt;Token&gt; {
     coin: <a href="#0x0_LibraDocTest_T">T</a>&lt;Token&gt;;
-    <b>aborts_if</b> !token_is_registered&lt;Token&gt;();
-    <b>aborts_if</b> info&lt;Token&gt;().preburn_value + coin.value &gt; max_u64();
+    <b>aborts_if</b> !<a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;();
+    <b>aborts_if</b> <a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().preburn_value + coin.value &gt; max_u64();
 }
 </code></pre>
 
 
 
 
-<pre><code><b>schema</b> PreburnEnsures&lt;Token&gt; {
+<a name="0x0_LibraDocTest_PreburnEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x0_LibraDocTest_PreburnEnsures">PreburnEnsures</a>&lt;Token&gt; {
     preburn_ref: &<b>mut</b> <a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;;
     coin: <a href="#0x0_LibraDocTest_T">T</a>&lt;Token&gt;;
-    <b>ensures</b> info&lt;Token&gt;().preburn_value == <b>old</b>(info&lt;Token&gt;().preburn_value) + coin.value;
-    <b>ensures</b> Vector::eq_push_back(preburn_ref.requests, <b>old</b>(preburn_ref.requests), coin);
+    <b>ensures</b> <a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().preburn_value == <b>old</b>(<a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().preburn_value) + coin.value;
+    <b>ensures</b> <a href="#0x0_Vector_eq_push_back">Vector::eq_push_back</a>(preburn_ref.requests, <b>old</b>(preburn_ref.requests), coin);
 }
 </code></pre>
 
@@ -817,7 +881,7 @@ Send coin to the preburn holding area
     // TODO: bring this back once we can automate approvals in testnet
     // Transaction::assert(preburn_ref.is_approved, 13);
     <b>let</b> coin_value = <a href="#0x0_LibraDocTest_value">value</a>(&coin);
-    Vector::push_back(
+    <a href="#0x0_Vector_push_back">Vector::push_back</a>(
         &<b>mut</b> preburn_ref.requests,
         coin
     );
@@ -832,7 +896,7 @@ Send coin to the preburn holding area
 
 <a name="0x0_LibraDocTest_preburn_to_sender"></a>
 
-### Function `preburn_to_sender`
+## Function `preburn_to_sender`
 
 Send coin to the preburn holding area, where it will wait to be burned.
 Fails if the sender does not have a published Preburn resource
@@ -848,9 +912,9 @@ Fails if the sender does not have a published Preburn resource
 
 
 
-<pre><code><b>include</b> PreburnAbortsIf&lt;Token&gt;;
+<pre><code><b>include</b> <a href="#0x0_LibraDocTest_PreburnAbortsIf">PreburnAbortsIf</a>&lt;Token&gt;;
 <b>aborts_if</b> !exists&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(sender());
-<b>include</b> PreburnEnsures&lt;Token&gt;{preburn_ref: <b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(sender())};
+<b>include</b> <a href="#0x0_LibraDocTest_PreburnEnsures">PreburnEnsures</a>&lt;Token&gt;{preburn_ref: <b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(sender())};
 </code></pre>
 
 
@@ -872,7 +936,7 @@ Fails if the sender does not have a published Preburn resource
 
 <a name="0x0_LibraDocTest_burn_with_capability"></a>
 
-### Function `burn_with_capability`
+## Function `burn_with_capability`
 
 Permanently remove the coins held in the
 <code><a href="#0x0_LibraDocTest_Preburn">Preburn</a></code> resource stored at
@@ -895,9 +959,9 @@ resource under
 
 
 
-<pre><code><b>include</b> BurnAbortsIf&lt;Token&gt;;
-<b>aborts_if</b> info&lt;Token&gt;().total_value &lt; <b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests[0].value;
-<b>include</b> BurnEnsures&lt;Token&gt;;
+<pre><code><b>include</b> <a href="#0x0_LibraDocTest_BurnAbortsIf">BurnAbortsIf</a>&lt;Token&gt;;
+<b>aborts_if</b> <a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().total_value &lt; <b>global</b>&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address).requests[0].value;
+<b>include</b> <a href="#0x0_LibraDocTest_BurnEnsures">BurnEnsures</a>&lt;Token&gt;;
 </code></pre>
 
 
@@ -914,7 +978,7 @@ resource under
 ) <b>acquires</b> <a href="#0x0_LibraDocTest_Info">Info</a>, <a href="#0x0_LibraDocTest_Preburn">Preburn</a> {
     // destroy the coin at the head of the preburn queue
     <b>let</b> preburn = borrow_global_mut&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address);
-    <b>let</b> <a href="#0x0_LibraDocTest_T">T</a> { value } = Vector::remove(&<b>mut</b> preburn.requests, 0);
+    <b>let</b> <a href="#0x0_LibraDocTest_T">T</a> { value } = <a href="#0x0_Vector_remove">Vector::remove</a>(&<b>mut</b> preburn.requests, 0);
     // <b>update</b> the market cap
     <b>let</b> market_cap = borrow_global_mut&lt;<a href="#0x0_LibraDocTest_Info">Info</a>&lt;Token&gt;&gt;(0xA550C18);
     market_cap.total_value = market_cap.total_value - (value <b>as</b> u128);
@@ -928,7 +992,7 @@ resource under
 
 <a name="0x0_LibraDocTest_cancel_burn_with_capability"></a>
 
-### Function `cancel_burn_with_capability`
+## Function `cancel_burn_with_capability`
 
 Cancel the burn request in the
 <code><a href="#0x0_LibraDocTest_Preburn">Preburn</a></code> resource stored at
@@ -949,8 +1013,8 @@ does not have a published Preburn resource or has one with no pending burn reque
 
 
 
-<pre><code><b>include</b> BasicBurnAbortsIf&lt;Token&gt;;
-<b>include</b> CancelBurnEnsures&lt;Token&gt;;
+<pre><code><b>include</b> <a href="#0x0_LibraDocTest_BasicBurnAbortsIf">BasicBurnAbortsIf</a>&lt;Token&gt;;
+<b>include</b> <a href="#0x0_LibraDocTest_CancelBurnEnsures">CancelBurnEnsures</a>&lt;Token&gt;;
 </code></pre>
 
 
@@ -967,7 +1031,7 @@ does not have a published Preburn resource or has one with no pending burn reque
 ): <a href="#0x0_LibraDocTest_T">T</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_LibraDocTest_Info">Info</a>, <a href="#0x0_LibraDocTest_Preburn">Preburn</a> {
     // destroy the coin at the head of the preburn queue
     <b>let</b> preburn = borrow_global_mut&lt;<a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address);
-    <b>let</b> coin = Vector::remove(&<b>mut</b> preburn.requests, 0);
+    <b>let</b> coin = <a href="#0x0_Vector_remove">Vector::remove</a>(&<b>mut</b> preburn.requests, 0);
     // <b>update</b> the market cap
     <b>let</b> market_cap = borrow_global_mut&lt;<a href="#0x0_LibraDocTest_Info">Info</a>&lt;Token&gt;&gt;(0xA550C18);
     market_cap.preburn_value = market_cap.preburn_value - <a href="#0x0_LibraDocTest_value">value</a>(&coin);
@@ -982,7 +1046,7 @@ does not have a published Preburn resource or has one with no pending burn reque
 
 <a name="0x0_LibraDocTest_publish_preburn"></a>
 
-### Function `publish_preburn`
+## Function `publish_preburn`
 
 Publish
 <code>preburn</code> under the sender's account
@@ -1022,7 +1086,7 @@ Publish
 
 <a name="0x0_LibraDocTest_remove_preburn"></a>
 
-### Function `remove_preburn`
+## Function `remove_preburn`
 
 Remove and return the
 <code><a href="#0x0_LibraDocTest_Preburn">Preburn</a></code> resource under the sender's account
@@ -1062,7 +1126,7 @@ Remove and return the
 
 <a name="0x0_LibraDocTest_destroy_preburn"></a>
 
-### Function `destroy_preburn`
+## Function `destroy_preburn`
 
 Destroys the given preburn resource.
 Aborts if
@@ -1092,7 +1156,7 @@ Aborts if
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraDocTest_destroy_preburn">destroy_preburn</a>&lt;Token&gt;(preburn: <a href="#0x0_LibraDocTest_Preburn">Preburn</a>&lt;Token&gt;) {
     <b>let</b> <a href="#0x0_LibraDocTest_Preburn">Preburn</a> { requests, is_approved: _ } = preburn;
-    Vector::destroy_empty(requests)
+    <a href="#0x0_Vector_destroy_empty">Vector::destroy_empty</a>(requests)
 }
 </code></pre>
 
@@ -1102,7 +1166,7 @@ Aborts if
 
 <a name="0x0_LibraDocTest_publish_mint_capability"></a>
 
-### Function `publish_mint_capability`
+## Function `publish_mint_capability`
 
 Publish
 <code>capability</code> under the sender's account
@@ -1118,8 +1182,8 @@ Publish
 
 
 
-<pre><code><b>aborts_if</b> exists_sender_mint_capability&lt;Token&gt;();
-<b>ensures</b> exists_sender_mint_capability&lt;Token&gt;();
+<pre><code><b>aborts_if</b> <a href="#0x0_LibraDocTest_exists_sender_mint_capability">exists_sender_mint_capability</a>&lt;Token&gt;();
+<b>ensures</b> <a href="#0x0_LibraDocTest_exists_sender_mint_capability">exists_sender_mint_capability</a>&lt;Token&gt;();
 <b>ensures</b> capability == <b>global</b>&lt;<a href="#0x0_LibraDocTest_MintCapability">MintCapability</a>&lt;Token&gt;&gt;(sender());
 </code></pre>
 
@@ -1142,7 +1206,7 @@ Publish
 
 <a name="0x0_LibraDocTest_remove_mint_capability"></a>
 
-### Function `remove_mint_capability`
+## Function `remove_mint_capability`
 
 Remove and return the MintCapability from the sender's account. Fails if the sender does
 not have a published MintCapability
@@ -1158,8 +1222,8 @@ not have a published MintCapability
 
 
 
-<pre><code><b>aborts_if</b> !exists_sender_mint_capability&lt;Token&gt;();
-<b>ensures</b> !exists_sender_mint_capability&lt;Token&gt;();
+<pre><code><b>aborts_if</b> !<a href="#0x0_LibraDocTest_exists_sender_mint_capability">exists_sender_mint_capability</a>&lt;Token&gt;();
+<b>ensures</b> !<a href="#0x0_LibraDocTest_exists_sender_mint_capability">exists_sender_mint_capability</a>&lt;Token&gt;();
 <b>ensures</b> result == <b>old</b>(<b>global</b>&lt;<a href="#0x0_LibraDocTest_MintCapability">MintCapability</a>&lt;Token&gt;&gt;(sender()));
 </code></pre>
 
@@ -1182,7 +1246,7 @@ not have a published MintCapability
 
 <a name="0x0_LibraDocTest_market_cap"></a>
 
-### Function `market_cap`
+## Function `market_cap`
 
 Return the total value of all Libra in the system
 
@@ -1197,8 +1261,8 @@ Return the total value of all Libra in the system
 
 
 
-<pre><code><b>aborts_if</b> !token_is_registered&lt;Token&gt;();
-<b>ensures</b> result == info&lt;Token&gt;().total_value;
+<pre><code><b>aborts_if</b> !<a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;();
+<b>ensures</b> result == <a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().total_value;
 </code></pre>
 
 
@@ -1220,7 +1284,7 @@ Return the total value of all Libra in the system
 
 <a name="0x0_LibraDocTest_preburn_value"></a>
 
-### Function `preburn_value`
+## Function `preburn_value`
 
 Return the total value of Libra to be burned
 
@@ -1235,8 +1299,8 @@ Return the total value of Libra to be burned
 
 
 
-<pre><code><b>aborts_if</b> !token_is_registered&lt;Token&gt;();
-<b>ensures</b> result == info&lt;Token&gt;().preburn_value;
+<pre><code><b>aborts_if</b> !<a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;();
+<b>ensures</b> result == <a href="#0x0_LibraDocTest_info">info</a>&lt;Token&gt;().preburn_value;
 </code></pre>
 
 
@@ -1258,7 +1322,7 @@ Return the total value of Libra to be burned
 
 <a name="0x0_LibraDocTest_zero"></a>
 
-### Function `zero`
+## Function `zero`
 
 Create a new
 <code><a href="#0x0_LibraDocTest_T">LibraDocTest::T</a></code> with a value of 0
@@ -1274,7 +1338,7 @@ Create a new
 
 
 
-<pre><code><b>aborts_if</b> !token_is_registered&lt;Token&gt;();
+<pre><code><b>aborts_if</b> !<a href="#0x0_LibraDocTest_token_is_registered">token_is_registered</a>&lt;Token&gt;();
 <b>ensures</b> result.value == 0;
 </code></pre>
 
@@ -1299,7 +1363,7 @@ Create a new
 
 <a name="0x0_LibraDocTest_value"></a>
 
-### Function `value`
+## Function `value`
 
 Public accessor for the value of a coin
 
@@ -1336,7 +1400,7 @@ Public accessor for the value of a coin
 
 <a name="0x0_LibraDocTest_split"></a>
 
-### Function `split`
+## Function `split`
 
 Splits the given coin into two and returns them both
 It leverages
@@ -1378,7 +1442,7 @@ It leverages
 
 <a name="0x0_LibraDocTest_withdraw"></a>
 
-### Function `withdraw`
+## Function `withdraw`
 
 "Divides" the given coin into two, where original coin is modified in place
 The original coin will have value = original value -
@@ -1428,7 +1492,7 @@ Fails if the coins value is less than
 
 <a name="0x0_LibraDocTest_join"></a>
 
-### Function `join`
+## Function `join`
 
 Merges two coins and returns a new coin whose value is equal to the sum of the two inputs
 
@@ -1467,7 +1531,7 @@ Merges two coins and returns a new coin whose value is equal to the sum of the t
 
 <a name="0x0_LibraDocTest_deposit"></a>
 
-### Function `deposit`
+## Function `deposit`
 
 "Merges" the two coins
 The coin passed in by reference will have a value equal to the sum of the two coins
@@ -1509,7 +1573,7 @@ The
 
 <a name="0x0_LibraDocTest_destroy_zero"></a>
 
-### Function `destroy_zero`
+## Function `destroy_zero`
 
 Destroy a coin
 Fails if the value is non-zero

@@ -37,7 +37,10 @@ use crate::{
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type},
 };
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    ffi::OsStr,
+};
 use vm::{file_format::Bytecode, CompiledModule};
 
 // =================================================================================================
@@ -774,9 +777,15 @@ impl<'env> ModuleEnv<'env> {
     }
 
     /// Returns true of this module is from a dependency, i.e. not the target of verification.
-    pub fn is_in_dependency(&self) -> bool {
+    pub fn is_dependency(&self) -> bool {
         let file_id = self.data.loc.file_id;
         self.env.file_id_is_dep.contains(&file_id)
+    }
+
+    /// Returns the path to source file of this module.
+    pub fn get_source_path(&self) -> &OsStr {
+        let file_id = self.data.loc.file_id;
+        self.env.source_files.name(file_id)
     }
 
     /// Returns documentation associated with this module.
@@ -1028,6 +1037,15 @@ impl<'env> ModuleEnv<'env> {
         self.data.spec_vars.get(&id).expect("spec var id defined")
     }
 
+    /// Find spec var by name.
+    pub fn find_spec_var(&self, name: Symbol) -> Option<&SpecVarDecl> {
+        self.data
+            .spec_vars
+            .iter()
+            .find(|(_, svar)| svar.name == name)
+            .map(|(_, svar)| svar)
+    }
+
     /// Returns specification functions of this module.
     pub fn get_spec_funs(&'env self) -> impl Iterator<Item = (&'env SpecFunId, &'env SpecFunDecl)> {
         self.data.spec_funs.iter()
@@ -1258,10 +1276,10 @@ impl<'env> StructEnv<'env> {
                     .get_struct_source_map(self.data.def_idx)
                     .ok()
                     .and_then(|smap| smap.type_parameters.get(i))
-                    .map(|(s, _)| s.as_str())
-                    .unwrap_or_else(|| "?");
+                    .map(|(s, _)| s.clone())
+                    .unwrap_or_else(|| format!("unknown#{}", i));
                 TypeParameter(
-                    self.module_env.env.symbol_pool.make(name),
+                    self.module_env.env.symbol_pool.make(&name),
                     TypeConstraint::from(*k),
                 )
             })
@@ -1546,10 +1564,10 @@ impl<'env> FunctionEnv<'env> {
                     .get_function_source_map(self.data.def_idx)
                     .ok()
                     .and_then(|fmap| fmap.type_parameters.get(i))
-                    .map(|(s, _)| s.as_str())
-                    .unwrap_or_else(|| "?");
+                    .map(|(s, _)| s.clone())
+                    .unwrap_or_else(|| format!("unknown#{}", i));
                 TypeParameter(
-                    self.module_env.env.symbol_pool.make(name),
+                    self.module_env.env.symbol_pool.make(&name),
                     TypeConstraint::from(*k),
                 )
             })

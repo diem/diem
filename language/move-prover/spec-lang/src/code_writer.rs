@@ -84,7 +84,15 @@ impl CodeWriter {
     /// Calls a function to process the code written so far. This is embedded into a function
     /// so we ensure correct scoping of borrowed RefCell content.
     pub fn process_result<T, F: FnMut(&str) -> T>(&self, mut f: F) -> T {
-        f(&self.0.borrow().output)
+        // Ensure that result is terminated by newline without spaces.
+        // This assumes that we already trimmed all individual lines.
+        let data = self.0.borrow();
+        let output = data.output.as_str();
+        let mut j = output.trim_end().len();
+        if j < output.len() && output[j..].starts_with('\n') {
+            j += 1;
+        }
+        f(&output[0..j])
     }
 
     /// Sets the current location. This location will be associated with all subsequently written
@@ -150,18 +158,24 @@ impl CodeWriter {
             if first {
                 first = false
             } else {
+                Self::trim_trailing_whitespace(&mut self.0.borrow_mut().output);
                 self.0.borrow_mut().output.push_str("\n");
             }
             self.emit_str(l)
         }
         if end_newl {
+            Self::trim_trailing_whitespace(&mut self.0.borrow_mut().output);
             self.0.borrow_mut().output.push_str("\n");
         }
     }
 
+    fn trim_trailing_whitespace(s: &mut String) {
+        s.truncate(s.trim_end_matches(' ').len());
+    }
+
     /// Emits a string and then terminates the line.
     pub fn emit_line(&self, s: &str) {
-        self.emit(s);
+        self.emit(s.trim_end_matches(' '));
         self.emit("\n");
     }
 
