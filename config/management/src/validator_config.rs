@@ -4,13 +4,13 @@
 use crate::{constants, error::Error, SecureBackends};
 use libra_crypto::{ed25519::Ed25519PublicKey, hash::CryptoHash, x25519, ValidCryptoMaterial};
 use libra_global_constants::{
-    CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OWNER_KEY, VALIDATOR_NETWORK_KEY,
+    CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_KEY, VALIDATOR_NETWORK_KEY,
 };
 use libra_network_address::{NetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{Storage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_types::{
-    account_address::AccountAddress,
+    account_address::{self, AccountAddress},
     transaction::{RawTransaction, SignedTransaction, Transaction},
 };
 use std::{
@@ -43,7 +43,7 @@ impl ValidatorConfig {
         let consensus_key = ed25519_from_storage(CONSENSUS_KEY, local.as_mut())?;
         let fullnode_network_key = x25519_from_storage(FULLNODE_NETWORK_KEY, local.as_mut())?;
         let validator_network_key = x25519_from_storage(VALIDATOR_NETWORK_KEY, local.as_mut())?;
-        let owner_key = ed25519_from_storage(OWNER_KEY, local.as_mut())?;
+        let operator_key = ed25519_from_storage(OPERATOR_KEY, local.as_mut())?;
 
         // append ln-noise-ik and ln-handshake protocols to base network addresses
 
@@ -69,14 +69,16 @@ impl ValidatorConfig {
         // transition complete
         let script = transaction_builder::encode_register_validator_script(
             consensus_key.to_bytes().to_vec(),
-            owner_key.to_bytes().to_vec(),
+            operator_key.to_bytes().to_vec(),
             validator_network_key.to_bytes(),
             raw_validator_address.into(),
             fullnode_network_key.to_bytes(),
             raw_fullnode_address.into(),
         );
 
-        let sender = self.owner_address;
+        // TODO(davidiw): This is currently not supported
+        // let sender = self.owner_address;
+        let sender = account_address::from_public_key(&operator_key);
         // TODO(davidiw): In genesis this is irrelevant -- afterward we need to obtain the
         // current sequence number by querying the blockchain.
         let sequence_number = 0;
@@ -91,11 +93,11 @@ impl ValidatorConfig {
             Duration::from_secs(expiration_time),
         );
         let signature = local
-            .sign_message(OWNER_KEY, &raw_transaction.hash())
+            .sign_message(OPERATOR_KEY, &raw_transaction.hash())
             .map_err(|e| {
-                Error::LocalStorageSigningError("validator-config", OWNER_KEY, e.to_string())
+                Error::LocalStorageSigningError("validator-config", OPERATOR_KEY, e.to_string())
             })?;
-        let signed_txn = SignedTransaction::new(raw_transaction, owner_key, signature);
+        let signed_txn = SignedTransaction::new(raw_transaction, operator_key, signature);
         let txn = Transaction::UserTransaction(signed_txn);
 
         // Step 3) Submit to remote storage
