@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::error::Error;
-use libra_config::config::{self, OnDiskStorageConfig, Token, VaultConfig};
+use libra_config::config::{self, GitHubConfig, OnDiskStorageConfig, Token, VaultConfig};
 use libra_secure_storage::Storage;
 use std::{
     collections::HashMap,
@@ -12,6 +12,7 @@ use std::{
 };
 
 pub const DISK: &str = "disk";
+pub const GITHUB: &str = "github";
 pub const MEMORY: &str = "memory";
 pub const VAULT: &str = "vault";
 
@@ -78,6 +79,26 @@ impl TryInto<config::SecureBackend> for SecureBackend {
                 config.namespace = self.parameters.remove("namespace");
                 config::SecureBackend::OnDiskStorage(config)
             }
+            GITHUB => {
+                let owner = self
+                    .parameters
+                    .remove("owner")
+                    .ok_or_else(|| Error::BackendParsingError("missing owner".into()))?;
+                let repository = self
+                    .parameters
+                    .remove("repository")
+                    .ok_or_else(|| Error::BackendParsingError("missing reository".into()))?;
+                let token = self
+                    .parameters
+                    .remove("token")
+                    .ok_or_else(|| Error::BackendParsingError("missing token".into()))?;
+                config::SecureBackend::GitHub(GitHubConfig {
+                    namespace: self.parameters.remove("namespace"),
+                    owner,
+                    repository,
+                    token: Token::new_disk(PathBuf::from(token)),
+                })
+            }
             MEMORY => config::SecureBackend::InMemoryStorage,
             VAULT => {
                 let server = self
@@ -139,6 +160,30 @@ mod tests {
 
         let disk = "backend=disk";
         assert!(storage(disk).is_err());
+    }
+
+    #[test]
+    fn test_github() {
+        let path = libra_temppath::TempPath::new();
+        path.create_as_file().unwrap();
+        let mut file = File::create(path.path()).unwrap();
+        file.write_all(b"disk_token").unwrap();
+        let path_str = path.path().to_str().unwrap();
+
+        let github = format!(
+            "backend=github;owner=libra;repository=libra;token={}",
+            path_str
+        );
+        storage(&github).unwrap();
+
+        let github = format!(
+            "backend=github;owner=libra;repository=libra;token={};namespace=test",
+            path_str
+        );
+        storage(&github).unwrap();
+
+        let github = "backend=github";
+        assert!(storage(github).is_err());
     }
 
     #[test]

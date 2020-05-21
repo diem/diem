@@ -210,6 +210,8 @@ pub struct SecureBackends {
     /// pair: "k0=v0;k1=v1;...".  The current supported formats are:
     ///     Vault: "backend=vault;server=URL;token=PATH_TO_TOKEN"
     ///         vault has an optional namespace: "namespace=NAMESPACE"
+    ///     GitHub: "backend=github;owner=OWNER;repository=REPOSITORY;token=PATH_TO_TOKEN"
+    ///         GitHUb has an optional namespace: "namespace=NAMESPACE"
     ///     InMemory: "backend=memory"
     ///     OnDisk: "backend=disk;path=LOCAL_PATH"
     #[structopt(long, verbatim_doc_comment)]
@@ -227,6 +229,8 @@ pub struct SingleBackend {
     /// The current supported formats are:
     ///     Vault: "backend=vault;server=URL;token=PATH_TO_TOKEN"
     ///         vault has an optional namespace: "namespace=NAMESPACE"
+    ///     GitHub: "backend=github;owner=OWNER;repository=REPOSITORY;token=PATH_TO_TOKEN"
+    ///         GitHUb has an optional namespace: "namespace=NAMESPACE"
     ///     InMemory: "backend=memory"
     ///     OnDisk: "backend=disk;path=LOCAL_PATH"
     #[structopt(long, verbatim_doc_comment)]
