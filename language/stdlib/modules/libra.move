@@ -138,6 +138,12 @@ module Libra {
         MintCapability<CoinType> { }
     }
 
+    public fun grant_mint_capability_for_sender<CoinType>() {
+        Transaction::assert(Transaction::sender() == 0xB1E55ED, 0);
+        assert_is_coin<CoinType>();
+        move_to_sender(grant_mint_capability<CoinType>());
+    }
+
     // Returns a `BurnCapability` for the `CoinType` currency. `CoinType`
     // must be a registered currency type.
     public fun grant_burn_capability<CoinType>(): BurnCapability<CoinType> {
@@ -147,6 +153,7 @@ module Libra {
 
     public fun grant_burn_capability_for_sender<CoinType>() {
         Transaction::assert(Transaction::sender() == 0xB1E55ED, 0);
+        assert_is_coin<CoinType>();
         move_to_sender(grant_burn_capability<CoinType>());
     }
 
