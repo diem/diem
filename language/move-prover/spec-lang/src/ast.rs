@@ -89,7 +89,7 @@ impl ConditionKind {
     /// Returns true if this condition is allowed on a private function declaration.
     pub fn allowed_on_private_fun_decl(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Requires | AbortsIf | Ensures)
+        matches!(self, Requires | RequiresModule | AbortsIf | Ensures)
     }
 
     /// Returns true if this condition is allowed in a function body.
