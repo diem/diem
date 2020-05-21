@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 futures = { version = "0.3.5"  }
-tokio = { version = "0.2.13", features = ["full"] }
+tokio = { version = "0.2.21", features = ["full"] }
 tokio-util = { version = "0.3", features = ["codec"] }
 
 libra-crypto = { path = "../../crypto/crypto" }
