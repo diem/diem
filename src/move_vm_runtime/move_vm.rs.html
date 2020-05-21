@@ -81,6 +81,7 @@
 <span id="81">81</span>
 <span id="82">82</span>
 <span id="83">83</span>
+<span id="84">84</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -88,12 +89,12 @@
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">runtime</span>::<span class="ident">VMRuntime</span>;
 <span class="kw">use</span> <span class="ident">bytecode_verifier</span>::<span class="ident">VerifiedModule</span>;
 <span class="kw">use</span> <span class="ident">move_core_types</span>::{
-    <span class="ident">gas_schedule</span>::<span class="ident">CostTable</span>,
     <span class="ident">identifier</span>::<span class="ident">IdentStr</span>,
     <span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">TypeTag</span>},
 };
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::{
-    <span class="ident">chain_state</span>::<span class="ident">ChainState</span>, <span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>, <span class="ident">values</span>::<span class="ident">Value</span>,
+    <span class="ident">data_store</span>::<span class="ident">DataStore</span>, <span class="ident">gas_schedule</span>::<span class="ident">CostStrategy</span>, <span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>,
+    <span class="ident">values</span>::<span class="ident">Value</span>,
 };
 <span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">errors</span>::<span class="ident">VMResult</span>;
 
@@ -108,55 +109,56 @@
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute_function</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">ChainState</span><span class="op">&gt;</span>(
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute_function</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleId</span>,
         <span class="ident">function_name</span>: <span class="kw-2">&amp;</span><span class="ident">IdentStr</span>,
-        <span class="ident">gas_schedule</span>: <span class="kw-2">&amp;</span><span class="ident">CostTable</span>,
-        <span class="ident">chain_state</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">S</span>,
-        <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
         <span class="ident">ty_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TypeTag</span><span class="op">&gt;</span>,
         <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&gt;</span>,
+        <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
+        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
+        <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">execute_function</span>(
-            <span class="ident">chain_state</span>,
-            <span class="ident">txn_data</span>,
-            <span class="ident">gas_schedule</span>,
             <span class="ident">module</span>,
             <span class="ident">function_name</span>,
             <span class="ident">ty_args</span>,
             <span class="ident">args</span>,
+            <span class="ident">cost_strategy</span>,
+            <span class="ident">data_store</span>,
+            <span class="ident">txn_data</span>,
         )
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute_script</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">ChainState</span><span class="op">&gt;</span>(
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute_script</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">script</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-        <span class="ident">gas_schedule</span>: <span class="kw-2">&amp;</span><span class="ident">CostTable</span>,
-        <span class="ident">chain_state</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">S</span>,
-        <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
         <span class="ident">ty_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TypeTag</span><span class="op">&gt;</span>,
         <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">runtime</span>
-            .<span class="ident">execute_script</span>(<span class="ident">chain_state</span>, <span class="ident">txn_data</span>, <span class="ident">gas_schedule</span>, <span class="ident">script</span>, <span class="ident">ty_args</span>, <span class="ident">args</span>)
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">publish_module</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">ChainState</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">module</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-        <span class="ident">chain_state</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">S</span>,
+        <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
+        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
         <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">publish_module</span>(<span class="ident">module</span>, <span class="ident">chain_state</span>, <span class="ident">txn_data</span>)
+        <span class="self">self</span>.<span class="ident">runtime</span>
+            .<span class="ident">execute_script</span>(<span class="ident">script</span>, <span class="ident">ty_args</span>, <span class="ident">args</span>, <span class="ident">cost_strategy</span>, <span class="ident">data_store</span>, <span class="ident">txn_data</span>)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cache_module</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">ChainState</span><span class="op">&gt;</span>(
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">publish_module</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">module</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
+        <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">runtime</span>
+            .<span class="ident">publish_module</span>(<span class="ident">module</span>, <span class="ident">data_store</span>, <span class="kw-2">&amp;</span><span class="ident">txn_data</span>.<span class="ident">sender</span>)
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cache_module</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">module</span>: <span class="ident">VerifiedModule</span>,
-        <span class="ident">chain_state</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">S</span>,
+        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">cache_module</span>(<span class="ident">module</span>, <span class="ident">chain_state</span>)
+        <span class="self">self</span>.<span class="ident">runtime</span>.<span class="ident">cache_module</span>(<span class="ident">module</span>, <span class="ident">data_store</span>)
     }
 }
 

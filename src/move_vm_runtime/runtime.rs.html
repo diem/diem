@@ -179,6 +179,7 @@
 <span id="179">179</span>
 <span id="180">180</span>
 <span id="181">181</span>
+<span id="182">182</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -188,15 +189,14 @@
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>};
 <span class="kw">use</span> <span class="ident">move_core_types</span>::{
-    <span class="ident">gas_schedule</span>::<span class="ident">CostTable</span>,
+    <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">identifier</span>::<span class="ident">IdentStr</span>,
     <span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">TypeTag</span>},
 };
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::{
-    <span class="ident">interpreter_context</span>::<span class="ident">InterpreterContext</span>, <span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>,
+    <span class="ident">data_store</span>::<span class="ident">DataStore</span>, <span class="ident">gas_schedule</span>::<span class="ident">CostStrategy</span>, <span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>,
     <span class="ident">values</span>::<span class="ident">Value</span>,
 };
-
 <span class="kw">use</span> <span class="ident">vm</span>::{
     <span class="ident">access</span>::<span class="ident">ModuleAccess</span>,
     <span class="ident">errors</span>::{<span class="ident">verification_error</span>, <span class="ident">vm_error</span>, <span class="ident">Location</span>, <span class="ident">VMResult</span>},
@@ -210,7 +210,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">VMRuntime</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">VMRuntime</span> {
             <span class="ident">loader</span>: <span class="ident">Loader</span>::<span class="ident">new</span>(),
         }
@@ -219,8 +219,8 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">publish_module</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">module</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-        <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">InterpreterContext</span>,
-        <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
+        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
+        <span class="ident">sender</span>: <span class="kw-2">&amp;</span><span class="ident">AccountAddress</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">compiled_module</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">CompiledModule</span>::<span class="ident">deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">module</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">module</span>,
@@ -233,7 +233,7 @@
         <span class="comment">// Make sure the module&#39;s self address matches the transaction sender. The self address is</span>
         <span class="comment">// where the module will actually be published. If we did not check this, the sender could</span>
         <span class="comment">// publish a module under anyone&#39;s account.</span>
-        <span class="kw">if</span> <span class="ident">compiled_module</span>.<span class="ident">address</span>() <span class="op">!</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">txn_data</span>.<span class="ident">sender</span> {
+        <span class="kw">if</span> <span class="ident">compiled_module</span>.<span class="ident">address</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">sender</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(
                 <span class="ident">IndexKind</span>::<span class="ident">AddressIdentifier</span>,
                 <span class="ident">compiled_module</span>.<span class="ident">self_handle_idx</span>().<span class="number">0</span> <span class="kw">as</span> <span class="ident">usize</span>,
@@ -244,7 +244,7 @@
         <span class="comment">// Make sure that there is not already a module with this name published</span>
         <span class="comment">// under the transaction sender&#39;s account.</span>
         <span class="kw">let</span> <span class="ident">module_id</span> <span class="op">=</span> <span class="ident">compiled_module</span>.<span class="ident">self_id</span>();
-        <span class="kw">if</span> <span class="ident">context</span>.<span class="ident">exists_module</span>(<span class="kw-2">&amp;</span><span class="ident">module_id</span>) {
+        <span class="kw">if</span> <span class="ident">data_store</span>.<span class="ident">exists_module</span>(<span class="kw-2">&amp;</span><span class="ident">module_id</span>) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">vm_error</span>(
                 <span class="ident">Location</span>::<span class="ident">default</span>(),
                 <span class="ident">StatusCode</span>::<span class="ident">DUPLICATE_MODULE_NAME</span>,
@@ -253,17 +253,17 @@
 
         <span class="kw">let</span> <span class="ident">verified_module</span> <span class="op">=</span> <span class="ident">VerifiedModule</span>::<span class="ident">new</span>(<span class="ident">compiled_module</span>).<span class="ident">map_err</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">e</span>)<span class="op">|</span> <span class="ident">e</span>)<span class="question-mark">?</span>;
         <span class="ident">Loader</span>::<span class="ident">check_natives</span>(<span class="kw-2">&amp;</span><span class="ident">verified_module</span>)<span class="question-mark">?</span>;
-        <span class="ident">context</span>.<span class="ident">publish_module</span>(<span class="ident">module_id</span>, <span class="ident">module</span>)
+        <span class="ident">data_store</span>.<span class="ident">publish_module</span>(<span class="ident">module_id</span>, <span class="ident">module</span>)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute_script</span>(
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">execute_script</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">InterpreterContext</span>,
-        <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
-        <span class="ident">gas_schedule</span>: <span class="kw-2">&amp;</span><span class="ident">CostTable</span>,
         <span class="ident">script</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
         <span class="ident">ty_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TypeTag</span><span class="op">&gt;</span>,
         <span class="kw-2">mut</span> <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&gt;</span>,
+        <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
+        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
+        <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">fn</span> <span class="ident">is_signer_reference</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">SignatureToken</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
             <span class="kw">use</span> <span class="ident">SignatureToken</span> <span class="kw">as</span> <span class="ident">S</span>;
@@ -275,9 +275,9 @@
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">type_params</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
         <span class="kw">for</span> <span class="ident">ty</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">ty_args</span> {
-            <span class="ident">type_params</span>.<span class="ident">push</span>(<span class="self">self</span>.<span class="ident">loader</span>.<span class="ident">load_type</span>(<span class="ident">ty</span>, <span class="ident">context</span>)<span class="question-mark">?</span>);
+            <span class="ident">type_params</span>.<span class="ident">push</span>(<span class="self">self</span>.<span class="ident">loader</span>.<span class="ident">load_type</span>(<span class="ident">ty</span>, <span class="ident">data_store</span>)<span class="question-mark">?</span>);
         }
-        <span class="kw">let</span> <span class="ident">main</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">loader</span>.<span class="ident">load_script</span>(<span class="kw-2">&amp;</span><span class="ident">script</span>, <span class="ident">context</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">main</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">loader</span>.<span class="ident">load_script</span>(<span class="kw-2">&amp;</span><span class="ident">script</span>, <span class="ident">data_store</span>)<span class="question-mark">?</span>;
 
         <span class="self">self</span>.<span class="ident">loader</span>
             .<span class="ident">verify_ty_args</span>(<span class="ident">main</span>.<span class="ident">type_parameters</span>(), <span class="kw-2">&amp;</span><span class="ident">type_params</span>)<span class="question-mark">?</span>;
@@ -291,31 +291,33 @@
         <span class="ident">verify_args</span>(<span class="ident">main</span>.<span class="ident">parameters</span>(), <span class="kw-2">&amp;</span><span class="ident">args</span>)<span class="question-mark">?</span>;
 
         <span class="ident">Interpreter</span>::<span class="ident">entrypoint</span>(
-            <span class="ident">context</span>,
+            <span class="ident">data_store</span>,
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">loader</span>,
             <span class="ident">txn_data</span>,
-            <span class="ident">gas_schedule</span>,
+            <span class="ident">cost_strategy</span>,
             <span class="ident">main</span>,
             <span class="ident">type_params</span>,
             <span class="ident">args</span>,
         )
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute_function</span>(
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">execute_function</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">InterpreterContext</span>,
-        <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
-        <span class="ident">gas_schedule</span>: <span class="kw-2">&amp;</span><span class="ident">CostTable</span>,
         <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleId</span>,
         <span class="ident">function_name</span>: <span class="kw-2">&amp;</span><span class="ident">IdentStr</span>,
         <span class="ident">ty_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TypeTag</span><span class="op">&gt;</span>,
         <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&gt;</span>,
+        <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
+        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
+        <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">type_params</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
         <span class="kw">for</span> <span class="ident">ty</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">ty_args</span> {
-            <span class="ident">type_params</span>.<span class="ident">push</span>(<span class="self">self</span>.<span class="ident">loader</span>.<span class="ident">load_type</span>(<span class="ident">ty</span>, <span class="ident">context</span>)<span class="question-mark">?</span>);
+            <span class="ident">type_params</span>.<span class="ident">push</span>(<span class="self">self</span>.<span class="ident">loader</span>.<span class="ident">load_type</span>(<span class="ident">ty</span>, <span class="ident">data_store</span>)<span class="question-mark">?</span>);
         }
-        <span class="kw">let</span> <span class="ident">func</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">loader</span>.<span class="ident">load_function</span>(<span class="ident">function_name</span>, <span class="ident">module</span>, <span class="ident">context</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">func</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">loader</span>
+            .<span class="ident">load_function</span>(<span class="ident">function_name</span>, <span class="ident">module</span>, <span class="ident">data_store</span>)<span class="question-mark">?</span>;
 
         <span class="self">self</span>.<span class="ident">loader</span>
             .<span class="ident">verify_ty_args</span>(<span class="ident">func</span>.<span class="ident">type_parameters</span>(), <span class="kw-2">&amp;</span><span class="ident">type_params</span>)<span class="question-mark">?</span>;
@@ -323,22 +325,22 @@
         <span class="comment">//verify_args(func.parameters(), &amp;args)?;</span>
 
         <span class="ident">Interpreter</span>::<span class="ident">entrypoint</span>(
-            <span class="ident">context</span>,
+            <span class="ident">data_store</span>,
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">loader</span>,
             <span class="ident">txn_data</span>,
-            <span class="ident">gas_schedule</span>,
+            <span class="ident">cost_strategy</span>,
             <span class="ident">func</span>,
             <span class="ident">type_params</span>,
             <span class="ident">args</span>,
         )
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cache_module</span>(
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">cache_module</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">module</span>: <span class="ident">VerifiedModule</span>,
-        <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">InterpreterContext</span>,
+        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">loader</span>.<span class="ident">cache_module</span>(<span class="ident">module</span>, <span class="ident">context</span>)
+        <span class="self">self</span>.<span class="ident">loader</span>.<span class="ident">cache_module</span>(<span class="ident">module</span>, <span class="ident">data_store</span>)
     }
 }
 

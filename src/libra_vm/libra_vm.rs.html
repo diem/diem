@@ -1097,11 +1097,58 @@
 <span id="1097">1097</span>
 <span id="1098">1098</span>
 <span id="1099">1099</span>
+<span id="1100">1100</span>
+<span id="1101">1101</span>
+<span id="1102">1102</span>
+<span id="1103">1103</span>
+<span id="1104">1104</span>
+<span id="1105">1105</span>
+<span id="1106">1106</span>
+<span id="1107">1107</span>
+<span id="1108">1108</span>
+<span id="1109">1109</span>
+<span id="1110">1110</span>
+<span id="1111">1111</span>
+<span id="1112">1112</span>
+<span id="1113">1113</span>
+<span id="1114">1114</span>
+<span id="1115">1115</span>
+<span id="1116">1116</span>
+<span id="1117">1117</span>
+<span id="1118">1118</span>
+<span id="1119">1119</span>
+<span id="1120">1120</span>
+<span id="1121">1121</span>
+<span id="1122">1122</span>
+<span id="1123">1123</span>
+<span id="1124">1124</span>
+<span id="1125">1125</span>
+<span id="1126">1126</span>
+<span id="1127">1127</span>
+<span id="1128">1128</span>
+<span id="1129">1129</span>
+<span id="1130">1130</span>
+<span id="1131">1131</span>
+<span id="1132">1132</span>
+<span id="1133">1133</span>
+<span id="1134">1134</span>
+<span id="1135">1135</span>
+<span id="1136">1136</span>
+<span id="1137">1137</span>
+<span id="1138">1138</span>
+<span id="1139">1139</span>
+<span id="1140">1140</span>
+<span id="1141">1141</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">counters</span>::<span class="kw-2">*</span>, <span class="ident">system_module_names</span>::<span class="kw-2">*</span>, <span class="ident">VMExecutor</span>, <span class="ident">VMValidator</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">counters</span>::<span class="kw-2">*</span>,
+    <span class="ident">data_cache</span>::{<span class="ident">RemoteStorage</span>, <span class="ident">StateViewCache</span>},
+    <span class="ident">system_module_names</span>::<span class="kw-2">*</span>,
+    <span class="ident">VMExecutor</span>, <span class="ident">VMValidator</span>,
+};
 <span class="kw">use</span> <span class="ident">debug_interface</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">HashValue</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
@@ -1125,14 +1172,12 @@
     <span class="ident">identifier</span>::<span class="ident">IdentStr</span>,
     <span class="ident">language_storage</span>::{<span class="ident">ResourceKey</span>, <span class="ident">StructTag</span>, <span class="ident">TypeTag</span>},
 };
-<span class="kw">use</span> <span class="ident">move_vm_runtime</span>::<span class="ident">MoveVM</span>;
-<span class="kw">use</span> <span class="ident">move_vm_state</span>::{
-    <span class="ident">data_cache</span>::{<span class="ident">BlockDataCache</span>, <span class="ident">RemoteCache</span>, <span class="ident">RemoteStorage</span>},
-    <span class="ident">execution_context</span>::{<span class="ident">ExecutionContext</span>, <span class="ident">SystemExecutionContext</span>, <span class="ident">TransactionExecutionContext</span>},
+<span class="kw">use</span> <span class="ident">move_vm_runtime</span>::{
+    <span class="ident">data_cache</span>::{<span class="ident">RemoteCache</span>, <span class="ident">TransactionDataCache</span>},
+    <span class="ident">move_vm</span>::<span class="ident">MoveVM</span>,
 };
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::{
-    <span class="ident">chain_state</span>::<span class="ident">ChainState</span>,
-    <span class="ident">gas_schedule</span>::{<span class="ident">calculate_intrinsic_gas</span>, <span class="ident">zero_cost_schedule</span>},
+    <span class="ident">gas_schedule</span>::{<span class="ident">calculate_intrinsic_gas</span>, <span class="ident">zero_cost_schedule</span>, <span class="ident">CostStrategy</span>},
     <span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>,
     <span class="ident">values</span>::<span class="ident">Value</span>,
 };
@@ -1317,7 +1362,8 @@
         <span class="ident">txn_data</span>: <span class="ident">TransactionMetadata</span>,
         <span class="ident">account_currency_symbol</span>: <span class="kw-2">&amp;</span><span class="ident">IdentStr</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">VerifiedTransactionPayload</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">SystemExecutionContext</span>::<span class="ident">new</span>(<span class="ident">remote_cache</span>, <span class="ident">GasUnits</span>::<span class="ident">new</span>(<span class="number">0</span>));
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cost_strategy</span> <span class="op">=</span> <span class="ident">CostStrategy</span>::<span class="ident">system</span>(<span class="self">self</span>.<span class="ident">get_gas_schedule</span>()<span class="question-mark">?</span>, <span class="ident">GasUnits</span>::<span class="ident">new</span>(<span class="number">0</span>));
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data_store</span> <span class="op">=</span> <span class="ident">TransactionDataCache</span>::<span class="ident">new</span>(<span class="ident">remote_cache</span>);
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>
             .<span class="ident">on_chain_config</span>()<span class="question-mark">?</span>
             .<span class="ident">publishing_option</span>
@@ -1326,7 +1372,12 @@
             <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;[VM] Custom scripts not allowed: {:?}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">script</span>.<span class="ident">code</span>());
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_SCRIPT</span>));
         };
-        <span class="self">self</span>.<span class="ident">run_prologue</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ctx</span>, <span class="kw-2">&amp;</span><span class="ident">txn_data</span>, <span class="ident">account_currency_symbol</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">run_prologue</span>(
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>,
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
+            <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
+            <span class="ident">account_currency_symbol</span>,
+        )<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">VerifiedTransactionPayload</span>::<span class="ident">Script</span>(
             <span class="ident">script</span>.<span class="ident">code</span>().<span class="ident">to_vec</span>(),
             <span class="ident">script</span>.<span class="ident">ty_args</span>().<span class="ident">to_vec</span>(),
@@ -1341,12 +1392,18 @@
         <span class="ident">txn_data</span>: <span class="ident">TransactionMetadata</span>,
         <span class="ident">account_currency_symbol</span>: <span class="kw-2">&amp;</span><span class="ident">IdentStr</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">VerifiedTransactionPayload</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">SystemExecutionContext</span>::<span class="ident">new</span>(<span class="ident">remote_cache</span>, <span class="ident">GasUnits</span>::<span class="ident">new</span>(<span class="number">0</span>));
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cost_strategy</span> <span class="op">=</span> <span class="ident">CostStrategy</span>::<span class="ident">system</span>(<span class="self">self</span>.<span class="ident">get_gas_schedule</span>()<span class="question-mark">?</span>, <span class="ident">GasUnits</span>::<span class="ident">new</span>(<span class="number">0</span>));
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data_store</span> <span class="op">=</span> <span class="ident">TransactionDataCache</span>::<span class="ident">new</span>(<span class="ident">remote_cache</span>);
         <span class="kw">if</span> <span class="op">!</span><span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">on_chain_config</span>()<span class="question-mark">?</span>.<span class="ident">publishing_option</span>.<span class="ident">is_open</span>() {
             <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;[VM] Custom modules not allowed&quot;</span>);
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_MODULE</span>));
         };
-        <span class="self">self</span>.<span class="ident">run_prologue</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ctx</span>, <span class="kw-2">&amp;</span><span class="ident">txn_data</span>, <span class="ident">account_currency_symbol</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">run_prologue</span>(
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>,
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
+            <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
+            <span class="ident">account_currency_symbol</span>,
+        )<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">VerifiedTransactionPayload</span>::<span class="ident">Module</span>(<span class="ident">module</span>.<span class="ident">code</span>().<span class="ident">to_vec</span>()))
     }
 
@@ -1356,8 +1413,8 @@
         <span class="ident">_change_set</span>: <span class="kw-2">&amp;</span><span class="ident">ChangeSet</span>,
         <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">SystemExecutionContext</span>::<span class="ident">new</span>(<span class="ident">remote_cache</span>, <span class="ident">GasUnits</span>::<span class="ident">new</span>(<span class="number">0</span>));
-        <span class="self">self</span>.<span class="ident">run_writeset_prologue</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ctx</span>, <span class="kw-2">&amp;</span><span class="ident">txn_data</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data_store</span> <span class="op">=</span> <span class="ident">TransactionDataCache</span>::<span class="ident">new</span>(<span class="ident">remote_cache</span>);
+        <span class="self">self</span>.<span class="ident">run_writeset_prologue</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>, <span class="kw-2">&amp;</span><span class="ident">txn_data</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -1406,50 +1463,66 @@
 
     <span class="kw">fn</span> <span class="ident">execute_verified_payload</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BlockDataCache</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
+        <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">StateViewCache</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
         <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
         <span class="ident">payload</span>: <span class="ident">VerifiedTransactionPayload</span>,
         <span class="ident">account_currency_symbol</span>: <span class="kw-2">&amp;</span><span class="ident">IdentStr</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TransactionOutput</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">TransactionExecutionContext</span>::<span class="ident">new</span>(<span class="ident">txn_data</span>.<span class="ident">max_gas_amount</span>(), <span class="ident">remote_cache</span>);
+        <span class="kw">let</span> <span class="ident">gas_schedule</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">get_gas_schedule</span>() {
+            <span class="prelude-val">Ok</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>,
+            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="ident">discard_error_output</span>(<span class="ident">e</span>),
+        };
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cost_strategy</span> <span class="op">=</span> <span class="ident">CostStrategy</span>::<span class="ident">transaction</span>(<span class="ident">gas_schedule</span>, <span class="ident">txn_data</span>.<span class="ident">max_gas_amount</span>());
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data_store</span> <span class="op">=</span> <span class="ident">TransactionDataCache</span>::<span class="ident">new</span>(<span class="ident">remote_cache</span>);
         <span class="comment">// TODO: The logic for handling falied transaction fee is pretty ugly right now. Fix it later.</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">failed_gas_left</span> <span class="op">=</span> <span class="ident">GasUnits</span>::<span class="ident">new</span>(<span class="number">0</span>);
         <span class="kw">match</span> <span class="ident">payload</span> {
             <span class="ident">VerifiedTransactionPayload</span>::<span class="ident">Module</span>(<span class="ident">m</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="self">self</span>.<span class="ident">move_vm</span>.<span class="ident">publish_module</span>(<span class="ident">m</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ctx</span>, <span class="ident">txn_data</span>)
+                <span class="self">self</span>.<span class="ident">move_vm</span>.<span class="ident">publish_module</span>(<span class="ident">m</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>, <span class="ident">txn_data</span>)
             }
             <span class="ident">VerifiedTransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">s</span>, <span class="ident">ty_args</span>, <span class="ident">args</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">gas_schedule</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">get_gas_schedule</span>() {
-                    <span class="prelude-val">Ok</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>,
-                    <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="ident">discard_error_output</span>(<span class="ident">e</span>),
-                };
-                <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span>
-                    <span class="self">self</span>.<span class="ident">move_vm</span>
-                        .<span class="ident">execute_script</span>(<span class="ident">s</span>, <span class="ident">gas_schedule</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ctx</span>, <span class="ident">txn_data</span>, <span class="ident">ty_args</span>, <span class="ident">args</span>);
-                <span class="kw">let</span> <span class="ident">gas_usage</span> <span class="op">=</span> <span class="ident">txn_data</span>.<span class="ident">max_gas_amount</span>().<span class="ident">sub</span>(<span class="ident">ctx</span>.<span class="ident">remaining_gas</span>()).<span class="ident">get</span>();
+                <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">move_vm</span>.<span class="ident">execute_script</span>(
+                    <span class="ident">s</span>,
+                    <span class="ident">ty_args</span>,
+                    <span class="ident">args</span>,
+                    <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
+                    <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>,
+                    <span class="ident">txn_data</span>,
+                );
+                <span class="kw">let</span> <span class="ident">gas_usage</span> <span class="op">=</span> <span class="ident">txn_data</span>
+                    .<span class="ident">max_gas_amount</span>()
+                    .<span class="ident">sub</span>(<span class="ident">cost_strategy</span>.<span class="ident">remaining_gas</span>())
+                    .<span class="ident">get</span>();
                 <span class="ident">TXN_EXECUTION_GAS_USAGE</span>.<span class="ident">observe</span>(<span class="ident">gas_usage</span> <span class="kw">as</span> <span class="ident">f64</span>);
                 <span class="ident">ret</span>
             }
         }
         .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-            <span class="ident">failed_gas_left</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">remaining_gas</span>();
+            <span class="ident">failed_gas_left</span> <span class="op">=</span> <span class="ident">cost_strategy</span>.<span class="ident">remaining_gas</span>();
             <span class="ident">err</span>
         })
         .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-            <span class="ident">failed_gas_left</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">remaining_gas</span>();
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gas_free_ctx</span> <span class="op">=</span> <span class="ident">SystemExecutionContext</span>::<span class="ident">from</span>(<span class="ident">ctx</span>);
-            <span class="self">self</span>.<span class="ident">run_epilogue</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">gas_free_ctx</span>, <span class="ident">txn_data</span>, <span class="ident">account_currency_symbol</span>)
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-                    <span class="ident">get_transaction_output</span>(
-                        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">gas_free_ctx</span>,
-                        <span class="ident">txn_data</span>,
-                        <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">EXECUTED</span>),
-                    )
-                })
+            <span class="ident">failed_gas_left</span> <span class="op">=</span> <span class="ident">cost_strategy</span>.<span class="ident">remaining_gas</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cost_strategy</span> <span class="op">=</span> <span class="ident">CostStrategy</span>::<span class="ident">system</span>(<span class="ident">gas_schedule</span>, <span class="ident">failed_gas_left</span>);
+            <span class="self">self</span>.<span class="ident">run_epilogue</span>(
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>,
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
+                <span class="ident">txn_data</span>,
+                <span class="ident">account_currency_symbol</span>,
+            )
+            .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
+                <span class="ident">get_transaction_output</span>(
+                    <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>,
+                    <span class="kw-2">&amp;</span><span class="ident">cost_strategy</span>,
+                    <span class="ident">txn_data</span>,
+                    <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">EXECUTED</span>),
+                )
+            })
         })
         .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
             <span class="self">self</span>.<span class="ident">failed_transaction_cleanup</span>(
                 <span class="ident">err</span>,
+                <span class="ident">gas_schedule</span>,
                 <span class="ident">failed_gas_left</span>,
                 <span class="ident">txn_data</span>,
                 <span class="ident">remote_cache</span>,
@@ -1463,16 +1536,25 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">failed_transaction_cleanup</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">error_code</span>: <span class="ident">VMStatus</span>,
+        <span class="ident">gas_schedule</span>: <span class="kw-2">&amp;</span><span class="ident">CostTable</span>,
         <span class="ident">gas_left</span>: <span class="ident">GasUnits</span><span class="op">&lt;</span><span class="ident">GasCarrier</span><span class="op">&gt;</span>,
         <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
-        <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BlockDataCache</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
+        <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">StateViewCache</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
         <span class="ident">account_currency_symbol</span>: <span class="kw-2">&amp;</span><span class="ident">IdentStr</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TransactionOutput</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gas_free_ctx</span> <span class="op">=</span> <span class="ident">SystemExecutionContext</span>::<span class="ident">new</span>(<span class="ident">remote_cache</span>, <span class="ident">gas_left</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cost_strategy</span> <span class="op">=</span> <span class="ident">CostStrategy</span>::<span class="ident">system</span>(<span class="ident">gas_schedule</span>, <span class="ident">gas_left</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data_store</span> <span class="op">=</span> <span class="ident">TransactionDataCache</span>::<span class="ident">new</span>(<span class="ident">remote_cache</span>);
         <span class="kw">match</span> <span class="ident">TransactionStatus</span>::<span class="ident">from</span>(<span class="ident">error_code</span>) {
             <span class="ident">TransactionStatus</span>::<span class="ident">Keep</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>
-                .<span class="ident">run_epilogue</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">gas_free_ctx</span>, <span class="ident">txn_data</span>, <span class="ident">account_currency_symbol</span>)
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">get_transaction_output</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">gas_free_ctx</span>, <span class="ident">txn_data</span>, <span class="ident">status</span>))
+                .<span class="ident">run_epilogue</span>(
+                    <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>,
+                    <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
+                    <span class="ident">txn_data</span>,
+                    <span class="ident">account_currency_symbol</span>,
+                )
+                .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
+                    <span class="ident">get_transaction_output</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>, <span class="kw-2">&amp;</span><span class="ident">cost_strategy</span>, <span class="ident">txn_data</span>, <span class="ident">status</span>)
+                })
                 .<span class="ident">unwrap_or_else</span>(<span class="ident">discard_error_output</span>),
             <span class="ident">TransactionStatus</span>::<span class="ident">Discard</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">discard_error_output</span>(<span class="ident">status</span>),
             <span class="ident">TransactionStatus</span>::<span class="ident">Retry</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
@@ -1482,7 +1564,7 @@
     <span class="kw">fn</span> <span class="ident">execute_user_transaction</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">_state_view</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">StateView</span>,
-        <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BlockDataCache</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
+        <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">StateViewCache</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
         <span class="ident">txn</span>: <span class="kw-2">&amp;</span><span class="ident">SignatureCheckedTransaction</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TransactionOutput</span> {
         <span class="kw">let</span> <span class="ident">txn_data</span> <span class="op">=</span> <span class="ident">TransactionMetadata</span>::<span class="ident">new</span>(<span class="ident">txn</span>);
@@ -1514,7 +1596,7 @@
 
     <span class="kw">fn</span> <span class="ident">read_writeset</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="ident">BlockDataCache</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
+        <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="ident">StateViewCache</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
         <span class="ident">write_set</span>: <span class="kw-2">&amp;</span><span class="ident">WriteSet</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="comment">// All Move executions satisfy the read-before-write property. Thus we need to read each</span>
@@ -1527,7 +1609,7 @@
 
     <span class="kw">fn</span> <span class="ident">process_waypoint_change_set</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BlockDataCache</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
+        <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">StateViewCache</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
         <span class="ident">change_set</span>: <span class="ident">ChangeSet</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">TransactionOutput</span><span class="op">&gt;</span> {
         <span class="kw">let</span> (<span class="ident">write_set</span>, <span class="ident">events</span>) <span class="op">=</span> <span class="ident">change_set</span>.<span class="ident">into_inner</span>();
@@ -1544,7 +1626,7 @@
 
     <span class="kw">fn</span> <span class="ident">process_block_prologue</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BlockDataCache</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
+        <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">StateViewCache</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
         <span class="ident">block_metadata</span>: <span class="ident">BlockMetadata</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">TransactionOutput</span><span class="op">&gt;</span> {
         <span class="comment">// TODO: How should we setup the metadata here? A couple of thoughts here:</span>
@@ -1561,11 +1643,9 @@
             <span class="ident">RegisteredCurrencies</span>::<span class="ident">fetch_config</span>(<span class="ident">remote_cache</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">RemoteCache</span>)
                 .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>))<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">interpreter_context</span> <span class="op">=</span>
-            <span class="ident">TransactionExecutionContext</span>::<span class="ident">new</span>(<span class="ident">txn_data</span>.<span class="ident">max_gas_amount</span>(), <span class="ident">remote_cache</span>);
-        <span class="comment">// TODO: We might need a non zero cost table here so that we can at least bound the execution</span>
-        <span class="comment">//       time by a reasonable amount.</span>
         <span class="kw">let</span> <span class="ident">gas_schedule</span> <span class="op">=</span> <span class="ident">zero_cost_schedule</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cost_strategy</span> <span class="op">=</span> <span class="ident">CostStrategy</span>::<span class="ident">transaction</span>(<span class="kw-2">&amp;</span><span class="ident">gas_schedule</span>, <span class="ident">txn_data</span>.<span class="ident">max_gas_amount</span>());
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data_store</span> <span class="op">=</span> <span class="ident">TransactionDataCache</span>::<span class="ident">new</span>(<span class="ident">remote_cache</span>);
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>((<span class="ident">round</span>, <span class="ident">timestamp</span>, <span class="ident">previous_vote</span>, <span class="ident">proposer</span>)) <span class="op">=</span> <span class="ident">block_metadata</span>.<span class="ident">into_inner</span>() {
             <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[
@@ -1577,11 +1657,11 @@
             <span class="self">self</span>.<span class="ident">move_vm</span>.<span class="ident">execute_function</span>(
                 <span class="kw-2">&amp;</span><span class="ident">LIBRA_BLOCK_MODULE</span>,
                 <span class="kw-2">&amp;</span><span class="ident">BLOCK_PROLOGUE</span>,
-                <span class="kw-2">&amp;</span><span class="ident">gas_schedule</span>,
-                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">interpreter_context</span>,
-                <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
                 <span class="macro">vec</span><span class="macro">!</span>[],
                 <span class="ident">args</span>,
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>,
+                <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
             )<span class="question-mark">?</span>
         } <span class="kw">else</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>));
@@ -1593,16 +1673,17 @@
             <span class="self">self</span>.<span class="ident">move_vm</span>.<span class="ident">execute_function</span>(
                 <span class="kw-2">&amp;</span><span class="ident">TRANSACTION_FEE_MODULE</span>,
                 <span class="kw-2">&amp;</span><span class="ident">DISTRIBUTE_TXN_FEES</span>,
-                <span class="kw-2">&amp;</span><span class="ident">gas_schedule</span>,
-                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">interpreter_context</span>,
-                <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
                 <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">currency_ty</span>],
                 <span class="macro">vec</span><span class="macro">!</span>[],
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>,
+                <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
             )<span class="question-mark">?</span>
         }
 
         <span class="ident">get_transaction_output</span>(
-            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">interpreter_context</span>,
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>,
+            <span class="kw-2">&amp;</span><span class="ident">cost_strategy</span>,
             <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
             <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">EXECUTED</span>),
         )
@@ -1614,7 +1695,7 @@
 
     <span class="kw">fn</span> <span class="ident">process_writeset_transaction</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BlockDataCache</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
+        <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">StateViewCache</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
         <span class="ident">txn</span>: <span class="ident">SignedTransaction</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">TransactionOutput</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">txn</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">txn</span>.<span class="ident">check_signature</span>() {
@@ -1639,16 +1720,16 @@
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">discard_error_output</span>(<span class="ident">e</span>));
         };
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">interpreter_context</span> <span class="op">=</span> <span class="ident">SystemExecutionContext</span>::<span class="ident">new</span>(<span class="ident">remote_cache</span>, <span class="ident">GasUnits</span>::<span class="ident">new</span>(<span class="number">0</span>));
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data_store</span> <span class="op">=</span> <span class="ident">TransactionDataCache</span>::<span class="ident">new</span>(<span class="ident">remote_cache</span>);
 
-        <span class="self">self</span>.<span class="ident">run_writeset_epilogue</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">interpreter_context</span>, <span class="ident">change_set</span>, <span class="kw-2">&amp;</span><span class="ident">txn_data</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">run_writeset_epilogue</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>, <span class="ident">change_set</span>, <span class="kw-2">&amp;</span><span class="ident">txn_data</span>)<span class="question-mark">?</span>;
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">read_writeset</span>(<span class="ident">remote_cache</span>, <span class="kw-2">&amp;</span><span class="ident">change_set</span>.<span class="ident">write_set</span>()) {
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">discard_error_output</span>(<span class="ident">e</span>));
         };
 
-        <span class="kw">let</span> <span class="ident">epilogue_writeset</span> <span class="op">=</span> <span class="ident">interpreter_context</span>.<span class="ident">make_write_set</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">epilogue_events</span> <span class="op">=</span> <span class="ident">interpreter_context</span>.<span class="ident">events</span>().<span class="ident">to_vec</span>();
+        <span class="kw">let</span> <span class="ident">epilogue_writeset</span> <span class="op">=</span> <span class="ident">data_store</span>.<span class="ident">make_write_set</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">epilogue_events</span> <span class="op">=</span> <span class="ident">data_store</span>.<span class="ident">event_data</span>().<span class="ident">to_vec</span>();
 
         <span class="comment">// Make sure epilogue WriteSet doesn&#39;t intersect with the writeset in TransactionPayload.</span>
         <span class="kw">if</span> <span class="op">!</span><span class="ident">epilogue_writeset</span>
@@ -1710,9 +1791,10 @@
 
     <span class="doccomment">/// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored</span>
     <span class="doccomment">/// in the `ACCOUNT_MODULE` on chain.</span>
-    <span class="kw">fn</span> <span class="ident">run_prologue</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">ChainState</span><span class="op">&gt;</span>(
+    <span class="kw">fn</span> <span class="ident">run_prologue</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">chain_state</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>,
+        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">TransactionDataCache</span>,
+        <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
         <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
         <span class="ident">account_currency_symbol</span>: <span class="kw-2">&amp;</span><span class="ident">IdentStr</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
@@ -1728,9 +1810,6 @@
             .<span class="ident">execute_function</span>(
                 <span class="kw-2">&amp;</span><span class="ident">account_config</span>::<span class="ident">ACCOUNT_MODULE</span>,
                 <span class="kw-2">&amp;</span><span class="ident">PROLOGUE_NAME</span>,
-                <span class="self">self</span>.<span class="ident">get_gas_schedule</span>()<span class="question-mark">?</span>,
-                <span class="ident">chain_state</span>,
-                <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
                 <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">gas_currency_ty</span>],
                 <span class="macro">vec</span><span class="macro">!</span>[
                     <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">txn_sequence_number</span>),
@@ -1739,15 +1818,19 @@
                     <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">txn_max_gas_units</span>),
                     <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">txn_expiration_time</span>),
                 ],
+                <span class="ident">cost_strategy</span>,
+                <span class="ident">data_store</span>,
+                <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
             )
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">convert_prologue_runtime_error</span>(<span class="kw-2">&amp;</span><span class="ident">err</span>, <span class="kw-2">&amp;</span><span class="ident">txn_data</span>.<span class="ident">sender</span>))
     }
 
     <span class="doccomment">/// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored</span>
     <span class="doccomment">/// in the `ACCOUNT_MODULE` on chain.</span>
-    <span class="kw">fn</span> <span class="ident">run_epilogue</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">ChainState</span><span class="op">&gt;</span>(
+    <span class="kw">fn</span> <span class="ident">run_epilogue</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">chain_state</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>,
+        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">TransactionDataCache</span>,
+        <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
         <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
         <span class="ident">account_currency_symbol</span>: <span class="kw-2">&amp;</span><span class="ident">IdentStr</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
@@ -1756,14 +1839,11 @@
         <span class="kw">let</span> <span class="ident">txn_sequence_number</span> <span class="op">=</span> <span class="ident">txn_data</span>.<span class="ident">sequence_number</span>();
         <span class="kw">let</span> <span class="ident">txn_gas_price</span> <span class="op">=</span> <span class="ident">txn_data</span>.<span class="ident">gas_unit_price</span>().<span class="ident">get</span>();
         <span class="kw">let</span> <span class="ident">txn_max_gas_units</span> <span class="op">=</span> <span class="ident">txn_data</span>.<span class="ident">max_gas_amount</span>().<span class="ident">get</span>();
-        <span class="kw">let</span> <span class="ident">gas_remaining</span> <span class="op">=</span> <span class="ident">chain_state</span>.<span class="ident">remaining_gas</span>().<span class="ident">get</span>();
+        <span class="kw">let</span> <span class="ident">gas_remaining</span> <span class="op">=</span> <span class="ident">cost_strategy</span>.<span class="ident">remaining_gas</span>().<span class="ident">get</span>();
         <span class="kw">let</span> <span class="ident">_timer</span> <span class="op">=</span> <span class="ident">TXN_EPILOGUE_SECONDS</span>.<span class="ident">start_timer</span>();
         <span class="self">self</span>.<span class="ident">move_vm</span>.<span class="ident">execute_function</span>(
             <span class="kw-2">&amp;</span><span class="ident">account_config</span>::<span class="ident">ACCOUNT_MODULE</span>,
             <span class="kw-2">&amp;</span><span class="ident">EPILOGUE_NAME</span>,
-            <span class="self">self</span>.<span class="ident">get_gas_schedule</span>()<span class="question-mark">?</span>,
-            <span class="ident">chain_state</span>,
-            <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
             <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">gas_currency_ty</span>],
             <span class="macro">vec</span><span class="macro">!</span>[
                 <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">txn_sequence_number</span>),
@@ -1771,57 +1851,62 @@
                 <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">txn_max_gas_units</span>),
                 <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">gas_remaining</span>),
             ],
+            <span class="ident">cost_strategy</span>,
+            <span class="ident">data_store</span>,
+            <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
         )
     }
 
     <span class="doccomment">/// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored</span>
     <span class="doccomment">/// in the `WRITESET_MODULE` on chain.</span>
-    <span class="kw">fn</span> <span class="ident">run_writeset_prologue</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">ChainState</span><span class="op">&gt;</span>(
+    <span class="kw">fn</span> <span class="ident">run_writeset_prologue</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">chain_state</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>,
+        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">TransactionDataCache</span>,
         <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">txn_sequence_number</span> <span class="op">=</span> <span class="ident">txn_data</span>.<span class="ident">sequence_number</span>();
         <span class="kw">let</span> <span class="ident">txn_public_key</span> <span class="op">=</span> <span class="ident">txn_data</span>.<span class="ident">authentication_key_preimage</span>().<span class="ident">to_vec</span>();
         <span class="kw">let</span> <span class="ident">gas_schedule</span> <span class="op">=</span> <span class="ident">zero_cost_schedule</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cost_strategy</span> <span class="op">=</span> <span class="ident">CostStrategy</span>::<span class="ident">system</span>(<span class="kw-2">&amp;</span><span class="ident">gas_schedule</span>, <span class="ident">GasUnits</span>::<span class="ident">new</span>(<span class="number">0</span>));
         <span class="kw">let</span> <span class="ident">_timer</span> <span class="op">=</span> <span class="ident">TXN_PROLOGUE_SECONDS</span>.<span class="ident">start_timer</span>();
         <span class="self">self</span>.<span class="ident">move_vm</span>
             .<span class="ident">execute_function</span>(
                 <span class="kw-2">&amp;</span><span class="ident">LIBRA_WRITESET_MANAGER_MODULE</span>,
                 <span class="kw-2">&amp;</span><span class="ident">PROLOGUE_NAME</span>,
-                <span class="kw-2">&amp;</span><span class="ident">gas_schedule</span>,
-                <span class="ident">chain_state</span>,
-                <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
                 <span class="macro">vec</span><span class="macro">!</span>[],
                 <span class="macro">vec</span><span class="macro">!</span>[
                     <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">txn_sequence_number</span>),
                     <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">txn_public_key</span>),
                 ],
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
+                <span class="ident">data_store</span>,
+                <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
             )
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">convert_prologue_runtime_error</span>(<span class="kw-2">&amp;</span><span class="ident">err</span>, <span class="kw-2">&amp;</span><span class="ident">txn_data</span>.<span class="ident">sender</span>))
     }
 
     <span class="doccomment">/// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored</span>
     <span class="doccomment">/// in the `WRITESET_MODULE` on chain.</span>
-    <span class="kw">fn</span> <span class="ident">run_writeset_epilogue</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">ChainState</span><span class="op">&gt;</span>(
+    <span class="kw">fn</span> <span class="ident">run_writeset_epilogue</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">chain_state</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>,
+        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">TransactionDataCache</span>,
         <span class="ident">change_set</span>: <span class="kw-2">&amp;</span><span class="ident">ChangeSet</span>,
         <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">change_set_bytes</span> <span class="op">=</span>
             <span class="ident">lcs</span>::<span class="ident">to_bytes</span>(<span class="ident">change_set</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">INVALID_DATA</span>))<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">gas_schedule</span> <span class="op">=</span> <span class="ident">zero_cost_schedule</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cost_strategy</span> <span class="op">=</span> <span class="ident">CostStrategy</span>::<span class="ident">system</span>(<span class="kw-2">&amp;</span><span class="ident">gas_schedule</span>, <span class="ident">GasUnits</span>::<span class="ident">new</span>(<span class="number">0</span>));
 
         <span class="kw">let</span> <span class="ident">_timer</span> <span class="op">=</span> <span class="ident">TXN_EPILOGUE_SECONDS</span>.<span class="ident">start_timer</span>();
         <span class="self">self</span>.<span class="ident">move_vm</span>.<span class="ident">execute_function</span>(
             <span class="kw-2">&amp;</span><span class="ident">LIBRA_WRITESET_MANAGER_MODULE</span>,
             <span class="kw-2">&amp;</span><span class="ident">EPILOGUE_NAME</span>,
-            <span class="kw-2">&amp;</span><span class="ident">gas_schedule</span>,
-            <span class="ident">chain_state</span>,
-            <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
             <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">change_set_bytes</span>)],
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
+            <span class="ident">data_store</span>,
+            <span class="kw-2">&amp;</span><span class="ident">txn_data</span>,
         )
     }
 
@@ -1833,7 +1918,7 @@
         <span class="kw">let</span> <span class="ident">count</span> <span class="op">=</span> <span class="ident">transactions</span>.<span class="ident">len</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
         <span class="kw">let</span> <span class="ident">blocks</span> <span class="op">=</span> <span class="ident">chunk_block_transactions</span>(<span class="ident">transactions</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data_cache</span> <span class="op">=</span> <span class="ident">BlockDataCache</span>::<span class="ident">new</span>(<span class="ident">state_view</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data_cache</span> <span class="op">=</span> <span class="ident">StateViewCache</span>::<span class="ident">new</span>(<span class="ident">state_view</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">execute_block_trace_guard</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">current_block_id</span> <span class="op">=</span> <span class="ident">HashValue</span>::<span class="ident">zero</span>();
         <span class="kw">for</span> <span class="ident">block</span> <span class="kw">in</span> <span class="ident">blocks</span> {
@@ -1876,7 +1961,7 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">block_id</span>: <span class="ident">HashValue</span>,
         <span class="ident">txn_block</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SignedTransaction</span><span class="op">&gt;</span>,
-        <span class="ident">data_cache</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BlockDataCache</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
+        <span class="ident">data_cache</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">StateViewCache</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
         <span class="ident">state_view</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">StateView</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TransactionOutput</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">load_configs_impl</span>(<span class="ident">data_cache</span>);
@@ -1949,7 +2034,7 @@
         <span class="ident">transaction</span>: <span class="ident">SignedTransaction</span>,
         <span class="ident">state_view</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">StateView</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMValidatorResult</span> {
-        <span class="kw">let</span> <span class="ident">data_cache</span> <span class="op">=</span> <span class="ident">BlockDataCache</span>::<span class="ident">new</span>(<span class="ident">state_view</span>);
+        <span class="kw">let</span> <span class="ident">data_cache</span> <span class="op">=</span> <span class="ident">StateViewCache</span>::<span class="ident">new</span>(<span class="ident">state_view</span>);
         <span class="kw">let</span> <span class="ident">_timer</span> <span class="op">=</span> <span class="ident">TXN_VALIDATION_SECONDS</span>.<span class="ident">start_timer</span>();
         <span class="kw">let</span> <span class="ident">gas_price</span> <span class="op">=</span> <span class="ident">transaction</span>.<span class="ident">gas_unit_price</span>();
         <span class="kw">let</span> <span class="ident">currency_code</span> <span class="op">=</span>
@@ -2051,19 +2136,17 @@
 
     <span class="doccomment">/// Executes the given code within the context of a transaction.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// The `TransactionExecutionContext` can be used as a `ChainState`.</span>
+    <span class="doccomment">/// The `TransactionDataCache` can be used as a `ChainState`.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// If you don&#39;t care about the transaction metadata, use `TransactionMetadata::default()`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_txn_context</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_txn_data_cache</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(
         <span class="self">self</span>,
-        <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
         <span class="ident">state_view</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">StateView</span>,
-        <span class="ident">f</span>: <span class="kw">impl</span> <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;txn</span><span class="op">&gt;</span> <span class="ident">FnOnce</span>(<span class="ident">TransactionExecutionContext</span><span class="op">&lt;</span><span class="lifetime">&#39;txn</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span>,
+        <span class="ident">f</span>: <span class="kw">impl</span> <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;txn</span><span class="op">&gt;</span> <span class="ident">FnOnce</span>(<span class="ident">TransactionDataCache</span><span class="op">&lt;</span><span class="lifetime">&#39;txn</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span> {
         <span class="kw">let</span> <span class="ident">remote_storage</span> <span class="op">=</span> <span class="ident">RemoteStorage</span>::<span class="ident">new</span>(<span class="ident">state_view</span>);
-        <span class="kw">let</span> <span class="ident">txn_context</span> <span class="op">=</span>
-            <span class="ident">TransactionExecutionContext</span>::<span class="ident">new</span>(<span class="ident">txn_data</span>.<span class="ident">max_gas_amount</span>(), <span class="kw-2">&amp;</span><span class="ident">remote_storage</span>);
-        <span class="ident">f</span>(<span class="ident">txn_context</span>)
+        <span class="kw">let</span> <span class="ident">data_store</span> <span class="op">=</span> <span class="ident">TransactionDataCache</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">remote_storage</span>);
+        <span class="ident">f</span>(<span class="ident">data_store</span>)
     }
 }
 
@@ -2168,20 +2251,21 @@
 }
 
 <span class="kw">fn</span> <span class="ident">get_transaction_output</span>(
-    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> (<span class="kw">impl</span> <span class="ident">ChainState</span> <span class="op">+</span> <span class="ident">ExecutionContext</span>),
+    <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">TransactionDataCache</span>,
+    <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="ident">CostStrategy</span>,
     <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
     <span class="ident">status</span>: <span class="ident">VMStatus</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">TransactionOutput</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">gas_used</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="ident">txn_data</span>
         .<span class="ident">max_gas_amount</span>()
-        .<span class="ident">sub</span>(<span class="ident">ctx</span>.<span class="ident">remaining_gas</span>())
+        .<span class="ident">sub</span>(<span class="ident">cost_strategy</span>.<span class="ident">remaining_gas</span>())
         .<span class="ident">mul</span>(<span class="ident">txn_data</span>.<span class="ident">gas_unit_price</span>())
         .<span class="ident">get</span>();
-    <span class="kw">let</span> <span class="ident">write_set</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">make_write_set</span>()<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">write_set</span> <span class="op">=</span> <span class="ident">data_store</span>.<span class="ident">make_write_set</span>()<span class="question-mark">?</span>;
     <span class="ident">TXN_TOTAL_GAS_USAGE</span>.<span class="ident">observe</span>(<span class="ident">gas_used</span> <span class="kw">as</span> <span class="ident">f64</span>);
     <span class="prelude-val">Ok</span>(<span class="ident">TransactionOutput</span>::<span class="ident">new</span>(
         <span class="ident">write_set</span>,
-        <span class="ident">ctx</span>.<span class="ident">events</span>().<span class="ident">to_vec</span>(),
+        <span class="ident">data_store</span>.<span class="ident">event_data</span>().<span class="ident">to_vec</span>(),
         <span class="ident">gas_used</span>,
         <span class="ident">TransactionStatus</span>::<span class="ident">Keep</span>(<span class="ident">status</span>),
     ))

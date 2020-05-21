@@ -21,7 +21,6 @@
 <span id="21">21</span>
 <span id="22">22</span>
 <span id="23">23</span>
-<span id="24">24</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -37,15 +36,14 @@
 <span class="attribute">#[<span class="ident">macro_use</span>]</span>
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">mirai_annotations</span>;
 
-<span class="kw">mod</span> <span class="ident">gas_meter</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">data_cache</span>;
+<span class="kw">mod</span> <span class="ident">data_operations</span>;
 <span class="kw">mod</span> <span class="ident">interpreter</span>;
 <span class="kw">mod</span> <span class="ident">loader</span>;
-<span class="kw">mod</span> <span class="ident">move_vm</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">move_vm</span>;
 <span class="kw">mod</span> <span class="ident">native_functions</span>;
 <span class="kw">mod</span> <span class="ident">runtime</span>;
 <span class="attribute">#[<span class="ident">macro_use</span>]</span>
 <span class="kw">mod</span> <span class="ident">tracing</span>;
-
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">move_vm</span>::<span class="kw-2">*</span>;
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "move_vm_runtime";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

@@ -172,11 +172,16 @@
 <span id="172">172</span>
 <span id="173">173</span>
 <span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">interpreter</span>::<span class="ident">Interpreter</span>, <span class="ident">loader</span>::<span class="ident">Resolver</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">data_operations</span>::<span class="ident">move_resource_to</span>, <span class="ident">interpreter</span>::<span class="ident">Interpreter</span>, <span class="ident">loader</span>::<span class="ident">Resolver</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>, <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">account_config</span>::<span class="ident">CORE_CODE_ADDRESS</span>,
     <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>,
@@ -184,7 +189,8 @@
 <span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">gas_schedule</span>::<span class="ident">CostTable</span>, <span class="ident">identifier</span>::<span class="ident">IdentStr</span>, <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>};
 <span class="kw">use</span> <span class="ident">move_vm_natives</span>::{<span class="ident">account</span>, <span class="ident">event</span>, <span class="ident">hash</span>, <span class="ident">lcs</span>, <span class="ident">signature</span>};
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::{
-    <span class="ident">interpreter_context</span>::<span class="ident">InterpreterContext</span>,
+    <span class="ident">data_store</span>::<span class="ident">DataStore</span>,
+    <span class="ident">gas_schedule</span>::<span class="ident">CostStrategy</span>,
     <span class="ident">loaded_data</span>::{<span class="ident">runtime_types</span>::<span class="ident">Type</span>, <span class="ident">types</span>::<span class="ident">FatType</span>},
     <span class="ident">natives</span>::<span class="ident">function</span>::{<span class="ident">NativeContext</span>, <span class="ident">NativeResult</span>},
     <span class="ident">values</span>::{<span class="ident">debug</span>, <span class="ident">vector</span>, <span class="ident">Struct</span>, <span class="ident">Value</span>},
@@ -289,19 +295,22 @@
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">FunctionContext</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;txn</span><span class="op">&gt;</span> {
     <span class="ident">interpreter</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">Interpreter</span><span class="op">&lt;</span><span class="lifetime">&#39;txn</span><span class="op">&gt;</span>,
-    <span class="ident">interpreter_context</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">InterpreterContext</span>,
+    <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
+    <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">CostStrategy</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>,
     <span class="ident">resolver</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Resolver</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;txn</span><span class="op">&gt;</span> <span class="ident">FunctionContext</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;txn</span><span class="op">&gt;</span> {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">interpreter</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">Interpreter</span><span class="op">&lt;</span><span class="lifetime">&#39;txn</span><span class="op">&gt;</span>,
-        <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">InterpreterContext</span>,
+        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
+        <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
         <span class="ident">resolver</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Resolver</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">FunctionContext</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;txn</span><span class="op">&gt;</span> {
         <span class="ident">FunctionContext</span> {
             <span class="ident">interpreter</span>,
-            <span class="ident">interpreter_context</span>: <span class="ident">context</span>,
+            <span class="ident">data_store</span>,
+            <span class="ident">cost_strategy</span>,
             <span class="ident">resolver</span>,
         }
     }
@@ -314,7 +323,7 @@
     }
 
     <span class="kw">fn</span> <span class="ident">cost_table</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">CostTable</span> {
-        <span class="self">self</span>.<span class="ident">interpreter</span>.<span class="ident">gas_schedule</span>()
+        <span class="self">self</span>.<span class="ident">cost_strategy</span>.<span class="ident">cost_table</span>()
     }
 
     <span class="kw">fn</span> <span class="ident">save_under_address</span>(
@@ -325,19 +334,20 @@
         <span class="ident">resource_to_save</span>: <span class="ident">Struct</span>,
         <span class="ident">account_address</span>: <span class="ident">AccountAddress</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">libra_type</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">resolver</span>.<span class="ident">get_libra_type_info</span>(
-            <span class="ident">module_id</span>,
-            <span class="ident">struct_name</span>,
-            <span class="ident">ty_args</span>,
-            <span class="self">self</span>.<span class="ident">interpreter_context</span>,
-        )<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">libra_type</span> <span class="op">=</span>
+            <span class="self">self</span>.<span class="ident">resolver</span>
+                .<span class="ident">get_libra_type_info</span>(<span class="ident">module_id</span>, <span class="ident">struct_name</span>, <span class="ident">ty_args</span>, <span class="self">self</span>.<span class="ident">data_store</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">ap</span> <span class="op">=</span> <span class="ident">AccessPath</span>::<span class="ident">new</span>(<span class="ident">account_address</span>, <span class="ident">libra_type</span>.<span class="ident">resource_key</span>().<span class="ident">to_vec</span>());
-        <span class="self">self</span>.<span class="ident">interpreter_context</span>
-            .<span class="ident">move_resource_to</span>(<span class="kw-2">&amp;</span><span class="ident">ap</span>, <span class="ident">libra_type</span>.<span class="ident">fat_type</span>(), <span class="ident">resource_to_save</span>)
+        <span class="ident">move_resource_to</span>(
+            <span class="self">self</span>.<span class="ident">data_store</span>,
+            <span class="kw-2">&amp;</span><span class="ident">ap</span>,
+            <span class="ident">libra_type</span>.<span class="ident">fat_type</span>(),
+            <span class="ident">resource_to_save</span>,
+        )
     }
 
     <span class="kw">fn</span> <span class="ident">save_event</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">event</span>: <span class="ident">ContractEvent</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">interpreter_context</span>.<span class="ident">push_event</span>(<span class="ident">event</span>))
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">data_store</span>.<span class="ident">emit_event</span>(<span class="ident">event</span>))
     }
 
     <span class="kw">fn</span> <span class="ident">convert_to_fat_types</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">types</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">FatType</span><span class="op">&gt;</span><span class="op">&gt;</span> {

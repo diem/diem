@@ -1,1 +1,1 @@
-initSidebarItems({"macro":[["gas",""],["trace",""]],"struct":[["MoveVM",""]]});
+initSidebarItems({"macro":[["trace",""]],"mod":[["data_cache",""],["move_vm",""]]});

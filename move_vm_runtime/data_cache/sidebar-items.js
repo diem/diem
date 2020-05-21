@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["TransactionDataCache","Transaction data cache. Keep updates within a transaction so they can all be published at once when the transaction succeeeds."]],"trait":[["RemoteCache","Trait for the Move VM to abstract `StateView` operations."]]});

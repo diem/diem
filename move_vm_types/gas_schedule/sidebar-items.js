@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["NativeCostIndex",""]],"fn":[["calculate_intrinsic_gas","Calculate the intrinsic gas for the transaction based upon its size in bytes/words."],["new_from_instructions",""],["zero_cost_schedule",""]]});
+initSidebarItems({"enum":[["NativeCostIndex",""]],"fn":[["calculate_intrinsic_gas","Calculate the intrinsic gas for the transaction based upon its size in bytes/words."],["new_from_instructions",""],["zero_cost_schedule",""]],"struct":[["CostStrategy","The Move VM implementation for gas charging."]]});

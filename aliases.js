@@ -84,7 +84,6 @@ ALIASES["move_lang"] = {};
 ALIASES["move_prover"] = {};
 ALIASES["move_vm_natives"] = {};
 ALIASES["move_vm_runtime"] = {};
-ALIASES["move_vm_state"] = {};
 ALIASES["move_vm_types"] = {};
 ALIASES["netcore"] = {};
 ALIASES["network"] = {};
