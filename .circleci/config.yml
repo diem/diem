@@ -234,28 +234,9 @@ jobs:
           name: Build release
           command: RUST_BACKTRACE=1 cargo build -j 8 --release
       - build_teardown
-  build-e2e-test:
-    executor: test-executor
-    description: Generate a list of E2E test targets to be distributed.
-    steps:
-      - build_setup
-      - attach_workspace:
-          at: /home/circleci/project
-      - restore_cargo_package_cache
-      - run:
-          name: Find all e2e tests
-          command: |
-            RUST_BACKTRACE=1 cargo x test --package testsuite -- --list | \
-              grep "::" | sed 's/: .*$//' > e2e_tests
-            cat e2e_tests
-      - persist_to_workspace:
-          root: /home/circleci/project
-          paths:
-            - e2e_tests
-            - target/debug/deps/libratest*
   run-e2e-test:
-    executor: test-executor
-    parallelism: 4
+    executor: build-executor
+    parallelism: 2
     description: Run E2E tests in parallel. Each container runs a subset of
       test targets.
     environment:
@@ -264,16 +245,18 @@ jobs:
       MESSAGE_PAYLOAD_FILE: "/tmp/message_payload"
     steps:
       - build_setup
-      - restore_cargo_package_cache
       - attach_workspace:
           at: /home/circleci/project
+      - restore_cargo_package_cache
       - run:
           name: Determine test targets for this container.
           # NOTE Currently the tests are distributed by name order. Once test
           # metadata is enabled, the tests can be distributed by run time to
           # speed up this job.
           command: |
-            ls -all target/debug/*
+            RUST_BACKTRACE=1 cargo x test --package testsuite -- --list | \
+              grep "::" | sed 's/: .*$//' > e2e_tests
+            cat e2e_tests
             echo -e "Found $(wc -l e2e_tests) tests."
             cat e2e_tests | circleci tests split > /tmp/tests_to_run
             echo -e "This runner will run these tests\n$(cat /tmp/tests_to_run)"
@@ -283,7 +266,6 @@ jobs:
           # +e to disable exit immediately when test timeout in the retry loop
           command: |
             set +e
-            libratest=$(find target/debug/deps/ -name "libratest*" -executable)
             num_fails=0
             for target in $(cat /tmp/tests_to_run) ; do
               retry=0
@@ -291,7 +273,7 @@ jobs:
               failed_tests=
               while [[ $status != 0 && $retry < ${E2E_RETRIES} ]]; do
                 RUST_BACKTRACE=full timeout --kill-after=370 --preserve-status 360 \
-                  $libratest $target --test-threads 1 --exact --nocapture
+                  cargo x test --package testsuite -- $target --test-threads 1 --exact --nocapture
                 status=$?
                 retry=$((retry + 1))
                 sleep 10
@@ -517,12 +499,9 @@ workflows:
       - build-release:
           requires:
             - prefetch-crates
-      - build-e2e-test:
-          requires:
-            - prefetch-crates
       - run-e2e-test:
           requires:
-            - build-e2e-test
+            - prefetch-crates
       - run-unit-test:
           requires:
             - prefetch-crates
