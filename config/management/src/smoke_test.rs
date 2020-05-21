@@ -11,7 +11,7 @@ use libra_crypto::{ed25519::Ed25519PrivateKey, x25519, Uniform};
 use libra_secure_storage::Value;
 use libra_swarm::swarm::{LibraNode, LibraSwarm, LibraSwarmDir};
 use libra_temppath::TempPath;
-use libra_types::account_address::AccountAddress;
+use libra_types::account_address;
 use std::path::PathBuf;
 
 struct ManagementBuilder {
@@ -61,10 +61,14 @@ fn smoke_test() {
         let ns_shared = ns.clone() + shared;
         helper.initialize(ns.clone());
 
+        let operator_key = helper.operator_key(&ns, &ns_shared).unwrap();
+
+        let validator_account = account_address::from_public_key(&operator_key);
         let mut config = NodeConfig::default();
 
         let mut network = NetworkConfig::default();
         network.discovery_method = DiscoveryMethod::Onchain;
+        network.peer_id = validator_account;
         config.validator_network = Some(network);
 
         let mut network = NetworkConfig::default();
@@ -99,7 +103,7 @@ fn smoke_test() {
         helper.operator_key(&ns, &ns_shared).unwrap();
         helper
             .validator_config(
-                AccountAddress::random(),
+                validator_account,
                 validator_network_address,
                 fullnode_network_address,
                 &ns,
