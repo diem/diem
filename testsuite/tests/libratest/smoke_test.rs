@@ -764,7 +764,7 @@ fn test_external_transaction_signer() {
     let receiver_auth_key = receiver_auth_key_opt.unwrap();
     let amount = 1_000_000;
     let gas_unit_price = 1;
-    let max_gas_amount = 1000000;
+    let max_gas_amount = 1_000_000;
 
     // mint to the sender address
     client_proxy
