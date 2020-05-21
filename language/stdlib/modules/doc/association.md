@@ -472,7 +472,7 @@ only the root address has a Root resource.
 
 
 <pre><code><b>define</b> <a href="#0x0_Association_only_root_addr_has_root_privilege">only_root_addr_has_root_privilege</a>(): bool {
-    all(domain&lt;address&gt;(), |addr| exists&lt;<a href="#0x0_Association_Root">Root</a>&gt;(addr) ==&gt; (addr == <a href="#0x0_Association_spec_root_address">spec_root_address</a>()))
+    all(domain&lt;address&gt;(), |addr| (exists&lt;<a href="#0x0_Association_Root">Root</a>&gt;(addr)) ==&gt; addr == <a href="#0x0_Association_spec_root_address">spec_root_address</a>())
 }
 </code></pre>
 
@@ -649,7 +649,7 @@ the
 <code>assert_sender_is_root</code> does not
 directly check that the
 <code>sender == <a href="#0x0_Association_root_address">root_address</a>()</code>. Instead, it aborts if
-sender has root privilege, and only the root_address has
+sender has no root privilege, and only the root_address has
 <code><a href="#0x0_Association_Root">Root</a></code>.
 > TODO: There is a style question about whether this should just check for presence of
 a Root privilege. I guess it's moot so long as

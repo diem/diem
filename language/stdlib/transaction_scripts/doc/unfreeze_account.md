@@ -25,7 +25,7 @@
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(to_unfreeze_account: address) {
-    <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_unfreeze_account">LibraAccount::unfreeze_account</a>(to_unfreeze_account)
+    <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_unfreeze_account">LibraAccount::unfreeze_account</a>(to_unfreeze_account);
 }
 </code></pre>
 

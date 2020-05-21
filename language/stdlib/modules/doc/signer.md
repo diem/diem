@@ -7,6 +7,7 @@
 
 -  [Function `borrow_address`](#0x0_Signer_borrow_address)
 -  [Function `address_of`](#0x0_Signer_address_of)
+-  [Specification](#0x0_Signer_Specification)
 
 
 
@@ -55,3 +56,15 @@
 
 
 </details>
+
+<a name="0x0_Signer_Specification"></a>
+
+## Specification
+
+
+
+<a name="0x0_Signer_get_address"></a>
+
+
+<pre><code><b>native</b> <b>define</b> <a href="#0x0_Signer_get_address">get_address</a>(account: signer): address;
+</code></pre>

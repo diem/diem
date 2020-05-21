@@ -53,6 +53,11 @@
 -  [Function `make_account`](#0x0_LibraAccount_make_account)
 -  [Function `create_genesis_account`](#0x0_LibraAccount_create_genesis_account)
 -  [Function `create_treasury_compliance_account`](#0x0_LibraAccount_create_treasury_compliance_account)
+-  [Function `is_designated_dealer`](#0x0_LibraAccount_is_designated_dealer)
+-  [Function `add_tier`](#0x0_LibraAccount_add_tier)
+-  [Function `update_tier`](#0x0_LibraAccount_update_tier)
+-  [Function `create_designated_dealer`](#0x0_LibraAccount_create_designated_dealer)
+-  [Function `mint_to_designated_dealer`](#0x0_LibraAccount_mint_to_designated_dealer)
 -  [Function `create_parent_vasp_account`](#0x0_LibraAccount_create_parent_vasp_account)
 -  [Function `create_child_vasp_account`](#0x0_LibraAccount_create_child_vasp_account)
 -  [Function `create_unhosted_account`](#0x0_LibraAccount_create_unhosted_account)
@@ -1719,6 +1724,161 @@ Create a treasury/compliance account at
     // TODO: add <a href="association.md#0x0_Association">Association</a> or TreasuryCompliance role instead of using <a href="empty.md#0x0_Empty">Empty</a>?
     <a href="event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
     <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="empty.md#0x0_Empty_T">Empty::T</a>&gt;(new_account, auth_key_prefix, <a href="empty.md#0x0_Empty_create">Empty::create</a>(), <b>false</b>)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_LibraAccount_is_designated_dealer"></a>
+
+## Function `is_designated_dealer`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_is_designated_dealer">is_designated_dealer</a>(addr: address): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_is_designated_dealer">is_designated_dealer</a>(addr: address): bool <b>acquires</b> <a href="#0x0_LibraAccount_Role">Role</a> {
+    <b>let</b> dealer =
+        &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_LibraAccount_Role">Role</a>&lt;<a href="designated_dealer.md#0x0_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a>&gt;&gt;(addr).role_data;
+    <a href="designated_dealer.md#0x0_DesignatedDealer_is_designated_dealer">DesignatedDealer::is_designated_dealer</a>(dealer)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_LibraAccount_add_tier"></a>
+
+## Function `add_tier`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_add_tier">add_tier</a>(blessed: &signer, addr: address, tier_upperbound: u64)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_add_tier">add_tier</a>(blessed: &signer, addr: address, tier_upperbound: u64) <b>acquires</b> <a href="#0x0_LibraAccount_Role">Role</a> {
+    <a href="designated_dealer.md#0x0_DesignatedDealer_assert_account_is_blessed">DesignatedDealer::assert_account_is_blessed</a>(blessed);
+    <b>let</b> dealer =
+        &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_LibraAccount_Role">Role</a>&lt;<a href="designated_dealer.md#0x0_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a>&gt;&gt;(addr).role_data;
+    <a href="designated_dealer.md#0x0_DesignatedDealer_add_tier">DesignatedDealer::add_tier</a>(dealer, tier_upperbound)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_LibraAccount_update_tier"></a>
+
+## Function `update_tier`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_update_tier">update_tier</a>(blessed: &signer, addr: address, tier_index: u64, new_upperbound: u64)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_update_tier">update_tier</a>(blessed: &signer, addr: address, tier_index: u64, new_upperbound: u64) <b>acquires</b> <a href="#0x0_LibraAccount_Role">Role</a> {
+    <a href="designated_dealer.md#0x0_DesignatedDealer_assert_account_is_blessed">DesignatedDealer::assert_account_is_blessed</a>(blessed);
+    <b>let</b> dealer =
+        &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_LibraAccount_Role">Role</a>&lt;<a href="designated_dealer.md#0x0_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a>&gt;&gt;(addr).role_data;
+    <a href="designated_dealer.md#0x0_DesignatedDealer_update_tier">DesignatedDealer::update_tier</a>(dealer, tier_index, new_upperbound)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_LibraAccount_create_designated_dealer"></a>
+
+## Function `create_designated_dealer`
+
+Create a designated dealer account at
+<code>new_account_address</code> with authentication key
+<code>auth_key_prefix</code> |
+<code>new_account_address</code>, for non synthetic CoinType
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(blessed: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(
+    blessed: &signer,
+    new_account_address: address,
+    auth_key_prefix: vector&lt;u8&gt;,
+) {
+    <a href="designated_dealer.md#0x0_DesignatedDealer_assert_account_is_blessed">DesignatedDealer::assert_account_is_blessed</a>(blessed);
+    Transaction::assert(!<a href="libra.md#0x0_Libra_is_synthetic_currency">Libra::is_synthetic_currency</a>&lt;CoinType&gt;(), 202);
+    <b>let</b> new_dd_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
+    <b>let</b> dealer =
+        <a href="designated_dealer.md#0x0_DesignatedDealer_create_designated_dealer">DesignatedDealer::create_designated_dealer</a>();
+    <a href="event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_dd_account);
+    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;CoinType, <a href="designated_dealer.md#0x0_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a>&gt;(new_dd_account, auth_key_prefix, dealer, <b>false</b>)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_LibraAccount_mint_to_designated_dealer"></a>
+
+## Function `mint_to_designated_dealer`
+
+Tiered Mint called by Treasury Compliance
+CoinType should match type called with create_designated_dealer
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_mint_to_designated_dealer">mint_to_designated_dealer</a>&lt;CoinType&gt;(blessed: &signer, dealer_address: address, amount: u64, tier: u64)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_mint_to_designated_dealer">mint_to_designated_dealer</a>&lt;CoinType&gt;(blessed: &signer, dealer_address: address, amount: u64, tier: u64
+) <b>acquires</b> <a href="#0x0_LibraAccount_Role">Role</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_T">T</a> {
+    <a href="designated_dealer.md#0x0_DesignatedDealer_assert_account_is_blessed">DesignatedDealer::assert_account_is_blessed</a>(blessed);
+    // INVALID_MINT_AMOUNT
+    Transaction::assert(amount &gt; 0, 6);
+    <b>let</b> dealer = &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_LibraAccount_Role">Role</a>&lt;<a href="designated_dealer.md#0x0_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a>&gt;&gt;(dealer_address).role_data;
+    // NOT_A_DD
+    Transaction::assert(<a href="designated_dealer.md#0x0_DesignatedDealer_is_designated_dealer">DesignatedDealer::is_designated_dealer</a>(dealer), 1);
+    <b>let</b> tier_check = <a href="designated_dealer.md#0x0_DesignatedDealer_tiered_mint">DesignatedDealer::tiered_mint</a>(dealer, amount, tier);
+    // INVALID_AMOUNT_FOR_TIER
+    Transaction::assert(tier_check, 5);
+    <b>let</b> coins = <a href="libra.md#0x0_Libra_mint">Libra::mint</a>&lt;CoinType&gt;(amount);
+    <a href="#0x0_LibraAccount_deposit">deposit</a>(dealer_address, coins);
 }
 </code></pre>
 
