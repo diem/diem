@@ -6,12 +6,6 @@ TRACE_PATH=$HOME/trace
 
 export MOVE_VM_TRACE=$TRACE_PATH
 
-echo "Removing account universe from test..."
-pushd ../../e2e-tests || exit 1
-sed -i.bak '/mod account_universe;$/d' src/tests.rs
-rm -rf src/tests.rs.bak
-popd || exit 1
-
 echo "Rebuilding stdlib..."
 pushd ../../stdlib || exit 1
 cargo run
@@ -24,7 +18,7 @@ popd || exit 1
 
 echo "Running e2e testsuite..."
 pushd ../../e2e-tests || exit 1
-cargo test
+cargo test -- --skip account_universe
 popd || exit 1
 
 echo "Running Move testsuite..."
