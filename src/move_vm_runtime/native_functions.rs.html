@@ -180,6 +180,12 @@
 <span id="180">180</span>
 <span id="181">181</span>
 <span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -228,6 +234,8 @@
     <span class="ident">DebugPrint</span>,
     <span class="ident">DebugPrintStackTrace</span>,
     <span class="ident">SignerBorrowAddress</span>,
+    <span class="ident">CreateSigner</span>,
+    <span class="ident">DestroySigner</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">NativeFunction</span> {
@@ -257,6 +265,8 @@
             (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;Vector&quot;</span>, <span class="string">&quot;destroy_empty&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">VectorDestroyEmpty</span>,
             (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;Vector&quot;</span>, <span class="string">&quot;swap&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">VectorSwap</span>,
             (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;Event&quot;</span>, <span class="string">&quot;write_to_event_store&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AccountWriteEvent</span>,
+            (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;LibraAccount&quot;</span>, <span class="string">&quot;create_signer&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CreateSigner</span>,
+            (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;LibraAccount&quot;</span>, <span class="string">&quot;destroy_signer&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">DestroySigner</span>,
             (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;LibraAccount&quot;</span>, <span class="string">&quot;save_account&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AccountSaveAccount</span>,
             (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;Debug&quot;</span>, <span class="string">&quot;print&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">DebugPrint</span>,
             (<span class="kw-2">&amp;</span><span class="ident">CORE_CODE_ADDRESS</span>, <span class="string">&quot;Debug&quot;</span>, <span class="string">&quot;print_stack_trace&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">DebugPrintStackTrace</span>,
@@ -295,6 +305,8 @@
             <span class="self">Self</span>::<span class="ident">DebugPrint</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">debug</span>::<span class="ident">native_print</span>(<span class="ident">ctx</span>, <span class="ident">t</span>, <span class="ident">v</span>),
             <span class="self">Self</span>::<span class="ident">DebugPrintStackTrace</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">debug</span>::<span class="ident">native_print_stack_trace</span>(<span class="ident">ctx</span>, <span class="ident">t</span>, <span class="ident">v</span>),
             <span class="self">Self</span>::<span class="ident">SignerBorrowAddress</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">signer</span>::<span class="ident">native_borrow_address</span>(<span class="ident">ctx</span>, <span class="ident">t</span>, <span class="ident">v</span>),
+            <span class="self">Self</span>::<span class="ident">CreateSigner</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">account</span>::<span class="ident">native_create_signer</span>(<span class="ident">ctx</span>, <span class="ident">t</span>, <span class="ident">v</span>),
+            <span class="self">Self</span>::<span class="ident">DestroySigner</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">account</span>::<span class="ident">native_destroy_signer</span>(<span class="ident">ctx</span>, <span class="ident">t</span>, <span class="ident">v</span>),
         }
     }
 }
