@@ -96,12 +96,22 @@ pub enum DiscoverySource {
 /// Requests received by the [`ConnectivityManager`] manager actor from upstream modules.
 #[derive(Debug)]
 pub enum ConnectivityRequest {
+    /// Request to update the PartnerConfiguration
+    UpdateConfiguration(DiscoverySource, PartnerConfiguration),
     /// Request to update known addresses of peer with id `PeerId` to given list.
+    #[deprecated(note = "Please use UpdateConfiguration instead")]
     UpdateAddresses(DiscoverySource, PeerId, Vec<NetworkAddress>),
     /// Update set of nodes eligible to join the network.
+    #[deprecated(note = "Please use UpdateConfiguration instead")]
     UpdateEligibleNodes(HashMap<PeerId, NetworkPublicKeys>),
     /// Gets current size of dial queue. This is useful in tests.
     GetDialQueueSize(oneshot::Sender<usize>),
+}
+
+/// Configuration information for all potential network partners.
+#[derive(Debug)]
+pub struct PartnerConfiguration {
+    peers: HashMap<PeerId, (NetworkPublicKeys, Vec<NetworkAddress>)>,
 }
 
 /// A set of NetworkAddress's for a peer, bucketed by DiscoverySource in priority order.
@@ -370,8 +380,27 @@ where
         self.dial_eligible_peers(pending_dials).await;
     }
 
+    fn update_config(&mut self, src: DiscoverySource, config: PartnerConfiguration) {
+        trace!(
+            "Received a configuration update from {:?} discovery source",
+            src
+        );
+        let mut new_eligible = HashMap::<PeerId, NetworkPublicKeys>::new();
+        for (peer_id, (keys, addresses)) in config.peers {
+            new_eligible.insert(peer_id, keys);
+            self.update_peer_addrs(src, peer_id, addresses);
+            if let Some(dial_state) = self.dial_states.get_mut(&peer_id) {
+                dial_state.reset_addr();
+            }
+        }
+        *self.eligible.write().unwrap() = new_eligible;
+    }
+
     fn handle_request(&mut self, req: ConnectivityRequest) {
         match req {
+            ConnectivityRequest::UpdateConfiguration(src, configuration) => {
+                self.update_config(src, configuration);
+            }
             ConnectivityRequest::UpdateAddresses(src, peer_id, addrs) => {
                 trace!(
                     "Received updated addresses for peer: {} from {:?} discovery source",
