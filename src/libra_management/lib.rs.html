@@ -428,6 +428,10 @@
 <span id="428">428</span>
 <span id="429">429</span>
 <span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -641,6 +645,8 @@
     <span class="doccomment">/// pair: &quot;k0=v0;k1=v1;...&quot;.  The current supported formats are:</span>
     <span class="doccomment">///     Vault: &quot;backend=vault;server=URL;token=PATH_TO_TOKEN&quot;</span>
     <span class="doccomment">///         vault has an optional namespace: &quot;namespace=NAMESPACE&quot;</span>
+    <span class="doccomment">///     GitHub: &quot;backend=github;owner=OWNER;repository=REPOSITORY;token=PATH_TO_TOKEN&quot;</span>
+    <span class="doccomment">///         GitHUb has an optional namespace: &quot;namespace=NAMESPACE&quot;</span>
     <span class="doccomment">///     InMemory: &quot;backend=memory&quot;</span>
     <span class="doccomment">///     OnDisk: &quot;backend=disk;path=LOCAL_PATH&quot;</span>
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">verbatim_doc_comment</span>)]</span>
@@ -658,6 +664,8 @@
     <span class="doccomment">/// The current supported formats are:</span>
     <span class="doccomment">///     Vault: &quot;backend=vault;server=URL;token=PATH_TO_TOKEN&quot;</span>
     <span class="doccomment">///         vault has an optional namespace: &quot;namespace=NAMESPACE&quot;</span>
+    <span class="doccomment">///     GitHub: &quot;backend=github;owner=OWNER;repository=REPOSITORY;token=PATH_TO_TOKEN&quot;</span>
+    <span class="doccomment">///         GitHUb has an optional namespace: &quot;namespace=NAMESPACE&quot;</span>
     <span class="doccomment">///     InMemory: &quot;backend=memory&quot;</span>
     <span class="doccomment">///     OnDisk: &quot;backend=disk;path=LOCAL_PATH&quot;</span>
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">long</span>, <span class="ident">verbatim_doc_comment</span>)]</span>

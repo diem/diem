@@ -170,12 +170,57 @@
 <span id="170">170</span>
 <span id="171">171</span>
 <span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">error</span>::<span class="ident">Error</span>;
-<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="self">self</span>, <span class="ident">OnDiskStorageConfig</span>, <span class="ident">Token</span>, <span class="ident">VaultConfig</span>};
+<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="self">self</span>, <span class="ident">GitHubConfig</span>, <span class="ident">OnDiskStorageConfig</span>, <span class="ident">Token</span>, <span class="ident">VaultConfig</span>};
 <span class="kw">use</span> <span class="ident">libra_secure_storage</span>::<span class="ident">Storage</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">HashMap</span>,
@@ -185,6 +230,7 @@
 };
 
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DISK</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;disk&quot;</span>;
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">GITHUB</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;github&quot;</span>;
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MEMORY</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;memory&quot;</span>;
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">VAULT</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;vault&quot;</span>;
 
@@ -251,6 +297,26 @@
                 <span class="ident">config</span>.<span class="ident">namespace</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">parameters</span>.<span class="ident">remove</span>(<span class="string">&quot;namespace&quot;</span>);
                 <span class="ident">config</span>::<span class="ident">SecureBackend</span>::<span class="ident">OnDiskStorage</span>(<span class="ident">config</span>)
             }
+            <span class="ident">GITHUB</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">owner</span> <span class="op">=</span> <span class="self">self</span>
+                    .<span class="ident">parameters</span>
+                    .<span class="ident">remove</span>(<span class="string">&quot;owner&quot;</span>)
+                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">BackendParsingError</span>(<span class="string">&quot;missing owner&quot;</span>.<span class="ident">into</span>()))<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">repository</span> <span class="op">=</span> <span class="self">self</span>
+                    .<span class="ident">parameters</span>
+                    .<span class="ident">remove</span>(<span class="string">&quot;repository&quot;</span>)
+                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">BackendParsingError</span>(<span class="string">&quot;missing reository&quot;</span>.<span class="ident">into</span>()))<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">token</span> <span class="op">=</span> <span class="self">self</span>
+                    .<span class="ident">parameters</span>
+                    .<span class="ident">remove</span>(<span class="string">&quot;token&quot;</span>)
+                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">BackendParsingError</span>(<span class="string">&quot;missing token&quot;</span>.<span class="ident">into</span>()))<span class="question-mark">?</span>;
+                <span class="ident">config</span>::<span class="ident">SecureBackend</span>::<span class="ident">GitHub</span>(<span class="ident">GitHubConfig</span> {
+                    <span class="ident">namespace</span>: <span class="self">self</span>.<span class="ident">parameters</span>.<span class="ident">remove</span>(<span class="string">&quot;namespace&quot;</span>),
+                    <span class="ident">owner</span>,
+                    <span class="ident">repository</span>,
+                    <span class="ident">token</span>: <span class="ident">Token</span>::<span class="ident">new_disk</span>(<span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="ident">token</span>)),
+                })
+            }
             <span class="ident">MEMORY</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">config</span>::<span class="ident">SecureBackend</span>::<span class="ident">InMemoryStorage</span>,
             <span class="ident">VAULT</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="self">self</span>
@@ -312,6 +378,30 @@
 
         <span class="kw">let</span> <span class="ident">disk</span> <span class="op">=</span> <span class="string">&quot;backend=disk&quot;</span>;
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">storage</span>(<span class="ident">disk</span>).<span class="ident">is_err</span>());
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_github</span>() {
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">libra_temppath</span>::<span class="ident">TempPath</span>::<span class="ident">new</span>();
+        <span class="ident">path</span>.<span class="ident">create_as_file</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">File</span>::<span class="ident">create</span>(<span class="ident">path</span>.<span class="ident">path</span>()).<span class="ident">unwrap</span>();
+        <span class="ident">file</span>.<span class="ident">write_all</span>(<span class="string">b&quot;disk_token&quot;</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">path_str</span> <span class="op">=</span> <span class="ident">path</span>.<span class="ident">path</span>().<span class="ident">to_str</span>().<span class="ident">unwrap</span>();
+
+        <span class="kw">let</span> <span class="ident">github</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+            <span class="string">&quot;backend=github;owner=libra;repository=libra;token={}&quot;</span>,
+            <span class="ident">path_str</span>
+        );
+        <span class="ident">storage</span>(<span class="kw-2">&amp;</span><span class="ident">github</span>).<span class="ident">unwrap</span>();
+
+        <span class="kw">let</span> <span class="ident">github</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+            <span class="string">&quot;backend=github;owner=libra;repository=libra;token={};namespace=test&quot;</span>,
+            <span class="ident">path_str</span>
+        );
+        <span class="ident">storage</span>(<span class="kw-2">&amp;</span><span class="ident">github</span>).<span class="ident">unwrap</span>();
+
+        <span class="kw">let</span> <span class="ident">github</span> <span class="op">=</span> <span class="string">&quot;backend=github&quot;</span>;
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">storage</span>(<span class="ident">github</span>).<span class="ident">is_err</span>());
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
