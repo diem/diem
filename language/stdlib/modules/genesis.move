@@ -90,7 +90,8 @@ module Genesis {
     fun grant_tc_capabilities_for_sender(auth_key: vector<u8>) {
         Libra::grant_burn_capability_for_sender<Coin1::T>();
         Libra::grant_burn_capability_for_sender<Coin2::T>();
-        Libra::grant_burn_capability_for_sender<LBR::T>();
+        Libra::grant_mint_capability_for_sender<Coin1::T>();
+        Libra::grant_mint_capability_for_sender<Coin2::T>();
         LibraAccount::rotate_authentication_key(auth_key);
     }
 
