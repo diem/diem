@@ -10,6 +10,7 @@ use libra_config::{
         VaultConfig,
     },
     generator,
+    network_id::NetworkId,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_network_address::NetworkAddress;
@@ -86,6 +87,7 @@ impl ValidatorConfig {
             .validator_network
             .as_mut()
             .ok_or(Error::MissingValidatorNetwork)?;
+        validator_network.network_id = NetworkId::Validator;
         validator_network.listen_address = self.listen_address.clone();
         validator_network.advertised_address = self.advertised_address.clone();
         validator_network.seed_peers = seed_peers;

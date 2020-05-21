@@ -23,7 +23,7 @@ use futures::{
     stream::{select_all, FuturesUnordered},
     StreamExt,
 };
-use libra_config::config::{NetworkId, NodeConfig, PeerNetworkId};
+use libra_config::config::{NodeConfig, PeerNetworkId, UpstreamNetworkId};
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
@@ -39,7 +39,7 @@ use vm_validator::vm_validator::TransactionValidation;
 pub(crate) async fn coordinator<V>(
     mut smp: SharedMempool<V>,
     executor: Handle,
-    network_events: Vec<(NetworkId, MempoolNetworkEvents)>,
+    network_events: Vec<(UpstreamNetworkId, MempoolNetworkEvents)>,
     mut client_events: mpsc::Receiver<(
         SignedTransaction,
         oneshot::Sender<Result<SubmissionStatus>>,

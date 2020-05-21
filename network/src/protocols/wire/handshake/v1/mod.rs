@@ -10,6 +10,7 @@
 //! supported over that messaging protocol. On receipt, both ends will determine the highest
 //! intersecting messaging protocol version and use that for the remainder of the session.
 
+use libra_config::network_id::NetworkId;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::TryInto, fmt, iter::Iterator};
 
@@ -61,6 +62,7 @@ pub struct SupportedProtocols(bitvec::BitVec);
 #[derive(Clone, Debug, Deserialize, Serialize, Default)]
 pub struct HandshakeMsg {
     pub supported_protocols: BTreeMap<MessagingProtocolVersion, SupportedProtocols>,
+    pub network_id: NetworkId,
 }
 
 /// Enum representing different versions of the Libra network protocol. These should be listed from
@@ -104,8 +106,11 @@ impl SupportedProtocols {
 }
 
 impl HandshakeMsg {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(network_id: NetworkId) -> Self {
+        Self {
+            supported_protocols: Default::default(),
+            network_id,
+        }
     }
 
     pub fn add(

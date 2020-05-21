@@ -8,7 +8,10 @@ use crate::{
 use anyhow::{bail, Result};
 use executor_types::ExecutedTrees;
 use futures::executor::block_on;
-use libra_config::config::{PeerNetworkId, RoleType};
+use libra_config::{
+    config::{PeerNetworkId, RoleType},
+    network_id::NetworkId,
+};
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
 use libra_mempool::mocks::MockSharedMempool;
 use libra_network_address::{NetworkAddress, RawNetworkAddress};
@@ -113,6 +116,7 @@ struct SynchronizerEnv {
     clients: Vec<Arc<StateSyncClient>>,
     storage_proxies: Vec<Arc<RwLock<MockStorage>>>, // to directly modify peers storage
     signers: Vec<ValidatorSigner>,
+    network_id: NetworkId,
     public_keys: Vec<ValidatorInfo>,
     peer_ids: Vec<PeerId>,
     peer_addresses: Vec<NetworkAddress>,
@@ -194,6 +198,7 @@ impl SynchronizerEnv {
             clients: vec![],
             storage_proxies: vec![],
             signers,
+            network_id: NetworkId::Validator,
             public_keys,
             peer_ids,
             peer_addresses: vec![],
@@ -242,6 +247,7 @@ impl SynchronizerEnv {
         }
         let mut network_builder = NetworkBuilder::new(
             self.runtime.handle().clone(),
+            self.network_id.clone(),
             self.peer_ids[new_peer_idx],
             RoleType::Validator,
             addr,

@@ -18,7 +18,6 @@ impl SpawnedProcess {
         config_path.persist();
         config_path.create_as_file().unwrap();
         config.save_config(&config_path).unwrap();
-
         let service = &config.execution.service;
         let server_addr =
             if let ExecutionCorrectnessService::SpawnedProcess(remote_service) = service {

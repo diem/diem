@@ -3,9 +3,12 @@
 
 use crate::{layout::Layout, storage_helper::StorageHelper};
 use config_builder::{BuildSwarm, SwarmConfig};
-use libra_config::config::{
-    DiscoveryMethod, Identity, NetworkConfig, NodeConfig, OnDiskStorageConfig, RoleType,
-    SecureBackend,
+use libra_config::{
+    config::{
+        DiscoveryMethod, Identity, NetworkConfig, NodeConfig, OnDiskStorageConfig, RoleType,
+        SecureBackend,
+    },
+    network_id::NetworkId,
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_secure_storage::Value;
@@ -69,11 +72,11 @@ fn smoke_test() {
         let validator_account = account_address::from_public_key(&operator_key);
         let mut config = NodeConfig::default();
 
-        let mut network = NetworkConfig::default();
+        let mut network = NetworkConfig::network_with_id(NetworkId::Validator);
         network.discovery_method = DiscoveryMethod::None;
         config.validator_network = Some(network);
 
-        let mut network = NetworkConfig::default();
+        let mut network = NetworkConfig::network_with_id(NetworkId::vfn_network());
         network.discovery_method = DiscoveryMethod::None;
         config.full_node_networks = vec![network];
         config.randomize_ports();

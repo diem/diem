@@ -5,6 +5,7 @@ use anyhow::{ensure, Result};
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
+    collections::HashSet,
     fmt,
     fs::File,
     io::{Read, Write},
@@ -44,6 +45,7 @@ pub use safety_rules_config::*;
 mod upstream_config;
 pub use upstream_config::*;
 mod test_config;
+use crate::network_id::NetworkId;
 use libra_types::waypoint::Waypoint;
 pub use test_config::*;
 
@@ -205,13 +207,23 @@ impl NodeConfig {
             );
         }
 
+        let mut network_ids = HashSet::new();
         let input_dir = RootPath::new(input_path);
         config.execution.load(&input_dir)?;
         if let Some(network) = &mut config.validator_network {
             network.load(&input_dir, RoleType::Validator)?;
+            network_ids.insert(network.network_id.clone());
         }
         for network in &mut config.full_node_networks {
             network.load(&input_dir, RoleType::FullNode)?;
+
+            // Validate that a network isn't repeated
+            let network_id = network.network_id.clone();
+            ensure!(
+                !network_ids.contains(&network_id),
+                format!("network_id {:?} was repeated", network_id)
+            );
+            network_ids.insert(network_id);
         }
         config.set_data_dir(config.data_dir().clone());
         Ok(config)
@@ -276,7 +288,8 @@ impl NodeConfig {
             );
 
             if self.validator_network.is_none() {
-                self.validator_network = Some(NetworkConfig::default());
+                let network_config = NetworkConfig::network_with_id(NetworkId::Validator);
+                self.validator_network = Some(network_config);
             }
 
             let validator_network = self.validator_network.as_mut().unwrap();
@@ -285,7 +298,8 @@ impl NodeConfig {
         } else {
             self.validator_network = None;
             if self.full_node_networks.is_empty() {
-                self.full_node_networks.push(NetworkConfig::default());
+                let network_config = NetworkConfig::network_with_id(NetworkId::Public);
+                self.full_node_networks.push(network_config);
             }
             for network in &mut self.full_node_networks {
                 network.random(rng);

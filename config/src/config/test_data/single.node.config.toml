@@ -50,6 +50,9 @@ type = "from_config"
 key = "60dd107034b4582a2ef42c5e1ea475f2fea477a10a9f1d75b3635243b2506b72"
 peer_id = "31893204fa402143c11b26ce8a89ea1d"
 
+[validator_network.network_id]
+type = "Validator"
+
 [consensus]
 max_block_size = 1000
 max_pruned_blocks_in_mem = 10000

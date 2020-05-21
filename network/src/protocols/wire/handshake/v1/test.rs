@@ -29,6 +29,7 @@ fn protocols_to_from_vec() {
 
 #[test]
 fn common_protocols() {
+    let network_id = NetworkId::Validator;
     let h1: BTreeMap<_, _> = [(
         MessagingProtocolVersion::V1,
         [ProtocolId::ConsensusRpc, ProtocolId::DiscoveryDirectSend]
@@ -39,6 +40,7 @@ fn common_protocols() {
     .cloned()
     .collect();
     let h1 = HandshakeMsg {
+        network_id: network_id.clone(),
         supported_protocols: h1,
     };
 
@@ -53,6 +55,7 @@ fn common_protocols() {
     .cloned()
     .collect();
     let h2 = HandshakeMsg {
+        network_id: network_id.clone(),
         supported_protocols: h2,
     };
     assert_eq!(
@@ -65,6 +68,7 @@ fn common_protocols() {
 
     // Case 2: No intersecting messaging protocol version.
     let h2 = HandshakeMsg {
+        network_id: network_id.clone(),
         supported_protocols: BTreeMap::default(),
     };
     assert_eq!(None, h1.find_common_protocols(&h2));
@@ -75,6 +79,7 @@ fn common_protocols() {
         .cloned()
         .collect();
     let h2 = HandshakeMsg {
+        network_id,
         supported_protocols: h2,
     };
     assert_eq!(

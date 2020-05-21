@@ -16,7 +16,9 @@ use futures::{
     stream::select_all,
     StreamExt,
 };
-use libra_config::config::{NetworkId, PeerNetworkId, RoleType, StateSyncConfig, UpstreamConfig};
+use libra_config::config::{
+    PeerNetworkId, RoleType, StateSyncConfig, UpstreamConfig, UpstreamNetworkId,
+};
 use libra_logger::prelude::*;
 use libra_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
 use libra_types::{
@@ -94,7 +96,7 @@ pub(crate) struct SyncCoordinator<T> {
     // waypoint a node is not going to be abl
     waypoint: Option<Waypoint>,
     // network senders - (k, v) = (network ID, network sender)
-    network_senders: HashMap<NetworkId, StateSynchronizerSender>,
+    network_senders: HashMap<UpstreamNetworkId, StateSynchronizerSender>,
     // peers used for synchronization
     peer_manager: PeerManager,
     // Optional sync request to be called when the target sync is reached
@@ -112,7 +114,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     pub fn new(
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
-        network_senders: HashMap<NetworkId, StateSynchronizerSender>,
+        network_senders: HashMap<UpstreamNetworkId, StateSynchronizerSender>,
         role: RoleType,
         waypoint: Option<Waypoint>,
         config: StateSyncConfig,

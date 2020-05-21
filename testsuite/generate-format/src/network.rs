@@ -48,6 +48,7 @@ pub fn get_registry() -> Result<Registry> {
     tracer.trace_type::<messaging::v1::ErrorCode>(&samples)?;
     tracer.trace_type::<handshake::v1::ProtocolId>(&samples)?;
     tracer.trace_type::<address::Protocol>(&samples)?;
+    tracer.trace_type::<libra_config::network_id::NetworkId>(&samples)?;
 
     tracer.registry()
 }
