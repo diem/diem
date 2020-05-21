@@ -67,3 +67,28 @@ pub fn native_save_account(
     )?;
     Ok(NativeResult::ok(cost, vec![]))
 }
+
+pub fn native_create_signer(
+    context: &mut impl NativeContext,
+    ty_args: Vec<Type>,
+    mut arguments: VecDeque<Value>,
+) -> VMResult<NativeResult> {
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(arguments.len() == 1);
+
+    let address = pop_arg!(arguments, AccountAddress);
+    let cost = native_gas(context.cost_table(), NativeCostIndex::CREATE_SIGNER, 0);
+    Ok(NativeResult::ok(cost, vec![Value::signer(address)]))
+}
+
+pub fn native_destroy_signer(
+    context: &mut impl NativeContext,
+    ty_args: Vec<Type>,
+    arguments: VecDeque<Value>,
+) -> VMResult<NativeResult> {
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(arguments.len() == 1);
+
+    let cost = native_gas(context.cost_table(), NativeCostIndex::CREATE_SIGNER, 0);
+    Ok(NativeResult::ok(cost, vec![]))
+}
