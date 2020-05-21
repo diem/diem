@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["burn",""],["cancel_burn",""],["mint",""],["preburn",""],["received_payment",""],["sent_payment",""]]});
+initSidebarItems({"mod":[["burn",""],["cancel_burn",""],["mint",""],["new_block",""],["new_epoch",""],["preburn",""],["received_payment",""],["sent_payment",""],["upgrade",""]]});

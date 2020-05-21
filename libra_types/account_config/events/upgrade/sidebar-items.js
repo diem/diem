@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["UpgradeEvent","Struct that represents a UpgradeEvent."]]});
