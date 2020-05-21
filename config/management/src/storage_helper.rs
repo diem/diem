@@ -160,7 +160,7 @@ impl StorageHelper {
     pub fn set_layout(&self, path: &str, namespace: &str) -> Result<crate::layout::Layout, Error> {
         let args = format!(
             "
-                validator_config
+                management
                 set-layout
                 --path {path}
                 --backend backend={backend};\
@@ -215,7 +215,7 @@ impl StorageHelper {
     pub fn verify(&self, namespace: &str) -> Result<String, Error> {
         let args = format!(
             "
-                validator_config
+                management
                 verify
                 --backend backend={backend};\
                     path={path};\
