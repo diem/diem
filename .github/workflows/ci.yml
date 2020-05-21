@@ -1,0 +1,170 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  unit-tests:
+
+    runs-on: ubuntu-latest-xl
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Version Info
+      run: rustc --version; cargo --version; rustup --version
+    - name: Environment Setup
+      run: |
+        echo '::set-env name=LIBRA_DUMP_LOGS::1'
+        echo '::set-env name=CARGO_INCREMENTAL::0'
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake curl clang llvm gcc-powerpc-linux-gnu
+        rustup component add clippy rustfmt
+
+    - name: Run all unit tests
+      run: RUST_BACKTRACE=1 cargo x test --unit
+
+    - name: Check for changed and untracked files
+      run: ./scripts/changed-files.sh
+
+  # Run crypto unit tests without formally verified crypto, to insulate against a curve25519 "default" backend regression
+  crypto-unit-tests:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Version Info
+      run: rustc --version; cargo --version; rustup --version
+    - name: Environment Setup
+      run: |
+        echo '::set-env name=LIBRA_DUMP_LOGS::1'
+        echo '::set-env name=CARGO_INCREMENTAL::0'
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake curl clang llvm gcc-powerpc-linux-gnu
+        rustup component add clippy rustfmt
+
+    - name: Run crypto unit tests
+      run: |
+        cd crypto/crypto
+        RUST_BACKTRACE=1 cargo test --features='std u64_backend batch' --no-default-features
+
+    - name: Check for changed and untracked files
+      run: ./scripts/changed-files.sh
+
+  e2e-tests:
+
+    runs-on: ubuntu-latest-xl
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Version Info
+      run: rustc --version; cargo --version; rustup --version
+    - name: Environment Setup
+      run: |
+        echo '::set-env name=LIBRA_DUMP_LOGS::1'
+        echo '::set-env name=CARGO_INCREMENTAL::0'
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake curl clang llvm gcc-powerpc-linux-gnu
+        rustup component add clippy rustfmt
+
+    - name: Build all binaries
+      run: cargo build --all --bins --exclude cluster-test
+    - name: Run e2e tests
+      run: RUST_BACKTRACE=1 cargo x test --package testsuite -- --test-threads 1
+
+    - name: Check for changed and untracked files
+      run: ./scripts/changed-files.sh
+
+  lint:
+
+    # This could probably be done using a smaller instance
+    runs-on: ubuntu-latest-xl
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Version Info
+      run: rustc --version; cargo --version; rustup --version
+    - name: Environment Setup
+      run: |
+        echo '::set-env name=LIBRA_DUMP_LOGS::1'
+        echo '::set-env name=CARGO_INCREMENTAL::0'
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake curl clang llvm gcc-powerpc-linux-gnu
+        rustup component add clippy rustfmt
+
+    - name: Git Hooks and Checks
+      run: ./scripts/git-checks.sh
+    - name: cargo lint
+      run: cargo x lint
+    - name: cargo clippy
+      run: cargo xclippy --workspace --all-targets
+    - name: cargo fmt
+      run: cargo xfmt --check
+
+    - name: Check for changed and untracked files
+      run: ./scripts/changed-files.sh
+
+  build-dev:
+
+    runs-on: ubuntu-latest-xl
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Version Info
+      run: rustc --version; cargo --version; rustup --version
+    - name: Environment Setup
+      run: |
+        echo '::set-env name=LIBRA_DUMP_LOGS::1'
+        echo '::set-env name=CARGO_INCREMENTAL::0'
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake curl clang llvm gcc-powerpc-linux-gnu
+        rustup component add clippy rustfmt
+
+    - name: Development Build
+      run: |
+        RUST_BACKTRACE=1 cargo build
+        RUST_BACKTRACE=1 cargo build -p libra-swarm -p cluster-test -p libra-fuzzer -p language-benchmarks -p test-generation
+    - name: powerpc build
+      run: |
+        rustup target add powerpc-unknown-linux-gnu
+        RUST_BACKTRACE=1 cargo build -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
+
+    - name: Check for changed and untracked files
+      run: ./scripts/changed-files.sh
+
+  build-release:
+
+    runs-on: ubuntu-latest-xl
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Version Info
+      run: rustc --version; cargo --version; rustup --version
+    - name: Environment Setup
+      run: |
+        echo '::set-env name=LIBRA_DUMP_LOGS::1'
+        echo '::set-env name=CARGO_INCREMENTAL::0'
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake curl clang llvm gcc-powerpc-linux-gnu
+        rustup component add clippy rustfmt
+
+    - name: Release Build
+      run: RUST_BACKTRACE=1 cargo build --release
+
+    - name: Check for changed and untracked files
+      run: ./scripts/changed-files.sh
