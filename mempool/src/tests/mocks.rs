@@ -10,7 +10,10 @@ use crate::{
 use anyhow::{format_err, Result};
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use futures::channel::{mpsc, oneshot};
-use libra_config::config::{NetworkConfig, NodeConfig};
+use libra_config::{
+    config::{NetworkConfig, NodeConfig},
+    network_id::NetworkId,
+};
 use libra_types::{mempool_status::MempoolStatusCode, transaction::SignedTransaction};
 use network::peer_manager::{
     conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender,
@@ -49,7 +52,7 @@ impl MockSharedMempool {
             .expect("[mock shared mempool] failed to create runtime");
 
         let mut config = NodeConfig::random();
-        config.validator_network = Some(NetworkConfig::default());
+        config.validator_network = Some(NetworkConfig::network_with_id(NetworkId::Validator));
         let peer_id = config.validator_network.as_ref().unwrap().peer_id();
 
         let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));

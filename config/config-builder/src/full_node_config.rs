@@ -7,7 +7,9 @@ use libra_config::{
     config::{
         NetworkPeerInfo, NetworkPeersConfig, NodeConfig, PeerNetworkId, RoleType, UpstreamConfig,
     },
-    generator, utils,
+    generator,
+    network_id::NetworkId,
+    utils,
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_network_address::NetworkAddress;
@@ -175,6 +177,7 @@ impl FullNodeConfig {
                 .full_node_networks
                 .get_mut(0)
                 .ok_or(Error::MissingFullNodeNetwork)?;
+            network.network_id = NetworkId::vfn_network();
             network.listen_address = utils::get_available_port_in_multiaddr(true);
             network.advertised_address = network.listen_address.clone();
             network.enable_remote_authentication = self.enable_remote_authentication;
@@ -208,6 +211,7 @@ impl FullNodeConfig {
                 .full_node_networks
                 .last_mut()
                 .ok_or(Error::MissingFullNodeNetwork)?;
+            network.network_id = NetworkId::Public;
             network.network_peers = network_peers.clone();
             network.seed_peers = seed_peers.clone();
             let mut upstream = UpstreamConfig::default();

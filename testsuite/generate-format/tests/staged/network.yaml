@@ -28,6 +28,8 @@ HandshakeMsg:
             TYPENAME: MessagingProtocolVersion
           VALUE:
             TYPENAME: SupportedProtocols
+    - network_id:
+        TYPENAME: NetworkId
 MessagingProtocolVersion:
   ENUM:
     0:
@@ -36,6 +38,19 @@ NetworkAddress:
   NEWTYPESTRUCT:
     SEQ:
       TYPENAME: Protocol
+NetworkId:
+  ENUM:
+    0:
+      Validator: UNIT
+    1:
+      Public: UNIT
+    2:
+      Private:
+        NEWTYPE:
+          TYPENAME: NetworkInfo
+NetworkInfo:
+  STRUCT:
+    - name: STR
 NetworkMessage:
   ENUM:
     0:

@@ -1713,6 +1713,7 @@ dependencies = [
  "consensus 0.1.0",
  "consensus-types 0.1.0",
  "libra-canonical-serialization 0.1.0",
+ "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-network-address 0.1.0",
  "libra-types 0.1.0",

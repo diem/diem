@@ -10,6 +10,7 @@ use crate::{
     },
 };
 use futures::io::{AsyncRead, AsyncWrite};
+use libra_config::network_id::NetworkId;
 use libra_crypto::{traits::ValidCryptoMaterial, x25519};
 use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
@@ -46,6 +47,7 @@ const LIBRA_TCP_TRANSPORT: tcp::TcpTransport = tcp::TcpTransport {
 };
 
 pub trait TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + 'static {}
+
 impl<T> TSocket for T where T: AsyncRead + AsyncWrite + Send + Debug + Unpin + 'static {}
 
 /// Unique local identifier for a connection.
@@ -183,11 +185,21 @@ pub async fn perform_handshake<T: TSocket>(
     own_handshake: &HandshakeMsg,
 ) -> Result<Connection<T>, io::Error> {
     let handshake_other = exchange_handshake(&own_handshake, &mut socket).await?;
+    if own_handshake.network_id != handshake_other.network_id {
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!(
+                "network_ids don't match own: {:?} received: {:?}",
+                own_handshake.network_id, handshake_other.network_id
+            ),
+        ));
+    }
+
     let intersecting_protocols = own_handshake.find_common_protocols(&handshake_other);
     match intersecting_protocols {
         None => {
             info!("No matching protocols found for connection with peer: {:?}. Handshake received: {:?}",
-            peer_id.short_str(), handshake_other);
+                  peer_id.short_str(), handshake_other);
             Err(io::Error::new(
                 io::ErrorKind::Other,
                 "no matching messaging protocol",
@@ -208,6 +220,7 @@ pub async fn perform_handshake<T: TSocket>(
 }
 
 pub fn build_memory_noise_transport(
+    network_id: NetworkId,
     identity_key: x25519::PrivateKey,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     application_protocols: SupportedProtocols,
@@ -215,7 +228,7 @@ pub fn build_memory_noise_transport(
     let memory_transport = memory::MemoryTransport::default();
     let noise_config = Arc::new(NoiseWrapper::new(identity_key));
     let noise_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::default()));
-    let mut own_handshake = HandshakeMsg::new();
+    let mut own_handshake = HandshakeMsg::new(network_id);
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
     memory_transport
@@ -247,12 +260,13 @@ pub fn build_memory_noise_transport(
 }
 
 pub fn build_unauthenticated_memory_noise_transport(
+    network_id: NetworkId,
     identity_key: x25519::PrivateKey,
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
     let noise_config = Arc::new(NoiseWrapper::new(identity_key));
-    let mut own_handshake = HandshakeMsg::new();
+    let mut own_handshake = HandshakeMsg::new(network_id);
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
     memory_transport
@@ -282,11 +296,12 @@ pub fn build_unauthenticated_memory_noise_transport(
 }
 
 pub fn build_memory_transport(
+    network_id: NetworkId,
     own_peer_id: PeerId,
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
-    let mut own_handshake = HandshakeMsg::new();
+    let mut own_handshake = HandshakeMsg::new(network_id);
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
     memory_transport
@@ -302,13 +317,14 @@ pub fn build_memory_transport(
 
 //TODO(bmwill) Maybe create an Either Transport so we can merge the building of Memory + Tcp
 pub fn build_tcp_noise_transport(
+    network_id: NetworkId,
     identity_key: x25519::PrivateKey,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let noise_config = Arc::new(NoiseWrapper::new(identity_key));
     let noise_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::default()));
-    let mut own_handshake = HandshakeMsg::new();
+    let mut own_handshake = HandshakeMsg::new(network_id);
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
     LIBRA_TCP_TRANSPORT
@@ -347,11 +363,12 @@ pub fn build_tcp_noise_transport(
 // Transport based on TCP + Noise, but without remote authentication (i.e., any
 // node is allowed to connect).
 pub fn build_unauthenticated_tcp_noise_transport(
+    network_id: NetworkId,
     identity_key: x25519::PrivateKey,
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let noise_config = Arc::new(NoiseWrapper::new(identity_key));
-    let mut own_handshake = HandshakeMsg::new();
+    let mut own_handshake = HandshakeMsg::new(network_id);
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
     LIBRA_TCP_TRANSPORT
@@ -381,10 +398,11 @@ pub fn build_unauthenticated_tcp_noise_transport(
 }
 
 pub fn build_tcp_transport(
+    network_id: NetworkId,
     own_peer_id: PeerId,
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
-    let mut own_handshake = HandshakeMsg::new();
+    let mut own_handshake = HandshakeMsg::new(network_id);
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
     LIBRA_TCP_TRANSPORT
@@ -396,4 +414,60 @@ pub fn build_tcp_transport(
         })
         .with_timeout(TRANSPORT_TIMEOUT)
         .boxed()
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        protocols::wire::handshake::v1::{HandshakeMsg, MessagingProtocolVersion},
+        transport::perform_handshake,
+        ProtocolId,
+    };
+    use futures::{executor::block_on, future::join};
+    use libra_config::network_id::NetworkId;
+    use libra_network_address::NetworkAddress;
+    use libra_types::PeerId;
+    use memsocket::MemorySocket;
+    use netcore::transport::ConnectionOrigin;
+
+    #[test]
+    fn handshake_network_id_mismatch() {
+        let (outbound, inbound) = MemorySocket::new_pair();
+
+        let mut server_handshake = HandshakeMsg::new(NetworkId::Validator);
+        // This is required to ensure that test doesn't get an error for a different reason
+        server_handshake.add(
+            MessagingProtocolVersion::V1,
+            [ProtocolId::ConsensusDirectSend].iter().into(),
+        );
+        let mut client_handshake = server_handshake.clone();
+        // Ensure client doesn't match networks
+        client_handshake.network_id = NetworkId::Public;
+
+        let server = async move {
+            perform_handshake(
+                PeerId::random(),
+                inbound,
+                NetworkAddress::mock(),
+                ConnectionOrigin::Inbound,
+                &server_handshake,
+            )
+            .await
+            .unwrap_err()
+        };
+
+        let client = async move {
+            perform_handshake(
+                PeerId::random(),
+                outbound,
+                NetworkAddress::mock(),
+                ConnectionOrigin::Outbound,
+                &client_handshake,
+            )
+            .await
+            .unwrap_err()
+        };
+
+        block_on(join(server, client));
+    }
 }

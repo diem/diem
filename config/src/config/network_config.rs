@@ -4,6 +4,7 @@
 use crate::{
     config::{PersistableConfig, RoleType, RootPath, SecureBackend},
     keys::KeyPair,
+    network_id::NetworkId,
     utils,
 };
 use anyhow::{anyhow, ensure, Result};
@@ -53,11 +54,19 @@ pub struct NetworkConfig {
     pub seed_peers: SeedPeersConfig,
     pub seed_peers_file: PathBuf,
     pub identity: Identity,
+    pub network_id: NetworkId,
 }
 
 impl Default for NetworkConfig {
     fn default() -> Self {
+        NetworkConfig::network_with_id(NetworkId::default())
+    }
+}
+
+impl NetworkConfig {
+    pub fn network_with_id(network_id: NetworkId) -> NetworkConfig {
         let mut config = Self {
+            network_id,
             listen_address: "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
             advertised_address: "/ip4/127.0.0.1/tcp/6180".parse().unwrap(),
             discovery_interval_ms: 1000,
@@ -80,6 +89,7 @@ impl NetworkConfig {
     /// template for another config.
     pub fn clone_for_template(&self) -> Self {
         Self {
+            network_id: self.network_id.clone(),
             listen_address: self.listen_address.clone(),
             advertised_address: self.advertised_address.clone(),
             discovery_interval_ms: self.discovery_interval_ms,
@@ -394,6 +404,7 @@ mod test {
             config.seed_peers_file,
             PathBuf::from(config.default_path(SEED_PEERS_DEFAULT))
         );
+        assert_eq!(new_config.network_id, config.network_id)
     }
 
     #[test]
@@ -418,8 +429,7 @@ mod test {
     fn generate_config() -> (NetworkConfig, TempPath) {
         let temp_dir = TempPath::new();
         temp_dir.create_as_dir().expect("error creating tempdir");
-        let mut config = NetworkConfig::default();
-        config.network_peers = NetworkPeersConfig::default();
+        let config = NetworkConfig::default();
         (config, temp_dir)
     }
 }

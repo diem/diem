@@ -20,7 +20,10 @@ use futures::{
     sink::SinkExt,
     StreamExt,
 };
-use libra_config::config::{NetworkConfig, NodeConfig, PeerNetworkId, RoleType, UpstreamConfig};
+use libra_config::{
+    config::{NetworkConfig, NodeConfig, PeerNetworkId, RoleType, UpstreamConfig},
+    network_id::NetworkId,
+};
 use libra_network_address::NetworkAddress;
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
@@ -182,7 +185,7 @@ impl SharedMempoolNetwork {
 
         for _ in 0..validator_nodes_count {
             let mut config = NodeConfig::random();
-            config.validator_network = Some(NetworkConfig::default());
+            config.validator_network = Some(NetworkConfig::network_with_id(NetworkId::Validator));
             let peer_id = config.validator_network.as_ref().unwrap().peer_id();
             config.mempool.shared_mempool_batch_size = broadcast_batch_size;
             config.upstream = UpstreamConfig::default();

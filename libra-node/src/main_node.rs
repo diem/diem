@@ -131,6 +131,7 @@ pub fn setup_network(
 
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
+        config.network_id.clone(),
         peer_id,
         role,
         config.listen_address.clone(),

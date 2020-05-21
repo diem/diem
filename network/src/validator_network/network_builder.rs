@@ -28,7 +28,10 @@ use crate::{
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use futures::stream::StreamExt;
-use libra_config::config::{RoleType, HANDSHAKE_VERSION};
+use libra_config::{
+    config::{RoleType, HANDSHAKE_VERSION},
+    network_id::NetworkId,
+};
 use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
@@ -104,6 +107,7 @@ fn append_libranet_protocols(
 // pretty tangled.
 pub struct NetworkBuilder {
     executor: Handle,
+    network_id: NetworkId,
     peer_id: PeerId,
     role: RoleType,
     // TODO(philiphayes): better support multiple listening addrs
@@ -137,6 +141,7 @@ impl NetworkBuilder {
     /// Return a new NetworkBuilder initialized with default configuration values.
     pub fn new(
         executor: Handle,
+        network_id: NetworkId,
         peer_id: PeerId,
         role: RoleType,
         listen_address: NetworkAddress,
@@ -155,6 +160,7 @@ impl NetworkBuilder {
         );
         NetworkBuilder {
             executor,
+            network_id,
             peer_id,
             role,
             listen_address,
@@ -405,6 +411,7 @@ impl NetworkBuilder {
     pub fn build(mut self) -> NetworkAddress {
         use libra_network_address::Protocol::*;
 
+        let network_id = self.network_id.clone();
         let peer_id = self.peer_id;
         let protos = self.supported_protocols();
 
@@ -429,23 +436,25 @@ impl NetworkBuilder {
         let bound_listen_addr = match self.listen_address.as_slice() {
             [Ip4(_), Tcp(_)] | [Ip6(_), Tcp(_)] => match authentication_mode {
                 AuthenticationMode::Unauthenticated => {
-                    self.build_with_transport(build_tcp_transport(peer_id, protos))
+                    self.build_with_transport(build_tcp_transport(network_id, peer_id, protos))
                 }
-                AuthenticationMode::ServerOnly(key) => self
-                    .build_with_transport(build_unauthenticated_tcp_noise_transport(key, protos)),
-                AuthenticationMode::Mutual(key) => {
-                    self.build_with_transport(build_tcp_noise_transport(key, trusted_peers, protos))
-                }
+                AuthenticationMode::ServerOnly(key) => self.build_with_transport(
+                    build_unauthenticated_tcp_noise_transport(network_id, key, protos),
+                ),
+                AuthenticationMode::Mutual(key) => self.build_with_transport(
+                    build_tcp_noise_transport(network_id, key, trusted_peers, protos),
+                ),
             },
             [Memory(_)] => match authentication_mode {
                 AuthenticationMode::Unauthenticated => {
-                    self.build_with_transport(build_memory_transport(peer_id, protos))
+                    self.build_with_transport(build_memory_transport(network_id, peer_id, protos))
                 }
                 AuthenticationMode::ServerOnly(key) => self.build_with_transport(
-                    build_unauthenticated_memory_noise_transport(key, protos),
+                    build_unauthenticated_memory_noise_transport(network_id, key, protos),
                 ),
-                AuthenticationMode::Mutual(key) => self
-                    .build_with_transport(build_memory_noise_transport(key, trusted_peers, protos)),
+                AuthenticationMode::Mutual(key) => self.build_with_transport(
+                    build_memory_noise_transport(network_id, key, trusted_peers, protos),
+                ),
             },
             _ => panic!(
                 "Unsupported listen_address: '{}', expected '/memory/<port>', \
