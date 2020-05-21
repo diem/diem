@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["run_move_prover",""]],"mod":[["cli","Functionality related to the command line interface of the move prover."]]});
+initSidebarItems({"fn":[["run_move_prover",""]],"mod":[["cli","Functionality related to the command line interface of the Move prover."]]});

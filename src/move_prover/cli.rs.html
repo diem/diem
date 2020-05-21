@@ -560,27 +560,13 @@
 <span id="560">560</span>
 <span id="561">561</span>
 <span id="562">562</span>
-<span id="563">563</span>
-<span id="564">564</span>
-<span id="565">565</span>
-<span id="566">566</span>
-<span id="567">567</span>
-<span id="568">568</span>
-<span id="569">569</span>
-<span id="570">570</span>
-<span id="571">571</span>
-<span id="572">572</span>
-<span id="573">573</span>
-<span id="574">574</span>
-<span id="575">575</span>
-<span id="576">576</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="attribute">#![<span class="ident">forbid</span>(<span class="ident">unsafe_code</span>)]</span>
 
-<span class="doccomment">//! Functionality related to the command line interface of the move prover.</span>
+<span class="doccomment">//! Functionality related to the command line interface of the Move prover.</span>
 
 <span class="kw">use</span> <span class="ident">clap</span>::{<span class="ident">App</span>, <span class="ident">Arg</span>};
 <span class="kw">use</span> <span class="ident">docgen</span>::<span class="ident">docgen</span>::<span class="ident">DocgenOptions</span>;
@@ -639,13 +625,11 @@
     <span class="kw">pub</span> <span class="ident">account_address</span>: <span class="ident">String</span>,
     <span class="doccomment">/// Verbosity level for logging.</span>
     <span class="kw">pub</span> <span class="ident">verbosity_level</span>: <span class="ident">LevelFilter</span>,
-    <span class="doccomment">/// The paths to the move sources.</span>
+    <span class="doccomment">/// The paths to the Move sources.</span>
     <span class="kw">pub</span> <span class="ident">move_sources</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The paths to any dependencies for the move sources. Those will not be verified but</span>
+    <span class="doccomment">/// The paths to any dependencies for the Move sources. Those will not be verified but</span>
     <span class="doccomment">/// can be used by `move_sources`.</span>
     <span class="kw">pub</span> <span class="ident">move_deps</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Paths to directories where dependencies are looked up automatically.</span>
-    <span class="kw">pub</span> <span class="ident">search_path</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Path to the boogie executable.</span>
     <span class="kw">pub</span> <span class="ident">boogie_exe</span>: <span class="ident">String</span>,
     <span class="doccomment">/// Path to the z3 executable.</span>
@@ -717,7 +701,6 @@
             <span class="ident">verbosity_level</span>: <span class="ident">LevelFilter</span>::<span class="ident">Info</span>,
             <span class="ident">move_sources</span>: <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="ident">move_deps</span>: <span class="macro">vec</span><span class="macro">!</span>[],
-            <span class="ident">search_path</span>: <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="ident">boogie_exe</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">z3_exe</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">use_cvc4</span>: <span class="bool-val">false</span>,
@@ -993,31 +976,21 @@
                     ),
             )
             .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;search-path&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;search-path&quot;</span>)
-                    .<span class="ident">short</span>(<span class="string">&quot;s&quot;</span>)
-                    .<span class="ident">multiple</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">number_of_values</span>(<span class="number">1</span>)
-                    .<span class="ident">takes_value</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;PATH&quot;</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;path to a directory where dependencies are looked up automatically&quot;</span>)
-            )
-            .<span class="ident">arg</span>(
                 <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;dependencies&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;dep&quot;</span>)
+                    .<span class="ident">long</span>(<span class="string">&quot;dependency&quot;</span>)
                     .<span class="ident">short</span>(<span class="string">&quot;d&quot;</span>)
                     .<span class="ident">multiple</span>(<span class="bool-val">true</span>)
                     .<span class="ident">number_of_values</span>(<span class="number">1</span>)
                     .<span class="ident">takes_value</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;MOVE_FILE&quot;</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;path to a move file dependency, which will not be verified&quot;</span>)
+                    .<span class="ident">value_name</span>(<span class="string">&quot;PATH_TO_DEPENDENCY_FILE&quot;</span>)
+                    .<span class="ident">help</span>(<span class="string">&quot;the Move library files, which will not be verified&quot;</span>)
             )
             .<span class="ident">arg</span>(
                 <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;sources&quot;</span>)
                     .<span class="ident">multiple</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;MOVE_FILE&quot;</span>)
+                    .<span class="ident">value_name</span>(<span class="string">&quot;PATH_TO_SOURCE_FILE&quot;</span>)
                     .<span class="ident">min_values</span>(<span class="number">1</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;path to a move file (with embedded spec)&quot;</span>),
+                    .<span class="ident">help</span>(<span class="string">&quot;the source files to verify&quot;</span>),
             );
 
         <span class="comment">// Parse the arguments. This will abort the program on parsing errors and print help.</span>
@@ -1053,7 +1026,6 @@
         <span class="self">self</span>.<span class="ident">boogie_flags</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="string">&quot;boogie-flags&quot;</span>);
         <span class="self">self</span>.<span class="ident">move_sources</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="string">&quot;sources&quot;</span>);
         <span class="self">self</span>.<span class="ident">move_deps</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="string">&quot;dependencies&quot;</span>);
-        <span class="self">self</span>.<span class="ident">search_path</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="string">&quot;search-path&quot;</span>);
         <span class="self">self</span>.<span class="ident">stable_test_output</span> <span class="op">=</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;stable-test-output&quot;</span>);
         <span class="self">self</span>.<span class="ident">verify_scope</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">get_with_default</span>(<span class="string">&quot;verify&quot;</span>).<span class="ident">as_str</span>() {
             <span class="string">&quot;public&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">VerificationScope</span>::<span class="ident">Public</span>,
