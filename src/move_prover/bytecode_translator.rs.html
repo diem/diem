@@ -1616,6 +1616,16 @@
 <span id="1616">1616</span>
 <span id="1617">1617</span>
 <span id="1618">1618</span>
+<span id="1619">1619</span>
+<span id="1620">1620</span>
+<span id="1621">1621</span>
+<span id="1622">1622</span>
+<span id="1623">1623</span>
+<span id="1624">1624</span>
+<span id="1625">1625</span>
+<span id="1626">1626</span>
+<span id="1627">1627</span>
+<span id="1628">1628</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1648,8 +1658,8 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">boogie_helpers</span>::{
         <span class="ident">boogie_byte_blob</span>, <span class="ident">boogie_field_name</span>, <span class="ident">boogie_function_name</span>, <span class="ident">boogie_local_type</span>,
-        <span class="ident">boogie_struct_name</span>, <span class="ident">boogie_struct_type_value</span>, <span class="ident">boogie_type_value</span>, <span class="ident">boogie_type_values</span>,
-        <span class="ident">boogie_well_formed_check</span>, <span class="ident">WellFormedMode</span>,
+        <span class="ident">boogie_requires_well_formed</span>, <span class="ident">boogie_struct_name</span>, <span class="ident">boogie_struct_type_value</span>,
+        <span class="ident">boogie_type_value</span>, <span class="ident">boogie_type_values</span>, <span class="ident">boogie_well_formed_check</span>, <span class="ident">WellFormedMode</span>,
     },
     <span class="ident">cli</span>::{<span class="ident">Options</span>, <span class="ident">VerificationScope</span>},
     <span class="ident">spec_translator</span>::<span class="ident">SpecTranslator</span>,
@@ -1999,6 +2009,7 @@
 
         <span class="comment">// generate inline function with function body</span>
         <span class="self">self</span>.<span class="ident">generate_function_sig</span>(<span class="ident">func_target</span>, <span class="bool-val">true</span>); <span class="comment">// inlined version of function</span>
+        <span class="self">self</span>.<span class="ident">generate_function_args_requires_well_formed</span>(<span class="ident">func_target</span>);
         <span class="self">self</span>.<span class="ident">generate_function_spec</span>(<span class="ident">func_target</span>);
         <span class="self">self</span>.<span class="ident">generate_inline_function_body</span>(<span class="ident">func_target</span>);
         <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>);
@@ -2011,6 +2022,7 @@
         <span class="comment">// generate the _verify version of the function which calls inline version for standalone</span>
         <span class="comment">// verification.</span>
         <span class="self">self</span>.<span class="ident">generate_function_sig</span>(<span class="ident">func_target</span>, <span class="bool-val">false</span>); <span class="comment">// no inline</span>
+        <span class="self">self</span>.<span class="ident">generate_function_args_requires_well_formed</span>(<span class="ident">func_target</span>);
         <span class="self">self</span>.<span class="ident">generate_verify_function_body</span>(<span class="ident">func_target</span>); <span class="comment">// function body just calls inlined version</span>
     }
 
@@ -2087,9 +2099,34 @@
         (<span class="ident">args</span>, <span class="ident">rets</span>)
     }
 
+    <span class="doccomment">/// Generate preconditions to make sure procedure parameters are well formed</span>
+    <span class="kw">fn</span> <span class="ident">generate_function_args_requires_well_formed</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">func_target</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionTarget</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) {
+        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>);
+        <span class="kw">let</span> <span class="ident">num_args</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_parameter_count</span>();
+        <span class="kw">let</span> <span class="ident">mode</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">func_target</span>.<span class="ident">is_public</span>() {
+            <span class="comment">// For public functions, we always include invariants in type assumptions for parameters,</span>
+            <span class="comment">// even for mutable references.</span>
+            <span class="ident">WellFormedMode</span>::<span class="ident">WithInvariant</span>
+        } <span class="kw">else</span> {
+            <span class="ident">WellFormedMode</span>::<span class="ident">Default</span>
+        };
+        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_args</span> {
+            <span class="kw">let</span> <span class="ident">local_name</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_name</span>(<span class="ident">i</span>);
+            <span class="kw">let</span> <span class="ident">local_str</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">local_name</span>.<span class="ident">display</span>(<span class="ident">func_target</span>.<span class="ident">symbol_pool</span>()));
+            <span class="kw">let</span> <span class="ident">local_type</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_type</span>(<span class="ident">i</span>);
+            <span class="kw">let</span> <span class="ident">type_check</span> <span class="op">=</span> <span class="ident">boogie_requires_well_formed</span>(
+                <span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">env</span>,
+                <span class="kw-2">&amp;</span><span class="ident">local_str</span>,
+                <span class="ident">local_type</span>,
+                <span class="ident">mode</span>,
+                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">options</span>.<span class="ident">template_context</span>.<span class="ident">type_requires</span>,
+            );
+            <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="kw-2">&amp;</span><span class="ident">type_check</span>);
+        }
+    }
+
     <span class="doccomment">/// Emit code for the function specification.</span>
     <span class="kw">fn</span> <span class="ident">generate_function_spec</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">func_target</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionTarget</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) {
-        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>);
         <span class="ident">SpecTranslator</span>::<span class="ident">new_for_spec_in_impl</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="ident">func_target</span>, <span class="bool-val">true</span>).<span class="ident">translate_conditions</span>();
     }
 
@@ -2237,23 +2274,6 @@
         <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;\n// initialize function execution&quot;</span>);
         <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;assert !$abort_flag;&quot;</span>);
         <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;$saved_m := $m;&quot;</span>);
-
-        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;\n// process and type check arguments&quot;</span>);
-        <span class="kw">let</span> <span class="ident">mode</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">func_target</span>.<span class="ident">is_public</span>() {
-            <span class="comment">// For public functions, we always include invariants in type assumptions for parameters,</span>
-            <span class="comment">// even for mutable references.</span>
-            <span class="ident">WellFormedMode</span>::<span class="ident">WithInvariant</span>
-        } <span class="kw">else</span> {
-            <span class="ident">WellFormedMode</span>::<span class="ident">Default</span>
-        };
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_args</span> {
-            <span class="kw">let</span> <span class="ident">local_name</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_name</span>(<span class="ident">i</span>);
-            <span class="kw">let</span> <span class="ident">local_str</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">local_name</span>.<span class="ident">display</span>(<span class="ident">func_target</span>.<span class="ident">symbol_pool</span>()));
-            <span class="kw">let</span> <span class="ident">local_type</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_type</span>(<span class="ident">i</span>);
-            <span class="kw">let</span> <span class="ident">type_check</span> <span class="op">=</span>
-                <span class="ident">boogie_well_formed_check</span>(<span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">env</span>, <span class="kw-2">&amp;</span><span class="ident">local_str</span>, <span class="ident">local_type</span>, <span class="ident">mode</span>);
-            <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="kw-2">&amp;</span><span class="ident">type_check</span>);
-        }
 
         <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;\n// bytecode translation starts here&quot;</span>);
 
