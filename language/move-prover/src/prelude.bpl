@@ -1123,6 +1123,17 @@ procedure {:inline 1} $Event_write_to_event_store(ta: TypeValue, guid: Value, co
 }
 
 // ==================================================================================
+// Native signer
+
+procedure {:inline 1} $Signer_borrow_address(signer: Value) returns (res: Value)
+    {{type_requires}} is#Address(signer);
+{
+    // A signer is currently identical to an address.
+    res := signer;
+}
+
+// TODO: implement the below methods
+// ==================================================================================
 // Native signature
 
 // TODO: implement the below methods

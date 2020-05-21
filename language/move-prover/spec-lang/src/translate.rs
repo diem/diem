@@ -3077,6 +3077,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         "address" => {
                             return check_zero_args(self, Type::new_prim(PrimitiveType::Address))
                         }
+                        "signer" => {
+                            return check_zero_args(self, Type::new_prim(PrimitiveType::Signer))
+                        }
                         "type" => {
                             return check_zero_args(self, Type::new_prim(PrimitiveType::TypeValue))
                         }
