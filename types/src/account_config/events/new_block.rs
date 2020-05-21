@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account_address::AccountAddress, account_config::CORE_CODE_ADDRESS, event::EventKey};
+use crate::{account_address::AccountAddress, event::EventKey};
 use anyhow::Result;
 use move_core_types::move_resource::MoveResource;
 use serde::{Deserialize, Serialize};
@@ -37,7 +37,7 @@ impl NewBlockEvent {
     }
 
     pub fn event_key() -> EventKey {
-        EventKey::new_from_address(&CORE_CODE_ADDRESS, 14)
+        crate::block_metadata::new_block_event_key()
     }
 }
 
