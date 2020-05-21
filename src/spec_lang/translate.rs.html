@@ -4124,6 +4124,9 @@
 <span id="4124">4124</span>
 <span id="4125">4125</span>
 <span id="4126">4126</span>
+<span id="4127">4127</span>
+<span id="4128">4128</span>
+<span id="4129">4129</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -7203,6 +7206,9 @@
                         }
                         <span class="string">&quot;address&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
                             <span class="kw">return</span> <span class="ident">check_zero_args</span>(<span class="self">self</span>, <span class="ident">Type</span>::<span class="ident">new_prim</span>(<span class="ident">PrimitiveType</span>::<span class="ident">Address</span>))
+                        }
+                        <span class="string">&quot;signer&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="kw">return</span> <span class="ident">check_zero_args</span>(<span class="self">self</span>, <span class="ident">Type</span>::<span class="ident">new_prim</span>(<span class="ident">PrimitiveType</span>::<span class="ident">Signer</span>))
                         }
                         <span class="string">&quot;type&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
                             <span class="kw">return</span> <span class="ident">check_zero_args</span>(<span class="self">self</span>, <span class="ident">Type</span>::<span class="ident">new_prim</span>(<span class="ident">PrimitiveType</span>::<span class="ident">TypeValue</span>))
