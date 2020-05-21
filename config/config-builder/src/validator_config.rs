@@ -6,8 +6,8 @@ use anyhow::{ensure, format_err, Result};
 use executor::db_bootstrapper;
 use libra_config::{
     config::{
-        ConsensusType, NodeConfig, RemoteService, SafetyRulesService, SecureBackend, Token,
-        VaultConfig,
+        ConsensusType, NodeConfig, RemoteService, SafetyRulesService, SecureBackend,
+        SeedPeersConfig, Token, VaultConfig,
     },
     generator,
 };
@@ -143,12 +143,7 @@ impl ValidatorConfig {
 
         // Extract and format first node's advertised address for the cluster
         // bootstrap.
-
-        let seed_config = configs[0]
-            .validator_network
-            .as_ref()
-            .ok_or(Error::MissingValidatorNetwork)?;
-        let seed_peers = seed_config.build_seed_peers(self.bootstrap.clone())?;
+        let seed_peers = self.build_seed_peers(&configs[0])?;
 
         let mut config = configs.swap_remove(self.index);
         let validator_network = config
@@ -281,6 +276,29 @@ impl ValidatorConfig {
         }
 
         Ok(())
+    }
+
+    fn build_seed_peers(&self, config: &NodeConfig) -> Result<SeedPeersConfig> {
+        let seed_config = config
+            .validator_network
+            .as_ref()
+            .ok_or(Error::MissingValidatorNetwork)?;
+
+        let seed_handshake = 0;
+        let seed_pubkey = seed_config
+            .network_keypairs
+            .as_ref()
+            .ok_or(Error::MissingNetworkKeyPairs)?
+            .identity_keypair
+            .public_key();
+        let seed_base_addr = self.bootstrap.clone();
+        let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, seed_handshake);
+
+        let mut seed_peers = SeedPeersConfig::default();
+        seed_peers
+            .seed_peers
+            .insert(seed_config.peer_id, vec![seed_addr]);
+        Ok(seed_peers)
     }
 }
 

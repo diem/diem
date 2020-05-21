@@ -148,7 +148,7 @@ fn identity_key_to_peer_id(
 /// temporary checks to make sure noise pubkeys are actually getting propagated correctly.
 // TODO(philiphayes): remove this after Transport refactor
 #[allow(dead_code)]
-fn expect_noise_pubkey(
+fn verify_noise_pubkey(
     addr: &NetworkAddress,
     remote_static_key: &[u8],
     origin: ConnectionOrigin,
@@ -221,7 +221,7 @@ pub fn build_memory_noise_transport(
         .and_then(move |socket, addr, origin| async move {
             let (remote_static_key, socket) =
                 noise_config.upgrade_connection(socket, origin).await?;
-            expect_noise_pubkey(&addr, remote_static_key.as_slice(), origin)?;
+            verify_noise_pubkey(&addr, remote_static_key.as_slice(), origin)?;
 
             if let Some(peer_id) = identity_key_to_peer_id(&trusted_peers, &remote_static_key) {
                 Ok((peer_id, socket))
@@ -250,7 +250,7 @@ pub fn build_unauthenticated_memory_noise_transport(
             async move {
                 let (remote_static_key, socket) =
                     noise_config.upgrade_connection(socket, origin).await?;
-                expect_noise_pubkey(&addr, remote_static_key.as_slice(), origin)?;
+                verify_noise_pubkey(&addr, remote_static_key.as_slice(), origin)?;
 
                 // Generate PeerId from x25519::PublicKey.
                 // Note: This is inconsistent with current types because AccountAddress is derived
@@ -303,7 +303,7 @@ pub fn build_tcp_noise_transport(
         .and_then(move |socket, addr, origin| async move {
             let (remote_static_key, socket) =
                 noise_config.upgrade_connection(socket, origin).await?;
-            expect_noise_pubkey(&addr, remote_static_key.as_slice(), origin)?;
+            verify_noise_pubkey(&addr, remote_static_key.as_slice(), origin)?;
 
             if let Some(peer_id) = identity_key_to_peer_id(&trusted_peers, &remote_static_key) {
                 Ok((peer_id, socket))
@@ -338,7 +338,7 @@ pub fn build_unauthenticated_tcp_noise_transport(
             async move {
                 let (remote_static_key, socket) =
                     noise_config.upgrade_connection(socket, origin).await?;
-                expect_noise_pubkey(&addr, remote_static_key.as_slice(), origin)?;
+                verify_noise_pubkey(&addr, remote_static_key.as_slice(), origin)?;
 
                 // Generate PeerId from x25519::PublicKey.
                 // Note: This is inconsistent with current types because AccountAddress is derived

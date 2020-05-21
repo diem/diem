@@ -251,7 +251,22 @@ impl FullNodeConfig {
             .full_node_networks
             .last()
             .ok_or(Error::MissingFullNodeNetwork)?;
-        seed_config.build_seed_peers(self.bootstrap.clone())
+
+        let seed_handshake = 0;
+        let seed_pubkey = seed_config
+            .network_keypairs
+            .as_ref()
+            .ok_or(Error::MissingNetworkKeyPairs)?
+            .identity_keypair
+            .public_key();
+        let seed_base_addr = self.bootstrap.clone();
+        let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, seed_handshake);
+
+        let mut seed_peers = SeedPeersConfig::default();
+        seed_peers
+            .seed_peers
+            .insert(seed_config.peer_id, vec![seed_addr]);
+        Ok(seed_peers)
     }
 }
 

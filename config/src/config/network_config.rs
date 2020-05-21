@@ -6,7 +6,7 @@ use crate::{
     keys::KeyPair,
     utils,
 };
-use anyhow::{anyhow, ensure, format_err, Result};
+use anyhow::{anyhow, ensure, Result};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     x25519, Uniform,
@@ -101,6 +101,7 @@ impl NetworkConfig {
         if !self.seed_peers_file.as_os_str().is_empty() {
             let path = root_dir.full_path(&self.seed_peers_file);
             self.seed_peers = SeedPeersConfig::load_config(&path)?;
+            self.seed_peers.verify_libranet_addrs()?;
         }
         if self.advertised_address.to_string().is_empty() {
             self.advertised_address =
@@ -191,43 +192,6 @@ impl NetworkConfig {
         };
         self.network_keypairs = Some(network_keypairs);
     }
-
-    /// Use this node config to build a seed peer address (using the given
-    /// `bootstrap_address` instead of the configured `self.advertised_address`).
-    pub fn build_seed_address(&self, bootstrap_address: NetworkAddress) -> Result<NetworkAddress> {
-        // TODO(philiphayes): use enum in wire crate when that gets extracted
-        let handshake_version = 0;
-
-        if self.enable_remote_authentication || self.enable_noise {
-            let pubkey = self
-                .network_keypairs
-                .as_ref()
-                .ok_or_else(|| {
-                    format_err!(
-                        "Error: missing NetworkKeyPairs: peer_id: {}",
-                        self.peer_id.short_str()
-                    )
-                })?
-                .identity_keypair
-                .public_key();
-
-            Ok(bootstrap_address.append_prod_protos(pubkey, handshake_version))
-        } else {
-            Ok(bootstrap_address.append_test_protos(handshake_version))
-        }
-    }
-
-    /// Use this node config to build a `SeedPeersConfig` with this node as the
-    /// single seed peer (using the given `bootstrap_address` instead of the
-    /// configured `self.advertised_address`).
-    pub fn build_seed_peers(&self, bootstrap_address: NetworkAddress) -> Result<SeedPeersConfig> {
-        let seed_address = self.build_seed_address(bootstrap_address)?;
-        let mut seed_peers = SeedPeersConfig::default();
-        seed_peers
-            .seed_peers
-            .insert(self.peer_id, vec![seed_address]);
-        Ok(seed_peers)
-    }
 }
 
 // This is separated to another config so that it can be written to its own file
@@ -238,7 +202,7 @@ pub struct SeedPeersConfig {
 }
 
 impl SeedPeersConfig {
-    /// Check that all seed peer addresses look like typical LibraNet addresses
+    /// Check that all seed peer addresses look like canonical LibraNet addresses
     pub fn verify_libranet_addrs(&self) -> Result<()> {
         for (peer_id, addrs) in self.seed_peers.iter() {
             for addr in addrs {
