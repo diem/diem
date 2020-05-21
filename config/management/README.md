@@ -67,3 +67,82 @@ While this is compiled as a single binary it provides several different faciliti
   storage -- leveraging the identity tool.
 * Converting a genesis configuration and a secure storage into a genesis.blob /
   genesis waypoint.
+
+## The Process
+
+* The association first sets up a secure storage, in this case, say GitHub. All
+  participants must have commit and read access to this repository. The
+  association will share out the GitHub repository and a distinct name for each
+  participant.
+* Each participant must retrieve an appropriate
+  [token](https://github.com/settings/tokens) for their account that allows
+  access to the `repo` scope. This token should be stored locally on their disk
+  in a file accessible to the management application.
+* Each participant should initialize their respective key: `association`,
+  `owner`, or `operator` in a secure storage solution, likely Vault. And
+  prepare another token file accessible to the management application.
+* Each participant will upload their key to GitHub specifying their namespace
+  as their distinct name provided earlier:
+  * Association:
+```
+management association-key \\
+    --local 'backend=vault;server=URL;token=PATH_TO_TOKEN' \\
+    --remote 'backend=github;owner=OWNER;repostiory=REPOSITORY;token=PATH_TO_TOKEN;namespace=NAME'
+```
+  * Owner:
+```
+management owner-key \\
+    --local 'backend=vault;server=URL;token=PATH_TO_TOKEN' \\
+    --remote 'backend=github;owner=OWNER;repostiory=REPOSITORY;token=PATH_TO_TOKEN;namespace=NAME'
+```
+  * Operator:
+```
+management association-key \\
+    --local 'backend=vault;server=URL;token=PATH_TO_TOKEN' \\
+    --remote 'backend=github;owner=OWNER;repostiory=REPOSITORY;token=PATH_TO_TOKEN;namespace=NAME'
+```
+* The operator will upload a signed validator-config (note: the owner address
+  is irrelevant in this run):
+```
+management validator-config \\
+    --owner-address 00000000000000000000000000000000 \
+    --validator-address '/dns/DNS/tcp/PORT' \
+    --fullnode-address '/dns/DNS/tcp/PORT' \
+    --local 'backend=vault;server=URL;token=PATH_TO_TOKEN' \
+    --remote 'backend=github;owner=OWNER;repostiory=REPOSITORY;token=PATH_TO_TOKEN;namespace=NAME'
+```
+* The association will publish a layout containing the distinct names and roles
+  of the participants, this is placed into a common namespace:
+```
+management set-layout \\
+  --path PATH_TO_LAYOUT \\
+  --backend 'backend=github;owner=OWNER;repostiory=REPOSITORY;token=PATH_TO_TOKEN;namespace=common'
+```
+* Each participant can now produce genesis, this requires no namespace:
+```
+management genesis \\
+  --path PATH_TO_LAYOUT \\
+  --backend 'backend=github;owner=OWNER;repostiory=REPOSITORY;token=PATH_TO_TOKEN'
+```
+* Each participant can now produce a waypoint, this requires no namespace.  In
+  this command, the remote store is the destination where the waypoint will be
+  saved. It is derived from data in the local backend:
+```
+management create-waypoint \\
+    --local 'backend=github;owner=OWNER;repostiory=REPOSITORY;token=PATH_TO_TOKEN' \\
+    --remote 'backend=vault;server=URL;token=PATH_TO_TOKEN'
+```
+* Perform a verify that ensures the local store maps to Genesis and Genesis maps
+  to the waypoint.
+
+This concludes genesis.
+
+Important notes:
+
+* A namespace in Vault is represented as a subdirectory for secrets and a
+  prefix followed by `__` for transit, e.g., `namespace__`.
+* A namespace in GitHub is represented by a subdirectory
+* The GitHub owner repository translate into
+  `https://github.org/OWNER/REPOSITORY`
+* The owner-address is intentionally set as all 0s as it is unused at this
+  point in time.
