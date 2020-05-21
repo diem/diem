@@ -87,7 +87,7 @@ impl Experiment for RecoveryTime {
             )
             .await?;
         info!("Waiting for instance to be up: {}", self.instance);
-        while !self.instance.is_up() {
+        while self.instance.try_json_rpc().await.is_err() {
             time::delay_for(Duration::from_secs(1)).await;
         }
         let start_instant = Instant::now();

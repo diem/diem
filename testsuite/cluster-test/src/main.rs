@@ -7,7 +7,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use libra_logger::info;
+use libra_logger::{info, warn};
 use reqwest::Url;
 use structopt::{clap::ArgGroup, StructOpt};
 use termion::{color, style};
@@ -20,6 +20,7 @@ use cluster_test::{
     experiments::{get_experiment, Context, Experiment},
     github::GitHub,
     health::{DebugPortLogThread, HealthCheckRunner, LogTail, PrintFailures, TraceTail},
+    instance::Instance,
     prometheus::Prometheus,
     report::SuiteReport,
     slack::SlackClient,
@@ -811,7 +812,24 @@ impl ClusterTestRunner {
                 }
             }
         }
-        info!("All validators are now healthy");
+        info!("All validators are now healthy. Checking json rpc endpoints of validators and full nodes");
+        loop {
+            let results = self.runtime.block_on(join_all(
+                self.cluster.all_instances().map(Instance::try_json_rpc),
+            ));
+            if results.iter().all(Result::is_ok) {
+                break;
+            }
+            if Instant::now() > wait_deadline {
+                for (instance, result) in zip(self.cluster.all_instances(), results) {
+                    if let Err(err) = result {
+                        warn!("Instance {} still unhealthy: {}", instance, err);
+                    }
+                }
+                bail!("Some json rpc endpoints did not become healthy after deployment");
+            }
+        }
+        info!("All json rpc endpoints are healthy");
         Ok(())
     }
 

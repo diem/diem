@@ -4,10 +4,12 @@
 #![forbid(unsafe_code)]
 
 use anyhow::{ensure, format_err, Result};
+use libra_json_rpc_client::{JsonRpcAsyncClient, JsonRpcBatch};
 use once_cell::sync::Lazy;
 use regex::Regex;
+use reqwest::Url;
 use serde_json::Value;
-use std::{collections::HashSet, ffi::OsStr, fmt, process::Stdio};
+use std::{collections::HashSet, ffi::OsStr, fmt, process::Stdio, str::FromStr};
 
 static VAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"val-(\d+)").unwrap());
 static FULLNODE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"fn-(\d+)").unwrap());
@@ -162,10 +164,12 @@ impl Instance {
         }
     }
 
-    pub fn is_up(&self) -> bool {
-        reqwest::blocking::get(format!("http://{}:9101/counters", self.ip).as_str())
-            .map(|x| x.status().is_success())
-            .unwrap_or(false)
+    // TODO pass http client in here
+    pub async fn try_json_rpc(&self) -> Result<()> {
+        JsonRpcAsyncClient::new(self.json_rpc_url())
+            .execute(JsonRpcBatch::new())
+            .await?;
+        Ok(())
     }
 
     pub fn peer_name(&self) -> &String {
@@ -195,6 +199,10 @@ impl Instance {
 
     pub fn ac_port(&self) -> u32 {
         self.ac_port
+    }
+
+    pub fn json_rpc_url(&self) -> Url {
+        Url::from_str(&format!("http://{}:{}", self.ip(), self.ac_port())).expect("Invalid URL.")
     }
 
     pub fn k8s_node(&self) -> Option<&String> {

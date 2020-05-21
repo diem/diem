@@ -36,11 +36,10 @@ use tokio::runtime::Handle;
 use futures::future::{try_join_all, FutureExt};
 use libra_json_rpc_client::JsonRpcAsyncClient;
 use libra_types::transaction::SignedTransaction;
-use reqwest::{Client, Url};
+use reqwest::Client;
 use std::{
     cmp::{max, min},
     ops::Sub,
-    str::FromStr,
     sync::atomic::{AtomicBool, AtomicU64, Ordering},
 };
 use tokio::{task::JoinHandle, time};
@@ -318,11 +317,7 @@ impl TxEmitter {
     }
 
     fn make_client(&self, instance: &Instance) -> JsonRpcAsyncClient {
-        JsonRpcAsyncClient::new_with_client(
-            self.http_client.clone(),
-            Url::from_str(format!("http://{}:{}", instance.ip(), instance.ac_port()).as_str())
-                .expect("Invalid URL."),
-        )
+        JsonRpcAsyncClient::new_with_client(self.http_client.clone(), instance.json_rpc_url())
     }
 
     pub async fn emit_txn_for(
