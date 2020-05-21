@@ -24,7 +24,7 @@ popd || exit 1
 echo "Running Move testsuite..."
 pushd ../../move-lang || exit 1
 cargo test
-cargo run --bin move-build -- -f ../stdlib/modules/* -m
+cargo run --bin move-build -- ../stdlib/modules -m
 popd || exit 1
 
 echo "Converting trace file..."
