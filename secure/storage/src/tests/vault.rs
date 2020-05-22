@@ -33,15 +33,11 @@ const VAULT_TESTS: &[fn()] = &[
 #[ignore]
 fn execute_storage_tests_vault() {
     let mut storage = create_vault_with_namespace(None);
-    storage
-        .reset_and_clear()
-        .expect("Failed to reset VaultStorage after creation!");
+    storage.reset_and_clear().unwrap();
 
     for test in VAULT_TESTS.iter() {
         test();
-        storage
-            .reset_and_clear()
-            .expect("Failed to reset storage engine between tests!");
+        storage.reset_and_clear().unwrap();
     }
 }
 
