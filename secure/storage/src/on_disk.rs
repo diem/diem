@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Storage, Value};
+use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_temppath::TempPath;
 use std::{
@@ -29,11 +29,6 @@ pub struct OnDiskStorageInternal<T> {
 impl OnDiskStorageInternal<RealTimeService> {
     pub fn new(file_path: PathBuf) -> Self {
         Self::new_with_time_service(file_path, RealTimeService::new())
-    }
-
-    /// Public convenience function to return a new OnDiskStorage based Storage.
-    pub fn new_storage(path_buf: PathBuf) -> Box<dyn Storage> {
-        Box::new(Self::new(path_buf))
     }
 }
 

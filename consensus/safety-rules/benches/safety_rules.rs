@@ -56,7 +56,7 @@ fn in_memory(n: u64) {
     let signer = ValidatorSigner::from_int(0);
     let waypoint = test_utils::validator_signers_to_waypoints(&[&signer]);
     let storage = PersistentSafetyStorage::initialize(
-        InMemoryStorage::new_storage(),
+        Box::new(InMemoryStorage::new()),
         signer.private_key().clone(),
         waypoint,
     );
@@ -69,7 +69,7 @@ fn on_disk(n: u64) {
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
     let waypoint = test_utils::validator_signers_to_waypoints(&[&signer]);
     let storage = PersistentSafetyStorage::initialize(
-        OnDiskStorage::new_storage(file_path),
+        Box::new(OnDiskStorage::new(file_path)),
         signer.private_key().clone(),
         waypoint,
     );
@@ -82,7 +82,7 @@ fn serializer(n: u64) {
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
     let waypoint = test_utils::validator_signers_to_waypoints(&[&signer]);
     let storage = PersistentSafetyStorage::initialize(
-        OnDiskStorage::new_storage(file_path),
+        Box::new(OnDiskStorage::new(file_path)),
         signer.private_key().clone(),
         waypoint,
     );
@@ -95,7 +95,7 @@ fn thread(n: u64) {
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
     let waypoint = test_utils::validator_signers_to_waypoints(&[&signer]);
     let storage = PersistentSafetyStorage::initialize(
-        OnDiskStorage::new_storage(file_path),
+        Box::new(OnDiskStorage::new(file_path)),
         signer.private_key().clone(),
         waypoint,
     );
