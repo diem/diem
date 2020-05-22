@@ -34,7 +34,7 @@ pub static EVENT_PROCESSING_LOOP_BUSY_DURATION_S: Lazy<DurationHistogram> = Lazy
     )
 });
 
-pub struct SimpleOnChainSender {
+pub struct ConfigurationChangeListener {
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
 }
 
@@ -58,9 +58,13 @@ fn validator_set_to_update_eligible_nodes_request(
     )
 }
 
-impl SimpleOnChainSender {
+impl ConfigurationChangeListener {
+    pub fn new(conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>) -> Self {
+        Self { conn_mgr_reqs_tx }
+    }
+
     //the actual procssing of the onchainconfig payload event
-    pub async fn process_payload(&mut self, payload: OnChainConfigPayload) {
+    async fn process_payload(&mut self, payload: OnChainConfigPayload) {
         let validator_set: ValidatorSet = payload
             .get()
             .expect("failed to get ValidatorSet from payload");
@@ -73,6 +77,10 @@ impl SimpleOnChainSender {
             .await
             .expect("Unable to update network's eligible peers");
     }
+
+    // Issues:  this appears to be the only thing pushed by statesync.
+    // 1)  it does not currently have information about fullnode networks
+    // 2) I dont think it has any information about ip addresses
 
     pub async fn start(
         mut self,

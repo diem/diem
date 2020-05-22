@@ -375,12 +375,6 @@ impl<T: Payload> EpochManager<T> {
             epoch: payload.epoch(),
             verifier: (&validator_set).into(),
         };
-        let validator_keys = validator_set.payload().to_vec();
-        info!("Update Network about new validators");
-        self.network_sender
-            .update_eligible_nodes(validator_keys)
-            .await
-            .expect("Unable to update network's eligible peers");
 
         match self.storage.start() {
             LivenessStorageData::RecoveryData(initial_data) => {
