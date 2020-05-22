@@ -191,8 +191,9 @@ fn test_create_key_pair_and_perform_rotations(storage: &mut dyn Storage) {
         let new_public_key = storage.rotate_key(CRYPTO_NAME).unwrap();
         let new_private_key = storage.export_private_key(CRYPTO_NAME).unwrap();
 
-        let exported_key =
-            storage.export_private_key_for_version(CRYPTO_NAME, public_key).unwrap();
+        let exported_key = storage
+            .export_private_key_for_version(CRYPTO_NAME, public_key)
+            .unwrap();
         assert_eq!(exported_key, private_key);
         assert_eq!(new_public_key, new_private_key.public_key());
 

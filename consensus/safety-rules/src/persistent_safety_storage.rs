@@ -20,7 +20,7 @@ pub struct PersistentSafetyStorage {
 
 impl PersistentSafetyStorage {
     pub fn in_memory(private_key: Ed25519PrivateKey) -> Self {
-        let storage = InMemoryStorage::new_storage();
+        let storage = Box::new(InMemoryStorage::new());
         Self::initialize(storage, private_key, Waypoint::default())
     }
 

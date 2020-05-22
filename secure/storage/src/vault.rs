@@ -3,7 +3,7 @@
 
 use crate::{
     Capability, CryptoStorage, Error, GetResponse, Identity, KVStorage, Policy, PublicKeyResponse,
-    Storage, Value,
+    Value,
 };
 use chrono::DateTime;
 use libra_crypto::{
@@ -155,11 +155,6 @@ impl VaultStorage {
         vault_policy.add_policy(&path, core_capabilities);
         self.client.set_policy(&policy_name, &vault_policy)?;
         Ok(())
-    }
-
-    /// Public convenience function to return a new Vault based Storage.
-    pub fn new_storage(host: String, token: String, namespace: Option<String>) -> Box<dyn Storage> {
-        Box::new(VaultStorage::new(host, token, namespace))
     }
 
     fn key_version(&self, name: &str, version: &Ed25519PublicKey) -> Result<u32, Error> {

@@ -100,7 +100,7 @@ impl NodeSetup {
 
             let author = signer.author();
             let safety_storage = PersistentSafetyStorage::initialize(
-                libra_secure_storage::InMemoryStorage::new_storage(),
+                Box::new(libra_secure_storage::InMemoryStorage::new()),
                 signer.private_key().clone(),
                 waypoint,
             );

@@ -184,6 +184,6 @@ pub fn validator_signers_to_waypoints(signers: &[&ValidatorSigner]) -> Waypoint 
 
 pub fn test_storage(signer: &ValidatorSigner) -> PersistentSafetyStorage {
     let waypoint = validator_signers_to_waypoints(&[signer]);
-    let storage = InMemoryStorage::new_storage();
+    let storage = Box::new(InMemoryStorage::new());
     PersistentSafetyStorage::initialize(storage, signer.private_key().clone(), waypoint)
 }
