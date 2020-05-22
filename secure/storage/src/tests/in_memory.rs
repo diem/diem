@@ -5,6 +5,6 @@ use crate::{tests::suite, InMemoryStorage};
 
 #[test]
 fn in_memory() {
-    let mut storage = InMemoryStorage::new_storage();
+    let mut storage = Box::new(InMemoryStorage::new());
     suite::execute_all_storage_tests(storage.as_mut());
 }
