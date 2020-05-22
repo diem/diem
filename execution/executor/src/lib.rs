@@ -536,6 +536,7 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
         // object matches what we have computed locally.
         let mut txns_to_commit = vec![];
         let mut reconfig_events = vec![];
+        let mut txns_list_log = "".to_owned();
         for ((txn, txn_data), (i, txn_info)) in itertools::zip_eq(
             itertools::zip_eq(transactions, output.transaction_data()),
             transaction_infos.iter().enumerate(),
@@ -552,6 +553,17 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
                 "txn_info do not match for {}-th transaction in chunk.\nChunk txn_info: {}\nProof txn_info: {}",
                 i, generated_txn_info, txn_info
             );
+
+            if let Ok(user_txn) = txn.as_signed_user_txn() {
+                txns_list_log = txns_list_log
+                    + &format!(
+                        "{}:{}:{:?} ",
+                        user_txn.sender(),
+                        user_txn.sequence_number(),
+                        txn_data.status().vm_status().major_status
+                    );
+            }
+
             txns_to_commit.push(TransactionToCommit::new(
                 txn,
                 txn_data.account_blobs().clone(),
@@ -569,6 +581,14 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
         if ledger_info_to_commit.is_none() && txns_to_commit.is_empty() {
             return Ok(reconfig_events);
         }
+        let ledger_info_version = match ledger_info_to_commit.as_ref() {
+            Some(li) => Some(li.ledger_info().version()),
+            None => None,
+        };
+        debug!(
+            "[state sync] saving chunk {} with li version {:?}",
+            txns_list_log, ledger_info_version
+        );
         self.db.writer.save_transactions(
             &txns_to_commit,
             first_version,

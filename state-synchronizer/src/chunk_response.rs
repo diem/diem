@@ -65,7 +65,8 @@ impl fmt::Display for GetChunkResponse {
         let mut txns_list = "".to_owned();
         for txn in &self.txn_list_with_proof.transactions {
             if let Ok(user_txn) = txn.as_signed_user_txn() {
-                txns_list = txns_list + &format!("{}:{} ", user_txn.sender(), user_txn.sequence_number());
+                txns_list =
+                    txns_list + &format!("{}:{} ", user_txn.sender(), user_txn.sequence_number());
             }
         }
         let txns_repr = match self.txn_list_with_proof.first_transaction_version {
