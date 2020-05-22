@@ -98,8 +98,10 @@ async fn get_account_state(
     let account_address = AccountAddress::from_str(&address)?;
     let response = service
         .db
-        .get_account_state_with_proof_by_version(account_address, request.version())?
-        .0;
+//        .get_account_state_with_proof_by_version(account_address, request.version())?
+//        .0;
+//    service.db
+        .get_latest_account_state(account_address)?;
     let currency_info = currencies_info(service, request).await?;
     let currencies: Vec<_> = currency_info
         .into_iter()

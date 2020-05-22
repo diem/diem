@@ -226,6 +226,7 @@ where
                     if t.sequence_number() >= sequence_number {
                         return Some((t, sequence_number));
                     } else {
+                        debug!("[mempool] seq num too old {}:{}", t.sender(), sequence_number);
                         statuses.push((
                             MempoolStatus::new(MempoolStatusCode::VmError),
                             Some(VMStatus::new(SEQUENCE_NUMBER_TOO_OLD)),
