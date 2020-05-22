@@ -9,12 +9,11 @@ use futures::{
     ready,
     stream::Stream,
 };
-use libra_network_address::{NetworkAddress, Protocol};
+use libra_network_address::{parse_dns_tcp, parse_ip_tcp, NetworkAddress, Protocol};
 use std::{
     convert::TryFrom,
     fmt::Debug,
     io,
-    net::SocketAddr,
     pin::Pin,
     task::{Context, Poll},
     time::Duration,
@@ -74,10 +73,10 @@ impl Transport for TcpTransport {
         &self,
         addr: NetworkAddress,
     ) -> Result<(Self::Listener, NetworkAddress), Self::Error> {
-        let (socket_addr, addr_suffix) = parse_socketaddr(&addr)?;
-        let config = self.clone();
+        let ((ipaddr, port), addr_suffix) =
+            parse_ip_tcp(addr.as_slice()).ok_or_else(|| invalid_addr_error(&addr))?;
 
-        let listener = ::std::net::TcpListener::bind(&socket_addr)?;
+        let listener = ::std::net::TcpListener::bind((ipaddr, port))?;
         let listener = TcpListener::try_from(listener)?;
 
         // append the addr_suffix so any trailing protocols get included in the
@@ -88,18 +87,22 @@ impl Transport for TcpTransport {
         Ok((
             TcpListenerStream {
                 inner: listener,
-                config,
+                config: self.clone(),
             },
             actual_addr,
         ))
     }
 
     fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
-        let socket_addr = multiaddr_to_string(&addr)?;
-        let config = self.clone();
+        let (hostport, _addr_suffix) =
+            parse_hostport(addr.as_slice()).ok_or_else(|| invalid_addr_error(&addr))?;
         let f: Pin<Box<dyn Future<Output = io::Result<TcpStream>> + Send + 'static>> =
-            Box::pin(TcpStream::connect(socket_addr));
-        Ok(TcpOutbound { inner: f, config })
+            Box::pin(TcpStream::connect(hostport));
+
+        Ok(TcpOutbound {
+            inner: f,
+            config: self.clone(),
+        })
     }
 }
 
@@ -198,59 +201,20 @@ impl AsyncWrite for TcpSocket {
     }
 }
 
-/// parse the `NetworkAddress` into the `/ip4/<ip>/tcp/<port>` or
-/// `/ip6/<ip>/tcp/<port>` prefix and unparsed `&[Protocol]` suffix.
-fn parse_socketaddr<'a>(
-    addr: &'a NetworkAddress,
-) -> ::std::io::Result<(SocketAddr, &'a [Protocol])> {
-    if addr.len() < 2 {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("Invalid NetworkAddress '{:?}'", addr),
-        ));
-    }
-
-    let (prefix, suffix) = addr.as_slice().split_at(2);
-
-    let socket_addr = match prefix {
-        [Protocol::Ip4(ip), Protocol::Tcp(port)] => SocketAddr::new((*ip).into(), *port),
-        [Protocol::Ip6(ip), Protocol::Tcp(port)] => SocketAddr::new((*ip).into(), *port),
-        _ => {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("Invalid NetworkAddress '{:?}'", addr),
-            ))
-        }
-    };
-
-    Ok((socket_addr, suffix))
+fn invalid_addr_error(addr: &NetworkAddress) -> io::Error {
+    io::Error::new(
+        io::ErrorKind::InvalidInput,
+        format!("Invalid NetworkAddress: '{}'", addr),
+    )
 }
 
-fn multiaddr_to_string(addr: &NetworkAddress) -> ::std::io::Result<String> {
-    let mut iter = addr.as_slice().iter();
-    let proto1 = iter.next().ok_or_else(|| {
-        io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("Invalid NetworkAddress '{:?}'", addr),
-        )
-    })?;
-    let proto2 = iter.next().ok_or_else(|| {
-        io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("Invalid NetworkAddress '{:?}'", addr),
-        )
-    })?;
-
-    match (proto1, proto2) {
-        (Protocol::Ip4(ip), Protocol::Tcp(port)) => Ok(format!("{}:{}", ip, port)),
-        (Protocol::Ip6(ip), Protocol::Tcp(port)) => Ok(format!("{}:{}", ip, port)),
-        (Protocol::Dns4(host), Protocol::Tcp(port))
-        | (Protocol::Dns6(host), Protocol::Tcp(port)) => Ok(format!("{}:{}", host, port)),
-        _ => Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("Invalid NetworkAddress '{:?}'", addr),
-        )),
-    }
+fn parse_hostport(protos: &[Protocol]) -> Option<(String, &[Protocol])> {
+    parse_ip_tcp(protos)
+        .map(|((ip, port), suffix)| (format!("{}:{}", ip, port), suffix))
+        .or_else(|| {
+            parse_dns_tcp(protos)
+                .map(|((dnsname, port), suffix)| (format!("{}:{}", dnsname, port), suffix))
+        })
 }
 
 #[cfg(test)]
