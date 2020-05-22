@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Error, Policy};
+use crate::Error;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     HashValue,
@@ -18,11 +18,11 @@ pub trait CryptoStorage: Send + Sync {
     /// There are no guarantees about the state of the system after calling this multiple times.
     /// The behavior is implementation specific.
     ///
-    /// The new key pair is named according to the 'name' and is held in secure storage
-    /// under the given 'policy'. To access or use the key pair (e.g., sign or encrypt data),
-    /// subsequent API calls must refer to the key pair by name. As this API call may fail
-    /// (e.g., if a key pair with the given name already exists), an error may also be returned.
-    fn create_key(&mut self, name: &str, policy: &Policy) -> Result<Ed25519PublicKey, Error>;
+    /// The new key pair is named according to the 'name' To access or use the key pair (e.g., sign
+    /// or encrypt data), subsequent API calls must refer to the key pair by name. As this API call
+    /// may fail (e.g., if a key pair with the given name already exists), an error may also be
+    /// returned.
+    fn create_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error>;
 
     /// Returns the private key for a given Ed25519 key pair, as identified by the 'name'.
     /// If the key pair doesn't exist, or the caller doesn't have the appropriate permissions to

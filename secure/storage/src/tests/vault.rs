@@ -194,7 +194,10 @@ fn test_vault_crypto_policies() {
 
     // Initialize data and policies
     let key_name = "crypto_key";
-    let pubkey = storage.create_key(key_name, &policy).unwrap();
+    let pubkey = storage.create_key(key_name).unwrap();
+    storage
+        .set_policies(key_name, &VaultEngine::Transit, &policy)
+        .unwrap();
     assert_eq!(storage.get_public_key(key_name).unwrap().public_key, pubkey);
 
     // Verify exporter policy
