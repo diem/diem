@@ -36,9 +36,7 @@ const CRYPTO_NAME: &str = "Test_Key_Name";
 pub fn execute_all_storage_tests(storage: &mut dyn Storage) {
     for test in STORAGE_TESTS.iter() {
         test(storage);
-        storage
-            .reset_and_clear()
-            .expect("Failed to reset storage engine between tests!");
+        storage.reset_and_clear().unwrap();
     }
 }
 
@@ -186,28 +184,16 @@ fn test_create_and_get_non_existent_version(storage: &mut dyn Storage) {
 fn test_create_key_pair_and_perform_rotations(storage: &mut dyn Storage) {
     let num_rotations = 10;
 
-    let mut public_key = storage
-        .create_key(CRYPTO_NAME)
-        .expect("Failed to create a test Ed25519 key pair!");
-    let mut private_key = storage
-        .export_private_key(CRYPTO_NAME)
-        .expect("Failed to get the private key for a key pair that should exist!");
+    let mut public_key = storage.create_key(CRYPTO_NAME).unwrap();
+    let mut private_key = storage.export_private_key(CRYPTO_NAME).unwrap();
 
     for _ in 0..num_rotations {
-        let new_public_key = storage
-            .rotate_key(CRYPTO_NAME)
-            .expect("Failed to rotate a valid key pair!");
-        let new_private_key = storage
-            .export_private_key(CRYPTO_NAME)
-            .expect("Failed to get the private key for the rotated key pair!");
+        let new_public_key = storage.rotate_key(CRYPTO_NAME).unwrap();
+        let new_private_key = storage.export_private_key(CRYPTO_NAME).unwrap();
 
-        assert_eq!(
-            storage
-                .export_private_key_for_version(CRYPTO_NAME, public_key)
-                .expect("Failed to get the previous private key!"),
-            private_key
-        );
-
+        let exported_key =
+            storage.export_private_key_for_version(CRYPTO_NAME, public_key).unwrap();
+        assert_eq!(exported_key, private_key);
         assert_eq!(new_public_key, new_private_key.public_key());
 
         public_key = new_public_key;
@@ -220,9 +206,7 @@ fn test_create_key_pair_and_perform_rotations(storage: &mut dyn Storage) {
 /// produced.
 fn test_create_sign_rotate_sign(storage: &mut dyn Storage) {
     // Generate new key pair
-    let public_key = storage
-        .create_key(CRYPTO_NAME)
-        .expect("Failed to create a test Ed25519 key pair!");
+    let public_key = storage.create_key(CRYPTO_NAME).unwrap();
 
     // Create then sign message and verify correct signature
     let message = HashValue::new([1; HashValue::LENGTH]);
