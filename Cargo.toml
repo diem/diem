@@ -92,6 +92,7 @@ members = [
     "network/network-address",
     "network/noise",
     "network/onchain-discovery",
+    "network/simple-onchain-discovery",
     "network/socket-bench-server",
     "secure/json-rpc",
     "secure/key-manager",
