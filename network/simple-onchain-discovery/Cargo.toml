@@ -1,9 +1,22 @@
 [package]
 name = "simple-onchain-discovery"
 version = "0.1.0"
-authors = ["Allen Clement <aclement@gmail.com>"]
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra consensus"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+futures = "0.3.5"
+once_cell = "1.4.0"
+
+channel = { path = "../../common/channel", version = "0.1.0" }
+libra-logger = { path = "../../common/logger", version = "0.1.0" }
+libra-mempool = { path = "../../mempool", version = "0.1.0" }
+libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+network = { path = "../../network", version = "0.1.0" }

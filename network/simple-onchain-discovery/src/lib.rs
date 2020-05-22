@@ -1,58 +1,49 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    cmp::Ordering,
-    sync::Arc,
-    time::{Duration, Instant},
-};
-
-use anyhow::anyhow;
-use channel::libra_channel;
-use consensus_types::{
-    common::{Author, Payload, Round},
-    epoch_retrieval::EpochRetrievalRequest,
-};
+use futures::sink::SinkExt;
 use futures::{select, StreamExt};
-use libra_config::config::{ConsensusConfig, ConsensusProposerType, NodeConfig};
-use libra_logger::prelude::*;
-use libra_types::{
-    account_address::AccountAddress,
-    epoch_change::EpochChangeProof,
-    epoch_info::EpochInfo,
-    on_chain_config::{OnChainConfigPayload, ValidatorSet},
-};
-use network::protocols::network::Event;
-use safety_rules::SafetyRulesManager;
+use once_cell::sync::Lazy;
+use std::time::Instant;
 
-use crate::{
-    block_storage::BlockStore,
-    counters,
-    event_processor::{EventProcessor, SyncProcessor, UnverifiedEvent, VerifiedEvent},
-    liveness::{
-        leader_reputation::{ActiveInactiveHeuristic, LeaderReputation, LibraDBBackend},
-        multi_proposer_election::MultiProposer,
-        pacemaker::{ExponentialTimeInterval, Pacemaker},
-        proposal_generator::ProposalGenerator,
-        proposer_election::ProposerElection,
-        rotating_proposer_election::{choose_leader, RotatingProposer},
-    },
-    network::{IncomingBlockRetrievalRequest, NetworkReceivers, NetworkSender},
-    network_interface::{ConsensusMsg, ConsensusNetworkSender},
-    persistent_liveness_storage::{LedgerRecoveryData, PersistentLivenessStorage, RecoveryData},
-    state_replication::{StateComputer, TxnManager},
-    util::time_service::TimeService,
-};
+use channel::libra_channel;
+use libra_logger::prelude::*;
+use libra_metrics::{register_histogram, DurationHistogram};
+use libra_types::on_chain_config::{OnChainConfigPayload, ValidatorSet};
+use network::{common::NetworkPublicKeys, connectivity_manager::ConnectivityRequest};
+
+/// Histogram of idle time of spent in event processing loop
+pub static EVENT_PROCESSING_LOOP_IDLE_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
+    DurationHistogram::new(
+        register_histogram!(
+            "simple_onchain_discovery_event_processing_loop_idle_duration_s",
+            "Histogram of idle time of spent in event processing loop"
+        )
+        .unwrap(),
+    )
+});
+
+/// Histogram of busy time of spent in event processing loop
+pub static EVENT_PROCESSING_LOOP_BUSY_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
+    DurationHistogram::new(
+        register_histogram!(
+            "simple_onchain_discovery_event_processing_loop_busy_duration_s",
+            "Histogram of busy time of spent in event processing loop"
+        )
+        .unwrap(),
+    )
+});
 
 pub struct SimpleOnChainSender {
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
 }
 
-
-fn validator_set_to_connectivity_request(validator_set: ValidatorSet) -> ConnectivityRequest::UpdateEligibleNodes {
+fn validator_set_to_update_eligible_nodes_request(
+    validator_set: ValidatorSet,
+) -> ConnectivityRequest {
     let validator_keys = validator_set.payload().to_vec();
     ConnectivityRequest::UpdateEligibleNodes(
-        validators
+        validator_keys
             .into_iter()
             .map(|validator| {
                 (
@@ -74,9 +65,11 @@ impl SimpleOnChainSender {
             .get()
             .expect("failed to get ValidatorSet from payload");
 
-        let update_eligible_nodes_request = validator_set_to_connectivity_request(validator_set);
+        let update_eligible_nodes_request =
+            validator_set_to_update_eligible_nodes_request(validator_set);
         info!("Update Network about new validators");
-        self.conn_mgr_reqs_tx.send(update_eligible_nodes_request)
+        self.conn_mgr_reqs_tx
+            .send(update_eligible_nodes_request)
             .await
             .expect("Unable to update network's eligible peers");
     }
@@ -87,17 +80,15 @@ impl SimpleOnChainSender {
     ) {
         loop {
             let pre_select_instant = Instant::now();
-            let idle_duration;
+            let _idle_duration;
             select! {
-                payload = reconfig_events.select_next_some() => {
-                    idle_duration = pre_select_instant.elapsed();
-                    self.process_payload(payload).await
-            }
+                  payload = reconfig_events.select_next_some() => {
+                      _idle_duration = pre_select_instant.elapsed();
+                      self.process_payload(payload).await
+              }
 
-            counters::EVENT_PROCESSING_LOOP_BUSY_DURATION_S
-                .observe_duration(pre_select_instant.elapsed() - idle_duration);
-            counters::EVENT_PROCESSING_LOOP_IDLE_DURATION_S.observe_duration(idle_duration);
-            }
+            //  EVENT_PROCESSING_LOOP_IDLE_DURATION_S.observe_duration(idle_duration);
+              }
         }
     }
 }
