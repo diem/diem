@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Error, Policy, Storage, Value};
+use crate::{Error, Storage, Value};
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Signature, Uniform};
 
 /// This suite contains tests for secure storage backends. We test the correct functionality
@@ -130,7 +130,7 @@ fn test_verify_incorrect_value_types(storage: &mut dyn Storage) {
 /// the created key pair; (iii) compares the public keys returned by the create call and the
 /// retrieval call.
 fn test_create_get_key_pair(storage: &mut dyn Storage) {
-    let public_key = storage.create_key(CRYPTO_NAME, &Policy::public()).unwrap();
+    let public_key = storage.create_key(CRYPTO_NAME).unwrap();
     let retrieved_public_key_response = storage.get_public_key(CRYPTO_NAME).unwrap();
     assert_eq!(public_key, retrieved_public_key_response.public_key);
 }
@@ -171,7 +171,7 @@ fn test_ensure_storage_is_available(storage: &mut dyn Storage) {
 /// and private keys. As such, these calls should fail.
 fn test_create_and_get_non_existent_version(storage: &mut dyn Storage) {
     // Create new named key pair
-    let _ = storage.create_key(CRYPTO_NAME, &Policy::public()).unwrap();
+    let _ = storage.create_key(CRYPTO_NAME).unwrap();
 
     // Get a non-existent version of the new key pair and verify failure
     let non_existent_public_key = Ed25519PrivateKey::generate_for_testing().public_key();
@@ -187,7 +187,7 @@ fn test_create_key_pair_and_perform_rotations(storage: &mut dyn Storage) {
     let num_rotations = 10;
 
     let mut public_key = storage
-        .create_key(CRYPTO_NAME, &Policy::public())
+        .create_key(CRYPTO_NAME)
         .expect("Failed to create a test Ed25519 key pair!");
     let mut private_key = storage
         .export_private_key(CRYPTO_NAME)
@@ -221,7 +221,7 @@ fn test_create_key_pair_and_perform_rotations(storage: &mut dyn Storage) {
 fn test_create_sign_rotate_sign(storage: &mut dyn Storage) {
     // Generate new key pair
     let public_key = storage
-        .create_key(CRYPTO_NAME, &Policy::public())
+        .create_key(CRYPTO_NAME)
         .expect("Failed to create a test Ed25519 key pair!");
 
     // Create then sign message and verify correct signature

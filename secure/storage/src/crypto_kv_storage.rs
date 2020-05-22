@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{CryptoStorage, Error, KVStorage, Policy, PublicKeyResponse, Value};
+use crate::{CryptoStorage, Error, KVStorage, PublicKeyResponse, Value};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     HashValue, PrivateKey, SigningKey, Uniform,
@@ -14,7 +14,7 @@ use rand::{rngs::OsRng, Rng, SeedableRng};
 pub trait CryptoKVStorage: KVStorage {}
 
 impl<T: CryptoKVStorage> CryptoStorage for T {
-    fn create_key(&mut self, name: &str, _policy: &Policy) -> Result<Ed25519PublicKey, Error> {
+    fn create_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
         // Generate and store the new named key pair
         let (private_key, public_key) = new_ed25519_key_pair()?;
         self.set(name, Value::Ed25519PrivateKey(private_key))?;

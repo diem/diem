@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{CryptoStorage, Error, GetResponse, KVStorage, Policy, PublicKeyResponse, Value};
+use crate::{CryptoStorage, Error, GetResponse, KVStorage, PublicKeyResponse, Value};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     HashValue,
@@ -38,8 +38,8 @@ impl KVStorage for BoxStorage {
 }
 
 impl CryptoStorage for BoxStorage {
-    fn create_key(&mut self, name: &str, policy: &Policy) -> Result<Ed25519PublicKey, Error> {
-        self.0.create_key(name, policy)
+    fn create_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
+        self.0.create_key(name)
     }
 
     fn export_private_key(&self, name: &str) -> Result<Ed25519PrivateKey, Error> {
