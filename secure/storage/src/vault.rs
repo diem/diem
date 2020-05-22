@@ -97,24 +97,6 @@ impl VaultStorage {
         Ok(result)
     }
 
-    /// Retrieves a key from a given secret. Libra Secure Storage inserts each key into its own
-    /// distinct secret store and thus the secret and key have the same identifier.
-    fn get_secret(&self, key: &str) -> Result<GetResponse, Error> {
-        let secret = self.secret_name(key);
-        let resp = self.client.read_secret(&secret, key)?;
-        let last_update = DateTime::parse_from_rfc3339(&resp.creation_time)?.timestamp() as u64;
-        let value: Value = serde_json::from_str(&resp.value)?;
-        Ok(GetResponse { last_update, value })
-    }
-
-    /// Inserts a key, value pair into a secret that shares the name of the key.
-    fn set_secret(&self, key: &str, value: Value) -> Result<(), Error> {
-        let secret = self.secret_name(key);
-        self.client
-            .write_secret(&secret, key, &serde_json::to_string(&value)?)?;
-        Ok(())
-    }
-
     /// Create a new policy in Vault, see the explanation for Policy for how the data is
     /// structured. Vault does not distingush a create and update. An update must first read the
     /// existing policy, amend the contents,  and then be applied via this API.
@@ -210,11 +192,17 @@ impl KVStorage for VaultStorage {
     }
 
     fn get(&self, key: &str) -> Result<GetResponse, Error> {
-        self.get_secret(&key)
+        let secret = self.secret_name(key);
+        let resp = self.client.read_secret(&secret, key)?;
+        let last_update = DateTime::parse_from_rfc3339(&resp.creation_time)?.timestamp() as u64;
+        let value: Value = serde_json::from_str(&resp.value)?;
+        Ok(GetResponse { last_update, value })
     }
 
     fn set(&mut self, key: &str, value: Value) -> Result<(), Error> {
-        self.set_secret(&key, value)?;
+        let secret = self.secret_name(key);
+        self.client
+            .write_secret(&secret, key, &serde_json::to_string(&value)?)?;
         Ok(())
     }
 
