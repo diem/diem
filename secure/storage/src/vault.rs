@@ -27,9 +27,14 @@ pub struct VaultStorage {
 }
 
 impl VaultStorage {
-    pub fn new(host: String, token: String, namespace: Option<String>) -> Self {
+    pub fn new(
+        host: String,
+        token: String,
+        namespace: Option<String>,
+        certificate: Option<String>,
+    ) -> Self {
         Self {
-            client: Client::new(host, token),
+            client: Client::new(host, token, certificate),
             namespace,
         }
     }

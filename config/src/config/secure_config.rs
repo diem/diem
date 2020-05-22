@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::PathBuf};
 
@@ -81,6 +82,8 @@ pub struct GitHubConfig {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct VaultConfig {
+    /// Optional SSL Certificate for the vault host, this is expected to be a full path.
+    pub ca_certificate: Option<PathBuf>,
     /// A namespace is an optional portion of the path to a key stored within Vault. For example,
     /// a secret, S, without a namespace would be available in secret/data/S, with a namespace, N, it
     /// would be in secret/data/N/S.
@@ -89,6 +92,16 @@ pub struct VaultConfig {
     pub server: String,
     /// The authorization token for accessing secrets
     pub token: Token,
+}
+
+impl VaultConfig {
+    pub fn ca_certificate(&self) -> Result<String> {
+        let path = self
+            .ca_certificate
+            .as_ref()
+            .ok_or_else(|| anyhow!("No Certificate path"))?;
+        read_file(path)
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -122,14 +135,9 @@ impl Token {
         Token::FromDisk(TokenFromDisk { path })
     }
 
-    pub fn read_token(&self) -> anyhow::Result<String> {
+    pub fn read_token(&self) -> Result<String> {
         match self {
-            Token::FromDisk(from_disk) => {
-                let mut file = File::open(&from_disk.path)?;
-                let mut contents = String::new();
-                file.read_to_string(&mut contents)?;
-                Ok(contents)
-            }
+            Token::FromDisk(from_disk) => read_file(&from_disk.path),
             Token::FromConfig(from_config) => Ok(from_config.token.clone()),
         }
     }
@@ -169,6 +177,13 @@ impl OnDiskStorageConfig {
     }
 }
 
+fn read_file(path: &PathBuf) -> Result<String> {
+    let mut file = File::open(path)?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+    Ok(contents)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -185,6 +200,7 @@ mod tests {
             vault: VaultConfig {
                 namespace: None,
                 server: "127.0.0.1:8200".to_string(),
+                ca_certificate: None,
                 token: Token::FromConfig(TokenFromConfig {
                     token: "test".to_string(),
                 }),
@@ -212,6 +228,7 @@ token = \"test\"
             vault: VaultConfig {
                 namespace: None,
                 server: "127.0.0.1:8200".to_string(),
+                ca_certificate: None,
                 token: Token::FromDisk(TokenFromDisk {
                     path: PathBuf::from("/token"),
                 }),

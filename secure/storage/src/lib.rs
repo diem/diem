@@ -62,6 +62,10 @@ impl From<&SecureBackend> for Box<dyn Storage> {
                 config.server.clone(),
                 config.token.read_token().expect("Unable to read token"),
                 config.namespace.clone(),
+                config
+                    .ca_certificate
+                    .as_ref()
+                    .map(|_| config.ca_certificate().unwrap()),
             )),
         }
     }

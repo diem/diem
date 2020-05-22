@@ -9,6 +9,7 @@ use serde_json::json;
 use std::{
     collections::BTreeMap,
     convert::{TryFrom, TryInto},
+    sync::Arc,
 };
 use thiserror::Error;
 
@@ -76,18 +77,33 @@ impl From<serde_json::Error> for Error {
 pub struct Client {
     host: String,
     token: String,
+    tls_config: Option<Arc<rustls::ClientConfig>>,
 }
 
 impl Client {
-    pub fn new(host: String, token: String) -> Self {
-        Self { host, token }
+    pub fn new(host: String, token: String, ca_certificate: Option<String>) -> Self {
+        let tls_config = if let Some(certificate) = ca_certificate {
+            let mut tls_config = rustls::ClientConfig::new();
+            // First try the certificate as a DER encoded cert, then as a PEM, and then panic.
+            let cert = rustls::Certificate(certificate.as_bytes().to_vec());
+            if tls_config.root_store.add(&cert).is_err() {
+                let certs = rustls::internal::pemfile::certs(&mut certificate.as_bytes()).unwrap();
+                tls_config.root_store.add(&certs[0]).unwrap();
+            }
+            Some(Arc::new(tls_config))
+        } else {
+            None
+        };
+        Self {
+            host,
+            token,
+            tls_config,
+        }
     }
 
     pub fn delete_policy(&self, policy_name: &str) -> Result<(), Error> {
-        let resp = ureq::delete(&format!("{}/v1/sys/policy/{}", self.host, policy_name))
-            .set("X-Vault-Token", &self.token)
-            .timeout_connect(TIMEOUT)
-            .call();
+        let request = ureq::delete(&format!("{}/v1/sys/policy/{}", self.host, policy_name));
+        let resp = self.upgrade_request(request).call();
         if resp.ok() {
             Ok(())
         } else {
@@ -96,10 +112,8 @@ impl Client {
     }
 
     pub fn list_policies(&self) -> Result<Vec<String>, Error> {
-        let resp = ureq::get(&format!("{}/v1/sys/policy", self.host))
-            .set("X-Vault-Token", &self.token)
-            .timeout_connect(TIMEOUT)
-            .call();
+        let request = ureq::get(&format!("{}/v1/sys/policy", self.host));
+        let resp = self.upgrade_request(request).call();
         match resp.status() {
             200 => {
                 let policies: ListPoliciesResponse = serde_json::from_str(&resp.into_string()?)?;
@@ -113,10 +127,8 @@ impl Client {
 
     /// Retrieves the policy at the given policy name.
     pub fn read_policy(&self, policy_name: &str) -> Result<Policy, Error> {
-        let resp = ureq::get(&format!("{}/v1/sys/policy/{}", self.host, policy_name))
-            .set("X-Vault-Token", &self.token)
-            .timeout_connect(TIMEOUT)
-            .call();
+        let request = ureq::get(&format!("{}/v1/sys/policy/{}", self.host, policy_name));
+        let resp = self.upgrade_request(request).call();
         match resp.status() {
             200 => Ok(Policy::try_from(resp.into_json()?)?),
             _ => Err(resp.into()),
@@ -127,10 +139,8 @@ impl Client {
     /// structured. Vault does not distingush a create and update. An update must first read the
     /// existing policy, amend the contents,  and then be applied via this API.
     pub fn set_policy(&self, policy_name: &str, policy: &Policy) -> Result<(), Error> {
-        let resp = ureq::post(&format!("{}/v1/sys/policy/{}", self.host, policy_name))
-            .set("X-Vault-Token", &self.token)
-            .timeout_connect(TIMEOUT)
-            .send_json(policy.try_into()?);
+        let request = ureq::post(&format!("{}/v1/sys/policy/{}", self.host, policy_name));
+        let resp = self.upgrade_request(request).send_json(policy.try_into()?);
         if resp.ok() {
             Ok(())
         } else {
@@ -141,9 +151,9 @@ impl Client {
     /// Creates a new token or identity for accessing Vault. The token will have access to anything
     /// under the default policy and any prescribed policies.
     pub fn create_token(&self, policies: Vec<&str>) -> Result<String, Error> {
-        let resp = ureq::post(&format!("{}/v1/auth/token/create", self.host))
-            .set("X-Vault-Token", &self.token)
-            .timeout_connect(TIMEOUT)
+        let request = ureq::post(&format!("{}/v1/auth/token/create", self.host));
+        let resp = self
+            .upgrade_request(request)
             .send_json(json!({ "policies": policies }));
         if resp.ok() {
             let resp: CreateTokenResponse = serde_json::from_str(&resp.into_string()?)?;
@@ -155,13 +165,11 @@ impl Client {
 
     /// List all stored secrets
     pub fn list_secrets(&self, secret: &str) -> Result<Vec<String>, Error> {
-        let resp = ureq::request(
+        let request = ureq::request(
             "LIST",
             &format!("{}/v1/secret/metadata/{}", self.host, secret),
-        )
-        .set("X-Vault-Token", &self.token)
-        .timeout_connect(TIMEOUT)
-        .call();
+        );
+        let resp = self.upgrade_request(request).call();
         match resp.status() {
             200 => {
                 let resp: ReadSecretListResponse = serde_json::from_str(&resp.into_string()?)?;
@@ -175,10 +183,8 @@ impl Client {
 
     /// Delete a specific secret store
     pub fn delete_secret(&self, secret: &str) -> Result<(), Error> {
-        let resp = ureq::delete(&format!("{}/v1/secret/metadata/{}", self.host, secret))
-            .set("X-Vault-Token", &self.token)
-            .timeout_connect(TIMEOUT)
-            .call();
+        let request = ureq::delete(&format!("{}/v1/secret/metadata/{}", self.host, secret));
+        let resp = self.upgrade_request(request).call();
         if resp.ok() {
             Ok(())
         } else {
@@ -188,10 +194,8 @@ impl Client {
 
     /// Read a key/value pair from a given secret store.
     pub fn read_secret(&self, secret: &str, key: &str) -> Result<ReadResponse<String>, Error> {
-        let resp = ureq::get(&format!("{}/v1/secret/data/{}", self.host, secret))
-            .set("X-Vault-Token", &self.token)
-            .timeout_connect(TIMEOUT)
-            .call();
+        let request = ureq::get(&format!("{}/v1/secret/data/{}", self.host, secret));
+        let resp = self.upgrade_request(request).call();
         match resp.status() {
             200 => {
                 let mut resp: ReadSecretResponse = serde_json::from_str(&resp.into_string()?)?;
@@ -210,9 +214,9 @@ impl Client {
     }
 
     pub fn create_ed25519_key(&self, name: &str, exportable: bool) -> Result<(), Error> {
-        let resp = ureq::post(&format!("{}/v1/transit/keys/{}", self.host, name))
-            .set("X-Vault-Token", &self.token)
-            .timeout_connect(TIMEOUT)
+        let request = ureq::post(&format!("{}/v1/transit/keys/{}", self.host, name));
+        let resp = self
+            .upgrade_request(request)
             .send_json(json!({ "type": "ed25519", "exportable": exportable }));
         match resp.status() {
             200 => Ok(()),
@@ -223,19 +227,17 @@ impl Client {
     }
 
     pub fn delete_key(&self, name: &str) -> Result<(), Error> {
-        let resp = ureq::post(&format!("{}/v1/transit/keys/{}/config", self.host, name))
-            .set("X-Vault-Token", &self.token)
-            .timeout_connect(TIMEOUT)
+        let request = ureq::post(&format!("{}/v1/transit/keys/{}/config", self.host, name));
+        let resp = self
+            .upgrade_request(request)
             .send_json(json!({ "deletion_allowed": true }));
 
         if !resp.ok() {
             return Err(resp.into());
         }
 
-        let resp = ureq::delete(&format!("{}/v1/transit/keys/{}", self.host, name))
-            .set("X-Vault-Token", &self.token)
-            .timeout_connect(TIMEOUT)
-            .call();
+        let request = ureq::delete(&format!("{}/v1/transit/keys/{}", self.host, name));
+        let resp = self.upgrade_request(request).call();
         if resp.ok() {
             Ok(())
         } else {
@@ -248,13 +250,11 @@ impl Client {
         name: &str,
         version: Option<u32>,
     ) -> Result<Ed25519PrivateKey, Error> {
-        let resp = ureq::get(&format!(
+        let request = ureq::get(&format!(
             "{}/v1/transit/export/signing-key/{}",
             self.host, name
-        ))
-        .set("X-Vault-Token", &self.token)
-        .timeout_connect(TIMEOUT)
-        .call();
+        ));
+        let resp = self.upgrade_request(request).call();
         if resp.ok() {
             let export_key: ExportKeyResponse = serde_json::from_str(&resp.into_string()?)?;
             if let Some(version) = version {
@@ -274,10 +274,8 @@ impl Client {
     }
 
     pub fn list_keys(&self) -> Result<Vec<String>, Error> {
-        let resp = ureq::request("LIST", &format!("{}/v1/transit/keys", self.host))
-            .set("X-Vault-Token", &self.token)
-            .timeout_connect(TIMEOUT)
-            .call();
+        let request = ureq::request("LIST", &format!("{}/v1/transit/keys", self.host));
+        let resp = self.upgrade_request(request).call();
         match resp.status() {
             200 => {
                 let list_keys: ListKeysResponse = serde_json::from_str(&resp.into_string()?)?;
@@ -292,10 +290,8 @@ impl Client {
         &self,
         name: &str,
     ) -> Result<Vec<ReadResponse<Ed25519PublicKey>>, Error> {
-        let resp = ureq::get(&format!("{}/v1/transit/keys/{}", self.host, name))
-            .set("X-Vault-Token", &self.token)
-            .timeout_connect(TIMEOUT)
-            .call();
+        let request = ureq::get(&format!("{}/v1/transit/keys/{}", self.host, name));
+        let resp = self.upgrade_request(request).call();
         match resp.status() {
             200 => {
                 let read_key: ReadKeyResponse = serde_json::from_str(&resp.into_string()?)?;
@@ -315,10 +311,8 @@ impl Client {
     }
 
     pub fn rotate_key(&self, name: &str) -> Result<(), Error> {
-        let resp = ureq::post(&format!("{}/v1/transit/keys/{}/rotate", self.host, name))
-            .set("X-Vault-Token", &self.token)
-            .timeout_connect(TIMEOUT)
-            .call();
+        let request = ureq::post(&format!("{}/v1/transit/keys/{}/rotate", self.host, name));
+        let resp = self.upgrade_request(request).call();
         if resp.ok() {
             Ok(())
         } else {
@@ -338,10 +332,8 @@ impl Client {
             json!({ "input": base64::encode(&data) })
         };
 
-        let resp = ureq::post(&format!("{}/v1/transit/sign/{}", self.host, name))
-            .set("X-Vault-Token", &self.token)
-            .timeout_connect(TIMEOUT)
-            .send_json(data);
+        let request = ureq::post(&format!("{}/v1/transit/sign/{}", self.host, name));
+        let resp = self.upgrade_request(request).send_json(data);
         if resp.ok() {
             let signature: SignatureResponse = serde_json::from_str(&resp.into_string()?)?;
             let signature = &signature.data.signature;
@@ -359,9 +351,9 @@ impl Client {
 
     /// Create or update a key/value pair in a given secret store.
     pub fn write_secret(&self, secret: &str, key: &str, value: &str) -> Result<(), Error> {
-        let resp = ureq::put(&format!("{}/v1/secret/data/{}", self.host, secret))
-            .set("X-Vault-Token", &self.token)
-            .timeout_connect(TIMEOUT)
+        let request = ureq::put(&format!("{}/v1/secret/data/{}", self.host, secret));
+        let resp = self
+            .upgrade_request(request)
             .send_json(json!({ "data": { key: value } }));
         match resp.status() {
             200 => Ok(()),
@@ -372,9 +364,9 @@ impl Client {
     /// Returns whether or not the vault is unsealed (can be read from / written to). This can be
     /// queried without authentication.
     pub fn unsealed(&self) -> Result<bool, Error> {
-        let resp = ureq::get(&format!("{}/v1/sys/seal-status", self.host))
-            .timeout_connect(TIMEOUT)
-            .call();
+        let request = ureq::get(&format!("{}/v1/sys/seal-status", self.host));
+        let resp = self.upgrade_request_without_token(request).call();
+        println!("{:?}", resp.synthetic_error());
         match resp.status() {
             200 => {
                 let resp: SealStatusResponse = serde_json::from_str(&resp.into_string()?)?;
@@ -382,6 +374,20 @@ impl Client {
             }
             _ => Err(resp.into()),
         }
+    }
+
+    fn upgrade_request(&self, request: ureq::Request) -> ureq::Request {
+        let mut request = self.upgrade_request_without_token(request);
+        request.set("X-Vault-Token", &self.token);
+        request
+    }
+
+    fn upgrade_request_without_token(&self, mut request: ureq::Request) -> ureq::Request {
+        request.timeout_connect(TIMEOUT);
+        if let Some(tls_config) = self.tls_config.as_ref() {
+            request.set_tls_config(tls_config.clone());
+        }
+        request
     }
 }
 

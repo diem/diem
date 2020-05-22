@@ -19,7 +19,7 @@ fn safety_rules<T: Payload>() -> (Box<dyn TSafetyRules<T>>, ValidatorSigner) {
     let signer = ValidatorSigner::from_int(0);
     let host = "http://localhost:8200".to_string();
     let token = "root_token".to_string();
-    let mut storage = Box::new(VaultStorage::new(host, token, None));
+    let mut storage = Box::new(VaultStorage::new(host, token, None, None));
     storage.reset_and_clear().unwrap();
 
     let waypoint = Waypoint::default();
