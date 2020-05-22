@@ -3,7 +3,7 @@
 
 use crate::transport::Transport;
 use futures::{future, stream::Stream};
-use libra_network_address::{NetworkAddress, Protocol};
+use libra_network_address::{parse_memory, NetworkAddress, Protocol};
 use memsocket::{MemoryListener, MemorySocket};
 use std::{
     io,
@@ -26,7 +26,7 @@ impl Transport for MemoryTransport {
         &self,
         addr: NetworkAddress,
     ) -> Result<(Self::Listener, NetworkAddress), Self::Error> {
-        let (port, addr_suffix) = addr.parse_memory_proto().ok_or_else(|| {
+        let (port, addr_suffix) = parse_memory(addr.as_slice()).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::InvalidData,
                 format!("Invalid NetworkAddress: '{}'", addr),
@@ -44,7 +44,7 @@ impl Transport for MemoryTransport {
     }
 
     fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
-        let (port, _addr_suffix) = addr.parse_memory_proto().ok_or_else(|| {
+        let (port, _addr_suffix) = parse_memory(addr.as_slice()).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::InvalidData,
                 format!("Invalid NetworkAddress: '{}'", addr),
