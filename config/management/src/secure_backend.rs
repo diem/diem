@@ -101,6 +101,7 @@ impl TryInto<config::SecureBackend> for SecureBackend {
             }
             MEMORY => config::SecureBackend::InMemoryStorage,
             VAULT => {
+                let certificate = self.parameters.remove("ca_certificate").map(PathBuf::from);
                 let server = self
                     .parameters
                     .remove("server")
@@ -112,6 +113,7 @@ impl TryInto<config::SecureBackend> for SecureBackend {
                 config::SecureBackend::Vault(VaultConfig {
                     namespace: self.parameters.remove("namespace"),
                     server,
+                    ca_certificate: certificate,
                     token: Token::new_disk(PathBuf::from(token)),
                 })
             }
