@@ -232,7 +232,7 @@ impl KVStorage for VaultStorage {
 }
 
 impl CryptoStorage for VaultStorage {
-    fn create_key(&mut self, name: &str, policy: &Policy) -> Result<Ed25519PublicKey, Error> {
+    fn create_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
         let ns_name = self.crypto_name(name);
         match self.get_public_key(name) {
             Ok(_) => return Err(Error::KeyAlreadyExists(ns_name)),
@@ -241,9 +241,6 @@ impl CryptoStorage for VaultStorage {
         }
 
         self.client.create_ed25519_key(&ns_name, true)?;
-        if !policy.is_default() {
-            self.set_policies(&ns_name, &VaultEngine::Transit, policy)?;
-        }
         self.get_public_key(name).map(|v| v.public_key)
     }
 
