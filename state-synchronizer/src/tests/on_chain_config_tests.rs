@@ -137,7 +137,7 @@ fn test_on_chain_config_pub_sub() {
 
     let receive_reconfig = async {
         let payload = reconfig_receiver.select_next_some().await;
-        let received_config = payload.get::<VMConfig>().unwrap();
+        let received_config = payload.vm_config().unwrap();
         assert_eq!(received_config.publishing_option, vm_publishing_option);
     };
 

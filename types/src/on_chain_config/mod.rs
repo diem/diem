@@ -50,10 +50,10 @@ impl ConfigID {
 
 /// State sync will panic if the value of any config in this registry is uninitialized
 pub const ON_CHAIN_CONFIG_REGISTRY: &[ConfigID] = &[
-    VMConfig::CONFIG_ID,
     LibraVersion::CONFIG_ID,
-    ValidatorSet::CONFIG_ID,
     RegisteredCurrencies::CONFIG_ID,
+    ValidatorSet::CONFIG_ID,
+    VMConfig::CONFIG_ID,
 ];
 
 #[derive(Clone, Debug, PartialEq)]
@@ -67,16 +67,37 @@ impl OnChainConfigPayload {
         Self { epoch, configs }
     }
 
+    /// Returns the configuration epoch.
     pub fn epoch(&self) -> u64 {
         self.epoch
     }
 
-    pub fn get<T: OnChainConfig>(&self) -> Result<T> {
+    fn get<T: OnChainConfig>(&self) -> Result<T> {
         let bytes = self
             .configs
             .get(&T::CONFIG_ID)
             .ok_or_else(|| format_err!("[on-chain cfg] config not in payload"))?;
         T::deserialize_into_config(bytes)
+    }
+
+    /// Returns the LibraVersion if it exists and an error otherwise.
+    pub fn libra_version(&self) -> Result<LibraVersion> {
+        self.get()
+    }
+
+    /// Returns the RegisteredCurrencies if it exists and an error otherwise.
+    pub fn registered_currencies(&self) -> Result<RegisteredCurrencies> {
+        self.get()
+    }
+
+    /// Returns the ValidatorSet if it exists and an error otherwise.
+    pub fn validator_set(&self) -> Result<ValidatorSet> {
+        self.get()
+    }
+
+    /// Returns the VMConfig if it exists and an error otherwise.
+    pub fn vm_config(&self) -> Result<VMConfig> {
+        self.get()
     }
 
     pub fn configs(&self) -> &HashMap<ConfigID, Vec<u8>> {

@@ -1,16 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{convert::TryFrom, sync::Arc};
+
 use anyhow::Result;
+
 use libra_types::{
     account_address::AccountAddress,
     account_config::AccountResource,
-    on_chain_config::{LibraVersion, OnChainConfigPayload, VMConfig},
+    on_chain_config::OnChainConfigPayload,
     transaction::{SignedTransaction, VMValidatorResult},
 };
 use libra_vm::LibraVM;
 use scratchpad::SparseMerkleTree;
-use std::{convert::TryFrom, sync::Arc};
 use storage_interface::{state_view::VerifiedStateView, DbReader};
 
 #[cfg(test)]
@@ -63,8 +65,8 @@ impl TransactionValidation for VMValidator {
     }
 
     fn restart(&mut self, config: OnChainConfigPayload) -> Result<()> {
-        let vm_config = config.get::<VMConfig>()?;
-        let version = config.get::<LibraVersion>()?;
+        let vm_config = config.vm_config()?;
+        let version = config.libra_version()?;
 
         self.vm = LibraVM::init_with_config(version, vm_config);
         Ok(())

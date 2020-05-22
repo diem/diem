@@ -369,7 +369,7 @@ impl<T: Payload> EpochManager<T> {
 
     pub async fn start_processor(&mut self, payload: OnChainConfigPayload) {
         let validator_set: ValidatorSet = payload
-            .get()
+            .validator_set()
             .expect("failed to get ValidatorSet from payload");
         let epoch_info = EpochInfo {
             epoch: payload.epoch(),
