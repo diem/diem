@@ -3,6 +3,8 @@
 +-------------------------+
 Module 00000000000000000000000000000000::Debug
 >>> % Module coverage: NaN
+Module 00000000000000000000000000000000::Signer
+>>> % Module coverage: 100.00
 Module 00000000000000000000000000000000::Testnet
 >>> % Module coverage: 100.00
 Module 00000000000000000000000000000000::LibraTimestamp
@@ -53,6 +55,8 @@ Module 00000000000000000000000000000000::Signature
 >>> % Module coverage: NaN
 Module 00000000000000000000000000000000::LibraTransactionTimeout
 >>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::LBR
+>>> % Module coverage: 100.00
 Module 00000000000000000000000000000000::LibraAccount
 >>> % Module coverage: 100.00
 Module 00000000000000000000000000000000::ValidatorConfig
@@ -65,8 +69,6 @@ Module 00000000000000000000000000000000::LibraWriteSetManager
 >>> % Module coverage: 100.00
 Module 00000000000000000000000000000000::LibraBlock
 >>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::LBR
->>> % Module coverage: 100.00
 Module 00000000000000000000000000000000::Genesis
 >>> % Module coverage: 100.00
 Module 00000000000000000000000000000000::LibraVMConfig
@@ -75,6 +77,8 @@ Module 00000000000000000000000000000000::LibraVersion
 >>> % Module coverage: 100.00
 Module 00000000000000000000000000000000::SharedEd25519PublicKey
 >>> % Module coverage: 100.00
+Module 00000000000000000000000000000000::SlidingNonce
+>>> % Module coverage: 100.00
 +-------------------------+
-| % Move Coverage: 99.14  |
+| % Move Coverage: 99.18  |
 +-------------------------+

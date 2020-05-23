@@ -18,3 +18,14 @@ fun main() {
 }
 }
 // check: CANNOT_WRITE_EXISTING_RESOURCE
+
+//! new-transaction
+script {
+use 0x0::Libra;
+use 0x0::Coin1;
+fun main() {
+    Libra::grant_mint_capability_for_sender<Coin1::T>();
+}
+}
+// check: ABORTED
+// check: 0

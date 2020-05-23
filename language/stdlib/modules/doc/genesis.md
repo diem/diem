@@ -177,7 +177,8 @@
 <pre><code><b>fun</b> <a href="#0x0_Genesis_grant_tc_capabilities_for_sender">grant_tc_capabilities_for_sender</a>(auth_key: vector&lt;u8&gt;) {
     <a href="libra.md#0x0_Libra_grant_burn_capability_for_sender">Libra::grant_burn_capability_for_sender</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;();
     <a href="libra.md#0x0_Libra_grant_burn_capability_for_sender">Libra::grant_burn_capability_for_sender</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;();
-    <a href="libra.md#0x0_Libra_grant_burn_capability_for_sender">Libra::grant_burn_capability_for_sender</a>&lt;<a href="lbr.md#0x0_LBR_T">LBR::T</a>&gt;();
+    <a href="libra.md#0x0_Libra_grant_mint_capability_for_sender">Libra::grant_mint_capability_for_sender</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;();
+    <a href="libra.md#0x0_Libra_grant_mint_capability_for_sender">Libra::grant_mint_capability_for_sender</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;();
     <a href="libra_account.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(auth_key);
 }
 </code></pre>

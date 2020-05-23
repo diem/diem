@@ -8,7 +8,7 @@ export MOVE_VM_TRACE=$TRACE_PATH
 
 echo "Rebuilding stdlib..."
 pushd ../../stdlib || exit 1
-cargo run
+cargo run -- --no-doc
 popd || exit 1
 
 echo "Running IR testsuite..."

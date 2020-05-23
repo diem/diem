@@ -1,5 +1,6 @@
 //! account: bob, 100000000, 0, unhosted
 //! account: alice, 100000000, 0, unhosted
+//! account: vivian, 100000000, 0, unhosted
 
 // ****
 // Account setup - bob is account with nonce resource and alice is a regular account
@@ -46,6 +47,32 @@ script {
     fun main() {
         SlidingNonce::record_nonce_or_abort(0);
         SlidingNonce::record_nonce_or_abort(0);
+    }
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: vivian
+script {
+    use 0x0::SlidingNonce;
+
+    fun main() {
+        SlidingNonce::publish_nonce_resource_for_user();
+        SlidingNonce::record_nonce_or_abort(1);
+        SlidingNonce::record_nonce_or_abort(1);
+    }
+}
+// check: ABORTED
+// check: 10003
+
+//! new-transaction
+//! sender: vivian
+script {
+    use 0x0::SlidingNonce;
+
+    fun main() {
+        SlidingNonce::publish_nonce_resource_for_user();
+        SlidingNonce::record_nonce_or_abort(128);
     }
 }
 // check: EXECUTED
