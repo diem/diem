@@ -84,15 +84,15 @@ function {:constructor} VectorType(t: TypeValue) : TypeValue;
 function {:constructor} StructType(name: TypeName, ps: TypeValueArray, ts: TypeValueArray) : TypeValue;
 function {:constructor} $TypeType(): TypeValue;
 function {:constructor} ErrorType() : TypeValue;
-const DefaultTypeValue: TypeValue;
-axiom DefaultTypeValue == ErrorType();
+
+function {:inline} DefaultTypeValue() : TypeValue { ErrorType() }
 function {:builtin "MapConst"} MapConstTypeValue(tv: TypeValue): [int]TypeValue;
 
 type {:datatype} TypeValueArray;
 function {:constructor} TypeValueArray(v: [int]TypeValue, l: int): TypeValueArray;
 const EmptyTypeValueArray: TypeValueArray;
 axiom l#TypeValueArray(EmptyTypeValueArray) == 0;
-axiom v#TypeValueArray(EmptyTypeValueArray) == MapConstTypeValue(DefaultTypeValue);
+axiom v#TypeValueArray(EmptyTypeValueArray) == MapConstTypeValue(DefaultTypeValue());
 
 
 // Values
@@ -114,8 +114,8 @@ function {:constructor} Vector(v: ValueArray): Value; // used to both represent 
 function {:constructor} $Range(lb: Value, ub: Value): Value;
 function {:constructor} $Type(t: TypeValue): Value;
 function {:constructor} Error(): Value;
-const DefaultValue: Value;
-axiom DefaultValue == Error();
+
+function {:inline} DefaultValue(): Value { Error() }
 function {:builtin "MapConst"} MapConstValue(v: Value): [int]Value;
 
 function {:inline} $IsValidU8(v: Value): bool {
@@ -149,14 +149,14 @@ function {:constructor} ValueArray(v: [int]Value, l: int): ValueArray;
 const EmptyValueArray: ValueArray;
 
 axiom l#ValueArray(EmptyValueArray) == 0;
-axiom v#ValueArray(EmptyValueArray) == MapConstValue(DefaultValue);
+axiom v#ValueArray(EmptyValueArray) == MapConstValue(Error());
 
 function {{func_inline}} RemoveValueArray(a: ValueArray): ValueArray {
     (
         var l := l#ValueArray(a) - 1;
         ValueArray(
             (lambda i: int ::
-                if i >= 0 && i < l then v#ValueArray(a)[i] else DefaultValue),
+                if i >= 0 && i < l then v#ValueArray(a)[i] else DefaultValue()),
             l
         )
     )
@@ -168,7 +168,7 @@ function {{func_inline}} RemoveIndexValueArray(a: ValueArray, i: int): ValueArra
             (lambda j: int ::
                 if j >= 0 && j < l then
                     if j < i then v#ValueArray(a)[j] else v#ValueArray(a)[j+1]
-                else DefaultValue),
+                else DefaultValue()),
             l
         )
     )
@@ -181,7 +181,7 @@ function {{func_inline}} ConcatValueArray(a1: ValueArray, a2: ValueArray): Value
                 if i >= 0 && i < l1 + l2 then
                     if i < l1 then v#ValueArray(a1)[i] else v#ValueArray(a2)[i - l1]
                 else
-                    DefaultValue),
+                    DefaultValue()),
             l1 + l2)
     )
 }
@@ -189,13 +189,13 @@ function {{func_inline}} ReverseValueArray(a: ValueArray): ValueArray {
     (
         var l := l#ValueArray(a);
         ValueArray(
-            (lambda i: int :: if 0 <= i && i < l then v#ValueArray(a)[l - i - 1] else DefaultValue),
+            (lambda i: int :: if 0 <= i && i < l then v#ValueArray(a)[l - i - 1] else DefaultValue()),
             l
         )
     )
 }
 function {{func_inline}} SliceValueArray(a: ValueArray, i: int, j: int): ValueArray { // return the sliced vector of a for the range [i, j)
-    ValueArray((lambda k:int :: if 0 <= k && k < j-i then v#ValueArray(a)[i+k] else DefaultValue), (if j-i < 0 then 0 else j-i))
+    ValueArray((lambda k:int :: if 0 <= k && k < j-i then v#ValueArray(a)[i+k] else DefaultValue()), (if j-i < 0 then 0 else j-i))
 }
 function {{func_inline}} ExtendValueArray(a: ValueArray, elem: Value): ValueArray {
     (var len := l#ValueArray(a);
@@ -345,7 +345,7 @@ function {:inline} $vlen(v: Value): int {
 // All invalid elements of array are DefaultValue. This is useful in specialized
 // cases
 function {:inline} IsNormalizedMap(va: [int]Value, len: int): bool {
-    (forall i: int :: i < 0 || i >= len ==> va[i] == DefaultValue)
+    (forall i: int :: i < 0 || i >= len ==> va[i] == DefaultValue())
 }
 
 // Check that all invalid elements of vector are DefaultValue
@@ -427,7 +427,7 @@ function {:builtin "MapConst"} ConstMemoryContent(v: Value): [Location]Value;
 
 const EmptyMemory: Memory;
 axiom domain#Memory(EmptyMemory) == ConstMemoryDomain(false);
-axiom contents#Memory(EmptyMemory) == ConstMemoryContent(DefaultValue);
+axiom contents#Memory(EmptyMemory) == ConstMemoryContent(DefaultValue());
 
 var $m: Memory;
 var $abort_flag: bool;
@@ -515,7 +515,7 @@ procedure {:inline 1} $MoveFrom(address: Value, ta: TypeValue) returns (dst: Val
         return;
     }
     dst := contents#Memory($m)[l];
-    $m := Memory(domain#Memory($m)[l := false], contents#Memory($m)[l := DefaultValue]);
+    $m := Memory(domain#Memory($m)[l := false], contents#Memory($m)[l := DefaultValue()]);
 }
 
 procedure {:inline 1} $BorrowGlobal(address: Value, ta: TypeValue) returns (dst: Reference)
@@ -854,7 +854,7 @@ function {:inline} $Vector_is_well_formed(v: Value): bool {
         (
             var l := l#ValueArray(va);
             0 <= l &&
-            (forall x: int :: {v#ValueArray(va)[x]} x < 0 || x >= l ==> v#ValueArray(va)[x] == DefaultValue)
+            (forall x: int :: {v#ValueArray(va)[x]} x < 0 || x >= l ==> v#ValueArray(va)[x] == DefaultValue())
         )
     )
 }

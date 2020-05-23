@@ -174,13 +174,13 @@ impl<'env> ModuleTranslator<'env> {
             .map(|(i, _)| format!("$tv{}: TypeValue", i))
             .join(", ");
 
-        let mut param_types = String::from("MapConstTypeValue(DefaultTypeValue)");
+        let mut param_types = String::from("MapConstTypeValue(DefaultTypeValue())");
         let type_param_count = struct_env.get_type_parameters().len();
         for i in 0..type_param_count {
             param_types = format!("{}[{} := $tv{}]", param_types, i, i);
         }
         let type_param_array = format!("TypeValueArray({}, {})", param_types, type_param_count);
-        let mut field_types = String::from("MapConstTypeValue(DefaultTypeValue)");
+        let mut field_types = String::from("MapConstTypeValue(DefaultTypeValue())");
         for field_env in struct_env.get_fields() {
             field_types = format!(
                 "{}[{} := {}]",
@@ -257,7 +257,7 @@ impl<'env> ModuleTranslator<'env> {
             separate(vec![type_args_str.clone(), args_str.clone()], ", ")
         );
         self.writer.indent();
-        let mut ctor_expr = "MapConstValue(DefaultValue)".to_owned();
+        let mut ctor_expr = "MapConstValue(DefaultValue())".to_owned();
         for field_env in struct_env.get_fields() {
             let field_param =
                 &format!("{}", field_env.get_name().display(struct_env.symbol_pool()));
@@ -666,7 +666,7 @@ impl<'env> ModuleTranslator<'env> {
             if ty.is_reference() {
                 emitln!(self.writer, "{} := DefaultReference;", &ret_str);
             } else {
-                emitln!(self.writer, "{} := DefaultValue;", &ret_str);
+                emitln!(self.writer, "{} := DefaultValue();", &ret_str);
             }
         }
         self.writer.unindent();
