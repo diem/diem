@@ -9,7 +9,7 @@ use itertools::Itertools;
 use num::BigUint;
 use once_cell::sync::Lazy;
 use regex::Regex;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use spec_lang::{
     ast::{ModuleName, SpecBlockInfo, SpecBlockTarget},
     code_writer::CodeWriter,
@@ -79,7 +79,8 @@ const WEAK_KEYWORDS: &[&str] = &[
 ];
 
 /// Options passed into the documentation generator.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct DocgenOptions {
     /// The level where we start sectioning. Often markdown sections are rendered with
     /// unnecessary large section fonts, setting this value high reduces the size.

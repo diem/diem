@@ -28,13 +28,12 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     args.push("--verbose=warn".to_owned());
     args.push(path.to_string_lossy().to_string());
 
-    let mut options = Options::default();
-    options.initialize_from_args(&args)?;
+    let mut options = Options::create_from_args(&args)?;
     options.setup_logging_for_test();
     if no_boogie {
-        options.generate_only = true;
+        options.prover.generate_only = true;
     }
-    options.stable_test_output = true;
+    options.prover.stable_test_output = true;
 
     let temp_path = TempPath::new();
     temp_path.create_as_dir()?;
@@ -86,7 +85,7 @@ fn get_flags(path: &Path) -> anyhow::Result<(Vec<String>, Option<PathBuf>)> {
         (LEGACY_STDLIB_FLAGS, Some(path.with_extension("exp")))
     } else {
         return Err(anyhow!(
-            "do not know how to run tests for `{}` because its directory is not configured",
+            "do not know how to run tests for `{}` because it's directory is not configured",
             path_str
         ));
     };

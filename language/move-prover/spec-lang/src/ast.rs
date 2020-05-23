@@ -316,6 +316,7 @@ pub enum Operation {
     Global,
     Exists,
     Old,
+    Trace,
     Update,
     Sender,
     MaxU8,

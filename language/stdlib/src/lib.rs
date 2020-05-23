@@ -168,14 +168,14 @@ fn build_doc(output_path: &str, doc_path: &str, sources: &[String], dep_path: &s
         options.move_deps = vec![dep_path.to_string()]
     }
     options.verbosity_level = LevelFilter::Warn;
-    options.docgen = true;
-    options.docgen_options.include_impl = true;
-    options.docgen_options.include_private_fun = true;
-    options.docgen_options.specs_inlined = false;
+    options.run_docgen = true;
+    options.docgen.include_impl = true;
+    options.docgen.include_private_fun = true;
+    options.docgen.specs_inlined = false;
     if !doc_path.is_empty() {
-        options.docgen_options.doc_path = vec![doc_path.to_string()];
+        options.docgen.doc_path = vec![doc_path.to_string()];
     }
-    options.docgen_options.output_directory = output_path.to_string();
+    options.docgen.output_directory = output_path.to_string();
     options.setup_logging_for_test();
     move_prover::run_move_prover_errors_to_stderr(options).unwrap();
 }

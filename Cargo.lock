@@ -3338,6 +3338,7 @@ dependencies = [
  "spec-lang 0.1.0",
  "stackless-bytecode-generator 0.1.0",
  "test-utils 0.1.0",
+ "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
 ]
 

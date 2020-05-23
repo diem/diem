@@ -65,7 +65,7 @@ pub fn run_move_prover<W: WriteColor>(
         return Err(anyhow!("exiting with checking errors"));
     }
     // Until this point, prover and docgen have same code. Here we part ways.
-    if options.docgen {
+    if options.run_docgen {
         return run_docgen(&env, &options, now);
     }
     let targets = create_and_process_bytecode(&options, &env);
@@ -84,7 +84,7 @@ pub fn run_move_prover<W: WriteColor>(
     debug!("writing boogie to {}", &options.output_path);
     writer.process_result(|result| fs::write(&options.output_path, result))?;
     let translator_elapsed = now.elapsed();
-    if !options.generate_only {
+    if !options.prover.generate_only {
         let boogie_file_id =
             writer.process_result(|result| env.add_source(&options.output_path, result, false));
         let boogie = BoogieWrapper {
@@ -94,9 +94,9 @@ pub fn run_move_prover<W: WriteColor>(
             options: &options,
             boogie_file_id,
         };
-        boogie.call_boogie_and_verify_output(options.bench_repeat, &options.output_path)?;
+        boogie.call_boogie_and_verify_output(options.backend.bench_repeat, &options.output_path)?;
         let boogie_elapsed = now.elapsed();
-        if options.bench_repeat <= 1 {
+        if options.backend.bench_repeat <= 1 {
             info!(
                 "{:.3}s translator, {:.3}s solver",
                 translator_elapsed.as_secs_f64(),
@@ -106,8 +106,9 @@ pub fn run_move_prover<W: WriteColor>(
             info!(
                 "{:.3}s translator, {:.3}s solver (average over {} solver runs)",
                 translator_elapsed.as_secs_f64(),
-                (boogie_elapsed - translator_elapsed).as_secs_f64() / (options.bench_repeat as f64),
-                options.bench_repeat
+                (boogie_elapsed - translator_elapsed).as_secs_f64()
+                    / (options.backend.bench_repeat as f64),
+                options.backend.bench_repeat
             );
         }
 
@@ -125,7 +126,7 @@ pub fn run_move_prover_errors_to_stderr(options: Options) -> anyhow::Result<()> 
 }
 
 fn run_docgen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Result<()> {
-    let mut generator = Docgen::new(env, &options.docgen_options);
+    let mut generator = Docgen::new(env, &options.docgen);
     let checking_elapsed = now.elapsed();
     info!("generating documentation");
     generator.gen();
@@ -157,10 +158,10 @@ fn add_prelude(options: &Options, writer: &CodeWriter) -> anyhow::Result<()> {
     handlebars.register_helper(
         "stratified",
         Box::new(StratificationHelper::new(
-            options.template_context.stratification_depth,
+            options.backend.stratification_depth,
         )),
     );
-    let expanded_content = handlebars.render_template(&content, &options.template_context)?;
+    let expanded_content = handlebars.render_template(&content, &options)?;
     emitln!(writer, &expanded_content);
     Ok(())
 }

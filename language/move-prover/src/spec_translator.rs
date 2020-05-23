@@ -13,32 +13,57 @@ use spec_lang::{
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 
-use crate::boogie_helpers::{
-    boogie_byte_blob, boogie_declare_global, boogie_field_name, boogie_global_declarator,
-    boogie_local_type, boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name,
-    boogie_type_value, boogie_well_formed_expr, WellFormedMode,
+use crate::{
+    boogie_helpers::{
+        boogie_byte_blob, boogie_declare_global, boogie_field_name, boogie_global_declarator,
+        boogie_local_type, boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name,
+        boogie_struct_type_value, boogie_type_value, boogie_well_formed_expr, WellFormedMode,
+    },
+    cli::Options,
 };
 use itertools::Itertools;
 use spec_lang::{
     ast::{Condition, ConditionKind, Exp, LocalVarDecl, Operation, Value},
     code_writer::CodeWriter,
     emit, emitln,
-    env::GlobalEnv,
+    env::{GlobalEnv, SpecVarId},
     symbol::Symbol,
     ty::TypeDisplayContext,
 };
 use stackless_bytecode_generator::{
     function_target::FunctionTarget, stackless_bytecode::SpecBlockId,
 };
+use std::collections::BTreeSet;
 
-enum SpecEnv<'env> {
-    Module(&'env ModuleEnv<'env>),
-    Function(&'env FunctionTarget<'env>),
+pub enum SpecEnv<'env> {
+    Module(ModuleEnv<'env>),
+    Function(FunctionTarget<'env>),
+    Struct(StructEnv<'env>),
+}
+
+impl<'env> Into<SpecEnv<'env>> for FunctionTarget<'env> {
+    fn into(self) -> SpecEnv<'env> {
+        SpecEnv::Function(self)
+    }
+}
+
+impl<'env> Into<SpecEnv<'env>> for StructEnv<'env> {
+    fn into(self) -> SpecEnv<'env> {
+        SpecEnv::Struct(self)
+    }
+}
+
+impl<'env> Into<SpecEnv<'env>> for ModuleEnv<'env> {
+    fn into(self) -> SpecEnv<'env> {
+        SpecEnv::Module(self)
+    }
 }
 
 pub struct SpecTranslator<'env> {
-    /// The module in which context translation happens.
+    /// The environment in which context translation happens.
     spec_env: SpecEnv<'env>,
+    /// Options passed into the translator.
+    options: &'env Options,
     /// The code writer.
     writer: &'env CodeWriter,
     /// Whether the translation context supports native `old`,
@@ -49,27 +74,51 @@ pub struct SpecTranslator<'env> {
     in_ensures: RefCell<bool>,
     /// The current target for invariant fields, a pair of strings for current and old value.
     invariant_target: RefCell<(String, String)>,
-    /// Counter for generating fresh variables.  It's a RefCell so we can increment it without
-    /// making a ton of &self arguments mutable.
-    fresh_var_count: RefCell<u64>,
-    // If we are translating in the context of a type instantiation, the type arguments.
+    /// Counter for generating fresh variables.
+    fresh_var_count: RefCell<usize>,
+    /// If we are translating in the context of a type instantiation, the type arguments.
     type_args_opt: Option<Vec<Type>>,
+    /// Set of items which have been already traced. This is used to avoid redundant tracing
+    /// of expressions whose value has been already tracked.
+    traced_items: RefCell<BTreeSet<TraceItem>>,
+}
+
+/// A item which is traced for printing in diagnosis. The boolean indicates whether the item is
+/// traced inside old context or not.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum TraceItem {
+    // Automatically traced items when `options.prover.debug_trace_exp` is on.
+    Sender,
+    Local(bool, Symbol),
+    SpecVar(bool, ModuleId, SpecVarId, Vec<Type>),
+    Exp,
+    // Explicitly traced item via user level trace function.
+    Explicit,
 }
 
 impl<'env> SpecTranslator<'env> {
-    fn module_env(&self) -> &'env ModuleEnv<'env> {
+    fn module_env(&'env self) -> &'env ModuleEnv<'env> {
         use SpecEnv::*;
-        match self.spec_env {
+        match &self.spec_env {
             Module(module_env) => module_env,
             Function(func_target) => &func_target.func_env.module_env,
+            Struct(struct_env) => &struct_env.module_env,
         }
     }
 
-    fn function_target(&self) -> &'env FunctionTarget<'env> {
+    fn function_target(&'env self) -> &'env FunctionTarget<'env> {
         use SpecEnv::*;
-        match self.spec_env {
-            Module(_) => panic!(),
+        match &self.spec_env {
+            Module(_) | Struct(_) => panic!(),
             Function(func_target) => func_target,
+        }
+    }
+
+    fn struct_env(&'env self) -> &'env StructEnv<'env> {
+        use SpecEnv::*;
+        match &self.spec_env {
+            Module(_) | Function(_) => panic!(),
+            Struct(struct_env) => struct_env,
         }
     }
 }
@@ -79,13 +128,18 @@ impl<'env> SpecTranslator<'env> {
 
 impl<'env> SpecTranslator<'env> {
     /// Creates a translator.
-    pub fn new(
+    pub fn new<E>(
         writer: &'env CodeWriter,
-        module_env: &'env ModuleEnv<'env>,
+        env: E,
+        options: &'env Options,
         supports_native_old: bool,
-    ) -> SpecTranslator<'env> {
+    ) -> SpecTranslator<'env>
+    where
+        E: Into<SpecEnv<'env>>,
+    {
         SpecTranslator {
-            spec_env: SpecEnv::Module(module_env),
+            spec_env: env.into(),
+            options,
             writer,
             supports_native_old,
             in_old: RefCell::new(false),
@@ -93,24 +147,7 @@ impl<'env> SpecTranslator<'env> {
             invariant_target: RefCell::new(("".to_string(), "".to_string())),
             fresh_var_count: RefCell::new(0),
             type_args_opt: None,
-        }
-    }
-
-    /// Creates a translator for use in translating spec blocks inside function implementation
-    pub fn new_for_spec_in_impl(
-        writer: &'env CodeWriter,
-        func_target: &'env FunctionTarget<'env>,
-        supports_native_old: bool,
-    ) -> SpecTranslator<'env> {
-        SpecTranslator {
-            spec_env: SpecEnv::Function(func_target),
-            writer,
-            supports_native_old,
-            in_old: RefCell::new(false),
-            in_ensures: RefCell::new(false),
-            invariant_target: RefCell::new(("".to_string(), "".to_string())),
-            fresh_var_count: RefCell::new(0),
-            type_args_opt: None,
+            traced_items: Default::default(),
         }
     }
 
@@ -381,6 +418,7 @@ impl<'env> SpecTranslator<'env> {
     /// Assumes preconditions for function. This is used for the top-level verification
     /// entry point of a function.
     pub fn assume_preconditions(&self) {
+        emitln!(self.writer, "assume $Memory__is_well_formed($m);");
         emitln!(self.writer, "assume $ExistsTxnSenderAccount($m, $txn);");
         let func_target = self.function_target();
         // Assume requires.
@@ -405,7 +443,8 @@ impl<'env> SpecTranslator<'env> {
 
     /// Assume module requires of a function. This is used when the function is called from
     /// outside of a module.
-    pub fn assume_module_preconditions(&self, func_target: &FunctionTarget<'_>) {
+    pub fn assume_module_preconditions(&self) {
+        let func_target = self.function_target();
         if func_target.is_public() {
             let requires = func_target
                 .get_spec()
@@ -432,17 +471,18 @@ impl<'env> SpecTranslator<'env> {
     /// ----------------------------
 
     /// Emits functions and procedures needed for invariants.
-    pub fn translate_invariant_functions(&self, struct_env: &StructEnv<'env>) {
-        self.translate_assume_well_formed(struct_env);
-        self.translate_before_update_invariant(struct_env);
-        self.translate_after_update_invariant(struct_env);
+    pub fn translate_invariant_functions(&self) {
+        self.translate_assume_well_formed();
+        self.translate_before_update_invariant();
+        self.translate_after_update_invariant();
     }
 
     /// Generates functions which assumes the struct to be well-formed. The first function
     /// only checks type assumptions and is called to ensure well-formedness while the struct is
     /// mutated. The second function checks both types and data invariants and is used while
     /// the struct is not mutated.
-    fn translate_assume_well_formed(&self, struct_env: &StructEnv<'env>) {
+    fn translate_assume_well_formed(&self) {
+        let struct_env = self.struct_env();
         let emit_field_checks = |mode: WellFormedMode| {
             emitln!(self.writer, "$Vector_is_well_formed($this)");
             emitln!(
@@ -488,6 +528,36 @@ impl<'env> SpecTranslator<'env> {
         self.writer.unindent();
         emitln!(self.writer, "}");
         emitln!(self.writer);
+
+        if struct_env.is_resource() && self.options.prover.resource_wellformed_axiom {
+            // Emit axiom that for all addresses, this resource as stored in global memory
+            // is well-formed.
+            emit!(self.writer, "axiom (forall m: Memory, a: Value");
+            let mut type_args = vec![];
+            for i in 0..struct_env.get_type_parameters().len() {
+                emit!(self.writer, ", $tv{}: TypeValue", i);
+                type_args.push(Type::TypeParameter(i as u16));
+            }
+            emitln!(
+                self.writer,
+                " :: $Memory__is_well_formed(m) && is#Address(a) ==> "
+            );
+            self.writer.indent();
+            emitln!(
+                self.writer,
+                "{}_is_well_formed($ResourceValue(m, {}, a))",
+                boogie_struct_name(struct_env),
+                boogie_struct_type_value(
+                    &struct_env.module_env.env,
+                    struct_env.module_env.get_id(),
+                    struct_env.get_id(),
+                    &type_args
+                ),
+            );
+            self.writer.unindent();
+            emitln!(self.writer, ");");
+            emitln!(self.writer);
+        }
     }
 
     /// Determines whether a before-update invariant is generated for this struct.
@@ -518,7 +588,8 @@ impl<'env> SpecTranslator<'env> {
     }
 
     /// Generates a procedure which asserts the before-update invariants of the struct.
-    pub fn translate_before_update_invariant(&self, struct_env: &StructEnv<'env>) {
+    pub fn translate_before_update_invariant(&self) {
+        let struct_env = self.struct_env();
         if !Self::has_before_update_invariant(struct_env) {
             return;
         }
@@ -599,7 +670,8 @@ impl<'env> SpecTranslator<'env> {
     }
 
     /// Generates a procedure which asserts the after-update invariants of the struct.
-    pub fn translate_after_update_invariant(&self, struct_env: &StructEnv<'env>) {
+    pub fn translate_after_update_invariant(&self) {
+        let struct_env = self.struct_env();
         if !Self::has_after_update_invariant(struct_env) {
             return;
         }
@@ -671,7 +743,8 @@ impl<'env> SpecTranslator<'env> {
         emitln!(self.writer);
     }
 
-    pub fn emit_pack_invariants(&self, struct_env: &StructEnv<'env>, target: &str) {
+    pub fn emit_pack_invariants(&self, target: &str) {
+        let struct_env = self.struct_env();
         let spec = struct_env.get_spec();
         self.emit_invariants_assume_or_assert(
             target,
@@ -687,7 +760,8 @@ impl<'env> SpecTranslator<'env> {
     }
 
     /// Emits a sequence of statements which assert the unpack invariants.
-    pub fn emit_unpack_invariants(&self, struct_env: &StructEnv<'env>, target: &str) {
+    pub fn emit_unpack_invariants(&self, target: &str) {
+        let struct_env = self.struct_env();
         self.emit_spec_var_updates(
             target,
             "",
@@ -784,26 +858,37 @@ impl<'env> SpecTranslator<'env> {
                 self.translate_local_var(*node_id, *name);
             }
             Exp::SpecVar(node_id, module_id, var_id) => {
-                self.set_writer_location(*node_id);
-                let module_env = self.module_env().env.get_module(*module_id);
-                let spec_var = module_env.get_spec_var(*var_id);
-                let instantiation = self.module_env().get_node_instantiation(*node_id);
-                let instantiation_str = if instantiation.is_empty() {
-                    "".to_string()
-                } else {
-                    format!(
-                        "[{}]",
-                        instantiation
-                            .iter()
-                            .map(|ty| self.translate_type(ty))
-                            .join(", ")
-                    )
-                };
-                emit!(
-                    self.writer,
-                    "{}{}",
-                    boogie_spec_var_name(&module_env, spec_var.name),
-                    instantiation_str
+                let instantiation = &self.module_env().get_node_instantiation(*node_id);
+                self.trace_value(
+                    *node_id,
+                    TraceItem::SpecVar(
+                        *self.in_old.borrow(),
+                        *module_id,
+                        *var_id,
+                        instantiation.clone(),
+                    ),
+                    || {
+                        self.set_writer_location(*node_id);
+                        let module_env = self.module_env().env.get_module(*module_id);
+                        let spec_var = module_env.get_spec_var(*var_id);
+                        let instantiation_str = if instantiation.is_empty() {
+                            "".to_string()
+                        } else {
+                            format!(
+                                "[{}]",
+                                instantiation
+                                    .iter()
+                                    .map(|ty| self.translate_type(ty))
+                                    .join(", ")
+                            )
+                        };
+                        emit!(
+                            self.writer,
+                            "{}{}",
+                            boogie_spec_var_name(&module_env, spec_var.name),
+                            instantiation_str
+                        );
+                    },
                 );
             }
             Exp::Call(node_id, oper, args) => {
@@ -835,6 +920,41 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
+    fn trace_value<F>(&self, node_id: NodeId, item: TraceItem, f: F)
+    where
+        F: Fn(),
+    {
+        let go = if item == TraceItem::Explicit {
+            // User called TRACE function, always do it.
+            true
+        } else if self.options.prover.debug_trace {
+            // Option for automatic tracing has been enabled
+            if item != TraceItem::Exp {
+                // Some arbitrary exp
+                true
+            } else {
+                // Some named item, like a spec var or local. Only trace again if it has not
+                // been done yet. This avoids redundant noise.
+                self.traced_items.borrow_mut().insert(item)
+            }
+        } else {
+            false
+        };
+        if go {
+            let module_env = self.module_env();
+            emit!(
+                self.writer,
+                "$DebugTrackExp({}, {}, ",
+                module_env.get_id().to_usize(),
+                node_id.as_usize(),
+            );
+            f();
+            emit!(self.writer, ")");
+        } else {
+            f();
+        }
+    }
+
     fn translate_exp_parenthesised(&self, exp: &Exp) {
         emit!(self.writer, "(");
         self.translate_exp(exp);
@@ -851,22 +971,28 @@ impl<'env> SpecTranslator<'env> {
     }
 
     fn translate_local_var(&self, node_id: NodeId, name: Symbol) {
-        let mut ty = &self.module_env().get_node_type(node_id);
-        let mut var_name = self.module_env().symbol_pool().string(name);
-        // overwrite ty if func_target provides a binding for name
-        if let SpecEnv::Function(func_target) = self.spec_env {
-            if let Some(local_index) = func_target.get_local_index(name) {
-                ty = func_target.get_local_type(*local_index);
-                if *self.in_ensures.borrow() && !*self.in_old.borrow() {
-                    if let Some(return_index) = func_target.get_return_index(*local_index) {
-                        var_name = Rc::new(format!("$ret{}", return_index));
+        self.trace_value(
+            node_id,
+            TraceItem::Local(*self.in_old.borrow(), name),
+            || {
+                let mut ty = &self.module_env().get_node_type(node_id);
+                let mut var_name = self.module_env().symbol_pool().string(name);
+                // overwrite ty if func_target provides a binding for name
+                if let SpecEnv::Function(func_target) = &self.spec_env {
+                    if let Some(local_index) = func_target.get_local_index(name) {
+                        ty = func_target.get_local_type(*local_index);
+                        if *self.in_ensures.borrow() && !*self.in_old.borrow() {
+                            if let Some(return_index) = func_target.get_return_index(*local_index) {
+                                var_name = Rc::new(format!("$ret{}", return_index));
+                            }
+                        }
                     }
-                }
-            }
-        };
-        self.auto_dref(ty, || {
-            emit!(self.writer, var_name.as_ref());
-        });
+                };
+                self.auto_dref(ty, || {
+                    emit!(self.writer, var_name.as_ref());
+                });
+            },
+        );
     }
 
     fn auto_dref<F>(&self, ty: &Type, f: F)
@@ -951,7 +1077,9 @@ impl<'env> SpecTranslator<'env> {
             Operation::Global => self.translate_resource_access(node_id, args),
             Operation::Exists => self.translate_resource_exists(node_id, args),
             Operation::Len => self.translate_primitive_call("$vlen_value", args),
-            Operation::Sender => emit!(self.writer, "$TxnSender($txn)"),
+            Operation::Sender => self.trace_value(node_id, TraceItem::Sender, || {
+                emit!(self.writer, "$TxnSender($txn)")
+            }),
             Operation::All => self.translate_all_or_exists(&loc, true, args),
             Operation::Any => self.translate_all_or_exists(&loc, false, args),
             Operation::TypeValue => self.translate_type_value(node_id),
@@ -962,6 +1090,9 @@ impl<'env> SpecTranslator<'env> {
             ),
             Operation::Update => self.translate_primitive_call("$update_vector_by_value", args),
             Operation::Old => self.translate_old(args),
+            Operation::Trace => self.trace_value(node_id, TraceItem::Explicit, || {
+                self.translate_exp(&args[0])
+            }),
             Operation::MaxU8 => emit!(self.writer, "Integer(MAX_U8)"),
             Operation::MaxU64 => emit!(self.writer, "Integer(MAX_U64)"),
             Operation::MaxU128 => emit!(self.writer, "Integer(MAX_U128)"),
@@ -1055,19 +1186,23 @@ impl<'env> SpecTranslator<'env> {
     }
 
     fn translate_resource_access(&self, node_id: NodeId, args: &[Exp]) {
-        let rty = &self.module_env().get_node_instantiation(node_id)[0];
-        let type_value = self.translate_type(rty);
-        emit!(self.writer, "$ResourceValue($m, {}, ", type_value);
-        self.translate_exp(&args[0]);
-        emit!(self.writer, ")");
+        self.trace_value(node_id, TraceItem::Exp, || {
+            let rty = &self.module_env().get_node_instantiation(node_id)[0];
+            let type_value = self.translate_type(rty);
+            emit!(self.writer, "$ResourceValue($m, {}, ", type_value);
+            self.translate_exp(&args[0]);
+            emit!(self.writer, ")");
+        });
     }
 
     fn translate_resource_exists(&self, node_id: NodeId, args: &[Exp]) {
-        let rty = &self.module_env().get_node_instantiation(node_id)[0];
-        let type_value = self.translate_type(rty);
-        emit!(self.writer, "$ResourceExists($m, {}, ", type_value);
-        self.translate_exp(&args[0]);
-        emit!(self.writer, ")");
+        self.trace_value(node_id, TraceItem::Exp, || {
+            let rty = &self.module_env().get_node_instantiation(node_id)[0];
+            let type_value = self.translate_type(rty);
+            emit!(self.writer, "$ResourceExists($m, {}, ", type_value);
+            self.translate_exp(&args[0]);
+            emit!(self.writer, ")");
+        });
     }
 
     fn translate_all_or_exists(&self, loc: &Loc, is_all: bool, args: &[Exp]) {
