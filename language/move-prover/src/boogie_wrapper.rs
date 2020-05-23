@@ -27,8 +27,9 @@ use spec_lang::{
 };
 
 use crate::cli::Options;
-// DENUG
+// DEBUG
 // use backtrace::Backtrace;
+use spec_lang::env::NodeId;
 use stackless_bytecode_generator::{
     function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder,
 };
@@ -181,7 +182,7 @@ impl<'env> BoogieWrapper<'env> {
             && !error.execution_trace.is_empty()
             // Reporting errors on boogie source seems to have some non-determinism, so skip
             // this if stable output is required
-            && (on_source || !self.options.stable_test_output)
+            && (on_source || !self.options.prover.stable_test_output)
         {
             let mut locals_shown = BTreeSet::new();
             let mut aborted = None;
@@ -203,7 +204,7 @@ impl<'env> BoogieWrapper<'env> {
                 .dedup_by(|(_, _, source_pos1, _, _), (_, _, source_pos2, kind2, _)| {
                     // Removes consecutive entries which point to the same location if trace
                     // minimization is active.
-                    if !self.options.minimize_execution_trace {
+                    if !self.options.prover.minimize_execution_trace {
                         return false;
                     }
                     if *kind2 != &TraceKind::Regular {
@@ -286,6 +287,22 @@ impl<'env> BoogieWrapper<'env> {
             }
             diag = diag.with_notes(trace);
         }
+        // Inject secondary labels about expression values.
+        if let Some(m) = &error.model {
+            for (desc, values) in &m.tracked_exps {
+                let module_env = self.env.get_module(desc.module_id);
+                let loc = module_env.get_node_loc(desc.node_id);
+                let ty = module_env.get_node_type(desc.node_id);
+                let value_display = values
+                    .iter()
+                    .filter_map(|v| Some(v.pretty_or_raw(self, m, &ty)).map(|p| self.render(&p)))
+                    .join(", ");
+                if !value_display.is_empty() {
+                    let label = Label::new(loc.file_id(), loc.span(), value_display);
+                    diag.secondary_labels.push(label);
+                }
+            }
+        }
         self.env.add_diag(diag);
     }
 
@@ -296,16 +313,21 @@ impl<'env> BoogieWrapper<'env> {
 
     /// Renders trace information.
     fn render_trace_info(&self, file: String, pos: Location, info: PrettyDoc) -> String {
+        self.render(
+            &PrettyDoc::text(format!(
+                "    at {}:{}:{}: ",
+                file,
+                pos.line.0 + 1,
+                pos.column.0 + 1
+            ))
+            .append(info.nest(8)),
+        )
+    }
+
+    /// Renders the doc.
+    fn render(&self, doc: &PrettyDoc) -> String {
         let mut lines = vec![];
-        PrettyDoc::text(format!(
-            "    at {}:{}:{}: ",
-            file,
-            pos.line.0 + 1,
-            pos.column.0 + 1
-        ))
-        .append(info.nest(8))
-        .render(70, &mut lines)
-        .unwrap();
+        doc.render(70, &mut lines).unwrap();
         String::from_utf8_lossy(&lines).to_string()
     }
 
@@ -554,6 +576,7 @@ pub struct Model {
     vars: BTreeMap<ModelValue, ModelValue>,
     tracked_locals: BTreeMap<Loc, Vec<(LocalDescriptor, ModelValue)>>,
     tracked_aborts: BTreeMap<(String, LineIndex), AbortDescriptor>,
+    tracked_exps: BTreeMap<ExpDescriptor, Vec<ModelValue>>,
 }
 
 impl Model {
@@ -606,6 +629,24 @@ impl Model {
                         .ok_or_else(Self::invalid_track_info)?;
                     tracked_aborts.insert((pos.0, pos.1.line), mark);
                 }
+
+                // Extract the tracked expressions.
+                let mut tracked_exps = BTreeMap::new();
+                let track_exp_map = vars
+                    .get(&ModelValue::literal("$DebugTrackExp"))
+                    .and_then(|x| x.extract_map())
+                    .ok_or_else(Self::invalid_track_info)?;
+                for k in track_exp_map.keys() {
+                    if k == &ModelValue::literal("else") {
+                        continue;
+                    }
+                    let (desc, value) = Self::extract_debug_exp(wrapper, k)?;
+                    tracked_exps
+                        .entry(desc)
+                        .or_insert_with(|| vec![])
+                        .push(value);
+                }
+
                 // DEBUG
                 // for (loc, values) in &tracked_locals {
                 //     info!("{} -> ", loc.span());
@@ -627,6 +668,7 @@ impl Model {
                     vars,
                     tracked_locals,
                     tracked_aborts,
+                    tracked_exps,
                 };
                 Ok(model)
             })
@@ -689,6 +731,36 @@ impl Model {
                 },
                 loc,
             ))
+        } else {
+            Err(Self::invalid_track_info())
+        }
+    }
+
+    /// Extract and validate a tracked expression from $DebugTrackExp map.
+    fn extract_debug_exp(
+        wrapper: &BoogieWrapper<'_>,
+        map_entry: &ModelValue,
+    ) -> Result<(ExpDescriptor, ModelValue), ModelParseError> {
+        if let ModelValue::List(args) = map_entry {
+            if args.len() != 3 {
+                return Err(Self::invalid_track_info());
+            }
+            let module_id = ModuleId::new(
+                args[0]
+                    .extract_number()
+                    .ok_or_else(Self::invalid_track_info)
+                    .and_then(Self::index_range_check(wrapper.env.get_module_count()))?,
+            );
+            let module_env = wrapper.env.get_module(module_id);
+            let node_id = NodeId::new(
+                args[1]
+                    .extract_number()
+                    .ok_or_else(Self::invalid_track_info)?,
+            );
+            if module_env.get_node_type(node_id) == Type::Error {
+                return Err(Self::invalid_track_info());
+            }
+            Ok((ExpDescriptor { module_id, node_id }, args[2].clone()))
         } else {
             Err(Self::invalid_track_info())
         }
@@ -906,7 +978,7 @@ impl ModelValue {
     /// Pretty prints the given model value which has given type. If printing fails, falls
     /// back to print the debug value.
     pub fn pretty_or_raw(&self, wrapper: &BoogieWrapper, model: &Model, ty: &Type) -> PrettyDoc {
-        if wrapper.options.stable_test_output {
+        if wrapper.options.prover.stable_test_output {
             return PrettyDoc::text("<redacted>");
         }
         self.pretty(wrapper, model, ty).unwrap_or_else(|| {
@@ -1107,6 +1179,13 @@ impl LocalDescriptor {
 struct AbortDescriptor {
     module_id: ModuleId,
     func_id: FunId,
+}
+
+/// Represents an expression descriptor.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+struct ExpDescriptor {
+    module_id: ModuleId,
+    node_id: NodeId,
 }
 
 /// Represents parser for a boogie model.

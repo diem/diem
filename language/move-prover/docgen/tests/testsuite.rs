@@ -28,22 +28,21 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     args.extend(FLAGS.iter().map(|s| (*s).to_string()).collect_vec());
     args.push(path.to_string_lossy().to_string());
 
-    let mut options = Options::default();
-    options.initialize_from_args(&args)?;
+    let mut options = Options::create_from_args(&args)?;
     options.setup_logging_for_test();
 
-    options.docgen_options.include_specs = true;
-    options.docgen_options.include_impl = true;
-    options.docgen_options.include_private_fun = true;
+    options.docgen.include_specs = true;
+    options.docgen.include_impl = true;
+    options.docgen.include_private_fun = true;
 
-    options.docgen_options.specs_inlined = true;
+    options.docgen.specs_inlined = true;
     test_docgen(path, options.clone(), "spec_inline.md")?;
 
-    options.docgen_options.specs_inlined = false;
+    options.docgen.specs_inlined = false;
     test_docgen(path, options.clone(), "spec_separate.md")?;
 
-    options.docgen_options.specs_inlined = true;
-    options.docgen_options.collapsed_sections = false;
+    options.docgen.specs_inlined = true;
+    options.docgen.collapsed_sections = false;
     test_docgen(path, options, "spec_inline_no_fold.md")?;
 
     Ok(())
@@ -51,7 +50,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
 
 fn test_docgen(path: &Path, mut options: Options, suffix: &str) -> anyhow::Result<()> {
     let mut temp_path = PathBuf::from(TempPath::new().path());
-    options.docgen_options.output_directory = temp_path.to_string_lossy().to_string();
+    options.docgen.output_directory = temp_path.to_string_lossy().to_string();
     let base_name = format!("{}.md", path.file_stem().unwrap().to_str().unwrap());
     temp_path.push(&base_name);
 

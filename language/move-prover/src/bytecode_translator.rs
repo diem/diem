@@ -120,7 +120,8 @@ impl<'env> ModuleTranslator<'env> {
         );
         self.writer
             .set_location(&self.module_env.env.internal_loc());
-        let spec_translator = SpecTranslator::new(self.writer, &self.module_env, false);
+        let spec_translator =
+            SpecTranslator::new(self.writer, self.module_env.clone(), self.options, false);
         spec_translator.translate_spec_vars();
         spec_translator.translate_spec_funs();
         self.translate_structs();
@@ -227,8 +228,9 @@ impl<'env> ModuleTranslator<'env> {
         }
 
         // Emit invariant functions.
-        let spec_translator = SpecTranslator::new(self.writer, &struct_env.module_env, false);
-        spec_translator.translate_invariant_functions(&struct_env);
+        let spec_translator =
+            SpecTranslator::new(self.writer, struct_env.clone(), self.options, false);
+        spec_translator.translate_invariant_functions();
     }
 
     /// Translates struct accessors (pack/unpack).
@@ -290,8 +292,9 @@ impl<'env> ModuleTranslator<'env> {
         );
 
         // Insert invariant code.
-        let spec_translator = SpecTranslator::new(self.writer, &struct_env.module_env, false);
-        spec_translator.emit_pack_invariants(struct_env, "$struct");
+        let spec_translator =
+            SpecTranslator::new(self.writer, struct_env.clone(), self.options, false);
+        spec_translator.emit_pack_invariants("$struct");
 
         self.writer.unindent();
         emitln!(self.writer, "}\n");
@@ -323,8 +326,9 @@ impl<'env> ModuleTranslator<'env> {
         }
 
         // Insert invariant checking code.
-        let spec_translator = SpecTranslator::new(self.writer, &struct_env.module_env, false);
-        spec_translator.emit_unpack_invariants(struct_env, "$struct");
+        let spec_translator =
+            SpecTranslator::new(self.writer, struct_env.clone(), self.options, false);
+        spec_translator.emit_unpack_invariants("$struct");
 
         self.writer.unindent();
         emitln!(self.writer, "}\n");
@@ -369,7 +373,7 @@ impl<'env> ModuleTranslator<'env> {
     /// Translates the given function.
     fn translate_function(&self, func_target: &FunctionTarget<'_>) {
         if func_target.is_native() {
-            if self.options.native_stubs {
+            if self.options.prover.native_stubs {
                 self.generate_function_sig(func_target, true);
                 emit!(self.writer, ";");
                 self.generate_function_spec(func_target);
@@ -406,7 +410,7 @@ impl<'env> ModuleTranslator<'env> {
         }
         // We look up the `verify` pragma property first in this function, then in
         // the module, and finally fall back to the value of option `--verify`.
-        let default = || match self.options.verify_scope {
+        let default = || match self.options.prover.verify_scope {
             VerificationScope::Public => func_target.func_env.is_public(),
             VerificationScope::All => true,
             VerificationScope::None => false,
@@ -490,7 +494,7 @@ impl<'env> ModuleTranslator<'env> {
                 &local_str,
                 local_type,
                 mode,
-                &self.options.template_context.type_requires,
+                &self.options.backend.type_requires,
             );
             emit!(self.writer, &type_check);
         }
@@ -498,7 +502,8 @@ impl<'env> ModuleTranslator<'env> {
 
     /// Emit code for the function specification.
     fn generate_function_spec(&self, func_target: &FunctionTarget<'_>) {
-        SpecTranslator::new_for_spec_in_impl(self.writer, func_target, true).translate_conditions();
+        SpecTranslator::new(self.writer, func_target.clone(), self.options, true)
+            .translate_conditions();
     }
 
     /// Emit code for spec inside function implementation.
@@ -507,7 +512,7 @@ impl<'env> ModuleTranslator<'env> {
         func_target: &FunctionTarget<'_>,
         block_id: SpecBlockId,
     ) {
-        SpecTranslator::new_for_spec_in_impl(self.writer, func_target, true)
+        SpecTranslator::new(self.writer, func_target.clone(), self.options, true)
             .translate_conditions_inside_impl(block_id);
     }
 
@@ -525,7 +530,8 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "call $InitVerification();");
 
         // (b) assume implicit preconditions.
-        let spec_translator = SpecTranslator::new_for_spec_in_impl(self.writer, func_target, false);
+        let spec_translator =
+            SpecTranslator::new(self.writer, func_target.clone(), self.options, false);
         spec_translator.assume_preconditions();
 
         // (c) assume reference parameters to be based on the Param(i) Location, ensuring
@@ -924,11 +930,15 @@ impl<'env> ModuleTranslator<'env> {
                         if callee_env.module_env.get_id()
                             != func_target.func_env.module_env.get_id()
                         {
-                            let spec_translator =
-                                SpecTranslator::new(self.writer, &callee_env.module_env, false)
-                                    .set_type_args(type_actuals.clone());
-                            spec_translator
-                                .assume_module_preconditions(&self.targets.get_target(&callee_env));
+                            let callee_target = self.targets.get_target(&callee_env).clone();
+                            let spec_translator = SpecTranslator::new(
+                                self.writer,
+                                callee_target,
+                                self.options,
+                                false,
+                            )
+                            .set_type_args(type_actuals.clone());
+                            spec_translator.assume_module_preconditions();
                         }
 
                         let mut dest_str = String::new();

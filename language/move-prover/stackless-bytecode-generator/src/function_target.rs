@@ -29,6 +29,20 @@ pub struct FunctionTarget<'env> {
     annotation_formatters: RefCell<Vec<Box<AnnotationFormatter>>>,
 }
 
+impl<'env> Clone for FunctionTarget<'env> {
+    fn clone(&self) -> Self {
+        // Annotation formatters are transient and forgotten on clone.
+        // TODO: move name_to_index and annotation_formatters into  function target data.
+        //   FunctionTarget itself should be a cheap handle which can easily be cloned.
+        Self {
+            func_env: self.func_env,
+            data: self.data,
+            name_to_index: self.name_to_index.clone(),
+            annotation_formatters: RefCell::new(vec![]),
+        }
+    }
+}
+
 /// Holds the owned data belonging to a FunctionTarget, which can be rewritten using
 /// the `FunctionTargetsHolder::rewrite` method.
 #[derive(Debug)]

@@ -150,6 +150,10 @@ pub struct SpecVarId(RawIndex);
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct NodeId(RawIndex);
 
+/// A global id. Instances of this type represent unique identifiers relative to `GlobalEnv`.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+pub struct GlobalId(usize);
+
 impl FunId {
     pub fn new(sym: Symbol) -> Self {
         Self(sym)
@@ -214,6 +218,10 @@ impl NodeId {
     pub fn new(idx: usize) -> Self {
         Self(idx as RawIndex)
     }
+
+    pub fn as_usize(self) -> usize {
+        self.0 as usize
+    }
 }
 
 impl ModuleId {
@@ -223,6 +231,16 @@ impl ModuleId {
 
     pub fn to_usize(self) -> usize {
         self.0 as usize
+    }
+}
+
+impl GlobalId {
+    pub fn new(idx: usize) -> Self {
+        Self(idx)
+    }
+
+    pub fn as_usize(self) -> usize {
+        self.0
     }
 }
 
@@ -263,6 +281,8 @@ pub struct GlobalEnv {
     symbol_pool: SymbolPool,
     /// List of loaded modules, in order they have been provided using `add`.
     module_data: Vec<ModuleData>,
+    /// A counter for issuing global ids.
+    global_id_counter: RefCell<usize>,
 }
 
 impl GlobalEnv {
@@ -299,7 +319,16 @@ impl GlobalEnv {
             diags: RefCell::new(vec![]),
             symbol_pool: SymbolPool::new(),
             module_data: vec![],
+            global_id_counter: RefCell::new(0),
         }
+    }
+
+    /// Create a new global id unique to this environment.
+    pub fn new_global_id(&self) -> GlobalId {
+        let mut counter = self.global_id_counter.borrow_mut();
+        let id = GlobalId::new(*counter);
+        *counter += 1;
+        id
     }
 
     /// Returns a reference to the symbol pool owned by this environment.

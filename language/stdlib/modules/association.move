@@ -130,7 +130,7 @@ module Association {
         /// in a schema and as a post-condition to `initialize`. This postulates that
         /// only the root address has a Root resource.
         define only_root_addr_has_root_privilege(): bool {
-            all(domain<address>(), |addr| exists<Root>(addr) ==> (addr == spec_root_address()))
+            all(domain<address>(), |addr| (exists<Root>(addr)) ==> addr == spec_root_address())
         }
     }
     spec schema OnlyRootAddressHasRootPrivilege {
@@ -160,7 +160,7 @@ module Association {
     /// the `Root` invariant really works. It needs the invariant
     /// `OnlyRootAddressHasRootPrivilege`, because `assert_sender_is_root` does not
     /// directly check that the `sender == root_address()`. Instead, it aborts if
-    /// sender has root privilege, and only the root_address has `Root`.
+    /// sender has no root privilege, and only the root_address has `Root`.
     /// > TODO: There is a style question about whether this should just check for presence of
     /// a Root privilege. I guess it's moot so long as `OnlyRootAddressHasRootPrivilege` holds.
     spec fun assert_sender_is_root {
