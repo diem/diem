@@ -6,6 +6,7 @@ pub mod code_unit_tests;
 pub mod constants_tests;
 pub mod control_flow_tests;
 pub mod duplication_tests;
+pub mod generic_ops_tests;
 pub mod negative_stack_size_tests;
 pub mod resources_tests;
 pub mod signature_tests;

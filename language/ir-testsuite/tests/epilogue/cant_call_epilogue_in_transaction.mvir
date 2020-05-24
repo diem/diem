@@ -1,7 +1,8 @@
 import 0x0.LibraAccount;
+import 0x0.Coin1;
 
 main() {
-    LibraAccount.epilogue(0, 0, 0, 0);
+    LibraAccount.epilogue<Coin1.T>(0, 0, 0, 0);
     return;
 }
 
