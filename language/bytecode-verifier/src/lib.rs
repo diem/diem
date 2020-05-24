@@ -14,6 +14,7 @@ pub mod constants;
 pub mod control_flow;
 pub mod control_flow_graph;
 pub mod instantiation_loops;
+pub mod instruction_consistency;
 pub mod locals_safety;
 pub mod reference_safety;
 pub mod resolver;
@@ -28,6 +29,7 @@ pub mod verifier;
 
 pub use check_duplication::DuplicationChecker;
 pub use code_unit_verifier::CodeUnitVerifier;
+pub use instruction_consistency::InstructionConsistency;
 pub use resources::ResourceTransitiveChecker;
 pub use signature::SignatureChecker;
 pub use stack_usage_verifier::StackUsageVerifier;

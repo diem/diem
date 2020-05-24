@@ -355,6 +355,7 @@ pub enum StatusCode {
     TOO_MANY_LOCALS = 1089,
     MOVETO_TYPE_MISMATCH_ERROR = 1090,
     MOVETO_NO_RESOURCE_ERROR = 1091,
+    GENERIC_MEMBER_OPCODE_MISMATCH = 1092,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.
