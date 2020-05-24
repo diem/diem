@@ -1,0 +1,53 @@
+\section{Correctness} \label{correctness}
+
+It is useful to think about correctness in the following manner. Each round in the chain represents a slot in a sequence of consensus decisions.
+Once a decision is committed, it takes effect immediately in the next slot. For normal transactions, this means that the state of the ledger is
+updated by each slot, starting with the state of the previous slot. For control actions like reconfiguration, it changes the algorithm itself.
+This again, takes effect in the immediate slot following the control transaction.
+Generally, note that reconfiguration transactions can change any aspect of the algorithm, not just the validator set.
+
+Now, imagine that an entire consensus algorithm is done separately for each round/slot. Clearly, to agree on the commit output of the algorithm
+we must have agreement on the algorithm itself. Initially, the system is bootstrapped with an algorithm (and in particular, the
+validator-configuration) responsible for slot 1 pre-determined and known to all via genesis transaction. Thereafter, if a slot commits an algorithm (configuration) change,
+it takes effect in the succeeding slot.
+
+It is fairly obvious to see inductively that in this manner, we maintain agreement on the algorithm for each slot.
+
+\paragraph{Enters pipelining}
+
+As depicted above under “Pipelined reconfiguration”, the LibraBFT consensus algorithm “spreads” the phases of the protocol (for every slot) over
+3 rounds. More specifically, every phase is carried in a single round and contains a new proposal. For example, the leader of round k drives only
+a single phase of certification of its proposal. In the next round, k+1, a leader again drives a single phase of certification. Interestingly,
+this phase has multiple purposes:
+\begin{itemize}
+\item The k+1 leader sends its own k+1 proposal.
+\item It also piggybacks the QC for the k proposal. In this way, certifying at round k+1 generates a QC for k+1, but also a QC-of-QC for k.
+\item In the third round, k+2, the k proposal can become committed, the k+1 proposal can obtain a QC-of-QC, and the k+2 can obtain a QC.
+\end{itemize}
+
+Importantly, it should be understood that spreading phases of the k-protocol into rounds k+1 and k+2 does not shift the responsibility away from the k-algorithm.
+
+To complicate matters, if any phase aborts due to a timeout, the k-protocol remains undecided. It can become committed only via a transaction that extends the k branch. If the k command is a reconfiguration command, the reconfiguration takes effect only upon the next commit.
+
+For example, say that round k+1 aborts (no QC(k+1) obtained). The leader for k+2 extends k, and if three consecutive rounds (k+2, k+3, k+4) complete, then the prefix of the branch up to and include k+2 becomes committed, including k. Importantly, in this case, the reconfiguration transaction takes effect at round k+2.
+
+A correctness “meta argument” reduction is the follows:
+
+If the algorithm for a slot k is A, then it is necessary and sufficient for the quorums used for three slots succeeding the first commit on a branch extending A to contain quorums of A. If there is no gap, then rounds k, k+1 and k+2 use algorithm A. If there is a gap and k’ is the next commit, then rounds from k all the way to k’, k’+1, k’+2 use algorithm A.
+
+If round k* (once committed) changes the configuration to A’, then similarly, it is necessary and sufficient for slots succeeding k* to contain quorums for A’ but also A until k* becomes committed.
+
+\paragraph{Reconfiguration condition with pipelining}
+Consider a round-k proposal such that:
+\begin{itemize}
+\item the last committed reconfiguration transaction on the branch which the k proposal extends is A (hence, A is “in effect”)
+\item the k proposal changes (once committed) the algorithm from A to A’
+\item k becomes committed by a round k* transaction which extends the k-branch
+\end{itemize}
+Then the following is necessary and sufficient for reconfiguration to not fork:
+\begin{itemize}
+\item A’ should take effect at round k+1
+\item rounds k+1 thru k*+2 must use QC’s that contains quorums of both A and A’.
+\end{itemize}
+
+This “meta argument” suffices to show that the above proposals all work. The proposals differ in other properties they provide, such as ease of implementation, building state-transfer transition into reconfiguration, etc.
