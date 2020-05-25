@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 mirai-annotations = "1.8.0"
-petgraph = "0.5.0"
+petgraph = "0.5.1"
 
 borrow-graph = { path = "../borrow-graph", version = "0.0.1" }
 vm = { path = "../vm", version = "0.1.0" }

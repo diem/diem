@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dev-dependencies]
-petgraph = "0.5.0"
+petgraph = "0.5.1"
 proptest = "0.9.6"
 
 bytecode-verifier = { path = "../", version = "0.1.0" }
