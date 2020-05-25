@@ -5041,6 +5041,7 @@ version = "0.1.0"
 dependencies = [
  "channel 0.1.0",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-config 0.1.0",
  "libra-logger 0.1.0",
  "libra-mempool 0.1.0",
  "libra-metrics 0.1.0",

@@ -33,11 +33,11 @@ use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_mempool::MEMPOOL_SUBSCRIBED_CONFIGS;
 use libra_metrics::metric_server;
-use libra_types::{on_chain_config::ON_CHAIN_CONFIG_REGISTRY, PeerId, waypoint::Waypoint};
+use libra_types::{on_chain_config::ON_CHAIN_CONFIG_REGISTRY, waypoint::Waypoint, PeerId};
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use network::validator_network::network_builder::{
-    AuthenticationMode, HANDSHAKE_VERSION, NetworkBuilder,
+    AuthenticationMode, NetworkBuilder, HANDSHAKE_VERSION,
 };
 use onchain_discovery::{client::OnchainDiscovery, service::OnchainDiscoveryService};
 use state_synchronizer::StateSynchronizer;
@@ -69,10 +69,10 @@ fn setup_debug_interface(config: &NodeConfig) -> Runtime {
         "{}:{}",
         config.debug_interface.address, config.debug_interface.admission_control_node_debug_port,
     )
-        .to_socket_addrs()
-        .unwrap()
-        .next()
-        .unwrap();
+    .to_socket_addrs()
+    .unwrap()
+    .next()
+    .unwrap();
     rt.spawn(
         tonic::transport::Server::builder()
             .add_service(NodeDebugInterfaceServer::new(NodeDebugService::new()))
@@ -257,7 +257,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             false, /* readonly */
             node_config.storage.prune_window,
         )
-            .expect("DB should open."),
+        .expect("DB should open."),
     );
     let _simple_storage_service =
         start_storage_service_with_db(&node_config, Arc::clone(&libra_db));
@@ -313,9 +313,13 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         mempool_network_handles.push((network.peer_id, mempool_sender, mempool_events));
         validator_network_provider = Some((network.peer_id, runtime, network_builder));
         // Set up the network configuration event handling by establishing the subscription and starting the config change processor.
-        let (validator_subscription, validator_network_events) = ReconfigSubscription::subscribe(VALIDATOR_CONFIG_CHANGES);
+        let (validator_subscription, validator_network_events) =
+            ReconfigSubscription::subscribe(VALIDATOR_CONFIG_CHANGES);
         reconfig_subscription.push(validator_subscription);
-        let network_config_listener = ConfigurationChangeListener::new(network_builder.conn_mgr_reqs_tx(), validator_network_events);
+        let network_config_listener = ConfigurationChangeListener::new(
+            network_builder.conn_mgr_reqs_tx(),
+            validator_network_events,
+        );
         network_config_listener.run();
     }
 
@@ -346,9 +350,13 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         debug!("Network started for peer_id: {}", full_node_network.peer_id);
 
         // Set up the network configuration event handling by establishing the subscription and starting the config change processor.
-        let (full_node_network_subscription, full_node_network_events) = ReconfigSubscription::subscribe(VALIDATOR_CONFIG_CHANGES(network_id));
+        let (full_node_network_subscription, full_node_network_events) =
+            ReconfigSubscription::subscribe(VALIDATOR_CONFIG_CHANGES(network_id));
         reconfig_subscription.push(full_node_network_subscription);
-        let network_config_listener = ConfigurationChangeListener::new(network_builder.conn_mgr_reqs_tx(), full_node_network_events);
+        let network_config_listener = ConfigurationChangeListener::new(
+            network_builder.conn_mgr_reqs_tx(),
+            full_node_network_events,
+        );
         network_config_listener.run();
     }
 
