@@ -1,21 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    boxed::Box,
-    collections::HashMap,
-    net::ToSocketAddrs,
-    sync::Arc,
-    thread,
-    time::{Duration, Instant},
-};
-
-use futures::{channel::mpsc::channel, executor::block_on, stream::StreamExt};
-use tokio::{
-    runtime::{Builder, Handle, Runtime},
-    time::interval,
-};
-
 use admission_control_service::admission_control_service::AdmissionControlService;
 use backup_service::start_backup_service;
 use consensus::consensus_provider::start_consensus;
@@ -25,6 +10,7 @@ use debug_interface::{
 };
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_types::ChunkExecutor;
+use futures::{channel::mpsc::channel, executor::block_on, stream::StreamExt};
 use libra_config::{
     config::{DiscoveryMethod, NetworkConfig, NodeConfig, RoleType},
     utils::get_genesis_txn,
@@ -41,9 +27,21 @@ use network::validator_network::network_builder::{
 };
 use onchain_discovery::{client::OnchainDiscovery, service::OnchainDiscoveryService};
 use state_synchronizer::StateSynchronizer;
+use std::{
+    boxed::Box,
+    collections::HashMap,
+    net::ToSocketAddrs,
+    sync::Arc,
+    thread,
+    time::{Duration, Instant},
+};
 use storage_interface::{DbReader, DbReaderWriter};
 use storage_service::start_storage_service_with_db;
 use subscription_service::ReconfigSubscription;
+use tokio::{
+    runtime::{Builder, Handle, Runtime},
+    time::interval,
+};
 
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 const INTRA_NODE_CHANNEL_BUFFER_SIZE: usize = 1;

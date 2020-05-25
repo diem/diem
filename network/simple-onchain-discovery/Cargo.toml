@@ -18,6 +18,7 @@ libra-config = { path = "../../config", version = "0.1.0"}
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-mempool = { path = "../../mempool", version = "0.1.0" }
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
+libra-network-address = { path = "../../network/network-address", version = "0.1.0"}
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 network = { path = "../../network", version = "0.1.0" }
