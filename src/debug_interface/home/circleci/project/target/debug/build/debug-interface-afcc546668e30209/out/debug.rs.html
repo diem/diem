@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `/home/circleci/project/target/debug/build/admission-control-proto-4bc19ac67dd8686b/out/admission_control.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>admission_control.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../../../../../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../../../../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../../../../../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../../../../../../../../light.css" id="themeStyle"><script src="../../../../../../../../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../../../../../../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../../../../../../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../../../../../../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../../../../../../../../admission_control_proto/index.html'><div class='logo-container'><img src='../../../../../../../../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../../../../../../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../../../../../../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../../../../../../../../settings.html"><img src="../../../../../../../../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `/home/circleci/project/target/debug/build/debug-interface-afcc546668e30209/out/debug.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>debug.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../../../../../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../../../../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../../../../../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../../../../../../../../light.css" id="themeStyle"><script src="../../../../../../../../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../../../../../../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../../../../../../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../../../../../../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../../../../../../../../debug_interface/index.html'><div class='logo-container'><img src='../../../../../../../../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../../../../../../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../../../../../../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../../../../../../../../settings.html"><img src="../../../../../../../../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -247,187 +247,38 @@
 <span id="247">247</span>
 <span id="248">248</span>
 <span id="249">249</span>
-<span id="250">250</span>
-<span id="251">251</span>
-<span id="252">252</span>
-<span id="253">253</span>
-<span id="254">254</span>
-<span id="255">255</span>
-<span id="256">256</span>
-<span id="257">257</span>
-<span id="258">258</span>
-<span id="259">259</span>
-<span id="260">260</span>
-<span id="261">261</span>
-<span id="262">262</span>
-<span id="263">263</span>
-<span id="264">264</span>
-<span id="265">265</span>
-<span id="266">266</span>
-<span id="267">267</span>
-<span id="268">268</span>
-<span id="269">269</span>
-<span id="270">270</span>
-<span id="271">271</span>
-<span id="272">272</span>
-<span id="273">273</span>
-<span id="274">274</span>
-<span id="275">275</span>
-<span id="276">276</span>
-<span id="277">277</span>
-<span id="278">278</span>
-<span id="279">279</span>
-<span id="280">280</span>
-<span id="281">281</span>
-<span id="282">282</span>
-<span id="283">283</span>
-<span id="284">284</span>
-<span id="285">285</span>
-<span id="286">286</span>
-<span id="287">287</span>
-<span id="288">288</span>
-<span id="289">289</span>
-<span id="290">290</span>
-<span id="291">291</span>
-<span id="292">292</span>
-<span id="293">293</span>
-<span id="294">294</span>
-<span id="295">295</span>
-<span id="296">296</span>
-<span id="297">297</span>
-<span id="298">298</span>
-<span id="299">299</span>
-<span id="300">300</span>
-<span id="301">301</span>
-<span id="302">302</span>
-<span id="303">303</span>
-<span id="304">304</span>
-<span id="305">305</span>
-<span id="306">306</span>
-<span id="307">307</span>
-<span id="308">308</span>
-<span id="309">309</span>
-<span id="310">310</span>
-<span id="311">311</span>
-<span id="312">312</span>
-<span id="313">313</span>
-<span id="314">314</span>
-<span id="315">315</span>
-<span id="316">316</span>
-<span id="317">317</span>
-<span id="318">318</span>
-<span id="319">319</span>
-<span id="320">320</span>
-<span id="321">321</span>
-<span id="322">322</span>
-<span id="323">323</span>
-<span id="324">324</span>
-<span id="325">325</span>
-<span id="326">326</span>
-<span id="327">327</span>
-<span id="328">328</span>
-<span id="329">329</span>
-<span id="330">330</span>
-<span id="331">331</span>
-<span id="332">332</span>
-<span id="333">333</span>
-<span id="334">334</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="doccomment">/// The request for submitting a transaction to an upstream validator or full</span>
-<span class="doccomment">/// node.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AdmissionControlMsg</span> {
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">oneof</span> <span class="op">=</span> <span class="string">&quot;admission_control_msg::Message&quot;</span>, <span class="ident">tags</span> <span class="op">=</span> <span class="string">&quot;1, 2&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">message</span>: ::<span class="ident">std</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">admission_control_msg</span>::<span class="ident">Message</span><span class="op">&gt;</span>,
-}
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">admission_control_msg</span> {
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Oneof</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Message</span> {
-        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;1&quot;</span>)]</span>
-        <span class="ident">SubmitTransactionRequest</span>(<span class="kw">super</span>::<span class="ident">SubmitTransactionRequest</span>),
-        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;2&quot;</span>)]</span>
-        <span class="ident">SubmitTransactionResponse</span>(<span class="kw">super</span>::<span class="ident">SubmitTransactionResponse</span>),
-    }
-}
-<span class="doccomment">/// -----------------------------------------------------------------------------</span>
-<span class="doccomment">/// ---------------- Submit transaction</span>
-<span class="doccomment">/// -----------------------------------------------------------------------------</span>
-<span class="doccomment">/// The request for transaction submission.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GetNodeDetailsRequest</span> {}
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SubmitTransactionRequest</span> {
-    <span class="doccomment">/// Transaction submitted by user.</span>
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;1&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">transaction</span>: ::<span class="ident">std</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">types</span>::<span class="ident">SignedTransaction</span><span class="op">&gt;</span>,
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GetNodeDetailsResponse</span> {
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">map</span> <span class="op">=</span> <span class="string">&quot;string, string&quot;</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;1&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">stats</span>: ::<span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>, <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span><span class="op">&gt;</span>,
 }
-<span class="doccomment">/// AC response status containing code and optionally an error message.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AdmissionControlStatus</span> {
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">enumeration</span> <span class="op">=</span> <span class="string">&quot;AdmissionControlStatusCode&quot;</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;1&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">code</span>: <span class="ident">i32</span>,
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;2&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">message</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
-}
-<span class="doccomment">/// The response for transaction submission.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// How does a client know if their transaction was included?</span>
-<span class="doccomment">/// A response from the transaction submission only means that the transaction</span>
-<span class="doccomment">/// was successfully added to mempool, but not that it is guaranteed to be</span>
-<span class="doccomment">/// included in the chain.  Each transaction should include an expiration time in</span>
-<span class="doccomment">/// the signed transaction.  Let&#39;s call this T0.  As a client, I submit my</span>
-<span class="doccomment">/// transaction to a validator. I now need to poll for the transaction I</span>
-<span class="doccomment">/// submitted.  I can use the query that takes my account and sequence number. If</span>
-<span class="doccomment">/// I receive back that the transaction is completed, I will verify the proofs to</span>
-<span class="doccomment">/// ensure that this is the transaction I expected.  If I receive a response that</span>
-<span class="doccomment">/// my transaction is not yet completed, I must check the latest timestamp in the</span>
-<span class="doccomment">/// ledgerInfo that I receive back from the query.  If this time is greater than</span>
-<span class="doccomment">/// T0, I can be certain that my transaction will never be included.  If this</span>
-<span class="doccomment">/// time is less than T0, I need to continue polling.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GetEventsRequest</span> {}
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SubmitTransactionResponse</span> {
-    <span class="doccomment">/// Public key(id) of the validator that processed this transaction</span>
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">bytes</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;4&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">validator_id</span>: <span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The status of a transaction submission can either be a VM status, or</span>
-    <span class="doccomment">/// some other admission control/mempool specific status e.g. Blacklisted.</span>
-    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">oneof</span> <span class="op">=</span> <span class="string">&quot;submit_transaction_response::Status&quot;</span>, <span class="ident">tags</span> <span class="op">=</span> <span class="string">&quot;1, 2, 3&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">status</span>: ::<span class="ident">std</span>::<span class="ident">option</span>::<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">submit_transaction_response</span>::<span class="ident">Status</span><span class="op">&gt;</span>,
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GetEventsResponse</span> {
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">repeated</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;1&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">events</span>: ::<span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&gt;</span>,
 }
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">submit_transaction_response</span> {
-    <span class="doccomment">/// The status of a transaction submission can either be a VM status, or</span>
-    <span class="doccomment">/// some other admission control/mempool specific status e.g. Blacklisted.</span>
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Oneof</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Status</span> {
-        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;1&quot;</span>)]</span>
-        <span class="ident">VmStatus</span>(<span class="kw">super</span>::<span class="kw">super</span>::<span class="ident">types</span>::<span class="ident">VmStatus</span>),
-        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;2&quot;</span>)]</span>
-        <span class="ident">AcStatus</span>(<span class="kw">super</span>::<span class="ident">AdmissionControlStatus</span>),
-        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;3&quot;</span>)]</span>
-        <span class="ident">MempoolStatus</span>(<span class="kw">super</span>::<span class="kw">super</span>::<span class="ident">types</span>::<span class="ident">MempoolStatus</span>),
-    }
-}
-<span class="doccomment">/// Additional statuses that are possible from admission control in addition</span>
-<span class="doccomment">/// to VM statuses.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">PartialOrd</span>, <span class="ident">Ord</span>, ::<span class="ident">prost</span>::<span class="ident">Enumeration</span>)]</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">i32</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">AdmissionControlStatusCode</span> {
-    <span class="doccomment">/// Validator accepted the transaction.</span>
-    <span class="ident">Accepted</span> <span class="op">=</span> <span class="number">0</span>,
-    <span class="doccomment">/// The sender is blacklisted.</span>
-    <span class="ident">Blacklisted</span> <span class="op">=</span> <span class="number">1</span>,
-    <span class="doccomment">/// The transaction is rejected, e.g. due to incorrect signature.</span>
-    <span class="ident">Rejected</span> <span class="op">=</span> <span class="number">2</span>,
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, ::<span class="ident">prost</span>::<span class="ident">Message</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Event</span> {
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;1&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">int64</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;2&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">timestamp</span>: <span class="ident">i64</span>,
+    <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">string</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;3&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">json</span>: <span class="ident">std</span>::<span class="ident">string</span>::<span class="ident">String</span>,
 }
 <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">r&quot; Generated client implementations.&quot;</span>]</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">admission_control_client</span> {
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">node_debug_interface_client</span> {
     <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">unused_variables</span>, <span class="ident">dead_code</span>, <span class="ident">missing_docs</span>)]</span>
     <span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">codegen</span>::<span class="kw-2">*</span>;
-    <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; -----------------------------------------------------------------------------&quot;</span>]</span>
-    <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; ---------------- Service definition&quot;</span>]</span>
-    <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; -----------------------------------------------------------------------------&quot;</span>]</span>
-    <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AdmissionControlClient</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NodeDebugInterfaceClient</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="ident">inner</span>: <span class="ident">tonic</span>::<span class="ident">client</span>::<span class="ident">Grpc</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
     }
-    <span class="kw">impl</span> <span class="ident">AdmissionControlClient</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Channel</span><span class="op">&gt;</span> {
+    <span class="kw">impl</span> <span class="ident">NodeDebugInterfaceClient</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Channel</span><span class="op">&gt;</span> {
         <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">r&quot; Attempt to create a new client by connecting to a given endpoint.&quot;</span>]</span>
         <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">connect</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span>(<span class="ident">dst</span>: <span class="ident">D</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">Error</span><span class="op">&gt;</span>
         <span class="kw">where</span>
@@ -438,7 +289,7 @@
             <span class="prelude-val">Ok</span>(<span class="self">Self</span>::<span class="ident">new</span>(<span class="ident">conn</span>))
         }
     }
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">AdmissionControlClient</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">NodeDebugInterfaceClient</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">T</span>: <span class="ident">tonic</span>::<span class="ident">client</span>::<span class="ident">GrpcService</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">body</span>::<span class="ident">BoxBody</span><span class="op">&gt;</span>,
         <span class="ident">T</span>::<span class="ident">ResponseBody</span>: <span class="ident">Body</span> <span class="op">+</span> <span class="ident">HttpBody</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
@@ -453,11 +304,11 @@
             <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">tonic</span>::<span class="ident">client</span>::<span class="ident">Grpc</span>::<span class="ident">with_interceptor</span>(<span class="ident">inner</span>, <span class="ident">interceptor</span>);
             <span class="self">Self</span> { <span class="ident">inner</span> }
         }
-        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; Public API to submit transaction to a validator.&quot;</span>]</span>
-        <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">submit_transaction</span>(
+        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; Returns debug information about node&quot;</span>]</span>
+        <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_node_details</span>(
             <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-            <span class="ident">request</span>: <span class="kw">impl</span> <span class="ident">tonic</span>::<span class="ident">IntoRequest</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">SubmitTransactionRequest</span><span class="op">&gt;</span>,
-        ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">SubmitTransactionResponse</span><span class="op">&gt;</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span> {
+            <span class="ident">request</span>: <span class="kw">impl</span> <span class="ident">tonic</span>::<span class="ident">IntoRequest</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">GetNodeDetailsRequest</span><span class="op">&gt;</span>,
+        ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">GetNodeDetailsResponse</span><span class="op">&gt;</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span> {
             <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">ready</span>().<span class="kw">await</span>.<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
                 <span class="ident">tonic</span>::<span class="ident">Status</span>::<span class="ident">new</span>(
                     <span class="ident">tonic</span>::<span class="ident">Code</span>::<span class="ident">Unknown</span>,
@@ -465,22 +316,15 @@
                 )
             })<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">codec</span> <span class="op">=</span> <span class="ident">tonic</span>::<span class="ident">codec</span>::<span class="ident">ProstCodec</span>::<span class="ident">default</span>();
-            <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">http</span>::<span class="ident">uri</span>::<span class="ident">PathAndQuery</span>::<span class="ident">from_static</span>(
-                <span class="string">&quot;/admission_control.AdmissionControl/SubmitTransaction&quot;</span>,
-            );
+            <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span>
+                <span class="ident">http</span>::<span class="ident">uri</span>::<span class="ident">PathAndQuery</span>::<span class="ident">from_static</span>(<span class="string">&quot;/debug.NodeDebugInterface/GetNodeDetails&quot;</span>);
             <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">unary</span>(<span class="ident">request</span>.<span class="ident">into_request</span>(), <span class="ident">path</span>, <span class="ident">codec</span>).<span class="kw">await</span>
         }
-        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; This API is used to update the client to the latest ledger version and&quot;</span>]</span>
-        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; optionally also request 1..n other pieces of data.  This allows for batch&quot;</span>]</span>
-        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; queries.  All queries return proofs that a client should check to validate&quot;</span>]</span>
-        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; the data. Note that if a client only wishes to update to the latest&quot;</span>]</span>
-        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; LedgerInfo and receive the proof of this latest version, they can simply&quot;</span>]</span>
-        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; omit the requested_items (or pass an empty list)&quot;</span>]</span>
-        <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">update_to_latest_ledger</span>(
+        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; Returns recent events generated by event! macro&quot;</span>]</span>
+        <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_events</span>(
             <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-            <span class="ident">request</span>: <span class="kw">impl</span> <span class="ident">tonic</span>::<span class="ident">IntoRequest</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="kw">super</span>::<span class="ident">types</span>::<span class="ident">UpdateToLatestLedgerRequest</span><span class="op">&gt;</span>,
-        ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="kw">super</span>::<span class="ident">types</span>::<span class="ident">UpdateToLatestLedgerResponse</span><span class="op">&gt;</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span>
-        {
+            <span class="ident">request</span>: <span class="kw">impl</span> <span class="ident">tonic</span>::<span class="ident">IntoRequest</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">GetEventsRequest</span><span class="op">&gt;</span>,
+        ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">GetEventsResponse</span><span class="op">&gt;</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span> {
             <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">ready</span>().<span class="kw">await</span>.<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
                 <span class="ident">tonic</span>::<span class="ident">Status</span>::<span class="ident">new</span>(
                     <span class="ident">tonic</span>::<span class="ident">Code</span>::<span class="ident">Unknown</span>,
@@ -488,58 +332,48 @@
                 )
             })<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">codec</span> <span class="op">=</span> <span class="ident">tonic</span>::<span class="ident">codec</span>::<span class="ident">ProstCodec</span>::<span class="ident">default</span>();
-            <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">http</span>::<span class="ident">uri</span>::<span class="ident">PathAndQuery</span>::<span class="ident">from_static</span>(
-                <span class="string">&quot;/admission_control.AdmissionControl/UpdateToLatestLedger&quot;</span>,
-            );
+            <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">http</span>::<span class="ident">uri</span>::<span class="ident">PathAndQuery</span>::<span class="ident">from_static</span>(<span class="string">&quot;/debug.NodeDebugInterface/GetEvents&quot;</span>);
             <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">unary</span>(<span class="ident">request</span>.<span class="ident">into_request</span>(), <span class="ident">path</span>, <span class="ident">codec</span>).<span class="kw">await</span>
         }
     }
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">AdmissionControlClient</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">NodeDebugInterfaceClient</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">fn</span> <span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
             <span class="self">Self</span> {
                 <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">clone</span>(),
             }
         }
     }
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">AdmissionControlClient</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">NodeDebugInterfaceClient</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
-            <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;AdmissionControlClient {{ ... }}&quot;</span>)
+            <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;NodeDebugInterfaceClient {{ ... }}&quot;</span>)
         }
     }
 }
 <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">r&quot; Generated server implementations.&quot;</span>]</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">admission_control_server</span> {
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">node_debug_interface_server</span> {
     <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">unused_variables</span>, <span class="ident">dead_code</span>, <span class="ident">missing_docs</span>)]</span>
     <span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">codegen</span>::<span class="kw-2">*</span>;
-    <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot;Generated trait containing gRPC methods that should be implemented for use with AdmissionControlServer.&quot;</span>]</span>
+    <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot;Generated trait containing gRPC methods that should be implemented for use with NodeDebugInterfaceServer.&quot;</span>]</span>
     <span class="attribute">#[<span class="ident">async_trait</span>]</span>
-    <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">AdmissionControl</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span> {
-        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; Public API to submit transaction to a validator.&quot;</span>]</span>
-        <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">submit_transaction</span>(
+    <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">NodeDebugInterface</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span> {
+        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; Returns debug information about node&quot;</span>]</span>
+        <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_node_details</span>(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
-            <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">SubmitTransactionRequest</span><span class="op">&gt;</span>,
-        ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">SubmitTransactionResponse</span><span class="op">&gt;</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span>;
-        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; This API is used to update the client to the latest ledger version and&quot;</span>]</span>
-        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; optionally also request 1..n other pieces of data.  This allows for batch&quot;</span>]</span>
-        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; queries.  All queries return proofs that a client should check to validate&quot;</span>]</span>
-        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; the data. Note that if a client only wishes to update to the latest&quot;</span>]</span>
-        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; LedgerInfo and receive the proof of this latest version, they can simply&quot;</span>]</span>
-        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; omit the requested_items (or pass an empty list)&quot;</span>]</span>
-        <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">update_to_latest_ledger</span>(
+            <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">GetNodeDetailsRequest</span><span class="op">&gt;</span>,
+        ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">GetNodeDetailsResponse</span><span class="op">&gt;</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span>;
+        <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; Returns recent events generated by event! macro&quot;</span>]</span>
+        <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_events</span>(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
-            <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="kw">super</span>::<span class="ident">types</span>::<span class="ident">UpdateToLatestLedgerRequest</span><span class="op">&gt;</span>,
-        ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="kw">super</span>::<span class="ident">types</span>::<span class="ident">UpdateToLatestLedgerResponse</span><span class="op">&gt;</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span>;
+            <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">GetEventsRequest</span><span class="op">&gt;</span>,
+        ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">GetEventsResponse</span><span class="op">&gt;</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span>;
     }
-    <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; -----------------------------------------------------------------------------&quot;</span>]</span>
-    <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; ---------------- Service definition&quot;</span>]</span>
-    <span class="attribute">#[<span class="ident">doc</span> <span class="op">=</span> <span class="string">&quot; -----------------------------------------------------------------------------&quot;</span>]</span>
     <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
     <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AdmissionControlServer</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">AdmissionControl</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NodeDebugInterfaceServer</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">NodeDebugInterface</span><span class="op">&gt;</span> {
         <span class="ident">inner</span>: <span class="ident">_Inner</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
     }
     <span class="kw">struct</span> <span class="ident">_Inner</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Interceptor</span><span class="op">&gt;</span>);
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">AdmissionControl</span><span class="op">&gt;</span> <span class="ident">AdmissionControlServer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">NodeDebugInterface</span><span class="op">&gt;</span> <span class="ident">NodeDebugInterfaceServer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">inner</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
             <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">inner</span>);
             <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">_Inner</span>(<span class="ident">inner</span>, <span class="prelude-val">None</span>);
@@ -551,9 +385,9 @@
             <span class="self">Self</span> { <span class="ident">inner</span> }
         }
     }
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">B</span><span class="op">&gt;</span> <span class="ident">Service</span><span class="op">&lt;</span><span class="ident">http</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">AdmissionControlServer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">B</span><span class="op">&gt;</span> <span class="ident">Service</span><span class="op">&lt;</span><span class="ident">http</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">NodeDebugInterfaceServer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">T</span>: <span class="ident">AdmissionControl</span>,
+        <span class="ident">T</span>: <span class="ident">NodeDebugInterface</span>,
         <span class="ident">B</span>: <span class="ident">HttpBody</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
         <span class="ident">B</span>::<span class="ident">Error</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">StdError</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
     {
@@ -566,21 +400,21 @@
         <span class="kw">fn</span> <span class="ident">call</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">req</span>: <span class="ident">http</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Future</span> {
             <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">clone</span>();
             <span class="kw">match</span> <span class="ident">req</span>.<span class="ident">uri</span>().<span class="ident">path</span>() {
-                <span class="string">&quot;/admission_control.AdmissionControl/SubmitTransaction&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="string">&quot;/debug.NodeDebugInterface/GetNodeDetails&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_camel_case_types</span>)]</span>
-                    <span class="kw">struct</span> <span class="ident">SubmitTransactionSvc</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">AdmissionControl</span><span class="op">&gt;</span>(<span class="kw">pub</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>);
-                    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">AdmissionControl</span><span class="op">&gt;</span>
-                        <span class="ident">tonic</span>::<span class="ident">server</span>::<span class="ident">UnaryService</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">SubmitTransactionRequest</span><span class="op">&gt;</span>
-                        <span class="kw">for</span> <span class="ident">SubmitTransactionSvc</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+                    <span class="kw">struct</span> <span class="ident">GetNodeDetailsSvc</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">NodeDebugInterface</span><span class="op">&gt;</span>(<span class="kw">pub</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>);
+                    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">NodeDebugInterface</span><span class="op">&gt;</span>
+                        <span class="ident">tonic</span>::<span class="ident">server</span>::<span class="ident">UnaryService</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">GetNodeDetailsRequest</span><span class="op">&gt;</span>
+                        <span class="kw">for</span> <span class="ident">GetNodeDetailsSvc</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
                     {
-                        <span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="kw">super</span>::<span class="ident">SubmitTransactionResponse</span>;
+                        <span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="kw">super</span>::<span class="ident">GetNodeDetailsResponse</span>;
                         <span class="kw">type</span> <span class="ident">Future</span> <span class="op">=</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Response</span><span class="op">&gt;</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span>;
                         <span class="kw">fn</span> <span class="ident">call</span>(
                             <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-                            <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">SubmitTransactionRequest</span><span class="op">&gt;</span>,
+                            <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">GetNodeDetailsRequest</span><span class="op">&gt;</span>,
                         ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Future</span> {
                             <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">clone</span>();
-                            <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> { <span class="ident">inner</span>.<span class="ident">submit_transaction</span>(<span class="ident">request</span>).<span class="kw">await</span> };
+                            <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> { <span class="ident">inner</span>.<span class="ident">get_node_details</span>(<span class="ident">request</span>).<span class="kw">await</span> };
                             <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="ident">fut</span>)
                         }
                     }
@@ -588,7 +422,7 @@
                     <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
                         <span class="kw">let</span> <span class="ident">interceptor</span> <span class="op">=</span> <span class="ident">inner</span>.<span class="number">1</span>.<span class="ident">clone</span>();
                         <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">inner</span>.<span class="number">0</span>;
-                        <span class="kw">let</span> <span class="ident">method</span> <span class="op">=</span> <span class="ident">SubmitTransactionSvc</span>(<span class="ident">inner</span>);
+                        <span class="kw">let</span> <span class="ident">method</span> <span class="op">=</span> <span class="ident">GetNodeDetailsSvc</span>(<span class="ident">inner</span>);
                         <span class="kw">let</span> <span class="ident">codec</span> <span class="op">=</span> <span class="ident">tonic</span>::<span class="ident">codec</span>::<span class="ident">ProstCodec</span>::<span class="ident">default</span>();
                         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grpc</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">interceptor</span>) <span class="op">=</span> <span class="ident">interceptor</span> {
                             <span class="ident">tonic</span>::<span class="ident">server</span>::<span class="ident">Grpc</span>::<span class="ident">with_interceptor</span>(<span class="ident">codec</span>, <span class="ident">interceptor</span>)
@@ -600,24 +434,20 @@
                     };
                     <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="ident">fut</span>)
                 }
-                <span class="string">&quot;/admission_control.AdmissionControl/UpdateToLatestLedger&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="string">&quot;/debug.NodeDebugInterface/GetEvents&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_camel_case_types</span>)]</span>
-                    <span class="kw">struct</span> <span class="ident">UpdateToLatestLedgerSvc</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">AdmissionControl</span><span class="op">&gt;</span>(<span class="kw">pub</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>);
-                    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">AdmissionControl</span><span class="op">&gt;</span>
-                        <span class="ident">tonic</span>::<span class="ident">server</span>::<span class="ident">UnaryService</span><span class="op">&lt;</span>
-                            <span class="kw">super</span>::<span class="kw">super</span>::<span class="ident">types</span>::<span class="ident">UpdateToLatestLedgerRequest</span>,
-                        <span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">UpdateToLatestLedgerSvc</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+                    <span class="kw">struct</span> <span class="ident">GetEventsSvc</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">NodeDebugInterface</span><span class="op">&gt;</span>(<span class="kw">pub</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>);
+                    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">NodeDebugInterface</span><span class="op">&gt;</span> <span class="ident">tonic</span>::<span class="ident">server</span>::<span class="ident">UnaryService</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">GetEventsRequest</span><span class="op">&gt;</span>
+                        <span class="kw">for</span> <span class="ident">GetEventsSvc</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
                     {
-                        <span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="kw">super</span>::<span class="kw">super</span>::<span class="ident">types</span>::<span class="ident">UpdateToLatestLedgerResponse</span>;
+                        <span class="kw">type</span> <span class="ident">Response</span> <span class="op">=</span> <span class="kw">super</span>::<span class="ident">GetEventsResponse</span>;
                         <span class="kw">type</span> <span class="ident">Future</span> <span class="op">=</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="ident">tonic</span>::<span class="ident">Response</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Response</span><span class="op">&gt;</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span>;
                         <span class="kw">fn</span> <span class="ident">call</span>(
                             <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-                            <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span>
-                                <span class="kw">super</span>::<span class="kw">super</span>::<span class="ident">types</span>::<span class="ident">UpdateToLatestLedgerRequest</span>,
-                            <span class="op">&gt;</span>,
+                            <span class="ident">request</span>: <span class="ident">tonic</span>::<span class="ident">Request</span><span class="op">&lt;</span><span class="kw">super</span>::<span class="ident">GetEventsRequest</span><span class="op">&gt;</span>,
                         ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Future</span> {
                             <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">clone</span>();
-                            <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> { <span class="ident">inner</span>.<span class="ident">update_to_latest_ledger</span>(<span class="ident">request</span>).<span class="kw">await</span> };
+                            <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> { <span class="ident">inner</span>.<span class="ident">get_events</span>(<span class="ident">request</span>).<span class="kw">await</span> };
                             <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="ident">fut</span>)
                         }
                     }
@@ -625,7 +455,7 @@
                     <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
                         <span class="kw">let</span> <span class="ident">interceptor</span> <span class="op">=</span> <span class="ident">inner</span>.<span class="number">1</span>.<span class="ident">clone</span>();
                         <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">inner</span>.<span class="number">0</span>;
-                        <span class="kw">let</span> <span class="ident">method</span> <span class="op">=</span> <span class="ident">UpdateToLatestLedgerSvc</span>(<span class="ident">inner</span>);
+                        <span class="kw">let</span> <span class="ident">method</span> <span class="op">=</span> <span class="ident">GetEventsSvc</span>(<span class="ident">inner</span>);
                         <span class="kw">let</span> <span class="ident">codec</span> <span class="op">=</span> <span class="ident">tonic</span>::<span class="ident">codec</span>::<span class="ident">ProstCodec</span>::<span class="ident">default</span>();
                         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grpc</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">interceptor</span>) <span class="op">=</span> <span class="ident">interceptor</span> {
                             <span class="ident">tonic</span>::<span class="ident">server</span>::<span class="ident">Grpc</span>::<span class="ident">with_interceptor</span>(<span class="ident">codec</span>, <span class="ident">interceptor</span>)
@@ -647,13 +477,13 @@
             }
         }
     }
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">AdmissionControl</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">AdmissionControlServer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">NodeDebugInterface</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">NodeDebugInterfaceServer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">fn</span> <span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
             <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">clone</span>();
             <span class="self">Self</span> { <span class="ident">inner</span> }
         }
     }
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">AdmissionControl</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">_Inner</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">NodeDebugInterface</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">_Inner</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">fn</span> <span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
             <span class="self">Self</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">clone</span>(), <span class="self">self</span>.<span class="number">1</span>.<span class="ident">clone</span>())
         }
@@ -663,9 +493,9 @@
             <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>)
         }
     }
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">AdmissionControl</span><span class="op">&gt;</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">NamedService</span> <span class="kw">for</span> <span class="ident">AdmissionControlServer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-        <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;admission_control.AdmissionControl&quot;</span>;
+    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">NodeDebugInterface</span><span class="op">&gt;</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::<span class="ident">NamedService</span> <span class="kw">for</span> <span class="ident">NodeDebugInterfaceServer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+        <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;debug.NodeDebugInterface&quot;</span>;
     }
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../../../../../../../../";window.currentCrate = "admission_control_proto";</script><script src="../../../../../../../../../../aliases.js"></script><script src="../../../../../../../../../../main.js"></script><script src="../../../../../../../../../../source-script.js"></script><script src="../../../../../../../../../../source-files.js"></script><script defer src="../../../../../../../../../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../../../../../../../../";window.currentCrate = "debug_interface";</script><script src="../../../../../../../../../../aliases.js"></script><script src="../../../../../../../../../../main.js"></script><script src="../../../../../../../../../../source-script.js"></script><script src="../../../../../../../../../../source-files.js"></script><script defer src="../../../../../../../../../../search-index.js"></script></body></html>
