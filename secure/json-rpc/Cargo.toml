@@ -13,7 +13,7 @@ edition = "2018"
 hex = "0.4.2"
 serde_json = "1.0.53"
 thiserror = "1.0"
-ureq = { version = "1.1.0", features = ["json"] }
+ureq = { version = "1.1.1", features = ["json"] }
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
