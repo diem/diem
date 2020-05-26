@@ -1737,7 +1737,7 @@
     <span class="doccomment">/// Translates this module.</span>
     <span class="kw">fn</span> <span class="ident">translate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="macro">log</span><span class="macro">!</span>(
-            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">is_in_dependency</span>() {
+            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">is_dependency</span>() {
                 <span class="ident">Level</span>::<span class="ident">Debug</span>
             } <span class="kw">else</span> {
                 <span class="ident">Level</span>::<span class="ident">Info</span>
@@ -1980,7 +1980,7 @@
             <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">set_location</span>(<span class="kw-2">&amp;</span><span class="ident">func_env</span>.<span class="ident">get_loc</span>());
             <span class="self">self</span>.<span class="ident">translate_function</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">targets</span>.<span class="ident">get_target</span>(<span class="kw-2">&amp;</span><span class="ident">func_env</span>));
         }
-        <span class="kw">if</span> <span class="ident">num_fun</span> <span class="op">&gt;</span> <span class="number">0</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">is_in_dependency</span>() {
+        <span class="kw">if</span> <span class="ident">num_fun</span> <span class="op">&gt;</span> <span class="number">0</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">is_dependency</span>() {
             <span class="macro">debug</span><span class="macro">!</span>(
                 <span class="string">&quot;{} out of {} functions have (directly or indirectly) \
                  specifications in module `{}`&quot;</span>,
@@ -2029,7 +2029,7 @@
     <span class="doccomment">/// Determines whether we should generate the `_verify` entry point for a function, which</span>
     <span class="doccomment">/// triggers its standalone verification.</span>
     <span class="kw">fn</span> <span class="ident">should_generate_verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">func_target</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionTarget</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="kw">if</span> <span class="ident">func_target</span>.<span class="ident">func_env</span>.<span class="ident">module_env</span>.<span class="ident">is_in_dependency</span>() {
+        <span class="kw">if</span> <span class="ident">func_target</span>.<span class="ident">func_env</span>.<span class="ident">module_env</span>.<span class="ident">is_dependency</span>() {
             <span class="comment">// Never generate verify method for functions from dependencies.</span>
             <span class="kw">return</span> <span class="bool-val">false</span>;
         }

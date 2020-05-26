@@ -201,6 +201,20 @@
 <span id="201">201</span>
 <span id="202">202</span>
 <span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -288,7 +302,15 @@
     <span class="doccomment">/// Calls a function to process the code written so far. This is embedded into a function</span>
     <span class="doccomment">/// so we ensure correct scoping of borrowed RefCell content.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">process_result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">F</span>: <span class="ident">FnMut</span>(<span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">f</span>: <span class="ident">F</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span> {
-        <span class="ident">f</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.<span class="ident">borrow</span>().<span class="ident">output</span>)
+        <span class="comment">// Ensure that result is terminated by newline without spaces.</span>
+        <span class="comment">// This assumes that we already trimmed all individual lines.</span>
+        <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">borrow</span>();
+        <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">data</span>.<span class="ident">output</span>.<span class="ident">as_str</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">j</span> <span class="op">=</span> <span class="ident">output</span>.<span class="ident">trim_end</span>().<span class="ident">len</span>();
+        <span class="kw">if</span> <span class="ident">j</span> <span class="op">&lt;</span> <span class="ident">output</span>.<span class="ident">len</span>() <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">output</span>[<span class="ident">j</span>..].<span class="ident">starts_with</span>(<span class="string">&#39;\n&#39;</span>) {
+            <span class="ident">j</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+        }
+        <span class="ident">f</span>(<span class="kw-2">&amp;</span><span class="ident">output</span>[<span class="number">0</span>..<span class="ident">j</span>])
     }
 
     <span class="doccomment">/// Sets the current location. This location will be associated with all subsequently written</span>
@@ -354,18 +376,24 @@
             <span class="kw">if</span> <span class="ident">first</span> {
                 <span class="ident">first</span> <span class="op">=</span> <span class="bool-val">false</span>
             } <span class="kw">else</span> {
+                <span class="self">Self</span>::<span class="ident">trim_trailing_whitespace</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">borrow_mut</span>().<span class="ident">output</span>);
                 <span class="self">self</span>.<span class="number">0</span>.<span class="ident">borrow_mut</span>().<span class="ident">output</span>.<span class="ident">push_str</span>(<span class="string">&quot;\n&quot;</span>);
             }
             <span class="self">self</span>.<span class="ident">emit_str</span>(<span class="ident">l</span>)
         }
         <span class="kw">if</span> <span class="ident">end_newl</span> {
+            <span class="self">Self</span>::<span class="ident">trim_trailing_whitespace</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">borrow_mut</span>().<span class="ident">output</span>);
             <span class="self">self</span>.<span class="number">0</span>.<span class="ident">borrow_mut</span>().<span class="ident">output</span>.<span class="ident">push_str</span>(<span class="string">&quot;\n&quot;</span>);
         }
     }
 
+    <span class="kw">fn</span> <span class="ident">trim_trailing_whitespace</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">String</span>) {
+        <span class="ident">s</span>.<span class="ident">truncate</span>(<span class="ident">s</span>.<span class="ident">trim_end_matches</span>(<span class="string">&#39; &#39;</span>).<span class="ident">len</span>());
+    }
+
     <span class="doccomment">/// Emits a string and then terminates the line.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">emit_line</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
-        <span class="self">self</span>.<span class="ident">emit</span>(<span class="ident">s</span>);
+        <span class="self">self</span>.<span class="ident">emit</span>(<span class="ident">s</span>.<span class="ident">trim_end_matches</span>(<span class="string">&#39; &#39;</span>));
         <span class="self">self</span>.<span class="ident">emit</span>(<span class="string">&quot;\n&quot;</span>);
     }
 
