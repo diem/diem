@@ -143,6 +143,7 @@ impl Interpreter {
                     .or_else(|err| Err(self.maybe_core_dump(err, &current_frame)))?;
             match exit_code {
                 ExitCode::Return => {
+                    current_frame.locals.check_resources_for_return()?;
                     if let Some(frame) = self.call_stack.pop() {
                         current_frame = frame;
                     } else {
@@ -814,9 +815,10 @@ impl Frame {
                             |acc, v| acc.add(v.size()),
                         );
                         cost_strategy.charge_instr_with_size(Opcodes::PACK, size)?;
+                        let is_resource = resolver.struct_at(*sd_idx).is_resource;
                         interpreter
                             .operand_stack
-                            .push(Value::struct_(Struct::pack(args)))?;
+                            .push(Value::struct_(Struct::pack(args, is_resource)))?;
                     }
                     Bytecode::PackGeneric(si_idx) => {
                         let field_count = resolver.field_instantiation_count(*si_idx);
@@ -826,9 +828,25 @@ impl Frame {
                             |acc, v| acc.add(v.size()),
                         );
                         cost_strategy.charge_instr_with_size(Opcodes::PACK_GENERIC, size)?;
+                        let struct_def = resolver.struct_instantiation_at(*si_idx);
+                        let struct_ty = resolver.struct_type_at(struct_def.get_def_idx());
+                        let is_nominal_resource = struct_ty.is_resource;
+
+                        let is_resource = if is_nominal_resource {
+                            true
+                        } else {
+                            let mut is_resource = false;
+                            for ty in struct_def.get_instantiation() {
+                                if resolver.is_resource(&ty.subst(self.ty_args())?)? {
+                                    is_resource = true;
+                                }
+                            }
+                            is_resource
+                        };
+
                         interpreter
                             .operand_stack
-                            .push(Value::struct_(Struct::pack(args)))?;
+                            .push(Value::struct_(Struct::pack(args, is_resource)))?;
                     }
                     Bytecode::Unpack(sd_idx) => {
                         let field_count = resolver.field_count(*sd_idx);

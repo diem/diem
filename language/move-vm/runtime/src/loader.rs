@@ -728,6 +728,10 @@ impl<'a> Resolver<'a> {
         self.loader.type_to_fat_type(ty)
     }
 
+    pub(crate) fn is_resource(&self, ty: &Type) -> VMResult<bool> {
+        self.loader.is_resource(ty)
+    }
+
     pub(crate) fn make_fat_type(
         &self,
         token: &SignatureToken,

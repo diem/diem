@@ -182,4 +182,8 @@ impl<'a> NativeContext for FunctionContext<'a> {
             .map(|ty| self.resolver.type_to_fat_type(ty))
             .collect()
     }
+
+    fn is_resource(&self, ty: &Type) -> VMResult<bool> {
+        self.resolver.is_resource(ty)
+    }
 }

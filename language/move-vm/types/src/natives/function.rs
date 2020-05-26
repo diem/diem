@@ -56,6 +56,8 @@ pub trait NativeContext {
     fn save_event(&mut self, event: ContractEvent) -> VMResult<()>;
     /// Converts types to fet types.
     fn convert_to_fat_types(&self, types: Vec<Type>) -> VMResult<Vec<FatType>>;
+    /// Whether a type is a resource or not.
+    fn is_resource(&self, ty: &Type) -> VMResult<bool>;
 }
 
 /// Result of a native function execution requires charges for execution cost.
