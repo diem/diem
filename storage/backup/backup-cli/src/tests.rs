@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    backup::{backup_account_state, BackupServiceClient},
+    backup::{
+        BackupServiceClient, GlobalBackupOpt, StateSnapshotBackupController, StateSnapshotBackupOpt,
+    },
     restore::restore_account_state,
-    storage::local_fs::LocalFs,
+    storage::{local_fs::LocalFs, BackupStorage},
 };
 use backup_service::start_backup_service;
 use libra_config::config::NodeConfig;
@@ -12,7 +14,7 @@ use libra_proptest_helpers::ValueGenerator;
 use libra_temppath::TempPath;
 use libra_types::transaction::PRE_GENESIS_VERSION;
 use libradb::{test_helper::arb_blocks_to_commit, LibraDB};
-use std::sync::Arc;
+use std::{borrow::Borrow, sync::Arc};
 use storage_interface::{DbReader, DbWriter};
 
 fn tmp_db_empty() -> (TempPath, LibraDB) {
@@ -47,17 +49,28 @@ fn end_to_end() {
     let tgt_db_dir = TempPath::new();
     let backup_dir = TempPath::new();
     backup_dir.create_as_dir().unwrap();
-    let store = LocalFs::new(backup_dir.path().to_path_buf());
+    let store: Arc<dyn BackupStorage> = Arc::new(LocalFs::new(backup_dir.path().to_path_buf()));
 
     let config = NodeConfig::random();
     let mut rt = start_backup_service(config.storage.backup_service_port, src_db);
-    let client = BackupServiceClient::new(config.storage.backup_service_port);
+    let client = Arc::new(BackupServiceClient::new(config.storage.backup_service_port));
     let (version, state_root_hash) = rt.block_on(client.get_latest_state_root()).unwrap();
     let handles = rt
-        .block_on(backup_account_state(&client, version, &store, 500))
+        .block_on(
+            StateSnapshotBackupController::new(
+                StateSnapshotBackupOpt { version },
+                GlobalBackupOpt {
+                    max_chunk_size: 500,
+                },
+                client,
+                Arc::clone(&store),
+            )
+            .run(),
+        )
         .unwrap();
 
     rt.block_on(restore_account_state(
+        store.borrow(),
         PRE_GENESIS_VERSION,
         state_root_hash,
         &tgt_db_dir,
