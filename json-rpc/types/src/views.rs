@@ -511,10 +511,14 @@ impl TryFrom<AccountStateProof> for AccountStateProofView {
     fn try_from(account_state_proof: AccountStateProof) -> Result<AccountStateProofView, Error> {
         Ok(AccountStateProofView {
             ledger_info_to_transaction_info_proof: BytesView::from(&lcs::to_bytes(
-                account_state_proof.ledger_info_to_transaction_info_proof(),
+                account_state_proof
+                    .transaction_info_with_proof()
+                    .ledger_info_to_transaction_info_proof(),
             )?),
             transaction_info: BytesView::from(&lcs::to_bytes(
-                account_state_proof.transaction_info(),
+                account_state_proof
+                    .transaction_info_with_proof()
+                    .transaction_info(),
             )?),
             transaction_info_to_account_proof: BytesView::from(&lcs::to_bytes(
                 account_state_proof.transaction_info_to_account_proof(),

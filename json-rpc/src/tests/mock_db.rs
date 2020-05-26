@@ -13,7 +13,7 @@ use libra_types::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::{
         AccumulatorConsistencyProof, AccumulatorRangeProof, SparseMerkleProof,
-        TransactionAccumulatorProof, TransactionListProof, TransactionProof,
+        TransactionAccumulatorProof, TransactionInfoWithProof, TransactionListProof,
     },
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionWithProof, Version,
@@ -97,7 +97,7 @@ impl DbReader for MockLibraDB {
                 } else {
                     None
                 },
-                proof: TransactionProof::new(
+                proof: TransactionInfoWithProof::new(
                     TransactionAccumulatorProof::new(vec![]),
                     TransactionInfo::new(
                         Default::default(),

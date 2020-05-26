@@ -502,13 +502,10 @@ impl SparseMerkleRangeProof {
     }
 }
 
-/// The complete proof used to authenticate a `Transaction` object.  This structure consists of an
-/// `AccumulatorProof` from `LedgerInfo` to `TransactionInfo` the verifier needs to verify the
-/// correctness of the `TransactionInfo` object, and the `TransactionInfo` object that is supposed
-/// to match the `Transaction`.
+/// `TransactionInfo` and a `TransactionAccumulatorProof` connecting it to the ledger root.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct TransactionProof {
+pub struct TransactionInfoWithProof {
     /// The accumulator proof from ledger info root to leaf that authenticates the hash of the
     /// `TransactionInfo` object.
     ledger_info_to_transaction_info_proof: TransactionAccumulatorProof,
@@ -517,8 +514,8 @@ pub struct TransactionProof {
     transaction_info: TransactionInfo,
 }
 
-impl TransactionProof {
-    /// Constructs a new `TransactionProof` object using given
+impl TransactionInfoWithProof {
+    /// Constructs a new `TransactionWithProof` object using given
     /// `ledger_info_to_transaction_info_proof`.
     pub fn new(
         ledger_info_to_transaction_info_proof: TransactionAccumulatorProof,
@@ -540,33 +537,9 @@ impl TransactionProof {
         &self.transaction_info
     }
 
-    /// Verifies that a `Transaction` with hash value of `transaction_hash` is the version
-    /// `transaction_version` transaction in the ledger using the provided proof.  If
-    /// `event_root_hash` is provided, it's also verified against the proof.
-    pub fn verify(
-        &self,
-        ledger_info: &LedgerInfo,
-        transaction_hash: HashValue,
-        event_root_hash: Option<HashValue>,
-        transaction_version: Version,
-    ) -> Result<()> {
-        ensure!(
-            transaction_hash == self.transaction_info.transaction_hash(),
-            "The hash of transaction does not match the transaction info in proof. \
-             Transaction hash: {:x}. Transaction hash provided by proof: {:x}.",
-            transaction_hash,
-            self.transaction_info.transaction_hash()
-        );
-
-        if let Some(event_root_hash) = event_root_hash {
-            ensure!(
-                event_root_hash == self.transaction_info.event_root_hash(),
-                "Event root hash ({}) doesn't match that in the transaction info ({}).",
-                event_root_hash,
-                self.transaction_info.event_root_hash(),
-            );
-        }
-
+    /// Verifies that the `TransactionInfo` exists in the ledger represented by the `LedgerInfo`
+    /// at specified version.
+    pub fn verify(&self, ledger_info: &LedgerInfo, transaction_version: Version) -> Result<()> {
         verify_transaction_info(
             ledger_info,
             transaction_version,
@@ -583,12 +556,7 @@ impl TransactionProof {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccountStateProof {
-    /// The accumulator proof from ledger info root to leaf that authenticates the hash of the
-    /// `TransactionInfo` object.
-    ledger_info_to_transaction_info_proof: TransactionAccumulatorProof,
-
-    /// The `TransactionInfo` object at the leaf of the accumulator.
-    transaction_info: TransactionInfo,
+    transaction_info_with_proof: TransactionInfoWithProof,
 
     /// The sparse merkle proof from state root to the account state.
     transaction_info_to_account_proof: SparseMerkleProof,
@@ -598,25 +566,18 @@ impl AccountStateProof {
     /// Constructs a new `AccountStateProof` using given `ledger_info_to_transaction_info_proof`,
     /// `transaction_info` and `transaction_info_to_account_proof`.
     pub fn new(
-        ledger_info_to_transaction_info_proof: TransactionAccumulatorProof,
-        transaction_info: TransactionInfo,
+        transaction_info_with_proof: TransactionInfoWithProof,
         transaction_info_to_account_proof: SparseMerkleProof,
     ) -> Self {
         AccountStateProof {
-            ledger_info_to_transaction_info_proof,
-            transaction_info,
+            transaction_info_with_proof,
             transaction_info_to_account_proof,
         }
     }
 
-    /// Returns the `ledger_info_to_transaction_info_proof` object in this proof.
-    pub fn ledger_info_to_transaction_info_proof(&self) -> &TransactionAccumulatorProof {
-        &self.ledger_info_to_transaction_info_proof
-    }
-
-    /// Returns the `transaction_info` object in this proof.
-    pub fn transaction_info(&self) -> &TransactionInfo {
-        &self.transaction_info
+    /// Returns the `transaction_info_with_proof` object in this proof.
+    pub fn transaction_info_with_proof(&self) -> &TransactionInfoWithProof {
+        &self.transaction_info_with_proof
     }
 
     /// Returns the `transaction_info_to_account_proof` object in this proof.
@@ -635,17 +596,16 @@ impl AccountStateProof {
         account_state_blob: Option<&AccountStateBlob>,
     ) -> Result<()> {
         self.transaction_info_to_account_proof.verify(
-            self.transaction_info.state_root_hash(),
+            self.transaction_info_with_proof
+                .transaction_info
+                .state_root_hash(),
             account_address_hash,
             account_state_blob,
         )?;
 
-        verify_transaction_info(
-            ledger_info,
-            state_version,
-            &self.transaction_info,
-            &self.ledger_info_to_transaction_info_proof,
-        )?;
+        self.transaction_info_with_proof
+            .verify(ledger_info, state_version)?;
+
         Ok(())
     }
 }
@@ -656,12 +616,7 @@ impl AccountStateProof {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct EventProof {
-    /// The accumulator proof from ledger info root to leaf that authenticates the hash of the
-    /// `TransactionInfo` object.
-    ledger_info_to_transaction_info_proof: TransactionAccumulatorProof,
-
-    /// The `TransactionInfo` object at the leaf of the accumulator.
-    transaction_info: TransactionInfo,
+    transaction_info_with_proof: TransactionInfoWithProof,
 
     /// The accumulator proof from event root to the actual event.
     transaction_info_to_event_proof: EventAccumulatorProof,
@@ -671,25 +626,18 @@ impl EventProof {
     /// Constructs a new `EventProof` using given `ledger_info_to_transaction_info_proof`,
     /// `transaction_info` and `transaction_info_to_event_proof`.
     pub fn new(
-        ledger_info_to_transaction_info_proof: TransactionAccumulatorProof,
-        transaction_info: TransactionInfo,
+        transaction_info_with_proof: TransactionInfoWithProof,
         transaction_info_to_event_proof: EventAccumulatorProof,
     ) -> Self {
         EventProof {
-            ledger_info_to_transaction_info_proof,
-            transaction_info,
+            transaction_info_with_proof,
             transaction_info_to_event_proof,
         }
     }
 
-    /// Returns the `ledger_info_to_transaction_info_proof` object in this proof.
-    pub fn ledger_info_to_transaction_info_proof(&self) -> &TransactionAccumulatorProof {
-        &self.ledger_info_to_transaction_info_proof
-    }
-
-    /// Returns the `transaction_info` object in this proof.
-    pub fn transaction_info(&self) -> &TransactionInfo {
-        &self.transaction_info
+    /// Returns the `transaction_info_with_proof` object in this proof.
+    pub fn transaction_info_with_proof(&self) -> &TransactionInfoWithProof {
+        &self.transaction_info_with_proof
     }
 
     /// Returns the `transaction_info_to_event_proof` object in this proof.
@@ -706,17 +654,15 @@ impl EventProof {
         event_version_within_transaction: Version,
     ) -> Result<()> {
         self.transaction_info_to_event_proof.verify(
-            self.transaction_info.event_root_hash(),
+            self.transaction_info_with_proof
+                .transaction_info()
+                .event_root_hash(),
             event_hash,
             event_version_within_transaction,
         )?;
 
-        verify_transaction_info(
-            ledger_info,
-            transaction_version,
-            &self.transaction_info,
-            &self.ledger_info_to_transaction_info_proof,
-        )?;
+        self.transaction_info_with_proof
+            .verify(ledger_info, transaction_version)?;
 
         Ok(())
     }

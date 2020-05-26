@@ -286,6 +286,7 @@ mod test {
         mempool_status::{MempoolStatus, MempoolStatusCode},
         proof::{
             AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, SparseMerkleProof,
+            TransactionInfoWithProof,
         },
         test_helpers::transaction_test_helpers::get_test_signed_txn,
         transaction::{
@@ -446,8 +447,7 @@ mod test {
         );
 
         AccountStateProof::new(
-            AccumulatorProof::new(vec![]),
-            transaction_info,
+            TransactionInfoWithProof::new(AccumulatorProof::new(vec![]), transaction_info),
             SparseMerkleProof::new(None, vec![]),
         )
     }

@@ -4,8 +4,8 @@
 use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use libra_types::proof::{
     AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleProof,
-    SparseMerkleRangeProof, TestAccumulatorProof, TestAccumulatorRangeProof, TransactionListProof,
-    TransactionProof,
+    SparseMerkleRangeProof, TestAccumulatorProof, TestAccumulatorRangeProof,
+    TransactionInfoWithProof, TransactionListProof,
 };
 use proptest::prelude::*;
 
@@ -44,8 +44,8 @@ proptest! {
     }
 
     #[test]
-    fn test_transaction_proof_proto_roundtrip(proof in any::<TransactionProof>()) {
-        assert_protobuf_encode_decode::<crate::proto::types::TransactionProof, TransactionProof>(&proof);
+    fn test_transaction_proof_proto_roundtrip(proof in any::<TransactionInfoWithProof>()) {
+        assert_protobuf_encode_decode::<crate::proto::types::TransactionProof, TransactionInfoWithProof>(&proof);
     }
 
 

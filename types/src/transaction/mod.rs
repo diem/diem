@@ -8,7 +8,7 @@ use crate::{
     block_metadata::BlockMetadata,
     contract_event::ContractEvent,
     ledger_info::LedgerInfo,
-    proof::{accumulator::InMemoryAccumulator, TransactionListProof, TransactionProof},
+    proof::{accumulator::InMemoryAccumulator, TransactionInfoWithProof, TransactionListProof},
     transaction::authenticator::TransactionAuthenticator,
     vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
@@ -458,10 +458,23 @@ pub struct TransactionWithProof {
     pub version: Version,
     pub transaction: Transaction,
     pub events: Option<Vec<ContractEvent>>,
-    pub proof: TransactionProof,
+    pub proof: TransactionInfoWithProof,
 }
 
 impl TransactionWithProof {
+    pub fn new(
+        version: Version,
+        transaction: Transaction,
+        events: Option<Vec<ContractEvent>>,
+        proof: TransactionInfoWithProof,
+    ) -> Self {
+        Self {
+            version,
+            transaction,
+            events,
+            proof,
+        }
+    }
     /// Verifies the transaction with the proof, both carried by `self`.
     ///
     /// A few things are ensured if no error is raised:
@@ -499,16 +512,28 @@ impl TransactionWithProof {
             sequence_number,
         );
 
-        let events_root_hash = self.events.as_ref().map(|events| {
+        let txn_hash = self.transaction.hash();
+        ensure!(
+            txn_hash == self.proof.transaction_info().transaction_hash,
+            "Transaction hash ({}) not expected ({}).",
+            txn_hash,
+            self.proof.transaction_info().transaction_hash,
+        );
+
+        if let Some(events) = &self.events {
             let event_hashes: Vec<_> = events.iter().map(ContractEvent::hash).collect();
-            InMemoryAccumulator::<EventAccumulatorHasher>::from_leaves(&event_hashes).root_hash()
-        });
-        self.proof.verify(
-            ledger_info,
-            self.transaction.hash(),
-            events_root_hash,
-            version,
-        )
+            let event_root_hash =
+                InMemoryAccumulator::<EventAccumulatorHasher>::from_leaves(&event_hashes[..])
+                    .root_hash();
+            ensure!(
+                event_root_hash == self.proof.transaction_info().event_root_hash,
+                "Event root hash ({}) not expected ({}).",
+                event_root_hash,
+                self.proof.transaction_info().event_root_hash,
+            );
+        }
+
+        self.proof.verify(ledger_info, version)
     }
 }
 
