@@ -42,15 +42,15 @@ fn tmp_db_with_random_content() -> (TempPath, LibraDB) {
 
 #[test]
 fn end_to_end() {
-    let (_src_db_dir, db_src) = tmp_db_with_random_content();
-    let db_src = Arc::new(db_src);
+    let (_src_db_dir, src_db) = tmp_db_with_random_content();
+    let src_db = Arc::new(src_db);
     let tgt_db_dir = TempPath::new();
     let backup_dir = TempPath::new();
     backup_dir.create_as_dir().unwrap();
     let adaptor = LocalStorage::new(backup_dir.path().to_path_buf());
 
     let config = NodeConfig::random();
-    let mut rt = start_backup_service(config.storage.backup_service_port, db_src);
+    let mut rt = start_backup_service(config.storage.backup_service_port, src_db);
     let client = BackupServiceClient::new(config.storage.backup_service_port);
     let (version, state_root_hash) = rt.block_on(client.get_latest_state_root()).unwrap();
     let handles = rt
