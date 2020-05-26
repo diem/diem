@@ -8,16 +8,13 @@ use libra_state_view::StateView;
 use libra_types::{access_path::AccessPath, account_address::AccountAddress};
 use libra_vm::data_cache::StateViewCache;
 use move_core_types::{
-    gas_schedule::{GasAlgebra, GasUnits},
+    gas_schedule::{AbstractMemorySize, GasAlgebra, GasUnits},
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
 };
 use move_lang::{compiled_unit::CompiledUnit, shared::Address};
 use move_vm_runtime::{data_cache::TransactionDataCache, move_vm::MoveVM};
-use move_vm_types::{
-    gas_schedule::{zero_cost_schedule, CostStrategy},
-    transaction_metadata::TransactionMetadata,
-};
+use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use std::path::PathBuf;
 
 /// Entry point for the bench, provide a function name to invoke in Module Bench in bench.move.
@@ -52,7 +49,6 @@ fn execute(c: &mut Criterion, move_vm: &MoveVM, module: VerifiedModule, fun: &st
     let data_cache = StateViewCache::new(&state);
     let mut data_store = TransactionDataCache::new(&data_cache);
     let mut cost_strategy = CostStrategy::transaction(&gas_schedule, GasUnits::new(100_000_000));
-    let metadata = TransactionMetadata::default();
 
     move_vm
         .cache_module(module, &mut data_store)
@@ -71,9 +67,10 @@ fn execute(c: &mut Criterion, move_vm: &MoveVM, module: VerifiedModule, fun: &st
                     &fun_name,
                     vec![],
                     vec![],
-                    &mut cost_strategy,
+                    AccountAddress::default(),
+                    AbstractMemorySize::new(0),
                     &mut data_store,
-                    &metadata,
+                    &mut cost_strategy,
                 )
                 .unwrap_or_else(|_| panic!("Cannot execute function {}", fun))
         })

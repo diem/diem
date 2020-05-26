@@ -119,20 +119,20 @@ impl NativeFunction {
     }
 }
 
-pub(crate) struct FunctionContext<'a, 'txn> {
-    interpreter: &'a mut Interpreter<'txn>,
+pub(crate) struct FunctionContext<'a> {
+    interpreter: &'a mut Interpreter,
     data_store: &'a mut dyn DataStore,
     cost_strategy: &'a CostStrategy<'a>,
     resolver: &'a Resolver<'a>,
 }
 
-impl<'a, 'txn> FunctionContext<'a, 'txn> {
+impl<'a> FunctionContext<'a> {
     pub(crate) fn new(
-        interpreter: &'a mut Interpreter<'txn>,
+        interpreter: &'a mut Interpreter,
         data_store: &'a mut dyn DataStore,
         cost_strategy: &'a mut CostStrategy,
         resolver: &'a Resolver<'a>,
-    ) -> FunctionContext<'a, 'txn> {
+    ) -> FunctionContext<'a> {
         FunctionContext {
             interpreter,
             data_store,
@@ -142,7 +142,7 @@ impl<'a, 'txn> FunctionContext<'a, 'txn> {
     }
 }
 
-impl<'a, 'txn> NativeContext for FunctionContext<'a, 'txn> {
+impl<'a> NativeContext for FunctionContext<'a> {
     fn print_stack_trace<B: Write>(&self, buf: &mut B) -> VMResult<()> {
         self.interpreter
             .debug_print_stack_trace(buf, &self.resolver)

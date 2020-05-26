@@ -19,7 +19,6 @@ use move_vm_types::{
     data_store::DataStore,
     gas_schedule::CostStrategy,
     loaded_data::{runtime_types::Type, types::FatStructType},
-    transaction_metadata::TransactionMetadata,
     values::{self, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value},
 };
 use std::{cmp::min, collections::VecDeque, fmt::Write, sync::Arc};
@@ -54,34 +53,28 @@ macro_rules! debug_writeln {
 ///
 /// An `Interpreter` instance is a stand alone execution context for a function.
 /// It mimics execution on a single thread, with an call stack and an operand stack.
-/// The `Interpreter` receives a reference to a data store used by certain opcodes
-/// to do operations on data on chain and a `TransactionMetadata` which is also used to resolve
-/// specific opcodes.
-pub(crate) struct Interpreter<'txn> {
+pub(crate) struct Interpreter {
     /// Operand stack, where Move `Value`s are stored for stack operations.
     operand_stack: Stack,
     /// The stack of active functions.
     call_stack: CallStack,
-    /// Transaction data to resolve special bytecodes (e.g. GetTxnSequenceNumber, GetTxnPublicKey,
-    /// GetTxnSenderAddress, ...)
-    txn_data: &'txn TransactionMetadata,
+    /// The sender of the transaction. This can materialize as an argument to a script.
+    sender: AccountAddress,
 }
 
-impl<'txn> Interpreter<'txn> {
+impl Interpreter {
     /// Entrypoint into the interpreter. All external calls need to be routed through this
     /// function.
     pub(crate) fn entrypoint(
-        data_store: &mut dyn DataStore,
-        loader: &Loader,
-        txn_data: &'txn TransactionMetadata,
-        cost_strategy: &mut CostStrategy,
         function: Arc<Function>,
         ty_args: Vec<Type>,
         args: Vec<Value>,
+        sender: AccountAddress,
+        txn_size: AbstractMemorySize<GasCarrier>,
+        data_store: &mut dyn DataStore,
+        cost_strategy: &mut CostStrategy,
+        loader: &Loader,
     ) -> VMResult<()> {
-        // We charge an intrinsic amount of gas based upon the size of the transaction submitted
-        // (in raw bytes).
-        let txn_size = txn_data.transaction_size();
         // The callers of this function verify the transaction before executing it. Transaction
         // verification ensures the following condition.
         // TODO: This is enforced by Libra but needs to be enforced by other callers of the Move VM
@@ -89,18 +82,18 @@ impl<'txn> Interpreter<'txn> {
         assume!(txn_size.get() <= (MAX_TRANSACTION_SIZE_IN_BYTES as u64));
         // We count the intrinsic cost of the transaction here, since that needs to also cover the
         // setup of the function.
-        let mut interp = Self::new(txn_data);
+        let mut interp = Self::new(sender);
         cost_strategy.charge_intrinsic_gas(txn_size)?;
         interp.execute(loader, data_store, cost_strategy, function, ty_args, args)
     }
 
     /// Create a new instance of an `Interpreter` in the context of a transaction with a
     /// given module cache and gas schedule.
-    fn new(txn_data: &'txn TransactionMetadata) -> Self {
+    fn new(sender: AccountAddress) -> Self {
         Interpreter {
             operand_stack: Stack::new(),
             call_stack: CallStack::new(),
-            txn_data,
+            sender,
         }
     }
 
@@ -1007,7 +1000,7 @@ impl Frame {
                         cost_strategy.charge_instr(Opcodes::GET_TXN_SENDER)?;
                         interpreter
                             .operand_stack
-                            .push(Value::address(interpreter.txn_data.sender()))?;
+                            .push(Value::address(interpreter.sender))?;
                     }
                     Bytecode::MutBorrowGlobal(sd_idx) | Bytecode::ImmBorrowGlobal(sd_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
@@ -1085,22 +1078,20 @@ impl Frame {
                         cost_strategy.charge_instr_with_size(Opcodes::MOVE_FROM_GENERIC, size)?;
                     }
                     Bytecode::MoveToSender(sd_idx) => {
-                        let addr = interpreter.txn_data.sender();
                         let size = interpreter.global_data_op(
                             resolver,
                             data_store,
-                            addr,
+                            interpreter.sender,
                             *sd_idx,
                             Interpreter::move_to_sender,
                         )?;
                         cost_strategy.charge_instr_with_size(Opcodes::MOVE_TO_SENDER, size)?;
                     }
                     Bytecode::MoveToSenderGeneric(si_idx) => {
-                        let addr = interpreter.txn_data.sender();
                         let size = interpreter.global_data_op_generic(
                             resolver,
                             data_store,
-                            addr,
+                            interpreter.sender,
                             *si_idx,
                             self,
                             Interpreter::move_to_sender,

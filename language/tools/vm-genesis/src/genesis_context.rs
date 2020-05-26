@@ -16,7 +16,7 @@ use libra_types::{
 };
 use libra_vm::data_cache::StateViewCache;
 use move_core_types::{
-    gas_schedule::{CostTable, GasAlgebra, GasUnits},
+    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
 };
@@ -28,7 +28,6 @@ use move_vm_types::{
     data_store::DataStore,
     gas_schedule::{zero_cost_schedule, CostStrategy},
     loaded_data::types::FatStructType,
-    transaction_metadata::TransactionMetadata,
     values::{GlobalValue, Value},
 };
 use std::collections::{btree_map::BTreeMap, HashMap};
@@ -38,16 +37,16 @@ use vm::{access::ModuleAccess, errors::VMResult};
 pub(crate) struct GenesisContext<'a> {
     vm: MoveVM,
     gas_schedule: CostTable,
-    interpreter_context: GenesisDataCache<'a>,
-    txn_data: TransactionMetadata,
+    data_store: GenesisDataCache<'a>,
+    sender: AccountAddress,
 }
 
 impl<'a> GenesisContext<'a> {
     pub fn new(data_cache: &'a StateViewCache<'a>, stdlib_modules: &[VerifiedModule]) -> Self {
         let vm = MoveVM::new();
-        let mut interpreter_context = GenesisDataCache::new(data_cache);
+        let mut data_store = GenesisDataCache::new(data_cache);
         for module in stdlib_modules {
-            vm.cache_module(module.clone(), &mut interpreter_context)
+            vm.cache_module(module.clone(), &mut data_store)
                 .unwrap_or_else(|_| {
                     panic!("Failure loading stdlib module {}", module.as_inner().name())
                 });
@@ -56,8 +55,8 @@ impl<'a> GenesisContext<'a> {
         Self {
             vm,
             gas_schedule: zero_cost_schedule(),
-            interpreter_context,
-            txn_data: TransactionMetadata::default(),
+            data_store,
+            sender: AccountAddress::default(),
         }
     }
 
@@ -101,9 +100,10 @@ impl<'a> GenesisContext<'a> {
                 &Self::name(function_name),
                 type_params,
                 args,
+                self.sender,
+                AbstractMemorySize::new(0),
+                &mut self.data_store,
                 &mut cost_strategy,
-                &mut self.interpreter_context,
-                &self.txn_data,
             )
             .unwrap_or_else(|e| panic!("Error calling {}.{}: {}", module_name, function_name, e))
     }
@@ -116,19 +116,20 @@ impl<'a> GenesisContext<'a> {
                 script.code().to_vec(),
                 script.ty_args().to_vec(),
                 Self::convert_txn_args(script.args()),
+                self.sender,
+                AbstractMemorySize::new(0),
+                &mut self.data_store,
                 &mut cost_strategy,
-                &mut self.interpreter_context,
-                &self.txn_data,
             )
             .unwrap()
     }
 
     pub fn set_sender(&mut self, sender: AccountAddress) {
-        self.txn_data.sender = sender;
+        self.sender = sender;
     }
 
-    pub fn into_interpreter_context(self) -> GenesisDataCache<'a> {
-        self.interpreter_context
+    pub fn into_data_store(self) -> GenesisDataCache<'a> {
+        self.data_store
     }
 }
 

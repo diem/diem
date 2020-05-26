@@ -89,7 +89,7 @@ pub fn encode_genesis_change_set(
     setup_vm_config(&mut genesis_context, vm_publishing_option);
     reconfigure(&mut genesis_context);
 
-    let mut interpreter_context = genesis_context.into_interpreter_context();
+    let mut interpreter_context = genesis_context.into_data_store();
     publish_stdlib(&mut interpreter_context, stdlib_modules);
 
     verify_genesis_write_set(interpreter_context.events());

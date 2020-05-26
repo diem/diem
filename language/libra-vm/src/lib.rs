@@ -110,6 +110,8 @@ pub mod data_cache;
 pub mod foreign_contracts;
 
 mod libra_vm;
+pub mod transaction_metadata;
+
 #[cfg(test)]
 mod unit_tests;
 
