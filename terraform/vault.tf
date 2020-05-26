@@ -86,7 +86,7 @@ resource "aws_ecs_task_definition" "vault" {
 
   volume {
     name      = "vault-data"
-    host_path = "/vault"
+    host_path = var.persist_libra_data ? "/vault" : ""
   }
 
   placement_constraints {
