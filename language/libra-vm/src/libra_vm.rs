@@ -5,6 +5,7 @@ use crate::{
     counters::*,
     data_cache::{RemoteStorage, StateViewCache},
     system_module_names::*,
+    transaction_metadata::TransactionMetadata,
     VMExecutor, VMValidator,
 };
 use debug_interface::prelude::*;
@@ -36,7 +37,6 @@ use move_vm_runtime::{
 };
 use move_vm_types::{
     gas_schedule::{calculate_intrinsic_gas, zero_cost_schedule, CostStrategy},
-    transaction_metadata::TransactionMetadata,
     values::Value,
 };
 use rayon::prelude::*;
@@ -336,16 +336,18 @@ impl LibraVM {
         let mut failed_gas_left = GasUnits::new(0);
         match payload {
             VerifiedTransactionPayload::Module(m) => {
-                self.move_vm.publish_module(m, &mut data_store, txn_data)
+                self.move_vm
+                    .publish_module(m, txn_data.sender(), &mut data_store)
             }
             VerifiedTransactionPayload::Script(s, ty_args, args) => {
                 let ret = self.move_vm.execute_script(
                     s,
                     ty_args,
                     args,
-                    &mut cost_strategy,
+                    txn_data.sender(),
+                    txn_data.transaction_size(),
                     &mut data_store,
-                    txn_data,
+                    &mut cost_strategy,
                 );
                 let gas_usage = txn_data
                     .max_gas_amount()
@@ -517,9 +519,10 @@ impl LibraVM {
                 &BLOCK_PROLOGUE,
                 vec![],
                 args,
-                &mut cost_strategy,
+                txn_data.sender(),
+                txn_data.transaction_size(),
                 &mut data_store,
-                &txn_data,
+                &mut cost_strategy,
             )?
         } else {
             return Err(VMStatus::new(StatusCode::MALFORMED));
@@ -533,9 +536,10 @@ impl LibraVM {
                 &DISTRIBUTE_TXN_FEES,
                 vec![currency_ty],
                 vec![],
-                &mut cost_strategy,
+                txn_data.sender(),
+                txn_data.transaction_size(),
                 &mut data_store,
-                &txn_data,
+                &mut cost_strategy,
             )?
         }
 
@@ -676,9 +680,10 @@ impl LibraVM {
                     Value::u64(txn_max_gas_units),
                     Value::u64(txn_expiration_time),
                 ],
-                cost_strategy,
+                txn_data.sender(),
+                txn_data.transaction_size(),
                 data_store,
-                &txn_data,
+                cost_strategy,
             )
             .map_err(|err| convert_prologue_runtime_error(&err, &txn_data.sender))
     }
@@ -709,9 +714,10 @@ impl LibraVM {
                 Value::u64(txn_max_gas_units),
                 Value::u64(gas_remaining),
             ],
-            cost_strategy,
+            txn_data.sender(),
+            txn_data.transaction_size(),
             data_store,
-            &txn_data,
+            cost_strategy,
         )
     }
 
@@ -736,9 +742,10 @@ impl LibraVM {
                     Value::u64(txn_sequence_number),
                     Value::vector_u8(txn_public_key),
                 ],
-                &mut cost_strategy,
+                txn_data.sender(),
+                txn_data.transaction_size(),
                 data_store,
-                &txn_data,
+                &mut cost_strategy,
             )
             .map_err(|err| convert_prologue_runtime_error(&err, &txn_data.sender))
     }
@@ -762,9 +769,10 @@ impl LibraVM {
             &EPILOGUE_NAME,
             vec![],
             vec![Value::vector_u8(change_set_bytes)],
-            &mut cost_strategy,
+            txn_data.sender(),
+            txn_data.transaction_size(),
             data_store,
-            &txn_data,
+            &mut cost_strategy,
         )
     }
 

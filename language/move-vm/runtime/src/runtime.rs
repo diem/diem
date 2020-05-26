@@ -7,13 +7,11 @@ use libra_logger::prelude::*;
 use libra_types::vm_error::{StatusCode, VMStatus};
 use move_core_types::{
     account_address::AccountAddress,
+    gas_schedule::{AbstractMemorySize, GasCarrier},
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
 };
-use move_vm_types::{
-    data_store::DataStore, gas_schedule::CostStrategy, transaction_metadata::TransactionMetadata,
-    values::Value,
-};
+use move_vm_types::{data_store::DataStore, gas_schedule::CostStrategy, values::Value};
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, vm_error, Location, VMResult},
@@ -36,8 +34,8 @@ impl VMRuntime {
     pub(crate) fn publish_module(
         &self,
         module: Vec<u8>,
-        data_store: &mut dyn DataStore,
         sender: &AccountAddress,
+        data_store: &mut dyn DataStore,
     ) -> VMResult<()> {
         let compiled_module = match CompiledModule::deserialize(&module) {
             Ok(module) => module,
@@ -78,9 +76,10 @@ impl VMRuntime {
         script: Vec<u8>,
         ty_args: Vec<TypeTag>,
         mut args: Vec<Value>,
-        cost_strategy: &mut CostStrategy,
+        sender: AccountAddress,
+        txn_size: AbstractMemorySize<GasCarrier>,
         data_store: &mut dyn DataStore,
-        txn_data: &TransactionMetadata,
+        cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
         fn is_signer_reference(s: &SignatureToken) -> bool {
             use SignatureToken as S;
@@ -100,21 +99,19 @@ impl VMRuntime {
             .verify_ty_args(main.type_parameters(), &type_params)?;
         let first_param_opt = main.parameters().0.get(0);
         if first_param_opt.map_or(false, |sig| is_signer_reference(sig)) {
-            args.insert(
-                0,
-                Value::transaction_argument_signer_reference(txn_data.sender()),
-            )
+            args.insert(0, Value::transaction_argument_signer_reference(sender))
         }
         verify_args(main.parameters(), &args)?;
 
         Interpreter::entrypoint(
-            data_store,
-            &self.loader,
-            txn_data,
-            cost_strategy,
             main,
             type_params,
             args,
+            sender,
+            txn_size,
+            data_store,
+            cost_strategy,
+            &self.loader,
         )
     }
 
@@ -124,9 +121,10 @@ impl VMRuntime {
         function_name: &IdentStr,
         ty_args: Vec<TypeTag>,
         args: Vec<Value>,
-        cost_strategy: &mut CostStrategy,
+        sender: AccountAddress,
+        txn_size: AbstractMemorySize<GasCarrier>,
         data_store: &mut dyn DataStore,
-        txn_data: &TransactionMetadata,
+        cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
         let mut type_params = vec![];
         for ty in &ty_args {
@@ -142,13 +140,14 @@ impl VMRuntime {
         //verify_args(func.parameters(), &args)?;
 
         Interpreter::entrypoint(
-            data_store,
-            &self.loader,
-            txn_data,
-            cost_strategy,
             func,
             type_params,
             args,
+            sender,
+            txn_size,
+            data_store,
+            cost_strategy,
+            &self.loader,
         )
     }
 

@@ -3347,7 +3347,6 @@ version = "0.1.0"
 dependencies = [
  "bit-vec 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-crypto 0.1.0",
- "libra-logger 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "mirai-annotations 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3384,10 +3383,8 @@ dependencies = [
 name = "move-vm-types"
 version = "0.1.0"
 dependencies = [
- "bit-vec 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",
- "libra-logger 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "mirai-annotations 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",

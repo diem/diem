@@ -25,7 +25,6 @@ pub mod data_store;
 pub mod gas_schedule;
 pub mod loaded_data;
 pub mod natives;
-pub mod transaction_metadata;
 pub mod values;
 
 #[cfg(test)]

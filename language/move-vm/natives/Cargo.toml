@@ -18,7 +18,6 @@ mirai-annotations = "1.8.0"
 sha2 = "0.8.2"
 
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
-libra-logger = { path = "../../../common/logger", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }

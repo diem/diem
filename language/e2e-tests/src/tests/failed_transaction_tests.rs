@@ -7,9 +7,9 @@ use crate::{
     executor::FakeExecutor,
 };
 use libra_types::vm_error::{StatusCode, VMStatus};
-use libra_vm::{data_cache::StateViewCache, LibraVM};
+use libra_vm::{data_cache::StateViewCache, transaction_metadata::TransactionMetadata, LibraVM};
 use move_core_types::gas_schedule::{GasAlgebra, GasPrice, GasUnits};
-use move_vm_types::{gas_schedule::zero_cost_schedule, transaction_metadata::TransactionMetadata};
+use move_vm_types::gas_schedule::zero_cost_schedule;
 
 #[test]
 fn failed_transaction_cleanup_test() {
