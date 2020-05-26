@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/byte_string_token_eof3.move:3:11 ───
+   │
+ 3 │         b"\x0"
+   │           ^^^ Invalid escape: '\x0'. Single HEX literal must be represented by two symbols. [\x00-\xFF].
+   │
+

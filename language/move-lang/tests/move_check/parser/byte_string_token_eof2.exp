@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/byte_string_token_eof2.move:3:9 ───
+   │
+ 3 │         b"Libra
+   │         ^^^^^^^ Missing closing quote (") after byte string
+   │
+
