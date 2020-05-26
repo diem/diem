@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    storage::{local_fs::LocalFs, BackupStorage, FileHandle},
+    storage::{BackupStorage, FileHandle},
     ReadRecordBytes,
 };
 use anyhow::Result;
@@ -13,6 +13,7 @@ use std::path::Path;
 use tokio::io::AsyncReadExt;
 
 pub async fn restore_account_state<P, I>(
+    storage: &dyn BackupStorage,
     version: u64,
     root_hash: HashValue,
     db_dir: P,
@@ -26,8 +27,8 @@ where
     let mut receiver = libradb.get_state_restore_receiver(version, root_hash)?;
 
     for (chunk_handle, proof_handle) in iter {
-        let chunk = read_account_state_chunk(chunk_handle).await?;
-        let proof = read_proof(proof_handle).await?;
+        let chunk = read_account_state_chunk(storage, chunk_handle).await?;
+        let proof = read_proof(storage, proof_handle).await?;
 
         receiver.add_chunk(chunk, proof)?;
     }
@@ -37,9 +38,10 @@ where
 }
 
 async fn read_account_state_chunk(
+    storage: &dyn BackupStorage,
     file_handle: FileHandle,
 ) -> Result<Vec<(HashValue, AccountStateBlob)>> {
-    let mut file = LocalFs::open_for_read(&file_handle).await?;
+    let mut file = storage.open_for_read(&file_handle).await?;
 
     let mut chunk = vec![];
 
@@ -50,8 +52,11 @@ async fn read_account_state_chunk(
     Ok(chunk)
 }
 
-async fn read_proof(file_handle: FileHandle) -> Result<SparseMerkleRangeProof> {
-    let mut file = LocalFs::open_for_read(&file_handle).await?;
+async fn read_proof(
+    storage: &dyn BackupStorage,
+    file_handle: FileHandle,
+) -> Result<SparseMerkleRangeProof> {
+    let mut file = storage.open_for_read(&file_handle).await?;
     let mut buf = Vec::new();
     file.read_to_end(&mut buf).await?;
 

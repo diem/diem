@@ -2,47 +2,41 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use backup_cli::{
-    backup::{backup_account_state, BackupServiceClient},
-    storage::local_fs::LocalFs,
+    backup::{
+        BackupServiceClient, BackupServiceClientOpt, GlobalBackupOpt,
+        StateSnapshotBackupController, StateSnapshotBackupOpt,
+    },
+    storage::local_fs::{LocalFs, LocalFsOpt},
 };
-use std::path::PathBuf;
+use std::sync::Arc;
 use structopt::StructOpt;
 
-#[derive(Debug, StructOpt)]
+#[derive(StructOpt)]
 struct Opt {
-    /// Default 4M.
-    #[structopt(long, default_value = "4194304")]
-    state_chunk_size: usize,
+    #[structopt(flatten)]
+    global: GlobalBackupOpt,
 
-    /// Where the backup is stored.
-    #[structopt(long, parse(from_os_str))]
-    local_dir: PathBuf,
+    #[structopt(flatten)]
+    state_snapshot: StateSnapshotBackupOpt,
 
-    /// The port of the storage service.
-    #[structopt(long)]
-    node_port: u16,
+    #[structopt(flatten)]
+    client: BackupServiceClientOpt,
 
-    #[structopt(long)]
-    backup_service_port: u16,
+    #[structopt(flatten)]
+    storage: LocalFsOpt,
 }
 
 #[tokio::main]
 async fn main() {
     let opt = Opt::from_args();
+    let client = Arc::new(BackupServiceClient::new_with_opt(opt.client));
+    let storage = Arc::new(LocalFs::new_with_opt(opt.storage));
 
-    let client = BackupServiceClient::new(opt.backup_service_port);
-
-    let (version, state_root_hash) = client
-        .get_latest_state_root()
-        .await
-        .expect("Failed to get latest version and state root hash.");
-    println!("Latest version: {}", version);
-    println!("State root hash: {:x}", state_root_hash);
-
-    let adapter = LocalFs::new(opt.local_dir);
-    let file_handles = backup_account_state(&client, version, &adapter, opt.state_chunk_size)
-        .await
-        .expect("Failed to backup account state.");
+    let file_handles =
+        StateSnapshotBackupController::new(opt.state_snapshot, opt.global, client, storage)
+            .run()
+            .await
+            .expect("Failed to backup account state.");
 
     for (account_state_file, proof_file) in file_handles {
         println!("{}", account_state_file);

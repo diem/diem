@@ -29,6 +29,7 @@ pub trait BackupStorage {
     ) -> Result<(FileHandle, Box<dyn AsyncWrite + Send + Unpin>)>;
     /// Open file for reading.
     async fn open_for_read(
+        &self,
         file_handle: &FileHandleRef,
     ) -> Result<Box<dyn AsyncRead + Send + Unpin>>;
 }

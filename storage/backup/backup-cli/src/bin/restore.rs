@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use backup_cli::restore::restore_account_state;
+use backup_cli::{restore::restore_account_state, storage::local_fs::LocalFs};
 use itertools::Itertools;
 use libra_crypto::HashValue;
 use std::path::PathBuf;
@@ -53,9 +53,17 @@ async fn main() {
         .into_iter()
         .tuples::<(_, _)>();
 
-    restore_account_state(version, root_hash, &opt.db_dir, file_handle_pair_iter)
-        .await
-        .expect("Failed restoring state.");
+    // LocalFs uses absolute paths, so when reading we can construct it in any dir.
+    let storage = LocalFs::new(PathBuf::from("."));
+    restore_account_state(
+        &storage,
+        version,
+        root_hash,
+        &opt.db_dir,
+        file_handle_pair_iter,
+    )
+    .await
+    .expect("Failed restoring state.");
 
     println!("Finished restoring account state.");
 }

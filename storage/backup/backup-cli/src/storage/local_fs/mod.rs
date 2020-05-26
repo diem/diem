@@ -10,10 +10,21 @@ use crate::storage::BackupStorage;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use std::path::PathBuf;
+use structopt::StructOpt;
 use tokio::{
     fs::{create_dir, OpenOptions},
     io::{AsyncRead, AsyncWrite},
 };
+
+#[derive(StructOpt)]
+pub struct LocalFsOpt {
+    #[structopt(
+        long = "local-backup-store",
+        parse(from_os_str),
+        help = "Target local dir to hold backups."
+    )]
+    pub dir: PathBuf,
+}
 
 /// A storage backend that stores everything in a local directory.
 pub struct LocalFs {
@@ -24,6 +35,10 @@ pub struct LocalFs {
 impl LocalFs {
     pub fn new(dir: PathBuf) -> Self {
         Self { dir }
+    }
+
+    pub fn new_with_opt(opt: LocalFsOpt) -> Self {
+        Self::new(opt.dir)
     }
 }
 
@@ -54,7 +69,9 @@ impl BackupStorage for LocalFs {
         Ok((file_handle, Box::new(file)))
     }
 
+    /// N.B: `LocalFs` uses absolute paths as file handles, so `self.dir` doesn't matter.
     async fn open_for_read(
+        &self,
         file_handle: &FileHandleRef,
     ) -> Result<Box<dyn AsyncRead + Send + Unpin>> {
         let file = OpenOptions::new().read(true).open(file_handle).await?;
