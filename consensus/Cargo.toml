@@ -40,6 +40,7 @@ libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-mempool = { path = "../mempool", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
+libra-network-address = { path = "../network/network-address", version = "0.1.0"}
 libra-secure-storage = { path = "../secure/storage", version = "0.1.0" }
 libra-security-logger = { path = "../common/security-logger", version = "0.1.0" }
 libra-temppath = { path = "../common/temppath", version = "0.1.0" }

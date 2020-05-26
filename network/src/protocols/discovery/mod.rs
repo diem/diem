@@ -32,7 +32,7 @@
 //! [`ConnectivityManager`]: ../../connectivity_manager
 
 use crate::{
-    connectivity_manager::{ConnectivityRequest, DiscoverySource},
+    connectivity_manager::{ConnectivityRequest, DiscoverySource, PartnerConfiguration},
     counters,
     error::{NetworkError, NetworkErrorKind},
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
@@ -319,6 +319,7 @@ where
     // Updates local state by reconciling with notes received from some remote peer.
     // Assumption: `remote_notes` have already been verified for signature validity and content.
     async fn reconcile(&mut self, remote_peer: PeerId, remote_notes: Vec<VerifiedNote>) {
+        let mut change_detected = false;
         // If a peer is previously unknown, or has a newer epoch number, we update its
         // corresponding entry in the map.
         for mut note in remote_notes.into_iter() {
@@ -374,22 +375,34 @@ where
                         self.note = VerifiedNote(unverified_note);
                         note = self.note.clone();
                     } else {
-                        // The network addresses in the peer's discovery Note.
-                        let peer_addrs = note.as_note().addrs().clone();
-
-                        self.conn_mgr_reqs_tx
-                            .send(ConnectivityRequest::UpdateAddresses(
-                                DiscoverySource::Gossip,
-                                note.as_note().peer_id,
-                                peer_addrs,
-                            ))
-                            .await
-                            .expect("ConnectivityRequest::UpdateAddresses send");
+                        change_detected = true;
                     }
                     // Update internal state of the peer with new Note.
                     self.known_peers.insert(note.as_note().peer_id, note);
                 }
             }
+        }
+
+        // If one or more remote peers were updated, then UpdateConfiguration.
+        if change_detected {
+            let partner_configuration = PartnerConfiguration::new(
+                self.trusted_peers.read().unwrap().clone(),
+                self.known_peers
+                    .clone()
+                    .into_iter()
+                    .map(|(peer_id, verified_note)| {
+                        (peer_id, verified_note.as_note().addrs().clone())
+                    })
+                    .collect(),
+            );
+
+            self.conn_mgr_reqs_tx
+                .send(ConnectivityRequest::UpdateConfiguration(
+                    DiscoverySource::Gossip,
+                    partner_configuration,
+                ))
+                .await
+                .expect("ConnectivityRequest::UpdateConfiguration send");
         }
     }
 

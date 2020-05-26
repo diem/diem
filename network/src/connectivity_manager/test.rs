@@ -19,10 +19,31 @@ use std::{io, num::NonZeroUsize};
 use tokio::runtime::Runtime;
 use tokio_retry::strategy::FixedInterval;
 
+fn generate_partner_configuration(
+    eligible_peers: Vec<PeerId>,
+    peer_addresses: HashMap<PeerId, Vec<NetworkAddress>>,
+) -> PartnerConfiguration {
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    PartnerConfiguration {
+        eligible_peers: eligible_peers
+            .into_iter()
+            .map(|peer_id| {
+                let signing_public_key = Ed25519PrivateKey::generate(&mut rng).public_key();
+                let identity_public_key = x25519::PrivateKey::generate(&mut rng).public_key();
+                let pubkeys = NetworkPublicKeys {
+                    identity_public_key,
+                    signing_public_key,
+                };
+                (peer_id, pubkeys)
+            })
+            .collect::<HashMap<_, _>>(),
+        known_peers: peer_addresses,
+    }
+}
+
 fn setup_conn_mgr(
     rt: &mut Runtime,
-    eligible_peers: Vec<PeerId>,
-    seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
+    partner_configuration: PartnerConfiguration,
 ) -> (
     libra_channel::Receiver<PeerId, ConnectionRequest>,
     conn_notifs_channel::Sender,
@@ -35,26 +56,12 @@ fn setup_conn_mgr(
     let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
     let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(0);
     let (ticker_tx, ticker_rx) = channel::new_test(0);
-    let mut rng = StdRng::from_seed(TEST_SEED);
-
-    let eligible_peers = eligible_peers
-        .into_iter()
-        .map(|peer_id| {
-            let signing_public_key = Ed25519PrivateKey::generate(&mut rng).public_key();
-            let identity_public_key = x25519::PrivateKey::generate(&mut rng).public_key();
-            let pubkeys = NetworkPublicKeys {
-                identity_public_key,
-                signing_public_key,
-            };
-            (peer_id, pubkeys)
-        })
-        .collect::<HashMap<_, _>>();
 
     let conn_mgr = {
         ConnectivityManager::new(
             self_peer_id,
-            Arc::new(RwLock::new(eligible_peers)),
-            seed_peers,
+            Arc::new(RwLock::new(partner_configuration.eligible_peers)),
+            partner_configuration.known_peers,
             ticker_rx,
             ConnectionRequestSender::new(connection_reqs_tx),
             connection_notifs_rx,
@@ -194,8 +201,9 @@ fn connect_to_seeds_on_startup() {
     let eligible_peers = vec![seed_peer_id];
 
     info!("Seed peer_id is {}", seed_peer_id.short_str());
+    let partner_configuration = generate_partner_configuration(eligible_peers, seed_peers);
     let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
+        setup_conn_mgr(&mut rt, partner_configuration.clone());
 
     // Fake peer manager and discovery.
     let f_peer_mgr = async move {
@@ -211,14 +219,13 @@ fn connect_to_seeds_on_startup() {
         )
         .await;
 
-        // Sending an UpdateAddresses with the same seed address should not
+        // Sending an UpdateConfiguration with the same configuration should not
         // trigger any dials.
         info!("Sending same address of seed peer");
         conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
+            .send(ConnectivityRequest::UpdateConfiguration(
                 DiscoverySource::Gossip,
-                seed_peer_id,
-                vec![seed_addr.clone()],
+                partner_configuration.clone(),
             ))
             .await
             .unwrap();
@@ -230,11 +237,17 @@ fn connect_to_seeds_on_startup() {
         let new_seed_addr = NetworkAddress::from_str("/ip4/127.0.1.1/tcp/8080").unwrap();
         // Send new address of seed peer.
         info!("Sending new address of seed peer");
+        let replacement_config = PartnerConfiguration {
+            eligible_peers: partner_configuration.eligible_peers.clone(),
+            known_peers: [(seed_peer_id, vec![new_seed_addr.clone()])]
+                .iter()
+                .cloned()
+                .collect(),
+        };
         conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
+            .send(ConnectivityRequest::UpdateConfiguration(
                 DiscoverySource::Gossip,
-                seed_peer_id,
-                vec![new_seed_addr.clone()],
+                replacement_config,
             ))
             .await
             .unwrap();
@@ -300,8 +313,9 @@ fn addr_change() {
     let eligible_peers = vec![other_peer_id];
     let seed_peers = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
+    let partner_configuration = generate_partner_configuration(eligible_peers, seed_peers);
     let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
+        setup_conn_mgr(&mut rt, partner_configuration.clone());
 
     // Fake peer manager and discovery.
     let f_peer_mgr = async move {
@@ -309,11 +323,17 @@ fn addr_change() {
 
         // Send address of other peer.
         info!("Sending address of other peer");
+        let replacement_config = PartnerConfiguration {
+            eligible_peers: partner_configuration.eligible_peers.clone(),
+            known_peers: [(other_peer_id, vec![other_address.clone()])]
+                .iter()
+                .cloned()
+                .collect(),
+        };
         conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
+            .send(ConnectivityRequest::UpdateConfiguration(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_address.clone()],
+                replacement_config.clone(),
             ))
             .await
             .unwrap();
@@ -340,10 +360,9 @@ fn addr_change() {
         // attempt arrives in place of some other expected message in the future.
         info!("Sending same address of other peer");
         conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
+            .send(ConnectivityRequest::UpdateConfiguration(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_address.clone()],
+                replacement_config.clone(),
             ))
             .await
             .unwrap();
@@ -354,12 +373,18 @@ fn addr_change() {
 
         let other_address_new = NetworkAddress::from_str("/ip4/127.0.1.1/tcp/8080").unwrap();
         // Send new address of other peer.
+        let replacement_address_config = PartnerConfiguration {
+            eligible_peers: partner_configuration.eligible_peers,
+            known_peers: [(other_peer_id, vec![other_address_new.clone()])]
+                .iter()
+                .cloned()
+                .collect(),
+        };
         info!("Sending new address of other peer");
         conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
+            .send(ConnectivityRequest::UpdateConfiguration(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_address_new.clone()],
+                replacement_address_config.clone(),
             ))
             .await
             .unwrap();
@@ -408,20 +433,27 @@ fn lost_connection() {
     let eligible_peers = vec![other_peer_id];
     let seed_peers = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
+    let partner_configuration = generate_partner_configuration(eligible_peers, seed_peers);
     let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
+        setup_conn_mgr(&mut rt, partner_configuration.clone());
 
     // Fake peer manager and discovery.
     let f_peer_mgr = async move {
         let other_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
+        let replacement_configuration = PartnerConfiguration {
+            eligible_peers: partner_configuration.eligible_peers.clone(),
+            known_peers: [(other_peer_id, vec![other_address.clone()])]
+                .iter()
+                .cloned()
+                .collect(),
+        };
 
         // Send address of other peer.
         info!("Sending address of other peer");
         conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
+            .send(ConnectivityRequest::UpdateConfiguration(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_address.clone()],
+                replacement_configuration,
             ))
             .await
             .unwrap();
@@ -483,19 +515,25 @@ fn disconnect() {
     let eligible_peers = vec![other_peer_id];
     let seed_peers = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
+    let partner_configuration = generate_partner_configuration(eligible_peers, seed_peers);
     let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
+        setup_conn_mgr(&mut rt, partner_configuration.clone());
 
     let events_f = async move {
         let other_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
-
+        let replacement_configuration = PartnerConfiguration {
+            eligible_peers: partner_configuration.eligible_peers.clone(),
+            known_peers: [(other_peer_id, vec![other_address.clone()])]
+                .iter()
+                .cloned()
+                .collect(),
+        };
         // Send address of other peer.
         info!("Sending address of other peer");
         conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
+            .send(ConnectivityRequest::UpdateConfiguration(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_address.clone()],
+                replacement_configuration.clone(),
             ))
             .await
             .unwrap();
@@ -517,9 +555,16 @@ fn disconnect() {
         .await;
 
         // Send request to make other peer ineligible.
+        let no_eligible_configuration = PartnerConfiguration {
+            eligible_peers: HashMap::new(),
+            known_peers: replacement_configuration.clone().known_peers,
+        };
         info!("Sending request to make other peer ineligible");
         conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateEligibleNodes(HashMap::new()))
+            .send(ConnectivityRequest::UpdateConfiguration(
+                DiscoverySource::Gossip,
+                no_eligible_configuration,
+            ))
             .await
             .unwrap();
 
@@ -550,19 +595,25 @@ fn retry_on_failure() {
     let eligible_peers = vec![other_peer_id];
     let seed_peers = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
+    let partner_configuration = generate_partner_configuration(eligible_peers, seed_peers);
     let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
+        setup_conn_mgr(&mut rt, partner_configuration.clone());
 
     let events_f = async move {
         let other_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
-
+        let replacement_configuration = PartnerConfiguration {
+            eligible_peers: partner_configuration.eligible_peers.clone(),
+            known_peers: [(other_peer_id, vec![other_address.clone()])]
+                .iter()
+                .cloned()
+                .collect(),
+        };
         // Send address of other peer.
         info!("Sending address of other peer");
         conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
+            .send(ConnectivityRequest::UpdateConfiguration(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_address.clone()],
+                replacement_configuration.clone(),
             ))
             .await
             .unwrap();
@@ -602,9 +653,16 @@ fn retry_on_failure() {
         .await;
 
         // Send request to make other peer ineligible.
+        let updated_configuration = PartnerConfiguration {
+            eligible_peers: HashMap::new(),
+            known_peers: replacement_configuration.clone().known_peers,
+        };
         info!("Sending request to make other peer ineligible");
         conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateEligibleNodes(HashMap::new()))
+            .send(ConnectivityRequest::UpdateConfiguration(
+                DiscoverySource::Gossip,
+                updated_configuration,
+            ))
             .await
             .unwrap();
 
@@ -654,19 +712,25 @@ fn no_op_requests() {
     let eligible_peers = vec![other_peer_id];
     let seed_peers = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
+    let partner_configuration = generate_partner_configuration(eligible_peers, seed_peers);
     let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
+        setup_conn_mgr(&mut rt, partner_configuration.clone());
 
     let events_f = async move {
         let other_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
-
+        let replacement_configuration = PartnerConfiguration {
+            eligible_peers: partner_configuration.eligible_peers.clone(),
+            known_peers: [(other_peer_id, vec![other_address.clone()])]
+                .iter()
+                .cloned()
+                .collect(),
+        };
         // Send address of other peer.
         info!("Sending address of other peer");
         conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
+            .send(ConnectivityRequest::UpdateConfiguration(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_address.clone()],
+                replacement_configuration.clone(),
             ))
             .await
             .unwrap();
@@ -701,9 +765,16 @@ fn no_op_requests() {
         ticker_tx.send(()).await.unwrap();
 
         // Send request to make other peer ineligible.
+        let updated_configuration = PartnerConfiguration {
+            eligible_peers: HashMap::new(),
+            known_peers: replacement_configuration.clone().known_peers,
+        };
         info!("Sending request to make other peer ineligible");
         conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateEligibleNodes(HashMap::new()))
+            .send(ConnectivityRequest::UpdateConfiguration(
+                DiscoverySource::Gossip,
+                updated_configuration,
+            ))
             .await
             .unwrap();
 
@@ -736,7 +807,7 @@ fn no_op_requests() {
 
         // Trigger connectivity check again. We don't expect connectivity manager to do
         // anything - if it does, the task should panic. That may not fail the test (right
-        // now), but will be easily spotted by someone running the tests locallly.
+        // now), but will be easily spotted by someone running the tests locally.
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
     };
@@ -749,8 +820,9 @@ fn backoff_on_failure() {
     let mut rt = Runtime::new().unwrap();
     let eligible_peers = vec![];
     let seed_peers = HashMap::new();
+    let partner_configuration = generate_partner_configuration(eligible_peers, seed_peers);
     let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
+        setup_conn_mgr(&mut rt, partner_configuration);
 
     let events_f = async move {
         let (peer_a, peer_a_keys) = gen_peer();
@@ -758,34 +830,56 @@ fn backoff_on_failure() {
         let (peer_b, peer_b_keys) = gen_peer();
         let peer_b_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/8080").unwrap();
 
+        let config_with_eligible_peers = PartnerConfiguration {
+            eligible_peers: [(peer_a, peer_a_keys), (peer_b, peer_b_keys)]
+                .iter()
+                .cloned()
+                .collect(),
+            known_peers: HashMap::new(),
+        };
+
         info!("Sending list of eligible peers");
         conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateEligibleNodes(
-                [(peer_a, peer_a_keys), (peer_b, peer_b_keys)]
-                    .iter()
-                    .cloned()
-                    .collect(),
+            .send(ConnectivityRequest::UpdateConfiguration(
+                DiscoverySource::Gossip,
+                config_with_eligible_peers.clone(),
             ))
             .await
             .unwrap();
 
         // Send address of peer a.
+        let config_with_address_a = PartnerConfiguration {
+            eligible_peers: config_with_eligible_peers.clone().eligible_peers,
+            known_peers: [(peer_a, vec![peer_a_address.clone()])]
+                .iter()
+                .cloned()
+                .collect(),
+        };
         info!("Sending address of peer a");
         conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
+            .send(ConnectivityRequest::UpdateConfiguration(
                 DiscoverySource::Gossip,
-                peer_a,
-                vec![peer_a_address.clone()],
+                config_with_address_a,
             ))
             .await
             .unwrap();
+
         // Send address of peer b.
+        let config_with_address_a_b = PartnerConfiguration {
+            eligible_peers: config_with_eligible_peers.clone().eligible_peers,
+            known_peers: [
+                (peer_a, vec![peer_a_address.clone()]),
+                (peer_b, vec![peer_b_address.clone()]),
+            ]
+            .iter()
+            .cloned()
+            .collect(),
+        };
         info!("Sending address of peer b");
         conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
+            .send(ConnectivityRequest::UpdateConfiguration(
                 DiscoverySource::Gossip,
-                peer_b,
-                vec![peer_b_address.clone()],
+                config_with_address_a_b,
             ))
             .await
             .unwrap();
@@ -838,8 +932,9 @@ fn multiple_addrs_basic() {
     let eligible_peers = vec![other_peer_id];
     let seed_peers = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
+    let partner_configuration = generate_partner_configuration(eligible_peers, seed_peers);
     let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
+        setup_conn_mgr(&mut rt, partner_configuration.clone());
 
     // Fake peer manager and discovery.
     let f_peer_mgr = async move {
@@ -849,12 +944,21 @@ fn multiple_addrs_basic() {
         let other_addr_2 = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9092").unwrap();
 
         // Send addresses of other peer.
-        info!("Sending address of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::Gossip,
+        let updated_configuration = PartnerConfiguration {
+            eligible_peers: partner_configuration.eligible_peers.clone(),
+            known_peers: [(
                 other_peer_id,
                 vec![other_addr_1.clone(), other_addr_2.clone()],
+            )]
+            .iter()
+            .cloned()
+            .collect(),
+        };
+        info!("Sending address of other peer");
+        conn_mgr_reqs_tx
+            .send(ConnectivityRequest::UpdateConfiguration(
+                DiscoverySource::Gossip,
+                updated_configuration,
             ))
             .await
             .unwrap();
@@ -908,8 +1012,9 @@ fn multiple_addrs_wrapping() {
     let eligible_peers = vec![other_peer_id];
     let seed_peers = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
+    let partner_configuration = generate_partner_configuration(eligible_peers, seed_peers);
     let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
+        setup_conn_mgr(&mut rt, partner_configuration.clone());
 
     // Fake peer manager and discovery.
     let f_peer_mgr = async move {
@@ -917,12 +1022,21 @@ fn multiple_addrs_wrapping() {
         let other_addr_2 = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9092").unwrap();
 
         // Send addresses of other peer.
-        info!("Sending address of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::Gossip,
+        let updated_configuration = PartnerConfiguration {
+            eligible_peers: partner_configuration.eligible_peers.clone(),
+            known_peers: [(
                 other_peer_id,
                 vec![other_addr_1.clone(), other_addr_2.clone()],
+            )]
+            .iter()
+            .cloned()
+            .collect(),
+        };
+        info!("Sending address of other peer");
+        conn_mgr_reqs_tx
+            .send(ConnectivityRequest::UpdateConfiguration(
+                DiscoverySource::Gossip,
+                updated_configuration,
             ))
             .await
             .unwrap();
@@ -992,8 +1106,9 @@ fn multiple_addrs_shrinking() {
     let eligible_peers = vec![other_peer_id];
     let seed_peers = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
+    let partner_configuration = generate_partner_configuration(eligible_peers, seed_peers);
     let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
+        setup_conn_mgr(&mut rt, partner_configuration.clone());
 
     // Fake peer manager and discovery.
     let f_peer_mgr = async move {
@@ -1003,15 +1118,24 @@ fn multiple_addrs_shrinking() {
 
         // Send addresses of other peer.
         info!("Sending address of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::Gossip,
+        let updated_addresses_config = PartnerConfiguration {
+            eligible_peers: partner_configuration.clone().eligible_peers,
+            known_peers: [(
                 other_peer_id,
                 vec![
                     other_addr_1.clone(),
                     other_addr_2.clone(),
                     other_addr_3.clone(),
                 ],
+            )]
+            .iter()
+            .cloned()
+            .collect(),
+        };
+        conn_mgr_reqs_tx
+            .send(ConnectivityRequest::UpdateConfiguration(
+                DiscoverySource::Gossip,
+                updated_addresses_config,
             ))
             .await
             .unwrap();
@@ -1037,13 +1161,22 @@ fn multiple_addrs_shrinking() {
         let other_addr_4 = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9094").unwrap();
         let other_addr_5 = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9095").unwrap();
 
+        let replacemant_address_config = PartnerConfiguration {
+            eligible_peers: partner_configuration.clone().eligible_peers,
+            known_peers: [(
+                other_peer_id,
+                vec![other_addr_4.clone(), other_addr_5.clone()],
+            )]
+            .iter()
+            .cloned()
+            .collect(),
+        };
         // The peer issues a new, smaller set of listen addrs.
         info!("Sending address of other peer");
         conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
+            .send(ConnectivityRequest::UpdateConfiguration(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_addr_4.clone(), other_addr_5.clone()],
+                replacemant_address_config,
             ))
             .await
             .unwrap();

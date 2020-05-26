@@ -317,6 +317,7 @@ where
         // advertising new addresses. In an effort to maintain
         // connectivity, we will also merge in the previous advertised
         // addresses.
+        let change_detected = false;
         let update_addr_reqs = latest_discovery_set
             .0
             .into_iter()

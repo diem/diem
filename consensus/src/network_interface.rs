@@ -14,10 +14,11 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use futures::sink::SinkExt;
+use libra_network_address::NetworkAddress;
 use libra_types::{epoch_change::EpochChangeProof, validator_info::ValidatorInfo, PeerId};
 use network::{
     common::NetworkPublicKeys,
-    connectivity_manager::ConnectivityRequest,
+    connectivity_manager::{ConnectivityRequest, DiscoverySource, PartnerConfiguration},
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::{
@@ -28,7 +29,7 @@ use network::{
     ProtocolId,
 };
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::{convert::TryFrom, time::Duration};
 
 /// Network type for consensus
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -159,19 +160,37 @@ impl<T: Payload> ConsensusNetworkSender<T> {
         validators: Vec<ValidatorInfo>,
     ) -> Result<(), NetworkError> {
         self.conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateEligibleNodes(
-                validators
-                    .into_iter()
-                    .map(|validator| {
-                        (
-                            *validator.account_address(),
-                            NetworkPublicKeys {
-                                identity_public_key: validator.network_identity_public_key(),
-                                signing_public_key: validator.network_signing_public_key().clone(),
-                            },
-                        )
-                    })
-                    .collect(),
+            .send(ConnectivityRequest::UpdateConfiguration(
+                DiscoverySource::OnChain,
+                PartnerConfiguration::new(
+                    validators
+                        .clone()
+                        .into_iter()
+                        .map(|validator| {
+                            (
+                                *validator.account_address(),
+                                NetworkPublicKeys {
+                                    identity_public_key: validator.network_identity_public_key(),
+                                    signing_public_key: validator
+                                        .network_signing_public_key()
+                                        .clone(),
+                                },
+                            )
+                        })
+                        .collect(),
+                    validators
+                        .into_iter()
+                        .map(|validator| {
+                            (
+                                *validator.account_address(),
+                                vec![NetworkAddress::try_from(
+                                    &validator.config().validator_network_address,
+                                )
+                                .expect("WTF")],
+                            )
+                        })
+                        .collect(),
+                ),
             ))
             .await?;
         Ok(())

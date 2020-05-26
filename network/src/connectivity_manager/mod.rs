@@ -109,9 +109,22 @@ pub enum ConnectivityRequest {
 }
 
 /// Configuration information for all potential network partners.
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PartnerConfiguration {
-    peers: HashMap<PeerId, (NetworkPublicKeys, Vec<NetworkAddress>)>,
+    eligible_peers: HashMap<PeerId, NetworkPublicKeys>,
+    known_peers: HashMap<PeerId, Vec<NetworkAddress>>,
+}
+
+impl PartnerConfiguration {
+    pub fn new(
+        eligible_peers: HashMap<PeerId, NetworkPublicKeys>,
+        known_peers: HashMap<PeerId, Vec<NetworkAddress>>,
+    ) -> Self {
+        Self {
+            eligible_peers,
+            known_peers,
+        }
+    }
 }
 
 /// A set of NetworkAddress's for a peer, bucketed by DiscoverySource in priority order.
@@ -380,26 +393,28 @@ where
         self.dial_eligible_peers(pending_dials).await;
     }
 
-    fn update_config(&mut self, src: DiscoverySource, config: PartnerConfiguration) {
+    pub fn update_partner_configuration(
+        &mut self,
+        src: DiscoverySource,
+        config: PartnerConfiguration,
+    ) {
         trace!(
             "Received a configuration update from {:?} discovery source",
             src
         );
-        let mut new_eligible = HashMap::<PeerId, NetworkPublicKeys>::new();
-        for (peer_id, (keys, addresses)) in config.peers {
-            new_eligible.insert(peer_id, keys);
+        *self.eligible.write().unwrap() = config.eligible_peers;
+        for (peer_id, addresses) in config.known_peers {
             self.update_peer_addrs(src, peer_id, addresses);
             if let Some(dial_state) = self.dial_states.get_mut(&peer_id) {
                 dial_state.reset_addr();
             }
         }
-        *self.eligible.write().unwrap() = new_eligible;
     }
 
     fn handle_request(&mut self, req: ConnectivityRequest) {
         match req {
             ConnectivityRequest::UpdateConfiguration(src, configuration) => {
-                self.update_config(src, configuration);
+                self.update_partner_configuration(src, configuration);
             }
             ConnectivityRequest::UpdateAddresses(src, peer_id, addrs) => {
                 trace!(
