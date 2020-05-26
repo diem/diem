@@ -2,21 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use generate_format::Corpus;
-use serde_reflection::RegistryOwned;
+use serde_reflection::Registry;
 
 #[test]
 fn test_that_recorded_formats_did_not_change() {
     for corpus in Corpus::values() {
-        let registry: RegistryOwned = corpus
-            .get_registry()
-            .into_iter()
-            .map(|(k, v)| (k.to_string(), v))
-            .collect();
+        let registry = corpus.get_registry();
 
         // Some corpus may not be recorded on disk.
         if let Some(path) = corpus.output_file() {
             let content = std::fs::read_to_string(path).unwrap();
-            let expected = serde_yaml::from_str::<RegistryOwned>(content.as_str()).unwrap();
+            let expected = serde_yaml::from_str::<Registry>(content.as_str()).unwrap();
             assert_registry_has_not_changed(&corpus.to_string(), path, registry, expected);
         }
     }
@@ -31,12 +27,7 @@ Please verify the changes to the recorded file(s) and consider tagging your pull
     )
 }
 
-fn assert_registry_has_not_changed(
-    name: &str,
-    path: &str,
-    registry: RegistryOwned,
-    expected: RegistryOwned,
-) {
+fn assert_registry_has_not_changed(name: &str, path: &str, registry: Registry, expected: Registry) {
     for (key, value) in expected.iter() {
         assert_eq!(
             Some(value),
@@ -89,8 +80,8 @@ Person:
       FullName: UNIT
 "#;
 
-    let value1 = serde_yaml::from_str::<RegistryOwned>(yaml1).unwrap();
-    let value2 = serde_yaml::from_str::<RegistryOwned>(yaml2).unwrap();
+    let value1 = serde_yaml::from_str::<Registry>(yaml1).unwrap();
+    let value2 = serde_yaml::from_str::<Registry>(yaml2).unwrap();
     assert_ne!(value1, value2);
     assert_ne!(value1.get("Person").unwrap(), value2.get("Person").unwrap());
 }
