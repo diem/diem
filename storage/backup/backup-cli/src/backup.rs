@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    manifest::state_snapshot::{StateSnapshotBackup, StateSnapshotChunk},
     storage::{BackupHandleRef, BackupStorage, FileHandle},
     ReadRecordBytes,
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use bytes::Bytes;
 use futures::stream::TryStreamExt;
 use libra_crypto::HashValue;
@@ -129,69 +130,79 @@ impl StateSnapshotBackupController {
         }
     }
 
-    pub async fn run(self) -> Result<(Vec<(FileHandle, FileHandle)>, HashValue)> {
+    pub async fn run(self) -> Result<FileHandle> {
         let backup_handle = self.storage.create_backup(&self.backup_name()).await?;
 
-        let mut chunk_bytes = vec![];
         let mut chunks = vec![];
+
+        let mut state_snapshot_file = self.client.get_state_snapshot(self.version).await?;
+        let mut prev_record_bytes = state_snapshot_file
+            .read_record_bytes()
+            .await?
+            .ok_or_else(|| anyhow!("State is empty."))?;
+        let mut chunk_bytes = (prev_record_bytes.len() as u32).to_be_bytes().to_vec();
+        chunk_bytes.extend(&prev_record_bytes);
+        let mut chunk_first_key = Self::parse_key(&prev_record_bytes)?;
         let mut current_idx: usize = 0;
         let mut chunk_first_idx: usize = 0;
 
-        let mut state_snapshot_file = self.client.get_state_snapshot(self.version).await?;
-        let mut prev_record_bytes: Option<Bytes> = None;
         while let Some(record_bytes) = state_snapshot_file.read_record_bytes().await? {
             if chunk_bytes.len() + size_of::<u32>() + record_bytes.len() > self.max_chunk_size {
                 assert!(chunk_bytes.len() <= self.max_chunk_size);
                 println!("Reached max_chunk_size.");
 
-                let (chunk_handle, proof_handle) = self
+                let chunk = self
                     .write_chunk(
                         &backup_handle,
                         &chunk_bytes,
                         chunk_first_idx,
                         current_idx,
-                        &prev_record_bytes
-                            .expect("max_chunk_size should be larger than account size."),
+                        chunk_first_key,
+                        Self::parse_key(&prev_record_bytes)?,
                     )
                     .await?;
-
-                chunks.push((chunk_handle, proof_handle));
+                chunks.push(chunk);
                 chunk_bytes = vec![];
                 chunk_first_idx = current_idx + 1;
+                chunk_first_key = Self::parse_key(&record_bytes)?;
             }
 
             current_idx += 1;
             chunk_bytes.extend(&(record_bytes.len() as u32).to_be_bytes());
             chunk_bytes.extend(&record_bytes);
-            prev_record_bytes = Some(record_bytes);
+            prev_record_bytes = record_bytes;
         }
 
         assert!(!chunk_bytes.is_empty());
         assert!(chunk_bytes.len() <= self.max_chunk_size);
         println!("Last chunk.");
-        let (chunk_handle, proof_handle) = self
+        let chunk = self
             .write_chunk(
                 &backup_handle,
                 &chunk_bytes,
                 chunk_first_idx,
                 current_idx,
-                &prev_record_bytes.expect("Should have at least one account."),
+                chunk_first_key,
+                Self::parse_key(&prev_record_bytes)?,
             )
             .await?;
-        chunks.push((chunk_handle, proof_handle));
+        chunks.push(chunk);
 
-        let proof_bytes = self.client.get_state_root_proof(self.version).await?;
-        let (txn_info, ledger_info): (TransactionInfoWithProof, LedgerInfoWithSignatures) =
-            lcs::from_bytes(&proof_bytes)?;
-        assert_eq!(ledger_info.ledger_info().version(), self.version);
-
-        Ok((chunks, txn_info.transaction_info().state_root_hash()))
+        self.write_manifest(&backup_handle, chunks).await
     }
 }
 
 impl StateSnapshotBackupController {
     fn backup_name(&self) -> String {
         format!("state_ver_{}", self.version)
+    }
+
+    fn manifest_name() -> &'static str {
+        "state.manifest"
+    }
+
+    fn proof_name() -> &'static str {
+        "state.proof"
     }
 
     fn chunk_name(first_idx: usize) -> String {
@@ -202,16 +213,21 @@ impl StateSnapshotBackupController {
         format!("{}-{}.proof", first_idx, last_idx)
     }
 
+    fn parse_key(record: &Bytes) -> Result<HashValue> {
+        let (key, _): (HashValue, AccountStateBlob) = lcs::from_bytes(record)?;
+        Ok(key)
+    }
+
     async fn write_chunk(
         &self,
         backup_handle: &BackupHandleRef,
         chunk_bytes: &[u8],
         first_idx: usize,
         last_idx: usize,
-        prev_record_bytes: &Bytes,
-    ) -> Result<(FileHandle, FileHandle)> {
-        let (prev_key, _): (HashValue, AccountStateBlob) = lcs::from_bytes(prev_record_bytes)?;
-        println!("Asking proof for key: {:?}", prev_key,);
+        first_key: HashValue,
+        last_key: HashValue,
+    ) -> Result<StateSnapshotChunk> {
+        println!("Asking proof for key: {:?}", last_key);
         let (chunk_handle, mut chunk_file) = self
             .storage
             .create_for_write(backup_handle, &Self::chunk_name(first_idx))
@@ -224,11 +240,53 @@ impl StateSnapshotBackupController {
         tokio::io::copy(
             &mut self
                 .client
-                .get_account_range_proof(prev_key, self.version)
+                .get_account_range_proof(last_key, self.version)
                 .await?,
             &mut proof_file,
         )
         .await?;
-        Ok((chunk_handle, proof_handle))
+
+        Ok(StateSnapshotChunk {
+            first_idx,
+            last_idx,
+            first_key,
+            last_key,
+            blobs: chunk_handle,
+            proof: proof_handle,
+        })
+    }
+
+    async fn write_manifest(
+        &self,
+        backup_handle: &BackupHandleRef,
+        chunks: Vec<StateSnapshotChunk>,
+    ) -> Result<FileHandle> {
+        let proof_bytes = self.client.get_state_root_proof(self.version).await?;
+        let (txn_info, ledger_info): (TransactionInfoWithProof, LedgerInfoWithSignatures) =
+            lcs::from_bytes(&proof_bytes)?;
+        assert_eq!(ledger_info.ledger_info().version(), self.version);
+
+        let (proof_handle, mut proof_file) = self
+            .storage
+            .create_for_write(&backup_handle, Self::proof_name())
+            .await?;
+        proof_file.write_all(&proof_bytes).await?;
+
+        let manifest = StateSnapshotBackup {
+            version: self.version,
+            root_hash: txn_info.transaction_info().state_root_hash(),
+            chunks,
+            proof: proof_handle,
+        };
+
+        let (manifest_handle, mut manifest_file) = self
+            .storage
+            .create_for_write(&backup_handle, Self::manifest_name())
+            .await?;
+        manifest_file
+            .write_all(&serde_json::to_vec(&manifest)?)
+            .await?;
+
+        Ok(manifest_handle)
     }
 }
