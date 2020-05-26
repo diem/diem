@@ -957,6 +957,14 @@
 <span id="957">957</span>
 <span id="958">958</span>
 <span id="959">959</span>
+<span id="960">960</span>
+<span id="961">961</span>
+<span id="962">962</span>
+<span id="963">963</span>
+<span id="964">964</span>
+<span id="965">965</span>
+<span id="966">966</span>
+<span id="967">967</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1008,7 +1016,7 @@
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">ensure</span>, <span class="ident">format_err</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">itertools</span>::{<span class="ident">izip</span>, <span class="ident">zip_eq</span>};
-<span class="kw">use</span> <span class="ident">jellyfish_merkle</span>::<span class="ident">restore</span>::<span class="ident">JellyfishMerkleRestore</span>;
+<span class="kw">use</span> <span class="ident">jellyfish_merkle</span>::{<span class="ident">restore</span>::<span class="ident">JellyfishMerkleRestore</span>, <span class="ident">TreeReader</span>, <span class="ident">TreeWriter</span>};
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::{<span class="ident">CryptoHash</span>, <span class="ident">HashValue</span>, <span class="ident">SPARSE_MERKLE_PLACEHOLDER_HASH</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_metrics</span>::{
@@ -1362,6 +1370,14 @@
         }
         <span class="ident">restore</span>.<span class="ident">finish</span>()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_state_restore_receiver</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">version</span>: <span class="ident">Version</span>,
+        <span class="ident">expected_root_hash</span>: <span class="ident">HashValue</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">JellyfishMerkleRestore</span><span class="op">&lt;</span><span class="kw">impl</span> <span class="ident">TreeReader</span> <span class="op">+</span> <span class="ident">TreeWriter</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="ident">JellyfishMerkleRestore</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">state_store</span>, <span class="ident">version</span>, <span class="ident">expected_root_hash</span>)
     }
 
     <span class="comment">// ================================== Private APIs ==================================</span>
