@@ -609,6 +609,8 @@
 <span id="609">609</span>
 <span id="610">610</span>
 <span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -653,8 +655,8 @@
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//! use libra_crypto::hash::CryptoHash;</span>
 <span class="doccomment">//! use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};</span>
-<span class="doccomment">//! use serde::Serialize;</span>
-<span class="doccomment">//! #[derive(Serialize, CryptoHasher, LCSCryptoHash)]</span>
+<span class="doccomment">//! use serde::{Deserialize, Serialize};</span>
+<span class="doccomment">//! #[derive(Serialize, Deserialize, CryptoHasher, LCSCryptoHash)]</span>
 <span class="doccomment">//! struct MyNewStruct { /*...*/ }</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! let value = MyNewStruct { /*...*/ };</span>
@@ -674,16 +676,18 @@
 <span class="doccomment">//! For any new structure `MyNewStruct` that needs to be hashed, it is recommended to simply</span>
 <span class="doccomment">//! use the derive macro [`CryptoHasher`](https://doc.rust-lang.org/reference/procedural-macros.html).</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! ```ignore</span>
-<span class="doccomment">//! #[derive(CryptoHasher)]</span>
-<span class="doccomment">//! struct MyNewStruct {</span>
-<span class="doccomment">//!   ...</span>
-<span class="doccomment">//! }</span>
+<span class="doccomment">//! ```</span>
+<span class="doccomment">//! use libra_crypto_derive::CryptoHasher;</span>
+<span class="doccomment">//! use serde::Deserialize;</span>
+<span class="doccomment">//! #[derive(Deserialize, CryptoHasher)]</span>
+<span class="doccomment">//! #[serde(rename = &quot;OptionalCustomSerdeName&quot;)]</span>
+<span class="doccomment">//! struct MyNewStruct { /*...*/ }</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! The macro will define a hasher automatically called `MyNewStructHasher`, and pick a salt</span>
-<span class="doccomment">//! equal to the full module path + &quot;::&quot;  + structure name, i.e. if</span>
-<span class="doccomment">//! `MyNewStruct` is defined in `bar::baz::quux`, the salt will be `b&quot;bar::baz::quux::MyNewStruct&quot;`.</span>
+<span class="doccomment">//! The macro `CryptoHasher` will define a hasher automatically called `MyNewStructHasher`, and derive a salt</span>
+<span class="doccomment">//! using the name of the type as seen by the Serde library. In the example above, this name</span>
+<span class="doccomment">//! was changed using the Serde parameter `rename`: the salt will be based on the value `OptionalCustomSerdeName`</span>
+<span class="doccomment">//! instead of the default name `MyNewStruct`.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## Customized hashers</span>
 <span class="doccomment">//!</span>
@@ -721,7 +725,7 @@
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="self">self</span>, <span class="ident">convert</span>::<span class="ident">AsRef</span>, <span class="ident">fmt</span>, <span class="ident">str</span>::<span class="ident">FromStr</span>};
 <span class="kw">use</span> <span class="ident">tiny_keccak</span>::{<span class="ident">Hasher</span>, <span class="ident">Sha3</span>};
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">LIBRA_HASH_SUFFIX</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] <span class="op">=</span> <span class="string">b&quot;@@$$LIBRA$$@@&quot;</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">LIBRA_HASH_PREFIX</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] <span class="op">=</span> <span class="string">b&quot;LIBRA::&quot;</span>;
 <span class="kw">const</span> <span class="ident">SHORT_STRING_LENGTH</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4</span>;
 
 <span class="doccomment">/// Output value of our hash function. Intentionally opaque for safety and modularity.</span>
@@ -1071,8 +1075,8 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">typename</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">Sha3</span>::<span class="ident">v256</span>();
         <span class="kw">if</span> <span class="op">!</span><span class="ident">typename</span>.<span class="ident">is_empty</span>() {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">salt</span> <span class="op">=</span> <span class="ident">typename</span>.<span class="ident">to_vec</span>();
-            <span class="ident">salt</span>.<span class="ident">extend_from_slice</span>(<span class="ident">LIBRA_HASH_SUFFIX</span>);
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">salt</span> <span class="op">=</span> <span class="ident">LIBRA_HASH_PREFIX</span>.<span class="ident">to_vec</span>();
+            <span class="ident">salt</span>.<span class="ident">extend_from_slice</span>(<span class="ident">typename</span>);
             <span class="ident">state</span>.<span class="ident">update</span>(<span class="ident">HashValue</span>::<span class="ident">from_sha3_256</span>(<span class="kw-2">&amp;</span><span class="ident">salt</span>[..]).<span class="ident">as_ref</span>());
         }
         <span class="ident">DefaultHasher</span> { <span class="ident">state</span> }

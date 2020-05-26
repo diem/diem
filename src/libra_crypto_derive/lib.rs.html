@@ -411,6 +411,23 @@
 <span id="411">411</span>
 <span id="412">412</span>
 <span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -429,15 +446,14 @@
 <span class="doccomment">//! - the derive macro for `libra_crypto::hash::CryptoHasher`, which defines</span>
 <span class="doccomment">//!   the domain-separation hasher structures described in `libra_crypto::hash`</span>
 <span class="doccomment">//!   (look there for details). This derive macro has for sole difference that it</span>
-<span class="doccomment">//!   automatically picks a unique salt for you, using the path of the structure</span>
-<span class="doccomment">//!   + its name. I.e. for a Structure Foo defined in bar::baz::quux, it will</span>
-<span class="doccomment">//!   define the equivalent of:</span>
+<span class="doccomment">//!   automatically picks a unique salt for you, using the Serde name. For a container `Foo`,</span>
+<span class="doccomment">//!   this is usually equivalent to:</span>
 <span class="doccomment">//!   ```ignore</span>
 <span class="doccomment">//!   define_hasher! {</span>
 <span class="doccomment">//!    (</span>
 <span class="doccomment">//!         FooHasher,</span>
 <span class="doccomment">//!         FOO_HASHER,</span>
-<span class="doccomment">//!         b&quot;bar::baz::quux::Foo&quot;</span>
+<span class="doccomment">//!         b&quot;Foo&quot;</span>
 <span class="doccomment">//!     )</span>
 <span class="doccomment">//!   }</span>
 <span class="doccomment">//!   ```</span>
@@ -521,7 +537,8 @@
 <span class="kw">use</span> <span class="ident">proc_macro</span>::<span class="ident">TokenStream</span>;
 <span class="kw">use</span> <span class="ident">proc_macro2</span>::<span class="ident">Span</span>;
 <span class="kw">use</span> <span class="ident">quote</span>::<span class="ident">quote</span>;
-<span class="kw">use</span> <span class="ident">syn</span>::{<span class="ident">parse_macro_input</span>, <span class="ident">Data</span>, <span class="ident">DeriveInput</span>, <span class="ident">Ident</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">iter</span>::<span class="ident">FromIterator</span>;
+<span class="kw">use</span> <span class="ident">syn</span>::{<span class="ident">parse_macro_input</span>, <span class="ident">parse_quote</span>, <span class="ident">Data</span>, <span class="ident">DeriveInput</span>, <span class="ident">Ident</span>};
 <span class="kw">use</span> <span class="ident">unions</span>::<span class="kw-2">*</span>;
 
 <span class="attribute">#[<span class="ident">proc_macro_derive</span>(<span class="ident">SilentDisplay</span>)]</span>
@@ -735,7 +752,7 @@
 <span class="comment">// There is a unit test for this logic in the crypto crate, at</span>
 <span class="comment">// libra_crypto::unit_tests::cryptohasher — you may have to modify it if you</span>
 <span class="comment">// edit the below.</span>
-<span class="attribute">#[<span class="ident">proc_macro_derive</span>(<span class="ident">CryptoHasher</span>, <span class="ident">attributes</span>(<span class="ident">CryptoHasherSalt</span>))]</span>
+<span class="attribute">#[<span class="ident">proc_macro_derive</span>(<span class="ident">CryptoHasher</span>)]</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">hasher_dispatch</span>(<span class="ident">input</span>: <span class="ident">TokenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
     <span class="kw">let</span> <span class="ident">item</span> <span class="op">=</span> <span class="macro">parse_macro_input</span><span class="macro">!</span>(<span class="ident">input</span> <span class="kw">as</span> <span class="ident">DeriveInput</span>);
     <span class="kw">let</span> <span class="ident">hasher_name</span> <span class="op">=</span> <span class="ident">Ident</span>::<span class="ident">new</span>(
@@ -747,8 +764,15 @@
         <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}_HASHER&quot;</span>, <span class="ident">snake_name</span>.<span class="ident">to_uppercase</span>()),
         <span class="ident">Span</span>::<span class="ident">call_site</span>(),
     );
-    <span class="kw">let</span> <span class="ident">fn_name</span> <span class="op">=</span> <span class="ident">get_type_from_attrs</span>(<span class="kw-2">&amp;</span><span class="ident">item</span>.<span class="ident">attrs</span>, <span class="string">&quot;CryptoHasherSalt&quot;</span>)
-        .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">syn</span>::<span class="ident">LitStr</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">item</span>.<span class="ident">ident</span>.<span class="ident">to_string</span>(), <span class="ident">Span</span>::<span class="ident">call_site</span>()));
+    <span class="kw">let</span> <span class="ident">type_name</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">item</span>.<span class="ident">ident</span>;
+    <span class="kw">let</span> <span class="ident">param</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">item</span>.<span class="ident">generics</span>.<span class="ident">params</span>.<span class="ident">is_empty</span>() {
+        <span class="macro">quote</span><span class="macro">!</span>()
+    } <span class="kw">else</span> {
+        <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="ident">proc_macro2</span>::<span class="ident">TokenStream</span>::<span class="ident">from_iter</span>(
+            <span class="ident">std</span>::<span class="ident">iter</span>::<span class="ident">repeat</span>(<span class="macro">quote</span><span class="macro">!</span>(())).<span class="ident">take</span>(<span class="ident">item</span>.<span class="ident">generics</span>.<span class="ident">params</span>.<span class="ident">len</span>()),
+        );
+        <span class="macro">quote</span><span class="macro">!</span>(<span class="op">&lt;</span>#<span class="ident">args</span><span class="op">&gt;</span>)
+    };
 
     <span class="kw">let</span> <span class="ident">out</span> <span class="op">=</span> <span class="macro">quote</span><span class="macro">!</span>(
         <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
@@ -756,11 +780,10 @@
 
         <span class="kw">impl</span> #<span class="ident">hasher_name</span> {
             <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-                <span class="kw">let</span> <span class="ident">mp</span> <span class="op">=</span> <span class="macro">module_path</span><span class="macro">!</span>();
-                <span class="kw">let</span> <span class="ident">f_name</span> <span class="op">=</span> #<span class="ident">fn_name</span>;
-
+                <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">libra_crypto</span>::<span class="ident">_serde_name</span>::<span class="ident">trace_name</span>::<span class="op">&lt;</span>#<span class="ident">type_name</span> #<span class="ident">param</span><span class="op">&gt;</span>()
+                    .<span class="ident">expect</span>(<span class="string">&quot;The `CryptoHasher` macro only applies to structs and enums&quot;</span>);
                 #<span class="ident">hasher_name</span>(
-                    <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">DefaultHasher</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="ident">mp</span>, <span class="ident">f_name</span>).<span class="ident">as_bytes</span>()))
+                    <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">DefaultHasher</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">name</span>.<span class="ident">as_bytes</span>()))
             }
         }
 
@@ -810,8 +833,10 @@
         <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;LCS serialization of {} should not fail&quot;</span>, <span class="ident">name</span>.<span class="ident">to_string</span>()),
         <span class="ident">Span</span>::<span class="ident">call_site</span>(),
     );
+    <span class="kw">let</span> <span class="ident">generics</span> <span class="op">=</span> <span class="ident">add_trait_bounds</span>(<span class="ident">ast</span>.<span class="ident">generics</span>);
+    <span class="kw">let</span> (<span class="ident">impl_generics</span>, <span class="ident">ty_generics</span>, <span class="ident">where_clause</span>) <span class="op">=</span> <span class="ident">generics</span>.<span class="ident">split_for_impl</span>();
     <span class="kw">let</span> <span class="ident">out</span> <span class="op">=</span> <span class="macro">quote</span><span class="macro">!</span>(
-        <span class="kw">impl</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">CryptoHash</span> <span class="kw">for</span> #<span class="ident">name</span> {
+        <span class="kw">impl</span> #<span class="ident">impl_generics</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">CryptoHash</span> <span class="kw">for</span> #<span class="ident">name</span> #<span class="ident">ty_generics</span> #<span class="ident">where_clause</span> {
             <span class="kw">type</span> <span class="ident">Hasher</span> <span class="op">=</span> #<span class="ident">hasher_name</span>;
 
             <span class="kw">fn</span> <span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">HashValue</span> {
@@ -824,6 +849,15 @@
         }
     );
     <span class="ident">out</span>.<span class="ident">into</span>()
+}
+
+<span class="kw">fn</span> <span class="ident">add_trait_bounds</span>(<span class="kw-2">mut</span> <span class="ident">generics</span>: <span class="ident">syn</span>::<span class="ident">Generics</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">syn</span>::<span class="ident">Generics</span> {
+    <span class="kw">for</span> <span class="ident">param</span> <span class="kw">in</span> <span class="ident">generics</span>.<span class="ident">params</span>.<span class="ident">iter_mut</span>() {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">syn</span>::<span class="ident">GenericParam</span>::<span class="ident">Type</span>(<span class="ident">type_param</span>) <span class="op">=</span> <span class="ident">param</span> {
+            <span class="ident">type_param</span>.<span class="ident">bounds</span>.<span class="ident">push</span>(<span class="macro">parse_quote</span><span class="macro">!</span>(<span class="ident">Serialize</span>));
+        }
+    }
+    <span class="ident">generics</span>
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "libra_crypto_derive";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
