@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use crate::{
     errors::*,
-    parser::{ast::*, lexer::*},
+    parser::{ast::*, byte_string::decode_byte_string, lexer::*},
     shared::*,
 };
 use std::collections::BTreeMap;
@@ -432,26 +432,31 @@ fn parse_byte_string<'input>(tokens: &mut Lexer<'input>) -> Result<Vec<u8>, Erro
     }
     let start_loc = tokens.start_loc();
     let s = tokens.content();
-    assert!(s.starts_with("x\""));
-    let mut hex_string = String::from(&s[2..s.len() - 1]);
-    let adjust = if hex_string.len() % 2 != 0 {
-        hex_string.insert(0, '0');
-        1
-    } else {
-        0
-    };
-    tokens.advance()?;
-    match hex::decode(hex_string.as_str()) {
-        Ok(vec) => Ok(vec),
-        Err(hex::FromHexError::InvalidHexCharacter { c, index }) => {
-            let offset = start_loc + 2 - adjust + index;
-            let loc = make_loc(tokens.file_name(), offset, offset);
-            Err(vec![(
-                loc,
-                format!("Invalid hexadecimal character: '{}'", c),
-            )])
+    if s.starts_with("x\"") {
+        let mut hex_string = String::from(&s[2..s.len() - 1]);
+        let adjust = if hex_string.len() % 2 != 0 {
+            hex_string.insert(0, '0');
+            1
+        } else {
+            0
+        };
+        tokens.advance()?;
+        match hex::decode(hex_string.as_str()) {
+            Ok(vec) => Ok(vec),
+            Err(hex::FromHexError::InvalidHexCharacter { c, index }) => {
+                let offset = start_loc + 2 - adjust + index;
+                let loc = make_loc(tokens.file_name(), offset, offset);
+                Err(vec![(
+                    loc,
+                    format!("Invalid hexadecimal character: '{}'", c),
+                )])
+            }
+            Err(_) => unreachable!("unexpected error parsing hex byte string value"),
         }
-        Err(_) => unreachable!("unexpected error parsing hex byte string value"),
+    } else {
+        let result = decode_byte_string(tokens.file_name(), start_loc + 2, &s[2..s.len() - 1]);
+        tokens.advance()?;
+        result
     }
 }
 
@@ -1593,7 +1598,7 @@ fn parse_spec_block<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlock, Err
             return Err(unexpected_token_error(
                 tokens,
                 "one of `module`, `struct`, `fun`, `schema`, or `{`",
-            ))
+            ));
         }
     };
     let target = spanned(

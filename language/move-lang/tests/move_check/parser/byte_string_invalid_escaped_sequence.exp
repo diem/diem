@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/byte_string_invalid_escaped_sequence.move:3:15 ───
+   │
+ 3 │         b"libr\a"
+   │               ^^ Invalid escape sequence: '\a'
+   │
+
