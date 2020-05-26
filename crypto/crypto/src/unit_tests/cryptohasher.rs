@@ -81,3 +81,28 @@ fn test_lcs_cryptohash_with_generics() {
     let actual = CryptoHash::hash(&value);
     assert_eq!(expected, actual);
 }
+
+fn prefixed_sha3(input: &[u8]) -> [u8; 32] {
+    let mut sha3 = ::tiny_keccak::Sha3::v256();
+    let salt: Vec<u8> = [LIBRA_HASH_PREFIX, input].concat();
+    sha3.update(&salt);
+    let mut output = [0u8; 32];
+    sha3.finalize(&mut output);
+    output
+}
+
+#[test]
+fn test_cryptohasher_salt_access() {
+    // the salt for this simple struct is expected to be its name
+    assert_eq!(FooHasher::seed(), &prefixed_sha3(b"Foo"));
+    assert_eq!(<Foo as CryptoHash>::Hasher::seed(), &prefixed_sha3(b"Foo"));
+    assert_eq!(
+        <Baz<usize> as CryptoHash>::Hasher::seed(),
+        &prefixed_sha3(b"Foo")
+    );
+    assert_eq!(
+        <Baz<String> as CryptoHash>::Hasher::seed(),
+        &prefixed_sha3(b"Foo")
+    );
+    assert_eq!(<Bar as CryptoHash>::Hasher::seed(), &prefixed_sha3(b"Foo"));
+}
