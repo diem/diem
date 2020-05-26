@@ -8,8 +8,8 @@
 
 import argparse
 import json
-import sys
 import os
+import re
 from subprocess import check_call, check_output, DEVNULL, CalledProcessError
 
 
@@ -21,6 +21,16 @@ def gen_tf_var_list(var_name: str, vals: list) -> str:
     list_str = ','.join(f'"{v}"' for v in vals)
     return f'{var_name} = [{list_str}]'
 
+def execute_cmd_with_text_output(cmd: list, wdir: str, err: str) -> str:
+    try:
+        return check_output(cmd, cwd=wdir, stderr=DEVNULL)
+    except CalledProcessError:
+        print(f"ERROR: {err}")
+        raise
+
+def execute_cmd_with_json_output(cmd: list, wdir: str, err: str) -> dict:
+    out = execute_cmd_with_text_output(cmd, wdir, err)
+    return json.loads(out)
 
 parser = argparse.ArgumentParser(
     description='Record state from a terraform workspace for replay in another.')
@@ -43,27 +53,22 @@ print(f"Searching workspaces in {tf_dir}")
 try:
     check_call(['terraform', 'workspace', 'select', args.source], cwd=tf_dir, stdout=DEVNULL, stderr=DEVNULL)
 except CalledProcessError:
-    print(
-        f"ERROR: Could not find source workspace \"{args.source}\". Is it initialized?")
-    sys.exit(1)
+    print(f"ERROR: Could not find source workspace \"{args.source}\". Is it initialized?")
+    raise
 
 print(f"Using source workspace \"{args.source}\"")
 
-
 # get source state with terraform show
-try:
-    out_raw = check_output(['terraform', 'show', '-json'], cwd=tf_dir, stderr=DEVNULL)
-    out = json.loads(out_raw)
-except CalledProcessError:
-    print("ERROR: could not read info from terraform")
-    sys.exit(1)
-
+out = execute_cmd_with_json_output(
+    ['terraform', 'show', '-json'],
+    tf_dir,
+    "could not read info from terraform"
+)
 
 # get resources of importance
 validators = []
 fullnodes = []
 validators_ecs = []
-fullnodes_ecs = []
 for res in out.get('values').get('root_module').get('resources'):
     addr = res.get('address')
     if 'aws_instance.validator' in addr:
@@ -72,15 +77,12 @@ for res in out.get('values').get('root_module').get('resources'):
         fullnodes.append(res)
     elif 'ecs_task_definition.validator' in addr:
         validators_ecs.append(res)
-    elif 'ecs_task_definition.fullnode' in addr:
-        fullnodes_ecs.append(res)
 
 
 # terraform show not guaranteed to be sorted
 list.sort(validators, key=lambda x: x.get('index'))
 list.sort(fullnodes, key=lambda x: x.get('index'))
 list.sort(validators_ecs, key=lambda x: x.get('index'))
-list.sort(fullnodes_ecs, key=lambda x: x.get('index'))
 
 
 # parse validators
@@ -107,24 +109,56 @@ safetyrules_image = None
 logstash_version = None
 validator_versions = []
 safetyrules_version = None
+# Used to match the 'group' in task instance with 'family' in task definition. Why?
+# The index isn't available in task instance but in task definition so we iterate
+# over task definitions in order and use the mapping to extract the image and version
+# from the corresponding task instance
+validator_image_map = {}
+
+ecs_tasks = execute_cmd_with_json_output(
+    ['aws', 'ecs', 'list-tasks', '--cluster', args.source, '--no-paginate'],
+    tf_dir,
+    "could not get the list of ecs tasks"
+)
+
+for task in ecs_tasks.get('taskArns'):
+    task_details = execute_cmd_with_json_output(
+        ['aws', 'ecs', 'describe-tasks', '--cluster', args.source, '--task', task],
+        tf_dir,
+        f"could not get details of task {task}"
+    )
+    extract_image_tag = lambda container: (
+        re.split('[@:]', container.get("image"))[0],
+        container.get("imageDigest")
+    )
+    for container in task_details.get("tasks")[0].get("containers"):
+        name = container.get("name")
+        if not logstash_image and name == 'logstash':
+            logstash_image, logstash_version = extract_image_tag(container)
+        elif not safetyrules_image and name == 'safety-rules':
+            safetyrules_image, safetyrules_version = extract_image_tag(container)
+        elif name == 'validator':
+            key = task_details.get("tasks")[0].get("group").split("service:",1)[1]
+            validator_image_map[key] = extract_image_tag(container)
+
 for ecs in validators_ecs:
-    containers = json.loads(ecs.get('values').get('container_definitions'))
-    for container in containers:
-        container_name = container.get('name')
-        try:
-            image, version = container.get('image').split(':')
-        except:
-            print("Error getting ECS images")
-            sys.exit(1)
-        if container_name == 'logstash':
-            logstash_image = image
-            logstash_version = version
-        elif container_name == 'validator':
-            validator_image = image
+    if ecs.get("name") == "validator":
+        key = ecs.get("values").get("family")
+        if key in validator_image_map:
+            validator_image, version = validator_image_map[key]
             validator_versions.append(version)
-        elif container_name == 'safety-rules':
-            safetyrules_image = image
-            safetyrules_version = version
+        else:
+            print(f"ERROR: didn't find task corresponding to definition {key} in {validator_image_map.keys()}")
+
+print(f"logstash_image          : {logstash_image}")
+print(f"logstash_version        : {logstash_version}")
+print(f"safetyrules_image       : {safetyrules_image}")
+print(f"safetyrules_version     : {safetyrules_version}")
+print(f"validator_image         : {validator_image}")
+print(f"validator_versions      : {validator_versions}")
+print(f"validator_ips           : {validator_ips}")
+print(f"fullnode_ips            : {fullnode_ips}")
+print(f"validator_restore_vols  : {validator_restore_vols}")
 
 # build the var strings
 vars = []
@@ -162,7 +196,7 @@ with open(out_file, 'w') as f:
         f.write(var)
         f.write('\n')
 
-print()
+print("\nInstructions:")
 print(f"cd {tf_dir}")
 print("terraform workspace new <new_workspace>")
 print(f"terraform apply --var-file={out_file}")
