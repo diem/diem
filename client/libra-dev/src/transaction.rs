@@ -17,13 +17,15 @@ use libra_crypto::{
 };
 use libra_types::{
     account_address::{self, AccountAddress},
-    account_config::{lbr_type_tag, LBR_NAME},
+    account_config::{
+        from_currency_code_string, lbr_type_tag, type_tag_for_currency_code, LBR_NAME,
+    },
     transaction::{
         authenticator::AuthenticationKey, helpers::TransactionSigner, RawTransaction,
         SignedTransaction, TransactionArgument, TransactionPayload,
     },
 };
-use std::{convert::TryFrom, slice, time::Duration};
+use std::{convert::TryFrom, ffi::CStr, slice, time::Duration};
 use transaction_builder::{encode_transfer_with_metadata_script, get_transaction_name};
 
 #[no_mangle]
@@ -31,9 +33,11 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
     sender_private_key_bytes: *const u8,
     receiver: *const u8,
     sequence: u64,
+    identifier: *const i8,
     num_coins: u64,
     max_gas_amount: u64,
     gas_unit_price: u64,
+    gas_identifier: *const i8,
     expiration_time_secs: u64,
     metadata_bytes: *const u8,
     metadata_len: usize,
@@ -90,8 +94,21 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
     };
     let expiration_time = Duration::from_secs(expiration_time_secs);
 
+    let coin_type_tag = match from_currency_code_string(
+        CStr::from_ptr(identifier)
+            .to_string_lossy()
+            .into_owned()
+            .as_str(),
+    ) {
+        Ok(coin_ident) => type_tag_for_currency_code(coin_ident),
+        Err(e) => {
+            update_last_error(format!("Invalid coin identifier: {}", e.to_string()));
+            return LibraStatus::InvalidArgument;
+        }
+    };
+
     let program = encode_transfer_with_metadata_script(
-        lbr_type_tag(),
+        coin_type_tag,
         &receiver_address,
         receiver_auth_key.prefix().to_vec(),
         num_coins,
@@ -105,7 +122,9 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
         payload,
         max_gas_amount,
         gas_unit_price,
-        LBR_NAME.to_owned(),
+        CStr::from_ptr(gas_identifier)
+            .to_string_lossy()
+            .into_owned(),
         expiration_time,
     );
 
@@ -495,14 +514,18 @@ mod test {
         let buf_ptr = &mut buf;
         let mut len: usize = 0;
 
+        let coin_ident = std::ffi::CString::new(LBR_NAME).expect("Invalid ident");
+
         let result = unsafe {
             libra_SignedTransactionBytes_from(
                 private_key_bytes.as_ptr(),
                 receiver_auth_key.as_ref().as_ptr(),
                 sequence,
+                coin_ident.as_ptr(),
                 amount,
                 max_gas_amount,
                 gas_unit_price,
+                coin_ident.as_ptr(),
                 expiration_time_secs,
                 metadata.as_ptr(),
                 metadata.len(),
@@ -546,14 +569,17 @@ mod test {
         let mut buf2: *mut u8 = std::ptr::null_mut();
         let buf_ptr2 = &mut buf2;
         let mut len2: usize = 0;
+        let coin_idnet = std::ffi::CString::new(LBR_NAME).expect("Invalid ident");
         let result2 = unsafe {
             libra_SignedTransactionBytes_from(
                 private_key_bytes.as_ptr(),
                 receiver_auth_key.as_ref().as_ptr(),
                 sequence,
+                coin_idnet.as_ptr(),
                 amount,
                 max_gas_amount,
                 gas_unit_price,
+                coin_idnet.as_ptr(),
                 expiration_time_secs,
                 metadata.as_ptr(),
                 metadata.len(),
