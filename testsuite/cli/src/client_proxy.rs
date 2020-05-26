@@ -623,17 +623,17 @@ impl ClientProxy {
                 .get_txn_by_acc_seq(account, sequence_number - 1, true)
             {
                 Ok(Some(txn_view)) => {
-                    if txn_view.vm_status != StatusCode::EXECUTED {
-                        break Err(format_err!(
-                            "transaction failed to execute; status: {:?}!",
-                            txn_view.vm_status
-                        ));
-                    } else {
-                        println!("transaction is stored!");
+                    if txn_view.vm_status == StatusCode::EXECUTED {
+                        println!("transaction executed!");
                         if txn_view.events.is_empty() {
                             println!("no events emitted");
                         }
                         break Ok(());
+                    } else {
+                        break Err(format_err!(
+                            "transaction failed to execute; status: {:?}!",
+                            txn_view.vm_status
+                        ));
                     }
                 }
                 Err(e) => {
