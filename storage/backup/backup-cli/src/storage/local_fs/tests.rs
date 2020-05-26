@@ -42,7 +42,7 @@ async fn test_write_and_read_impl(backups: HashMap<String, HashMap<String, Vec<u
     for (backup_name, files) in &backups {
         for (name, content) in files {
             let handle = to_file_name(&tmpdir, backup_name, name);
-            let mut file = LocalFs::open_for_read(&handle).await.unwrap();
+            let mut file = store.open_for_read(&handle).await.unwrap();
             let mut buf = Vec::new();
             file.read_to_end(&mut buf).await.unwrap();
             assert_eq!(content, &buf);

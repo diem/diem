@@ -10,9 +10,19 @@ use bytes::Bytes;
 use futures::stream::TryStreamExt;
 use libra_crypto::HashValue;
 use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
-use std::mem::size_of;
+use std::{mem::size_of, sync::Arc};
+use structopt::StructOpt;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 use tokio_util::compat::FuturesAsyncReadCompatExt;
+
+#[derive(StructOpt)]
+pub struct BackupServiceClientOpt {
+    #[structopt(
+        long = "backup-service-port",
+        about = "Backup service port. The service must listen on localhost."
+    )]
+    pub port: u16,
+}
 
 pub struct BackupServiceClient {
     port: u16,
@@ -20,6 +30,10 @@ pub struct BackupServiceClient {
 }
 
 impl BackupServiceClient {
+    pub fn new_with_opt(opt: BackupServiceClientOpt) -> Self {
+        Self::new(opt.port)
+    }
+
     pub fn new(port: u16) -> Self {
         Self {
             port,
@@ -66,105 +80,137 @@ impl BackupServiceClient {
     }
 }
 
-fn backup_name(version: Version) -> String {
-    format!("state_ver_{}", version)
+#[derive(StructOpt)]
+pub struct GlobalBackupOpt {
+    #[structopt(long = "max-chunk-size", about = "Maximum chunk file size in bytes.")]
+    pub max_chunk_size: usize,
 }
 
-fn chunk_name(first_idx: usize) -> String {
-    format!("{}-.chunk", first_idx)
+#[derive(StructOpt)]
+pub struct StateSnapshotBackupOpt {
+    #[structopt(
+        long = "state-version",
+        about = "Version at which a state snapshot to be taken."
+    )]
+    pub version: Version,
 }
 
-fn chunk_proof_name(first_idx: usize, last_idx: usize) -> String {
-    format!("{}-{}.proof", first_idx, last_idx)
-}
-
-pub async fn backup_account_state(
-    client: &BackupServiceClient,
+pub struct StateSnapshotBackupController {
     version: Version,
-    storage: &impl BackupStorage,
     max_chunk_size: usize,
-) -> Result<Vec<(FileHandle, FileHandle)>> {
-    let backup_handle = storage.create_backup(&backup_name(version)).await?;
+    client: Arc<BackupServiceClient>,
+    storage: Arc<dyn BackupStorage>,
+}
 
-    let mut chunk_bytes = vec![];
-    let mut ret = vec![];
-    let mut current_idx: usize = 0;
-    let mut chunk_first_idx: usize = 0;
+impl StateSnapshotBackupController {
+    pub fn new(
+        opt: StateSnapshotBackupOpt,
+        global_opt: GlobalBackupOpt,
+        client: Arc<BackupServiceClient>,
+        storage: Arc<dyn BackupStorage>,
+    ) -> Self {
+        Self {
+            version: opt.version,
+            max_chunk_size: global_opt.max_chunk_size,
+            client,
+            storage,
+        }
+    }
 
-    let mut state_snapshot_file = client.get_state_snapshot(version).await?;
-    let mut prev_record_bytes: Option<Bytes> = None;
-    while let Some(record_bytes) = state_snapshot_file.read_record_bytes().await? {
-        if chunk_bytes.len() + size_of::<u32>() + record_bytes.len() > max_chunk_size {
-            assert!(chunk_bytes.len() <= max_chunk_size);
-            println!("Reached max_chunk_size.");
+    pub async fn run(self) -> Result<Vec<(FileHandle, FileHandle)>> {
+        let backup_handle = self.storage.create_backup(&self.backup_name()).await?;
 
-            let (chunk_handle, proof_handle) = write_chunk(
-                client,
-                version,
-                storage,
+        let mut chunk_bytes = vec![];
+        let mut ret = vec![];
+        let mut current_idx: usize = 0;
+        let mut chunk_first_idx: usize = 0;
+
+        let mut state_snapshot_file = self.client.get_state_snapshot(self.version).await?;
+        let mut prev_record_bytes: Option<Bytes> = None;
+        while let Some(record_bytes) = state_snapshot_file.read_record_bytes().await? {
+            if chunk_bytes.len() + size_of::<u32>() + record_bytes.len() > self.max_chunk_size {
+                assert!(chunk_bytes.len() <= self.max_chunk_size);
+                println!("Reached max_chunk_size.");
+
+                let (chunk_handle, proof_handle) = self
+                    .write_chunk(
+                        &backup_handle,
+                        &chunk_bytes,
+                        chunk_first_idx,
+                        current_idx,
+                        &prev_record_bytes
+                            .expect("max_chunk_size should be larger than account size."),
+                    )
+                    .await?;
+                ret.push((chunk_handle, proof_handle));
+                chunk_bytes = vec![];
+                chunk_first_idx = current_idx + 1;
+            }
+
+            current_idx += 1;
+            chunk_bytes.extend(&(record_bytes.len() as u32).to_be_bytes());
+            chunk_bytes.extend(&record_bytes);
+            prev_record_bytes = Some(record_bytes);
+        }
+
+        assert!(!chunk_bytes.is_empty());
+        assert!(chunk_bytes.len() <= self.max_chunk_size);
+        println!("Last chunk.");
+        let (chunk_handle, proof_handle) = self
+            .write_chunk(
                 &backup_handle,
                 &chunk_bytes,
                 chunk_first_idx,
                 current_idx,
-                &prev_record_bytes.expect("max_chunk_size should be larger than account size."),
+                &prev_record_bytes.expect("Should have at least one account."),
             )
             .await?;
-            ret.push((chunk_handle, proof_handle));
-            chunk_bytes = vec![];
-            chunk_first_idx = current_idx + 1;
-        }
+        ret.push((chunk_handle, proof_handle));
 
-        current_idx += 1;
-        chunk_bytes.extend(&(record_bytes.len() as u32).to_be_bytes());
-        chunk_bytes.extend(&record_bytes);
-        prev_record_bytes = Some(record_bytes);
+        Ok(ret)
     }
-
-    assert!(!chunk_bytes.is_empty());
-    assert!(chunk_bytes.len() <= max_chunk_size);
-    println!("Last chunk.");
-    let (chunk_handle, proof_handle) = write_chunk(
-        client,
-        version,
-        storage,
-        &backup_handle,
-        &chunk_bytes,
-        chunk_first_idx,
-        current_idx,
-        &prev_record_bytes.expect("Should have at least one account."),
-    )
-    .await?;
-    ret.push((chunk_handle, proof_handle));
-
-    Ok(ret)
 }
 
-async fn write_chunk(
-    client: &BackupServiceClient,
-    version: u64,
-    storage: &impl BackupStorage,
-    backup_handle: &BackupHandleRef,
-    chunk_bytes: &[u8],
-    chunk_first_idx: usize,
-    current_idx: usize,
-    prev_record_bytes: &Bytes,
-) -> Result<(FileHandle, FileHandle)> {
-    let (prev_key, _): (HashValue, AccountStateBlob) = lcs::from_bytes(prev_record_bytes)?;
-    println!("Asking proof for key: {:?}", prev_key,);
-    let (chunk_handle, mut chunk_file) = storage
-        .create_for_write(&backup_handle, &chunk_name(chunk_first_idx))
-        .await?;
-    chunk_file.write_all(&chunk_bytes).await?;
-    let (proof_handle, mut proof_file) = storage
-        .create_for_write(
-            &backup_handle,
-            &chunk_proof_name(chunk_first_idx, current_idx),
+impl StateSnapshotBackupController {
+    fn backup_name(&self) -> String {
+        format!("state_ver_{}", self.version)
+    }
+
+    fn chunk_name(first_idx: usize) -> String {
+        format!("{}-.chunk", first_idx)
+    }
+
+    fn chunk_proof_name(first_idx: usize, last_idx: usize) -> String {
+        format!("{}-{}.proof", first_idx, last_idx)
+    }
+
+    async fn write_chunk(
+        &self,
+        backup_handle: &BackupHandleRef,
+        chunk_bytes: &[u8],
+        first_idx: usize,
+        last_idx: usize,
+        prev_record_bytes: &Bytes,
+    ) -> Result<(FileHandle, FileHandle)> {
+        let (prev_key, _): (HashValue, AccountStateBlob) = lcs::from_bytes(prev_record_bytes)?;
+        println!("Asking proof for key: {:?}", prev_key,);
+        let (chunk_handle, mut chunk_file) = self
+            .storage
+            .create_for_write(backup_handle, &Self::chunk_name(first_idx))
+            .await?;
+        chunk_file.write_all(&chunk_bytes).await?;
+        let (proof_handle, mut proof_file) = self
+            .storage
+            .create_for_write(backup_handle, &Self::chunk_proof_name(first_idx, last_idx))
+            .await?;
+        tokio::io::copy(
+            &mut self
+                .client
+                .get_account_range_proof(prev_key, self.version)
+                .await?,
+            &mut proof_file,
         )
         .await?;
-    tokio::io::copy(
-        &mut client.get_account_range_proof(prev_key, version).await?,
-        &mut proof_file,
-    )
-    .await?;
-    Ok((chunk_handle, proof_handle))
+        Ok((chunk_handle, proof_handle))
+    }
 }
