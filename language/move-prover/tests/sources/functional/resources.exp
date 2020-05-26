@@ -1,11 +1,11 @@
 Move prover returns: exiting with boogie verification errors
 error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/functional/resources.move:32:6 ───
+    ┌── tests/sources/functional/resources.move:40:6 ───
     │
- 32 │      ensures exists<R>(sender());
+ 40 │      ensures exists<R>(sender());
     │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/resources.move:25:5: create_resource_incorrect (entry)
-    =     at tests/sources/functional/resources.move:26:9: create_resource_incorrect
-    =     at tests/sources/functional/resources.move:25:5: create_resource_incorrect (exit)
+    =     at tests/sources/functional/resources.move:33:5: create_resource_incorrect (entry)
+    =     at tests/sources/functional/resources.move:34:9: create_resource_incorrect
+    =     at tests/sources/functional/resources.move:33:5: create_resource_incorrect (exit)

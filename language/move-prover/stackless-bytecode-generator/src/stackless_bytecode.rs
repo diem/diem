@@ -95,6 +95,7 @@ pub enum Operation {
 
     // Resources
     MoveToSender(ModuleId, StructId, Vec<Type>),
+    MoveTo(ModuleId, StructId, Vec<Type>),
     MoveFrom(ModuleId, StructId, Vec<Type>),
     Exists(ModuleId, StructId, Vec<Type>),
 
@@ -533,6 +534,9 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             }
 
             // Resources
+            MoveTo(mid, sid, targs) => {
+                write!(f, "move_to<{}>", self.struct_str(*mid, *sid, targs))?;
+            }
             MoveToSender(mid, sid, targs) => {
                 write!(f, "move_to_sender<{}>", self.struct_str(*mid, *sid, targs))?;
             }
