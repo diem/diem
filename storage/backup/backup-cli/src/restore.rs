@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    storage::{BackupStorage, FileHandle},
+    manifest::state_snapshot::StateSnapshotBackup,
+    storage::{BackupStorage, FileHandle, FileHandleRef},
     ReadRecordBytes,
 };
 use anyhow::Result;
@@ -12,25 +13,31 @@ use libradb::LibraDB;
 use std::path::Path;
 use tokio::io::AsyncReadExt;
 
-pub async fn restore_account_state<P, I>(
+pub async fn restore_account_state<P>(
     storage: &dyn BackupStorage,
+    manifest_handle: &FileHandleRef,
     version: u64,
-    root_hash: HashValue,
     db_dir: P,
-    iter: I,
 ) -> Result<()>
 where
     P: AsRef<Path> + Clone,
-    I: Iterator<Item = (FileHandle, FileHandle)>,
 {
+    let mut manifest_bytes = Vec::new();
+    storage
+        .open_for_read(manifest_handle)
+        .await?
+        .read_to_end(&mut manifest_bytes)
+        .await?;
+    let manifest: StateSnapshotBackup = serde_json::from_slice(&manifest_bytes)?;
+
     let libradb = LibraDB::open(db_dir, false /* read_only */, None /* pruner */)?;
-    let mut receiver = libradb.get_state_restore_receiver(version, root_hash)?;
+    let mut receiver = libradb.get_state_restore_receiver(version, manifest.root_hash)?;
 
-    for (chunk_handle, proof_handle) in iter {
-        let chunk = read_account_state_chunk(storage, chunk_handle).await?;
-        let proof = read_proof(storage, proof_handle).await?;
+    for chunk in manifest.chunks {
+        let blobs = read_account_state_chunk(storage, chunk.blobs).await?;
+        let proof = read_proof(storage, chunk.proof).await?;
 
-        receiver.add_chunk(chunk, proof)?;
+        receiver.add_chunk(blobs, proof)?;
     }
 
     receiver.finish()?;

@@ -32,14 +32,11 @@ async fn main() {
     let client = Arc::new(BackupServiceClient::new_with_opt(opt.client));
     let storage = Arc::new(LocalFs::new_with_opt(opt.storage));
 
-    let (file_handles, _state_root_hash) =
+    let manifest =
         StateSnapshotBackupController::new(opt.state_snapshot, opt.global, client, storage)
             .run()
             .await
             .expect("Failed to backup account state.");
 
-    for (account_state_file, proof_file) in file_handles {
-        println!("{}", account_state_file);
-        println!("{}", proof_file);
-    }
+    println!("Success. Manifest saved to {}", &manifest);
 }

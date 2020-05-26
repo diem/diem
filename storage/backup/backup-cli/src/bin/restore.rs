@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Result;
 use backup_cli::{restore::restore_account_state, storage::local_fs::LocalFs};
-use itertools::Itertools;
-use libra_crypto::HashValue;
 use std::path::PathBuf;
 use structopt::StructOpt;
 use tokio::{
@@ -34,36 +31,19 @@ async fn main() {
         .expect("Version must be valid u64.");
     println!("Version: {}", version);
 
-    println!("Input state root hash:");
-    let root_hash_hex = lines
+    println!("Input manifest:");
+    let manifest = lines
         .next()
         .await
-        .expect("Must provide state root hash.")
+        .expect("Must provide manifest.")
         .expect("Failed to read from stdin.");
-    let root_hash = HashValue::from_slice(
-        &hex::decode(&root_hash_hex).expect("State root hash must be valid hex."),
-    )
-    .expect("Invalid root hash.");
-    println!("State root hash: {:x}", root_hash);
-
-    let file_handle_pair_iter = lines
-        .collect::<Result<Vec<_>, _>>()
-        .await
-        .expect("Failed reading file handles.")
-        .into_iter()
-        .tuples::<(_, _)>();
+    println!("Manifest: {}", &manifest);
 
     // LocalFs uses absolute paths, so when reading we can construct it in any dir.
     let storage = LocalFs::new(PathBuf::from("."));
-    restore_account_state(
-        &storage,
-        version,
-        root_hash,
-        &opt.db_dir,
-        file_handle_pair_iter,
-    )
-    .await
-    .expect("Failed restoring state.");
+    restore_account_state(&storage, &manifest, version, &opt.db_dir)
+        .await
+        .expect("Failed restoring state.");
 
     println!("Finished restoring account state.");
 }
