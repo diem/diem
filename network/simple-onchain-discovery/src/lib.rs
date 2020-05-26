@@ -44,6 +44,7 @@ pub struct ConfigurationChangeListener {
 
 fn extract_validator_updates(validator_set: ValidatorSet) -> Vec<ConnectivityRequest> {
     let validator_keys = validator_set.payload().to_vec();
+
     // Collect the set of address updates.
     let updates: Vec<ConnectivityRequest> = validator_keys
         .into_iter()
@@ -58,6 +59,7 @@ fn extract_validator_updates(validator_set: ValidatorSet) -> Vec<ConnectivityReq
             )
         })
         .collect();
+
     // Collect the set of EligibleNodes
     updates.push(ConnectivityRequest::UpdateEligibleNodes(
         validator_keys
@@ -73,6 +75,7 @@ fn extract_validator_updates(validator_set: ValidatorSet) -> Vec<ConnectivityReq
             })
             .collect(),
     ));
+
     updates
 }
 
@@ -86,6 +89,7 @@ fn extract_full_node_updates(full_node_set: ValidatorSet) -> Vec<ConnectivityReq
             ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::OnChain,
                 // TODO:  this seems wrong for the account address.  Is it shared with the validator?
+                // A:  should be account_address::from_public_key
                 full_node.account_address().clone(),
                 vec![NetworkAddress::try_from(
                     &full_node.config().full_node_network_address.clone(),
@@ -108,12 +112,10 @@ fn extract_full_node_updates(full_node_set: ValidatorSet) -> Vec<ConnectivityReq
                             .config()
                             .full_node_network_identity_public_key
                             .clone(),
-                        // TODO:  there are not separate keys for the full_node.  Are they therefore the same?
-                        // Note that signing_key type is Ed25519PublicKey
-                        // public key type is x25519::PublicKey
+                        // FullNodes are currently trusted portions of the validator and use the primary signing key.
                         signing_public_key: full_node
                             .config()
-                            .full_node_network_identity_public_key
+                            .validator_network_signing_public_key
                             .clone(),
                     },
                 )
@@ -148,11 +150,11 @@ impl ConfigurationChangeListener {
             "Update {} Network about new Node IDs",
             self.role.to_string()
         );
+
+        let mut futures = Vec::new();
         for mut update in updates {
-            let err_msg;
             match &update {
                 ConnectivityRequest::UpdateAddresses(a, b, c) => {
-                    err_msg = format!("Unable to update network address for peer {}", b);
                     info!(
                         "Updating {} network address for {} to {}",
                         self.role.to_string(),
@@ -161,21 +163,18 @@ impl ConfigurationChangeListener {
                     );
                 }
                 ConnectivityRequest::UpdateEligibleNodes(a) => {
-                    err_msg = format!(
-                        "Unable to update {} network's eligible peers",
-                        self.role.to_string()
-                    );
                     info!(
                         "Update {} network about new Node IDs",
                         self.role.to_string()
                     );
                 }
                 ConnectivityRequest::GetDialQueueSize(a) => {
-                    unimplemented!("Not expecting to receive this change!");
+                    unimplemented!("Not expecting to receive this change notification!");
                 }
             };
-            self.conn_mgr_reqs_tx.send(update).await.expect(&err_msg);
+            futures.push(self.conn_mgr_reqs_tx.send(update));
         }
+        join!(futures);
     }
 
     /// Starts the listener to wait on reconfiguration events.  Creates an infinite loop.
