@@ -7,6 +7,7 @@ use bytes::Bytes;
 use futures::{stream, stream::TryStreamExt};
 use libra_crypto::HashValue;
 use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
+use std::mem::size_of;
 use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio_util::compat::FuturesAsyncReadCompatExt;
 
@@ -71,7 +72,7 @@ pub async fn backup_account_state(
     let mut state_snapshot_stream = client.get_state_snapshot(version).await?;
     let mut prev_record_bytes: Option<Bytes> = None;
     while let Some(record_bytes) = state_snapshot_stream.read_record_bytes().await? {
-        if chunk.len() + 4 + record_bytes.len() > max_chunk_size {
+        if chunk.len() + size_of::<u32>() + record_bytes.len() > max_chunk_size {
             assert!(chunk.len() <= max_chunk_size);
             let account_state_file = adapter
                 .write_new_file(stream::once(async move { chunk }))
