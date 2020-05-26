@@ -54,12 +54,7 @@ fn end_to_end() {
     let client = BackupServiceClient::new(config.storage.backup_service_port);
     let (version, state_root_hash) = rt.block_on(client.get_latest_state_root()).unwrap();
     let handles = rt
-        .block_on(backup_account_state(
-            &client,
-            version,
-            &adaptor,
-            1024 * 1024,
-        ))
+        .block_on(backup_account_state(&client, version, &adaptor, 500))
         .unwrap();
 
     rt.block_on(restore_account_state(

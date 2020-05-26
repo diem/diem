@@ -77,8 +77,9 @@ pub async fn backup_account_state(
                 .write_new_file(stream::once(async move { chunk }))
                 .await?;
 
-            prev_record_bytes.expect("max_chunk_size should be larger than account size.");
-            let (prev_key, _): (HashValue, AccountStateBlob) = lcs::from_bytes(&record_bytes)?;
+            let prb =
+                prev_record_bytes.expect("max_chunk_size should be larger than account size.");
+            let (prev_key, _): (HashValue, AccountStateBlob) = lcs::from_bytes(&prb)?;
             println!(
                 "Reached max_chunk_size. Asking proof for key: {:?}",
                 prev_key,
@@ -99,8 +100,8 @@ pub async fn backup_account_state(
         .write_new_file(stream::once(async move { chunk }))
         .await?;
 
-    let prev_record_bytes = prev_record_bytes.expect("Should have at least one account.");
-    let (prev_key, _): (HashValue, AccountStateBlob) = lcs::from_bytes(&prev_record_bytes)?;
+    let prb = prev_record_bytes.expect("Should have at least one account.");
+    let (prev_key, _): (HashValue, AccountStateBlob) = lcs::from_bytes(&prb)?;
     println!("Asking proof for last key: {:x}", prev_key);
     let proof_file = get_proof_and_write(client, adapter, prev_key, version).await?;
     ret.push((account_state_file, proof_file));
