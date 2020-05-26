@@ -18,14 +18,14 @@ use 0x0::Libra;
 use 0x0::Coin1;
 use 0x0::Coin2;
 use 0x0::Transaction;
-fun main() {
+fun main(account: &signer) {
     let pre_coin1 = Libra::new_preburn<Coin1::T>();
     let pre_coin2 = Libra::new_preburn<Coin2::T>();
     Libra::publish_preburn(pre_coin1);
     Libra::publish_preburn(pre_coin2);
 
-    let coin1 = Libra::mint<Coin1::T>(10000);
-    let coin2 = Libra::mint<Coin2::T>(10000);
+    let coin1 = Libra::mint<Coin1::T>(account, 10000);
+    let coin2 = Libra::mint<Coin2::T>(account, 10000);
     Transaction::assert(Libra::value<Coin1::T>(&coin1) == 10000, 0);
     Transaction::assert(Libra::value<Coin2::T>(&coin2) == 10000, 1);
     Transaction::assert(Libra::value<Coin2::T>(&coin2) == 10000, 1);
@@ -59,11 +59,11 @@ fun main() {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x0::Libra;
-    use 0x0::Coin1;
-    fun main()  {
-        Libra::destroy_zero(Libra::mint<Coin1::T>(1));
-    }
+use 0x0::Libra;
+use 0x0::Coin1;
+fun main(account: &signer) {
+    Libra::destroy_zero(Libra::mint<Coin1::T>(account, 1));
+}
 }
 // check: ABORTED
 // check: 5
@@ -122,11 +122,11 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x0::LibraAccount;
-    use 0x0::Coin1;
-    fun main()  {
-        LibraAccount::mint_to_address<Coin1::T>({{bob}}, 1000000000 * 1000000 + 1);
-    }
+use 0x0::LibraAccount;
+use 0x0::Coin1;
+fun main(account: &signer)  {
+    LibraAccount::mint_to_address<Coin1::T>(account, {{bob}}, 1000000000 * 1000000 + 1);
+}
 }
 // check: ABORTED
 // check: 11
@@ -136,7 +136,7 @@ script {
 script {
     use 0x0::Libra;
     use 0x0::Coin1;
-    fun main(account:  &signer)  {
+    fun main(account: &signer)  {
         Libra::publish_mint_capability(
             account,
             Libra::remove_mint_capability<Coin1::T>()

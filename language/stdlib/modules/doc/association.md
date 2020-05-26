@@ -13,8 +13,8 @@
 -  [Function `grant_association_address`](#0x0_Association_grant_association_address)
 -  [Function `has_privilege`](#0x0_Association_has_privilege)
 -  [Function `remove_privilege`](#0x0_Association_remove_privilege)
--  [Function `assert_sender_is_association`](#0x0_Association_assert_sender_is_association)
--  [Function `assert_sender_is_root`](#0x0_Association_assert_sender_is_root)
+-  [Function `assert_is_association`](#0x0_Association_assert_is_association)
+-  [Function `assert_is_root`](#0x0_Association_assert_is_root)
 -  [Function `addr_is_association`](#0x0_Association_addr_is_association)
 -  [Function `root_address`](#0x0_Association_root_address)
 -  [Function `assert_addr_is_association`](#0x0_Association_assert_addr_is_association)
@@ -25,8 +25,8 @@
         -  [Management of Association Privilege](#0x0_Association_@Management_of_Association_Privilege)
     -  [Function `initialize`](#0x0_Association_Specification_initialize)
     -  [Function `remove_privilege`](#0x0_Association_Specification_remove_privilege)
-    -  [Function `assert_sender_is_association`](#0x0_Association_Specification_assert_sender_is_association)
-    -  [Function `assert_sender_is_root`](#0x0_Association_Specification_assert_sender_is_root)
+    -  [Function `assert_is_association`](#0x0_Association_Specification_assert_is_association)
+    -  [Function `assert_is_root`](#0x0_Association_Specification_assert_is_root)
     -  [Function `addr_is_association`](#0x0_Association_Specification_addr_is_association)
     -  [Function `assert_addr_is_association`](#0x0_Association_Specification_assert_addr_is_association)
 
@@ -40,6 +40,7 @@ Errors:
 1002 -> NOT_AN_ASSOCIATION_ACCOUNT
 1003 -> ACCOUNT_DOES_NOT_HAVE_PRIVILEGE
 1004 -> ACCOUNT_DOES_NOT_HAVE_PRIVILEGE_RESOURCE
+1005 -> CANT_REMOVE_ROOT_PRIVILEGE
 ```
 
 
@@ -143,9 +144,14 @@ It cannot be used for more specific/privileged operations.
 
 ## Function `initialize`
 
-Initialization is called in genesis. It publishes the root resource
-under the root_address() address, marks it as a normal
-association account.
+Initialization is called in genesis. It publishes the
+<code><a href="#0x0_Association_Root">Root</a></code> resource under
+<code>association</code>
+and marks it as an Association account by publishing a
+<code><a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association_T">T</a>&gt;</code> resource.
+Aborts if the address of
+<code>association</code> is not
+<code>root_address</code>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_initialize">initialize</a>(association: &signer)
@@ -160,7 +166,7 @@ association account.
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_initialize">initialize</a>(association: &signer) {
     Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == <a href="#0x0_Association_root_address">root_address</a>(), 1000);
     move_to(association, <a href="#0x0_Association_Root">Root</a>{ });
-    move_to(association, <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association_T">T</a>&gt;{  });
+    move_to(association, <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association_T">T</a>&gt;{ });
 }
 </code></pre>
 
@@ -176,7 +182,7 @@ Certify the privileged capability published under
 <code>association</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_privilege">grant_privilege</a>&lt;Privilege&gt;(association: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_privilege">grant_privilege</a>&lt;Privilege&gt;(association: &signer, recipient: &signer)
 </code></pre>
 
 
@@ -185,9 +191,9 @@ Certify the privileged capability published under
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_privilege">grant_privilege</a>&lt;Privilege&gt;(association: &signer) {
-    <a href="#0x0_Association_assert_sender_is_root">assert_sender_is_root</a>();
-    move_to(association, <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;{ });
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_privilege">grant_privilege</a>&lt;Privilege&gt;(association: &signer, recipient: &signer) {
+    <a href="#0x0_Association_assert_is_root">assert_is_root</a>(association);
+    move_to(recipient, <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;{ });
 }
 </code></pre>
 
@@ -203,7 +209,7 @@ Grant the association privilege to
 <code>association</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_association_address">grant_association_address</a>(association: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_association_address">grant_association_address</a>(association: &signer, recipient: &signer)
 </code></pre>
 
 
@@ -212,8 +218,8 @@ Grant the association privilege to
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_association_address">grant_association_address</a>(association: &signer) {
-    <a href="#0x0_Association_grant_privilege">grant_privilege</a>&lt;<a href="#0x0_Association_T">T</a>&gt;(association)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_association_address">grant_association_address</a>(association: &signer, recipient: &signer) {
+    <a href="#0x0_Association_grant_privilege">grant_privilege</a>&lt;<a href="#0x0_Association_T">T</a>&gt;(association, recipient)
 }
 </code></pre>
 
@@ -240,7 +246,7 @@ Return whether the
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_has_privilege">has_privilege</a>&lt;Privilege&gt;(addr: address): bool {
-    // TODO: figure out what <b>to</b> do with this
+    // TODO: make genesis work with this check enabled
     //<a href="#0x0_Association_addr_is_association">addr_is_association</a>(addr) &&
     exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(addr)
 }
@@ -256,11 +262,14 @@ Return whether the
 
 Remove the
 <code>Privilege</code> from the address at
-<code>addr</code>. The sender must
-be the root association account
+<code>addr</code>. The
+<code>sender</code> must be the root association
+account.
+Aborts if
+<code>addr</code> is the address of the root account
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_remove_privilege">remove_privilege</a>&lt;Privilege&gt;(addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_remove_privilege">remove_privilege</a>&lt;Privilege&gt;(association: &signer, addr: address)
 </code></pre>
 
 
@@ -269,9 +278,11 @@ be the root association account
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_remove_privilege">remove_privilege</a>&lt;Privilege&gt;(addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_remove_privilege">remove_privilege</a>&lt;Privilege&gt;(association: &signer, addr: address)
 <b>acquires</b> <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a> {
-    <a href="#0x0_Association_assert_sender_is_root">assert_sender_is_root</a>();
+    <a href="#0x0_Association_assert_is_root">assert_is_root</a>(association);
+    // root should not be able <b>to</b> remove its own privileges
+    Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) != addr, 1005);
     Transaction::assert(exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(addr), 1004);
     <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;{ } = move_from&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(addr);
 }
@@ -281,14 +292,14 @@ be the root association account
 
 </details>
 
-<a name="0x0_Association_assert_sender_is_association"></a>
+<a name="0x0_Association_assert_is_association"></a>
 
-## Function `assert_sender_is_association`
+## Function `assert_is_association`
 
 Assert that the sender is an association account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_sender_is_association">assert_sender_is_association</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_is_association">assert_is_association</a>(account: &signer)
 </code></pre>
 
 
@@ -297,8 +308,8 @@ Assert that the sender is an association account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_sender_is_association">assert_sender_is_association</a>() {
-    <a href="#0x0_Association_assert_addr_is_association">assert_addr_is_association</a>(Transaction::sender())
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_is_association">assert_is_association</a>(account: &signer) {
+    <a href="#0x0_Association_assert_addr_is_association">assert_addr_is_association</a>(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account))
 }
 </code></pre>
 
@@ -306,14 +317,14 @@ Assert that the sender is an association account.
 
 </details>
 
-<a name="0x0_Association_assert_sender_is_root"></a>
+<a name="0x0_Association_assert_is_root"></a>
 
-## Function `assert_sender_is_root`
+## Function `assert_is_root`
 
 Assert that the sender is the root association account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_sender_is_root">assert_sender_is_root</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_is_root">assert_is_root</a>(account: &signer)
 </code></pre>
 
 
@@ -322,8 +333,8 @@ Assert that the sender is the root association account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_sender_is_root">assert_sender_is_root</a>() {
-    Transaction::assert(exists&lt;<a href="#0x0_Association_Root">Root</a>&gt;(Transaction::sender()), 1001);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_is_root">assert_is_root</a>(account: &signer) {
+    Transaction::assert(exists&lt;<a href="#0x0_Association_Root">Root</a>&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)), 1001);
 }
 </code></pre>
 
@@ -453,7 +464,6 @@ Helper which mirrors Move
 </code></pre>
 
 
-> TODO: With grant/remove etc., separately specify that only root may grant or remove privileges
 
 <a name="0x0_Association_@Management_of_Root_marker"></a>
 
@@ -502,7 +512,7 @@ before the invariant is established.
 
 <pre><code><b>apply</b> <a href="#0x0_Association_OnlyRootAddressHasRootPrivilege">OnlyRootAddressHasRootPrivilege</a> <b>to</b> *&lt;Privilege&gt;, *
     <b>except</b> initialize, root_address, has_privilege, addr_is_association,
-    assert_addr_is_association, assert_sender_is_association;
+    assert_addr_is_association, assert_is_association;
 </code></pre>
 
 
@@ -589,23 +599,18 @@ Afterwards, only
 ### Function `remove_privilege`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_remove_privilege">remove_privilege</a>&lt;Privilege&gt;(addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_remove_privilege">remove_privilege</a>&lt;Privilege&gt;(association: &signer, addr: address)
 </code></pre>
 
 
 
 
-<pre><code><b>ensures</b> sender() == <a href="#0x0_Association_spec_root_address">spec_root_address</a>();
-</code></pre>
+<a name="0x0_Association_Specification_assert_is_association"></a>
+
+### Function `assert_is_association`
 
 
-
-<a name="0x0_Association_Specification_assert_sender_is_association"></a>
-
-### Function `assert_sender_is_association`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_sender_is_association">assert_sender_is_association</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_is_association">assert_is_association</a>(account: &signer)
 </code></pre>
 
 
@@ -617,33 +622,29 @@ Afterwards, only
 
 
 
-<a name="0x0_Association_Specification_assert_sender_is_root"></a>
+<a name="0x0_Association_Specification_assert_is_root"></a>
 
-### Function `assert_sender_is_root`
+### Function `assert_is_root`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_sender_is_root">assert_sender_is_root</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_is_root">assert_is_root</a>(account: &signer)
 </code></pre>
 
 
 This post-condition to
-<code><a href="#0x0_Association_assert_sender_is_root">Self::assert_sender_is_root</a></code> is a sanity check that
+<code><a href="#0x0_Association_assert_is_root">Self::assert_is_root</a></code> is a sanity check that
 the
 <code><a href="#0x0_Association_Root">Root</a></code> invariant really works. It needs the invariant
 <code><a href="#0x0_Association_OnlyRootAddressHasRootPrivilege">OnlyRootAddressHasRootPrivilege</a></code>, because
-<code>assert_sender_is_root</code> does not
+<code>assert_is_root</code> does not
 directly check that the
-<code>sender == <a href="#0x0_Association_root_address">root_address</a>()</code>. Instead, it aborts if
-sender has no root privilege, and only the root_address has
+<code><a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="#0x0_Association_root_address">root_address</a>()</code>. Instead, it aborts
+if
+<code>account</code> does not have root privilege, and only the root_address has
 <code><a href="#0x0_Association_Root">Root</a></code>.
 > TODO: There is a style question about whether this should just check for presence of
 a Root privilege. I guess it's moot so long as
 <code><a href="#0x0_Association_OnlyRootAddressHasRootPrivilege">OnlyRootAddressHasRootPrivilege</a></code> holds.
-
-
-<pre><code><b>ensures</b> sender() == <a href="#0x0_Association_spec_root_address">spec_root_address</a>();
-</code></pre>
-
 
 
 <a name="0x0_Association_Specification_addr_is_association"></a>

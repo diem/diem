@@ -553,7 +553,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_grant_mint_capability_to_association">grant_mint_capability_to_association</a>&lt;CoinType&gt;(association: &signer) {
-    <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;();
+    <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;(association);
     move_to(association, <a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;{})
 }
 </code></pre>
@@ -578,7 +578,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_mint_capability">publish_mint_capability</a>&lt;CoinType&gt;(account: &signer, cap: <a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;) {
-    <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;();
+    <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;(account);
     move_to(account, cap)
 }
 </code></pre>
@@ -603,7 +603,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_burn_capability">publish_burn_capability</a>&lt;CoinType&gt;(account: &signer, cap: <a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;) {
-    <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;();
+    <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;(account);
     move_to(account, cap)
 }
 </code></pre>
@@ -618,7 +618,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_mint">mint</a>&lt;Token&gt;(amount: u64): <a href="#0x0_Libra_T">Libra::T</a>&lt;Token&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_mint">mint</a>&lt;Token&gt;(account: &signer, amount: u64): <a href="#0x0_Libra_T">Libra::T</a>&lt;Token&gt;
 </code></pre>
 
 
@@ -627,8 +627,12 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_mint">mint</a>&lt;Token&gt;(amount: u64): <a href="#0x0_Libra_T">T</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x0_Libra_MintCapability">MintCapability</a> {
-    <a href="#0x0_Libra_mint_with_capability">mint_with_capability</a>(amount, borrow_global&lt;<a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;Token&gt;&gt;(Transaction::sender()))
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_mint">mint</a>&lt;Token&gt;(account: &signer, amount: u64): <a href="#0x0_Libra_T">T</a>&lt;Token&gt;
+<b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x0_Libra_MintCapability">MintCapability</a> {
+    <a href="#0x0_Libra_mint_with_capability">mint_with_capability</a>(
+        amount,
+        borrow_global&lt;<a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;Token&gt;&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account))
+    )
 }
 </code></pre>
 
@@ -671,7 +675,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_cancel_burn">cancel_burn</a>&lt;Token&gt;(preburn_address: address): <a href="#0x0_Libra_T">Libra::T</a>&lt;Token&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address): <a href="#0x0_Libra_T">Libra::T</a>&lt;Token&gt;
 </code></pre>
 
 
@@ -681,11 +685,12 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_cancel_burn">cancel_burn</a>&lt;Token&gt;(
+    account: &signer,
     preburn_address: address
 ): <a href="#0x0_Libra_T">T</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_Libra_BurnCapability">BurnCapability</a>, <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x0_Libra_Preburn">Preburn</a> {
     <a href="#0x0_Libra_cancel_burn_with_capability">cancel_burn_with_capability</a>(
         preburn_address,
-        borrow_global&lt;<a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;Token&gt;&gt;(Transaction::sender())
+        borrow_global&lt;<a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;Token&gt;&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account))
     )
 }
 </code></pre>
@@ -1575,7 +1580,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;FromCoinType&gt;(lbr_exchange_rate: <a href="fixedpoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;FromCoinType&gt;(account: &signer, lbr_exchange_rate: <a href="fixedpoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a>)
 </code></pre>
 
 
@@ -1584,9 +1589,11 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;FromCoinType&gt;(lbr_exchange_rate: <a href="fixedpoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a>)
-<b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
-    <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;FromCoinType&gt;();
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;FromCoinType&gt;(
+    account: &signer,
+    lbr_exchange_rate: <a href="fixedpoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a>
+) <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
+    <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;FromCoinType&gt;(account);
     <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;FromCoinType&gt;&gt;(<a href="#0x0_Libra_currency_addr">currency_addr</a>());
     currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
 }
@@ -1627,7 +1634,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_update_minting_ability">update_minting_ability</a>&lt;CoinType&gt;(can_mint: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_update_minting_ability">update_minting_ability</a>&lt;CoinType&gt;(account: &signer, can_mint: bool)
 </code></pre>
 
 
@@ -1636,10 +1643,10 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_update_minting_ability">update_minting_ability</a>&lt;CoinType&gt;(can_mint: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_update_minting_ability">update_minting_ability</a>&lt;CoinType&gt;(account: &signer, can_mint: bool)
 <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
-    <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;();
-    <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(Transaction::sender());
+    <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;(account);
+    <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x0_Libra_currency_addr">currency_addr</a>());
     currency_info.can_mint = can_mint;
 }
 </code></pre>
@@ -1678,7 +1685,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;()
+<pre><code><b>fun</b> <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;(account: &signer)
 </code></pre>
 
 
@@ -1687,8 +1694,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;() {
-    <a href="association.md#0x0_Association_assert_sender_is_association">Association::assert_sender_is_association</a>();
+<pre><code><b>fun</b> <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;(account: &signer) {
+    <a href="association.md#0x0_Association_assert_is_association">Association::assert_is_association</a>(account);
     <a href="#0x0_Libra_assert_is_coin">assert_is_coin</a>&lt;CoinType&gt;();
 }
 </code></pre>

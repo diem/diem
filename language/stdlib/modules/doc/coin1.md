@@ -54,7 +54,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Coin1_initialize">initialize</a>(account: &signer): (<a href="libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="#0x0_Coin1_T">T</a>&gt;, <a href="libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="#0x0_Coin1_T">T</a>&gt;) {
-    <a href="association.md#0x0_Association_assert_sender_is_association">Association::assert_sender_is_association</a>();
+    <a href="association.md#0x0_Association_assert_is_association">Association::assert_is_association</a>(account);
     // Register the <a href="#0x0_Coin1">Coin1</a> currency.
     <a href="libra.md#0x0_Libra_register_currency">Libra::register_currency</a>&lt;<a href="#0x0_Coin1_T">T</a>&gt;(
         account,

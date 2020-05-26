@@ -6,9 +6,10 @@
 address 0x0 {
 
 module AccountLimits {
-    use 0x0::Transaction;
-    use 0x0::LibraTimestamp;
     use 0x0::Association;
+    use 0x0::LibraTimestamp;
+    use 0x0::Signer;
+    use 0x0::Transaction;
 
     // An operations capability that restricts callers of this module since
     // the operations can mutate account states.
@@ -52,8 +53,8 @@ module AccountLimits {
 
     // Grant a capability to call this module. This does not necessarily
     // need to be a unique capability.
-    public fun grant_calling_capability(): CallingCapability {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 3000);
+    public fun grant_calling_capability(account: &signer): CallingCapability {
+        Transaction::assert(Signer::address_of(account) == 0xA550C18, 3000);
         CallingCapability{}
     }
 
@@ -107,29 +108,33 @@ module AccountLimits {
     // Anyone can publish a LimitsDefinition resource under their address. But
     // it does nothing until the association certifies the LimitsDefinition.
     public fun publish_limits_definition(
+        account: &signer,
         max_outflow: u64,
         max_inflow: u64,
         max_holding: u64,
         time_period: u64
     ) {
-        move_to_sender(LimitsDefinition {
-            max_outflow,
-            max_inflow,
-            max_holding,
-            time_period,
-            is_certified: false,
-        });
+        move_to(
+            account,
+            LimitsDefinition {
+                max_outflow,
+                max_inflow,
+                max_holding,
+                time_period,
+                is_certified: false,
+            }
+        )
     }
 
     // Unrestricted accounts are represented by setting all fields in the
     // limits definition to u64 max.
-    public fun publish_unrestricted_limits() {
+    public fun publish_unrestricted_limits(account: &signer) {
         let u64_max = 18446744073709551615u64;
-        publish_limits_definition(u64_max, u64_max, u64_max, u64_max)
+        publish_limits_definition(account, u64_max, u64_max, u64_max, u64_max)
     }
 
     // Removes the limits definition at the sender's address.
-    public fun unpublish_limits_definition()
+    public fun unpublish_limits_definition(account: &signer)
     acquires LimitsDefinition {
         LimitsDefinition {
             max_outflow: _,
@@ -137,22 +142,22 @@ module AccountLimits {
             max_holding: _,
             time_period: _,
             is_certified: _,
-        } = move_from<LimitsDefinition>(Transaction::sender());
+        } = move_from<LimitsDefinition>(Signer::address_of(account));
     }
 
     // Certify the limits definition published under the account at
     // `limits_addr`. Only callable by the association.
-    public fun certify_limits_definition(limits_addr: address)
+    public fun certify_limits_definition(account: &signer, limits_addr: address)
     acquires LimitsDefinition {
-        Association::assert_sender_is_association();
+        Association::assert_is_association(account);
         borrow_global_mut<LimitsDefinition>(limits_addr).is_certified = true;
     }
 
     // Decertify the limits_definition published under the account at
     // `limits_addr`. Only callable by the association.
-    public fun decertify_limits_definition(limits_addr: address)
+    public fun decertify_limits_definition(account: &signer, limits_addr: address)
     acquires LimitsDefinition {
-        Association::assert_sender_is_association();
+        Association::assert_is_association(account);
         borrow_global_mut<LimitsDefinition>(limits_addr).is_certified = false;
     }
 

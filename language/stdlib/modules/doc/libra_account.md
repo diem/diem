@@ -865,7 +865,7 @@
     move_to(
         association,
         <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
-            limits_cap: <a href="account_limits.md#0x0_AccountLimits_grant_calling_capability">AccountLimits::grant_calling_capability</a>(),
+            limits_cap: <a href="account_limits.md#0x0_AccountLimits_grant_calling_capability">AccountLimits::grant_calling_capability</a>(association),
             freeze_event_handle: <a href="event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>(association),
             unfreeze_event_handle: <a href="event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>(association),
         }
@@ -1083,7 +1083,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_mint_to_address">mint_to_address</a>&lt;Token&gt;(payee: address, amount: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_mint_to_address">mint_to_address</a>&lt;Token&gt;(account: &signer, payee: address, amount: u64)
 </code></pre>
 
 
@@ -1093,11 +1093,12 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_mint_to_address">mint_to_address</a>&lt;Token&gt;(
+    account: &signer,
     payee: address,
     amount: u64
 ) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
     // Mint and deposit the coin
-    <a href="#0x0_LibraAccount_deposit">deposit</a>(payee, <a href="libra.md#0x0_Libra_mint">Libra::mint</a>&lt;Token&gt;(amount));
+    <a href="#0x0_LibraAccount_deposit">deposit</a>(payee, <a href="libra.md#0x0_Libra_mint">Libra::mint</a>&lt;Token&gt;(account, amount));
 }
 </code></pre>
 
@@ -1111,7 +1112,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_mint_lbr_to_address">mint_lbr_to_address</a>(payee: address, amount: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_mint_lbr_to_address">mint_lbr_to_address</a>(account: &signer, payee: address, amount: u64)
 </code></pre>
 
 
@@ -1121,11 +1122,12 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_mint_lbr_to_address">mint_lbr_to_address</a>(
+    account: &signer,
     payee: address,
     amount: u64
 ) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
     // Mint and deposit the coin
-    <a href="#0x0_LibraAccount_deposit">deposit</a>(payee, <a href="lbr.md#0x0_LBR_mint">LBR::mint</a>(amount));
+    <a href="#0x0_LibraAccount_deposit">deposit</a>(payee, <a href="lbr.md#0x0_LBR_mint">LBR::mint</a>(account, amount));
 }
 </code></pre>
 
@@ -1139,7 +1141,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_cancel_burn">cancel_burn</a>&lt;Token&gt;(preburn_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address)
 </code></pre>
 
 
@@ -1149,9 +1151,10 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_cancel_burn">cancel_burn</a>&lt;Token&gt;(
+    account: &signer,
     preburn_address: address,
 ) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
-    <b>let</b> to_return = <a href="libra.md#0x0_Libra_cancel_burn">Libra::cancel_burn</a>&lt;Token&gt;(preburn_address);
+    <b>let</b> to_return = <a href="libra.md#0x0_Libra_cancel_burn">Libra::cancel_burn</a>&lt;Token&gt;(account, preburn_address);
     <a href="#0x0_LibraAccount_deposit">deposit</a>(preburn_address, to_return)
 }
 </code></pre>
@@ -1589,6 +1592,8 @@
             // An empty compliance key
             x"00000000000000000000000000000000"
         );
+    // cannot create an account at an address that already has one
+    Transaction::assert(!<a href="#0x0_LibraAccount_exists">exists</a>(new_account_address), 777777);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
     <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="vasp.md#0x0_VASP_ParentVASP">VASP::ParentVASP</a>&gt;(new_account, auth_key_prefix, vasp_parent, <b>false</b>)
@@ -1723,7 +1728,7 @@ Create a treasury/compliance account at
 <code>new_account_address</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_treasury_compliance_account">create_treasury_compliance_account</a>&lt;Token&gt;(new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, coin1_mint_cap: <a href="libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;, coin1_burn_cap: <a href="libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;, coin2_mint_cap: <a href="libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;, coin2_burn_cap: <a href="libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_treasury_compliance_account">create_treasury_compliance_account</a>&lt;Token&gt;(association: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, coin1_mint_cap: <a href="libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;, coin1_burn_cap: <a href="libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;, coin2_mint_cap: <a href="libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;, coin2_burn_cap: <a href="libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;)
 </code></pre>
 
 
@@ -1733,6 +1738,7 @@ Create a treasury/compliance account at
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_treasury_compliance_account">create_treasury_compliance_account</a>&lt;Token&gt;(
+    association: &signer,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
     coin1_mint_cap: <a href="libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;,
@@ -1740,10 +1746,10 @@ Create a treasury/compliance account at
     coin2_mint_cap: <a href="libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;,
     coin2_burn_cap: <a href="libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;,
 ) {
-    <a href="association.md#0x0_Association_assert_sender_is_root">Association::assert_sender_is_root</a>();
+    <a href="association.md#0x0_Association_assert_is_root">Association::assert_is_root</a>(association);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
-    <a href="association.md#0x0_Association_grant_association_address">Association::grant_association_address</a>(&new_account);
-    <a href="association.md#0x0_Association_grant_privilege">Association::grant_privilege</a>&lt;<a href="#0x0_LibraAccount_FreezingPrivilege">FreezingPrivilege</a>&gt;(&new_account);
+    <a href="association.md#0x0_Association_grant_association_address">Association::grant_association_address</a>(association, &new_account);
+    <a href="association.md#0x0_Association_grant_privilege">Association::grant_privilege</a>&lt;<a href="#0x0_LibraAccount_FreezingPrivilege">FreezingPrivilege</a>&gt;(association, &new_account);
     <a href="libra.md#0x0_Libra_publish_mint_capability">Libra::publish_mint_capability</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(&new_account, coin1_mint_cap);
     <a href="libra.md#0x0_Libra_publish_burn_capability">Libra::publish_burn_capability</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(&new_account, coin1_burn_cap);
     <a href="libra.md#0x0_Libra_publish_mint_capability">Libra::publish_mint_capability</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(&new_account, coin2_mint_cap);
@@ -1894,7 +1900,8 @@ CoinType should match type called with create_designated_dealer
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_mint_to_designated_dealer">mint_to_designated_dealer</a>&lt;CoinType&gt;(blessed: &signer, dealer_address: address, amount: u64, tier: u64
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_mint_to_designated_dealer">mint_to_designated_dealer</a>&lt;CoinType&gt;(
+    blessed: &signer, dealer_address: address, amount: u64, tier: u64
 ) <b>acquires</b> <a href="#0x0_LibraAccount_Role">Role</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_T">T</a> {
     <a href="designated_dealer.md#0x0_DesignatedDealer_assert_account_is_blessed">DesignatedDealer::assert_account_is_blessed</a>(blessed);
     // INVALID_MINT_AMOUNT
@@ -1905,7 +1912,7 @@ CoinType should match type called with create_designated_dealer
     <b>let</b> tier_check = <a href="designated_dealer.md#0x0_DesignatedDealer_tiered_mint">DesignatedDealer::tiered_mint</a>(dealer, amount, tier);
     // INVALID_AMOUNT_FOR_TIER
     Transaction::assert(tier_check, 5);
-    <b>let</b> coins = <a href="libra.md#0x0_Libra_mint">Libra::mint</a>&lt;CoinType&gt;(amount);
+    <b>let</b> coins = <a href="libra.md#0x0_Libra_mint">Libra::mint</a>&lt;CoinType&gt;(blessed, amount);
     <a href="#0x0_LibraAccount_deposit">deposit</a>(dealer_address, coins);
 }
 </code></pre>
@@ -1927,7 +1934,7 @@ all available currencies in the system will also be added.
 This can only be invoked by an Association account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_parent_vasp_account">create_parent_vasp_account</a>&lt;Token&gt;(new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;, add_all_currencies: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_parent_vasp_account">create_parent_vasp_account</a>&lt;Token&gt;(account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1937,6 +1944,7 @@ This can only be invoked by an Association account.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_parent_vasp_account">create_parent_vasp_account</a>&lt;Token&gt;(
+    account: &signer,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
     human_name: vector&lt;u8&gt;,
@@ -1944,7 +1952,7 @@ This can only be invoked by an Association account.
     compliance_public_key: vector&lt;u8&gt;,
     add_all_currencies: bool
 ) {
-    <a href="association.md#0x0_Association_assert_sender_is_association">Association::assert_sender_is_association</a>();
+    <a href="association.md#0x0_Association_assert_is_association">Association::assert_is_association</a>(account);
     <b>let</b> vasp_parent =
         <a href="vasp.md#0x0_VASP_create_parent_vasp_credential">VASP::create_parent_vasp_credential</a>(human_name, base_url, compliance_public_key);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);

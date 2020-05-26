@@ -293,7 +293,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LBR_mint">mint</a>(amount_lbr: u64): <a href="libra.md#0x0_Libra_T">Libra::T</a>&lt;<a href="#0x0_LBR_T">LBR::T</a>&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LBR_mint">mint</a>(account: &signer, amount_lbr: u64): <a href="libra.md#0x0_Libra_T">Libra::T</a>&lt;<a href="#0x0_LBR_T">LBR::T</a>&gt;
 </code></pre>
 
 
@@ -302,12 +302,12 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LBR_mint">mint</a>(amount_lbr: u64): <a href="libra.md#0x0_Libra_T">Libra::T</a>&lt;<a href="#0x0_LBR_T">T</a>&gt; <b>acquires</b> <a href="#0x0_LBR_Reserve">Reserve</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LBR_mint">mint</a>(account: &signer, amount_lbr: u64): <a href="libra.md#0x0_Libra_T">Libra::T</a>&lt;<a href="#0x0_LBR_T">T</a>&gt; <b>acquires</b> <a href="#0x0_LBR_Reserve">Reserve</a> {
     <b>let</b> reserve = borrow_global&lt;<a href="#0x0_LBR_Reserve">Reserve</a>&gt;(0xA550C18);
     <b>let</b> num_coin1 = 1 + <a href="fixedpoint32.md#0x0_FixedPoint32_multiply_u64">FixedPoint32::multiply_u64</a>(amount_lbr, *&reserve.coin1.ratio);
     <b>let</b> num_coin2 = 1 + <a href="fixedpoint32.md#0x0_FixedPoint32_multiply_u64">FixedPoint32::multiply_u64</a>(amount_lbr, *&reserve.coin2.ratio);
-    <b>let</b> coin1 = <a href="libra.md#0x0_Libra_mint">Libra::mint</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(num_coin1);
-    <b>let</b> coin2 = <a href="libra.md#0x0_Libra_mint">Libra::mint</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(num_coin2);
+    <b>let</b> coin1 = <a href="libra.md#0x0_Libra_mint">Libra::mint</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(account, num_coin1);
+    <b>let</b> coin2 = <a href="libra.md#0x0_Libra_mint">Libra::mint</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(account, num_coin2);
     <b>let</b> (lbr, leftover1, leftover2) = <a href="#0x0_LBR_create">create</a>(amount_lbr, coin1, coin2);
     <a href="libra.md#0x0_Libra_destroy_zero">Libra::destroy_zero</a>(leftover1);
     <a href="libra.md#0x0_Libra_destroy_zero">Libra::destroy_zero</a>(leftover2);

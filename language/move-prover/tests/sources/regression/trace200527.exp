@@ -7,10 +7,10 @@ error:  A postcondition might not hold on this return path.
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ·
  15 │             all(domain<address>(), |addr| exists<Root>(TRACE(addr)) ==> TRACE(addr) == root_address())
-    │                                                        ----------- <redacted>
+    │                                                        ----------- <redacted>, <redacted>
     ·
  15 │             all(domain<address>(), |addr| exists<Root>(TRACE(addr)) ==> TRACE(addr) == root_address())
-    │                                                                         ----------- <redacted>
+    │                                                                         ----------- <redacted>, <redacted>
     │
     =     at tests/sources/regression/trace200527.move:20:5: assert_sender_is_root (entry)
     =     at tests/sources/regression/trace200527.move:22:9: assert_sender_is_root

@@ -196,8 +196,9 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_initialize">initialize</a>(config_account: &signer, association_account: &signer) {
     Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="#0x0_LibraConfig_default_config_address">default_config_address</a>(), 1);
-    <a href="association.md#0x0_Association_grant_privilege">Association::grant_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(config_account);
-    <a href="association.md#0x0_Association_grant_privilege">Association::grant_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(association_account);
+    <a href="association.md#0x0_Association_grant_privilege">Association::grant_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(association_account, config_account);
+    <a href="association.md#0x0_Association_grant_privilege">Association::grant_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(association_account, association_account);
+
 
     move_to&lt;<a href="#0x0_LibraConfig_Configuration">Configuration</a>&gt;(
         config_account,

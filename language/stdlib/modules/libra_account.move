@@ -203,7 +203,7 @@ module LibraAccount {
         move_to(
             association,
             AccountOperationsCapability {
-                limits_cap: AccountLimits::grant_calling_capability(),
+                limits_cap: AccountLimits::grant_calling_capability(association),
                 freeze_event_handle: Event::new_event_handle(association),
                 unfreeze_event_handle: Event::new_event_handle(association),
             }
@@ -339,30 +339,33 @@ module LibraAccount {
     // `mint_to_address` can only be called by accounts with Libra::MintCapability<Token> and with
     // Token=Coin1 or Token=Coin2. `mint_lbr_to_address` should be used for minting LBR
     public fun mint_to_address<Token>(
+        account: &signer,
         payee: address,
         amount: u64
     ) acquires T, Balance, AccountOperationsCapability, Role {
         // Mint and deposit the coin
-        deposit(payee, Libra::mint<Token>(amount));
+        deposit(payee, Libra::mint<Token>(account, amount));
     }
 
     // Create `amount` LBR and send them to `payee`.
     // `mint_lbr_to_address` can only be called by accounts with Libra::MintCapability<Coin1> and
     // Libra::MintCapability<Coin2>
     public fun mint_lbr_to_address(
+        account: &signer,
         payee: address,
         amount: u64
     ) acquires T, Balance, AccountOperationsCapability, Role {
         // Mint and deposit the coin
-        deposit(payee, LBR::mint(amount));
+        deposit(payee, LBR::mint(account, amount));
     }
 
     // Cancel the oldest burn request from `preburn_address` and return the funds.
     // Fails if the sender does not have a published MintCapability.
     public fun cancel_burn<Token>(
+        account: &signer,
         preburn_address: address,
     ) acquires T, Balance, AccountOperationsCapability, Role {
-        let to_return = Libra::cancel_burn<Token>(preburn_address);
+        let to_return = Libra::cancel_burn<Token>(account, preburn_address);
         deposit(preburn_address, to_return)
     }
 
@@ -542,6 +545,9 @@ module LibraAccount {
                 // An empty compliance key
                 x"00000000000000000000000000000000"
             );
+        // TODO: refactor so that every attempt to create an existing account hits this check
+        // cannot create an account at an address that already has one
+        Transaction::assert(!exists(new_account_address), 777777);
         let new_account = create_signer(new_account_address);
         Event::publish_generator(&new_account);
         make_account<Token, VASP::ParentVASP>(new_account, auth_key_prefix, vasp_parent, false)
@@ -618,6 +624,7 @@ module LibraAccount {
     /// Create a treasury/compliance account at `new_account_address` with authentication key
     /// `auth_key_prefix` | `new_account_address`
     public fun create_treasury_compliance_account<Token>(
+        association: &signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         coin1_mint_cap: Libra::MintCapability<Coin1::T>,
@@ -625,10 +632,10 @@ module LibraAccount {
         coin2_mint_cap: Libra::MintCapability<Coin2::T>,
         coin2_burn_cap: Libra::BurnCapability<Coin2::T>,
     ) {
-        Association::assert_sender_is_root();
+        Association::assert_is_root(association);
         let new_account = create_signer(new_account_address);
-        Association::grant_association_address(&new_account);
-        Association::grant_privilege<FreezingPrivilege>(&new_account);
+        Association::grant_association_address(association, &new_account);
+        Association::grant_privilege<FreezingPrivilege>(association, &new_account);
         Libra::publish_mint_capability<Coin1::T>(&new_account, coin1_mint_cap);
         Libra::publish_burn_capability<Coin1::T>(&new_account, coin1_burn_cap);
         Libra::publish_mint_capability<Coin2::T>(&new_account, coin2_mint_cap);
@@ -682,7 +689,8 @@ module LibraAccount {
 
     /// Tiered Mint called by Treasury Compliance
     /// CoinType should match type called with create_designated_dealer
-    public fun mint_to_designated_dealer<CoinType>(blessed: &signer, dealer_address: address, amount: u64, tier: u64
+    public fun mint_to_designated_dealer<CoinType>(
+        blessed: &signer, dealer_address: address, amount: u64, tier: u64
     ) acquires Role, AccountOperationsCapability, Balance, T {
         DesignatedDealer::assert_account_is_blessed(blessed);
         // INVALID_MINT_AMOUNT
@@ -693,7 +701,7 @@ module LibraAccount {
         let tier_check = DesignatedDealer::tiered_mint(dealer, amount, tier);
         // INVALID_AMOUNT_FOR_TIER
         Transaction::assert(tier_check, 5);
-        let coins = Libra::mint<CoinType>(amount);
+        let coins = Libra::mint<CoinType>(blessed, amount);
         deposit(dealer_address, coins);
     }
 
@@ -703,6 +711,7 @@ module LibraAccount {
     /// all available currencies in the system will also be added.
     /// This can only be invoked by an Association account.
     public fun create_parent_vasp_account<Token>(
+        account: &signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
@@ -710,7 +719,7 @@ module LibraAccount {
         compliance_public_key: vector<u8>,
         add_all_currencies: bool
     ) {
-        Association::assert_sender_is_association();
+        Association::assert_is_association(account);
         let vasp_parent =
             VASP::create_parent_vasp_credential(human_name, base_url, compliance_public_key);
         let new_account = create_signer(new_account_address);

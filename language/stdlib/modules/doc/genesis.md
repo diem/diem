@@ -34,9 +34,9 @@
 ) {
     <b>let</b> dummy_auth_key_prefix = x"00000000000000000000000000000000";
 
-    // <a href="association.md#0x0_Association">Association</a>/cap setup
+    // <a href="association.md#0x0_Association">Association</a> root setup
     <a href="association.md#0x0_Association_initialize">Association::initialize</a>(association);
-    <a href="association.md#0x0_Association_grant_privilege">Association::grant_privilege</a>&lt;<a href="libra.md#0x0_Libra_AddCurrency">Libra::AddCurrency</a>&gt;(association);
+    <a href="association.md#0x0_Association_grant_privilege">Association::grant_privilege</a>&lt;<a href="libra.md#0x0_Libra_AddCurrency">Libra::AddCurrency</a>&gt;(association, association);
 
     // On-chain config setup
     <a href="event.md#0x0_Event_publish_generator">Event::publish_generator</a>(config_account);
@@ -55,7 +55,7 @@
     <a href="lbr.md#0x0_LBR_initialize">LBR::initialize</a>(association);
 
     <a href="libra_account.md#0x0_LibraAccount_initialize">LibraAccount::initialize</a>(association);
-    <a href="unhosted.md#0x0_Unhosted_publish_global_limits_definition">Unhosted::publish_global_limits_definition</a>();
+    <a href="unhosted.md#0x0_Unhosted_publish_global_limits_definition">Unhosted::publish_global_limits_definition</a>(association);
     <a href="libra_account.md#0x0_LibraAccount_create_genesis_account">LibraAccount::create_genesis_account</a>&lt;<a href="lbr.md#0x0_LBR_T">LBR::T</a>&gt;(
         <a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(association),
         <b>copy</b> dummy_auth_key_prefix,
@@ -69,6 +69,7 @@
 
     // Create the treasury compliance account
     <a href="libra_account.md#0x0_LibraAccount_create_treasury_compliance_account">LibraAccount::create_treasury_compliance_account</a>&lt;<a href="lbr.md#0x0_LBR_T">LBR::T</a>&gt;(
+        association,
         tc_addr,
         tc_auth_key_prefix,
         coin1_mint_cap,
