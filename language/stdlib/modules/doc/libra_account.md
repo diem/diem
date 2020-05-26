@@ -1558,7 +1558,7 @@
         );
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
-    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="vasp.md#0x0_VASP_ParentVASP">VASP::ParentVASP</a>&gt;(new_account, auth_key_prefix, vasp_parent)
+    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="vasp.md#0x0_VASP_ParentVASP">VASP::ParentVASP</a>&gt;(new_account, auth_key_prefix, vasp_parent, <b>false</b>)
 }
 </code></pre>
 
@@ -1576,13 +1576,15 @@ Creates a new account with account type
 zero in
 <code>Token</code> and authentication key
 <code>auth_key_prefix</code> |
-<code>fresh_address</code>.
+<code>fresh_address</code>. If
+<code>add_all_currencies</code> is true, 0 balances for all available currencies in the system will
+also be added.
 Aborts if there is already an account at
-<code>new_account_address</code>
+<code>new_account_address</code>.
 Creating an account at address 0x0 will abort as it is a reserved address for the MoveVM.
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, RoleData: <b>copyable</b>&gt;(new_account: signer, auth_key_prefix: vector&lt;u8&gt;, role_data: RoleData)
+<pre><code><b>fun</b> <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, RoleData: <b>copyable</b>&gt;(new_account: signer, auth_key_prefix: vector&lt;u8&gt;, role_data: RoleData, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1595,9 +1597,11 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
     new_account: signer,
     auth_key_prefix: vector&lt;u8&gt;,
     role_data: RoleData,
+    add_all_currencies: bool
 ) {
+    <b>let</b> new_account_addr = <a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(&new_account);
     // cannot create an account at the reserved address 0x0
-    Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(&new_account) != 0x0, 0);
+    Transaction::assert(new_account_addr != 0x0, 0);
 
     // (1) publish Account::T
     <b>let</b> authentication_key = auth_key_prefix;
@@ -1621,7 +1625,18 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
     //     configuration such <b>as</b> <a href="account_limits.md#0x0_AccountLimits">AccountLimits</a> before calling this
     move_to(&new_account, <a href="#0x0_LibraAccount_Role">Role</a>&lt;RoleData&gt; { role_data });
     // (3) publish <a href="#0x0_LibraAccount_Balance">Balance</a> <b>resource</b>(s)
-    move_to(&new_account, <a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;{ coin: <a href="libra.md#0x0_Libra_zero">Libra::zero</a>&lt;Token&gt;() });
+    <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;Token&gt;(&new_account);
+    <b>if</b> (add_all_currencies) {
+        <b>if</b> (!::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;&gt;(new_account_addr)) {
+            <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(&new_account);
+        };
+        <b>if</b> (!::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;&gt;(new_account_addr)) {
+            <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(&new_account);
+        };
+        <b>if</b> (!::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;<a href="lbr.md#0x0_LBR_T">LBR::T</a>&gt;&gt;(new_account_addr)) {
+            <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;<a href="lbr.md#0x0_LBR_T">LBR::T</a>&gt;(&new_account);
+        };
+    };
     // (4) TODO: publish account limits?
 
     <a href="#0x0_LibraAccount_destroy_signer">destroy_signer</a>(new_account);
@@ -1657,7 +1672,7 @@ Create an account with the Empty role at
 ) {
     Transaction::assert(<a href="libra_time.md#0x0_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
-    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="empty.md#0x0_Empty_T">Empty::T</a>&gt;(new_account, auth_key_prefix, <a href="empty.md#0x0_Empty_create">Empty::create</a>())
+    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="empty.md#0x0_Empty_T">Empty::T</a>&gt;(new_account, auth_key_prefix, <a href="empty.md#0x0_Empty_create">Empty::create</a>(), <b>false</b>)
 }
 </code></pre>
 
@@ -1703,7 +1718,7 @@ Create a treasury/compliance account at
 
     // TODO: add <a href="association.md#0x0_Association">Association</a> or TreasuryCompliance role instead of using <a href="empty.md#0x0_Empty">Empty</a>?
     <a href="event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
-    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="empty.md#0x0_Empty_T">Empty::T</a>&gt;(new_account, auth_key_prefix, <a href="empty.md#0x0_Empty_create">Empty::create</a>())
+    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="empty.md#0x0_Empty_T">Empty::T</a>&gt;(new_account, auth_key_prefix, <a href="empty.md#0x0_Empty_create">Empty::create</a>(), <b>false</b>)
 }
 </code></pre>
 
@@ -1718,10 +1733,13 @@ Create a treasury/compliance account at
 Create an account with the ParentVASP role at
 <code>new_account_address</code> with authentication key
 <code>auth_key_prefix</code> |
-<code>new_account_address</code>.
+<code>new_account_address</code>.  If
+<code>add_all_currencies</code> is true, 0 balances for
+all available currencies in the system will also be added.
+This can only be invoked by an Association account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_parent_vasp_account">create_parent_vasp_account</a>&lt;Token&gt;(new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_parent_vasp_account">create_parent_vasp_account</a>&lt;Token&gt;(new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1736,13 +1754,16 @@ Create an account with the ParentVASP role at
     human_name: vector&lt;u8&gt;,
     base_url: vector&lt;u8&gt;,
     compliance_public_key: vector&lt;u8&gt;,
+    add_all_currencies: bool
 ) {
     <a href="association.md#0x0_Association_assert_sender_is_association">Association::assert_sender_is_association</a>();
     <b>let</b> vasp_parent =
         <a href="vasp.md#0x0_VASP_create_parent_vasp_credential">VASP::create_parent_vasp_credential</a>(human_name, base_url, compliance_public_key);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
-    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="vasp.md#0x0_VASP_ParentVASP">VASP::ParentVASP</a>&gt;(new_account, auth_key_prefix, vasp_parent)
+    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="vasp.md#0x0_VASP_ParentVASP">VASP::ParentVASP</a>&gt;(
+        new_account, auth_key_prefix, vasp_parent, add_all_currencies
+    )
 }
 </code></pre>
 
@@ -1757,12 +1778,14 @@ Create an account with the ParentVASP role at
 Create an account with the ChildVASP role at
 <code>new_account_address</code> with authentication key
 <code>auth_key_prefix</code> |
-<code>new_account_address</code>. This account will be a child of
-<code>creator</code>, which
-must be a ParentVASP.
+<code>new_account_address</code> and a 0 balance of type
+<code>Token</code>. If
+<code>add_all_currencies</code> is true, 0 balances for all avaialable currencies in the system will
+also be added. This account will be a child of
+<code>creator</code>, which must be a ParentVASP.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_child_vasp_account">create_child_vasp_account</a>&lt;Token&gt;(new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, creator: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_child_vasp_account">create_child_vasp_account</a>&lt;Token&gt;(creator: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1772,14 +1795,17 @@ must be a ParentVASP.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_child_vasp_account">create_child_vasp_account</a>&lt;Token&gt;(
+    creator: &signer,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
-    creator: &signer
+    add_all_currencies: bool,
 ) {
     <b>let</b> child_vasp = <a href="vasp.md#0x0_VASP_create_child_vasp">VASP::create_child_vasp</a>(creator);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
-    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="vasp.md#0x0_VASP_ChildVASP">VASP::ChildVASP</a>&gt;(new_account, auth_key_prefix, child_vasp)
+    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="vasp.md#0x0_VASP_ChildVASP">VASP::ChildVASP</a>&gt;(
+        new_account, auth_key_prefix, child_vasp, add_all_currencies
+    )
 }
 </code></pre>
 
@@ -1793,7 +1819,7 @@ must be a ParentVASP.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_unhosted_account">create_unhosted_account</a>&lt;Token&gt;(new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_unhosted_account">create_unhosted_account</a>&lt;Token&gt;(new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1805,11 +1831,12 @@ must be a ParentVASP.
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_unhosted_account">create_unhosted_account</a>&lt;Token&gt;(
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
+    add_all_currencies: bool
 ) {
     <b>let</b> unhosted = <a href="unhosted.md#0x0_Unhosted_create">Unhosted::create</a>();
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
-    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="unhosted.md#0x0_Unhosted_T">Unhosted::T</a>&gt;(new_account, auth_key_prefix, unhosted)
+    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="unhosted.md#0x0_Unhosted_T">Unhosted::T</a>&gt;(new_account, auth_key_prefix, unhosted, add_all_currencies)
 }
 </code></pre>
 
@@ -1915,7 +1942,7 @@ must be a ParentVASP.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;Token&gt;()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;Token&gt;(account: &signer)
 </code></pre>
 
 
@@ -1924,8 +1951,8 @@ must be a ParentVASP.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;Token&gt;() {
-    move_to_sender(<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;{ coin: <a href="libra.md#0x0_Libra_zero">Libra::zero</a>&lt;Token&gt;() })
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;Token&gt;(account: &signer) {
+    move_to(account, <a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;{ coin: <a href="libra.md#0x0_Libra_zero">Libra::zero</a>&lt;Token&gt;() })
 }
 </code></pre>
 

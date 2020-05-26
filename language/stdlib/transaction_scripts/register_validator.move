@@ -4,12 +4,13 @@ use 0x0::LibraAccount;
 use 0x0::Coin1;
 use 0x0::Coin2;
 use 0x0::LBR;
-use 0x0::Transaction;
+use 0x0::Signer;
 
 // Register the sender as a candidate validator by publishing a ValidatorConfig.T resource with the
 // given keys under their account
 
 fun main(
+    account: &signer,
     consensus_pubkey: vector<u8>,
     validator_network_signing_pubkey: vector<u8>,
     validator_network_identity_pubkey: vector<u8>,
@@ -26,10 +27,16 @@ fun main(
       fullnodes_network_address
   );
 
-  let sender = Transaction::sender();
+  let sender = Signer::address_of(account);
   // Validating nodes need to accept all currencies in order to receive txn fees
-  if (!LibraAccount::accepts_currency<Coin1::T>(sender)) LibraAccount::add_currency<Coin1::T>();
-  if (!LibraAccount::accepts_currency<Coin2::T>(sender)) LibraAccount::add_currency<Coin2::T>();
-  if (!LibraAccount::accepts_currency<LBR::T>(sender)) LibraAccount::add_currency<LBR::T>();
+  if (!LibraAccount::accepts_currency<Coin1::T>(sender)) {
+      LibraAccount::add_currency<Coin1::T>(account)
+  };
+  if (!LibraAccount::accepts_currency<Coin2::T>(sender)) {
+      LibraAccount::add_currency<Coin2::T>(account)
+  };
+  if (!LibraAccount::accepts_currency<LBR::T>(sender)) {
+      LibraAccount::add_currency<LBR::T>(account)
+  };
 }
 }

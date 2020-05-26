@@ -536,20 +536,24 @@ module LibraAccount {
             );
         let new_account = create_signer(new_account_address);
         Event::publish_generator(&new_account);
-        make_account<Token, VASP::ParentVASP>(new_account, auth_key_prefix, vasp_parent)
+        make_account<Token, VASP::ParentVASP>(new_account, auth_key_prefix, vasp_parent, false)
     }
 
     /// Creates a new account with account type `Role` at `new_account_address` with a balance of
-    /// zero in `Token` and authentication key `auth_key_prefix` | `fresh_address`.
-    /// Aborts if there is already an account at `new_account_address`
+    /// zero in `Token` and authentication key `auth_key_prefix` | `fresh_address`. If
+    /// `add_all_currencies` is true, 0 balances for all available currencies in the system will
+    /// also be added.
+    /// Aborts if there is already an account at `new_account_address`.
     /// Creating an account at address 0x0 will abort as it is a reserved address for the MoveVM.
     fun make_account<Token, RoleData: copyable>(
         new_account: signer,
         auth_key_prefix: vector<u8>,
         role_data: RoleData,
+        add_all_currencies: bool
     ) {
+        let new_account_addr = Signer::address_of(&new_account);
         // cannot create an account at the reserved address 0x0
-        Transaction::assert(Signer::address_of(&new_account) != 0x0, 0);
+        Transaction::assert(new_account_addr != 0x0, 0);
 
         // (1) publish Account::T
         let authentication_key = auth_key_prefix;
@@ -573,7 +577,18 @@ module LibraAccount {
         //     configuration such as AccountLimits before calling this
         move_to(&new_account, Role<RoleData> { role_data });
         // (3) publish Balance resource(s)
-        move_to(&new_account, Balance<Token>{ coin: Libra::zero<Token>() });
+        add_currency<Token>(&new_account);
+        if (add_all_currencies) {
+            if (!::exists<Balance<Coin1::T>>(new_account_addr)) {
+                add_currency<Coin1::T>(&new_account);
+            };
+            if (!::exists<Balance<Coin2::T>>(new_account_addr)) {
+                add_currency<Coin2::T>(&new_account);
+            };
+            if (!::exists<Balance<LBR::T>>(new_account_addr)) {
+                add_currency<LBR::T>(&new_account);
+            };
+        };
         // (4) TODO: publish account limits?
 
         destroy_signer(new_account);
@@ -589,7 +604,7 @@ module LibraAccount {
     ) {
         Transaction::assert(LibraTimestamp::is_genesis(), 0);
         let new_account = create_signer(new_account_address);
-        make_account<Token, Empty::T>(new_account, auth_key_prefix, Empty::create())
+        make_account<Token, Empty::T>(new_account, auth_key_prefix, Empty::create(), false)
     }
 
     /// Create a treasury/compliance account at `new_account_address` with authentication key
@@ -613,48 +628,58 @@ module LibraAccount {
 
         // TODO: add Association or TreasuryCompliance role instead of using Empty?
         Event::publish_generator(&new_account);
-        make_account<Token, Empty::T>(new_account, auth_key_prefix, Empty::create())
+        make_account<Token, Empty::T>(new_account, auth_key_prefix, Empty::create(), false)
     }
 
     /// Create an account with the ParentVASP role at `new_account_address` with authentication key
-    /// `auth_key_prefix` | `new_account_address`.
+    /// `auth_key_prefix` | `new_account_address`.  If `add_all_currencies` is true, 0 balances for
+    /// all available currencies in the system will also be added.
+    /// This can only be invoked by an Association account.
     public fun create_parent_vasp_account<Token>(
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
         base_url: vector<u8>,
         compliance_public_key: vector<u8>,
+        add_all_currencies: bool
     ) {
         Association::assert_sender_is_association();
         let vasp_parent =
             VASP::create_parent_vasp_credential(human_name, base_url, compliance_public_key);
         let new_account = create_signer(new_account_address);
         Event::publish_generator(&new_account);
-        make_account<Token, VASP::ParentVASP>(new_account, auth_key_prefix, vasp_parent)
+        make_account<Token, VASP::ParentVASP>(
+            new_account, auth_key_prefix, vasp_parent, add_all_currencies
+        )
     }
 
     /// Create an account with the ChildVASP role at `new_account_address` with authentication key
-    /// `auth_key_prefix` | `new_account_address`. This account will be a child of `creator`, which
-    /// must be a ParentVASP.
+    /// `auth_key_prefix` | `new_account_address` and a 0 balance of type `Token`. If
+    /// `add_all_currencies` is true, 0 balances for all avaialable currencies in the system will
+    /// also be added. This account will be a child of `creator`, which must be a ParentVASP.
     public fun create_child_vasp_account<Token>(
+        creator: &signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
-        creator: &signer
+        add_all_currencies: bool,
     ) {
         let child_vasp = VASP::create_child_vasp(creator);
         let new_account = create_signer(new_account_address);
         Event::publish_generator(&new_account);
-        make_account<Token, VASP::ChildVASP>(new_account, auth_key_prefix, child_vasp)
+        make_account<Token, VASP::ChildVASP>(
+            new_account, auth_key_prefix, child_vasp, add_all_currencies
+        )
     }
 
     public fun create_unhosted_account<Token>(
         new_account_address: address,
         auth_key_prefix: vector<u8>,
+        add_all_currencies: bool
     ) {
         let unhosted = Unhosted::create();
         let new_account = create_signer(new_account_address);
         Event::publish_generator(&new_account);
-        make_account<Token, Unhosted::T>(new_account, auth_key_prefix, unhosted)
+        make_account<Token, Unhosted::T>(new_account, auth_key_prefix, unhosted, add_all_currencies)
     }
 
     native fun create_signer(addr: address): signer;
@@ -671,8 +696,8 @@ module LibraAccount {
     }
 
     // Add a balance of `Token` type to the sending account.
-    public fun add_currency<Token>() {
-        move_to_sender(Balance<Token>{ coin: Libra::zero<Token>() })
+    public fun add_currency<Token>(account: &signer) {
+        move_to(account, Balance<Token>{ coin: Libra::zero<Token>() })
     }
 
     // Return whether the account at `addr` accepts `Token` type coins

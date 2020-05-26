@@ -7,9 +7,9 @@ use 0x0::LibraAccount;
 use 0x0::Coin1;
 use 0x0::Coin2;
 // Setup bob's account as a multi-currency account.
-fun main() {
-    LibraAccount::add_currency<Coin1::T>();
-    LibraAccount::add_currency<Coin2::T>();
+fun main(account: &signer) {
+    LibraAccount::add_currency<Coin1::T>(account);
+    LibraAccount::add_currency<Coin2::T>(account);
 }
 }
 // check: EXECUTED

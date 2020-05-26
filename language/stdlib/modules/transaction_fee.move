@@ -3,6 +3,7 @@ address 0x0 {
 module TransactionFee {
     use 0x0::LibraAccount;
     use 0x0::LibraSystem;
+    use 0x0::Signer;
     use 0x0::Transaction;
 
     ///////////////////////////////////////////////////////////////////////////
@@ -28,11 +29,14 @@ module TransactionFee {
     // height in order to ensure that we don't try to pay more than once per-block. We also
     // encapsulate the withdrawal capability to the transaction fee account so that we can withdraw
     // the fees from this account from block metadata transactions.
-    public fun initialize_transaction_fees() {
-        Transaction::assert(Transaction::sender() == 0xFEE, 0);
-        move_to_sender<TransactionFees>(TransactionFees {
-            fee_withdrawal_capability: LibraAccount::extract_sender_withdrawal_capability(),
-        });
+    public fun initialize_transaction_fees(fee_account: &signer) {
+        Transaction::assert(Signer::address_of(fee_account) == 0xFEE, 0);
+        move_to(
+            fee_account,
+            TransactionFees {
+                fee_withdrawal_capability: LibraAccount::extract_sender_withdrawal_capability(),
+            }
+        );
     }
 
     // Called from block metadata transaction for each currency

@@ -7,7 +7,7 @@ main() {
   let addr: address;
   addr = 0x0;
   // try to create account on 0x0.
-  LibraAccount.create_unhosted_account<LBR.T>(copy(addr), LCS.to_bytes<address>(&addr));
+  LibraAccount.create_unhosted_account<LBR.T>(copy(addr), LCS.to_bytes<address>(&addr), false);
 
   return;
 }
