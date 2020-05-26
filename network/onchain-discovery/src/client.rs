@@ -338,7 +338,8 @@ where
                                 addrs.push(addr);
                             }
                         }
-
+// TODO:  This is the UpdateAddress that I cannot conver to UpdateConfiguration because the eligible peers are not available.
+                        // It could easily be consolidated into a UpdateGroupAddresses, however.
                         Some(ConnectivityRequest::UpdateAddresses(
                             DiscoverySource::OnChain,
                             peer_id,
