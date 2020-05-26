@@ -12,9 +12,10 @@ use codespan_reporting::{
         Config,
     },
 };
+use move_core_types::fs::FileName;
 use move_ir_types::location::Loc;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{collections::HashMap, fs::File, io::Read, path::Path};
+use std::{fs::File, io::Read, path::Path};
 
 pub type Error = (Loc, String);
 pub type Errors = Vec<Error>;
@@ -64,13 +65,9 @@ pub struct OwnedLoc {
 }
 
 pub fn remap_owned_loc_to_loc(m: SourceMap<OwnedLoc>) -> SourceMap<Loc> {
-    let mut table: HashMap<String, &'static str> = HashMap::new();
     let mut f = |owned| {
         let OwnedLoc { file, span } = owned;
-        let file = *table
-            .entry(file.clone())
-            .or_insert_with(|| Box::leak(Box::new(file)));
-        Loc::new(file, span)
+        Loc::new(FileName::new(&file), span)
     };
     m.remap_locations(&mut f)
 }

@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use bytecode_source_map::utils::{remap_owned_loc_to_loc, source_map_from_file, OwnedLoc};
+use move_core_types::fs::AFS;
 use move_coverage::{coverage_map::CoverageMap, source_coverage::SourceCoverageBuilder};
 use std::{
     fs,
@@ -39,6 +40,8 @@ struct Args {
 
 fn main() {
     let args = Args::from_args();
+    let _fs = AFS::new();
+
     let source_map_extension = "mvsm";
     let coverage_map = if args.is_raw_trace_file {
         CoverageMap::from_trace_file(&args.input_trace_path)

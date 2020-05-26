@@ -37,6 +37,7 @@ use crate::{
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type},
 };
+use move_core_types::fs::FileName;
 use std::{
     collections::{BTreeMap, BTreeSet},
     ffi::OsStr,
@@ -240,7 +241,7 @@ pub struct GlobalEnv {
     doc_comments: BTreeMap<FileId, BTreeMap<ByteIndex, String>>,
     /// A mapping from file names to associated FileId. Though this information is
     /// already in `source_files`, we can't get it out of there so need to book keep here.
-    file_name_map: BTreeMap<String, FileId>,
+    file_name_map: BTreeMap<FileName, FileId>,
     /// Bijective mapping between FileId and a plain int. FileId's are themselves wrappers around
     /// ints, but the inner representation is opaque and cannot be accessed. This is used so we
     /// can emit FileId's to generated code and read them back.
@@ -274,7 +275,7 @@ impl GlobalEnv {
         let mut file_idx_to_id = BTreeMap::new();
         let mut fake_loc = |content: &str| {
             let file_id = source_files.add(content, content.to_string());
-            file_name_map.insert(content.to_string(), file_id);
+            file_name_map.insert(FileName::new(content), file_id);
             let file_idx = file_id_to_idx.len() as u16;
             file_id_to_idx.insert(file_id, file_idx);
             file_idx_to_id.insert(file_idx, file_id);
@@ -284,7 +285,7 @@ impl GlobalEnv {
             )
         };
         let unknown_loc = fake_loc("<unknown>");
-        let unknown_move_ir_loc = MoveIrLoc::new("<unknown>", Span::default());
+        let unknown_move_ir_loc = MoveIrLoc::new(FileName::new("<unknown>"), Span::default());
         let internal_loc = fake_loc("<internal>");
         GlobalEnv {
             source_files,
@@ -308,9 +309,9 @@ impl GlobalEnv {
     }
 
     /// Adds a source to this environment, returning a FileId for it.
-    pub fn add_source(&mut self, file_name: &str, source: &str, is_dep: bool) -> FileId {
+    pub fn add_source(&mut self, file_name: FileName, source: &str, is_dep: bool) -> FileId {
         let file_id = self.source_files.add(file_name, source.to_string());
-        self.file_name_map.insert(file_name.to_string(), file_id);
+        self.file_name_map.insert(file_name, file_id);
         let file_idx = self.file_id_to_idx.len() as u16;
         self.file_id_to_idx.insert(file_id, file_idx);
         self.file_idx_to_id.insert(file_idx, file_id);
@@ -369,8 +370,8 @@ impl GlobalEnv {
     }
 
     /// Returns the file id for a file name, if defined.
-    pub fn get_file_id(&self, fname: &str) -> Option<FileId> {
-        self.file_name_map.get(fname).cloned()
+    pub fn get_file_id(&self, fname: FileName) -> Option<FileId> {
+        self.file_name_map.get(&fname).cloned()
     }
 
     /// Maps a FileId to an index which can be mapped back to a FileId.
@@ -1102,7 +1103,6 @@ impl<'env> ModuleEnv<'env> {
 
 // =================================================================================================
 /// # Struct Environment
-
 #[derive(Debug)]
 pub struct StructData {
     /// The name of this struct.
@@ -1299,7 +1299,6 @@ impl<'env> StructEnv<'env> {
 
 // =================================================================================================
 /// # Field Environment
-
 #[derive(Debug)]
 pub struct FieldData {
     /// The name of this field.

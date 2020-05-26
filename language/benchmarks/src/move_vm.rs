@@ -8,6 +8,7 @@ use libra_state_view::StateView;
 use libra_types::{access_path::AccessPath, account_address::AccountAddress};
 use libra_vm::data_cache::StateViewCache;
 use move_core_types::{
+    fs::AFS,
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
@@ -30,12 +31,10 @@ pub fn bench(c: &mut Criterion, fun: &str) {
 // Compile `bench.move`
 fn compile_module() -> VerifiedModule {
     // TODO: this has only been tried with `cargo bench` from `libra/src/language/benchmarks`
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push("src/bench.move");
-    let s = path.to_str().expect("no path specified").to_owned();
-
-    let (_, mut modules) =
-        move_lang::move_compile(&[s], &[], Some(Address::default())).expect("Error compiling...");
+    let fs = AFS::with_path(PathBuf::from(env!("CARGO_MANIFEST_DIR")));
+    let s = "src/bench.move".to_owned();
+    let (_, mut modules) = move_lang::move_compile(&[s], &[], Some(Address::default()), &fs)
+        .expect("Error compiling...");
     match modules.remove(0) {
         CompiledUnit::Module { module, .. } => {
             VerifiedModule::new(module).expect("Cannot verify code in file")

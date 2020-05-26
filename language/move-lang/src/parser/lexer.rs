@@ -3,6 +3,7 @@
 
 use crate::{errors::*, parser::syntax::make_loc, FileCommentMap, MatchedFileCommentMap};
 use codespan::{ByteIndex, Span};
+use move_core_types::fs::FileName;
 use move_ir_types::location::Loc;
 use std::{collections::BTreeMap, fmt};
 
@@ -159,7 +160,7 @@ impl fmt::Display for Tok {
 
 pub struct Lexer<'input> {
     text: &'input str,
-    file: &'static str,
+    file: FileName,
     doc_comments: FileCommentMap,
     matched_doc_comments: MatchedFileCommentMap,
     prev_end: usize,
@@ -171,7 +172,7 @@ pub struct Lexer<'input> {
 impl<'input> Lexer<'input> {
     pub fn new(
         text: &'input str,
-        file: &'static str,
+        file: FileName,
         doc_comments: BTreeMap<Span, String>,
     ) -> Lexer<'input> {
         Lexer {
@@ -194,7 +195,7 @@ impl<'input> Lexer<'input> {
         &self.text[self.cur_start..self.cur_end]
     }
 
-    pub fn file_name(&self) -> &'static str {
+    pub fn file_name(&self) -> FileName {
         self.file
     }
 
@@ -283,7 +284,7 @@ impl<'input> Lexer<'input> {
 }
 
 // Find the next token and its length without changing the state of the lexer.
-fn find_token(file: &'static str, text: &str, start_offset: usize) -> Result<(Tok, usize), Error> {
+fn find_token(file: FileName, text: &str, start_offset: usize) -> Result<(Tok, usize), Error> {
     let c: char = match text.chars().next() {
         Some(next_char) => next_char,
         None => {

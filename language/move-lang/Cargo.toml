@@ -16,7 +16,6 @@ structopt = "0.3.14"
 difference = "2.0"
 petgraph = "0.5.1"
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
-walkdir = "2.3.1"
 
 move-vm = { path = "../vm", package = "vm" }
 move-bytecode-verifier = { path = "../bytecode-verifier", package = "bytecode-verifier" }
@@ -27,11 +26,11 @@ ir-to-bytecode = {path = "../compiler/ir-to-bytecode" }
 borrow-graph = { path = "../borrow-graph" }
 bytecode-source-map = { path = "../compiler/bytecode-source-map" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
-
+move-core-types = { path = "../move-core/types", version = "0.1.0" }
 
 [dev-dependencies]
 functional-tests = { path = "../functional-tests", version = "0.1.0" }
-tempfile = "3.1.0"
+rand = "0.7.3"
 
 [[test]]
 name = "move_check_testsuite"

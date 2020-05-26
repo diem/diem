@@ -9,6 +9,7 @@ use bytecode_source_map::{
     utils::{remap_owned_loc_to_loc, source_map_from_file, OwnedLoc},
 };
 use disassembler::disassembler::{Disassembler, DisassemblerOptions};
+use move_core_types::fs::AFS;
 use move_coverage::coverage_map::CoverageMap;
 use move_ir_types::location::Spanned;
 use std::{fs, path::Path};
@@ -55,6 +56,7 @@ struct Args {
 
 fn main() {
     let args = Args::from_args();
+    let _fs = AFS::new();
 
     let move_extension = "move";
     let mv_bytecode_extension = "mv";

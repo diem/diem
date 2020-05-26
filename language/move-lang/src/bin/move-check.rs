@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+use move_core_types::fs::AFS;
 use move_lang::{
     command_line::{self as cli},
     shared::*,
@@ -43,5 +44,6 @@ pub fn main() -> anyhow::Result<()> {
         dependencies,
         sender,
     } = Options::from_args();
-    move_lang::move_check(&source_files, &dependencies, sender)
+    let fs = AFS::new();
+    move_lang::move_check(&source_files, &dependencies, sender, &fs)
 }

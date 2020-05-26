@@ -15,6 +15,7 @@ use docgen::docgen::Docgen;
 use handlebars::Handlebars;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
+use move_core_types::fs::{FileName, AFS};
 use move_lang::find_move_filenames;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -54,12 +55,19 @@ pub fn run_move_prover<W: WriteColor>(
     error_writer: &mut W,
     options: Options,
 ) -> anyhow::Result<()> {
+    let fs = AFS::new();
     let now = Instant::now();
-    let sources = find_move_filenames(&options.move_sources)?;
-    let deps = calculate_deps(&sources, &find_move_filenames(&options.move_deps)?)?;
+    let sources = find_move_filenames(&options.move_sources, &fs)?;
+    let deps = calculate_deps(&sources, &find_move_filenames(&options.move_deps, &fs)?)?;
     let address = Some(options.account_address.as_ref());
     debug!("parsing and checking sources");
-    let mut env: GlobalEnv = run_spec_lang_compiler(sources, deps, address)?;
+    let fs = AFS::new();
+
+    let sources = sources.iter().map(|f| f.name()).collect();
+
+    let deps = deps.iter().map(|f| f.name()).collect();
+
+    let mut env: GlobalEnv = run_spec_lang_compiler(sources, deps, address, &fs)?;
     if env.has_errors() {
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with checking errors"));
@@ -85,8 +93,9 @@ pub fn run_move_prover<W: WriteColor>(
     writer.process_result(|result| fs::write(&options.output_path, result))?;
     let translator_elapsed = now.elapsed();
     if !options.generate_only {
-        let boogie_file_id =
-            writer.process_result(|result| env.add_source(&options.output_path, result, false));
+        let boogie_file_id = writer.process_result(|result| {
+            env.add_source(FileName::new(&options.output_path), result, false)
+        });
         let boogie = BoogieWrapper {
             env: &env,
             targets: &targets,
@@ -199,34 +208,33 @@ fn create_bytecode_processing_pipeline(_options: &Options) -> FunctionTargetPipe
 }
 
 /// Calculates transitive dependencies of the given move sources.
-fn calculate_deps(sources: &[String], input_deps: &[String]) -> anyhow::Result<Vec<String>> {
+fn calculate_deps(sources: &[FileName], input_deps: &[FileName]) -> anyhow::Result<Vec<FileName>> {
     let file_map = calculate_file_map(input_deps)?;
     let mut deps = vec![];
     let mut visited = BTreeSet::new();
     for src in sources.iter() {
-        calculate_deps_recursively(Path::new(src), &file_map, &mut visited, &mut deps)?;
+        calculate_deps_recursively(*src, &file_map, &mut visited, &mut deps)?;
     }
     Ok(deps)
 }
 
 /// Recursively calculate dependencies.
 fn calculate_deps_recursively(
-    path: &Path,
-    file_map: &BTreeMap<String, PathBuf>,
-    visited: &mut BTreeSet<String>,
-    deps: &mut Vec<String>,
+    path: FileName,
+    file_map: &BTreeMap<String, FileName>,
+    visited: &mut BTreeSet<FileName>,
+    deps: &mut Vec<FileName>,
 ) -> anyhow::Result<()> {
     static REX: Lazy<Regex> =
         Lazy::new(|| Regex::new(r"(?m)0x[0-9abcdefABCDEF]+::\s*(\w+)").unwrap());
-    if !visited.insert(path.to_string_lossy().to_string()) {
+    if !visited.insert(path) {
         return Ok(());
     }
-    for dep in extract_matches(path, &*REX)? {
-        if let Some(dep_path) = file_map.get(&dep) {
-            let dep_str = dep_path.to_string_lossy().to_string();
-            if !deps.contains(&dep_str) {
-                deps.push(dep_str);
-                calculate_deps_recursively(dep_path.as_path(), file_map, visited, deps)?;
+    for dep in extract_matches(&path.into_path_buf(), &*REX)? {
+        if let Some(dep_name) = file_map.get(&dep) {
+            if !deps.contains(dep_name) {
+                deps.push(*dep_name);
+                calculate_deps_recursively(*dep_name, file_map, visited, deps)?;
             }
         }
     }
@@ -234,13 +242,12 @@ fn calculate_deps_recursively(
 }
 
 /// Calculate a map of module names to files which define those modules.
-fn calculate_file_map(deps: &[String]) -> anyhow::Result<BTreeMap<String, PathBuf>> {
+fn calculate_file_map(deps: &[FileName]) -> anyhow::Result<BTreeMap<String, FileName>> {
     static REX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?m)module\s+(\w+)\s*\{").unwrap());
     let mut module_to_file = BTreeMap::new();
     for dep in deps {
-        let dep_path = PathBuf::from(dep);
-        for module in extract_matches(dep_path.as_path(), &*REX)? {
-            module_to_file.insert(module, dep_path.clone());
+        for module in extract_matches(&dep.into_path_buf(), &*REX)? {
+            module_to_file.insert(module, *dep);
         }
     }
     Ok(module_to_file)

@@ -4,6 +4,7 @@
 use move_lang::{move_compile_no_report, shared::Address};
 use std::{fs, path::Path};
 
+use move_core_types::fs::AFS;
 use move_lang::test_utils::*;
 
 const OUT_EXT: &str = "out";
@@ -45,6 +46,7 @@ fn format_diff(expected: String, actual: String) -> String {
 
 // Runs all tests under the test/testsuite directory.
 fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
+    let fs = AFS::new();
     let targets: Vec<String> = vec![path.to_str().unwrap().to_owned()];
     let deps = stdlib_files();
     let sender = Some(Address::parse_str(SENDER).unwrap());
@@ -52,7 +54,7 @@ fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
     let exp_path = path.with_extension(EXP_EXT);
     let out_path = path.with_extension(OUT_EXT);
 
-    let (files, units_or_errors) = move_compile_no_report(&targets, &deps, sender)?;
+    let (files, units_or_errors) = move_compile_no_report(&targets, &deps, sender, &fs)?;
     let errors = match units_or_errors {
         Err(errors) => errors,
         Ok(units) => move_lang::compiled_unit::verify_units(units).1,

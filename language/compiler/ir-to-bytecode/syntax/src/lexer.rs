@@ -3,6 +3,7 @@
 
 use crate::syntax::ParseError;
 use codespan::{ByteIndex, Span};
+use move_core_types::fs::FileName;
 use move_ir_types::location::*;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -128,7 +129,7 @@ impl Tok {
 
 pub struct Lexer<'input> {
     pub spec_mode: bool,
-    file: &'static str,
+    file: FileName,
     text: &'input str,
     prev_end: usize,
     cur_start: usize,
@@ -137,7 +138,7 @@ pub struct Lexer<'input> {
 }
 
 impl<'input> Lexer<'input> {
-    pub fn new(file: &'static str, s: &'input str) -> Lexer<'input> {
+    pub fn new(file: FileName, s: &'input str) -> Lexer<'input> {
         Lexer {
             spec_mode: false, // read tokens without trailing punctuation during specs.
             file,
@@ -157,7 +158,7 @@ impl<'input> Lexer<'input> {
         &self.text[self.cur_start..self.cur_end]
     }
 
-    pub fn file_name(&self) -> &'static str {
+    pub fn file_name(&self) -> FileName {
         self.file
     }
 

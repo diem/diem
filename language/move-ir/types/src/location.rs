@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use codespan::Span;
+use move_core_types::fs::FileName;
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
@@ -15,15 +16,15 @@ use std::{
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Loc {
-    file: &'static str,
+    file: FileName,
     span: Span,
 }
 impl Loc {
-    pub fn new(file: &'static str, span: Span) -> Loc {
+    pub fn new(file: FileName, span: Span) -> Loc {
         Loc { file, span }
     }
 
-    pub fn file(self) -> &'static str {
+    pub fn file(self) -> FileName {
         self.file
     }
 
@@ -34,7 +35,7 @@ impl Loc {
 
 impl PartialOrd for Loc {
     fn partial_cmp(&self, other: &Loc) -> Option<Ordering> {
-        let file_ord = self.file.partial_cmp(other.file)?;
+        let file_ord = self.file.partial_cmp(&other.file)?;
         if file_ord != Ordering::Equal {
             return Some(file_ord);
         }
@@ -50,7 +51,7 @@ impl PartialOrd for Loc {
 
 impl Ord for Loc {
     fn cmp(&self, other: &Loc) -> Ordering {
-        self.file.cmp(other.file).then_with(|| {
+        self.file.cmp(&other.file).then_with(|| {
             self.span
                 .start()
                 .cmp(&other.span.start())
@@ -78,7 +79,7 @@ impl<T> Spanned<T> {
     pub fn unsafe_no_loc(value: T) -> Spanned<T> {
         Spanned {
             value,
-            loc: Loc::new(Self::NO_LOC_FILE, Span::default()),
+            loc: Loc::new(FileName::new(Self::NO_LOC_FILE), Span::default()),
         }
     }
 }

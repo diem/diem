@@ -7,6 +7,7 @@ pub mod transaction_scripts;
 
 use bytecode_verifier::{batch_verify_modules, VerifiedModule};
 use log::LevelFilter;
+use move_core_types::fs::AFS;
 use move_lang::{compiled_unit::CompiledUnit, move_compile, shared::Address};
 use once_cell::sync::Lazy;
 use std::path::PathBuf;
@@ -119,8 +120,9 @@ pub fn stdlib_files() -> Vec<String> {
 }
 
 pub fn build_stdlib() -> Vec<VerifiedModule> {
+    let fs = AFS::new();
     let (_, compiled_units) =
-        move_compile(&stdlib_files(), &[], Some(Address::LIBRA_CORE)).unwrap();
+        move_compile(&stdlib_files(), &[], Some(Address::LIBRA_CORE), &fs).unwrap();
     batch_verify_modules(
         compiled_units
             .into_iter()
@@ -133,10 +135,12 @@ pub fn build_stdlib() -> Vec<VerifiedModule> {
 }
 
 pub fn compile_script(source_file_str: String) -> Vec<u8> {
+    let fs = AFS::new();
     let (_, mut compiled_program) = move_compile(
         &[source_file_str],
         &stdlib_files(),
         Some(Address::LIBRA_CORE),
+        &fs,
     )
     .unwrap();
     let mut script_bytes = vec![];

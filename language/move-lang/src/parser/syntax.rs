@@ -10,6 +10,7 @@ use crate::{
     parser::{ast::*, lexer::*},
     shared::*,
 };
+use move_core_types::fs::FileName;
 use std::collections::BTreeMap;
 
 // In the informal grammar comments in this file, Comma<T> is shorthand for:
@@ -37,7 +38,7 @@ fn unexpected_token_error<'input>(tokens: &Lexer<'input>, expected: &str) -> Err
 // Miscellaneous Utilities
 //**************************************************************************************************
 
-pub fn make_loc(file: &'static str, start: usize, end: usize) -> Loc {
+pub fn make_loc(file: FileName, start: usize, end: usize) -> Loc {
     Loc::new(
         file,
         Span::new(ByteIndex(start as u32), ByteIndex(end as u32)),
@@ -53,7 +54,7 @@ fn current_token_loc<'input>(tokens: &Lexer<'input>) -> Loc {
     )
 }
 
-fn spanned<T>(file: &'static str, start: usize, end: usize, value: T) -> Spanned<T> {
+fn spanned<T>(file: FileName, start: usize, end: usize, value: T) -> Spanned<T> {
     Spanned {
         loc: make_loc(file, start, end),
         value,
@@ -2024,7 +2025,7 @@ fn parse_file<'input>(tokens: &mut Lexer<'input>) -> Result<Vec<Definition>, Err
 /// result as either a pair of FileDefinition and doc comments or some Errors. The `file` name
 /// is used to identify source locations in error messages.
 pub fn parse_file_string(
-    file: &'static str,
+    file: FileName,
     input: &str,
     comment_map: BTreeMap<Span, String>,
 ) -> Result<(Vec<Definition>, BTreeMap<ByteIndex, String>), Errors> {

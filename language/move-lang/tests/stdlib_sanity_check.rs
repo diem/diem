@@ -4,6 +4,7 @@
 use move_lang::{move_compile_no_report, shared::Address};
 use std::{fs, path::Path};
 
+use move_core_types::fs::AFS;
 use move_lang::test_utils::*;
 
 const OUT_EXT: &str = "out";
@@ -12,13 +13,14 @@ const KEEP_TMP: &str = "KEEP";
 
 // Runs all tests under the test/testsuite directory.
 fn sanity_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
+    let fs = AFS::new();
     let mut targets = vec![path.to_str().unwrap().to_owned()];
     targets.append(&mut stdlib_files());
     let sender = Some(Address::LIBRA_CORE);
 
     let out_path = path.with_extension(OUT_EXT);
 
-    let (files, units_or_errors) = move_compile_no_report(&targets, &[], sender)?;
+    let (files, units_or_errors) = move_compile_no_report(&targets, &[], sender, &fs)?;
     let errors = match units_or_errors {
         Err(errors) => errors,
         Ok(units) => move_lang::compiled_unit::verify_units(units).1,

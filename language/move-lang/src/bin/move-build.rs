@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+use move_core_types::fs::AFS;
 use move_lang::{
     command_line::{self as cli},
     shared::*,
@@ -59,6 +60,8 @@ pub fn main() -> anyhow::Result<()> {
         out_dir,
         emit_source_map,
     } = Options::from_args();
-    let (files, compiled_units) = move_lang::move_compile(&source_files, &dependencies, sender)?;
-    move_lang::output_compiled_units(emit_source_map, files, compiled_units, &out_dir)
+    let fs = AFS::new();
+    let (files, compiled_units) =
+        move_lang::move_compile(&source_files, &dependencies, sender, &fs)?;
+    move_lang::output_compiled_units(emit_source_map, files, compiled_units, &out_dir, &fs)
 }

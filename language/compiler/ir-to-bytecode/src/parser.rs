@@ -13,6 +13,7 @@ use codespan_reporting::{
 };
 use ir_to_bytecode_syntax::syntax::{self, ParseError};
 use libra_types::account_address::AccountAddress;
+use move_core_types::fs::AFS;
 use move_ir_types::{ast, location::*};
 
 /// Determine if a character is an allowed eye-visible (printable) character.
@@ -85,6 +86,7 @@ fn strip_comments_and_verify(string: &str) -> Result<String> {
 /// Given the raw input of a file, creates a `ScriptOrModule` enum
 /// Fails with `Err(_)` if the text cannot be parsed`
 pub fn parse_script_or_module(file_name: &str, s: &str) -> Result<ast::ScriptOrModule> {
+    let _fs = AFS::in_memory();
     let stripped_string = &strip_comments_and_verify(s)?;
     syntax::parse_script_or_module_string(file_name, stripped_string)
         .or_else(|e| handle_error(e, s))
@@ -93,6 +95,7 @@ pub fn parse_script_or_module(file_name: &str, s: &str) -> Result<ast::ScriptOrM
 /// Given the raw input of a file, creates a `Script` struct
 /// Fails with `Err(_)` if the text cannot be parsed
 pub fn parse_script(file_name: &str, script_str: &str) -> Result<ast::Script> {
+    let _fs = AFS::in_memory();
     let stripped_string = &strip_comments_and_verify(script_str)?;
     syntax::parse_script_string(file_name, stripped_string)
         .or_else(|e| handle_error(e, stripped_string))
@@ -101,6 +104,7 @@ pub fn parse_script(file_name: &str, script_str: &str) -> Result<ast::Script> {
 /// Given the raw input of a file, creates a single `ModuleDefinition` struct
 /// Fails with `Err(_)` if the text cannot be parsed
 pub fn parse_module(file_name: &str, modules_str: &str) -> Result<ast::ModuleDefinition> {
+    let _fs = AFS::in_memory();
     let stripped_string = &strip_comments_and_verify(modules_str)?;
     syntax::parse_module_string(file_name, stripped_string)
         .or_else(|e| handle_error(e, stripped_string))

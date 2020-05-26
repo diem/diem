@@ -7,25 +7,34 @@ use functional_tests::{
     testsuite,
 };
 use libra_types::account_address::AccountAddress as LibraAddress;
+use move_core_types::fs::{FileName, AFS, FS};
 use move_lang::{
     compiled_unit::CompiledUnit,
     move_compile_no_report,
     shared::Address,
     test_utils::{read_bool_var, stdlib_files, FUNCTIONAL_TEST_DIR},
 };
-use std::{convert::TryFrom, fmt, io::Write, path::Path};
-use tempfile::NamedTempFile;
+use std::{convert::TryFrom, fmt, fs, path::Path};
 
 struct MoveSourceCompiler {
     deps: Vec<String>,
-    temp_files: Vec<NamedTempFile>,
+    fs: AFS,
 }
 
 impl MoveSourceCompiler {
     fn new(stdlib_modules_file_names: Vec<String>) -> Self {
+        let fs = AFS::in_memory();
+        for stdlib_modules_file_names in &stdlib_modules_file_names {
+            fs.store(
+                FileName::new(&stdlib_modules_file_names),
+                fs::read_to_string(&stdlib_modules_file_names).unwrap(),
+            )
+            .unwrap();
+        }
+
         MoveSourceCompiler {
             deps: stdlib_modules_file_names,
-            temp_files: vec![],
+            fs,
         }
     }
 }
@@ -49,14 +58,14 @@ impl Compiler for MoveSourceCompiler {
         address: LibraAddress,
         input: &str,
     ) -> Result<ScriptOrModule> {
-        let cur_file = NamedTempFile::new()?;
-        let sender_addr = Address::try_from(address.as_ref()).unwrap();
-        cur_file.reopen()?.write_all(input.as_bytes())?;
-        let cur_path = cur_file.path().to_str().unwrap().to_owned();
+        let target = FileName::new(&format!("target_{}.move", rand::random::<u64>()));
+        self.fs.store(target, input.to_owned())?;
 
-        let targets = &vec![cur_path.clone()];
+        let sender_addr = Address::try_from(address.as_ref()).unwrap();
+        let targets = &vec![target.name()];
         let sender = Some(sender_addr);
-        let (files, units_or_errors) = move_compile_no_report(targets, &self.deps, sender)?;
+        let (files, units_or_errors) =
+            move_compile_no_report(targets, &self.deps, sender, &self.fs)?;
         let unit = match units_or_errors {
             Err(errors) => {
                 let error_buffer = if read_bool_var(testsuite::PRETTY) {
@@ -81,9 +90,9 @@ impl Compiler for MoveSourceCompiler {
             CompiledUnit::Script { script, .. } => ScriptOrModule::Script(script),
             CompiledUnit::Module { module, .. } => {
                 let input = format!("address {} {{\n{}\n}}", sender_addr, input);
-                cur_file.reopen()?.write_all(input.as_bytes())?;
-                self.temp_files.push(cur_file);
-                self.deps.push(cur_path);
+                self.fs.delete(target)?;
+                self.fs.store(target, input)?;
+                self.deps.push(target.name());
                 ScriptOrModule::Module(module)
             }
         })

@@ -20,19 +20,16 @@ pub mod test_utils;
 mod to_bytecode;
 pub mod typing;
 
-use anyhow::anyhow;
 use codespan::{ByteIndex, Span};
 use compiled_unit::CompiledUnit;
 use errors::*;
+use move_core_types::fs::{FileName, AFS, FS};
 use move_ir_types::location::*;
 use parser::syntax::parse_file_string;
 use shared::Address;
 use std::{
     collections::{BTreeMap, HashMap},
-    fs::File,
-    io::{Read, Write},
     iter::Peekable,
-    path::{Path, PathBuf},
     str::Chars,
 };
 
@@ -53,8 +50,9 @@ pub fn move_check(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
+    fs: &AFS,
 ) -> anyhow::Result<()> {
-    let (files, errors) = move_check_no_report(targets, deps, sender_opt)?;
+    let (files, errors) = move_check_no_report(targets, deps, sender_opt, fs)?;
     if !errors.is_empty() {
         errors::report_errors(files, errors)
     }
@@ -66,8 +64,9 @@ pub fn move_check_no_report(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
+    fs: &AFS,
 ) -> anyhow::Result<(FilesSourceText, Errors)> {
-    let (files, pprog_and_comments_res) = parse_program(targets, deps)?;
+    let (files, pprog_and_comments_res) = parse_program(targets, deps, fs)?;
     let pprog_res = pprog_and_comments_res.map(|(pprog, _)| pprog);
     match check_program(pprog_res, sender_opt) {
         Err(errors) => Ok((files, errors)),
@@ -84,8 +83,9 @@ pub fn move_compile(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
+    fs: &AFS,
 ) -> anyhow::Result<(FilesSourceText, Vec<CompiledUnit>)> {
-    let (files, pprog_and_comments_res) = parse_program(targets, deps)?;
+    let (files, pprog_and_comments_res) = parse_program(targets, deps, fs)?;
     let pprog_res = pprog_and_comments_res.map(|(pprog, _)| pprog);
     match compile_program(pprog_res, sender_opt) {
         Err(errors) => errors::report_errors(files, errors),
@@ -98,8 +98,9 @@ pub fn move_compile_no_report(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
+    fs: &AFS,
 ) -> anyhow::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Errors>)> {
-    let (files, pprog_and_comments_res) = parse_program(targets, deps)?;
+    let (files, pprog_and_comments_res) = parse_program(targets, deps, fs)?;
     let pprog_res = pprog_and_comments_res.map(|(pprog, _)| pprog);
     Ok(match compile_program(pprog_res, sender_opt) {
         Err(errors) => (files, Err(errors)),
@@ -114,11 +115,12 @@ pub fn move_compile_to_expansion_no_report(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
+    fs: &AFS,
 ) -> anyhow::Result<(
     FilesSourceText,
     Result<(expansion::ast::Program, CommentMap), Errors>,
 )> {
-    let (files, pprog_and_comments_res) = parse_program(targets, deps)?;
+    let (files, pprog_and_comments_res) = parse_program(targets, deps, fs)?;
     let res = pprog_and_comments_res.and_then(|(pprog, comment_map)| {
         let (eprog, errors) = expansion::translate::program(pprog, sender_opt);
         check_errors(errors)?;
@@ -146,6 +148,7 @@ pub fn output_compiled_units(
     files: FilesSourceText,
     compiled_units: Vec<CompiledUnit>,
     out_dir: &str,
+    fs: &AFS,
 ) -> anyhow::Result<()> {
     const SCRIPT_SUB_DIR: &str = "scripts";
     const MODULE_SUB_DIR: &str = "modules";
@@ -153,12 +156,11 @@ pub fn output_compiled_units(
     macro_rules! emit_unit {
         ($path:ident, $unit:ident) => {{
             if emit_source_maps {
-                $path.set_extension(SOURCE_MAP_EXTENSION);
-                File::create($path.as_path())?.write_all(&$unit.serialize_source_map())?;
+                let id = FileName::new(&format!("{}.{}", $path, SOURCE_MAP_EXTENSION));
+                fs.store_bytes(id, $unit.serialize_source_map())?;
             }
-
-            $path.set_extension(MOVE_COMPILED_EXTENSION);
-            File::create($path.as_path())?.write_all(&$unit.serialize())?
+            let id = FileName::new(&format!("{}.{}", $path, MOVE_COMPILED_EXTENSION));
+            fs.store_bytes(id, $unit.serialize())?;
         }};
     }
 
@@ -168,26 +170,14 @@ pub fn output_compiled_units(
         .partition(|u| matches!(u, CompiledUnit::Module { .. }));
 
     // modules
-    if !modules.is_empty() {
-        std::fs::create_dir_all(format!("{}/{}", out_dir, MODULE_SUB_DIR))?;
-    }
     for (idx, unit) in modules.into_iter().enumerate() {
-        let mut path = PathBuf::from(format!(
-            "{}/{}/{}_{}",
-            out_dir,
-            MODULE_SUB_DIR,
-            idx,
-            unit.name(),
-        ));
+        let path = format!("{}/{}/{}_{}", out_dir, MODULE_SUB_DIR, idx, unit.name(),);
         emit_unit!(path, unit);
     }
 
     // scripts
-    if !scripts.is_empty() {
-        std::fs::create_dir_all(format!("{}/{}", out_dir, SCRIPT_SUB_DIR))?;
-    }
     for unit in scripts {
-        let mut path = PathBuf::from(format!("{}/{}/{}", out_dir, SCRIPT_SUB_DIR, unit.name()));
+        let path = format!("{}/{}/{}", out_dir, SCRIPT_SUB_DIR, unit.name());
         emit_unit!(path, unit);
     }
     // let script_map = {
@@ -248,18 +238,13 @@ fn compile_program(
 fn parse_program(
     targets: &[String],
     deps: &[String],
+    fs: &AFS,
 ) -> anyhow::Result<(
     FilesSourceText,
     Result<(parser::ast::Program, CommentMap), Errors>,
 )> {
-    let targets = find_move_filenames(targets)?
-        .iter()
-        .map(|s| leak_str(s))
-        .collect::<Vec<&'static str>>();
-    let deps = find_move_filenames(deps)?
-        .iter()
-        .map(|s| leak_str(s))
-        .collect::<Vec<&'static str>>();
+    let targets = find_move_filenames(targets, fs)?;
+    let deps = find_move_filenames(deps, fs)?;
     let mut files: FilesSourceText = HashMap::new();
     let mut source_definitions = Vec::new();
     let mut source_comments = CommentMap::new();
@@ -267,14 +252,14 @@ fn parse_program(
     let mut errors: Errors = Vec::new();
 
     for fname in targets {
-        let (defs, comments, mut es) = parse_file(&mut files, fname)?;
+        let (defs, comments, mut es) = parse_file(&mut files, fname, fs)?;
         source_definitions.extend(defs);
         source_comments.insert(fname, comments);
         errors.append(&mut es);
     }
 
     for fname in deps {
-        let (defs, _, mut es) = parse_file(&mut files, fname)?;
+        let (defs, _, mut es) = parse_file(&mut files, fname, fs)?;
         lib_definitions.extend(defs);
         errors.append(&mut es);
     }
@@ -293,35 +278,19 @@ fn parse_program(
     Ok((files, res))
 }
 
-pub fn find_move_filenames(files: &[String]) -> anyhow::Result<Vec<String>> {
+pub fn find_move_filenames(files: &[String], fs: &AFS) -> anyhow::Result<Vec<FileName>> {
     let mut result = vec![];
-    let has_move_extension = |path: &Path| match path.extension().and_then(|s| s.to_str()) {
-        Some(extension) => extension == MOVE_EXTENSION,
-        None => false,
-    };
     for file in files {
-        let path = Path::new(file);
-        if !path.exists() {
-            return Err(anyhow!(format!("No such file or directory '{}'", file)));
-        }
-        if !path.is_dir() {
-            // If the filename is specified directly, add it to the list, regardless
-            // of whether it has a ".move" extension.
-            result.push(file.clone());
-            continue;
-        }
-        for entry in walkdir::WalkDir::new(path)
-            .into_iter()
-            .filter_map(|e| e.ok())
-        {
-            let entry_path = entry.path();
-            if !entry.file_type().is_file() || !has_move_extension(&entry_path) {
-                continue;
+        let id = FileName::new(file);
+
+        if fs.has_entry(id) {
+            if id.has_suffix(MOVE_EXTENSION) {
+                result.push(id);
             }
-            match entry_path.to_str() {
-                Some(p) => result.push(p.to_string()),
-                None => {
-                    return Err(anyhow!("non-Unicode file name"));
+        } else {
+            for id in fs.find_with_prefix(id)? {
+                if id.has_suffix(MOVE_EXTENSION) {
+                    result.push(id);
                 }
             }
         }
@@ -329,20 +298,14 @@ pub fn find_move_filenames(files: &[String]) -> anyhow::Result<Vec<String>> {
     Ok(result)
 }
 
-// TODO replace with some sort of intern table
-fn leak_str(s: &str) -> &'static str {
-    Box::leak(Box::new(s.to_owned()))
-}
-
 fn parse_file(
     files: &mut FilesSourceText,
-    fname: &'static str,
+    fname: FileName,
+    fs: &AFS,
 ) -> anyhow::Result<(Vec<parser::ast::Definition>, MatchedFileCommentMap, Errors)> {
     let mut errors: Errors = Vec::new();
-    let mut f = File::open(fname)
-        .map_err(|err| std::io::Error::new(err.kind(), format!("{}: {}", err, fname)))?;
-    let mut source_buffer = String::new();
-    f.read_to_string(&mut source_buffer)?;
+
+    let source_buffer = fs.load(fname)?;
     let (no_comments_buffer, comment_map) = match strip_comments_and_verify(fname, &source_buffer) {
         Err(errs) => {
             errors.extend(errs.into_iter());
@@ -394,7 +357,7 @@ pub fn is_permitted_char(c: char) -> bool {
     is_permitted_printable_char(c) || is_permitted_newline_char(c)
 }
 
-fn verify_string(fname: &'static str, string: &str) -> Result<(), Errors> {
+fn verify_string(fname: FileName, string: &str) -> Result<(), Errors> {
     match string
         .chars()
         .enumerate()
@@ -416,7 +379,7 @@ fn verify_string(fname: &'static str, string: &str) -> Result<(), Errors> {
 }
 
 /// Types to represent comments.
-pub type CommentMap = BTreeMap<&'static str, MatchedFileCommentMap>;
+pub type CommentMap = BTreeMap<FileName, MatchedFileCommentMap>;
 pub type MatchedFileCommentMap = BTreeMap<ByteIndex, String>;
 pub type FileCommentMap = BTreeMap<Span, String>;
 
@@ -430,7 +393,7 @@ pub type FileCommentMap = BTreeMap<Span, String>;
 /// (`/// .. <newline>` and `/** .. */`) will be not included in extracted comment string. The
 /// span in the returned map, however, covers the whole region of the comment, including the
 /// delimiters.
-fn strip_comments(fname: &'static str, input: &str) -> Result<(String, FileCommentMap), Errors> {
+fn strip_comments(fname: FileName, input: &str) -> Result<(String, FileCommentMap), Errors> {
     const SLASH: char = '/';
     const SPACE: char = ' ';
     const STAR: char = '*';
@@ -571,7 +534,7 @@ fn strip_comments(fname: &'static str, input: &str) -> Result<(String, FileComme
 // We restrict strings to only ascii visual characters (0x20 <= c <= 0x7E) or a permitted newline
 // character--\n--or a tab--\t.
 fn strip_comments_and_verify(
-    fname: &'static str,
+    fname: FileName,
     string: &str,
 ) -> Result<(String, FileCommentMap), Errors> {
     verify_string(fname, string)?;

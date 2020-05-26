@@ -6,6 +6,7 @@ use std::path::Path;
 
 use codespan_reporting::term::termcolor::Buffer;
 
+use move_core_types::fs::AFS;
 use spec_lang::{env::GlobalEnv, run_spec_lang_compiler};
 use stackless_bytecode_generator::{
     borrow_analysis::BorrowAnalysisProcessor,
@@ -88,7 +89,8 @@ fn get_tested_transformation_pipeline(
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let mut sources = extract_test_directives(path, "// dep:")?;
     sources.push(path.to_string_lossy().to_string());
-    let env: GlobalEnv = run_spec_lang_compiler(sources, vec![], Some("0x2345467"))?;
+    let fs = AFS::new();
+    let env: GlobalEnv = run_spec_lang_compiler(sources, vec![], Some("0x2345467"), &fs)?;
     let out = if env.has_errors() {
         let mut error_writer = Buffer::no_color();
         env.report_errors(&mut error_writer);

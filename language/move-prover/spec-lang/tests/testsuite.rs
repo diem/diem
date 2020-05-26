@@ -5,6 +5,7 @@ use std::path::Path;
 
 use codespan_reporting::term::termcolor::Buffer;
 
+use move_core_types::fs::AFS;
 use spec_lang::run_spec_lang_compiler;
 use test_utils::{baseline_test::verify_or_update_baseline, DEFAULT_SENDER};
 
@@ -12,8 +13,8 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let targets = vec![path.to_str().unwrap().to_string()];
     let deps = vec![];
     let address_opt = Some(DEFAULT_SENDER);
-
-    let env = run_spec_lang_compiler(targets, deps, address_opt)?;
+    let fs = AFS::new();
+    let env = run_spec_lang_compiler(targets, deps, address_opt, &fs)?;
     let diags = if env.has_errors() {
         let mut writer = Buffer::no_color();
         env.report_errors(&mut writer);

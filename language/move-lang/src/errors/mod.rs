@@ -10,6 +10,7 @@ use codespan_reporting::{
         Config,
     },
 };
+use move_core_types::fs::FileName;
 use move_ir_types::location::*;
 use std::collections::{HashMap, HashSet};
 
@@ -20,11 +21,11 @@ use std::collections::{HashMap, HashSet};
 pub type Errors = Vec<Error>;
 pub type Error = Vec<(Loc, String)>;
 pub type ErrorSlice = [(Loc, String)];
-pub type HashableError = Vec<(&'static str, usize, usize, String)>;
+pub type HashableError = Vec<(FileName, usize, usize, String)>;
 
-pub type FilesSourceText = HashMap<&'static str, String>;
+pub type FilesSourceText = HashMap<FileName, String>;
 
-type FileMapping = HashMap<&'static str, FileId>;
+type FileMapping = HashMap<FileName, FileId>;
 
 //**************************************************************************************************
 // Utils
@@ -110,7 +111,7 @@ fn render_errors<W: WriteColor>(
 
 fn convert_loc(files: &Files<String>, file_mapping: &FileMapping, loc: Loc) -> (FileId, Span) {
     let fname = loc.file();
-    let id = *file_mapping.get(fname).unwrap();
+    let id = *file_mapping.get(&fname).unwrap();
     let offset = files.source_span(id).start().to_usize();
     let begin_index = (loc.span().start().to_usize() + offset) as u32;
     let end_index = (loc.span().end().to_usize() + offset) as u32;

@@ -29,6 +29,7 @@ pub mod ty;
 use crate::env::SCRIPT_MODULE_NAME;
 #[allow(unused_imports)]
 use log::{info, warn};
+use move_core_types::fs::AFS;
 use move_ir_types::location::Spanned;
 use move_lang::{
     expansion::ast::ModuleDefinition,
@@ -43,6 +44,7 @@ pub fn run_spec_lang_compiler(
     targets: Vec<String>,
     deps: Vec<String>,
     address_opt: Option<&str>,
+    fs: &AFS,
 ) -> anyhow::Result<GlobalEnv> {
     let address_opt = address_opt
         .map(Address::parse_str)
@@ -54,7 +56,7 @@ pub fn run_spec_lang_compiler(
     all_sources.extend(deps.clone());
     let mut env = GlobalEnv::new();
     // First pass: compile move code.
-    let (files, units_or_errors) = move_compile_no_report(&all_sources, &[], address_opt)?;
+    let (files, units_or_errors) = move_compile_no_report(&all_sources, &[], address_opt, fs)?;
     // Enter sources into env, remember file ids as
     for (fname, fsrc) in files {
         env.add_source(fname, &fsrc, deps.contains(&fname.to_string()));
@@ -73,7 +75,7 @@ pub fn run_spec_lang_compiler(
                 // The alternative to do a second parse and expansion pass is to make the expansion
                 // AST clonable and tee it somehow out of the regular compile chain.
                 let (_, eprog_or_errors) =
-                    move_compile_to_expansion_no_report(&all_sources, &[], address_opt)?;
+                    move_compile_to_expansion_no_report(&all_sources, &[], address_opt, fs)?;
                 let (eprog, comment_map) = eprog_or_errors.expect("no compilation errors");
                 // Add any documentation comments found by the move compiler to the env.
                 for (fname, documentation) in comment_map {
