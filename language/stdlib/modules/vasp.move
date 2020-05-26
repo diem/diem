@@ -12,6 +12,9 @@ module VASP {
     use 0x0::Testnet;
     use 0x0::Transaction;
     use 0x0::Vector;
+    use 0x0::Association;
+    use 0x0::LibraConfig;
+    use 0x0::VASPRegistry::{Self, VASPRegistrationCapability};
 
     // A ParentVASP is held only by the root VASP account and holds the
     // VASP-related metadata for the account. It is subject to a time
@@ -39,6 +42,17 @@ module VASP {
     // the parent VASP account by the association.
     struct ChildVASP { parent_vasp_addr: address }
 
+    // A registration capability that allows this module to add and remove
+    // vasps from the on-chain VASP registry.
+    resource struct RegistrationCapability {
+        cap: VASPRegistrationCapability,
+    }
+
+    public fun initialize(config_account: &signer) {
+        let cap = VASPRegistry::initialize(config_account);
+        move_to(config_account, RegistrationCapability{cap});
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Association called functions for parent VASP accounts
     ///////////////////////////////////////////////////////////////////////////
@@ -50,9 +64,25 @@ module VASP {
 
     // Non-destructively decertify `parent_vasp`. Can be
     // recertified later on via `recertify_vasp`.
-    public fun decertify_vasp(parent_vasp: &mut ParentVASP) {
+    public fun decertify_vasp(parent_vasp_addr: address, parent_vasp: &mut ParentVASP)
+    acquires RegistrationCapability {
         // Expire the parent credential.
         parent_vasp.expiration_date = 0;
+        delist_vasp(parent_vasp_addr)
+    }
+
+    public fun delist_vasp(parent_vasp_addr: address)
+    acquires RegistrationCapability {
+        Association::assert_sender_is_association();
+        let cap = borrow_global<RegistrationCapability>(LibraConfig::default_config_address());
+        VASPRegistry::remove_vasp(parent_vasp_addr, &cap.cap);
+    }
+
+    public fun register_vasp(parent_vasp_addr: address)
+    acquires RegistrationCapability {
+        Association::assert_sender_is_association();
+        let cap = borrow_global<RegistrationCapability>(LibraConfig::default_config_address());
+        VASPRegistry::add_vasp(parent_vasp_addr, &cap.cap);
     }
 
     ///////////////////////////////////////////////////////////////////////////

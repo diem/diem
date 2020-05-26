@@ -804,6 +804,7 @@
         <a href="vasp.md#0x0_VASP_create_parent_vasp_credential">VASP::create_parent_vasp_credential</a>(human_name, base_url, compliance_public_key);
     <b>let</b> account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(addr);
     move_to(&account, <a href="#0x0_LibraAccount_Role">Role</a>&lt;<a href="vasp.md#0x0_VASP_ParentVASP">VASP::ParentVASP</a>&gt; { role_data });
+    <a href="vasp.md#0x0_VASP_register_vasp">VASP::register_vasp</a>(addr);
     <a href="#0x0_LibraAccount_destroy_signer">destroy_signer</a>(account);
 }
 </code></pre>
@@ -1742,7 +1743,8 @@ Create an account with the ParentVASP role at
         <a href="vasp.md#0x0_VASP_create_parent_vasp_credential">VASP::create_parent_vasp_credential</a>(human_name, base_url, compliance_public_key);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
-    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="vasp.md#0x0_VASP_ParentVASP">VASP::ParentVASP</a>&gt;(new_account, auth_key_prefix, vasp_parent)
+    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="vasp.md#0x0_VASP_ParentVASP">VASP::ParentVASP</a>&gt;(new_account, auth_key_prefix, vasp_parent);
+    <a href="vasp.md#0x0_VASP_register_vasp">VASP::register_vasp</a>(new_account_address)
 }
 </code></pre>
 

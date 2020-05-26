@@ -19,12 +19,14 @@ use std::{collections::HashMap, sync::Arc};
 mod libra_version;
 mod registered_currencies;
 mod validator_set;
+mod vasp_registry;
 mod vm_config;
 
 pub use self::{
     libra_version::LibraVersion,
     registered_currencies::RegisteredCurrencies,
     validator_set::ValidatorSet,
+    vasp_registry::VASPRegistry,
     vm_config::{VMConfig, VMPublishingOption},
 };
 
@@ -54,6 +56,7 @@ pub const ON_CHAIN_CONFIG_REGISTRY: &[ConfigID] = &[
     LibraVersion::CONFIG_ID,
     ValidatorSet::CONFIG_ID,
     RegisteredCurrencies::CONFIG_ID,
+    VASPRegistry::CONFIG_ID,
 ];
 
 #[derive(Clone, Debug, PartialEq)]

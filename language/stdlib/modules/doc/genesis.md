@@ -54,6 +54,8 @@
     <b>let</b> (coin2_mint_cap, coin2_burn_cap) = <a href="coin2.md#0x0_Coin2_initialize">Coin2::initialize</a>(association);
     <a href="lbr.md#0x0_LBR_initialize">LBR::initialize</a>(association);
 
+    <a href="vasp.md#0x0_VASP_initialize">VASP::initialize</a>(config_account);
+
     <a href="libra_account.md#0x0_LibraAccount_initialize">LibraAccount::initialize</a>(association);
     <a href="unhosted.md#0x0_Unhosted_publish_global_limits_definition">Unhosted::publish_global_limits_definition</a>();
     <a href="libra_account.md#0x0_LibraAccount_create_genesis_account">LibraAccount::create_genesis_account</a>&lt;<a href="lbr.md#0x0_LBR_T">LBR::T</a>&gt;(

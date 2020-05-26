@@ -187,6 +187,7 @@ module LibraAccount {
             VASP::create_parent_vasp_credential(human_name, base_url, compliance_public_key);
         let account = create_signer(addr);
         move_to(&account, Role<VASP::ParentVASP> { role_data });
+        VASP::register_vasp(addr);
         destroy_signer(account);
     }
 
@@ -630,7 +631,8 @@ module LibraAccount {
             VASP::create_parent_vasp_credential(human_name, base_url, compliance_public_key);
         let new_account = create_signer(new_account_address);
         Event::publish_generator(&new_account);
-        make_account<Token, VASP::ParentVASP>(new_account, auth_key_prefix, vasp_parent)
+        make_account<Token, VASP::ParentVASP>(new_account, auth_key_prefix, vasp_parent);
+        VASP::register_vasp(new_account_address)
     }
 
     /// Create an account with the ChildVASP role at `new_account_address` with authentication key

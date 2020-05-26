@@ -7,8 +7,12 @@
 
 -  [Struct `ParentVASP`](#0x0_VASP_ParentVASP)
 -  [Struct `ChildVASP`](#0x0_VASP_ChildVASP)
+-  [Struct `RegistrationCapability`](#0x0_VASP_RegistrationCapability)
+-  [Function `initialize`](#0x0_VASP_initialize)
 -  [Function `recertify_vasp`](#0x0_VASP_recertify_vasp)
 -  [Function `decertify_vasp`](#0x0_VASP_decertify_vasp)
+-  [Function `delist_vasp`](#0x0_VASP_delist_vasp)
+-  [Function `register_vasp`](#0x0_VASP_register_vasp)
 -  [Function `create_parent_vasp_credential`](#0x0_VASP_create_parent_vasp_credential)
 -  [Function `create_child_vasp`](#0x0_VASP_create_child_vasp)
 -  [Function `child_parent_address`](#0x0_VASP_child_parent_address)
@@ -101,6 +105,59 @@
 
 </details>
 
+<a name="0x0_VASP_RegistrationCapability"></a>
+
+## Struct `RegistrationCapability`
+
+
+
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_VASP_RegistrationCapability">RegistrationCapability</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>cap: <a href="vasp_registry.md#0x0_VASPRegistry_VASPRegistrationCapability">VASPRegistry::VASPRegistrationCapability</a></code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
+
+<a name="0x0_VASP_initialize"></a>
+
+## Function `initialize`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_VASP_initialize">initialize</a>(config_account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_VASP_initialize">initialize</a>(config_account: &signer) {
+    <b>let</b> cap = <a href="vasp_registry.md#0x0_VASPRegistry_initialize">VASPRegistry::initialize</a>(config_account);
+    move_to(config_account, <a href="#0x0_VASP_RegistrationCapability">RegistrationCapability</a>{cap});
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x0_VASP_recertify_vasp"></a>
 
 ## Function `recertify_vasp`
@@ -131,7 +188,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_VASP_decertify_vasp">decertify_vasp</a>(parent_vasp: &<b>mut</b> <a href="#0x0_VASP_ParentVASP">VASP::ParentVASP</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_VASP_decertify_vasp">decertify_vasp</a>(parent_vasp_addr: address, parent_vasp: &<b>mut</b> <a href="#0x0_VASP_ParentVASP">VASP::ParentVASP</a>)
 </code></pre>
 
 
@@ -140,9 +197,65 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_VASP_decertify_vasp">decertify_vasp</a>(parent_vasp: &<b>mut</b> <a href="#0x0_VASP_ParentVASP">ParentVASP</a>) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_VASP_decertify_vasp">decertify_vasp</a>(parent_vasp_addr: address, parent_vasp: &<b>mut</b> <a href="#0x0_VASP_ParentVASP">ParentVASP</a>)
+<b>acquires</b> <a href="#0x0_VASP_RegistrationCapability">RegistrationCapability</a> {
     // Expire the parent credential.
     parent_vasp.expiration_date = 0;
+    <a href="#0x0_VASP_delist_vasp">delist_vasp</a>(parent_vasp_addr)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_VASP_delist_vasp"></a>
+
+## Function `delist_vasp`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_VASP_delist_vasp">delist_vasp</a>(parent_vasp_addr: address)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_VASP_delist_vasp">delist_vasp</a>(parent_vasp_addr: address)
+<b>acquires</b> <a href="#0x0_VASP_RegistrationCapability">RegistrationCapability</a> {
+    <a href="association.md#0x0_Association_assert_sender_is_association">Association::assert_sender_is_association</a>();
+    <b>let</b> cap = borrow_global&lt;<a href="#0x0_VASP_RegistrationCapability">RegistrationCapability</a>&gt;(<a href="libra_configs.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>());
+    <a href="vasp_registry.md#0x0_VASPRegistry_remove_vasp">VASPRegistry::remove_vasp</a>(parent_vasp_addr, &cap.cap);
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_VASP_register_vasp"></a>
+
+## Function `register_vasp`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_VASP_register_vasp">register_vasp</a>(parent_vasp_addr: address)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_VASP_register_vasp">register_vasp</a>(parent_vasp_addr: address)
+<b>acquires</b> <a href="#0x0_VASP_RegistrationCapability">RegistrationCapability</a> {
+    <a href="association.md#0x0_Association_assert_sender_is_association">Association::assert_sender_is_association</a>();
+    <b>let</b> cap = borrow_global&lt;<a href="#0x0_VASP_RegistrationCapability">RegistrationCapability</a>&gt;(<a href="libra_configs.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>());
+    <a href="vasp_registry.md#0x0_VASPRegistry_add_vasp">VASPRegistry::add_vasp</a>(parent_vasp_addr, &cap.cap);
 }
 </code></pre>
 

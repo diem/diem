@@ -22,6 +22,7 @@ module Genesis {
     use 0x0::Testnet;
     use 0x0::TransactionFee;
     use 0x0::Unhosted;
+    use 0x0::VASP;
 
     fun initialize(
         association: &signer,
@@ -51,6 +52,8 @@ module Genesis {
         let (coin1_mint_cap, coin1_burn_cap) = Coin1::initialize(association);
         let (coin2_mint_cap, coin2_burn_cap) = Coin2::initialize(association);
         LBR::initialize(association);
+
+        VASP::initialize(config_account);
 
         LibraAccount::initialize(association);
         Unhosted::publish_global_limits_definition();
