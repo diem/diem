@@ -10,7 +10,7 @@ use crate::{
         definition::MAX_ACCUMULATOR_PROOF_DEPTH, AccountStateProof, EventAccumulatorInternalNode,
         EventAccumulatorProof, EventProof, SparseMerkleInternalNode, SparseMerkleLeafNode,
         SparseMerkleProof, TestAccumulatorInternalNode, TestAccumulatorProof,
-        TransactionAccumulatorInternalNode, TransactionAccumulatorProof, TransactionProof,
+        TransactionAccumulatorInternalNode, TransactionAccumulatorProof, TransactionInfoWithProof,
     },
     transaction::{RawTransaction, Script, Transaction, TransactionInfo},
     vm_error::StatusCode,
@@ -281,16 +281,23 @@ fn test_verify_transaction() {
 
     let ledger_info_to_transaction_info_proof =
         TransactionAccumulatorProof::new(vec![txn_info0_hash, internal_b_hash]);
-    let proof = TransactionProof::new(ledger_info_to_transaction_info_proof, txn_info1);
+    let proof =
+        TransactionInfoWithProof::new(ledger_info_to_transaction_info_proof.clone(), txn_info1);
 
     // The proof can be used to verify txn1.
-    assert!(proof.verify(&ledger_info, txn1_hash, None, 1).is_ok());
-    // Replacing txn1 with some other txn should cause the verification to fail.
-    assert!(proof
-        .verify(&ledger_info, HashValue::random(), None, 1)
-        .is_err());
+    assert!(proof.verify(&ledger_info, 1).is_ok());
     // Trying to show that txn1 is at version 2.
-    assert!(proof.verify(&ledger_info, txn1_hash, None, 2).is_err());
+    assert!(proof.verify(&ledger_info, 2).is_err());
+    // Replacing txn1 with some other txn should cause the verification to fail.
+    let fake_txn_info = TransactionInfo::new(
+        HashValue::random(),
+        state_root1_hash,
+        event_root1_hash,
+        /* gas_used = */ 0,
+        /* major_status = */ StatusCode::EXECUTED,
+    );
+    let proof = TransactionInfoWithProof::new(ledger_info_to_transaction_info_proof, fake_txn_info);
+    assert!(proof.verify(&ledger_info, 1).is_err());
 }
 
 #[test]
@@ -391,8 +398,10 @@ fn test_verify_account_state_and_event() {
         vec![leaf3_hash, leaf1_hash, *SPARSE_MERKLE_PLACEHOLDER_HASH],
     );
     let account_state_proof = AccountStateProof::new(
-        ledger_info_to_transaction_info_proof.clone(),
-        txn_info2.clone(),
+        TransactionInfoWithProof::new(
+            ledger_info_to_transaction_info_proof.clone(),
+            txn_info2.clone(),
+        ),
         transaction_info_to_account_proof,
     );
 
@@ -427,8 +436,7 @@ fn test_verify_account_state_and_event() {
 
     let transaction_info_to_event_proof = EventAccumulatorProof::new(vec![event1_hash]);
     let event_proof = EventProof::new(
-        ledger_info_to_transaction_info_proof,
-        txn_info2,
+        TransactionInfoWithProof::new(ledger_info_to_transaction_info_proof, txn_info2),
         transaction_info_to_event_proof,
     );
 

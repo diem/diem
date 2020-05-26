@@ -25,7 +25,7 @@ use libra_types::{
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     mempool_status::{MempoolStatus, MempoolStatusCode},
-    proof::{SparseMerkleProof, TransactionAccumulatorProof},
+    proof::{SparseMerkleProof, TransactionAccumulatorProof, TransactionInfoWithProof},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{Transaction, TransactionInfo, TransactionPayload},
     vm_error::{StatusCode, VMStatus},
@@ -45,6 +45,7 @@ use tokio::runtime::Runtime;
 use vm_validator::{
     mocks::mock_vm_validator::MockVMValidator, vm_validator::TransactionValidation,
 };
+
 type JsonMap = HashMap<String, serde_json::Value>;
 
 // returns MockLibraDB for unit-testing
@@ -533,8 +534,7 @@ fn test_get_account_state_with_proof() {
     let expected_proof = get_first_state_proof_from_mock_db(&mock_db);
     let expected_blob = expected_proof.blob.as_ref().unwrap();
     let expected_sm_proof = expected_proof.proof.transaction_info_to_account_proof();
-    let expected_txn_info = expected_proof.proof.transaction_info();
-    let expected_li_proof = expected_proof.proof.ledger_info_to_transaction_info_proof();
+    let expected_txn_info_with_proof = expected_proof.proof.transaction_info_with_proof();
 
     //version
     assert_eq!(received_proof.version, expected_proof.version);
@@ -556,7 +556,6 @@ fn test_get_account_state_with_proof() {
     assert_eq!(sm_proof, *expected_sm_proof);
     let txn_info: TransactionInfo =
         lcs::from_bytes(&received_proof.proof.transaction_info.into_bytes().unwrap()).unwrap();
-    assert_eq!(txn_info, *expected_txn_info);
     let li_proof: TransactionAccumulatorProof = lcs::from_bytes(
         &received_proof
             .proof
@@ -565,7 +564,8 @@ fn test_get_account_state_with_proof() {
             .unwrap(),
     )
     .unwrap();
-    assert_eq!(li_proof, *expected_li_proof);
+    let txn_info_with_proof = TransactionInfoWithProof::new(li_proof, txn_info);
+    assert_eq!(txn_info_with_proof, *expected_txn_info_with_proof);
 }
 
 #[test]

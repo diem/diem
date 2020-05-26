@@ -26,7 +26,7 @@ use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::{
         definition::LeafCount, position::Position, AccumulatorConsistencyProof,
-        TransactionAccumulatorProof, TransactionAccumulatorRangeProof,
+        TransactionAccumulatorProof, TransactionAccumulatorRangeProof, TransactionInfoWithProof,
     },
     transaction::{TransactionInfo, Version},
 };
@@ -263,10 +263,10 @@ impl LedgerStore {
         &self,
         version: Version,
         ledger_version: Version,
-    ) -> Result<(TransactionInfo, TransactionAccumulatorProof)> {
-        Ok((
-            self.get_transaction_info(version)?,
+    ) -> Result<TransactionInfoWithProof> {
+        Ok(TransactionInfoWithProof::new(
             self.get_transaction_proof(version, ledger_version)?,
+            self.get_transaction_info(version)?,
         ))
     }
 

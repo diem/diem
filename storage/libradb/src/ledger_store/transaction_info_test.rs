@@ -19,12 +19,19 @@ fn verify(
         .for_each(|(idx, expected_txn_info)| {
             let version = first_version + idx as u64;
 
-            let (txn_info, proof) = store
+            let txn_info_with_proof = store
                 .get_transaction_info_with_proof(version, ledger_version)
                 .unwrap();
 
-            assert_eq!(&txn_info, expected_txn_info);
-            proof.verify(root_hash, txn_info.hash(), version).unwrap();
+            assert_eq!(txn_info_with_proof.transaction_info(), expected_txn_info);
+            txn_info_with_proof
+                .ledger_info_to_transaction_info_proof()
+                .verify(
+                    root_hash,
+                    txn_info_with_proof.transaction_info().hash(),
+                    version,
+                )
+                .unwrap();
         })
 }
 

@@ -18,8 +18,8 @@ use std::convert::{TryFrom, TryInto};
 use libra_types::proof::{
     definition::{
         AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, AccumulatorRangeProof,
-        EventProof, SparseMerkleProof, SparseMerkleRangeProof, TransactionListProof,
-        TransactionProof,
+        EventProof, SparseMerkleProof, SparseMerkleRangeProof, TransactionInfoWithProof,
+        TransactionListProof,
     },
     SparseMerkleLeafNode,
 };
@@ -231,7 +231,7 @@ impl From<SparseMerkleRangeProof> for crate::proto::types::SparseMerkleRangeProo
     }
 }
 
-impl TryFrom<crate::proto::types::TransactionProof> for TransactionProof {
+impl TryFrom<crate::proto::types::TransactionProof> for TransactionInfoWithProof {
     type Error = Error;
 
     fn try_from(proto_proof: crate::proto::types::TransactionProof) -> Result<Self> {
@@ -244,15 +244,15 @@ impl TryFrom<crate::proto::types::TransactionProof> for TransactionProof {
             .ok_or_else(|| format_err!("Missing transaction_info"))?
             .try_into()?;
 
-        Ok(TransactionProof::new(
+        Ok(TransactionInfoWithProof::new(
             ledger_info_to_transaction_info_proof,
             transaction_info,
         ))
     }
 }
 
-impl From<TransactionProof> for crate::proto::types::TransactionProof {
-    fn from(proof: TransactionProof) -> Self {
+impl From<TransactionInfoWithProof> for crate::proto::types::TransactionProof {
+    fn from(proof: TransactionInfoWithProof) -> Self {
         Self {
             ledger_info_to_transaction_info_proof: Some(
                 proof.ledger_info_to_transaction_info_proof().into(),
@@ -280,8 +280,7 @@ impl TryFrom<crate::proto::types::AccountStateProof> for AccountStateProof {
             .try_into()?;
 
         Ok(AccountStateProof::new(
-            ledger_info_to_transaction_info_proof,
-            transaction_info,
+            TransactionInfoWithProof::new(ledger_info_to_transaction_info_proof, transaction_info),
             transaction_info_to_account_proof,
         ))
     }
@@ -291,9 +290,17 @@ impl From<AccountStateProof> for crate::proto::types::AccountStateProof {
     fn from(proof: AccountStateProof) -> Self {
         Self {
             ledger_info_to_transaction_info_proof: Some(
-                proof.ledger_info_to_transaction_info_proof().into(),
+                proof
+                    .transaction_info_with_proof()
+                    .ledger_info_to_transaction_info_proof()
+                    .into(),
             ),
-            transaction_info: Some(proof.transaction_info().into()),
+            transaction_info: Some(
+                proof
+                    .transaction_info_with_proof()
+                    .transaction_info()
+                    .into(),
+            ),
             transaction_info_to_account_proof: Some(
                 proof.transaction_info_to_account_proof().into(),
             ),
@@ -319,8 +326,7 @@ impl TryFrom<crate::proto::types::EventProof> for EventProof {
             .try_into()?;
 
         Ok(EventProof::new(
-            ledger_info_to_transaction_info_proof,
-            transaction_info,
+            TransactionInfoWithProof::new(ledger_info_to_transaction_info_proof, transaction_info),
             transaction_info_to_event_proof,
         ))
     }
@@ -330,9 +336,17 @@ impl From<EventProof> for crate::proto::types::EventProof {
     fn from(proof: EventProof) -> Self {
         Self {
             ledger_info_to_transaction_info_proof: Some(
-                proof.ledger_info_to_transaction_info_proof().into(),
+                proof
+                    .transaction_info_with_proof()
+                    .ledger_info_to_transaction_info_proof()
+                    .into(),
             ),
-            transaction_info: Some(proof.transaction_info().into()),
+            transaction_info: Some(
+                proof
+                    .transaction_info_with_proof()
+                    .transaction_info()
+                    .into(),
+            ),
             transaction_info_to_event_proof: Some(proof.transaction_info_to_event_proof().into()),
         }
     }

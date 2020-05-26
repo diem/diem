@@ -3,8 +3,8 @@
 
 use crate::proof::{
     AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleProof,
-    SparseMerkleRangeProof, TestAccumulatorProof, TestAccumulatorRangeProof, TransactionListProof,
-    TransactionProof,
+    SparseMerkleRangeProof, TestAccumulatorProof, TestAccumulatorRangeProof,
+    TransactionInfoWithProof, TransactionListProof,
 };
 use lcs::test_helpers::assert_canonical_encode_decode;
 use proptest::prelude::*;
@@ -49,7 +49,7 @@ proptest! {
 
 
     #[test]
-    fn test_transaction_proof_lcs_roundtrip(proof in any::<TransactionProof>()) {
+    fn test_transaction_proof_lcs_roundtrip(proof in any::<TransactionInfoWithProof>()) {
         assert_canonical_encode_decode(proof);
     }
 
