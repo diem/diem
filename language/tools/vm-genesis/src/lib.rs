@@ -173,7 +173,7 @@ fn create_and_initialize_main_accounts(
     );
 
     context.set_sender(tc_account_address);
-    context.exec(GENESIS_MODULE_NAME, "initalize_tc_account", vec![], vec![]);
+    context.exec(GENESIS_MODULE_NAME, "initialize_tc_account", vec![], vec![]);
 
     context.set_sender(root_association_address);
     context.exec(

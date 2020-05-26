@@ -7,7 +7,7 @@
 
 -  [Function `initialize_association`](#0x0_Genesis_initialize_association)
 -  [Function `initialize_accounts`](#0x0_Genesis_initialize_accounts)
--  [Function `initalize_tc_account`](#0x0_Genesis_initalize_tc_account)
+-  [Function `initialize_tc_account`](#0x0_Genesis_initialize_tc_account)
 -  [Function `grant_tc_account`](#0x0_Genesis_grant_tc_account)
 -  [Function `grant_tc_capabilities_for_sender`](#0x0_Genesis_grant_tc_capabilities_for_sender)
 -  [Function `initialize_txn_fee_account`](#0x0_Genesis_initialize_txn_fee_account)
@@ -109,13 +109,13 @@
 
 </details>
 
-<a name="0x0_Genesis_initalize_tc_account"></a>
+<a name="0x0_Genesis_initialize_tc_account"></a>
 
-## Function `initalize_tc_account`
+## Function `initialize_tc_account`
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_Genesis_initalize_tc_account">initalize_tc_account</a>()
+<pre><code><b>fun</b> <a href="#0x0_Genesis_initialize_tc_account">initialize_tc_account</a>()
 </code></pre>
 
 
@@ -124,7 +124,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_Genesis_initalize_tc_account">initalize_tc_account</a>() {
+<pre><code><b>fun</b> <a href="#0x0_Genesis_initialize_tc_account">initialize_tc_account</a>() {
     <a href="association.md#0x0_Association_apply_for_association">Association::apply_for_association</a>();
     <a href="association.md#0x0_Association_apply_for_privilege">Association::apply_for_privilege</a>&lt;<a href="libra_account.md#0x0_LibraAccount_FreezingPrivilege">LibraAccount::FreezingPrivilege</a>&gt;();
 }
@@ -177,7 +177,8 @@
 <pre><code><b>fun</b> <a href="#0x0_Genesis_grant_tc_capabilities_for_sender">grant_tc_capabilities_for_sender</a>(auth_key: vector&lt;u8&gt;) {
     <a href="libra.md#0x0_Libra_grant_burn_capability_for_sender">Libra::grant_burn_capability_for_sender</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;();
     <a href="libra.md#0x0_Libra_grant_burn_capability_for_sender">Libra::grant_burn_capability_for_sender</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;();
-    <a href="libra.md#0x0_Libra_grant_burn_capability_for_sender">Libra::grant_burn_capability_for_sender</a>&lt;<a href="lbr.md#0x0_LBR_T">LBR::T</a>&gt;();
+    <a href="libra.md#0x0_Libra_grant_mint_capability_for_sender">Libra::grant_mint_capability_for_sender</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;();
+    <a href="libra.md#0x0_Libra_grant_mint_capability_for_sender">Libra::grant_mint_capability_for_sender</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;();
     <a href="libra_account.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(auth_key);
 }
 </code></pre>

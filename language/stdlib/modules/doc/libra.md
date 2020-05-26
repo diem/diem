@@ -18,6 +18,7 @@
 -  [Struct `AddCurrency`](#0x0_Libra_AddCurrency)
 -  [Function `initialize`](#0x0_Libra_initialize)
 -  [Function `grant_mint_capability`](#0x0_Libra_grant_mint_capability)
+-  [Function `grant_mint_capability_for_sender`](#0x0_Libra_grant_mint_capability_for_sender)
 -  [Function `grant_burn_capability`](#0x0_Libra_grant_burn_capability)
 -  [Function `grant_burn_capability_for_sender`](#0x0_Libra_grant_burn_capability_for_sender)
 -  [Function `mint`](#0x0_Libra_mint)
@@ -561,6 +562,32 @@
 
 </details>
 
+<a name="0x0_Libra_grant_mint_capability_for_sender"></a>
+
+## Function `grant_mint_capability_for_sender`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_grant_mint_capability_for_sender">grant_mint_capability_for_sender</a>&lt;CoinType&gt;()
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_grant_mint_capability_for_sender">grant_mint_capability_for_sender</a>&lt;CoinType&gt;() {
+    Transaction::assert(Transaction::sender() == 0xB1E55ED, 0);
+    <a href="#0x0_Libra_assert_is_coin">assert_is_coin</a>&lt;CoinType&gt;();
+    move_to_sender(<a href="#0x0_Libra_grant_mint_capability">grant_mint_capability</a>&lt;CoinType&gt;());
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x0_Libra_grant_burn_capability"></a>
 
 ## Function `grant_burn_capability`
@@ -603,6 +630,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_grant_burn_capability_for_sender">grant_burn_capability_for_sender</a>&lt;CoinType&gt;() {
     Transaction::assert(Transaction::sender() == 0xB1E55ED, 0);
+    <a href="#0x0_Libra_assert_is_coin">assert_is_coin</a>&lt;CoinType&gt;();
     move_to_sender(<a href="#0x0_Libra_grant_burn_capability">grant_burn_capability</a>&lt;CoinType&gt;());
 }
 </code></pre>

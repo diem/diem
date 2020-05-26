@@ -12,6 +12,8 @@
 -  [Struct `SentPaymentEvent`](#0x0_LibraAccount_SentPaymentEvent)
 -  [Struct `ReceivedPaymentEvent`](#0x0_LibraAccount_ReceivedPaymentEvent)
 -  [Struct `FreezingPrivilege`](#0x0_LibraAccount_FreezingPrivilege)
+-  [Struct `FreezeAccountEvent`](#0x0_LibraAccount_FreezeAccountEvent)
+-  [Struct `UnfreezeAccountEvent`](#0x0_LibraAccount_UnfreezeAccountEvent)
 -  [Struct `AccountOperationsCapability`](#0x0_LibraAccount_AccountOperationsCapability)
 -  [Function `initialize`](#0x0_LibraAccount_initialize)
 -  [Function `deposit`](#0x0_LibraAccount_deposit)
@@ -341,6 +343,76 @@
 
 </details>
 
+<a name="0x0_LibraAccount_FreezeAccountEvent"></a>
+
+## Struct `FreezeAccountEvent`
+
+
+
+<pre><code><b>struct</b> <a href="#0x0_LibraAccount_FreezeAccountEvent">FreezeAccountEvent</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>initiator_address: address</code>
+</dt>
+<dd>
+
+</dd>
+<dt>
+
+<code>frozen_address: address</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
+
+<a name="0x0_LibraAccount_UnfreezeAccountEvent"></a>
+
+## Struct `UnfreezeAccountEvent`
+
+
+
+<pre><code><b>struct</b> <a href="#0x0_LibraAccount_UnfreezeAccountEvent">UnfreezeAccountEvent</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>initiator_address: address</code>
+</dt>
+<dd>
+
+</dd>
+<dt>
+
+<code>unfrozen_address: address</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
+
 <a name="0x0_LibraAccount_AccountOperationsCapability"></a>
 
 ## Struct `AccountOperationsCapability`
@@ -371,6 +443,20 @@
 <dd>
 
 </dd>
+<dt>
+
+<code>freeze_event_handle: <a href="event.md#0x0_Event_EventHandle">Event::EventHandle</a>&lt;<a href="#0x0_LibraAccount_FreezeAccountEvent">LibraAccount::FreezeAccountEvent</a>&gt;</code>
+</dt>
+<dd>
+
+</dd>
+<dt>
+
+<code>unfreeze_event_handle: <a href="event.md#0x0_Event_EventHandle">Event::EventHandle</a>&lt;<a href="#0x0_LibraAccount_UnfreezeAccountEvent">LibraAccount::UnfreezeAccountEvent</a>&gt;</code>
+</dt>
+<dd>
+
+</dd>
 </dl>
 
 
@@ -396,6 +482,8 @@
     move_to_sender(<a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
         tracking_cap: <a href="account_tracking.md#0x0_AccountTrack_grant_calling_capability">AccountTrack::grant_calling_capability</a>(),
         event_creation_cap: <a href="event.md#0x0_Event_grant_event_handle_creation_operation">Event::grant_event_handle_creation_operation</a>(),
+        freeze_event_handle: <a href="event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_LibraAccount_FreezeAccountEvent">FreezeAccountEvent</a>&gt;(),
+        unfreeze_event_handle: <a href="event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_LibraAccount_UnfreezeAccountEvent">UnfreezeAccountEvent</a>&gt;(),
     });
 }
 </code></pre>
@@ -1570,11 +1658,18 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_freeze_account">freeze_account</a>(addr: address)
-<b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
+<b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <a href="#0x0_LibraAccount_assert_can_freeze">assert_can_freeze</a>(Transaction::sender());
     // The root association account cannot be frozen
     Transaction::assert(addr != <a href="association.md#0x0_Association_root_address">Association::root_address</a>(), 14);
     borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(addr).is_frozen = <b>true</b>;
+    <a href="event.md#0x0_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x0_LibraAccount_FreezeAccountEvent">FreezeAccountEvent</a>&gt;(
+        &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(0xA550C18).freeze_event_handle,
+        <a href="#0x0_LibraAccount_FreezeAccountEvent">FreezeAccountEvent</a> {
+            initiator_address: Transaction::sender(),
+            frozen_address: addr
+        },
+    );
 }
 </code></pre>
 
@@ -1598,9 +1693,16 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_unfreeze_account">unfreeze_account</a>(addr: address)
-<b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
+<b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <a href="#0x0_LibraAccount_assert_can_freeze">assert_can_freeze</a>(Transaction::sender());
     borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(addr).is_frozen = <b>false</b>;
+    <a href="event.md#0x0_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x0_LibraAccount_UnfreezeAccountEvent">UnfreezeAccountEvent</a>&gt;(
+        &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(0xA550C18).unfreeze_event_handle,
+        <a href="#0x0_LibraAccount_UnfreezeAccountEvent">UnfreezeAccountEvent</a> {
+            initiator_address: Transaction::sender(),
+            unfrozen_address: addr
+        },
+    );
 }
 </code></pre>
 

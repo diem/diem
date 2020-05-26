@@ -77,7 +77,7 @@ module Genesis {
         LibraAccount::rotate_authentication_key(genesis_auth_key);
     }
 
-    fun initalize_tc_account() {
+    fun initialize_tc_account() {
         Association::apply_for_association();
         Association::apply_for_privilege<LibraAccount::FreezingPrivilege>();
     }
