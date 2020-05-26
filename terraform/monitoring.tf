@@ -191,7 +191,7 @@ data "template_file" "ecs_monitoring_definition" {
     prometheus_image   = "prom/prometheus:v2.9.2"
     pushgateway_image  = "prom/pushgateway:v1.2.0"
     alertmanager_image = "prom/alertmanager:v0.17.0"
-    grafana_image      = "grafana/grafana:latest"
+    grafana_image      = "grafana/grafana:6.7.3"
   }
 }
 
