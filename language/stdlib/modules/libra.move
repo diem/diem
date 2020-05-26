@@ -136,28 +136,32 @@ module Libra {
 
     // TODO: temporary, we should ideally make MintCapability unique eventually...
     public fun grant_mint_capability_to_association<CoinType>(association: &signer) {
-        assert_assoc_and_currency<CoinType>();
+        assert_assoc_and_currency<CoinType>(association);
         move_to(association, MintCapability<CoinType>{})
     }
 
     // Publish the `MintCapability` `cap` for the `CoinType` currency under `account`. `CoinType`
     // must be a registered currency type.
     public fun publish_mint_capability<CoinType>(account: &signer, cap: MintCapability<CoinType>) {
-        assert_assoc_and_currency<CoinType>();
+        assert_assoc_and_currency<CoinType>(account);
         move_to(account, cap)
     }
 
     // Publish the `BurnCapability` `cap` for the `CoinType` currency under `account`. `CoinType`
     // must be a registered currency type.
     public fun publish_burn_capability<CoinType>(account: &signer, cap: BurnCapability<CoinType>) {
-        assert_assoc_and_currency<CoinType>();
+        assert_assoc_and_currency<CoinType>(account);
         move_to(account, cap)
     }
 
     // Return `amount` coins.
     // Fails if the sender does not have a published MintCapability.
-    public fun mint<Token>(amount: u64): T<Token> acquires CurrencyInfo, MintCapability {
-        mint_with_capability(amount, borrow_global<MintCapability<Token>>(Transaction::sender()))
+    public fun mint<Token>(account: &signer, amount: u64): T<Token>
+    acquires CurrencyInfo, MintCapability {
+        mint_with_capability(
+            amount,
+            borrow_global<MintCapability<Token>>(Signer::address_of(account))
+        )
     }
 
     // Burn the coins currently held in the preburn holding area under `preburn_address`.
@@ -174,11 +178,12 @@ module Libra {
     // Cancel the oldest burn request from `preburn_address`
     // Fails if the sender does not have a published `BurnCapability`.
     public fun cancel_burn<Token>(
+        account: &signer,
         preburn_address: address
     ): T<Token> acquires BurnCapability, CurrencyInfo, Preburn {
         cancel_burn_with_capability(
             preburn_address,
-            borrow_global<BurnCapability<Token>>(Transaction::sender())
+            borrow_global<BurnCapability<Token>>(Signer::address_of(account))
         )
     }
 
@@ -525,9 +530,11 @@ module Libra {
     }
 
     // Updates the exchange rate for `FromCoinType` to LBR exchange rate held on chain.
-    public fun update_lbr_exchange_rate<FromCoinType>(lbr_exchange_rate: FixedPoint32::T)
-    acquires CurrencyInfo {
-        assert_assoc_and_currency<FromCoinType>();
+    public fun update_lbr_exchange_rate<FromCoinType>(
+        account: &signer,
+        lbr_exchange_rate: FixedPoint32::T
+    ) acquires CurrencyInfo {
+        assert_assoc_and_currency<FromCoinType>(account);
         let currency_info = borrow_global_mut<CurrencyInfo<FromCoinType>>(currency_addr());
         currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
     }
@@ -542,10 +549,10 @@ module Libra {
     // coins in the system without removing the currency. This function
     // allows the association to control whether or not further coins of
     // `CoinType` can be minted or not.
-    public fun update_minting_ability<CoinType>(can_mint: bool)
+    public fun update_minting_ability<CoinType>(account: &signer, can_mint: bool)
     acquires CurrencyInfo {
-        assert_assoc_and_currency<CoinType>();
-        let currency_info = borrow_global_mut<CurrencyInfo<CoinType>>(Transaction::sender());
+        assert_assoc_and_currency<CoinType>(account);
+        let currency_info = borrow_global_mut<CurrencyInfo<CoinType>>(currency_addr());
         currency_info.can_mint = can_mint;
     }
 
@@ -561,8 +568,8 @@ module Libra {
 
     // Assert that the sender is an association account, and that
     // `CoinType` is a regstered currency type.
-    fun assert_assoc_and_currency<CoinType>() {
-        Association::assert_sender_is_association();
+    fun assert_assoc_and_currency<CoinType>(account: &signer) {
+        Association::assert_is_association(account);
         assert_is_coin<CoinType>();
     }
 

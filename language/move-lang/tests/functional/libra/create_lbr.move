@@ -20,9 +20,9 @@ script {
 use 0x0::LibraAccount;
 use 0x0::Coin1;
 use 0x0::Coin2;
-fun main() {
-    LibraAccount::mint_to_address<Coin1::T>({{bob}}, 10000000);
-    LibraAccount::mint_to_address<Coin2::T>({{bob}}, 10000000);
+fun main(account: &signer) {
+    LibraAccount::mint_to_address<Coin1::T>(account, {{bob}}, 10000000);
+    LibraAccount::mint_to_address<Coin2::T>(account, {{bob}}, 10000000);
 }
 }
 // check: EXECUTED

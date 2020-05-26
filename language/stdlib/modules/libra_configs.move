@@ -30,8 +30,9 @@ module LibraConfig {
     // Currently, it is invoked in the genesis transaction
     public fun initialize(config_account: &signer, association_account: &signer) {
         Transaction::assert(Signer::address_of(config_account) == default_config_address(), 1);
-        Association::grant_privilege<CreateConfigCapability>(config_account);
-        Association::grant_privilege<CreateConfigCapability>(association_account);
+        Association::grant_privilege<CreateConfigCapability>(association_account, config_account);
+        Association::grant_privilege<CreateConfigCapability>(association_account, association_account);
+
 
         move_to<Configuration>(
             config_account,

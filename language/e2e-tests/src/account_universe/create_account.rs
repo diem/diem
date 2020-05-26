@@ -103,7 +103,7 @@ impl AUTransactionGen for CreateExistingAccountGen {
             sender.sequence_number += 1;
             gas_cost = sender.create_existing_account_gas_cost();
             sender.balance -= gas_cost;
-            TransactionStatus::Keep(VMStatus::new(StatusCode::CANNOT_WRITE_EXISTING_RESOURCE))
+            TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(777_777))
         } else {
             // Not enough gas to get past the prologue.
             TransactionStatus::Discard(VMStatus::new(

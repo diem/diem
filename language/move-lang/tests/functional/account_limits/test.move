@@ -36,10 +36,10 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::LibraAccount;
-    fun main() {
-        LibraAccount::mint_lbr_to_address({{bob}}, 1);
-    }
+use 0x0::LibraAccount;
+fun main(account: &signer) {
+    LibraAccount::mint_lbr_to_address(account, {{bob}}, 1);
+}
 }
 // TODO: fix
 // chec: ABORTED
@@ -60,8 +60,8 @@ script {
 //! sender: bob
 script {
     use 0x0::AccountLimits;
-    fun main() {
-        AccountLimits::publish_unrestricted_limits();
+    fun main(account: &signer) {
+        AccountLimits::publish_unrestricted_limits(account)
     }
 }
 // check: EXECUTED
@@ -70,8 +70,8 @@ script {
 //! sender: association
 script {
     use 0x0::AccountLimits;
-    fun main() {
-        AccountLimits::certify_limits_definition({{bob}});
+    fun main(account: &signer) {
+        AccountLimits::certify_limits_definition(account, {{bob}});
     }
 }
 // check: EXECUTED
@@ -79,8 +79,8 @@ script {
 //! new-transaction
 script {
     use 0x0::AccountLimits;
-    fun main() {
-        AccountLimits::decertify_limits_definition({{bob}});
+    fun main(account: &signer) {
+        AccountLimits::decertify_limits_definition(account, {{bob}});
     }
 }
 // check: ABORTED
@@ -90,8 +90,8 @@ script {
 //! sender: association
 script {
     use 0x0::AccountLimits;
-    fun main() {
-        AccountLimits::decertify_limits_definition({{bob}});
+    fun main(account: &signer) {
+        AccountLimits::decertify_limits_definition(account, {{bob}});
     }
 }
 // check: EXECUTED
@@ -100,8 +100,8 @@ script {
 //! sender: bob
 script {
     use 0x0::AccountLimits;
-    fun main() {
-        AccountLimits::unpublish_limits_definition();
+    fun main(account: &signer) {
+        AccountLimits::unpublish_limits_definition(account);
     }
 }
 // check: EXECUTED
@@ -133,10 +133,10 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::LibraAccount;
-    fun main() {
-        LibraAccount::mint_lbr_to_address({{bob}}, 2);
-    }
+use 0x0::LibraAccount;
+fun main(account: &signer) {
+    LibraAccount::mint_lbr_to_address(account, {{bob}}, 2);
+}
 }
 // check: EXECUTED
 
@@ -157,10 +157,10 @@ script {
     use 0x0::AccountLimits;
     // Publish our own limits definition for testing! Make sure we are
     // exercising the unrestricted limits check.
-    fun main() {
-        AccountLimits::unpublish_limits_definition();
-        AccountLimits::publish_unrestricted_limits();
-        AccountLimits::certify_limits_definition({{association}});
+    fun main(account: &signer) {
+        AccountLimits::unpublish_limits_definition(account);
+        AccountLimits::publish_unrestricted_limits(account);
+        AccountLimits::certify_limits_definition(account, {{association}});
     }
 }
 // check: EXECUTED
@@ -168,10 +168,10 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::LibraAccount;
-    fun main() {
-        LibraAccount::mint_lbr_to_address({{bob}}, 2);
-    }
+use 0x0::LibraAccount;
+fun main(account: &signer) {
+    LibraAccount::mint_lbr_to_address(account, {{bob}}, 2);
+}
 }
 // check: EXECUTED
 
@@ -192,8 +192,8 @@ script {
     use 0x0::AccountLimits;
     // Publish our own limits definition for testing! Make sure we are
     // exercising the unrestricted limits check.
-    fun main() {
-        AccountLimits::decertify_limits_definition({{association}});
+    fun main(account: &signer) {
+        AccountLimits::decertify_limits_definition(account, {{association}});
     }
 }
 // check: EXECUTED
@@ -216,15 +216,16 @@ script {
 script {
     use 0x0::AccountLimits;
     // Publish our own limits definition for testing!
-    fun main() {
-        AccountLimits::unpublish_limits_definition();
+    fun main(account: &signer) {
+        AccountLimits::unpublish_limits_definition(account);
         AccountLimits::publish_limits_definition(
+            account,
             100,
             100,
             200,
             40000,
         );
-        AccountLimits::certify_limits_definition({{association}});
+        AccountLimits::certify_limits_definition(account, {{association}});
     }
 }
 // check: EXECUTED
@@ -237,8 +238,8 @@ script {
 //! sender: association
 script {
     use 0x0::LibraAccount;
-    fun main() {
-        LibraAccount::mint_lbr_to_address({{bob}}, 100);
+    fun main(account: &signer) {
+        LibraAccount::mint_lbr_to_address(account, {{bob}}, 100);
     }
 }
 // check: EXECUTED
@@ -247,8 +248,8 @@ script {
 //! sender: association
 script {
     use 0x0::LibraAccount;
-    fun main() {
-        LibraAccount::mint_lbr_to_address({{bob}}, 1);
+    fun main(account: &signer) {
+        LibraAccount::mint_lbr_to_address(account, {{bob}}, 1);
     }
 }
 // TODO: fix
@@ -273,8 +274,8 @@ script {
     use 0x0::AccountLimits;
     // Publish our own limits definition for testing! Make sure we are
     // exercising the unrestricted limits check.
-    fun main() {
-        AccountLimits::decertify_limits_definition({{association}});
+    fun main(account: &signer) {
+        AccountLimits::decertify_limits_definition(account, {{association}});
     }
 }
 // check: EXECUTED
@@ -296,8 +297,8 @@ script {
 //! sender: association
 script {
     use 0x0::LibraAccount;
-    fun main() {
-        LibraAccount::mint_lbr_to_address({{bob}}, 1);
+    fun main(account: &signer) {
+        LibraAccount::mint_lbr_to_address(account, {{bob}}, 1);
     }
 }
 // TODO: fix

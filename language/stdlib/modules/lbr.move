@@ -117,12 +117,12 @@ module LBR {
 
     // Create `amount_lbr` LBR using the `MintCapability` for the coin types in the reserve.
     // Aborts if the caller does not have the appropriate `MintCapability`'s
-    public fun mint(amount_lbr: u64): Libra::T<T> acquires Reserve {
+    public fun mint(account: &signer, amount_lbr: u64): Libra::T<T> acquires Reserve {
         let reserve = borrow_global<Reserve>(0xA550C18);
         let num_coin1 = 1 + FixedPoint32::multiply_u64(amount_lbr, *&reserve.coin1.ratio);
         let num_coin2 = 1 + FixedPoint32::multiply_u64(amount_lbr, *&reserve.coin2.ratio);
-        let coin1 = Libra::mint<Coin1::T>(num_coin1);
-        let coin2 = Libra::mint<Coin2::T>(num_coin2);
+        let coin1 = Libra::mint<Coin1::T>(account, num_coin1);
+        let coin2 = Libra::mint<Coin2::T>(account, num_coin2);
         let (lbr, leftover1, leftover2) = create(amount_lbr, coin1, coin2);
         Libra::destroy_zero(leftover1);
         Libra::destroy_zero(leftover2);

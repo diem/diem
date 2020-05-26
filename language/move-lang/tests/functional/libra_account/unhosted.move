@@ -5,8 +5,8 @@
 //! sender: blessed
 script {
     use 0x0::LibraAccount;
-    fun main() {
-        LibraAccount::mint_lbr_to_address({{bob}}, 10001);
+    fun main(account: &signer) {
+        LibraAccount::mint_lbr_to_address(account, {{bob}}, 10001);
     }
 }
 // TODO: fix account limits
@@ -19,7 +19,8 @@ script {
     use 0x0::LibraAccount;
     use 0x0::LBR;
     fun main() {
-        LibraAccount::deposit({{bob}},
+        LibraAccount::deposit(
+            {{bob}},
             LibraAccount::withdraw_from_sender<LBR::T>(10001)
         );
     }

@@ -13,7 +13,7 @@
 
 ## Function `main`
 
-Script for Treasury Comliance Account to create designated dealer with 'new_account_address'
+Script for Treasury Compliance Account to create designated dealer account at 'new_account_address'
 and 'auth_key_prefix' for nonsynthetic CoinType
 
 

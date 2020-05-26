@@ -19,13 +19,12 @@ fun main(account: &signer) {
 script {
 use 0x0::LibraAccount;
 use 0x0::Coin2;
-fun main() {
-    LibraAccount::mint_to_address<Coin2::T>({{bob}}, 100);
+fun main(account: &signer) {
+    LibraAccount::mint_to_address<Coin2::T>(account, {{bob}}, 100);
 }
 }
 // check: EXECUTED
 
-// Now mint LBR to bob's account
 //! new-transaction
 //! sender: bob
 //! gas-price: 0
@@ -50,7 +49,6 @@ fun main() {
 }
 // check: EXECUTED
 
-// Now mint LBR to bob's account
 //! new-transaction
 //! sender: bob
 //! gas-price: 0
@@ -145,7 +143,6 @@ fun main() {
 }
 // check: EXECUTED
 
-// Now mint LBR to bob's account
 //! new-transaction
 //! sender: bob
 //! gas-price: 0

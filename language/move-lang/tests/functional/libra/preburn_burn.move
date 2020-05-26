@@ -9,8 +9,8 @@ script {
 use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::LibraAccount;
-fun main() {
-    let coin = Libra::mint<Coin1::T>(100);
+fun main(account: &signer) {
+    let coin = Libra::mint<Coin1::T>(account, 100);
     LibraAccount::deposit({{preburner}}, coin);
 }
 }

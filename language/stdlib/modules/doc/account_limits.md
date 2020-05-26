@@ -174,7 +174,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_grant_calling_capability">grant_calling_capability</a>(): <a href="#0x0_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_grant_calling_capability">grant_calling_capability</a>(account: &signer): <a href="#0x0_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>
 </code></pre>
 
 
@@ -183,8 +183,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_grant_calling_capability">grant_calling_capability</a>(): <a href="#0x0_AccountLimits_CallingCapability">CallingCapability</a> {
-    Transaction::assert(Transaction::sender() == 0xA550C18, 3000);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_grant_calling_capability">grant_calling_capability</a>(account: &signer): <a href="#0x0_AccountLimits_CallingCapability">CallingCapability</a> {
+    Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == 0xA550C18, 3000);
     <a href="#0x0_AccountLimits_CallingCapability">CallingCapability</a>{}
 }
 </code></pre>
@@ -296,7 +296,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_publish_limits_definition">publish_limits_definition</a>(max_outflow: u64, max_inflow: u64, max_holding: u64, time_period: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_publish_limits_definition">publish_limits_definition</a>(account: &signer, max_outflow: u64, max_inflow: u64, max_holding: u64, time_period: u64)
 </code></pre>
 
 
@@ -306,18 +306,22 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_publish_limits_definition">publish_limits_definition</a>(
+    account: &signer,
     max_outflow: u64,
     max_inflow: u64,
     max_holding: u64,
     time_period: u64
 ) {
-    move_to_sender(<a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
-        max_outflow,
-        max_inflow,
-        max_holding,
-        time_period,
-        is_certified: <b>false</b>,
-    });
+    move_to(
+        account,
+        <a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
+            max_outflow,
+            max_inflow,
+            max_holding,
+            time_period,
+            is_certified: <b>false</b>,
+        }
+    )
 }
 </code></pre>
 
@@ -331,7 +335,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>(account: &signer)
 </code></pre>
 
 
@@ -340,9 +344,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>() {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>(account: &signer) {
     <b>let</b> u64_max = 18446744073709551615u64;
-    <a href="#0x0_AccountLimits_publish_limits_definition">publish_limits_definition</a>(u64_max, u64_max, u64_max, u64_max)
+    <a href="#0x0_AccountLimits_publish_limits_definition">publish_limits_definition</a>(account, u64_max, u64_max, u64_max, u64_max)
 }
 </code></pre>
 
@@ -356,7 +360,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_unpublish_limits_definition">unpublish_limits_definition</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_unpublish_limits_definition">unpublish_limits_definition</a>(account: &signer)
 </code></pre>
 
 
@@ -365,7 +369,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_unpublish_limits_definition">unpublish_limits_definition</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_unpublish_limits_definition">unpublish_limits_definition</a>(account: &signer)
 <b>acquires</b> <a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
     <a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
         max_outflow: _,
@@ -373,7 +377,7 @@
         max_holding: _,
         time_period: _,
         is_certified: _,
-    } = move_from&lt;<a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(Transaction::sender());
+    } = move_from&lt;<a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account));
 }
 </code></pre>
 
@@ -387,7 +391,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_certify_limits_definition">certify_limits_definition</a>(limits_addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_certify_limits_definition">certify_limits_definition</a>(account: &signer, limits_addr: address)
 </code></pre>
 
 
@@ -396,9 +400,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_certify_limits_definition">certify_limits_definition</a>(limits_addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_certify_limits_definition">certify_limits_definition</a>(account: &signer, limits_addr: address)
 <b>acquires</b> <a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
-    <a href="association.md#0x0_Association_assert_sender_is_association">Association::assert_sender_is_association</a>();
+    <a href="association.md#0x0_Association_assert_is_association">Association::assert_is_association</a>(account);
     borrow_global_mut&lt;<a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(limits_addr).is_certified = <b>true</b>;
 }
 </code></pre>
@@ -413,7 +417,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_decertify_limits_definition">decertify_limits_definition</a>(limits_addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_decertify_limits_definition">decertify_limits_definition</a>(account: &signer, limits_addr: address)
 </code></pre>
 
 
@@ -422,9 +426,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_decertify_limits_definition">decertify_limits_definition</a>(limits_addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_decertify_limits_definition">decertify_limits_definition</a>(account: &signer, limits_addr: address)
 <b>acquires</b> <a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
-    <a href="association.md#0x0_Association_assert_sender_is_association">Association::assert_sender_is_association</a>();
+    <a href="association.md#0x0_Association_assert_is_association">Association::assert_is_association</a>(account);
     borrow_global_mut&lt;<a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(limits_addr).is_certified = <b>false</b>;
 }
 </code></pre>

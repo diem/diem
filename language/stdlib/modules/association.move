@@ -11,6 +11,7 @@ address 0x0 {
 /// 1002 -> NOT_AN_ASSOCIATION_ACCOUNT
 /// 1003 -> ACCOUNT_DOES_NOT_HAVE_PRIVILEGE
 /// 1004 -> ACCOUNT_DOES_NOT_HAVE_PRIVILEGE_RESOURCE
+/// 1005 -> CANT_REMOVE_ROOT_PRIVILEGE
 /// ```
 
 module Association {
@@ -36,51 +37,53 @@ module Association {
     /// > a more meaningful name (e.g., AssociationMember? AssociationPrivileges?)
     struct T { }
 
-    /// Initialization is called in genesis. It publishes the root resource
-    /// under the root_address() address, marks it as a normal
-    /// association account.
+    /// Initialization is called in genesis. It publishes the `Root` resource under `association`
+    /// and marks it as an Association account by publishing a `PrivilegedCapability<T>` resource.
+    /// Aborts if the address of `association` is not `root_address`
     public fun initialize(association: &signer) {
         Transaction::assert(Signer::address_of(association) == root_address(), 1000);
         move_to(association, Root{ });
-        move_to(association, PrivilegedCapability<T>{  });
+        move_to(association, PrivilegedCapability<T>{ });
     }
 
     /// Certify the privileged capability published under `association`.
-    public fun grant_privilege<Privilege>(association: &signer) {
-        assert_sender_is_root();
-        move_to(association, PrivilegedCapability<Privilege>{ });
+    public fun grant_privilege<Privilege>(association: &signer, recipient: &signer) {
+        assert_is_root(association);
+        move_to(recipient, PrivilegedCapability<Privilege>{ });
     }
 
     /// Grant the association privilege to `association`
-    public fun grant_association_address(association: &signer) {
-        grant_privilege<T>(association)
+    public fun grant_association_address(association: &signer, recipient: &signer) {
+        grant_privilege<T>(association, recipient)
     }
 
     /// Return whether the `addr` has the specified `Privilege`.
     public fun has_privilege<Privilege>(addr: address): bool {
-        // TODO: figure out what to do with this
+        // TODO: make genesis work with this check enabled
         //addr_is_association(addr) &&
         exists<PrivilegedCapability<Privilege>>(addr)
     }
 
-    /// Remove the `Privilege` from the address at `addr`. The sender must
-    /// be the root association account
-    // DD: Perhaps should not allow root to remove itself from Association?
-    public fun remove_privilege<Privilege>(addr: address)
+    /// Remove the `Privilege` from the address at `addr`. The `sender` must be the root association
+    /// account.
+    /// Aborts if `addr` is the address of the root account
+    public fun remove_privilege<Privilege>(association: &signer, addr: address)
     acquires PrivilegedCapability {
-        assert_sender_is_root();
+        assert_is_root(association);
+        // root should not be able to remove its own privileges
+        Transaction::assert(Signer::address_of(association) != addr, 1005);
         Transaction::assert(exists<PrivilegedCapability<Privilege>>(addr), 1004);
         PrivilegedCapability<Privilege>{ } = move_from<PrivilegedCapability<Privilege>>(addr);
     }
 
     /// Assert that the sender is an association account.
-    public fun assert_sender_is_association() {
-        assert_addr_is_association(Transaction::sender())
+    public fun assert_is_association(account: &signer) {
+        assert_addr_is_association(Signer::address_of(account))
     }
 
     /// Assert that the sender is the root association account.
-    public fun assert_sender_is_root() {
-        Transaction::assert(exists<Root>(Transaction::sender()), 1001);
+    public fun assert_is_root(account: &signer) {
+        Transaction::assert(exists<Root>(Signer::address_of(account)), 1001);
     }
 
     /// Return whether the account at `addr` is an association account.
@@ -120,8 +123,6 @@ module Association {
         }
      }
 
-    /// > TODO: With grant/remove etc., separately specify that only root may grant or remove privileges
-
     /// ## Management of Root marker
 
     /// The root_address is marked by a `Root` object that is stored at that place only.
@@ -146,7 +147,7 @@ module Association {
         /// > the assert_addr_is_root in grant_privilege<Privilege>
         apply OnlyRootAddressHasRootPrivilege to *<Privilege>, *
             except initialize, root_address, has_privilege, addr_is_association,
-            assert_addr_is_association, assert_sender_is_association;
+            assert_addr_is_association, assert_is_association;
     }
     spec fun initialize {
         /// `Self::initialize` establishes the invariant, so it's a special case.
@@ -156,15 +157,16 @@ module Association {
         ensures only_root_addr_has_root_privilege();
     }
 
-    /// This post-condition to `Self::assert_sender_is_root` is a sanity check that
+    /// This post-condition to `Self::assert_is_root` is a sanity check that
     /// the `Root` invariant really works. It needs the invariant
-    /// `OnlyRootAddressHasRootPrivilege`, because `assert_sender_is_root` does not
-    /// directly check that the `sender == root_address()`. Instead, it aborts if
-    /// sender has no root privilege, and only the root_address has `Root`.
+    /// `OnlyRootAddressHasRootPrivilege`, because `assert_is_root` does not
+    /// directly check that the `Signer::address_of(account) == root_address()`. Instead, it aborts
+    /// if `account` does not have root privilege, and only the root_address has `Root`.
     /// > TODO: There is a style question about whether this should just check for presence of
     /// a Root privilege. I guess it's moot so long as `OnlyRootAddressHasRootPrivilege` holds.
-    spec fun assert_sender_is_root {
-        ensures sender() == spec_root_address();
+    spec fun assert_is_root {
+        // TODO: Signer::address_of not supported in specs
+        //ensures Signer::address_of(account) == spec_root_address();
     }
 
     // Switch documentation context back to module level.
@@ -188,7 +190,7 @@ module Association {
     }
     spec fun remove_privilege {
         // Only root can call remove_privilege without aborting.
-        ensures sender() == spec_root_address();
+        ensures Signer::get_address(association) == spec_root_address();
     }
 
     // Switch documentation context back to module level.
@@ -227,9 +229,9 @@ module Association {
         ensures spec_addr_is_association(addr);
     }
 
-    spec fun assert_sender_is_association {
-        aborts_if !spec_addr_is_association(sender());
-        ensures spec_addr_is_association(sender());
+    spec fun assert_is_association {
+        aborts_if !spec_addr_is_association(Signer::get_address(account));
+        ensures spec_addr_is_association(Signer::get_address(account));
     }
 
 

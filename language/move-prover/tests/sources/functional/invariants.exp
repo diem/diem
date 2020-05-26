@@ -28,9 +28,9 @@ error:  This assertion might not hold.
 
 error:  This assertion might not hold.
 
-     ┌── tests/sources/functional/invariants.move:150:9 ───
+     ┌── tests/sources/functional/invariants.move:143:9 ───
      │
- 150 │         invariant y > 1;
+ 143 │         invariant x > 1;
      │         ^^^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/invariants.move:153:5: lifetime_invalid_S_branching (entry)

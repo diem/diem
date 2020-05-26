@@ -1,8 +1,8 @@
 //! new-transaction
 script {
     use 0x0::Unhosted;
-    fun main() {
-        Unhosted::publish_global_limits_definition();
+    fun main(account: &signer) {
+        Unhosted::publish_global_limits_definition(account);
     }
 }
 // check: ABORTED

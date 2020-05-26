@@ -46,7 +46,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Unhosted_publish_global_limits_definition">publish_global_limits_definition</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Unhosted_publish_global_limits_definition">publish_global_limits_definition</a>(account: &signer)
 </code></pre>
 
 
@@ -55,17 +55,17 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Unhosted_publish_global_limits_definition">publish_global_limits_definition</a>() {
-    Transaction::assert(Transaction::sender() == <a href="#0x0_Unhosted_limits_addr">limits_addr</a>(), 0);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Unhosted_publish_global_limits_definition">publish_global_limits_definition</a>(account: &signer) {
+    Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="#0x0_Unhosted_limits_addr">limits_addr</a>(), 100042);
     // These are limits for testnet _only_.
-    <a href="account_limits.md#0x0_AccountLimits_publish_unrestricted_limits">AccountLimits::publish_unrestricted_limits</a>();
+    <a href="account_limits.md#0x0_AccountLimits_publish_unrestricted_limits">AccountLimits::publish_unrestricted_limits</a>(account);
     /*<a href="account_limits.md#0x0_AccountLimits_publish_limits_definition">AccountLimits::publish_limits_definition</a>(
         10000,
         10000,
         50000,
         31540000000000
     );*/
-    <a href="account_limits.md#0x0_AccountLimits_certify_limits_definition">AccountLimits::certify_limits_definition</a>(<a href="#0x0_Unhosted_limits_addr">limits_addr</a>());
+    <a href="account_limits.md#0x0_AccountLimits_certify_limits_definition">AccountLimits::certify_limits_definition</a>(account, <a href="#0x0_Unhosted_limits_addr">limits_addr</a>());
 }
 </code></pre>
 

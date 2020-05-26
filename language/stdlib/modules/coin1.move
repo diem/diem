@@ -8,7 +8,7 @@ module Coin1 {
     struct T { }
 
     public fun initialize(account: &signer): (Libra::MintCapability<T>, Libra::BurnCapability<T>) {
-        Association::assert_sender_is_association();
+        Association::assert_is_association(account);
         // Register the Coin1 currency.
         Libra::register_currency<T>(
             account,

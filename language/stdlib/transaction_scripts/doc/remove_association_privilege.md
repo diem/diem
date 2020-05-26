@@ -15,7 +15,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;(addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;(account: &signer, addr: address)
 </code></pre>
 
 
@@ -24,8 +24,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Privilege&gt;(addr: address) {
-    <a href="../../modules/doc/association.md#0x0_Association_remove_privilege">Association::remove_privilege</a>&lt;Privilege&gt;(addr)
+<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Privilege&gt;(account: &signer, addr: address) {
+    <a href="../../modules/doc/association.md#0x0_Association_remove_privilege">Association::remove_privilege</a>&lt;Privilege&gt;(account, addr)
 }
 </code></pre>
 

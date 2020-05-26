@@ -43,7 +43,10 @@ pub(crate) fn move_resource_to(
         new_root.mark_dirty()?;
         data_store.publish_resource(ap, (ty.clone(), new_root))
     } else {
-        warn!("[VM] Cannot write over existing resource {}", ap);
+        warn!(
+            "[VM] Cannot write over existing resource type {:?} access path {}",
+            ty, ap
+        );
         Err(vm_error(
             Location::new(),
             StatusCode::CANNOT_WRITE_EXISTING_RESOURCE,

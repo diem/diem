@@ -32,9 +32,9 @@ module Genesis {
     ) {
         let dummy_auth_key_prefix = x"00000000000000000000000000000000";
 
-        // Association/cap setup
+        // Association root setup
         Association::initialize(association);
-        Association::grant_privilege<Libra::AddCurrency>(association);
+        Association::grant_privilege<Libra::AddCurrency>(association, association);
 
         // On-chain config setup
         Event::publish_generator(config_account);
@@ -53,7 +53,7 @@ module Genesis {
         LBR::initialize(association);
 
         LibraAccount::initialize(association);
-        Unhosted::publish_global_limits_definition();
+        Unhosted::publish_global_limits_definition(association);
         LibraAccount::create_genesis_account<LBR::T>(
             Signer::address_of(association),
             copy dummy_auth_key_prefix,
@@ -67,6 +67,7 @@ module Genesis {
 
         // Create the treasury compliance account
         LibraAccount::create_treasury_compliance_account<LBR::T>(
+            association,
             tc_addr,
             tc_auth_key_prefix,
             coin1_mint_cap,

@@ -1,12 +1,14 @@
 address 0x0 {
 
 module Coin2 {
-    use 0x0::Libra;
+    use 0x0::Association;
     use 0x0::FixedPoint32;
+    use 0x0::Libra;
 
     struct T { }
 
     public fun initialize(account: &signer): (Libra::MintCapability<T>, Libra::BurnCapability<T>) {
+        Association::assert_is_association(account);
         // Register the Coin2 currency.
         Libra::register_currency<T>(
             account,

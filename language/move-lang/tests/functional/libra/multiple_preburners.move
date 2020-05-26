@@ -15,10 +15,10 @@ script {
 use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::LibraAccount;
-fun main() {
-    LibraAccount::deposit({{alice}}, Libra::mint<Coin1::T>(200));
-    LibraAccount::deposit({{bob}}, Libra::mint<Coin1::T>(200));
-    LibraAccount::deposit({{carol}}, Libra::mint<Coin1::T>(200));
+fun main(account: &signer) {
+    LibraAccount::deposit({{alice}}, Libra::mint<Coin1::T>(account, 200));
+    LibraAccount::deposit({{bob}}, Libra::mint<Coin1::T>(account, 200));
+    LibraAccount::deposit({{carol}}, Libra::mint<Coin1::T>(account, 200));
 }
 }
 
@@ -203,9 +203,9 @@ use 0x0::LibraAccount;
 use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
-fun main() {
+fun main(account: &signer) {
     let old_balance = LibraAccount::balance<Coin1::T>({{alice}});
-    LibraAccount::cancel_burn<Coin1::T>({{alice}});
+    LibraAccount::cancel_burn<Coin1::T>(account, {{alice}});
     Transaction::assert(Libra::preburn_value<Coin1::T>() == 0, 8006);
     Transaction::assert(LibraAccount::balance<Coin1::T>({{alice}}) == old_balance + 100, 8007)
 }
@@ -220,8 +220,8 @@ fun main() {
 script {
 use 0x0::Coin2;
 use 0x0::LibraAccount;
-fun main() {
-    LibraAccount::mint_to_address<Coin2::T>({{dawn}}, 200);
+fun main(account: &signer) {
+    LibraAccount::mint_to_address<Coin2::T>(account, {{dawn}}, 200);
 }
 }
 // check: EXECUTED
@@ -266,8 +266,8 @@ fun main() {
 script {
 use 0x0::Coin2;
 use 0x0::LibraAccount;
-fun main() {
-    LibraAccount::cancel_burn<Coin2::T>({{dawn}});
+fun main(account: &signer) {
+    LibraAccount::cancel_burn<Coin2::T>(account, {{dawn}});
 }
 }
 // check: EXECUTED
