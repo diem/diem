@@ -631,6 +631,10 @@
 <span id="631">631</span>
 <span id="632">632</span>
 <span id="633">633</span>
+<span id="634">634</span>
+<span id="635">635</span>
+<span id="636">636</span>
+<span id="637">637</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -729,6 +733,7 @@
 
     <span class="comment">// Resources</span>
     <span class="ident">MoveToSender</span>(<span class="ident">ModuleId</span>, <span class="ident">StructId</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
+    <span class="ident">MoveTo</span>(<span class="ident">ModuleId</span>, <span class="ident">StructId</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
     <span class="ident">MoveFrom</span>(<span class="ident">ModuleId</span>, <span class="ident">StructId</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
     <span class="ident">Exists</span>(<span class="ident">ModuleId</span>, <span class="ident">StructId</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>),
 
@@ -1167,6 +1172,9 @@
             }
 
             <span class="comment">// Resources</span>
+            <span class="ident">MoveTo</span>(<span class="ident">mid</span>, <span class="ident">sid</span>, <span class="ident">targs</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;move_to&lt;{}&gt;&quot;</span>, <span class="self">self</span>.<span class="ident">struct_str</span>(<span class="kw-2">*</span><span class="ident">mid</span>, <span class="kw-2">*</span><span class="ident">sid</span>, <span class="ident">targs</span>))<span class="question-mark">?</span>;
+            }
             <span class="ident">MoveToSender</span>(<span class="ident">mid</span>, <span class="ident">sid</span>, <span class="ident">targs</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;move_to_sender&lt;{}&gt;&quot;</span>, <span class="self">self</span>.<span class="ident">struct_str</span>(<span class="kw-2">*</span><span class="ident">mid</span>, <span class="kw-2">*</span><span class="ident">sid</span>, <span class="ident">targs</span>))<span class="question-mark">?</span>;
             }

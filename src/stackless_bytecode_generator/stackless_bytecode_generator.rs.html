@@ -1071,6 +1071,33 @@
 <span id="1071">1071</span>
 <span id="1072">1072</span>
 <span id="1073">1073</span>
+<span id="1074">1074</span>
+<span id="1075">1075</span>
+<span id="1076">1076</span>
+<span id="1077">1077</span>
+<span id="1078">1078</span>
+<span id="1079">1079</span>
+<span id="1080">1080</span>
+<span id="1081">1081</span>
+<span id="1082">1082</span>
+<span id="1083">1083</span>
+<span id="1084">1084</span>
+<span id="1085">1085</span>
+<span id="1086">1086</span>
+<span id="1087">1087</span>
+<span id="1088">1088</span>
+<span id="1089">1089</span>
+<span id="1090">1090</span>
+<span id="1091">1091</span>
+<span id="1092">1092</span>
+<span id="1093">1093</span>
+<span id="1094">1094</span>
+<span id="1095">1095</span>
+<span id="1096">1096</span>
+<span id="1097">1097</span>
+<span id="1098">1098</span>
+<span id="1099">1099</span>
+<span id="1100">1100</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2101,9 +2128,36 @@
                 ));
             }
 
-            <span class="comment">// TODO: translate these</span>
-            <span class="ident">MoveBytecode</span>::<span class="ident">MoveTo</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {}
-            <span class="ident">MoveBytecode</span>::<span class="ident">MoveToGeneric</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {}
+            <span class="ident">MoveBytecode</span>::<span class="ident">MoveTo</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">value_operand_index</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">temp_stack</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>();
+                <span class="kw">let</span> <span class="ident">signer_operand_index</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">temp_stack</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>();
+                <span class="self">self</span>.<span class="ident">code</span>.<span class="ident">push</span>(<span class="ident">mk_call</span>(
+                    <span class="ident">Operation</span>::<span class="ident">MoveTo</span>(
+                        <span class="self">self</span>.<span class="ident">func_env</span>.<span class="ident">module_env</span>.<span class="ident">get_id</span>(),
+                        <span class="self">self</span>.<span class="ident">func_env</span>.<span class="ident">module_env</span>.<span class="ident">get_struct_id</span>(<span class="kw-2">*</span><span class="ident">idx</span>),
+                        <span class="macro">vec</span><span class="macro">!</span>[],
+                    ),
+                    <span class="macro">vec</span><span class="macro">!</span>[],
+                    <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">value_operand_index</span>, <span class="ident">signer_operand_index</span>],
+                ));
+            }
+
+            <span class="ident">MoveBytecode</span>::<span class="ident">MoveToGeneric</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">struct_instantiation</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">struct_instantiation_at</span>(<span class="kw-2">*</span><span class="ident">idx</span>);
+                <span class="kw">let</span> <span class="ident">value_operand_index</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">temp_stack</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>();
+                <span class="kw">let</span> <span class="ident">signer_operand_index</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">temp_stack</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>();
+                <span class="self">self</span>.<span class="ident">code</span>.<span class="ident">push</span>(<span class="ident">mk_call</span>(
+                    <span class="ident">Operation</span>::<span class="ident">MoveTo</span>(
+                        <span class="self">self</span>.<span class="ident">func_env</span>.<span class="ident">module_env</span>.<span class="ident">get_id</span>(),
+                        <span class="self">self</span>.<span class="ident">func_env</span>
+                            .<span class="ident">module_env</span>
+                            .<span class="ident">get_struct_id</span>(<span class="ident">struct_instantiation</span>.<span class="ident">def</span>),
+                        <span class="self">self</span>.<span class="ident">get_type_params</span>(<span class="ident">struct_instantiation</span>.<span class="ident">type_parameters</span>),
+                    ),
+                    <span class="macro">vec</span><span class="macro">!</span>[],
+                    <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">value_operand_index</span>, <span class="ident">signer_operand_index</span>],
+                ));
+            }
 
             <span class="ident">MoveBytecode</span>::<span class="ident">GetTxnSenderAddress</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">temp_index</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">temp_count</span>;
