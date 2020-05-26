@@ -432,7 +432,7 @@ impl Balance {
 
     /// Returns the Move Value for the account balance
     pub fn to_value(&self) -> Value {
-        Value::struct_(Struct::pack(vec![Value::u64(self.coin)]))
+        Value::struct_(Struct::pack(vec![Value::u64(self.coin)], true))
     }
 
     /// Returns the value layout for the account balance
@@ -574,27 +574,35 @@ impl AccountType {
     /// Returns the Move Value representation of the AccountType.
     pub fn to_value(&self) -> Value {
         let inner_type_structure = match self.account_specifier {
-            AccountTypeSpecifier::Empty => Struct::pack(vec![Value::bool(false)]),
-            AccountTypeSpecifier::Vasp => Struct::pack(vec![Value::struct_(Struct::pack(vec![
-                Value::vector_u8(vec![]),
-                Value::vector_u8(vec![]),
-                Value::u64(u64::MAX),
-                Value::vector_u8(vec![0u8; 16]),
-            ]))]),
-            AccountTypeSpecifier::Unhosted => {
-                Struct::pack(vec![Value::struct_(Struct::pack(vec![
-                    Value::u64(0),
-                    Value::u64(0),
-                    Value::u64(0),
-                    Value::u64(0),
-                ]))])
-            }
+            AccountTypeSpecifier::Empty => Struct::pack(vec![Value::bool(false)], false),
+            AccountTypeSpecifier::Vasp => Struct::pack(
+                vec![Value::struct_(Struct::pack(
+                    vec![
+                        Value::vector_u8(vec![]),
+                        Value::vector_u8(vec![]),
+                        Value::u64(u64::MAX),
+                        Value::vector_u8(vec![0u8; 16]),
+                    ],
+                    false,
+                ))],
+                false,
+            ),
+            AccountTypeSpecifier::Unhosted => Struct::pack(
+                vec![Value::struct_(Struct::pack(
+                    vec![Value::u64(0), Value::u64(0), Value::u64(0), Value::u64(0)],
+                    false,
+                ))],
+                false,
+            ),
         };
-        Value::struct_(Struct::pack(vec![
-            Value::bool(true),
-            Value::struct_(inner_type_structure),
-            Value::address(self.self_address),
-        ]))
+        Value::struct_(Struct::pack(
+            vec![
+                Value::bool(true),
+                Value::struct_(inner_type_structure),
+                Value::address(self.self_address),
+            ],
+            true,
+        ))
     }
 
     pub fn type_(account_specifier: AccountTypeSpecifier) -> FatStructType {
@@ -631,10 +639,10 @@ impl EventHandleGenerator {
     }
 
     pub fn to_value(&self) -> Value {
-        Value::struct_(Struct::pack(vec![
-            Value::u64(self.counter),
-            Value::address(self.addr),
-        ]))
+        Value::struct_(Struct::pack(
+            vec![Value::u64(self.counter), Value::address(self.addr)],
+            true,
+        ))
     }
 
     pub fn type_() -> FatStructType {
@@ -855,22 +863,31 @@ impl AccountData {
             .collect();
         let assoc_cap = self.account_type.to_value();
         let event_generator = self.event_generator.to_value();
-        let account = Value::struct_(Struct::pack(vec![
-            // TODO: this needs to compute the auth key instead
-            Value::vector_u8(AuthenticationKey::ed25519(&self.account.pubkey).to_vec()),
-            Value::bool(self.delegated_key_rotation_capability),
-            Value::bool(self.delegated_withdrawal_capability),
-            Value::struct_(Struct::pack(vec![
-                Value::u64(self.received_events.count()),
-                Value::vector_u8(self.received_events.key().to_vec()),
-            ])),
-            Value::struct_(Struct::pack(vec![
-                Value::u64(self.sent_events.count()),
-                Value::vector_u8(self.sent_events.key().to_vec()),
-            ])),
-            Value::u64(self.sequence_number),
-            Value::bool(self.is_frozen),
-        ]));
+        let account = Value::struct_(Struct::pack(
+            vec![
+                // TODO: this needs to compute the auth key instead
+                Value::vector_u8(AuthenticationKey::ed25519(&self.account.pubkey).to_vec()),
+                Value::bool(self.delegated_key_rotation_capability),
+                Value::bool(self.delegated_withdrawal_capability),
+                Value::struct_(Struct::pack(
+                    vec![
+                        Value::u64(self.received_events.count()),
+                        Value::vector_u8(self.received_events.key().to_vec()),
+                    ],
+                    true,
+                )),
+                Value::struct_(Struct::pack(
+                    vec![
+                        Value::u64(self.sent_events.count()),
+                        Value::vector_u8(self.sent_events.key().to_vec()),
+                    ],
+                    true,
+                )),
+                Value::u64(self.sequence_number),
+                Value::bool(self.is_frozen),
+            ],
+            true,
+        ));
         (account, balances, assoc_cap, event_generator)
     }
 

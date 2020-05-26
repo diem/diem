@@ -65,6 +65,7 @@ enum ValueImpl {
 /// making it possible to be shared by references.
 #[derive(Debug)]
 enum Container {
+    Resource(Vec<ValueImpl>),
     General(Vec<ValueImpl>),
     U8(Vec<u8>),
     U64(Vec<u64>),
@@ -185,7 +186,7 @@ impl Container {
         use Container::*;
 
         match self {
-            General(v) => v.len(),
+            Resource(v) | General(v) => v.len(),
             U8(v) => v.len(),
             U64(v) => v.len(),
             U128(v) => v.len(),
@@ -194,14 +195,34 @@ impl Container {
         }
     }
 
+    fn is_resource(&self) -> bool {
+        use Container::*;
+
+        match self {
+            Resource(_) => true,
+            General(_) | U8(_) | U64(_) | U128(_) | Address(_) | Bool(_) => false,
+        }
+    }
+
     fn signer(x: AccountAddress) -> Self {
-        Container::General(vec![ValueImpl::Address(x)])
+        Container::Resource(vec![ValueImpl::Address(x)])
     }
 }
 
 impl ValueImpl {
     fn new_container(container: Container) -> Self {
         Self::Container(Rc::new(RefCell::new(container)))
+    }
+
+    fn is_resource(&self) -> bool {
+        use ValueImpl::*;
+
+        match self {
+            Invalid | U8(_) | U64(_) | U128(_) | Address(_) | Bool(_) | ContainerRef(_)
+            | IndexedRef(_) => false,
+
+            Container(c) => c.borrow().is_resource(),
+        }
     }
 }
 
@@ -221,7 +242,7 @@ impl Value {
                 SignatureToken::Reference(inner_ty),
                 ValueImpl::ContainerRef(ContainerRef::Local(inner_ref)),
             ) => match (&**inner_ty, &*inner_ref.borrow()) {
-                (SignatureToken::Signer, Container::General(v)) => {
+                (SignatureToken::Signer, Container::Resource(v)) => {
                     v.len() == 1 && matches!(&v[0], ValueImpl::Address(_))
                 }
                 _ => false,
@@ -322,10 +343,10 @@ impl ValueImpl {
  *
  **************************************************************************************/
 impl ValueImpl {
-    fn copy_value(&self) -> Self {
+    fn copy_value(&self) -> VMResult<Self> {
         use ValueImpl::*;
 
-        match self {
+        Ok(match self {
             Invalid => Invalid,
 
             U8(x) => U8(*x),
@@ -339,23 +360,27 @@ impl ValueImpl {
 
             // When cloning a container, we need to make sure we make a deep
             // copy of the data instead of a shallow copy of the Rc.
-            Container(c) => Container(Rc::new(RefCell::new(c.borrow().copy_value()))),
-        }
+            Container(c) => Container(Rc::new(RefCell::new(c.borrow().copy_value()?))),
+        })
     }
 }
 
 impl Container {
-    fn copy_value(&self) -> Self {
+    fn copy_value(&self) -> VMResult<Self> {
         use Container::*;
 
-        match self {
-            General(v) => General(v.iter().map(|x| x.copy_value()).collect()),
+        Ok(match self {
+            General(v) => General(v.iter().map(|x| x.copy_value()).collect::<VMResult<_>>()?),
+            Resource(_) => {
+                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("copying a resource".to_string()))
+            }
             U8(v) => U8(v.clone()),
             U64(v) => U64(v.clone()),
             U128(v) => U128(v.clone()),
             Bool(v) => Bool(v.clone()),
             Address(v) => Address(v.clone()),
-        }
+        })
     }
 }
 
@@ -381,8 +406,8 @@ impl ContainerRef {
 }
 
 impl Value {
-    pub fn copy_value(&self) -> Self {
-        Self(self.0.copy_value())
+    pub fn copy_value(&self) -> VMResult<Self> {
+        Ok(Self(self.0.copy_value()?))
     }
 }
 
@@ -435,7 +460,7 @@ impl Container {
 
         let res =
             match (self, other) {
-                (General(l), General(r)) => {
+                (Resource(l), Resource(r)) | (General(l), General(r)) => {
                     if l.len() != r.len() {
                         return Ok(false);
                     }
@@ -476,7 +501,11 @@ impl IndexedRef {
             &*self.container_ref.borrow(),
             &*other.container_ref.borrow(),
         ) {
-            (General(v1), General(v2)) => v1[self.idx].equals(&v2[other.idx])?,
+            (Resource(v1), Resource(v2))
+            | (General(v1), Resource(v2))
+            | (Resource(v1), General(v2))
+            | (General(v1), General(v2)) => v1[self.idx].equals(&v2[other.idx])?,
+
             (U8(v1), U8(v2)) => v1[self.idx] == v2[other.idx],
             (U64(v1), U64(v2)) => v1[self.idx] == v2[other.idx],
             (U128(v1), U128(v2)) => v1[self.idx] == v2[other.idx],
@@ -484,22 +513,38 @@ impl IndexedRef {
             (Address(v1), Address(v2)) => v1[self.idx] == v2[other.idx],
 
             // Equality between a generic and a specialized container.
-            (General(v1), U8(v2)) => *v1[self.idx].as_value_ref::<u8>()? == v2[other.idx],
-            (U8(v1), General(v2)) => v1[self.idx] == *v2[other.idx].as_value_ref::<u8>()?,
+            (Resource(v1), U8(v2)) | (General(v1), U8(v2)) => {
+                *v1[self.idx].as_value_ref::<u8>()? == v2[other.idx]
+            }
+            (U8(v1), Resource(v2)) | (U8(v1), General(v2)) => {
+                v1[self.idx] == *v2[other.idx].as_value_ref::<u8>()?
+            }
 
-            (General(v1), U64(v2)) => *v1[self.idx].as_value_ref::<u64>()? == v2[other.idx],
-            (U64(v1), General(v2)) => v1[self.idx] == *v2[other.idx].as_value_ref::<u64>()?,
+            (Resource(v1), U64(v2)) | (General(v1), U64(v2)) => {
+                *v1[self.idx].as_value_ref::<u64>()? == v2[other.idx]
+            }
+            (U64(v1), General(v2)) | (U64(v1), Resource(v2)) => {
+                v1[self.idx] == *v2[other.idx].as_value_ref::<u64>()?
+            }
 
-            (General(v1), U128(v2)) => *v1[self.idx].as_value_ref::<u128>()? == v2[other.idx],
-            (U128(v1), General(v2)) => v1[self.idx] == *v2[other.idx].as_value_ref::<u128>()?,
+            (General(v1), U128(v2)) | (Resource(v1), U128(v2)) => {
+                *v1[self.idx].as_value_ref::<u128>()? == v2[other.idx]
+            }
+            (U128(v1), General(v2)) | (U128(v1), Resource(v2)) => {
+                v1[self.idx] == *v2[other.idx].as_value_ref::<u128>()?
+            }
 
-            (General(v1), Bool(v2)) => *v1[self.idx].as_value_ref::<bool>()? == v2[other.idx],
-            (Bool(v1), General(v2)) => v1[self.idx] == *v2[other.idx].as_value_ref::<bool>()?,
+            (General(v1), Bool(v2)) | (Resource(v1), Bool(v2)) => {
+                *v1[self.idx].as_value_ref::<bool>()? == v2[other.idx]
+            }
+            (Bool(v1), General(v2)) | (Bool(v1), Resource(v2)) => {
+                v1[self.idx] == *v2[other.idx].as_value_ref::<bool>()?
+            }
 
-            (General(v1), Address(v2)) => {
+            (General(v1), Address(v2)) | (Resource(v1), Address(v2)) => {
                 *v1[self.idx].as_value_ref::<AccountAddress>()? == v2[other.idx]
             }
-            (Address(v1), General(v2)) => {
+            (Address(v1), General(v2)) | (Address(v1), Resource(v2)) => {
                 v1[self.idx] == *v2[other.idx].as_value_ref::<AccountAddress>()?
             }
 
@@ -529,7 +574,7 @@ impl Value {
 
 impl ContainerRef {
     fn read_ref(self) -> VMResult<Value> {
-        Ok(Value(ValueImpl::new_container(self.borrow().copy_value())))
+        Ok(Value(ValueImpl::new_container(self.borrow().copy_value()?)))
     }
 }
 
@@ -538,7 +583,7 @@ impl IndexedRef {
         use Container::*;
 
         let res = match &*self.container_ref.borrow() {
-            General(v) => v[self.idx].copy_value(),
+            Resource(v) | General(v) => v[self.idx].copy_value()?,
             U8(v) => ValueImpl::U8(v[self.idx]),
             U64(v) => ValueImpl::U64(v[self.idx]),
             U128(v) => ValueImpl::U128(v[self.idx]),
@@ -583,7 +628,14 @@ impl ContainerRef {
     fn write_ref(self, v: Value) -> VMResult<()> {
         match v.0 {
             ValueImpl::Container(r) => {
-                *self.borrow_mut() = take_unique_ownership(r)?
+                let mut v = self.borrow_mut();
+                if v.is_resource() {
+                    return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(
+                            "resource implicitly destroyed via ContainerRef::write_ref".to_string(),
+                        ));
+                }
+                *v = take_unique_ownership(r)?
                 // TODO: can we simply take the Rc?
             }
             _ => {
@@ -617,7 +669,14 @@ impl IndexedRef {
         }
 
         match (&mut *self.container_ref.borrow_mut(), &x.0) {
-            (Container::General(v), _) => {
+            (Container::Resource(v), _) | (Container::General(v), _) => {
+                // TODO: do we need to check this for Container::General?
+                if v[self.idx].is_resource() {
+                    return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(
+                            "resource implicitly destroyed via IndexedRef::write_ref".to_string(),
+                        ));
+                }
                 v[self.idx] = x.0;
             }
             (Container::U8(v), ValueImpl::U8(x)) => v[self.idx] = *x,
@@ -676,7 +735,7 @@ impl ContainerRef {
         }
 
         let res = match &*r {
-            Container::General(v) => match &v[idx] {
+            Container::Resource(v) | Container::General(v) => match &v[idx] {
                 // TODO: check for the impossible combinations.
                 ValueImpl::Container(container) => {
                     let r = match self {
@@ -693,7 +752,12 @@ impl ContainerRef {
                     container_ref: self.copy_value(),
                 }),
             },
-            _ => ValueImpl::IndexedRef(IndexedRef {
+
+            Container::U8(_)
+            | Container::U64(_)
+            | Container::U128(_)
+            | Container::Address(_)
+            | Container::Bool(_) => ValueImpl::IndexedRef(IndexedRef {
                 idx,
                 container_ref: self.copy_value(),
             }),
@@ -746,8 +810,15 @@ impl Locals {
                         .with_message(format!("cannot borrow local {:?}", &v[idx])))
                 }
             },
-            v => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                .with_message(format!("bad container for locals: {:?}", v))),
+            Container::Resource(_)
+            | Container::U8(_)
+            | Container::U64(_)
+            | Container::U128(_)
+            | Container::Address(_)
+            | Container::Bool(_) => {
+                Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!("bad container for locals: {:?}", &*r)))
+            }
         }
     }
 }
@@ -766,11 +837,40 @@ impl Locals {
         ))))
     }
 
+    pub fn check_resources_for_return(&self) -> VMResult<()> {
+        match &*self.0.borrow() {
+            Container::General(vals) => {
+                for v in vals {
+                    if v.is_resource() {
+                        return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message(
+                                "resource implicitly destroyed when returnining".to_string(),
+                            ));
+                    }
+                }
+                Ok(())
+            }
+
+            Container::Resource(_)
+            | Container::U8(_)
+            | Container::U64(_)
+            | Container::U128(_)
+            | Container::Address(_)
+            | Container::Bool(_) => unreachable!(),
+        }
+    }
+
     pub fn copy_loc(&self, idx: usize) -> VMResult<Value> {
         let r = self.0.borrow();
         let v = match &*r {
             Container::General(v) => v,
-            _ => unreachable!(),
+
+            Container::Resource(_)
+            | Container::U8(_)
+            | Container::U64(_)
+            | Container::U128(_)
+            | Container::Address(_)
+            | Container::Bool(_) => unreachable!(),
         };
 
         match v.get(idx) {
@@ -778,7 +878,7 @@ impl Locals {
                 Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                     .with_message(format!("cannot copy invalid value at index {}", idx)))
             }
-            Some(v) => Ok(Value(v.copy_value())),
+            Some(v) => Ok(Value(v.copy_value()?)),
             None => Err(
                 VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(format!(
                     "local index out of bounds: got {}, len: {}",
@@ -793,7 +893,13 @@ impl Locals {
         let mut r = self.0.borrow_mut();
         let v = match &mut *r {
             Container::General(v) => v,
-            _ => unreachable!(),
+
+            Container::Resource(_)
+            | Container::U8(_)
+            | Container::U64(_)
+            | Container::U128(_)
+            | Container::Address(_)
+            | Container::Bool(_) => unreachable!(),
         };
 
         match v.get_mut(idx) {
@@ -829,7 +935,10 @@ impl Locals {
     }
 
     pub fn store_loc(&mut self, idx: usize, x: Value) -> VMResult<()> {
-        self.swap_loc(idx, x)?;
+        if self.swap_loc(idx, x)?.0.is_resource() {
+            return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                .with_message("resource implicitly destroyed via store_loc".to_string()));
+        }
         Ok(())
     }
 }
@@ -991,7 +1100,9 @@ impl VMValueCast<Vec<Value>> for Value {
     fn cast(self) -> VMResult<Vec<Value>> {
         match self.0 {
             ValueImpl::Container(r) => Ok(match take_unique_ownership(r)? {
-                Container::General(vs) => vs.into_iter().map(Value).collect(),
+                Container::Resource(vs) | Container::General(vs) => {
+                    vs.into_iter().map(Value).collect()
+                }
                 Container::U8(vs) => vs.into_iter().map(Value::u8).collect(),
                 Container::U64(vs) => vs.into_iter().map(Value::u64).collect(),
                 Container::U128(vs) => vs.into_iter().map(Value::u128).collect(),
@@ -1409,17 +1520,31 @@ pub mod vector {
         };
     }
 
-    fn check_elem_layout(ty: &Type, v: &Container) -> VMResult<()> {
+    fn check_elem_layout(context: &impl NativeContext, ty: &Type, v: &Container) -> VMResult<()> {
+        let is_resource = context.is_resource(ty)?;
+
         match (ty, v) {
             (Type::U8, Container::U8(_))
             | (Type::U64, Container::U64(_))
             | (Type::U128, Container::U128(_))
             | (Type::Bool, Container::Bool(_))
             | (Type::Address, Container::Address(_))
-            | (Type::Signer, Container::General(_))
-            | (Type::Vector(_), Container::General(_))
-            | (Type::Struct(_), Container::General(_)) => Ok(()),
-            (Type::StructInstantiation(_, _), Container::General(_)) => Ok(()),
+            | (Type::Signer, Container::Resource(_))
+            | (Type::Vector(_), Container::General(_)) => Ok(()),
+
+            (Type::Struct(_), Container::General(_))
+            | (Type::StructInstantiation(_, _), Container::General(_))
+                if !is_resource =>
+            {
+                Ok(())
+            }
+
+            (Type::Struct(_), Container::Resource(_))
+            | (Type::StructInstantiation(_, _), Container::Resource(_))
+                if is_resource =>
+            {
+                Ok(())
+            }
 
             (Type::Reference(_), _) | (Type::MutableReference(_), _) | (Type::TyParam(_), _) => {
                 Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
@@ -1461,8 +1586,14 @@ pub mod vector {
             Type::Bool => Container::Bool(vec![]),
             Type::Address => Container::Address(vec![]),
 
-            Type::Signer | Type::Vector(_) | Type::Struct(_) | Type::StructInstantiation(_, _) => {
-                Container::General(vec![])
+            Type::Signer => Container::Resource(vec![]),
+
+            Type::Vector(_) | Type::Struct(_) | Type::StructInstantiation(_, _) => {
+                if context.is_resource(&ty_args[0])? {
+                    Container::Resource(vec![])
+                } else {
+                    Container::General(vec![])
+                }
             }
 
             Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
@@ -1490,14 +1621,14 @@ pub mod vector {
         let cost = native_gas(context.cost_table(), NativeCostIndex::LENGTH, 1);
 
         let v = r.borrow();
-        check_elem_layout(&ty_args[0], &*v)?;
+        check_elem_layout(context, &ty_args[0], &*v)?;
         let len = match &*v {
             Container::U8(v) => v.len(),
             Container::U64(v) => v.len(),
             Container::U128(v) => v.len(),
             Container::Bool(v) => v.len(),
             Container::Address(v) => v.len(),
-            Container::General(v) => v.len(),
+            Container::Resource(v) | Container::General(v) => v.len(),
         };
 
         Ok(NativeResult::ok(cost, vec![Value::u64(len as u64)]))
@@ -1521,14 +1652,14 @@ pub mod vector {
         );
 
         let mut v = r.borrow_mut();
-        check_elem_layout(&ty_args[0], &*v)?;
+        check_elem_layout(context, &ty_args[0], &*v)?;
         match &mut *v {
             Container::U8(v) => v.push(e.value_as()?),
             Container::U64(v) => v.push(e.value_as()?),
             Container::U128(v) => v.push(e.value_as()?),
             Container::Bool(v) => v.push(e.value_as()?),
             Container::Address(v) => v.push(e.value_as()?),
-            Container::General(v) => v.push(e.0),
+            Container::Resource(v) | Container::General(v) => v.push(e.0),
         }
 
         Ok(NativeResult::ok(cost, vec![]))
@@ -1548,7 +1679,7 @@ pub mod vector {
         let cost = native_gas(context.cost_table(), NativeCostIndex::BORROW, 1);
 
         let v = r.borrow();
-        check_elem_layout(&ty_args[0], &*v)?;
+        check_elem_layout(context, &ty_args[0], &*v)?;
         if idx >= v.len() {
             return Ok(NativeResult::err(
                 cost,
@@ -1574,7 +1705,7 @@ pub mod vector {
         let cost = native_gas(context.cost_table(), NativeCostIndex::POP_BACK, 1);
 
         let mut v = r.borrow_mut();
-        check_elem_layout(&ty_args[0], &*v)?;
+        check_elem_layout(context, &ty_args[0], &*v)?;
 
         macro_rules! err_pop_empty_vec {
             () => {
@@ -1607,7 +1738,7 @@ pub mod vector {
                 None => err_pop_empty_vec!(),
             },
 
-            Container::General(v) => match v.pop() {
+            Container::Resource(v) | Container::General(v) => match v.pop() {
                 Some(x) => Value(x),
                 None => err_pop_empty_vec!(),
             },
@@ -1627,7 +1758,7 @@ pub mod vector {
 
         let cost = native_gas(context.cost_table(), NativeCostIndex::DESTROY_EMPTY, 1);
 
-        check_elem_layout(&ty_args[0], &v)?;
+        check_elem_layout(context, &ty_args[0], &v)?;
 
         let is_empty = match &v {
             Container::U8(v) => v.is_empty(),
@@ -1636,7 +1767,7 @@ pub mod vector {
             Container::Bool(v) => v.is_empty(),
             Container::Address(v) => v.is_empty(),
 
-            Container::General(v) => v.is_empty(),
+            Container::Resource(v) | Container::General(v) => v.is_empty(),
         };
 
         if is_empty {
@@ -1664,7 +1795,7 @@ pub mod vector {
         let cost = native_gas(context.cost_table(), NativeCostIndex::SWAP, 1);
 
         let mut v = r.borrow_mut();
-        check_elem_layout(&ty_args[0], &*v)?;
+        check_elem_layout(context, &ty_args[0], &*v)?;
 
         macro_rules! swap {
             ($v: ident) => {{
@@ -1685,7 +1816,7 @@ pub mod vector {
             Container::U128(v) => swap!(v),
             Container::Bool(v) => swap!(v),
             Container::Address(v) => swap!(v),
-            Container::General(v) => swap!(v),
+            Container::Resource(v) | Container::General(v) => swap!(v),
         }
 
         Ok(NativeResult::ok(cost, vec![]))
@@ -1727,7 +1858,7 @@ pub mod signer {
 impl Container {
     fn size(&self) -> AbstractMemorySize<GasCarrier> {
         match self {
-            Self::General(v) => v
+            Self::Resource(v) | Self::General(v) => v
                 .iter()
                 .fold(STRUCT_SIZE, |acc, v| acc.map2(v.size(), Add::add)),
             Self::U8(v) => AbstractMemorySize::new((v.len() * size_of::<u8>()) as u64),
@@ -1810,13 +1941,18 @@ impl GlobalValue {
  *
  **************************************************************************************/
 impl Struct {
-    pub fn pack<I: IntoIterator<Item = Value>>(vals: I) -> Self {
-        Self(Container::General(vals.into_iter().map(|v| v.0).collect()))
+    pub fn pack<I: IntoIterator<Item = Value>>(vals: I, is_resource: bool) -> Self {
+        let v = vals.into_iter().map(|v| v.0).collect();
+        Self(if is_resource {
+            Container::Resource(v)
+        } else {
+            Container::General(v)
+        })
     }
 
     pub fn unpack(self) -> VMResult<impl Iterator<Item = Value>> {
         match self.0 {
-            Container::General(v) => Ok(v.into_iter().map(Value)),
+            Container::Resource(v) | Container::General(v) => Ok(v.into_iter().map(Value)),
             Container::U8(_)
             | Container::U64(_)
             | Container::U128(_)
@@ -1953,7 +2089,7 @@ impl Display for IndexedRef {
 impl Display for Container {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::General(v) => display_list_of_items(v, f),
+            Self::Resource(v) | Self::General(v) => display_list_of_items(v, f),
             Self::U8(v) => display_list_of_items(v, f),
             Self::U64(v) => display_list_of_items(v, f),
             Self::U128(v) => display_list_of_items(v, f),
@@ -1982,7 +2118,13 @@ impl Display for Locals {
                     .collect::<Vec<_>>()
                     .join("\n")
             ),
-            _ => unreachable!(),
+
+            Container::Resource(_)
+            | Container::U8(_)
+            | Container::U64(_)
+            | Container::U128(_)
+            | Container::Bool(_)
+            | Container::Address(_) => unreachable!(),
         }
     }
 }
@@ -2056,8 +2198,9 @@ pub mod debug {
             (FatType::U64, Container::U64(v)) => print_vector!(v, "u64"),
             (FatType::U128, Container::U128(v)) => print_vector!(v, "u128"),
             (FatType::Bool, Container::Bool(v)) => print_vector!(v, ""),
+            (FatType::Address, Container::Address(v)) => print_vector!(v, ""),
 
-            (FatType::Address, Container::General(v))
+            (FatType::Struct(_), Container::Resource(v))
             | (FatType::Struct(_), Container::General(v)) => {
                 debug_write!(buf, "[")?;
                 let mut it = v.iter();
@@ -2086,7 +2229,7 @@ pub mod debug {
         s: &Container,
     ) -> VMResult<()> {
         let v = match s {
-            Container::General(v) => v,
+            Container::Resource(v) | Container::General(v) => v,
             _ => {
                 return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
                     .with_message(format!("invalid container {:?} as struct", s)))
@@ -2152,7 +2295,12 @@ pub mod debug {
             (FatType::U128, Container::U128(v)) => print_vector_elem!(v, idx, "u128"),
             (FatType::Bool, Container::Bool(v)) => print_vector_elem!(v, idx, ""),
 
-            (FatType::U8, Container::General(v))
+            (FatType::U8, Container::Resource(v))
+            | (FatType::U64, Container::Resource(v))
+            | (FatType::U128, Container::Resource(v))
+            | (FatType::Bool, Container::Resource(v))
+            | (FatType::Address, Container::Resource(v))
+            | (FatType::U8, Container::General(v))
             | (FatType::U64, Container::General(v))
             | (FatType::U128, Container::General(v))
             | (FatType::Bool, Container::General(v))
@@ -2194,7 +2342,13 @@ pub mod debug {
                 }
                 Ok(())
             }
-            _ => unreachable!(),
+
+            Container::Resource(_)
+            | Container::U8(_)
+            | Container::U64(_)
+            | Container::U128(_)
+            | Container::Bool(_)
+            | Container::Address(_) => unreachable!(),
         }
     }
 
@@ -2327,7 +2481,7 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, FatType, ValueImpl> {
                     (FatType::Bool, Container::Bool(v)) => v.serialize(serializer),
                     (FatType::Address, Container::Address(v)) => v.serialize(serializer),
 
-                    (_, Container::General(v)) => {
+                    (_, Container::Resource(v)) | (_, Container::General(v)) => {
                         let mut t = serializer.serialize_seq(Some(v.len()))?;
                         for val in v {
                             t.serialize_element(&AnnotatedValue { ty, val })?;
@@ -2343,11 +2497,12 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, FatType, ValueImpl> {
             }
 
             (FatType::Signer, ValueImpl::Container(r)) => match &*r.borrow() {
-                Container::General(v) if v.len() == 1 => (AnnotatedValue {
+                Container::Resource(v) if v.len() == 1 => (AnnotatedValue {
                     ty: &FatType::Address,
                     val: &v[0],
                 })
                 .serialize(serializer),
+
                 container => Err(invariant_violation::<S>(format!(
                     "cannot serialize container {:?} as a signer",
                     container
@@ -2365,8 +2520,13 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, FatType, ValueImpl> {
 impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, FatStructType, Container> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let values = match &self.val {
-            Container::General(v) => v,
-            _ => {
+            Container::Resource(v) | Container::General(v) => v,
+
+            Container::U8(_)
+            | Container::U64(_)
+            | Container::U128(_)
+            | Container::Bool(_)
+            | Container::Address(_) => {
                 return Err(invariant_violation::<S>(format!(
                     "cannot serialize container value {:?} as {:?}",
                     self.val, self.ty
@@ -2412,9 +2572,14 @@ impl<'d> serde::de::DeserializeSeed<'d> for &FatType {
                     FatType::U128 => Container::U128(Vec::deserialize(deserializer)?),
                     FatType::Bool => Container::Bool(Vec::deserialize(deserializer)?),
                     FatType::Address => Container::Address(Vec::deserialize(deserializer)?),
-                    layout => Container::General(
-                        deserializer.deserialize_seq(VectorElementVisitor(layout))?,
-                    ),
+                    layout => {
+                        let v = deserializer.deserialize_seq(VectorElementVisitor(layout))?;
+                        if layout.is_resource().unwrap() {
+                            Container::Resource(v)
+                        } else {
+                            Container::General(v)
+                        }
+                    }
                 };
                 Ok(Value(ValueImpl::Container(Rc::new(RefCell::new(
                     container,
@@ -2440,7 +2605,7 @@ impl<'d> serde::de::DeserializeSeed<'d> for &FatStructType {
     ) -> Result<Self::Value, D::Error> {
         let layout = &self.layout;
         let fields = deserializer.deserialize_tuple(layout.len(), StructFieldVisitor(layout))?;
-        Ok(Struct::pack(fields))
+        Ok(Struct::pack(fields, self.is_resource))
     }
 }
 
@@ -2561,26 +2726,37 @@ pub mod prop {
                 FatType::Address => vec(any::<AccountAddress>(), 0..10)
                     .prop_map(|vals| Value(ValueImpl::new_container(Container::Address(vals))))
                     .boxed(),
-                layout => vec(value_strategy_with_layout(layout), 0..10)
-                    .prop_map(|vals| {
-                        Value(ValueImpl::new_container(Container::General(
-                            vals.into_iter().map(|val| val.0).collect(),
-                        )))
-                    })
-                    .boxed(),
+                layout => {
+                    if layout.is_resource().unwrap() {
+                        vec(value_strategy_with_layout(layout), 0..10)
+                            .prop_map(|vals| {
+                                Value(ValueImpl::new_container(Container::Resource(
+                                    vals.into_iter().map(|val| val.0).collect(),
+                                )))
+                            })
+                            .boxed()
+                    } else {
+                        vec(value_strategy_with_layout(layout), 0..10)
+                            .prop_map(|vals| {
+                                Value(ValueImpl::new_container(Container::General(
+                                    vals.into_iter().map(|val| val.0).collect(),
+                                )))
+                            })
+                            .boxed()
+                    }
+                }
             },
 
-            FatType::Struct(struct_ty) => struct_ty
-                .layout
-                .iter()
-                .map(|layout| value_strategy_with_layout(layout))
-                .collect::<Vec<_>>()
-                .prop_map(|vals| {
-                    Value(ValueImpl::new_container(Container::General(
-                        vals.into_iter().map(|val| val.0).collect(),
-                    )))
-                })
-                .boxed(),
+            FatType::Struct(struct_ty) => {
+                let is_resource = struct_ty.is_resource;
+                struct_ty
+                    .layout
+                    .iter()
+                    .map(|layout| value_strategy_with_layout(layout))
+                    .collect::<Vec<_>>()
+                    .prop_map(move |vals| Value::struct_(Struct::pack(vals, is_resource)))
+                    .boxed()
+            }
 
             FatType::Reference(..) | FatType::MutableReference(..) => {
                 panic!("cannot generate references for prop tests")
@@ -2607,7 +2783,7 @@ pub mod prop {
                 (FatType::Address, ValueImpl::Address(x)) => MoveValue::Address(*x),
 
                 (FatType::Struct(ty), ValueImpl::Container(r)) => match &*r.borrow() {
-                    Container::General(v) => {
+                    Container::Resource(v) | Container::General(v) => {
                         let mut fields = vec![];
                         for (v, field_ty) in v.iter().zip(ty.layout.iter()) {
                             fields.push(v.as_move_value(field_ty));
@@ -2627,7 +2803,7 @@ pub mod prop {
                         Container::U128(v) => v.iter().map(|u| MoveValue::U128(*u)).collect(),
                         Container::Bool(b) => b.iter().map(|u| MoveValue::Bool(*u)).collect(),
                         Container::Address(v) => v.iter().map(|u| MoveValue::Address(*u)).collect(),
-                        Container::General(v) => v
+                        Container::Resource(v) | Container::General(v) => v
                             .iter()
                             .map(|v| v.as_move_value(inner_ty.as_ref()))
                             .collect(),
@@ -2636,14 +2812,11 @@ pub mod prop {
 
                 (FatType::Signer, ValueImpl::Container(r)) => {
                     MoveValue::Signer(match &*r.borrow() {
-                        Container::General(v) if v.len() == 1 => match &v[0] {
+                        Container::Resource(v) if v.len() == 1 => match &v[0] {
                             ValueImpl::Address(a) => *a,
                             v => panic!("Unexpected non-address while converting signer: {:?}", v),
                         },
-                        c => panic!(
-                            "Unexpected non-general container while converting signer: {:?}",
-                            c
-                        ),
+                        c => panic!("Unexpected container while converting signer: {:?}", c),
                     })
                 }
 
