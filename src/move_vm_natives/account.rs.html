@@ -35,133 +35,19 @@
 <span id="35">35</span>
 <span id="36">36</span>
 <span id="37">37</span>
-<span id="38">38</span>
-<span id="39">39</span>
-<span id="40">40</span>
-<span id="41">41</span>
-<span id="42">42</span>
-<span id="43">43</span>
-<span id="44">44</span>
-<span id="45">45</span>
-<span id="46">46</span>
-<span id="47">47</span>
-<span id="48">48</span>
-<span id="49">49</span>
-<span id="50">50</span>
-<span id="51">51</span>
-<span id="52">52</span>
-<span id="53">53</span>
-<span id="54">54</span>
-<span id="55">55</span>
-<span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
-<span id="63">63</span>
-<span id="64">64</span>
-<span id="65">65</span>
-<span id="66">66</span>
-<span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
-<span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
-<span id="83">83</span>
-<span id="84">84</span>
-<span id="85">85</span>
-<span id="86">86</span>
-<span id="87">87</span>
-<span id="88">88</span>
-<span id="89">89</span>
-<span id="90">90</span>
-<span id="91">91</span>
-<span id="92">92</span>
-<span id="93">93</span>
-<span id="94">94</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
-    <span class="ident">account_config</span>,
-    <span class="ident">account_config</span>::{<span class="ident">AccountResource</span>, <span class="ident">BalanceResource</span>, <span class="ident">CORE_CODE_ADDRESS</span>},
-    <span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>},
-};
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">move_resource</span>::<span class="ident">MoveResource</span>;
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>;
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::{
     <span class="ident">gas_schedule</span>::<span class="ident">NativeCostIndex</span>,
     <span class="ident">loaded_data</span>::<span class="ident">runtime_types</span>::<span class="ident">Type</span>,
     <span class="ident">natives</span>::<span class="ident">function</span>::{<span class="ident">native_gas</span>, <span class="ident">NativeContext</span>, <span class="ident">NativeResult</span>},
-    <span class="ident">values</span>::{<span class="ident">Struct</span>, <span class="ident">Value</span>},
+    <span class="ident">values</span>::<span class="ident">Value</span>,
 };
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">VecDeque</span>;
 <span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">errors</span>::<span class="ident">VMResult</span>;
-
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">native_save_account</span>(
-    <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">impl</span> <span class="ident">NativeContext</span>,
-    <span class="ident">ty_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>,
-    <span class="kw-2">mut</span> <span class="ident">arguments</span>: <span class="ident">VecDeque</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">NativeResult</span><span class="op">&gt;</span> {
-    <span class="macro">debug_assert</span><span class="macro">!</span>(<span class="ident">ty_args</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">2</span>);
-    <span class="macro">debug_assert</span><span class="macro">!</span>(<span class="ident">arguments</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">5</span>);
-
-    <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="macro">pop_arg</span><span class="macro">!</span>(<span class="ident">arguments</span>, <span class="ident">AccountAddress</span>);
-    <span class="kw">let</span> <span class="ident">event_generator</span> <span class="op">=</span> <span class="macro">pop_arg</span><span class="macro">!</span>(<span class="ident">arguments</span>, <span class="ident">Struct</span>);
-    <span class="kw">let</span> <span class="ident">account</span> <span class="op">=</span> <span class="macro">pop_arg</span><span class="macro">!</span>(<span class="ident">arguments</span>, <span class="ident">Struct</span>);
-    <span class="kw">let</span> <span class="ident">balance</span> <span class="op">=</span> <span class="macro">pop_arg</span><span class="macro">!</span>(<span class="ident">arguments</span>, <span class="ident">Struct</span>);
-    <span class="kw">let</span> <span class="ident">account_type</span> <span class="op">=</span> <span class="macro">pop_arg</span><span class="macro">!</span>(<span class="ident">arguments</span>, <span class="ident">Struct</span>);
-
-    <span class="kw">if</span> <span class="ident">address</span> <span class="op">=</span><span class="op">=</span> <span class="ident">CORE_CODE_ADDRESS</span> {
-        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">CREATE_NULL_ACCOUNT</span>));
-    }
-
-    <span class="kw">let</span> <span class="ident">cost</span> <span class="op">=</span> <span class="ident">native_gas</span>(<span class="ident">context</span>.<span class="ident">cost_table</span>(), <span class="ident">NativeCostIndex</span>::<span class="ident">SAVE_ACCOUNT</span>, <span class="number">0</span>);
-
-    <span class="ident">context</span>.<span class="ident">save_under_address</span>(
-        <span class="kw-2">&amp;</span>[],
-        <span class="kw-2">&amp;</span><span class="ident">account_config</span>::<span class="ident">EVENT_MODULE</span>,
-        <span class="ident">account_config</span>::<span class="ident">event_handle_generator_struct_name</span>(),
-        <span class="ident">event_generator</span>,
-        <span class="ident">address</span>,
-    )<span class="question-mark">?</span>;
-    <span class="ident">context</span>.<span class="ident">save_under_address</span>(
-        <span class="kw-2">&amp;</span>[],
-        <span class="kw-2">&amp;</span><span class="ident">account_config</span>::<span class="ident">ACCOUNT_MODULE</span>,
-        <span class="kw-2">&amp;</span><span class="ident">AccountResource</span>::<span class="ident">struct_identifier</span>(),
-        <span class="ident">account</span>,
-        <span class="ident">address</span>,
-    )<span class="question-mark">?</span>;
-    <span class="ident">context</span>.<span class="ident">save_under_address</span>(
-        <span class="kw-2">&amp;</span>[<span class="ident">ty_args</span>[<span class="number">0</span>].<span class="ident">clone</span>()],
-        <span class="kw-2">&amp;</span><span class="ident">account_config</span>::<span class="ident">ACCOUNT_MODULE</span>,
-        <span class="kw-2">&amp;</span><span class="ident">BalanceResource</span>::<span class="ident">struct_identifier</span>(),
-        <span class="ident">balance</span>,
-        <span class="ident">address</span>,
-    )<span class="question-mark">?</span>;
-    <span class="ident">context</span>.<span class="ident">save_under_address</span>(
-        <span class="kw-2">&amp;</span>[<span class="ident">ty_args</span>[<span class="number">1</span>].<span class="ident">clone</span>()],
-        <span class="kw-2">&amp;</span><span class="ident">account_config</span>::<span class="ident">ACCOUNT_TYPE_MODULE</span>,
-        <span class="ident">account_config</span>::<span class="ident">account_type_struct_name</span>(),
-        <span class="ident">account_type</span>,
-        <span class="ident">address</span>,
-    )<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(<span class="ident">NativeResult</span>::<span class="ident">ok</span>(<span class="ident">cost</span>, <span class="macro">vec</span><span class="macro">!</span>[]))
-}
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">native_create_signer</span>(
     <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">impl</span> <span class="ident">NativeContext</span>,

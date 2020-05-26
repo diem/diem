@@ -664,8 +664,6 @@
 <span id="664">664</span>
 <span id="665">665</span>
 <span id="666">666</span>
-<span id="667">667</span>
-<span id="668">668</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1101,7 +1099,6 @@
     <span class="ident">CALL_STACK_OVERFLOW</span> <span class="op">=</span> <span class="number">4021</span>,
     <span class="ident">NATIVE_FUNCTION_ERROR</span> <span class="op">=</span> <span class="number">4022</span>,
     <span class="ident">GAS_SCHEDULE_ERROR</span> <span class="op">=</span> <span class="number">4023</span>,
-    <span class="ident">CREATE_NULL_ACCOUNT</span> <span class="op">=</span> <span class="number">4024</span>,
 
     <span class="comment">// A reserved status to represent an unknown vm status.</span>
     <span class="ident">UNKNOWN_STATUS</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">u64</span>::<span class="ident">MAX</span>,
@@ -1296,7 +1293,6 @@
             <span class="number">4021</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">CALL_STACK_OVERFLOW</span>),
             <span class="number">4022</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">NATIVE_FUNCTION_ERROR</span>),
             <span class="number">4023</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">GAS_SCHEDULE_ERROR</span>),
-            <span class="number">4024</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">CREATE_NULL_ACCOUNT</span>),
             <span class="ident">std</span>::<span class="ident">u64</span>::<span class="ident">MAX</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_STATUS</span>),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="string">&quot;invalid StatusCode&quot;</span>),
         }

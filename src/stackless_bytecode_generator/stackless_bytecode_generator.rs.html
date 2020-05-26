@@ -1071,7 +1071,6 @@
 <span id="1071">1071</span>
 <span id="1072">1072</span>
 <span id="1073">1073</span>
-<span id="1074">1074</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2102,10 +2101,9 @@
                 ));
             }
 
-            <span class="ident">MoveBytecode</span>::<span class="ident">MoveTo</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unimplemented</span><span class="macro">!</span>(<span class="string">&quot;Not yet supported instruction: MoveTo&quot;</span>),
-            <span class="ident">MoveBytecode</span>::<span class="ident">MoveToGeneric</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">unimplemented</span><span class="macro">!</span>(<span class="string">&quot;Not yet supported instruction: MoveToGeneric&quot;</span>)
-            }
+            <span class="comment">// TODO: translate these</span>
+            <span class="ident">MoveBytecode</span>::<span class="ident">MoveTo</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {}
+            <span class="ident">MoveBytecode</span>::<span class="ident">MoveToGeneric</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {}
 
             <span class="ident">MoveBytecode</span>::<span class="ident">GetTxnSenderAddress</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">temp_index</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">temp_count</span>;

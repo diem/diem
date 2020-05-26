@@ -365,47 +365,6 @@
 <span id="365">365</span>
 <span id="366">366</span>
 <span id="367">367</span>
-<span id="368">368</span>
-<span id="369">369</span>
-<span id="370">370</span>
-<span id="371">371</span>
-<span id="372">372</span>
-<span id="373">373</span>
-<span id="374">374</span>
-<span id="375">375</span>
-<span id="376">376</span>
-<span id="377">377</span>
-<span id="378">378</span>
-<span id="379">379</span>
-<span id="380">380</span>
-<span id="381">381</span>
-<span id="382">382</span>
-<span id="383">383</span>
-<span id="384">384</span>
-<span id="385">385</span>
-<span id="386">386</span>
-<span id="387">387</span>
-<span id="388">388</span>
-<span id="389">389</span>
-<span id="390">390</span>
-<span id="391">391</span>
-<span id="392">392</span>
-<span id="393">393</span>
-<span id="394">394</span>
-<span id="395">395</span>
-<span id="396">396</span>
-<span id="397">397</span>
-<span id="398">398</span>
-<span id="399">399</span>
-<span id="400">400</span>
-<span id="401">401</span>
-<span id="402">402</span>
-<span id="403">403</span>
-<span id="404">404</span>
-<span id="405">405</span>
-<span id="406">406</span>
-<span id="407">407</span>
-<span id="408">408</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -497,9 +456,7 @@
 
     <span class="comment">// generate the genesis WriteSet</span>
     <span class="ident">create_and_initialize_main_accounts</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">genesis_context</span>, <span class="kw-2">&amp;</span><span class="ident">public_key</span>, <span class="kw-2">&amp;</span><span class="ident">lbr_ty</span>);
-    <span class="ident">create_and_initialize_validator_set</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">genesis_context</span>, <span class="kw-2">&amp;</span><span class="ident">lbr_ty</span>);
     <span class="ident">initialize_validators</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">genesis_context</span>, <span class="kw-2">&amp;</span><span class="ident">validators</span>, <span class="kw-2">&amp;</span><span class="ident">lbr_ty</span>);
-    <span class="ident">setup_libra_version</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">genesis_context</span>);
     <span class="ident">setup_vm_config</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">genesis_context</span>, <span class="ident">vm_publishing_option</span>);
     <span class="ident">reconfigure</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">genesis_context</span>);
 
@@ -541,79 +498,51 @@
     <span class="ident">public_key</span>: <span class="kw-2">&amp;</span><span class="ident">Ed25519PublicKey</span>,
     <span class="ident">lbr_ty</span>: <span class="kw-2">&amp;</span><span class="ident">TypeTag</span>,
 ) {
-    <span class="kw">let</span> <span class="ident">genesis_auth_key</span> <span class="op">=</span> <span class="ident">AuthenticationKey</span>::<span class="ident">ed25519</span>(<span class="ident">public_key</span>).<span class="ident">to_vec</span>();
+    <span class="kw">let</span> <span class="ident">genesis_auth_key</span> <span class="op">=</span> <span class="ident">AuthenticationKey</span>::<span class="ident">ed25519</span>(<span class="ident">public_key</span>);
 
     <span class="kw">let</span> <span class="ident">root_association_address</span> <span class="op">=</span> <span class="ident">account_config</span>::<span class="ident">association_address</span>();
     <span class="kw">let</span> <span class="ident">tc_account_address</span> <span class="op">=</span> <span class="ident">account_config</span>::<span class="ident">treasury_compliance_account_address</span>();
     <span class="kw">let</span> <span class="ident">fee_account_address</span> <span class="op">=</span> <span class="ident">account_config</span>::<span class="ident">transaction_fee_address</span>();
 
     <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">root_association_address</span>);
-
     <span class="ident">context</span>.<span class="ident">exec</span>(
         <span class="ident">GENESIS_MODULE_NAME</span>,
-        <span class="string">&quot;initialize_association&quot;</span>,
-        <span class="macro">vec</span><span class="macro">!</span>[],
-        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">root_association_address</span>)],
-    );
-
-    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">config_address</span>());
-    <span class="ident">context</span>.<span class="ident">exec</span>(<span class="ident">GENESIS_MODULE_NAME</span>, <span class="string">&quot;initialize_config&quot;</span>, <span class="macro">vec</span><span class="macro">!</span>[], <span class="macro">vec</span><span class="macro">!</span>[]);
-
-    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">root_association_address</span>);
-    <span class="ident">context</span>.<span class="ident">exec</span>(
-        <span class="string">&quot;LibraConfig&quot;</span>,
-        <span class="string">&quot;grant_creator_privilege&quot;</span>,
-        <span class="macro">vec</span><span class="macro">!</span>[],
-        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">config_address</span>())],
-    );
-    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">config_address</span>());
-    <span class="ident">context</span>.<span class="ident">exec</span>(<span class="string">&quot;Libra&quot;</span>, <span class="string">&quot;initialize&quot;</span>, <span class="macro">vec</span><span class="macro">!</span>[], <span class="macro">vec</span><span class="macro">!</span>[]);
-
-    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">root_association_address</span>);
-    <span class="ident">context</span>.<span class="ident">exec</span>(
-        <span class="ident">GENESIS_MODULE_NAME</span>,
-        <span class="string">&quot;initialize_accounts&quot;</span>,
+        <span class="string">&quot;initialize&quot;</span>,
         <span class="macro">vec</span><span class="macro">!</span>[],
         <span class="macro">vec</span><span class="macro">!</span>[
-            <span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">root_association_address</span>),
+            <span class="ident">Value</span>::<span class="ident">transaction_argument_signer_reference</span>(<span class="ident">root_association_address</span>),
+            <span class="ident">Value</span>::<span class="ident">transaction_argument_signer_reference</span>(<span class="ident">config_address</span>()),
             <span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">tc_account_address</span>),
-            <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">genesis_auth_key</span>.<span class="ident">clone</span>()),
+            <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">AuthenticationKey</span>::<span class="ident">prefix</span>(<span class="kw-2">&amp;</span><span class="ident">genesis_auth_key</span>).<span class="ident">to_vec</span>()), <span class="comment">// TODO: different key here?</span>
+            <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">genesis_auth_key</span>.<span class="ident">to_vec</span>()),
         ],
     );
 
-    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">tc_account_address</span>);
-    <span class="ident">context</span>.<span class="ident">exec</span>(<span class="ident">GENESIS_MODULE_NAME</span>, <span class="string">&quot;initalize_tc_account&quot;</span>, <span class="macro">vec</span><span class="macro">!</span>[], <span class="macro">vec</span><span class="macro">!</span>[]);
-
-    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">root_association_address</span>);
-    <span class="ident">context</span>.<span class="ident">exec</span>(
-        <span class="ident">GENESIS_MODULE_NAME</span>,
-        <span class="string">&quot;grant_tc_account&quot;</span>,
-        <span class="macro">vec</span><span class="macro">!</span>[],
-        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">tc_account_address</span>)],
-    );
-
-    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">tc_account_address</span>);
-    <span class="ident">context</span>.<span class="ident">exec</span>(
-        <span class="ident">GENESIS_MODULE_NAME</span>,
-        <span class="string">&quot;grant_tc_capabilities_for_sender&quot;</span>,
-        <span class="macro">vec</span><span class="macro">!</span>[],
-        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">genesis_auth_key</span>.<span class="ident">clone</span>())],
-    );
-
-    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">fee_account_address</span>);
-    <span class="ident">context</span>.<span class="ident">exec</span>(
-        <span class="ident">GENESIS_MODULE_NAME</span>,
-        <span class="string">&quot;initialize_txn_fee_account&quot;</span>,
-        <span class="macro">vec</span><span class="macro">!</span>[],
-        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">genesis_auth_key</span>.<span class="ident">clone</span>())],
-    );
-
+    <span class="comment">// TODO: use signer to eliminate this</span>
     <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">config_address</span>());
     <span class="ident">context</span>.<span class="ident">exec</span>(
         <span class="string">&quot;LibraAccount&quot;</span>,
         <span class="string">&quot;rotate_authentication_key&quot;</span>,
         <span class="macro">vec</span><span class="macro">!</span>[],
-        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">genesis_auth_key</span>)],
+        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">genesis_auth_key</span>.<span class="ident">to_vec</span>())],
+    );
+
+    <span class="comment">// TODO: use signer to eliminate this</span>
+    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">account_config</span>::<span class="ident">treasury_compliance_account_address</span>());
+    <span class="ident">context</span>.<span class="ident">exec</span>(
+        <span class="string">&quot;LibraAccount&quot;</span>,
+        <span class="string">&quot;rotate_authentication_key&quot;</span>,
+        <span class="macro">vec</span><span class="macro">!</span>[],
+        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">genesis_auth_key</span>.<span class="ident">to_vec</span>())],
+    );
+
+    <span class="comment">// TODO: use signer to eliminate this</span>
+    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">fee_account_address</span>);
+    <span class="ident">context</span>.<span class="ident">exec</span>(
+        <span class="ident">GENESIS_MODULE_NAME</span>,
+        <span class="string">&quot;initialize_txn_fee_account&quot;</span>,
+        <span class="macro">vec</span><span class="macro">!</span>[],
+        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">genesis_auth_key</span>.<span class="ident">to_vec</span>())],
     );
 
     <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">root_association_address</span>);
@@ -632,12 +561,6 @@
             <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="comment">/* gas_units_remaining */</span> <span class="number">0</span>),
         ],
     );
-}
-
-<span class="doccomment">/// Create and initialize the validator set.</span>
-<span class="kw">fn</span> <span class="ident">create_and_initialize_validator_set</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">GenesisContext</span>, <span class="ident">_lbr_ty</span>: <span class="kw-2">&amp;</span><span class="ident">TypeTag</span>) {
-    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">config_address</span>());
-    <span class="ident">context</span>.<span class="ident">exec</span>(<span class="string">&quot;LibraSystem&quot;</span>, <span class="string">&quot;initialize_validator_set&quot;</span>, <span class="macro">vec</span><span class="macro">!</span>[], <span class="macro">vec</span><span class="macro">!</span>[]);
 }
 
 <span class="doccomment">/// Initialize each validator.</span>
@@ -690,13 +613,9 @@
             <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">option_bytes</span>),
             <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">INITIAL_GAS_SCHEDULE</span>.<span class="number">0</span>.<span class="ident">clone</span>()),
             <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">INITIAL_GAS_SCHEDULE</span>.<span class="number">1</span>.<span class="ident">clone</span>()),
+            <span class="ident">Value</span>::<span class="ident">transaction_argument_signer_reference</span>(<span class="ident">config_address</span>()),
         ],
     );
-}
-
-<span class="kw">fn</span> <span class="ident">setup_libra_version</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">GenesisContext</span>) {
-    <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">config_address</span>());
-    <span class="ident">context</span>.<span class="ident">exec</span>(<span class="string">&quot;LibraVersion&quot;</span>, <span class="string">&quot;initialize&quot;</span>, <span class="macro">vec</span><span class="macro">!</span>[], <span class="macro">vec</span><span class="macro">!</span>[]);
 }
 
 <span class="kw">fn</span> <span class="ident">remove_genesis</span>(<span class="ident">stdlib_modules</span>: <span class="kw-2">&amp;</span>[<span class="ident">VerifiedModule</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">VerifiedModule</span><span class="op">&gt;</span> {
@@ -720,7 +639,6 @@
 <span class="doccomment">/// Trigger a reconfiguration. This emits an event that will be passed along to the storage layer.</span>
 <span class="kw">fn</span> <span class="ident">reconfigure</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">GenesisContext</span>) {
     <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">account_config</span>::<span class="ident">association_address</span>());
-    <span class="ident">context</span>.<span class="ident">exec</span>(<span class="string">&quot;LibraTimestamp&quot;</span>, <span class="string">&quot;initialize&quot;</span>, <span class="macro">vec</span><span class="macro">!</span>[], <span class="macro">vec</span><span class="macro">!</span>[]);
     <span class="ident">context</span>.<span class="ident">exec</span>(<span class="string">&quot;LibraConfig&quot;</span>, <span class="string">&quot;emit_reconfiguration_event&quot;</span>, <span class="macro">vec</span><span class="macro">!</span>[], <span class="macro">vec</span><span class="macro">!</span>[]);
 }
 

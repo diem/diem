@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["native_create_signer",""],["native_destroy_signer",""],["native_save_account",""]]});
+initSidebarItems({"fn":[["native_create_signer",""],["native_destroy_signer",""]]});

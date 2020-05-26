@@ -242,51 +242,6 @@
 <span id="242">242</span>
 <span id="243">243</span>
 <span id="244">244</span>
-<span id="245">245</span>
-<span id="246">246</span>
-<span id="247">247</span>
-<span id="248">248</span>
-<span id="249">249</span>
-<span id="250">250</span>
-<span id="251">251</span>
-<span id="252">252</span>
-<span id="253">253</span>
-<span id="254">254</span>
-<span id="255">255</span>
-<span id="256">256</span>
-<span id="257">257</span>
-<span id="258">258</span>
-<span id="259">259</span>
-<span id="260">260</span>
-<span id="261">261</span>
-<span id="262">262</span>
-<span id="263">263</span>
-<span id="264">264</span>
-<span id="265">265</span>
-<span id="266">266</span>
-<span id="267">267</span>
-<span id="268">268</span>
-<span id="269">269</span>
-<span id="270">270</span>
-<span id="271">271</span>
-<span id="272">272</span>
-<span id="273">273</span>
-<span id="274">274</span>
-<span id="275">275</span>
-<span id="276">276</span>
-<span id="277">277</span>
-<span id="278">278</span>
-<span id="279">279</span>
-<span id="280">280</span>
-<span id="281">281</span>
-<span id="282">282</span>
-<span id="283">283</span>
-<span id="284">284</span>
-<span id="285">285</span>
-<span id="286">286</span>
-<span id="287">287</span>
-<span id="288">288</span>
-<span id="289">289</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -313,25 +268,14 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">StdlibScript</span> {
     <span class="ident">AddValidator</span>,
-    <span class="ident">AddCurrency</span>,
     <span class="ident">AddCurrencyToAccount</span>,
-    <span class="ident">AllowChildAccounts</span>,
-    <span class="ident">ApplyForAssociationAddress</span>,
-    <span class="ident">ApplyForAssociationPrivilege</span>,
-    <span class="ident">ApplyForChildVaspCredential</span>,
-    <span class="ident">ApplyForParentCapability</span>,
-    <span class="ident">ApplyForRootVasp</span>,
     <span class="ident">Burn</span>,
     <span class="ident">CancelBurn</span>,
     <span class="ident">CreateAccount</span>,
-    <span class="ident">CreateEmptyAccount</span>,
+    <span class="ident">CreateChildVaspAccount</span>,
+    <span class="ident">CreateParentVaspAccount</span>,
     <span class="ident">EmptyScript</span>,
     <span class="ident">FreezeAccount</span>,
-    <span class="ident">GrantAssociationAddress</span>,
-    <span class="ident">GrantAssociationPrivilege</span>,
-    <span class="ident">GrantChildAccount</span>,
-    <span class="ident">GrantParentAccount</span>,
-    <span class="ident">GrantVaspAccount</span>,
     <span class="ident">Mint</span>,
     <span class="ident">MintLbr</span>,
     <span class="ident">MintLbrToAddress</span>,
@@ -340,13 +284,9 @@
     <span class="ident">PeerToPeerWithMetadata</span>,
     <span class="ident">Preburn</span>,
     <span class="ident">PublishSharedEd2551PublicKey</span>,
-    <span class="ident">RecertifyChildAccount</span>,
     <span class="ident">RegisterPreburner</span>,
     <span class="ident">RegisterValidator</span>,
-    <span class="ident">RemoveAssociationAddress</span>,
     <span class="ident">RemoveAssociationPrivilege</span>,
-    <span class="ident">RemoveChildAccount</span>,
-    <span class="ident">RemoveParentAccount</span>,
     <span class="ident">RemoveValidator</span>,
     <span class="ident">RotateAuthenticationKey</span>,
     <span class="ident">RotateCompliancePublicKey</span>,
@@ -367,25 +307,14 @@
         <span class="kw">use</span> <span class="ident">StdlibScript</span>::<span class="kw-2">*</span>;
         <span class="macro">vec</span><span class="macro">!</span>[
             <span class="ident">AddValidator</span>,
-            <span class="ident">AddCurrency</span>,
             <span class="ident">AddCurrencyToAccount</span>,
-            <span class="ident">AllowChildAccounts</span>,
-            <span class="ident">ApplyForAssociationAddress</span>,
-            <span class="ident">ApplyForAssociationPrivilege</span>,
-            <span class="ident">ApplyForChildVaspCredential</span>,
-            <span class="ident">ApplyForParentCapability</span>,
-            <span class="ident">ApplyForRootVasp</span>,
             <span class="ident">Burn</span>,
             <span class="ident">CancelBurn</span>,
             <span class="ident">CreateAccount</span>,
-            <span class="ident">CreateEmptyAccount</span>,
+            <span class="ident">CreateChildVaspAccount</span>,
+            <span class="ident">CreateParentVaspAccount</span>,
             <span class="ident">EmptyScript</span>,
             <span class="ident">FreezeAccount</span>,
-            <span class="ident">GrantAssociationAddress</span>,
-            <span class="ident">GrantAssociationPrivilege</span>,
-            <span class="ident">GrantChildAccount</span>,
-            <span class="ident">GrantParentAccount</span>,
-            <span class="ident">GrantVaspAccount</span>,
             <span class="ident">Mint</span>,
             <span class="ident">MintLbr</span>,
             <span class="ident">MintLbrToAddress</span>,
@@ -394,13 +323,9 @@
             <span class="ident">PeerToPeerWithMetadata</span>,
             <span class="ident">Preburn</span>,
             <span class="ident">PublishSharedEd2551PublicKey</span>,
-            <span class="ident">RecertifyChildAccount</span>,
             <span class="ident">RegisterPreburner</span>,
             <span class="ident">RegisterValidator</span>,
-            <span class="ident">RemoveAssociationAddress</span>,
             <span class="ident">RemoveAssociationPrivilege</span>,
-            <span class="ident">RemoveChildAccount</span>,
-            <span class="ident">RemoveParentAccount</span>,
             <span class="ident">RemoveValidator</span>,
             <span class="ident">RotateAuthenticationKey</span>,
             <span class="ident">RotateCompliancePublicKey</span>,
@@ -442,8 +367,8 @@
         <span class="ident">path</span>.<span class="ident">set_extension</span>(<span class="string">&quot;mv&quot;</span>);
         <span class="ident">CompiledBytes</span>(
             <span class="ident">STAGED_TXN_SCRIPTS_DIR</span>
-                .<span class="ident">get_file</span>(<span class="ident">path</span>)
-                .<span class="ident">unwrap</span>()
+                .<span class="ident">get_file</span>(<span class="ident">path</span>.<span class="ident">clone</span>())
+                .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;File {:?} does not exist&quot;</span>, <span class="ident">path</span>))
                 .<span class="ident">contents</span>()
                 .<span class="ident">to_vec</span>(),
         )
@@ -499,25 +424,14 @@
             <span class="string">&quot;{}&quot;</span>,
             <span class="kw">match</span> <span class="self">self</span> {
                 <span class="ident">AddValidator</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;add_validator&quot;</span>,
-                <span class="ident">AddCurrency</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;add_currency&quot;</span>,
                 <span class="ident">AddCurrencyToAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;add_currency_to_account&quot;</span>,
-                <span class="ident">AllowChildAccounts</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;allow_child_accounts&quot;</span>,
-                <span class="ident">ApplyForAssociationAddress</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;apply_for_association_address&quot;</span>,
-                <span class="ident">ApplyForAssociationPrivilege</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;apply_for_association_privilege&quot;</span>,
-                <span class="ident">ApplyForChildVaspCredential</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;apply_for_child_vasp_credential&quot;</span>,
-                <span class="ident">ApplyForParentCapability</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;apply_for_parent_capability&quot;</span>,
-                <span class="ident">ApplyForRootVasp</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;apply_for_root_vasp&quot;</span>,
                 <span class="ident">Burn</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;burn&quot;</span>,
                 <span class="ident">CancelBurn</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;cancel_burn&quot;</span>,
                 <span class="ident">CreateAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_account&quot;</span>,
-                <span class="ident">CreateEmptyAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_empty_account&quot;</span>,
+                <span class="ident">CreateChildVaspAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_child_vasp_account&quot;</span>,
+                <span class="ident">CreateParentVaspAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_parent_vasp_account&quot;</span>,
                 <span class="ident">EmptyScript</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;empty_script&quot;</span>,
                 <span class="ident">FreezeAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;freeze_account&quot;</span>,
-                <span class="ident">GrantAssociationAddress</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;grant_association_address&quot;</span>,
-                <span class="ident">GrantAssociationPrivilege</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;grant_association_privilege&quot;</span>,
-                <span class="ident">GrantChildAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;grant_child_account&quot;</span>,
-                <span class="ident">GrantParentAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;grant_parent_account&quot;</span>,
-                <span class="ident">GrantVaspAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;grant_vasp_account&quot;</span>,
                 <span class="ident">Mint</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;mint&quot;</span>,
                 <span class="ident">MintLbr</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;mint_lbr&quot;</span>,
                 <span class="ident">MintLbrToAddress</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;mint_lbr_to_address&quot;</span>,
@@ -526,13 +440,9 @@
                 <span class="ident">PeerToPeerWithMetadata</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;peer_to_peer_with_metadata&quot;</span>,
                 <span class="ident">Preburn</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;preburn&quot;</span>,
                 <span class="ident">PublishSharedEd2551PublicKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;publish_shared_ed25519_public_key&quot;</span>,
-                <span class="ident">RecertifyChildAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;recertify_child_account&quot;</span>,
                 <span class="ident">RegisterPreburner</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;register_preburner&quot;</span>,
                 <span class="ident">RegisterValidator</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;register_validator&quot;</span>,
-                <span class="ident">RemoveAssociationAddress</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;remove_association_address&quot;</span>,
                 <span class="ident">RemoveAssociationPrivilege</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;remove_association_privilege&quot;</span>,
-                <span class="ident">RemoveChildAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;remove_child_account&quot;</span>,
-                <span class="ident">RemoveParentAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;remove_parent_account&quot;</span>,
                 <span class="ident">RemoveValidator</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;remove_validator&quot;</span>,
                 <span class="ident">RotateAuthenticationKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_authentication_key&quot;</span>,
                 <span class="ident">RotateCompliancePublicKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_compliance_public_key&quot;</span>,
