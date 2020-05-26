@@ -1,0 +1,44 @@
+error: 
+
+   ┌── tests/move_check/expansion/spec_schema_member_conflicts.move:7:12 ───
+   │
+ 7 │     struct Foo {}
+   │            ^^^ Duplicate module member or alias 'Foo'. Top level names in a namespace must be unique
+   ·
+ 4 │     spec schema Foo<T> {
+   │                 --- Previously defined here
+   │
+
+error: 
+
+    ┌── tests/move_check/expansion/spec_schema_member_conflicts.move:14:17 ───
+    │
+ 14 │     spec schema Foo<T> {
+    │                 ^^^ Duplicate module member or alias 'Foo'. Top level names in a namespace must be unique
+    ·
+ 11 │     spec schema Foo<T> {
+    │                 --- Previously defined here
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/spec_schema_member_conflicts.move:23:9 ───
+    │
+ 23 │     fun Foo() {}
+    │         ^^^ Duplicate module member or alias 'Foo'. Top level names in a namespace must be unique
+    ·
+ 20 │     spec schema Foo<T> {
+    │                 --- Previously defined here
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/spec_schema_member_conflicts.move:31:16 ───
+    │
+ 31 │         define Foo(): bool { false }
+    │                ^^^ Duplicate module member or alias 'Foo'. Top level names in a namespace must be unique
+    ·
+ 27 │     spec schema Foo<T> {
+    │                 --- Previously defined here
+    │
+

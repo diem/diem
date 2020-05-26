@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/expansion/invalid_spec_schema_name.move:2:17 ───
+   │
+ 2 │     spec schema foo<T> {
+   │                 ^^^ Invalid schema name 'foo'. Schema names must start with 'A'..'Z'
+   │
+

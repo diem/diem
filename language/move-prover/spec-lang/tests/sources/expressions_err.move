@@ -28,7 +28,7 @@ module M {
     }
 
     // Wrong result type tuple.
-    define wrong_result_type(): (num, bool) {
+    define wrong_result_type2(): (num, bool) {
       false
     }
 
@@ -39,14 +39,6 @@ module M {
     // Wrongly typed function argument.
     define wrongly_typed_fun_arg_callee(f: |num|num): num { 0 }
     define wrongly_typed_fun_arg_caller(): num { wrongly_typed_fun_arg_callee(|x| false) }
-
-    // Ambiguous application
-    // TODO: we actually want to see the error at the declaration, but currently we see it at the call.
-    define ambigous_callee(): num { 0 }
-    define ambigous_callee(): num { 0 }
-    define amdbigous_caller(): num {
-      ambigous_callee()
-    }
 
     // Wrong instantiation
     define wrong_instantiation<T1, T2>(x: T1): T1 { x }
