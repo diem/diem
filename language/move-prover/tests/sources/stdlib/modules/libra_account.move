@@ -99,10 +99,10 @@ module LibraAccount {
     }
     spec fun deposit {
         aborts_if to_deposit.value == 0;
-        aborts_if !exists<T>(sender());
+        aborts_if !::exists<T>(sender());
         aborts_if global<T>(sender()).sent_events.counter + 1 > max_u64();
-        aborts_if !exists<T>(payee);
-        aborts_if !exists<Balance<Token>>(payee);
+        aborts_if !::exists<T>(payee);
+        aborts_if !::exists<Balance<Token>>(payee);
         aborts_if global<Balance<Token>>(payee).coin.value + to_deposit.value > max_u64();
         aborts_if global<T>(payee).received_events.counter + 1 > max_u64();
         ensures global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1;
@@ -116,9 +116,9 @@ module LibraAccount {
     }
     spec fun deposit_to_sender {
         aborts_if to_deposit.value == 0;
-        aborts_if !exists<T>(sender());
+        aborts_if !::exists<T>(sender());
         aborts_if global<T>(sender()).sent_events.counter + 1 > max_u64();
-        aborts_if !exists<Balance<Token>>(sender());
+        aborts_if !::exists<Balance<Token>>(sender());
         aborts_if global<Balance<Token>>(sender()).coin.value + to_deposit.value > max_u64();
         aborts_if global<T>(sender()).received_events.counter + 1 > max_u64();
         ensures global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1;
@@ -141,10 +141,10 @@ module LibraAccount {
     }
     spec fun deposit_with_metadata {
         aborts_if to_deposit.value == 0;
-        aborts_if !exists<T>(sender());
+        aborts_if !::exists<T>(sender());
         aborts_if global<T>(sender()).sent_events.counter + 1 > max_u64();
-        aborts_if !exists<T>(payee);
-        aborts_if !exists<Balance<Token>>(payee);
+        aborts_if !::exists<T>(payee);
+        aborts_if !::exists<Balance<Token>>(payee);
         aborts_if global<Balance<Token>>(payee).coin.value + to_deposit.value > max_u64();
         aborts_if global<T>(payee).received_events.counter + 1 > max_u64();
         ensures global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1;
@@ -193,10 +193,10 @@ module LibraAccount {
     }
     spec fun deposit_with_sender_and_metadata {
         aborts_if to_deposit.value == 0;
-        aborts_if !exists<T>(sender);
+        aborts_if !::exists<T>(sender);
         aborts_if global<T>(sender).sent_events.counter + 1 > max_u64();
-        aborts_if !exists<T>(payee);
-        aborts_if !exists<Balance<Token>>(payee);
+        aborts_if !::exists<T>(payee);
+        aborts_if !::exists<Balance<Token>>(payee);
         aborts_if global<Balance<Token>>(payee).coin.value + to_deposit.value > max_u64();
         aborts_if global<T>(payee).received_events.counter + 1 > max_u64();
         ensures global<T>(sender).sent_events.counter == old(global<T>(sender).sent_events.counter) + 1;
@@ -237,18 +237,18 @@ module LibraAccount {
     }
     spec fun cancel_burn {
         // derived from Libra::cancel_burn
-        aborts_if !exists<Libra::MintCapability<Token>>(sender());
-        aborts_if !exists<Libra::Preburn<Token>>(preburn_address);
+        aborts_if !::exists<Libra::MintCapability<Token>>(sender());
+        aborts_if !::exists<Libra::Preburn<Token>>(preburn_address);
         aborts_if len(global<Libra::Preburn<Token>>(preburn_address).requests) == 0;
-        aborts_if !exists<Libra::Info<Token>>(0xA550C18);
+        aborts_if !::exists<Libra::Info<Token>>(0xA550C18);
         aborts_if global<Libra::Info<Token>>(0xA550C18).preburn_value < global<Libra::Preburn<Token>>(preburn_address).requests[0].value;
 
         // derived from Self::deposit
         aborts_if to_return<Token>(preburn_address).value == 0;
-        aborts_if !exists<T>(sender());
+        aborts_if !::exists<T>(sender());
         aborts_if global<T>(sender()).sent_events.counter + 1 > max_u64();
-        aborts_if !exists<T>(preburn_address);
-        aborts_if !exists<Balance<Token>>(preburn_address);
+        aborts_if !::exists<T>(preburn_address);
+        aborts_if !::exists<Balance<Token>>(preburn_address);
         aborts_if global<Balance<Token>>(preburn_address).coin.value + to_return<Token>(preburn_address).value > max_u64();
         aborts_if global<T>(preburn_address).received_events.counter + 1 > max_u64();
 
@@ -282,8 +282,8 @@ module LibraAccount {
         withdraw_from_balance<Token>(sender_balance, amount)
     }
     spec fun withdraw_from_sender {
-        aborts_if !exists<T>(sender());
-        aborts_if !exists<Balance<Token>>(sender());
+        aborts_if !::exists<T>(sender());
+        aborts_if !::exists<Balance<Token>>(sender());
         aborts_if global<T>(sender()).delegated_withdrawal_capability;
         aborts_if global<Balance<Token>>(sender()).coin.value < amount;
         ensures global<Balance<Token>>(sender()).coin.value == old(global<Balance<Token>>(sender()).coin.value) - amount;
@@ -298,7 +298,7 @@ module LibraAccount {
         withdraw_from_balance<Token>(balance , amount)
     }
     spec fun withdraw_with_capability {
-        aborts_if !exists<Balance<Token>>(cap.account_address);
+        aborts_if !::exists<Balance<Token>>(cap.account_address);
         aborts_if global<Balance<Token>>(cap.account_address).coin.value < amount;
         ensures global<Balance<Token>>(cap.account_address).coin.value == old(global<Balance<Token>>(cap.account_address).coin.value) - amount;
         ensures result.value == amount;
@@ -317,7 +317,7 @@ module LibraAccount {
         WithdrawalCapability { account_address: sender }
     }
     spec fun extract_sender_withdrawal_capability {
-        aborts_if !exists<T>(sender());
+        aborts_if !::exists<T>(sender());
         aborts_if global<T>(sender()).delegated_withdrawal_capability == true;
         ensures global<T>(sender()).delegated_withdrawal_capability == true;
         ensures result.account_address == sender();
@@ -334,7 +334,7 @@ module LibraAccount {
         account.delegated_withdrawal_capability = false;
     }
     spec fun restore_withdrawal_capability {
-        aborts_if !exists<T>(cap.account_address);
+        aborts_if !::exists<T>(cap.account_address);
         ensures global<T>(cap.account_address).delegated_withdrawal_capability == false;
     }
 
@@ -378,41 +378,41 @@ module LibraAccount {
     }
     spec fun pay_from_sender_with_metadata {
         // derived from create_account
-        aborts_if !exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32; // modified
-        aborts_if !exists<T>(payee) && exists<Balance<Token>>(payee); // modified
-        aborts_if !exists<T>(payee) && !exists<Libra::Info<Token>>(0xA550C18); // modified
+        aborts_if !::exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32; // modified
+        aborts_if !::exists<T>(payee) && ::exists<Balance<Token>>(payee); // modified
+        aborts_if !::exists<T>(payee) && !::exists<Libra::Info<Token>>(0xA550C18); // modified
         // derived from withdraw_from_sender
-        aborts_if sender() != payee && !exists<T>(sender()); // modified
-        aborts_if sender() != payee && !exists<Balance<Token>>(sender()); // modified
-        aborts_if sender() == payee && exists<T>(payee) && !exists<Balance<Token>>(sender()); // modified
-        aborts_if exists<T>(sender()) && global<T>(sender()).delegated_withdrawal_capability; // modified
-        aborts_if sender() == payee && !exists<T>(payee);
-        aborts_if exists<Balance<Token>>(sender()) && global<Balance<Token>>(sender()).coin.value < amount; // modified
+        aborts_if sender() != payee && !::exists<T>(sender()); // modified
+        aborts_if sender() != payee && !::exists<Balance<Token>>(sender()); // modified
+        aborts_if sender() == payee && ::exists<T>(payee) && !::exists<Balance<Token>>(sender()); // modified
+        aborts_if ::exists<T>(sender()) && global<T>(sender()).delegated_withdrawal_capability; // modified
+        aborts_if sender() == payee && !::exists<T>(payee);
+        aborts_if ::exists<Balance<Token>>(sender()) && global<Balance<Token>>(sender()).coin.value < amount; // modified
         // derived from deposit_with_metadata
         aborts_if amount == 0;
-        aborts_if exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64();
-        aborts_if exists<T>(payee) && !exists<Balance<Token>>(payee); // modified
-        aborts_if sender() != payee && exists<Balance<Token>>(payee) && global<Balance<Token>>(payee).coin.value + amount > max_u64(); // modified
-        aborts_if exists<T>(payee) && global<T>(payee).received_events.counter + 1 > max_u64();
+        aborts_if ::exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64();
+        aborts_if ::exists<T>(payee) && !::exists<Balance<Token>>(payee); // modified
+        aborts_if sender() != payee && ::exists<Balance<Token>>(payee) && global<Balance<Token>>(payee).coin.value + amount > max_u64(); // modified
+        aborts_if ::exists<T>(payee) && global<T>(payee).received_events.counter + 1 > max_u64();
         // derived from create_account
-        ensures old(!exists<T>(payee)) ==> exists<Balance<Token>>(payee);
-        ensures old(!exists<T>(payee)) ==> global<Balance<Token>>(payee).coin.value == amount;
-        ensures old(!exists<T>(payee)) ==> exists<T>(payee);
-        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).authentication_key, auth_key_prefix, LCS::serialize(payee));
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_key_rotation_capability == false;
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_withdrawal_capability == false;
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).sequence_number == 0;
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).event_generator.counter == 2;
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).received_events.counter == 1;
-        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).received_events.guid, LCS::serialize(0), LCS::serialize(payee));
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).sent_events.counter == 0;
-        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).sent_events.guid, LCS::serialize(1), LCS::serialize(payee));
+        ensures old(!::exists<T>(payee)) ==> ::exists<Balance<Token>>(payee);
+        ensures old(!::exists<T>(payee)) ==> global<Balance<Token>>(payee).coin.value == amount;
+        ensures old(!::exists<T>(payee)) ==> ::exists<T>(payee);
+        ensures old(!::exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).authentication_key, auth_key_prefix, LCS::serialize(payee));
+        ensures old(!::exists<T>(payee)) ==> global<T>(payee).delegated_key_rotation_capability == false;
+        ensures old(!::exists<T>(payee)) ==> global<T>(payee).delegated_withdrawal_capability == false;
+        ensures old(!::exists<T>(payee)) ==> global<T>(payee).sequence_number == 0;
+        ensures old(!::exists<T>(payee)) ==> global<T>(payee).event_generator.counter == 2;
+        ensures old(!::exists<T>(payee)) ==> global<T>(payee).received_events.counter == 1;
+        ensures old(!::exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).received_events.guid, LCS::serialize(0), LCS::serialize(payee));
+        ensures old(!::exists<T>(payee)) ==> global<T>(payee).sent_events.counter == 0;
+        ensures old(!::exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).sent_events.guid, LCS::serialize(1), LCS::serialize(payee));
         // derived from withdraw_from_sender
         ensures payee != sender() ==> global<Balance<Token>>(sender()).coin.value == old(global<Balance<Token>>(sender()).coin.value) - amount;
         // derived from deposit_with_metadata
         ensures global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1;
-        ensures old(exists<T>(payee)) ==> global<T>(payee).received_events.counter == old(global<T>(payee).received_events.counter) + 1;
-        ensures old(exists<T>(payee)) && payee != sender() ==> global<Balance<Token>>(payee).coin.value == old(global<Balance<Token>>(payee).coin.value) + amount;
+        ensures old(::exists<T>(payee)) ==> global<T>(payee).received_events.counter == old(global<T>(payee).received_events.counter) + 1;
+        ensures old(::exists<T>(payee)) && payee != sender() ==> global<Balance<Token>>(payee).coin.value == old(global<Balance<Token>>(payee).coin.value) + amount;
     }
 
 
@@ -428,41 +428,41 @@ module LibraAccount {
     }
     spec fun pay_from_sender {
         // derived from create_account
-        aborts_if !exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32; // modified
-        aborts_if !exists<T>(payee) && exists<Balance<Token>>(payee); // modified
-        aborts_if !exists<T>(payee) && !exists<Libra::Info<Token>>(0xA550C18); // modified
+        aborts_if !::exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32; // modified
+        aborts_if !::exists<T>(payee) && ::exists<Balance<Token>>(payee); // modified
+        aborts_if !::exists<T>(payee) && !::exists<Libra::Info<Token>>(0xA550C18); // modified
         // derived from withdraw_from_sender
-        aborts_if sender() != payee && !exists<T>(sender()); // modified
-        aborts_if sender() != payee && !exists<Balance<Token>>(sender()); // modified
-        aborts_if sender() == payee && exists<T>(payee) && !exists<Balance<Token>>(sender()); // modified
-        aborts_if exists<T>(sender()) && global<T>(sender()).delegated_withdrawal_capability; // modified
-        aborts_if sender() == payee && !exists<T>(payee); // added. If this holds, delegated_withdrawal_capability is false.
-        aborts_if exists<Balance<Token>>(sender()) && global<Balance<Token>>(sender()).coin.value < amount; // modified
+        aborts_if sender() != payee && !::exists<T>(sender()); // modified
+        aborts_if sender() != payee && !::exists<Balance<Token>>(sender()); // modified
+        aborts_if sender() == payee && ::exists<T>(payee) && !::exists<Balance<Token>>(sender()); // modified
+        aborts_if ::exists<T>(sender()) && global<T>(sender()).delegated_withdrawal_capability; // modified
+        aborts_if sender() == payee && !::exists<T>(payee); // added. If this holds, delegated_withdrawal_capability is false.
+        aborts_if ::exists<Balance<Token>>(sender()) && global<Balance<Token>>(sender()).coin.value < amount; // modified
         // derived from deposit_with_metadata
         aborts_if amount == 0;
-        aborts_if exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64(); // modified
-        aborts_if exists<T>(payee) && !exists<Balance<Token>>(payee); // modified
-        aborts_if sender() != payee && exists<Balance<Token>>(payee) && global<Balance<Token>>(payee).coin.value + amount > max_u64(); // modified
-        aborts_if exists<T>(payee) && global<T>(payee).received_events.counter + 1 > max_u64();
+        aborts_if ::exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64(); // modified
+        aborts_if ::exists<T>(payee) && !::exists<Balance<Token>>(payee); // modified
+        aborts_if sender() != payee && ::exists<Balance<Token>>(payee) && global<Balance<Token>>(payee).coin.value + amount > max_u64(); // modified
+        aborts_if ::exists<T>(payee) && global<T>(payee).received_events.counter + 1 > max_u64();
         // derived from create_account
-        ensures old(!exists<T>(payee)) ==> exists<Balance<Token>>(payee);
-        ensures old(!exists<T>(payee)) ==> global<Balance<Token>>(payee).coin.value == amount;
-        ensures old(!exists<T>(payee)) ==> exists<T>(payee);
-        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).authentication_key, auth_key_prefix, LCS::serialize(payee));
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_key_rotation_capability == false;
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_withdrawal_capability == false;
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).sequence_number == 0;
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).event_generator.counter == 2;
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).received_events.counter == 1;
-        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).received_events.guid, LCS::serialize(0), LCS::serialize(payee));
-        ensures old(!exists<T>(payee)) ==> global<T>(payee).sent_events.counter == 0;
-        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).sent_events.guid, LCS::serialize(1), LCS::serialize(payee));
+        ensures old(!::exists<T>(payee)) ==> ::exists<Balance<Token>>(payee);
+        ensures old(!::exists<T>(payee)) ==> global<Balance<Token>>(payee).coin.value == amount;
+        ensures old(!::exists<T>(payee)) ==> ::exists<T>(payee);
+        ensures old(!::exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).authentication_key, auth_key_prefix, LCS::serialize(payee));
+        ensures old(!::exists<T>(payee)) ==> global<T>(payee).delegated_key_rotation_capability == false;
+        ensures old(!::exists<T>(payee)) ==> global<T>(payee).delegated_withdrawal_capability == false;
+        ensures old(!::exists<T>(payee)) ==> global<T>(payee).sequence_number == 0;
+        ensures old(!::exists<T>(payee)) ==> global<T>(payee).event_generator.counter == 2;
+        ensures old(!::exists<T>(payee)) ==> global<T>(payee).received_events.counter == 1;
+        ensures old(!::exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).received_events.guid, LCS::serialize(0), LCS::serialize(payee));
+        ensures old(!::exists<T>(payee)) ==> global<T>(payee).sent_events.counter == 0;
+        ensures old(!::exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).sent_events.guid, LCS::serialize(1), LCS::serialize(payee));
         // derived from withdraw_from_sender
         ensures payee != sender() ==> global<Balance<Token>>(sender()).coin.value == old(global<Balance<Token>>(sender()).coin.value) - amount;
         // derived from deposit_with_metadata
         ensures global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1;
-        ensures old(exists<T>(payee)) ==> global<T>(payee).received_events.counter == old(global<T>(payee).received_events.counter) + 1;
-        ensures old(exists<T>(payee)) && payee != sender() ==> global<Balance<Token>>(payee).coin.value == old(global<Balance<Token>>(payee).coin.value) + amount;
+        ensures old(::exists<T>(payee)) ==> global<T>(payee).received_events.counter == old(global<T>(payee).received_events.counter) + 1;
+        ensures old(::exists<T>(payee)) && payee != sender() ==> global<Balance<Token>>(payee).coin.value == old(global<Balance<Token>>(payee).coin.value) + amount;
     }
 
     fun rotate_authentication_key_for_account(account: &mut T, new_authentication_key: vector<u8>) {
@@ -488,7 +488,7 @@ module LibraAccount {
         );
     }
     spec fun rotate_authentication_key {
-        aborts_if !exists<T>(sender());
+        aborts_if !::exists<T>(sender());
         aborts_if global<T>(sender()).delegated_key_rotation_capability == true;
         aborts_if len(new_authentication_key) != 32;
         ensures global<T>(sender()).authentication_key == new_authentication_key;
@@ -505,7 +505,7 @@ module LibraAccount {
         );
     }
     spec fun rotate_authentication_key_with_capability {
-        aborts_if !exists<T>(cap.account_address);
+        aborts_if !::exists<T>(cap.account_address);
         aborts_if len(new_authentication_key) != 32;
         ensures global<T>(cap.account_address).authentication_key == new_authentication_key;
     }
@@ -520,7 +520,7 @@ module LibraAccount {
         KeyRotationCapability { account_address: sender }
     }
     spec fun extract_sender_key_rotation_capability {
-        aborts_if !exists<T>(sender());
+        aborts_if !::exists<T>(sender());
         aborts_if global<T>(sender()).delegated_key_rotation_capability == true;
         ensures global<T>(sender()).delegated_key_rotation_capability == true;
         ensures result.account_address == sender();
@@ -537,7 +537,7 @@ module LibraAccount {
         account.delegated_key_rotation_capability = false;
     }
     spec fun restore_key_rotation_capability {
-        aborts_if !exists<T>(cap.account_address);
+        aborts_if !::exists<T>(cap.account_address);
         ensures global<T>(cap.account_address).delegated_key_rotation_capability == false;
     }
 
@@ -569,12 +569,12 @@ module LibraAccount {
     }
     spec fun create_account {
         aborts_if len(LCS::serialize(fresh_address)) + len(auth_key_prefix) != 32;
-        aborts_if exists<Balance<Token>>(fresh_address);
-        aborts_if exists<T>(fresh_address);
-        aborts_if !exists<Libra::Info<Token>>(0xA550C18);
-        ensures exists<Balance<Token>>(fresh_address);
+        aborts_if ::exists<Balance<Token>>(fresh_address);
+        aborts_if ::exists<T>(fresh_address);
+        aborts_if !::exists<Libra::Info<Token>>(0xA550C18);
+        ensures ::exists<Balance<Token>>(fresh_address);
         ensures global<Balance<Token>>(fresh_address).coin.value == 0;
-        ensures exists<T>(fresh_address);
+        ensures ::exists<T>(fresh_address);
         ensures Vector::eq_append(global<T>(fresh_address).authentication_key, auth_key_prefix, LCS::serialize(fresh_address));
         ensures global<T>(fresh_address).delegated_key_rotation_capability == false;
         ensures global<T>(fresh_address).delegated_withdrawal_capability == false;
@@ -605,22 +605,22 @@ module LibraAccount {
     spec fun create_new_account {
         // derived from create_account
         aborts_if len(LCS::serialize(fresh_address)) + len(auth_key_prefix) != 32;
-        aborts_if exists<Balance<Token>>(fresh_address);
-        aborts_if exists<T>(fresh_address);
-        aborts_if !exists<Libra::Info<Token>>(0xA550C18);
+        aborts_if ::exists<Balance<Token>>(fresh_address);
+        aborts_if ::exists<T>(fresh_address);
+        aborts_if !::exists<Libra::Info<Token>>(0xA550C18);
         // derived from withdraw_from_sender
-        aborts_if initial_balance > 0 && !exists<T>(sender()); // modified
-        aborts_if initial_balance > 0 && !exists<Balance<Token>>(sender()); // modified
+        aborts_if initial_balance > 0 && !::exists<T>(sender()); // modified
+        aborts_if initial_balance > 0 && !::exists<Balance<Token>>(sender()); // modified
         aborts_if initial_balance > 0 && global<T>(sender()).delegated_withdrawal_capability; // modified
         aborts_if initial_balance > 0 && global<Balance<Token>>(sender()).coin.value < initial_balance; // modified
         // derived from deposit_with_metadata
         aborts_if initial_balance > 0 && initial_balance == 0; // modified
-        aborts_if initial_balance > 0 && fresh_address != sender() && !exists<T>(sender()); // modified
+        aborts_if initial_balance > 0 && fresh_address != sender() && !::exists<T>(sender()); // modified
         aborts_if initial_balance > 0 && global<T>(sender()).sent_events.counter + 1 > max_u64(); // modified
         // derived from create_account
-        ensures exists<Balance<Token>>(fresh_address);
+        ensures ::exists<Balance<Token>>(fresh_address);
         ensures global<Balance<Token>>(fresh_address).coin.value == initial_balance; // modified
-        ensures exists<T>(fresh_address);
+        ensures ::exists<T>(fresh_address);
         ensures Vector::eq_append(global<T>(fresh_address).authentication_key, auth_key_prefix, LCS::serialize(fresh_address));
         ensures global<T>(fresh_address).delegated_key_rotation_capability == false;
         ensures global<T>(fresh_address).delegated_withdrawal_capability == false;
@@ -656,7 +656,7 @@ module LibraAccount {
         balance_for(borrow_global<Balance<Token>>(addr))
     }
     spec fun balance {
-        aborts_if !exists<Balance<Token>>(addr);
+        aborts_if !::exists<Balance<Token>>(addr);
         ensures result == global<Balance<Token>>(addr).coin.value;
     }
 
@@ -673,7 +673,7 @@ module LibraAccount {
         sequence_number_for_account(borrow_global<T>(addr))
     }
     spec fun sequence_number {
-        aborts_if !exists<T>(addr);
+        aborts_if !::exists<T>(addr);
         ensures result == global<T>(addr).sequence_number;
     }
 
@@ -682,7 +682,7 @@ module LibraAccount {
         *&borrow_global<T>(addr).authentication_key
     }
     spec fun authentication_key {
-        aborts_if !exists<T>(addr);
+        aborts_if !::exists<T>(addr);
         ensures result == global<T>(addr).authentication_key;
     }
 
@@ -691,7 +691,7 @@ module LibraAccount {
         borrow_global<T>(addr).delegated_key_rotation_capability
     }
     spec fun delegated_key_rotation_capability {
-        aborts_if !exists<T>(addr);
+        aborts_if !::exists<T>(addr);
         ensures result == global<T>(addr).delegated_key_rotation_capability;
     }
 
@@ -700,7 +700,7 @@ module LibraAccount {
         borrow_global<T>(addr).delegated_withdrawal_capability
     }
     spec fun delegated_withdrawal_capability {
-        aborts_if !exists<T>(addr);
+        aborts_if !::exists<T>(addr);
         ensures result == global<T>(addr).delegated_withdrawal_capability;
     }
 
@@ -725,7 +725,7 @@ module LibraAccount {
         ::exists<T>(check_addr)
     }
     spec fun exists {
-        ensures result == exists<T>(check_addr);
+        ensures result == ::exists<T>(check_addr);
     }
 
     // The prologue is invoked at the beginning of every transaction
@@ -834,7 +834,7 @@ module LibraAccount {
         new_event_handle_impl<E>(&mut sender_account_ref.event_generator, Transaction::sender())
     }
     spec fun new_event_handle {
-        aborts_if !exists<T>(sender());
+        aborts_if !::exists<T>(sender());
         aborts_if global<T>(sender()).event_generator.counter + 1 > max_u64();
         ensures Vector::eq_append(result.guid, LCS::serialize(old(global<T>(sender()).event_generator.counter)), LCS::serialize(sender()));
         ensures result.counter == 0;

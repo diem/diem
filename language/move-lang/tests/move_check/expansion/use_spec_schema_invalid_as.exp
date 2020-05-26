@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/expansion/use_spec_schema_invalid_as.move:9:25 ───
+   │
+ 9 │     use 0x1::X::{Foo as foo};
+   │                         ^^^ Invalid schema alias name 'foo'. Schema alias names must start with 'A'..'Z'
+   │
+
