@@ -36,6 +36,8 @@
 <span id="36">36</span>
 <span id="37">37</span>
 <span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -53,6 +55,7 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">control_flow</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">control_flow_graph</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">instantiation_loops</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">instruction_consistency</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">locals_safety</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">reference_safety</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">resolver</span>;
@@ -67,6 +70,7 @@
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">check_duplication</span>::<span class="ident">DuplicationChecker</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">code_unit_verifier</span>::<span class="ident">CodeUnitVerifier</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">instruction_consistency</span>::<span class="ident">InstructionConsistency</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">resources</span>::<span class="ident">ResourceTransitiveChecker</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">signature</span>::<span class="ident">SignatureChecker</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">stack_usage_verifier</span>::<span class="ident">StackUsageVerifier</span>;
