@@ -329,6 +329,11 @@ pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
         Span::call_site(),
     );
     let snake_name = camel_to_snake(&item.ident.to_string());
+    let static_seed_name = Ident::new(
+        &format!("{}_SEED", snake_name.to_uppercase()),
+        Span::call_site(),
+    );
+
     let static_hasher_name = Ident::new(
         &format!("{}_HASHER", snake_name.to_uppercase()),
         Span::call_site(),
@@ -346,6 +351,8 @@ pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
     let out = quote!(
         #[derive(Clone)]
         pub struct #hasher_name(libra_crypto::hash::DefaultHasher);
+
+        static #static_seed_name: libra_crypto::_once_cell::sync::OnceCell<[u8; 32]> = libra_crypto::_once_cell::sync::OnceCell::new();
 
         impl #hasher_name {
             fn new() -> Self {
@@ -368,6 +375,14 @@ pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
         }
 
         impl libra_crypto::hash::CryptoHasher for #hasher_name {
+            fn seed() -> &'static [u8; 32] {
+                #static_seed_name.get_or_init(|| {
+                    let name = libra_crypto::_serde_name::trace_name::<#type_name #param>()
+                        .expect("The `CryptoHasher` macro only applies to structs and enums.").as_bytes();
+                    libra_crypto::hash::DefaultHasher::prefixed_hash(&name)
+                })
+            }
+
             fn update(&mut self, bytes: &[u8]) {
                 self.0.update(bytes);
             }

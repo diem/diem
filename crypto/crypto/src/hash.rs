@@ -84,7 +84,7 @@
 //! ```
 //! # // To get around that there's no way to doc-test a non-exported macro:
 //! # macro_rules! define_hasher { ($e:expr) => () }
-//! define_hasher! { (MyNewDataHasher, MY_NEW_DATA_HASHER, b"MyUniqueSaltString") }
+//! define_hasher! { (MyNewDataHasher, MY_NEW_DATA_HASHER, MY_NEW_DATA_SEED, b"MyUniqueSaltString") }
 //! ```
 //!
 //! # Using a hasher directly
@@ -103,7 +103,7 @@ use anyhow::{ensure, Error, Result};
 use bytes::Bytes;
 use libra_nibble::Nibble;
 use mirai_annotations::*;
-use once_cell::sync::Lazy;
+use once_cell::sync::{Lazy, OnceCell};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};
@@ -111,6 +111,9 @@ use serde::{de, ser};
 use std::{self, convert::AsRef, fmt, str::FromStr};
 use tiny_keccak::{Hasher, Sha3};
 
+/// A prefix used to begin the salt of every libra hashable structure. The salt
+/// consists in this global prefix, concatenated with the specified
+/// serialization name of the struct.
 pub(crate) const LIBRA_HASH_PREFIX: &[u8] = b"LIBRA::";
 const SHORT_STRING_LENGTH: usize = 4;
 
@@ -154,7 +157,7 @@ impl HashValue {
     }
 
     /// Creates a zero-initialized instance.
-    pub fn zero() -> Self {
+    pub const fn zero() -> Self {
         HashValue {
             hash: [0; HashValue::LENGTH],
         }
@@ -442,6 +445,9 @@ pub trait CryptoHash {
 
 /// A trait for representing the state of a cryptographic hasher.
 pub trait CryptoHasher: Default + std::io::Write {
+    /// the seed used to initialize hashing `Self` before the serialization bytes of the actual value
+    fn seed() -> &'static [u8; 32];
+
     /// Write bytes into the hasher.
     fn update(&mut self, bytes: &[u8]);
 
@@ -457,6 +463,16 @@ pub struct DefaultHasher {
 }
 
 impl DefaultHasher {
+    #[doc(hidden)]
+    pub fn prefixed_hash(buffer: &[u8]) -> [u8; 32] {
+        let salt: Vec<u8> = [LIBRA_HASH_PREFIX, buffer].concat();
+        let mut hasher = Sha3::v256();
+        hasher.update(&salt);
+        let mut output = [0u8; 32];
+        hasher.finalize(&mut output);
+        output
+    }
+
     #[doc(hidden)]
     pub fn new(typename: &[u8]) -> Self {
         let mut state = Sha3::v256();
@@ -484,7 +500,7 @@ impl DefaultHasher {
 macro_rules! define_hasher {
     (
         $(#[$attr:meta])*
-        ($hasher_type: ident, $hasher_name: ident, $salt: expr)
+        ($hasher_type: ident, $hasher_name: ident, $seed_name: ident, $salt: expr)
     ) => {
 
         #[derive(Clone)]
@@ -498,6 +514,7 @@ macro_rules! define_hasher {
         }
 
         static $hasher_name: Lazy<$hasher_type> = Lazy::new(|| { $hasher_type::new() });
+        static $seed_name: OnceCell<[u8; 32]> = OnceCell::new();
 
         impl Default for $hasher_type {
             fn default() -> Self {
@@ -506,6 +523,12 @@ macro_rules! define_hasher {
         }
 
         impl CryptoHasher for $hasher_type {
+            fn seed() -> &'static [u8;32] {
+                $seed_name.get_or_init(|| {
+                    DefaultHasher::prefixed_hash($salt)
+                })
+            }
+
             fn update(&mut self, bytes: &[u8]) {
                 self.0.update(bytes);
             }
@@ -532,6 +555,7 @@ define_hasher! {
     (
         TransactionAccumulatorHasher,
         TRANSACTION_ACCUMULATOR_HASHER,
+        TRANSACTION_ACCUMULATOR_SEED,
         b"TransactionAccumulator"
     )
 }
@@ -541,6 +565,7 @@ define_hasher! {
     (
         EventAccumulatorHasher,
         EVENT_ACCUMULATOR_HASHER,
+        EVENT_ACCUMULATOR_SEED,
         b"EventAccumulator"
     )
 }
@@ -550,13 +575,14 @@ define_hasher! {
     (
         SparseMerkleInternalHasher,
         SPARSE_MERKLE_INTERNAL_HASHER,
+        SPARSE_MERKLE_INTERNAL_SEED,
         b"SparseMerkleInternal"
     )
 }
 
 define_hasher! {
     /// The hasher used only for testing. It doesn't have a salt.
-    (TestOnlyHasher, TEST_ONLY_HASHER, b"")
+    (TestOnlyHasher, TEST_ONLY_HASHER, TEST_ONLY_SEED, b"")
 }
 
 fn create_literal_hash(word: &str) -> HashValue {
