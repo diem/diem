@@ -141,6 +141,8 @@ locals {
   image_repo                 = var.image_repo
   image_version              = substr(var.image_tag, 0, 6) == "sha256" ? "@${var.image_tag}" : ":${var.image_tag}"
   override_image_versions    = [for img in var.override_image_tags : substr(img, 0, 6) == "sha256" ? "@${img}" : ":${img}"]
+  logstash_image_repo        = var.logstash_image
+  logstash_image_version     = substr(var.logstash_version, 0, 6) == "sha256" ? "@${var.logstash_version}" : ":${var.logstash_version}"
   safety_rules_image_repo    = var.safety_rules_image_repo
   safety_rules_image_version = substr(var.safety_rules_image_tag, 0, 6) == "sha256" ? "@${var.safety_rules_image_tag}" : ":${var.safety_rules_image_tag}"
   instance_public_ip         = true
@@ -227,8 +229,8 @@ data "template_file" "ecs_task_definition" {
     capabilities               = jsonencode(var.validator_linux_capabilities)
     command                    = local.validator_command
     logstash                   = var.enable_logstash
-    logstash_image             = var.logstash_image
-    logstash_version           = ":${var.logstash_version}"
+    logstash_image             = local.logstash_image_repo
+    logstash_version           = local.logstash_image_version
     logstash_config            = local.logstash_config
     safety_rules_image         = local.safety_rules_image_repo
     safety_rules_image_version = local.safety_rules_image_version
