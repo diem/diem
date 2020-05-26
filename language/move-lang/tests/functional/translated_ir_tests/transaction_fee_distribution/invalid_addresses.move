@@ -1,8 +1,8 @@
 //! new-transaction
 script {
 use 0x0::TransactionFee;
-fun main() {
-    TransactionFee::initialize_transaction_fees();
+fun main(account: &signer) {
+    TransactionFee::initialize_transaction_fees(account);
 }
 }
 // check: ABORTED

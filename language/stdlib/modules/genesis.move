@@ -88,15 +88,16 @@ module Genesis {
         LibraBlock::initialize_block_metadata(association);
         LibraWriteSetManager::initialize(association);
         LibraTimestamp::initialize(association);
-        LibraAccount::rotate_authentication_key(genesis_auth_key);
+        LibraAccount::rotate_authentication_key(copy genesis_auth_key);
     }
 
     // TODO: use signer for this and combine with the above once add_currency and
     // initialize_transaction accept a signer parameter
-    fun initialize_txn_fee_account(auth_key: vector<u8>) {
-        LibraAccount::add_currency<Coin1::T>();
-        LibraAccount::add_currency<Coin2::T>();
-        TransactionFee::initialize_transaction_fees();
+    fun initialize_txn_fee_account(fee_account: &signer, auth_key: vector<u8>) {
+        // Create the transaction fee account
+        LibraAccount::add_currency<Coin1::T>(fee_account);
+        LibraAccount::add_currency<Coin2::T>(fee_account);
+        TransactionFee::initialize_transaction_fees(fee_account);
         LibraAccount::rotate_authentication_key(auth_key);
     }
 

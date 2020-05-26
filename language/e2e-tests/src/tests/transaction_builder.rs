@@ -122,6 +122,43 @@ fn freeze_unfreeze_account() {
 }
 
 #[test]
+fn create_parent_and_child_vasp() {
+    let mut executor = FakeExecutor::from_genesis_file();
+    let association = Account::new_association();
+    let parent = Account::new();
+    let child = Account::new();
+
+    let mut keygen = KeyGen::from_seed([9u8; 32]);
+    let (_vasp_compliance_private_key, vasp_compliance_public_key) = keygen.generate_keypair();
+
+    // create a parent VASP
+    let add_all_currencies = false;
+    executor.execute_and_apply(association.signed_script_txn(
+        encode_create_parent_vasp_account(
+            account_config::lbr_type_tag(),
+            *parent.address(),
+            parent.auth_key_prefix(),
+            vec![],
+            vec![],
+            vasp_compliance_public_key.to_bytes().to_vec(),
+            add_all_currencies,
+        ),
+        1,
+    ));
+
+    // create a child VASP
+    executor.execute_and_apply(parent.signed_script_txn(
+        encode_create_child_vasp_account(
+            account_config::lbr_type_tag(),
+            *child.address(),
+            child.auth_key_prefix(),
+            add_all_currencies,
+        ),
+        0,
+    ));
+}
+
+#[test]
 fn dual_attestation_payment() {
     let mut executor = FakeExecutor::from_genesis_file();
     // account that will receive the dual attestation payment

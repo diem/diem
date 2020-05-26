@@ -7,9 +7,9 @@ script {
 use 0x0::LibraAccount;
 use 0x0::LBR;
 use 0x0::Coin2;
-fun main() {
-    LibraAccount::add_currency<Coin2::T>();
-    LibraAccount::add_currency<LBR::T>();
+fun main(account: &signer) {
+    LibraAccount::add_currency<Coin2::T>(account);
+    LibraAccount::add_currency<LBR::T>(account);
 }
 }
 // check: EXECUTED

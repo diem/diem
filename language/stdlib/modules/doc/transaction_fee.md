@@ -47,7 +47,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_initialize_transaction_fees">initialize_transaction_fees</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_initialize_transaction_fees">initialize_transaction_fees</a>(fee_account: &signer)
 </code></pre>
 
 
@@ -56,11 +56,14 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_initialize_transaction_fees">initialize_transaction_fees</a>() {
-    Transaction::assert(Transaction::sender() == 0xFEE, 0);
-    move_to_sender&lt;<a href="#0x0_TransactionFee_TransactionFees">TransactionFees</a>&gt;(<a href="#0x0_TransactionFee_TransactionFees">TransactionFees</a> {
-        fee_withdrawal_capability: <a href="libra_account.md#0x0_LibraAccount_extract_sender_withdrawal_capability">LibraAccount::extract_sender_withdrawal_capability</a>(),
-    });
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_initialize_transaction_fees">initialize_transaction_fees</a>(fee_account: &signer) {
+    Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(fee_account) == 0xFEE, 0);
+    move_to(
+        fee_account,
+        <a href="#0x0_TransactionFee_TransactionFees">TransactionFees</a> {
+            fee_withdrawal_capability: <a href="libra_account.md#0x0_LibraAccount_extract_sender_withdrawal_capability">LibraAccount::extract_sender_withdrawal_capability</a>(),
+        }
+    );
 }
 </code></pre>
 

@@ -75,7 +75,7 @@ script {
     use 0x0::LibraAccount;
     use 0x0::LBR;
     fun main() {
-        LibraAccount::create_unhosted_account<LBR::T>(0xDEADBEEF, x"");
+        LibraAccount::create_unhosted_account<LBR::T>(0xDEADBEEF, x"", false);
     }
 }
 // check: ABORTED

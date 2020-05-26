@@ -12,8 +12,9 @@ use 0x0::Transaction;
 fun main() {
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
+    let add_all_currencies = false;
     LibraAccount::create_parent_vasp_account<LBR::T>(
-        0xA, copy dummy_auth_key_prefix, x"A1", x"A2", copy pubkey
+        0xA, copy dummy_auth_key_prefix, x"A1", x"A2", copy pubkey, add_all_currencies
     );
 
     Transaction::assert(LibraAccount::is_vasp(0xA), 2001);
@@ -42,7 +43,10 @@ use 0x0::LBR;
 use 0x0::Transaction;
 fun main(parent_vasp: &signer) {
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
-    LibraAccount::create_child_vasp_account<LBR::T>(0xAA, dummy_auth_key_prefix, parent_vasp);
+    let add_all_currencies = false;
+    LibraAccount::create_child_vasp_account<LBR::T>(
+        parent_vasp, 0xAA, dummy_auth_key_prefix, add_all_currencies
+    );
 
     Transaction::assert(LibraAccount::parent_vasp_address(0xAA) == {{parent}}, 2010);
 }

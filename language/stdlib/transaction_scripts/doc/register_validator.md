@@ -15,7 +15,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(consensus_pubkey: vector&lt;u8&gt;, validator_network_signing_pubkey: vector&lt;u8&gt;, validator_network_identity_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, fullnodes_network_identity_pubkey: vector&lt;u8&gt;, fullnodes_network_address: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, consensus_pubkey: vector&lt;u8&gt;, validator_network_signing_pubkey: vector&lt;u8&gt;, validator_network_identity_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, fullnodes_network_identity_pubkey: vector&lt;u8&gt;, fullnodes_network_address: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -25,6 +25,7 @@
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(
+    account: &signer,
     consensus_pubkey: vector&lt;u8&gt;,
     validator_network_signing_pubkey: vector&lt;u8&gt;,
     validator_network_identity_pubkey: vector&lt;u8&gt;,
@@ -41,11 +42,17 @@
       fullnodes_network_address
   );
 
-  <b>let</b> sender = Transaction::sender();
+  <b>let</b> sender = <a href="../../modules/doc/signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
   // Validating nodes need <b>to</b> accept all currencies in order <b>to</b> receive txn fees
-  <b>if</b> (!<a href="../../modules/doc/libra_account.md#0x0_LibraAccount_accepts_currency">LibraAccount::accepts_currency</a>&lt;<a href="../../modules/doc/coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(sender)) <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;<a href="../../modules/doc/coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;();
-  <b>if</b> (!<a href="../../modules/doc/libra_account.md#0x0_LibraAccount_accepts_currency">LibraAccount::accepts_currency</a>&lt;<a href="../../modules/doc/coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(sender)) <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;<a href="../../modules/doc/coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;();
-  <b>if</b> (!<a href="../../modules/doc/libra_account.md#0x0_LibraAccount_accepts_currency">LibraAccount::accepts_currency</a>&lt;<a href="../../modules/doc/lbr.md#0x0_LBR_T">LBR::T</a>&gt;(sender)) <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;<a href="../../modules/doc/lbr.md#0x0_LBR_T">LBR::T</a>&gt;();
+  <b>if</b> (!<a href="../../modules/doc/libra_account.md#0x0_LibraAccount_accepts_currency">LibraAccount::accepts_currency</a>&lt;<a href="../../modules/doc/coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(sender)) {
+      <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;<a href="../../modules/doc/coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(account)
+  };
+  <b>if</b> (!<a href="../../modules/doc/libra_account.md#0x0_LibraAccount_accepts_currency">LibraAccount::accepts_currency</a>&lt;<a href="../../modules/doc/coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(sender)) {
+      <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;<a href="../../modules/doc/coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(account)
+  };
+  <b>if</b> (!<a href="../../modules/doc/libra_account.md#0x0_LibraAccount_accepts_currency">LibraAccount::accepts_currency</a>&lt;<a href="../../modules/doc/lbr.md#0x0_LBR_T">LBR::T</a>&gt;(sender)) {
+      <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;<a href="../../modules/doc/lbr.md#0x0_LBR_T">LBR::T</a>&gt;(account)
+  };
 }
 </code></pre>
 

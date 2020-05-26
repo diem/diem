@@ -90,7 +90,7 @@
     <a href="libra_block.md#0x0_LibraBlock_initialize_block_metadata">LibraBlock::initialize_block_metadata</a>(association);
     <a href="libra_writeset_manager.md#0x0_LibraWriteSetManager_initialize">LibraWriteSetManager::initialize</a>(association);
     <a href="libra_time.md#0x0_LibraTimestamp_initialize">LibraTimestamp::initialize</a>(association);
-    <a href="libra_account.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(genesis_auth_key);
+    <a href="libra_account.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(<b>copy</b> genesis_auth_key);
 }
 </code></pre>
 
@@ -104,7 +104,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_Genesis_initialize_txn_fee_account">initialize_txn_fee_account</a>(auth_key: vector&lt;u8&gt;)
+<pre><code><b>fun</b> <a href="#0x0_Genesis_initialize_txn_fee_account">initialize_txn_fee_account</a>(fee_account: &signer, auth_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -113,10 +113,11 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_Genesis_initialize_txn_fee_account">initialize_txn_fee_account</a>(auth_key: vector&lt;u8&gt;) {
-    <a href="libra_account.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;();
-    <a href="libra_account.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;();
-    <a href="transaction_fee.md#0x0_TransactionFee_initialize_transaction_fees">TransactionFee::initialize_transaction_fees</a>();
+<pre><code><b>fun</b> <a href="#0x0_Genesis_initialize_txn_fee_account">initialize_txn_fee_account</a>(fee_account: &signer, auth_key: vector&lt;u8&gt;) {
+    // Create the transaction fee account
+    <a href="libra_account.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(fee_account);
+    <a href="libra_account.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(fee_account);
+    <a href="transaction_fee.md#0x0_TransactionFee_initialize_transaction_fees">TransactionFee::initialize_transaction_fees</a>(fee_account);
     <a href="libra_account.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(auth_key);
 }
 </code></pre>

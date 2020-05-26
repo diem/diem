@@ -174,7 +174,10 @@ fn create_and_initialize_main_accounts(
         GENESIS_MODULE_NAME,
         "initialize_txn_fee_account",
         vec![],
-        vec![Value::vector_u8(genesis_auth_key.to_vec())],
+        vec![
+            Value::transaction_argument_signer_reference(fee_account_address),
+            Value::vector_u8(genesis_auth_key.to_vec()),
+        ],
     );
 
     context.set_sender(root_association_address);

@@ -15,7 +15,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;()
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;(account: &signer)
 </code></pre>
 
 
@@ -24,8 +24,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Currency&gt;() {
-    <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;Currency&gt;();
+<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Currency&gt;(account: &signer) {
+    <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;Currency&gt;(account);
 }
 </code></pre>
 
