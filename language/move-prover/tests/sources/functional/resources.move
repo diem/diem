@@ -1,10 +1,10 @@
 module TestResources {
     use 0x0::Transaction;
+    use 0x0::Signer;
 
     spec module {
         pragma verify = true;
     }
-
 
     // ---------------
     // Simple resource
@@ -12,6 +12,14 @@ module TestResources {
 
     resource struct R {
         x: u64
+    }
+
+    public fun create_resource_at_signer(account: &signer) {
+        move_to<R>(account, R{x:1});
+    }
+    spec fun create_resource_at_signer {
+        aborts_if exists<R>(Signer::get_address(account));
+        ensures exists<R>(Signer::get_address(account));
     }
 
     public fun create_resource() {

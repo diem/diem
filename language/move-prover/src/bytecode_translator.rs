@@ -1181,15 +1181,29 @@ impl<'env> ModuleTranslator<'env> {
                         );
                         emitln!(self.writer, &update_and_track_local(dest, "$tmp"));
                     }
+                    MoveTo(mid, sid, type_actuals) => {
+                        let value = srcs[0];
+                        let signer = srcs[1];
+                        let resource_type =
+                            boogie_struct_type_value(self.module_env.env, *mid, *sid, type_actuals);
+                        emitln!(
+                            self.writer,
+                            "call $MoveTo({}, {}, {});",
+                            resource_type,
+                            str_local(value),
+                            str_local(signer),
+                        );
+                        emitln!(self.writer, &propagate_abort());
+                    }
                     MoveToSender(mid, sid, type_actuals) => {
-                        let src = srcs[0];
+                        let value = srcs[0];
                         let resource_type =
                             boogie_struct_type_value(self.module_env.env, *mid, *sid, type_actuals);
                         emitln!(
                             self.writer,
                             "call $MoveToSender({}, {});",
                             resource_type,
-                            str_local(src),
+                            str_local(value),
                         );
                         emitln!(self.writer, &propagate_abort());
                     }

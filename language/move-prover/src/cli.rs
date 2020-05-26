@@ -507,7 +507,7 @@ impl Options {
         } else if self.docgen {
             "doc".to_string()
         } else {
-            "ouput.bpl".to_string()
+            "output.bpl".to_string()
         };
         self.docgen_options.output_directory = self.output_path.clone();
         self.docgen_options.doc_path = get_vec("doc-path");

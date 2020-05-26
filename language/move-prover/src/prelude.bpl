@@ -489,18 +489,29 @@ procedure {:inline 1} $Exists(address: Value, t: TypeValue) returns (dst: Value)
     dst := $ResourceExists($m, t, address);
 }
 
-procedure {:inline 1} $MoveToSender(ta: TypeValue, v: Value)
+procedure {:inline 1} $MoveToRaw(ta: TypeValue, a: int, v: Value)
 {
-    var a: int;
     var l: Location;
 
-    a := sender#Transaction($txn);
     l := Global(ta, a);
     if ($ResourceExistsRaw($m, ta, a)) {
         $abort_flag := true;
         return;
     }
     $m := Memory(domain#Memory($m)[l := true], contents#Memory($m)[l := v]);
+}
+
+procedure {:inline 1} $MoveTo(ta: TypeValue, v: Value, signer: Value)
+{
+    var addr: Value;
+
+    call addr := $Signer_borrow_address(signer);
+    call $MoveToRaw(ta, a#Address(addr), v);
+}
+
+procedure {:inline 1} $MoveToSender(ta: TypeValue, v: Value)
+{
+    call $MoveToRaw(ta, sender#Transaction($txn), v);
 }
 
 procedure {:inline 1} $MoveFrom(address: Value, ta: TypeValue) returns (dst: Value)
@@ -1116,8 +1127,8 @@ procedure {:inline 1} $LibraAccount_save_account(
 procedure {:inline 1} $LibraAccount_create_signer(
   addr: Value
 ) returns (signer: Value) {
-  // TODO: implement
-  assert false;
+    // A signer is currently identical to an address.
+    signer := addr;
 }
 
 procedure {:inline 1} $LibraAccount_destroy_signer(
@@ -1141,7 +1152,6 @@ procedure {:inline 1} $Event_write_to_event_store(ta: TypeValue, guid: Value, co
 procedure {:inline 1} $Signer_borrow_address(signer: Value) returns (res: Value)
     {{type_requires}} is#Address(signer);
 {
-    // A signer is currently identical to an address.
     res := signer;
 }
 
@@ -1192,3 +1202,11 @@ axiom (forall v: Value :: ( var r := $LCS_serialize_core(v); $IsValidU8Vector(r)
 procedure $LCS_to_bytes(ta: TypeValue, v: Value) returns (res: Value);
 ensures res == $LCS_serialize($m, $txn, ta, v);
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
+
+// ==================================================================================
+// Native Signer::get_address
+function $Signer_get_address($m: Memory, $txn: Transaction, signer: Value): Value
+{
+    // A signer is currently identical to an address.
+    signer
+}
