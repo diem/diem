@@ -20,7 +20,7 @@ impl Command for TransferCommand {
          Suffix 'b' is for blocking. "
     }
     fn get_description(&self) -> &'static str {
-        "Transfer coins (in libra) from account to another."
+        "Transfer coins from one account to another."
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
         if params.len() < 5 || params.len() > 7 {
