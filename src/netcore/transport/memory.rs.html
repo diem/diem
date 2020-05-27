@@ -134,7 +134,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">transport</span>::<span class="ident">Transport</span>;
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">future</span>, <span class="ident">stream</span>::<span class="ident">Stream</span>};
-<span class="kw">use</span> <span class="ident">libra_network_address</span>::{<span class="ident">NetworkAddress</span>, <span class="ident">Protocol</span>};
+<span class="kw">use</span> <span class="ident">libra_network_address</span>::{<span class="ident">parse_memory</span>, <span class="ident">NetworkAddress</span>, <span class="ident">Protocol</span>};
 <span class="kw">use</span> <span class="ident">memsocket</span>::{<span class="ident">MemoryListener</span>, <span class="ident">MemorySocket</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">io</span>,
@@ -157,7 +157,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="self">Self</span>::<span class="ident">Listener</span>, <span class="ident">NetworkAddress</span>), <span class="self">Self</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> (<span class="ident">port</span>, <span class="ident">addr_suffix</span>) <span class="op">=</span> <span class="ident">addr</span>.<span class="ident">parse_memory_proto</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="kw">let</span> (<span class="ident">port</span>, <span class="ident">addr_suffix</span>) <span class="op">=</span> <span class="ident">parse_memory</span>(<span class="ident">addr</span>.<span class="ident">as_slice</span>()).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
             <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(
                 <span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">InvalidData</span>,
                 <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Invalid NetworkAddress: &#39;{}&#39;&quot;</span>, <span class="ident">addr</span>),
@@ -175,7 +175,7 @@
     }
 
     <span class="kw">fn</span> <span class="ident">dial</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Outbound</span>, <span class="self">Self</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> (<span class="ident">port</span>, <span class="ident">_addr_suffix</span>) <span class="op">=</span> <span class="ident">addr</span>.<span class="ident">parse_memory_proto</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="kw">let</span> (<span class="ident">port</span>, <span class="ident">_addr_suffix</span>) <span class="op">=</span> <span class="ident">parse_memory</span>(<span class="ident">addr</span>.<span class="ident">as_slice</span>()).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
             <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(
                 <span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">InvalidData</span>,
                 <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Invalid NetworkAddress: &#39;{}&#39;&quot;</span>, <span class="ident">addr</span>),
