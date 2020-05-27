@@ -1125,7 +1125,6 @@ fn get_transaction_output(
     let gas_used: u64 = txn_data
         .max_gas_amount()
         .sub(cost_strategy.remaining_gas())
-        .mul(txn_data.gas_unit_price())
         .get();
     let write_set = data_store.make_write_set()?;
     TXN_TOTAL_GAS_USAGE.observe(gas_used as f64);
