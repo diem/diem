@@ -10,7 +10,7 @@ use libra_global_constants::{
 use libra_network_address::NetworkAddress;
 use libra_secure_storage::{NamespacedStorage, OnDiskStorage, Storage, Value};
 use libra_types::{account_address::AccountAddress, transaction::Transaction, waypoint::Waypoint};
-use std::fs::File;
+use std::{fs::File, path::Path};
 use structopt::StructOpt;
 
 pub struct StorageHelper {
@@ -96,16 +96,18 @@ impl StorageHelper {
         command.create_waypoint()
     }
 
-    pub fn genesis(&self) -> Result<Transaction, Error> {
+    pub fn genesis(&self, genesis_path: &Path) -> Result<Transaction, Error> {
         let args = format!(
             "
                 management
                 genesis
                 --backend backend={backend};\
                     path={path}
+                --path {genesis_path}
             ",
             backend = crate::secure_backend::DISK,
             path = self.path_string(),
+            genesis_path = genesis_path.to_str().expect("Unable to parse genesis_path"),
         );
 
         let command = Command::from_iter(args.split_whitespace());
@@ -223,6 +225,26 @@ impl StorageHelper {
             backend = crate::secure_backend::DISK,
             path = self.path_string(),
             ns = namespace,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.verify()
+    }
+
+    pub fn verify_genesis(&self, namespace: &str, genesis_path: &Path) -> Result<String, Error> {
+        let args = format!(
+            "
+                management
+                verify
+                --backend backend={backend};\
+                    path={path};\
+                    namespace={ns}
+                --genesis-path {genesis_path}
+            ",
+            backend = crate::secure_backend::DISK,
+            path = self.path_string(),
+            ns = namespace,
+            genesis_path = genesis_path.to_str().expect("Unable to parse genesis_path"),
         );
 
         let command = Command::from_iter(args.split_whitespace());

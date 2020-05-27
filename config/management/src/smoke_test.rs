@@ -113,9 +113,11 @@ fn smoke_test() {
     }
 
     // Step 4) Produce genesis and introduce into node configs
-    let genesis = helper.genesis().unwrap();
+    let genesis_path = TempPath::new();
+    genesis_path.create_as_file().unwrap();
+    let genesis = helper.genesis(genesis_path.path()).unwrap();
 
-    // Step 6) Introduce waypoint and genesis into the configs
+    // Step 5) Introduce waypoint and genesis into the configs and verify along the way
     let temppath = TempPath::new();
     temppath.create_as_dir().unwrap();
     let swarm_path = temppath.path().to_path_buf();
@@ -123,6 +125,9 @@ fn smoke_test() {
     for (i, mut config) in configs.iter_mut().enumerate() {
         let ns = i.to_string();
         let waypoint = helper.create_waypoint(&ns).unwrap();
+        let output = helper.verify_genesis(&ns, genesis_path.path()).unwrap();
+        // 4 matches = 6 splits
+        assert_eq!(output.split("match").count(), 5);
 
         let mut to = swarm_path.clone();
         to.push("secure_store_for_".to_string() + &ns);
@@ -149,7 +154,6 @@ fn smoke_test() {
         faucet_key,
     };
 
-    println!("{:?}", swarm_path);
     let mut swarm = LibraSwarm {
         dir: LibraSwarmDir::Temporary(temppath),
         nodes: std::collections::HashMap::new(),

@@ -6,7 +6,7 @@ use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{ASSOCIATION_KEY, OPERATOR_KEY};
 use libra_secure_storage::Storage;
 use libra_types::transaction::{Transaction, TransactionPayload};
-use std::{convert::TryInto, path::PathBuf};
+use std::{convert::TryInto, fs::File, io::Write, path::PathBuf};
 use structopt::StructOpt;
 use vm_genesis::ValidatorRegistration;
 
@@ -27,11 +27,25 @@ impl Genesis {
         let association_key = self.association(&layout)?;
         let validators = self.validators(&layout)?;
 
-        Ok(vm_genesis::encode_genesis_transaction_with_validator(
+        let genesis = vm_genesis::encode_genesis_transaction_with_validator(
             association_key,
             &validators,
             None,
-        ))
+        );
+
+        if let Some(path) = self.path {
+            let mut file = File::create(path).map_err(|e| {
+                Error::UnexpectedError(format!("Unable to create genesis file: {}", e.to_string()))
+            })?;
+            let bytes = lcs::to_bytes(&genesis).map_err(|e| {
+                Error::UnexpectedError(format!("Unable to serialize genesis: {}", e.to_string()))
+            })?;
+            file.write_all(&bytes).map_err(|e| {
+                Error::UnexpectedError(format!("Unable to write genesis file: {}", e.to_string()))
+            })?;
+        }
+
+        Ok(genesis)
     }
 
     /// Retrieves association key from the remote storage. Note, at this point in time, genesis

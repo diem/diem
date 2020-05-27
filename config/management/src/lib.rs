@@ -249,7 +249,10 @@ pub mod tests {
     use super::*;
     use crate::storage_helper::StorageHelper;
     use libra_types::account_address::AccountAddress;
-    use std::{fs::File, io::Write};
+    use std::{
+        fs::File,
+        io::{Read, Write},
+    };
 
     #[test]
     fn test_end_to_end() {
@@ -318,7 +321,14 @@ pub mod tests {
 
         // Step 4) Produce genesis
 
-        helper.genesis().unwrap();
+        let genesis_path = libra_temppath::TempPath::new();
+        genesis_path.create_as_file().unwrap();
+        helper.genesis(genesis_path.path()).unwrap();
+        let mut file = File::open(genesis_path.path()).unwrap();
+        let mut contents = Vec::new();
+        assert!(contents.is_empty());
+        file.read_to_end(&mut contents).unwrap();
+        assert!(!contents.is_empty());
     }
 
     #[test]
@@ -385,12 +395,20 @@ pub mod tests {
         let helper = StorageHelper::new();
         let namespace = "verify";
 
-        let output = helper.verify(namespace).unwrap().split("KeyNotSet").count();
+        let output = helper
+            .verify(namespace)
+            .unwrap()
+            .split("Key not set")
+            .count();
         assert_eq!(output, 10); // 9 KeyNotSet results in 9 splits
 
         helper.initialize(namespace.into());
 
-        let output = helper.verify(namespace).unwrap().split("KeyNotSet").count();
+        let output = helper
+            .verify(namespace)
+            .unwrap()
+            .split("Key not set")
+            .count();
         assert_eq!(output, 1); // 0 KeyNotSet results in 1 split
     }
 

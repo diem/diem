@@ -2590,6 +2590,7 @@ dependencies = [
  "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "config-builder 0.1.0",
  "executor 0.1.0",
+ "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-global-constants 0.1.0",
