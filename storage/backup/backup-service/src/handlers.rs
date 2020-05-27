@@ -37,6 +37,14 @@ fn get_state_snapshot(backup_handler: &BackupHandler, version: Version) -> Resul
         .map(size_prefixed_lcs_bytes_stream)
 }
 
+fn get_state_root_proof(
+    backup_handler: &BackupHandler,
+    version: Version,
+) -> Result<Box<dyn Reply>> {
+    let bytes = lcs::to_bytes(&backup_handler.get_state_root_proof(version)?)?;
+    Ok(Box::new(bytes))
+}
+
 fn size_prefixed_lcs_bytes_stream<I, R>(iter: I) -> Box<dyn Reply>
 where
     I: Iterator<Item = Result<R>> + Send + Sync + 'static,
@@ -91,9 +99,16 @@ pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Rep
         .recover(handle_rejection);
 
     // GET state_snapshot/<version>
-    let bh = backup_handler;
+    let bh = backup_handler.clone();
     let state_snapshot = warp::path!(Version)
         .map(move |version| get_state_snapshot(&bh, version))
+        .map(unwrap_or_500)
+        .recover(handle_rejection);
+
+    // GET state_root_proof/<version>
+    let bh = backup_handler;
+    let state_root_proof = warp::path!(Version)
+        .map(move |version| get_state_root_proof(&bh, version))
         .map(unwrap_or_500)
         .recover(handle_rejection);
 
@@ -101,7 +116,8 @@ pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Rep
     let routes = warp::any()
         .and(warp::path("latest_state_root").and(latest_state_root))
         .or(warp::path("state_range_proof").and(state_range_proof))
-        .or(warp::path("state_snapshot").and(state_snapshot));
+        .or(warp::path("state_snapshot").and(state_snapshot))
+        .or(warp::path("state_root_proof").and(state_root_proof));
 
     // Serve all routes for GET only.
     warp::get().and(routes).boxed()
