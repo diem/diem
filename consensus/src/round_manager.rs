@@ -96,16 +96,16 @@ pub enum VerifiedEvent<T> {
 }
 
 #[cfg(test)]
-#[path = "event_processor_test.rs"]
-mod event_processor_test;
+#[path = "round_manager_test.rs"]
+mod round_manager_test;
 
 #[cfg(any(test, feature = "fuzzing"))]
-#[path = "event_processor_fuzzing.rs"]
-pub mod event_processor_fuzzing;
+#[path = "round_manager_fuzzing.rs"]
+pub mod round_manager_fuzzing;
 
-/// During the event of the node can't recover from local data, StartupSyncProcessor is responsible
+/// If the node can't recover corresponding blocks from local storage, RecoveryManager is responsible
 /// for processing the events carrying sync info and use the info to retrieve blocks from peers
-pub struct SyncProcessor<T> {
+pub struct RecoveryManager<T> {
     epoch_info: EpochInfo,
     network: NetworkSender<T>,
     storage: Arc<dyn PersistentLivenessStorage<T>>,
@@ -113,7 +113,7 @@ pub struct SyncProcessor<T> {
     ledger_recovery_data: LedgerRecoveryData,
 }
 
-impl<T: Payload> SyncProcessor<T> {
+impl<T: Payload> RecoveryManager<T> {
     pub fn new(
         epoch_info: EpochInfo,
         network: NetworkSender<T>,
@@ -121,7 +121,7 @@ impl<T: Payload> SyncProcessor<T> {
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         ledger_recovery_data: LedgerRecoveryData,
     ) -> Self {
-        SyncProcessor {
+        RecoveryManager {
             epoch_info,
             network,
             storage,
@@ -172,12 +172,12 @@ impl<T: Payload> SyncProcessor<T> {
     }
 }
 
-/// Consensus SMR is working in an event based fashion: EventProcessor is responsible for
+/// Consensus SMR is working in an event based fashion: RoundManager is responsible for
 /// processing the individual events (e.g., process_new_round, process_proposal, process_vote,
 /// etc.). It is exposing the async processing functions for each event type.
 /// The caller is responsible for running the event loops and driving the execution via some
 /// executors.
-pub struct EventProcessor<T> {
+pub struct RoundManager<T> {
     epoch_info: EpochInfo,
     block_store: Arc<BlockStore<T>>,
     pending_votes: PendingVotes,
@@ -193,7 +193,7 @@ pub struct EventProcessor<T> {
     last_vote_sent: Option<Vote>,
 }
 
-impl<T: Payload> EventProcessor<T> {
+impl<T: Payload> RoundManager<T> {
     pub fn new(
         epoch_info: EpochInfo,
         block_store: Arc<BlockStore<T>>,
@@ -292,7 +292,7 @@ impl<T: Payload> EventProcessor<T> {
                 .trace_transactions(payload, signed_proposal.id());
         }
         trace_edge!("parent_proposal", {"block", signed_proposal.parent_id()}, {"block", signed_proposal.id()});
-        trace_event!("event_processor::generate_proposal", {"block", signed_proposal.id()});
+        trace_event!("round_manager::generate_proposal", {"block", signed_proposal.id()});
         debug!("Propose {}", signed_proposal);
         // return proposal
         Ok(ProposalMsg::new(signed_proposal, self.gen_sync_info()))
@@ -313,7 +313,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 2. forwarding the proposals to the ProposerElection queue,
     /// which is going to eventually trigger one winning proposal per round
     async fn pre_process_proposal(&mut self, proposal_msg: ProposalMsg<T>) -> Option<Block<T>> {
-        trace_event!("event_processor::pre_process_proposal", {"block", proposal_msg.proposal().id()});
+        trace_event!("round_manager::pre_process_proposal", {"block", proposal_msg.proposal().id()});
         // Pacemaker is going to be updated with all the proposal certificates later,
         // but it's known that the pacemaker's round is not going to decrease so we can already
         // filter out the proposals from old rounds.
@@ -515,7 +515,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 3. In case a validator chooses to vote, send the vote to the representatives at the next
     /// position.
     async fn process_proposed_block(&mut self, proposal: Block<T>) {
-        debug!("EventProcessor: process_proposed_block {}", proposal);
+        debug!("RoundManager: process_proposed_block {}", proposal);
 
         if let Some(time_to_receival) =
             duration_since_epoch().checked_sub(Duration::from_micros(proposal.timestamp_usecs()))
@@ -630,7 +630,7 @@ impl<T: Payload> EventProcessor<T> {
     ///
     /// This function assumes that it might be called from different tasks concurrently.
     async fn execute_and_vote(&mut self, proposed_block: Block<T>) -> anyhow::Result<Vote> {
-        trace_code_block!("event_processor::execute_and_vote", {"block", proposed_block.id()});
+        trace_code_block!("round_manager::execute_and_vote", {"block", proposed_block.id()});
         let executed_block = self
             .block_store
             .execute_and_insert_block(proposed_block)
@@ -695,7 +695,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 2. Add the vote to the store and check whether it finishes a QC.
     /// 3. Once the QC successfully formed, notify the Pacemaker.
     pub async fn process_vote(&mut self, vote_msg: VoteMsg) {
-        trace_code_block!("event_processor::process_vote", {"block", vote_msg.proposed_block_id()});
+        trace_code_block!("round_manager::process_vote", {"block", vote_msg.proposed_block_id()});
         // Check whether this validator is a valid recipient of the vote.
         if !vote_msg.vote().is_timeout() {
             // Unlike timeout votes regular votes are sent to the leaders of the next round only.

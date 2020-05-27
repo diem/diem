@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::FuzzTargetImpl;
-use consensus::event_processor_fuzzing::{fuzz_proposal, generate_corpus_proposal};
+use consensus::round_manager_fuzzing::{fuzz_proposal, generate_corpus_proposal};
 use libra_proptest_helpers::ValueGenerator;
 
 #[derive(Clone, Debug, Default)]
