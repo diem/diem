@@ -37,6 +37,7 @@ use futures::future::{try_join_all, FutureExt};
 use libra_json_rpc_client::JsonRpcAsyncClient;
 use libra_types::transaction::SignedTransaction;
 use reqwest::Client;
+use std::sync::{Mutex, PoisonError};
 use std::{
     cmp::{max, min},
     ops::Sub,
@@ -57,6 +58,7 @@ pub struct EmitJob {
     workers: Vec<Worker>,
     stop: Arc<AtomicBool>,
     stats: Arc<StatsAccumulator>,
+    latencies: Arc<Mutex<AtomicHistogram>>,
 }
 
 #[derive(Default)]
@@ -67,12 +69,50 @@ struct StatsAccumulator {
     latency: AtomicU64,
 }
 
+pub struct AtomicHistogram {
+    buckets: Box<[AtomicU64]>,
+}
+
+impl AtomicHistogram {
+    fn default() -> Self {
+        let mut buf = Vec::with_capacity(HISTOGRAM_CAPACITY);
+        for _i in 0..HISTOGRAM_CAPACITY {
+            buf.push(AtomicU64::new(0));
+        }
+        Self {
+            buckets: buf.into_boxed_slice(),
+        }
+    }
+
+    fn to_u64_array(v: AtomicHistogram) -> Box<[u64]> {
+        let mut buf = Vec::with_capacity(HISTOGRAM_CAPACITY);
+        for _i in 0..HISTOGRAM_CAPACITY {
+            buf.push(v.buckets[_i].load(Ordering::Relaxed));
+        }
+
+        buf.into_boxed_slice()
+    }
+}
+
+impl Clone for AtomicHistogram {
+    fn clone(&self) -> Self {
+        let mut buf = Vec::with_capacity(HISTOGRAM_CAPACITY);
+        for _i in 0..HISTOGRAM_CAPACITY {
+            buf.push(AtomicU64::new(self.buckets[_i].load(Ordering::Relaxed)));
+        }
+        Self {
+            buckets: buf.into_boxed_slice(),
+        }
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct TxStats {
     pub submitted: u64,
     pub committed: u64,
     pub expired: u64,
     pub latency: u64,
+    pub latency_buckets: Box<[u64]>,
 }
 
 #[derive(Debug, Default)]
@@ -193,6 +233,7 @@ impl TxEmitter {
         let mut all_accounts = all_accounts.into_iter();
         let stop = Arc::new(AtomicBool::new(false));
         let stats = Arc::new(StatsAccumulator::default());
+        let latencies = Arc::new(Mutex::new(AtomicHistogram::default()));
         let tokio_handle = Handle::current();
         for instance in &req.instances {
             for _ in 0..workers_per_ac {
@@ -202,6 +243,7 @@ impl TxEmitter {
                 let stop = stop.clone();
                 let params = req.thread_params.clone();
                 let stats = Arc::clone(&stats);
+                let latencies = Arc::clone(&latencies);
                 let worker = SubmissionWorker {
                     accounts,
                     client,
@@ -209,6 +251,7 @@ impl TxEmitter {
                     stop,
                     params,
                     stats,
+                    latencies,
                 };
                 let join_handle = tokio_handle.spawn(worker.run().boxed());
                 workers.push(Worker { join_handle });
@@ -219,6 +262,7 @@ impl TxEmitter {
             workers,
             stop,
             stats,
+            latencies,
         })
     }
 
@@ -301,7 +345,8 @@ impl TxEmitter {
     }
 
     pub fn peek_job_stats(&self, job: &EmitJob) -> TxStats {
-        job.stats.accumulate()
+        let guard = job.latencies.lock().unwrap();
+        job.stats.accumulate((*guard).clone())
     }
 
     pub async fn stop_job(&mut self, job: EmitJob) -> TxStats {
@@ -313,7 +358,8 @@ impl TxEmitter {
                 .expect("TxEmitter worker thread failed");
             self.accounts.append(&mut accounts);
         }
-        job.stats.accumulate()
+        let guard = job.latencies.lock().unwrap();
+        job.stats.accumulate((*guard).clone())
     }
 
     fn make_client(&self, instance: &Instance) -> JsonRpcAsyncClient {
@@ -359,6 +405,7 @@ struct SubmissionWorker {
     stop: Arc<AtomicBool>,
     params: EmitThreadParams,
     stats: Arc<StatsAccumulator>,
+    latencies: Arc<Mutex<AtomicHistogram>>,
 }
 
 impl SubmissionWorker {
@@ -390,6 +437,7 @@ impl SubmissionWorker {
                 {
                     let end_time = (Instant::now() - start_time).as_millis() as u64;
                     let num_committed = (num_requests - uncommitted.len()) as u64;
+                    let latency = end_time - tx_offset_time / num_requests as u64;
                     self.stats
                         .committed
                         .fetch_add(num_committed, Ordering::Relaxed);
@@ -400,22 +448,37 @@ impl SubmissionWorker {
                         // To avoid negative result caused by uncommitted tx occur
                         // Simplified from:
                         // end_time * num_committed - (tx_offset_time/num_requests) * num_committed
-                        (end_time - tx_offset_time / num_requests as u64) * num_committed as u64,
+                        // to
+                        // (end_time - tx_offset_time / num_requests) * num_committed
+                        latency * num_committed as u64,
                         Ordering::Relaxed,
                     );
+                    let latency_bucket_num = get_bucket_num(latency);
+                    {
+                        let guard = self.latencies.lock().unwrap_or_else(PoisonError::into_inner);
+                        (*guard).buckets[latency_bucket_num as usize]
+                            .fetch_add(num_committed, Ordering::Relaxed);
+                    }
                     info!(
                         "[{:?}] Transactions were not committed before expiration: {:?}",
                         self.client, uncommitted
                     );
                 } else {
                     let end_time = (Instant::now() - start_time).as_millis() as u64;
+                    let latency = end_time - tx_offset_time / num_requests as u64;
                     self.stats
                         .committed
                         .fetch_add(num_requests as u64, Ordering::Relaxed);
                     self.stats.latency.fetch_add(
-                        end_time * num_requests as u64 - tx_offset_time,
+                        latency * num_requests as u64,
                         Ordering::Relaxed,
                     );
+                    let latency_bucket_num = get_bucket_num(latency);
+                    {
+                        let guard = self.latencies.lock().unwrap_or_else(PoisonError::into_inner);
+                        (*guard).buckets[latency_bucket_num as usize]
+                            .fetch_add(num_requests as u64, Ordering::Relaxed);
+                    }
                 }
             }
         }
@@ -512,6 +575,8 @@ const GAS_CURRENCY_CODE: &str = LBR_NAME;
 const TXN_EXPIRATION_SECONDS: i64 = 50;
 const TXN_MAX_WAIT: Duration = Duration::from_secs(TXN_EXPIRATION_SECONDS as u64 + 30);
 const LIBRA_PER_NEW_ACCOUNT: u64 = 1_000_000;
+const HISTOGRAM_CAPACITY: usize = 2048;
+const HISTOGRAM_WIDTH_MILLIS: u64 = 50;
 
 fn gen_submit_transaction_request(
     script: Script,
@@ -735,12 +800,13 @@ impl AccountData {
 }
 
 impl StatsAccumulator {
-    pub fn accumulate(&self) -> TxStats {
+    pub fn accumulate(&self, latency_buckets: AtomicHistogram) -> TxStats {
         TxStats {
             submitted: self.submitted.load(Ordering::Relaxed),
             committed: self.committed.load(Ordering::Relaxed),
             expired: self.expired.load(Ordering::Relaxed),
             latency: self.latency.load(Ordering::Relaxed),
+            latency_buckets: AtomicHistogram::to_u64_array(latency_buckets),
         }
     }
 }
@@ -754,6 +820,30 @@ impl TxStats {
             latency: self.latency / self.committed,
         }
     }
+
+    pub fn calculate_p90(&self) -> u64 {
+        let p90_count = self.committed * 9 / 10;
+        let mut counter = 0u64;
+        let mut total_latency = 0u64;
+        for i in 0..self.latency_buckets.len() {
+            let num = self.latency_buckets[i];
+            let gap = p90_count - counter;
+            if counter >= p90_count {
+                break;
+            }
+            if num > gap {
+                total_latency += gap * HISTOGRAM_WIDTH_MILLIS * i as u64;
+                counter += gap;
+            } else {
+                total_latency += num * HISTOGRAM_WIDTH_MILLIS * i as u64;
+                counter += num;
+            }
+        }
+        if p90_count == 0 {
+            return 0;
+        }
+        total_latency / p90_count
+    }
 }
 
 impl Sub for &TxStats {
@@ -765,6 +855,7 @@ impl Sub for &TxStats {
             committed: self.committed - other.committed,
             expired: self.expired - other.expired,
             latency: self.latency - other.latency,
+            latency_buckets: AtomicHistogram::to_u64_array(AtomicHistogram::default()),
         }
     }
 }
@@ -773,8 +864,11 @@ impl fmt::Display for TxStats {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "submitted: {}, committed: {}, expired: {}",
-            self.submitted, self.committed, self.expired
+            "submitted: {}, committed: {}, expired: {}, p90 latency: {}",
+            self.submitted,
+            self.committed,
+            self.expired,
+            self.calculate_p90()
         )
     }
 }
@@ -787,4 +881,12 @@ impl fmt::Display for TxStatsRate {
             self.submitted, self.committed, self.expired, self.latency
         )
     }
+}
+
+pub fn get_bucket_num(latency:u64) -> u64 {
+    let bucket_num = latency / HISTOGRAM_WIDTH_MILLIS;
+    if bucket_num >= HISTOGRAM_CAPACITY as u64 - 2 {
+        return HISTOGRAM_CAPACITY as u64 - 1;
+    }
+    return bucket_num;
 }

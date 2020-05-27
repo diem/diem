@@ -155,6 +155,7 @@ impl Experiment for PerformanceBenchmark {
         let start = end - window + 2 * buffer;
         let avg_txns_per_block = stats::avg_txns_per_block(&context.prometheus, start, end)?;
         let avg_latency_client = stats.latency / stats.committed;
+        let p90_latency = stats.calculate_p90();
         let avg_tps = stats.committed / window.as_secs();
         info!(
             "Link to dashboard : {}",
@@ -194,8 +195,8 @@ impl Experiment for PerformanceBenchmark {
             format!("(!) expired {} out of {} txns", expired_txn, submitted_txn)
         };
         context.report.report_text(format!(
-            "{} : {:.0} TPS, {:.1} ms latency, {}",
-            self, avg_tps, avg_latency_client, expired_text
+            "{} : {:.0} TPS, {:.1} ms latency, {:.1} ms p90 latency, {}",
+            self, avg_tps, avg_latency_client, p90_latency, expired_text
         ));
         Ok(())
     }

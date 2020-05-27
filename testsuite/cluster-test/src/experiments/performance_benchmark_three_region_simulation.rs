@@ -75,6 +75,7 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
             .await?;
         let avg_tps = stats.committed / window.as_secs();
         let avg_latency_client = stats.latency / stats.committed;
+        let p90_latency = stats.calculate_p90();
         info!(
             "Tx status from client side: txn {}, avg latency {}",
             stats.committed as u64, avg_latency_client
@@ -87,8 +88,8 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
             .report
             .report_metric(&self, "avg_latency", avg_latency_client as f64);
         context.report.report_text(format!(
-            "{} : {:.0} TPS, {:.1} ms latency",
-            self, avg_tps, avg_latency_client
+            "{} : {:.0} TPS, {:.1} ms latency, {:.1} ms p90 latency",
+            self, avg_tps, avg_latency_client, p90_latency
         ));
         Ok(())
     }
