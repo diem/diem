@@ -310,28 +310,13 @@
 <span id="310">310</span>
 <span id="311">311</span>
 <span id="312">312</span>
-<span id="313">313</span>
-<span id="314">314</span>
-<span id="315">315</span>
-<span id="316">316</span>
-<span id="317">317</span>
-<span id="318">318</span>
-<span id="319">319</span>
-<span id="320">320</span>
-<span id="321">321</span>
-<span id="322">322</span>
-<span id="323">323</span>
-<span id="324">324</span>
-<span id="325">325</span>
-<span id="326">326</span>
-<span id="327">327</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">Capability</span>, <span class="ident">CryptoStorage</span>, <span class="ident">Error</span>, <span class="ident">GetResponse</span>, <span class="ident">Identity</span>, <span class="ident">KVStorage</span>, <span class="ident">Policy</span>, <span class="ident">PublicKeyResponse</span>,
-    <span class="ident">Storage</span>, <span class="ident">Value</span>,
+    <span class="ident">Value</span>,
 };
 <span class="kw">use</span> <span class="ident">chrono</span>::<span class="ident">DateTime</span>;
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::{
@@ -355,9 +340,14 @@
 }
 
 <span class="kw">impl</span> <span class="ident">VaultStorage</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">host</span>: <span class="ident">String</span>, <span class="ident">token</span>: <span class="ident">String</span>, <span class="ident">namespace</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">host</span>: <span class="ident">String</span>,
+        <span class="ident">token</span>: <span class="ident">String</span>,
+        <span class="ident">namespace</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+        <span class="ident">certificate</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">client</span>: <span class="ident">Client</span>::<span class="ident">new</span>(<span class="ident">host</span>, <span class="ident">token</span>),
+            <span class="ident">client</span>: <span class="ident">Client</span>::<span class="ident">new</span>(<span class="ident">host</span>, <span class="ident">token</span>, <span class="ident">certificate</span>),
             <span class="ident">namespace</span>,
         }
     }
@@ -425,24 +415,6 @@
         <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
     }
 
-    <span class="doccomment">/// Retrieves a key from a given secret. Libra Secure Storage inserts each key into its own</span>
-    <span class="doccomment">/// distinct secret store and thus the secret and key have the same identifier.</span>
-    <span class="kw">fn</span> <span class="ident">get_secret</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">GetResponse</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">secret</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">secret_name</span>(<span class="ident">key</span>);
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">read_secret</span>(<span class="kw-2">&amp;</span><span class="ident">secret</span>, <span class="ident">key</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">last_update</span> <span class="op">=</span> <span class="ident">DateTime</span>::<span class="ident">parse_from_rfc3339</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>.<span class="ident">creation_time</span>)<span class="question-mark">?</span>.<span class="ident">timestamp</span>() <span class="kw">as</span> <span class="ident">u64</span>;
-        <span class="kw">let</span> <span class="ident">value</span>: <span class="ident">Value</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>.<span class="ident">value</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">GetResponse</span> { <span class="ident">last_update</span>, <span class="ident">value</span> })
-    }
-
-    <span class="doccomment">/// Inserts a key, value pair into a secret that shares the name of the key.</span>
-    <span class="kw">fn</span> <span class="ident">set_secret</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">value</span>: <span class="ident">Value</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">secret</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">secret_name</span>(<span class="ident">key</span>);
-        <span class="self">self</span>.<span class="ident">client</span>
-            .<span class="ident">write_secret</span>(<span class="kw-2">&amp;</span><span class="ident">secret</span>, <span class="ident">key</span>, <span class="kw-2">&amp;</span><span class="ident">serde_json</span>::<span class="ident">to_string</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(())
-    }
-
     <span class="doccomment">/// Create a new policy in Vault, see the explanation for Policy for how the data is</span>
     <span class="doccomment">/// structured. Vault does not distingush a create and update. An update must first read the</span>
     <span class="doccomment">/// existing policy, amend the contents,  and then be applied via this API.</span>
@@ -483,11 +455,6 @@
         <span class="ident">vault_policy</span>.<span class="ident">add_policy</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>, <span class="ident">core_capabilities</span>);
         <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">set_policy</span>(<span class="kw-2">&amp;</span><span class="ident">policy_name</span>, <span class="kw-2">&amp;</span><span class="ident">vault_policy</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
-    }
-
-    <span class="doccomment">/// Public convenience function to return a new Vault based Storage.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_storage</span>(<span class="ident">host</span>: <span class="ident">String</span>, <span class="ident">token</span>: <span class="ident">String</span>, <span class="ident">namespace</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Storage</span><span class="op">&gt;</span> {
-        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">VaultStorage</span>::<span class="ident">new</span>(<span class="ident">host</span>, <span class="ident">token</span>, <span class="ident">namespace</span>))
     }
 
     <span class="kw">fn</span> <span class="ident">key_version</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">version</span>: <span class="kw-2">&amp;</span><span class="ident">Ed25519PublicKey</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
@@ -543,11 +510,17 @@
     }
 
     <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">GetResponse</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">get_secret</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>)
+        <span class="kw">let</span> <span class="ident">secret</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">secret_name</span>(<span class="ident">key</span>);
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">read_secret</span>(<span class="kw-2">&amp;</span><span class="ident">secret</span>, <span class="ident">key</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">last_update</span> <span class="op">=</span> <span class="ident">DateTime</span>::<span class="ident">parse_from_rfc3339</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>.<span class="ident">creation_time</span>)<span class="question-mark">?</span>.<span class="ident">timestamp</span>() <span class="kw">as</span> <span class="ident">u64</span>;
+        <span class="kw">let</span> <span class="ident">value</span>: <span class="ident">Value</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>.<span class="ident">value</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="ident">GetResponse</span> { <span class="ident">last_update</span>, <span class="ident">value</span> })
     }
 
     <span class="kw">fn</span> <span class="ident">set</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">value</span>: <span class="ident">Value</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">set_secret</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>, <span class="ident">value</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">secret</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">secret_name</span>(<span class="ident">key</span>);
+        <span class="self">self</span>.<span class="ident">client</span>
+            .<span class="ident">write_secret</span>(<span class="kw-2">&amp;</span><span class="ident">secret</span>, <span class="ident">key</span>, <span class="kw-2">&amp;</span><span class="ident">serde_json</span>::<span class="ident">to_string</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -560,7 +533,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">CryptoStorage</span> <span class="kw">for</span> <span class="ident">VaultStorage</span> {
-    <span class="kw">fn</span> <span class="ident">create_key</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">policy</span>: <span class="kw-2">&amp;</span><span class="ident">Policy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ed25519PublicKey</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">create_key</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ed25519PublicKey</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">ns_name</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">crypto_name</span>(<span class="ident">name</span>);
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">get_public_key</span>(<span class="ident">name</span>) {
             <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">KeyAlreadyExists</span>(<span class="ident">ns_name</span>)),
@@ -569,9 +542,6 @@
         }
 
         <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">create_ed25519_key</span>(<span class="kw-2">&amp;</span><span class="ident">ns_name</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">policy</span>.<span class="ident">is_default</span>() {
-            <span class="self">self</span>.<span class="ident">set_policies</span>(<span class="kw-2">&amp;</span><span class="ident">ns_name</span>, <span class="kw-2">&amp;</span><span class="ident">VaultEngine</span>::<span class="ident">Transit</span>, <span class="ident">policy</span>)<span class="question-mark">?</span>;
-        }
         <span class="self">self</span>.<span class="ident">get_public_key</span>(<span class="ident">name</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">public_key</span>)
     }
 

@@ -69,6 +69,10 @@
 <span id="69">69</span>
 <span id="70">70</span>
 <span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -134,6 +138,10 @@
                 <span class="ident">config</span>.<span class="ident">server</span>.<span class="ident">clone</span>(),
                 <span class="ident">config</span>.<span class="ident">token</span>.<span class="ident">read_token</span>().<span class="ident">expect</span>(<span class="string">&quot;Unable to read token&quot;</span>),
                 <span class="ident">config</span>.<span class="ident">namespace</span>.<span class="ident">clone</span>(),
+                <span class="ident">config</span>
+                    .<span class="ident">ca_certificate</span>
+                    .<span class="ident">as_ref</span>()
+                    .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">config</span>.<span class="ident">ca_certificate</span>().<span class="ident">unwrap</span>()),
             )),
         }
     }

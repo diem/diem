@@ -374,7 +374,7 @@
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">test_storage</span>(<span class="ident">signer</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorSigner</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">PersistentSafetyStorage</span> {
     <span class="kw">let</span> <span class="ident">waypoint</span> <span class="op">=</span> <span class="ident">validator_signers_to_waypoints</span>(<span class="kw-2">&amp;</span>[<span class="ident">signer</span>]);
-    <span class="kw">let</span> <span class="ident">storage</span> <span class="op">=</span> <span class="ident">InMemoryStorage</span>::<span class="ident">new_storage</span>();
+    <span class="kw">let</span> <span class="ident">storage</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">InMemoryStorage</span>::<span class="ident">new</span>());
     <span class="ident">PersistentSafetyStorage</span>::<span class="ident">initialize</span>(<span class="ident">storage</span>, <span class="ident">signer</span>.<span class="ident">private_key</span>().<span class="ident">clone</span>(), <span class="ident">waypoint</span>)
 }
 </pre></div>

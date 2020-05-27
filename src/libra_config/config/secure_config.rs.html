@@ -247,10 +247,28 @@
 <span id="247">247</span>
 <span id="248">248</span>
 <span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
+<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fs</span>::<span class="ident">File</span>, <span class="ident">io</span>::<span class="ident">Read</span>, <span class="ident">path</span>::<span class="ident">PathBuf</span>};
 
@@ -331,6 +349,8 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VaultConfig</span> {
+    <span class="doccomment">/// Optional SSL Certificate for the vault host, this is expected to be a full path.</span>
+    <span class="kw">pub</span> <span class="ident">ca_certificate</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PathBuf</span><span class="op">&gt;</span>,
     <span class="doccomment">/// A namespace is an optional portion of the path to a key stored within Vault. For example,</span>
     <span class="doccomment">/// a secret, S, without a namespace would be available in secret/data/S, with a namespace, N, it</span>
     <span class="doccomment">/// would be in secret/data/N/S.</span>
@@ -339,6 +359,16 @@
     <span class="kw">pub</span> <span class="ident">server</span>: <span class="ident">String</span>,
     <span class="doccomment">/// The authorization token for accessing secrets</span>
     <span class="kw">pub</span> <span class="ident">token</span>: <span class="ident">Token</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">VaultConfig</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ca_certificate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">ca_certificate</span>
+            .<span class="ident">as_ref</span>()
+            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;No Certificate path&quot;</span>))<span class="question-mark">?</span>;
+        <span class="ident">read_file</span>(<span class="ident">path</span>)
+    }
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
@@ -372,14 +402,9 @@
         <span class="ident">Token</span>::<span class="ident">FromDisk</span>(<span class="ident">TokenFromDisk</span> { <span class="ident">path</span> })
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_token</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_token</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Token</span>::<span class="ident">FromDisk</span>(<span class="ident">from_disk</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">File</span>::<span class="ident">open</span>(<span class="kw-2">&amp;</span><span class="ident">from_disk</span>.<span class="ident">path</span>)<span class="question-mark">?</span>;
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">contents</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">new</span>();
-                <span class="ident">file</span>.<span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">contents</span>)<span class="question-mark">?</span>;
-                <span class="prelude-val">Ok</span>(<span class="ident">contents</span>)
-            }
+            <span class="ident">Token</span>::<span class="ident">FromDisk</span>(<span class="ident">from_disk</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">read_file</span>(<span class="kw-2">&amp;</span><span class="ident">from_disk</span>.<span class="ident">path</span>),
             <span class="ident">Token</span>::<span class="ident">FromConfig</span>(<span class="ident">from_config</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">from_config</span>.<span class="ident">token</span>.<span class="ident">clone</span>()),
         }
     }
@@ -419,6 +444,13 @@
     }
 }
 
+<span class="kw">fn</span> <span class="ident">read_file</span>(<span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">PathBuf</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">File</span>::<span class="ident">open</span>(<span class="ident">path</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">contents</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">new</span>();
+    <span class="ident">file</span>.<span class="ident">read_to_string</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">contents</span>)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(<span class="ident">contents</span>)
+}
+
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
@@ -435,6 +467,7 @@
             <span class="ident">vault</span>: <span class="ident">VaultConfig</span> {
                 <span class="ident">namespace</span>: <span class="prelude-val">None</span>,
                 <span class="ident">server</span>: <span class="string">&quot;127.0.0.1:8200&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="ident">ca_certificate</span>: <span class="prelude-val">None</span>,
                 <span class="ident">token</span>: <span class="ident">Token</span>::<span class="ident">FromConfig</span>(<span class="ident">TokenFromConfig</span> {
                     <span class="ident">token</span>: <span class="string">&quot;test&quot;</span>.<span class="ident">to_string</span>(),
                 }),
@@ -462,6 +495,7 @@ token = \&quot;test\&quot;
             <span class="ident">vault</span>: <span class="ident">VaultConfig</span> {
                 <span class="ident">namespace</span>: <span class="prelude-val">None</span>,
                 <span class="ident">server</span>: <span class="string">&quot;127.0.0.1:8200&quot;</span>.<span class="ident">to_string</span>(),
+                <span class="ident">ca_certificate</span>: <span class="prelude-val">None</span>,
                 <span class="ident">token</span>: <span class="ident">Token</span>::<span class="ident">FromDisk</span>(<span class="ident">TokenFromDisk</span> {
                     <span class="ident">path</span>: <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="string">&quot;/token&quot;</span>),
                 }),

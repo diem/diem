@@ -215,6 +215,8 @@
 <span id="215">215</span>
 <span id="216">216</span>
 <span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -319,6 +321,7 @@
             }
             <span class="ident">MEMORY</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">config</span>::<span class="ident">SecureBackend</span>::<span class="ident">InMemoryStorage</span>,
             <span class="ident">VAULT</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">certificate</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">parameters</span>.<span class="ident">remove</span>(<span class="string">&quot;ca_certificate&quot;</span>).<span class="ident">map</span>(<span class="ident">PathBuf</span>::<span class="ident">from</span>);
                 <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="self">self</span>
                     .<span class="ident">parameters</span>
                     .<span class="ident">remove</span>(<span class="string">&quot;server&quot;</span>)
@@ -330,6 +333,7 @@
                 <span class="ident">config</span>::<span class="ident">SecureBackend</span>::<span class="ident">Vault</span>(<span class="ident">VaultConfig</span> {
                     <span class="ident">namespace</span>: <span class="self">self</span>.<span class="ident">parameters</span>.<span class="ident">remove</span>(<span class="string">&quot;namespace&quot;</span>),
                     <span class="ident">server</span>,
+                    <span class="ident">ca_certificate</span>: <span class="ident">certificate</span>,
                     <span class="ident">token</span>: <span class="ident">Token</span>::<span class="ident">new_disk</span>(<span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="ident">token</span>)),
                 })
             }

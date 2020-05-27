@@ -340,6 +340,7 @@
 <span id="340">340</span>
 <span id="341">341</span>
 <span id="342">342</span>
+<span id="343">343</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -611,6 +612,7 @@
                         .<span class="ident">as_ref</span>()
                         .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">MissingSafetyRulesHost</span>)<span class="question-mark">?</span>
                         .<span class="ident">clone</span>(),
+                    <span class="ident">ca_certificate</span>: <span class="prelude-val">None</span>,
                     <span class="ident">token</span>: <span class="ident">Token</span>::<span class="ident">new_config</span>(
                         <span class="self">self</span>.<span class="ident">safety_rules_token</span>
                             .<span class="ident">as_ref</span>()

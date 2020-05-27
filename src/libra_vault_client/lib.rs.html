@@ -699,6 +699,12 @@
 <span id="699">699</span>
 <span id="700">700</span>
 <span id="701">701</span>
+<span id="702">702</span>
+<span id="703">703</span>
+<span id="704">704</span>
+<span id="705">705</span>
+<span id="706">706</span>
+<span id="707">707</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -711,6 +717,7 @@
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">BTreeMap</span>,
     <span class="ident">convert</span>::{<span class="ident">TryFrom</span>, <span class="ident">TryInto</span>},
+    <span class="ident">sync</span>::<span class="ident">Arc</span>,
 };
 <span class="kw">use</span> <span class="ident">thiserror</span>::<span class="ident">Error</span>;
 
@@ -778,18 +785,33 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Client</span> {
     <span class="ident">host</span>: <span class="ident">String</span>,
     <span class="ident">token</span>: <span class="ident">String</span>,
+    <span class="ident">tls_config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">rustls</span>::<span class="ident">ClientConfig</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Client</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">host</span>: <span class="ident">String</span>, <span class="ident">token</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">host</span>, <span class="ident">token</span> }
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">host</span>: <span class="ident">String</span>, <span class="ident">token</span>: <span class="ident">String</span>, <span class="ident">ca_certificate</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">tls_config</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">certificate</span>) <span class="op">=</span> <span class="ident">ca_certificate</span> {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tls_config</span> <span class="op">=</span> <span class="ident">rustls</span>::<span class="ident">ClientConfig</span>::<span class="ident">new</span>();
+            <span class="comment">// First try the certificate as a DER encoded cert, then as a PEM, and then panic.</span>
+            <span class="kw">let</span> <span class="ident">cert</span> <span class="op">=</span> <span class="ident">rustls</span>::<span class="ident">Certificate</span>(<span class="ident">certificate</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>());
+            <span class="kw">if</span> <span class="ident">tls_config</span>.<span class="ident">root_store</span>.<span class="ident">add</span>(<span class="kw-2">&amp;</span><span class="ident">cert</span>).<span class="ident">is_err</span>() {
+                <span class="kw">let</span> <span class="ident">certs</span> <span class="op">=</span> <span class="ident">rustls</span>::<span class="ident">internal</span>::<span class="ident">pemfile</span>::<span class="ident">certs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">certificate</span>.<span class="ident">as_bytes</span>()).<span class="ident">unwrap</span>();
+                <span class="ident">tls_config</span>.<span class="ident">root_store</span>.<span class="ident">add</span>(<span class="kw-2">&amp;</span><span class="ident">certs</span>[<span class="number">0</span>]).<span class="ident">unwrap</span>();
+            }
+            <span class="prelude-val">Some</span>(<span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">tls_config</span>))
+        } <span class="kw">else</span> {
+            <span class="prelude-val">None</span>
+        };
+        <span class="self">Self</span> {
+            <span class="ident">host</span>,
+            <span class="ident">token</span>,
+            <span class="ident">tls_config</span>,
+        }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">delete_policy</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">policy_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">delete</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/sys/policy/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">policy_name</span>))
-            .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-            .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
-            .<span class="ident">call</span>();
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">delete</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/sys/policy/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">policy_name</span>));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request</span>(<span class="ident">request</span>).<span class="ident">call</span>();
         <span class="kw">if</span> <span class="ident">resp</span>.<span class="ident">ok</span>() {
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else</span> {
@@ -798,10 +820,8 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">list_policies</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/sys/policy&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>))
-            .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-            .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
-            .<span class="ident">call</span>();
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/sys/policy&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request</span>(<span class="ident">request</span>).<span class="ident">call</span>();
         <span class="kw">match</span> <span class="ident">resp</span>.<span class="ident">status</span>() {
             <span class="number">200</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">policies</span>: <span class="ident">ListPoliciesResponse</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
@@ -815,10 +835,8 @@
 
     <span class="doccomment">/// Retrieves the policy at the given policy name.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_policy</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">policy_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Policy</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/sys/policy/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">policy_name</span>))
-            .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-            .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
-            .<span class="ident">call</span>();
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/sys/policy/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">policy_name</span>));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request</span>(<span class="ident">request</span>).<span class="ident">call</span>();
         <span class="kw">match</span> <span class="ident">resp</span>.<span class="ident">status</span>() {
             <span class="number">200</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Policy</span>::<span class="ident">try_from</span>(<span class="ident">resp</span>.<span class="ident">into_json</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">resp</span>.<span class="ident">into</span>()),
@@ -829,10 +847,8 @@
     <span class="doccomment">/// structured. Vault does not distingush a create and update. An update must first read the</span>
     <span class="doccomment">/// existing policy, amend the contents,  and then be applied via this API.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_policy</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">policy_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">policy</span>: <span class="kw-2">&amp;</span><span class="ident">Policy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">post</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/sys/policy/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">policy_name</span>))
-            .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-            .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
-            .<span class="ident">send_json</span>(<span class="ident">policy</span>.<span class="ident">try_into</span>()<span class="question-mark">?</span>);
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">post</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/sys/policy/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">policy_name</span>));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request</span>(<span class="ident">request</span>).<span class="ident">send_json</span>(<span class="ident">policy</span>.<span class="ident">try_into</span>()<span class="question-mark">?</span>);
         <span class="kw">if</span> <span class="ident">resp</span>.<span class="ident">ok</span>() {
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else</span> {
@@ -843,9 +859,9 @@
     <span class="doccomment">/// Creates a new token or identity for accessing Vault. The token will have access to anything</span>
     <span class="doccomment">/// under the default policy and any prescribed policies.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_token</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">policies</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">post</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/auth/token/create&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>))
-            .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-            .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">post</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/auth/token/create&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">upgrade_request</span>(<span class="ident">request</span>)
             .<span class="ident">send_json</span>(<span class="macro">json</span><span class="macro">!</span>({ <span class="string">&quot;policies&quot;</span>: <span class="ident">policies</span> }));
         <span class="kw">if</span> <span class="ident">resp</span>.<span class="ident">ok</span>() {
             <span class="kw">let</span> <span class="ident">resp</span>: <span class="ident">CreateTokenResponse</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
@@ -857,13 +873,11 @@
 
     <span class="doccomment">/// List all stored secrets</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">list_secrets</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">secret</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">request</span>(
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">request</span>(
             <span class="string">&quot;LIST&quot;</span>,
             <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/secret/metadata/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">secret</span>),
-        )
-        .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-        .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
-        .<span class="ident">call</span>();
+        );
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request</span>(<span class="ident">request</span>).<span class="ident">call</span>();
         <span class="kw">match</span> <span class="ident">resp</span>.<span class="ident">status</span>() {
             <span class="number">200</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">resp</span>: <span class="ident">ReadSecretListResponse</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
@@ -877,10 +891,8 @@
 
     <span class="doccomment">/// Delete a specific secret store</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">delete_secret</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">secret</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">delete</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/secret/metadata/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">secret</span>))
-            .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-            .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
-            .<span class="ident">call</span>();
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">delete</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/secret/metadata/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">secret</span>));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request</span>(<span class="ident">request</span>).<span class="ident">call</span>();
         <span class="kw">if</span> <span class="ident">resp</span>.<span class="ident">ok</span>() {
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else</span> {
@@ -890,10 +902,8 @@
 
     <span class="doccomment">/// Read a key/value pair from a given secret store.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_secret</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">secret</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/secret/data/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">secret</span>))
-            .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-            .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
-            .<span class="ident">call</span>();
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/secret/data/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">secret</span>));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request</span>(<span class="ident">request</span>).<span class="ident">call</span>();
         <span class="kw">match</span> <span class="ident">resp</span>.<span class="ident">status</span>() {
             <span class="number">200</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">resp</span>: <span class="ident">ReadSecretResponse</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
@@ -912,9 +922,9 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_ed25519_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">exportable</span>: <span class="ident">bool</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">post</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/transit/keys/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">name</span>))
-            .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-            .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">post</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/transit/keys/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">name</span>));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">upgrade_request</span>(<span class="ident">request</span>)
             .<span class="ident">send_json</span>(<span class="macro">json</span><span class="macro">!</span>({ <span class="string">&quot;type&quot;</span>: <span class="string">&quot;ed25519&quot;</span>, <span class="string">&quot;exportable&quot;</span>: <span class="ident">exportable</span> }));
         <span class="kw">match</span> <span class="ident">resp</span>.<span class="ident">status</span>() {
             <span class="number">200</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(()),
@@ -925,19 +935,17 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">delete_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">post</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/transit/keys/{}/config&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">name</span>))
-            .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-            .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">post</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/transit/keys/{}/config&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">name</span>));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">upgrade_request</span>(<span class="ident">request</span>)
             .<span class="ident">send_json</span>(<span class="macro">json</span><span class="macro">!</span>({ <span class="string">&quot;deletion_allowed&quot;</span>: <span class="bool-val">true</span> }));
 
         <span class="kw">if</span> <span class="op">!</span><span class="ident">resp</span>.<span class="ident">ok</span>() {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">resp</span>.<span class="ident">into</span>());
         }
 
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">delete</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/transit/keys/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">name</span>))
-            .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-            .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
-            .<span class="ident">call</span>();
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">delete</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/transit/keys/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">name</span>));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request</span>(<span class="ident">request</span>).<span class="ident">call</span>();
         <span class="kw">if</span> <span class="ident">resp</span>.<span class="ident">ok</span>() {
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else</span> {
@@ -950,13 +958,11 @@
         <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">version</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ed25519PrivateKey</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(
             <span class="string">&quot;{}/v1/transit/export/signing-key/{}&quot;</span>,
             <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">name</span>
-        ))
-        .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-        .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
-        .<span class="ident">call</span>();
+        ));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request</span>(<span class="ident">request</span>).<span class="ident">call</span>();
         <span class="kw">if</span> <span class="ident">resp</span>.<span class="ident">ok</span>() {
             <span class="kw">let</span> <span class="ident">export_key</span>: <span class="ident">ExportKeyResponse</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">version</span>) <span class="op">=</span> <span class="ident">version</span> {
@@ -976,10 +982,8 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">list_keys</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">request</span>(<span class="string">&quot;LIST&quot;</span>, <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/transit/keys&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>))
-            .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-            .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
-            .<span class="ident">call</span>();
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">request</span>(<span class="string">&quot;LIST&quot;</span>, <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/transit/keys&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request</span>(<span class="ident">request</span>).<span class="ident">call</span>();
         <span class="kw">match</span> <span class="ident">resp</span>.<span class="ident">status</span>() {
             <span class="number">200</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">list_keys</span>: <span class="ident">ListKeysResponse</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
@@ -994,10 +998,8 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&lt;</span><span class="ident">Ed25519PublicKey</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/transit/keys/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">name</span>))
-            .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-            .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
-            .<span class="ident">call</span>();
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/transit/keys/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">name</span>));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request</span>(<span class="ident">request</span>).<span class="ident">call</span>();
         <span class="kw">match</span> <span class="ident">resp</span>.<span class="ident">status</span>() {
             <span class="number">200</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">read_key</span>: <span class="ident">ReadKeyResponse</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
@@ -1017,10 +1019,8 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">rotate_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">post</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/transit/keys/{}/rotate&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">name</span>))
-            .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-            .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
-            .<span class="ident">call</span>();
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">post</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/transit/keys/{}/rotate&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">name</span>));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request</span>(<span class="ident">request</span>).<span class="ident">call</span>();
         <span class="kw">if</span> <span class="ident">resp</span>.<span class="ident">ok</span>() {
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else</span> {
@@ -1040,10 +1040,8 @@
             <span class="macro">json</span><span class="macro">!</span>({ <span class="string">&quot;input&quot;</span>: <span class="ident">base64</span>::<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="ident">data</span>) })
         };
 
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">post</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/transit/sign/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">name</span>))
-            .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-            .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
-            .<span class="ident">send_json</span>(<span class="ident">data</span>);
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">post</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/transit/sign/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">name</span>));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request</span>(<span class="ident">request</span>).<span class="ident">send_json</span>(<span class="ident">data</span>);
         <span class="kw">if</span> <span class="ident">resp</span>.<span class="ident">ok</span>() {
             <span class="kw">let</span> <span class="ident">signature</span>: <span class="ident">SignatureResponse</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">signature</span>.<span class="ident">data</span>.<span class="ident">signature</span>;
@@ -1061,9 +1059,9 @@
 
     <span class="doccomment">/// Create or update a key/value pair in a given secret store.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_secret</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">secret</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">value</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">put</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/secret/data/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">secret</span>))
-            .<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>)
-            .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">put</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/secret/data/{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>, <span class="ident">secret</span>));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">upgrade_request</span>(<span class="ident">request</span>)
             .<span class="ident">send_json</span>(<span class="macro">json</span><span class="macro">!</span>({ <span class="string">&quot;data&quot;</span>: { <span class="ident">key</span>: <span class="ident">value</span> } }));
         <span class="kw">match</span> <span class="ident">resp</span>.<span class="ident">status</span>() {
             <span class="number">200</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(()),
@@ -1074,9 +1072,9 @@
     <span class="doccomment">/// Returns whether or not the vault is unsealed (can be read from / written to). This can be</span>
     <span class="doccomment">/// queried without authentication.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">unsealed</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/sys/seal-status&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>))
-            .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>)
-            .<span class="ident">call</span>();
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">ureq</span>::<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/sys/seal-status&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>));
+        <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request_without_token</span>(<span class="ident">request</span>).<span class="ident">call</span>();
+        <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">resp</span>.<span class="ident">synthetic_error</span>());
         <span class="kw">match</span> <span class="ident">resp</span>.<span class="ident">status</span>() {
             <span class="number">200</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">resp</span>: <span class="ident">SealStatusResponse</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
@@ -1084,6 +1082,20 @@
             }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">resp</span>.<span class="ident">into</span>()),
         }
+    }
+
+    <span class="kw">fn</span> <span class="ident">upgrade_request</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="ident">ureq</span>::<span class="ident">Request</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ureq</span>::<span class="ident">Request</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">request</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request_without_token</span>(<span class="ident">request</span>);
+        <span class="ident">request</span>.<span class="ident">set</span>(<span class="string">&quot;X-Vault-Token&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">token</span>);
+        <span class="ident">request</span>
+    }
+
+    <span class="kw">fn</span> <span class="ident">upgrade_request_without_token</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">request</span>: <span class="ident">ureq</span>::<span class="ident">Request</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ureq</span>::<span class="ident">Request</span> {
+        <span class="ident">request</span>.<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>);
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tls_config</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">tls_config</span>.<span class="ident">as_ref</span>() {
+            <span class="ident">request</span>.<span class="ident">set_tls_config</span>(<span class="ident">tls_config</span>.<span class="ident">clone</span>());
+        }
+        <span class="ident">request</span>
     }
 }
 

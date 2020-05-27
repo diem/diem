@@ -161,7 +161,7 @@
 
 <span class="kw">impl</span> <span class="ident">PersistentSafetyStorage</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">in_memory</span>(<span class="ident">private_key</span>: <span class="ident">Ed25519PrivateKey</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">storage</span> <span class="op">=</span> <span class="ident">InMemoryStorage</span>::<span class="ident">new_storage</span>();
+        <span class="kw">let</span> <span class="ident">storage</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">InMemoryStorage</span>::<span class="ident">new</span>());
         <span class="self">Self</span>::<span class="ident">initialize</span>(<span class="ident">storage</span>, <span class="ident">private_key</span>, <span class="ident">Waypoint</span>::<span class="ident">default</span>())
     }
 
