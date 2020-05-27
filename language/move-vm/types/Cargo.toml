@@ -30,4 +30,3 @@ proptest = "0.10.0"
 default = []
 batch = ["libra-crypto/batch"]
 fuzzing = ["proptest", "libra-types/fuzzing", "vm/fuzzing"]
-debug_module = []

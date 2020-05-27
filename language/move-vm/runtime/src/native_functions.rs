@@ -7,13 +7,13 @@ use libra_types::{
     contract_event::ContractEvent,
 };
 use move_core_types::{gas_schedule::CostTable, identifier::IdentStr, language_storage::ModuleId};
-use move_vm_natives::{account, event, hash, lcs, signature};
+use move_vm_natives::{account, debug, event, hash, lcs, signature, signer, vector};
 use move_vm_types::{
     data_store::DataStore,
     gas_schedule::CostStrategy,
     loaded_data::{runtime_types::Type, types::FatType},
     natives::function::{NativeContext, NativeResult},
-    values::{debug, signer, vector, Struct, Value},
+    values::{Struct, Value},
 };
 use std::{collections::VecDeque, fmt::Write};
 use vm::errors::VMResult;
