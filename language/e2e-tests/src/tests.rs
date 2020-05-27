@@ -12,6 +12,7 @@
 mod account_universe;
 mod create_account;
 mod data_store;
+mod execution_strategies;
 mod failed_transaction_tests;
 mod genesis;
 mod mint;
