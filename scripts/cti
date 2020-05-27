@@ -24,6 +24,23 @@ source "${DIR}/ct.vars"
 RESTORE=$(echo -en '\001\033[0m\002')
 BLUE=$(echo -en '\001\033[01;34m\002')
 
+# https://stackoverflow.com/a/5533586
+# This function shuffles the elements of an array named "array" in-place using the Knuth-Fisher-Yates shuffle algorithm
+shuffle() {
+   local i tmp size max rand
+
+   # $RANDOM % (i+1) is biased because of the limited range of $RANDOM
+   # Compensate by using a range which is a multiple of the array size.
+   size=${#array[*]}
+   max=$(( 32768 / size * size ))
+
+   for ((i=size-1; i>0; i--)); do
+      while (( (rand=$RANDOM) >= max )); do :; done
+      rand=$(( rand % (i+1) ))
+      tmp=${array[i]} array[i]=${array[rand]} array[rand]=$tmp
+   done
+}
+
 join_args() {
   retval_join_args=""
   for var in $*
@@ -55,8 +72,14 @@ kube_init_context () {
 
 kube_select_cluster () {
   retval_kube_select_cluster=""
+  array=()
+  for ((i = 0; i < ${K8S_POOL_SIZE}; i++)); do
+    array+=("${i}")
+  done
+  # shuffle all the elements of the array to randomly pick a cluster
+  shuffle
   for attempt in {1..360} ; do
-    for ((i = 0; i < ${K8S_POOL_SIZE}; i++)); do
+    for i in "${array[@]}"; do
       local context=${K8S_CONTEXT_PATTERN/CLUSTERNAME/ct-${i}}
       local running_pods=$(kubectl --context="${context}" get pods -l app=cluster-test --field-selector=status.phase==Running 2> /dev/null  | grep -v ^NAME | wc -l)
       local pending_pods=$(kubectl --context="${context}" get pods -l app=cluster-test --field-selector=status.phase==Pending 2> /dev/null | grep -v ^NAME | wc -l)
