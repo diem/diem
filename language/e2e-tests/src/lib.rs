@@ -17,6 +17,7 @@ pub mod account_universe;
 pub mod common_transactions;
 pub mod compile;
 pub mod data_store;
+pub mod execution_strategies;
 pub mod executor;
 pub mod gas_costs;
 pub mod keygen;
