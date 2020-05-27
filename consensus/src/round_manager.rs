@@ -295,7 +295,10 @@ impl<T: Payload> RoundManager<T> {
         trace_event!("round_manager::generate_proposal", {"block", signed_proposal.id()});
         debug!("Propose {}", signed_proposal);
         // return proposal
-        Ok(ProposalMsg::new(signed_proposal, self.gen_sync_info()))
+        Ok(ProposalMsg::new(
+            signed_proposal,
+            self.block_store.sync_info(),
+        ))
     }
 
     /// Process a ProposalMsg, pre_process would bring all the dependencies and filter out invalid
@@ -364,7 +367,7 @@ impl<T: Payload> RoundManager<T> {
         author: Author,
         help_remote: bool,
     ) -> anyhow::Result<()> {
-        let local_sync_info = self.gen_sync_info();
+        let local_sync_info = self.block_store.sync_info();
         if sync_info.is_stale(&local_sync_info) {
             if help_remote {
                 counters::SYNC_INFO_MSGS_SENT_COUNT.inc();
@@ -466,7 +469,7 @@ impl<T: Payload> RoundManager<T> {
         }
 
         self.last_vote_sent.replace(timeout_vote.clone());
-        let timeout_vote_msg = VoteMsg::new(timeout_vote, self.gen_sync_info());
+        let timeout_vote_msg = VoteMsg::new(timeout_vote, self.block_store.sync_info());
         self.network.broadcast_vote(timeout_vote_msg).await
     }
 
@@ -494,7 +497,7 @@ impl<T: Payload> RoundManager<T> {
 
     /// This function is called only after all the dependencies of the given QC have been retrieved.
     async fn process_certificates(&mut self) -> anyhow::Result<()> {
-        let sync_info = self.gen_sync_info();
+        let sync_info = self.block_store.sync_info();
         self.safety_rules.update(sync_info.highest_quorum_cert())?;
         let consensus_state = self.safety_rules.consensus_state()?;
         counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_round() as i64);
@@ -539,7 +542,7 @@ impl<T: Payload> RoundManager<T> {
         debug!("{}Voted: {} {}", Fg(Green), Fg(Reset), vote);
 
         self.last_vote_sent.replace(vote.clone());
-        let vote_msg = VoteMsg::new(vote, self.gen_sync_info());
+        let vote_msg = VoteMsg::new(vote, self.block_store.sync_info());
         self.network.send_vote(vote_msg, recipients).await;
     }
 
@@ -604,22 +607,6 @@ impl<T: Payload> RoundManager<T> {
             }
         }
         Ok(())
-    }
-
-    /// Generate sync info that can be attached to an outgoing message
-    fn gen_sync_info(&self) -> SyncInfo {
-        let hqc = self.block_store.highest_quorum_cert().as_ref().clone();
-        // No need to include HTC if it's lower than HQC
-        let htc = self
-            .block_store
-            .highest_timeout_cert()
-            .filter(|tc| tc.round() > hqc.certified_block().round())
-            .map(|tc| tc.as_ref().clone());
-        SyncInfo::new(
-            hqc,
-            self.block_store.highest_commit_cert().as_ref().clone(),
-            htc,
-        )
     }
 
     /// The function generates a VoteMsg for a given proposed_block:

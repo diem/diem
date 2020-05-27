@@ -13,7 +13,7 @@ use crate::{
 use anyhow::{bail, ensure, format_err, Context};
 use consensus_types::{
     block::Block, common::Payload, executed_block::ExecutedBlock, quorum_cert::QuorumCert,
-    timeout_certificate::TimeoutCertificate,
+    sync_info::SyncInfo, timeout_certificate::TimeoutCertificate,
 };
 use debug_interface::prelude::*;
 use executor_types::StateComputeResult;
@@ -436,6 +436,14 @@ impl<T: Payload> BlockReader for BlockStore<T> {
 
     fn highest_timeout_cert(&self) -> Option<Arc<TimeoutCertificate>> {
         self.inner.read().unwrap().highest_timeout_cert()
+    }
+
+    fn sync_info(&self) -> SyncInfo {
+        SyncInfo::new(
+            self.highest_quorum_cert().as_ref().clone(),
+            self.highest_commit_cert().as_ref().clone(),
+            self.highest_timeout_cert().map(|tc| tc.as_ref().clone()),
+        )
     }
 }
 
