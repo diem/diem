@@ -2,20 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    gas_schedule::NativeCostIndex,
     loaded_data::types::{FatStructType, FatType},
-    natives::function::{native_gas, NativeResult},
+    natives::function::NativeResult,
 };
 use libra_types::{
     account_address::AccountAddress,
     vm_error::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode, VMStatus},
 };
 use move_core_types::gas_schedule::{
-    words_in, AbstractMemorySize, GasAlgebra, GasCarrier, CONST_SIZE, REFERENCE_SIZE, STRUCT_SIZE,
+    words_in, AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits, CONST_SIZE, REFERENCE_SIZE,
+    STRUCT_SIZE,
 };
 use std::{
     cell::{Ref, RefCell, RefMut},
-    collections::VecDeque,
     fmt::{self, Debug, Display},
     iter,
     mem::size_of,
@@ -109,6 +108,25 @@ enum ReferenceImpl {
     IndexedRef(IndexedRef),
     ContainerRef(ContainerRef),
 }
+
+// A reference to a signer. Clients can attempt a cast to this struct if they are
+// expecting a Signer on the stavk or as an argument.
+#[derive(Debug)]
+pub struct SignerRef(ContainerRef);
+
+// A reference to a vector. This is an alias for a ContainerRef for now but we may change
+// it once Containers are restructured.
+// It's used from vector native functions to get a reference to a vector and operate on that.
+// There is an impl for VecotrRef which implements the API private to this module.
+#[derive(Debug)]
+pub struct VectorRef(ContainerRef);
+
+// A vector. This is an alias for a Container for now but we may change
+// it once Containers are restructured.
+// It's used from vector native functions to get a vector and operate on that.
+// There is an impl for Vecotr which implements the API private to this module.
+#[derive(Debug)]
+pub struct Vector(Rc<RefCell<Container>>);
 
 /***************************************************************************************
  *
@@ -823,6 +841,12 @@ impl Locals {
     }
 }
 
+impl SignerRef {
+    pub fn borrow_signer(&self) -> VMResult<Value> {
+        Ok(Value(self.0.borrow_elem(0)?))
+    }
+}
+
 /***************************************************************************************
  *
  * Locals
@@ -1013,8 +1037,14 @@ impl Value {
     }
 
     pub fn vector_address(it: impl IntoIterator<Item = AccountAddress>) -> Self {
+        Self(ValueImpl::new_container(Container::Address(
+            it.into_iter().collect(),
+        )))
+    }
+
+    pub fn vector_general(it: impl IntoIterator<Item = Value>) -> Self {
         Self(ValueImpl::new_container(Container::General(
-            it.into_iter().map(ValueImpl::Address).collect(),
+            it.into_iter().map(|v| v.0).collect(),
         )))
     }
 }
@@ -1141,6 +1171,36 @@ impl VMValueCast<Vec<u8>> for Value {
             },
             v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot cast {:?} to vector<u8>", v,))),
+        }
+    }
+}
+
+impl VMValueCast<SignerRef> for Value {
+    fn cast(self) -> VMResult<SignerRef> {
+        match self.0 {
+            ValueImpl::ContainerRef(r) => Ok(SignerRef(r)),
+            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                .with_message(format!("cannot cast {:?} to Signer reference", v,))),
+        }
+    }
+}
+
+impl VMValueCast<VectorRef> for Value {
+    fn cast(self) -> VMResult<VectorRef> {
+        match self.0 {
+            ValueImpl::ContainerRef(r) => Ok(VectorRef(r)),
+            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                .with_message(format!("cannot cast {:?} to vector reference", v,))),
+        }
+    }
+}
+
+impl VMValueCast<Vector> for Value {
+    fn cast(self) -> VMResult<Vector> {
+        match self.0 {
+            ValueImpl::Container(c) => Ok(Vector(c)),
+            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                .with_message(format!("cannot cast {:?} to vector", v,))),
         }
     }
 }
@@ -1506,122 +1566,64 @@ impl IntegerValue {
 *
 **************************************************************************************/
 
-pub mod vector {
-    use super::*;
-    use crate::{loaded_data::runtime_types::Type, natives::function::NativeContext};
+pub const INDEX_OUT_OF_BOUNDS: u64 = NFE_VECTOR_ERROR_BASE + 1;
+pub const POP_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 2;
+pub const DESTROY_NON_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 3;
 
-    pub const INDEX_OUT_OF_BOUNDS: u64 = NFE_VECTOR_ERROR_BASE + 1;
-    pub const POP_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 2;
-    pub const DESTROY_NON_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 3;
+fn check_elem_layout(context: &impl NativeContext, ty: &Type, v: &Container) -> VMResult<()> {
+    let is_resource = context.is_resource(ty)?;
 
-    macro_rules! pop_arg_front {
-        ($arguments:ident, $t:ty) => {
-            $arguments.pop_front().unwrap().value_as::<$t>()?
-        };
-    }
+    match (ty, v) {
+        (Type::U8, Container::U8(_))
+        | (Type::U64, Container::U64(_))
+        | (Type::U128, Container::U128(_))
+        | (Type::Bool, Container::Bool(_))
+        | (Type::Address, Container::Address(_))
+        | (Type::Signer, Container::Resource(_))
+        | (Type::Vector(_), Container::General(_)) => Ok(()),
 
-    fn check_elem_layout(context: &impl NativeContext, ty: &Type, v: &Container) -> VMResult<()> {
-        let is_resource = context.is_resource(ty)?;
-
-        match (ty, v) {
-            (Type::U8, Container::U8(_))
-            | (Type::U64, Container::U64(_))
-            | (Type::U128, Container::U128(_))
-            | (Type::Bool, Container::Bool(_))
-            | (Type::Address, Container::Address(_))
-            | (Type::Signer, Container::Resource(_))
-            | (Type::Vector(_), Container::General(_)) => Ok(()),
-
-            (Type::Struct(_), Container::General(_))
-            | (Type::StructInstantiation(_, _), Container::General(_))
-                if !is_resource =>
-            {
-                Ok(())
-            }
-
-            (Type::Struct(_), Container::Resource(_))
-            | (Type::StructInstantiation(_, _), Container::Resource(_))
-                if is_resource =>
-            {
-                Ok(())
-            }
-
-            (Type::Reference(_), _) | (Type::MutableReference(_), _) | (Type::TyParam(_), _) => {
-                Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message(format!("invalid type param for vector: {:?}", ty)))
-            }
-
-            (Type::U8, _)
-            | (Type::U64, _)
-            | (Type::U128, _)
-            | (Type::Bool, _)
-            | (Type::Address, _)
-            | (Type::Signer, _)
-            | (Type::Vector(_), _)
-            | (Type::Struct(_), _)
-            | (Type::StructInstantiation(_, _), _) => Err(VMStatus::new(
-                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
-            )
-            .with_message(format!(
-                "vector elem layout mismatch, expected {:?}, got {:?}",
-                ty, v
-            ))),
+        (Type::Struct(_), Container::General(_))
+        | (Type::StructInstantiation(_, _), Container::General(_))
+            if !is_resource =>
+        {
+            Ok(())
         }
+
+        (Type::Struct(_), Container::Resource(_))
+        | (Type::StructInstantiation(_, _), Container::Resource(_))
+            if is_resource =>
+        {
+            Ok(())
+        }
+
+        (Type::Reference(_), _) | (Type::MutableReference(_), _) | (Type::TyParam(_), _) => {
+            Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                .with_message(format!("invalid type param for vector: {:?}", ty)))
+        }
+
+        (Type::U8, _)
+        | (Type::U64, _)
+        | (Type::U128, _)
+        | (Type::Bool, _)
+        | (Type::Address, _)
+        | (Type::Signer, _)
+        | (Type::Vector(_), _)
+        | (Type::Struct(_), _)
+        | (Type::StructInstantiation(_, _), _) => Err(VMStatus::new(
+            StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+        )
+        .with_message(format!(
+            "vector elem layout mismatch, expected {:?}, got {:?}",
+            ty, v
+        ))),
     }
+}
 
-    pub fn native_empty(
-        context: &impl NativeContext,
-        ty_args: Vec<Type>,
-        args: VecDeque<Value>,
-    ) -> VMResult<NativeResult> {
-        debug_assert!(ty_args.len() == 1);
-        debug_assert!(args.is_empty());
+impl VectorRef {
+    pub fn len(&self, type_param: &Type, context: &impl NativeContext) -> VMResult<Value> {
+        let v = self.0.borrow();
+        check_elem_layout(context, type_param, &*v)?;
 
-        let cost = native_gas(context.cost_table(), NativeCostIndex::EMPTY, 1);
-
-        let container = match &ty_args[0] {
-            Type::U8 => Container::U8(vec![]),
-            Type::U64 => Container::U64(vec![]),
-            Type::U128 => Container::U128(vec![]),
-            Type::Bool => Container::Bool(vec![]),
-            Type::Address => Container::Address(vec![]),
-
-            Type::Signer => Container::Resource(vec![]),
-
-            Type::Vector(_) | Type::Struct(_) | Type::StructInstantiation(_, _) => {
-                if context.is_resource(&ty_args[0])? {
-                    Container::Resource(vec![])
-                } else {
-                    Container::General(vec![])
-                }
-            }
-
-            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
-                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message(format!("invalid type param for vector: {:?}", &ty_args[0])))
-            }
-        };
-
-        Ok(NativeResult::ok(
-            cost,
-            vec![Value(ValueImpl::new_container(container))],
-        ))
-    }
-
-    pub fn native_length(
-        context: &impl NativeContext,
-        ty_args: Vec<Type>,
-        mut args: VecDeque<Value>,
-    ) -> VMResult<NativeResult> {
-        debug_assert!(ty_args.len() == 1);
-        debug_assert!(args.len() == 1);
-
-        let r = pop_arg_front!(args, ContainerRef);
-
-        let cost = native_gas(context.cost_table(), NativeCostIndex::LENGTH, 1);
-
-        let v = r.borrow();
-        check_elem_layout(context, &ty_args[0], &*v)?;
         let len = match &*v {
             Container::U8(v) => v.len(),
             Container::U64(v) => v.len(),
@@ -1630,29 +1632,18 @@ pub mod vector {
             Container::Address(v) => v.len(),
             Container::Resource(v) | Container::General(v) => v.len(),
         };
-
-        Ok(NativeResult::ok(cost, vec![Value::u64(len as u64)]))
+        Ok(Value::u64(len as u64))
     }
 
-    pub fn native_push_back(
+    pub fn push_back(
+        &self,
+        e: Value,
+        type_param: &Type,
         context: &impl NativeContext,
-        ty_args: Vec<Type>,
-        mut args: VecDeque<Value>,
-    ) -> VMResult<NativeResult> {
-        debug_assert!(ty_args.len() == 1);
-        debug_assert!(args.len() == 2);
+    ) -> VMResult<()> {
+        let mut v = self.0.borrow_mut();
+        check_elem_layout(context, type_param, &*v)?;
 
-        let r = pop_arg_front!(args, ContainerRef);
-        let e = args.pop_front().unwrap();
-
-        let cost = native_gas(
-            context.cost_table(),
-            NativeCostIndex::PUSH_BACK,
-            e.size().get() as usize,
-        );
-
-        let mut v = r.borrow_mut();
-        check_elem_layout(context, &ty_args[0], &*v)?;
         match &mut *v {
             Container::U8(v) => v.push(e.value_as()?),
             Container::U64(v) => v.push(e.value_as()?),
@@ -1661,25 +1652,18 @@ pub mod vector {
             Container::Address(v) => v.push(e.value_as()?),
             Container::Resource(v) | Container::General(v) => v.push(e.0),
         }
-
-        Ok(NativeResult::ok(cost, vec![]))
+        Ok(())
     }
 
-    pub fn native_borrow(
+    pub fn borrow_elem(
+        &self,
+        idx: usize,
+        cost: GasUnits<GasCarrier>,
+        type_param: &Type,
         context: &impl NativeContext,
-        ty_args: Vec<Type>,
-        mut args: VecDeque<Value>,
     ) -> VMResult<NativeResult> {
-        debug_assert!(ty_args.len() == 1);
-        debug_assert!(args.len() == 2);
-
-        let r = pop_arg_front!(args, ContainerRef);
-        let idx = pop_arg_front!(args, u64) as usize;
-
-        let cost = native_gas(context.cost_table(), NativeCostIndex::BORROW, 1);
-
-        let v = r.borrow();
-        check_elem_layout(context, &ty_args[0], &*v)?;
+        let v = self.0.borrow();
+        check_elem_layout(context, type_param, &*v)?;
         if idx >= v.len() {
             return Ok(NativeResult::err(
                 cost,
@@ -1687,25 +1671,20 @@ pub mod vector {
                     .with_sub_status(INDEX_OUT_OF_BOUNDS),
             ));
         }
-        let v = Value(r.borrow_elem(idx)?);
-
-        Ok(NativeResult::ok(cost, vec![v]))
+        Ok(NativeResult::ok(
+            cost,
+            vec![Value(self.0.borrow_elem(idx)?)],
+        ))
     }
 
-    pub fn native_pop(
+    pub fn pop(
+        &self,
+        cost: GasUnits<GasCarrier>,
+        type_param: &Type,
         context: &impl NativeContext,
-        ty_args: Vec<Type>,
-        mut args: VecDeque<Value>,
     ) -> VMResult<NativeResult> {
-        debug_assert!(ty_args.len() == 1);
-        debug_assert!(args.len() == 1);
-
-        let r = pop_arg_front!(args, ContainerRef);
-
-        let cost = native_gas(context.cost_table(), NativeCostIndex::POP_BACK, 1);
-
-        let mut v = r.borrow_mut();
-        check_elem_layout(context, &ty_args[0], &*v)?;
+        let mut v = self.0.borrow_mut();
+        check_elem_layout(context, type_param, &*v)?;
 
         macro_rules! err_pop_empty_vec {
             () => {
@@ -1747,55 +1726,16 @@ pub mod vector {
         Ok(NativeResult::ok(cost, vec![res]))
     }
 
-    pub fn native_destroy_empty(
+    pub fn swap(
+        &self,
+        idx1: usize,
+        idx2: usize,
+        cost: GasUnits<GasCarrier>,
+        type_param: &Type,
         context: &impl NativeContext,
-        ty_args: Vec<Type>,
-        mut args: VecDeque<Value>,
     ) -> VMResult<NativeResult> {
-        debug_assert!(ty_args.len() == 1);
-        debug_assert!(args.len() == 1);
-        let v = args.pop_front().unwrap().value_as::<Container>()?;
-
-        let cost = native_gas(context.cost_table(), NativeCostIndex::DESTROY_EMPTY, 1);
-
-        check_elem_layout(context, &ty_args[0], &v)?;
-
-        let is_empty = match &v {
-            Container::U8(v) => v.is_empty(),
-            Container::U64(v) => v.is_empty(),
-            Container::U128(v) => v.is_empty(),
-            Container::Bool(v) => v.is_empty(),
-            Container::Address(v) => v.is_empty(),
-
-            Container::Resource(v) | Container::General(v) => v.is_empty(),
-        };
-
-        if is_empty {
-            Ok(NativeResult::ok(cost, vec![]))
-        } else {
-            Ok(NativeResult::err(
-                cost,
-                VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
-                    .with_sub_status(DESTROY_NON_EMPTY_VEC),
-            ))
-        }
-    }
-
-    pub fn native_swap(
-        context: &impl NativeContext,
-        ty_args: Vec<Type>,
-        mut args: VecDeque<Value>,
-    ) -> VMResult<NativeResult> {
-        debug_assert!(ty_args.len() == 1);
-        debug_assert!(args.len() == 3);
-        let r = pop_arg_front!(args, ContainerRef);
-        let idx1 = pop_arg_front!(args, u64) as usize;
-        let idx2 = pop_arg_front!(args, u64) as usize;
-
-        let cost = native_gas(context.cost_table(), NativeCostIndex::SWAP, 1);
-
-        let mut v = r.borrow_mut();
-        check_elem_layout(context, &ty_args[0], &*v)?;
+        let mut v = self.0.borrow_mut();
+        check_elem_layout(context, type_param, &*v)?;
 
         macro_rules! swap {
             ($v: ident) => {{
@@ -1823,27 +1763,66 @@ pub mod vector {
     }
 }
 
-/***************************************************************************************
-*
-* Signer
-*
-*   Native function imeplementations of the Signer module.
-**************************************************************************************/
-
-pub mod signer {
-    use super::*;
-    use crate::{loaded_data::runtime_types::Type, natives::function::NativeContext};
-
-    pub fn native_borrow_address(
+impl Vector {
+    pub fn empty(
+        cost: GasUnits<GasCarrier>,
+        type_param: &Type,
         context: &impl NativeContext,
-        _ty_args: Vec<Type>,
-        mut arguments: VecDeque<Value>,
     ) -> VMResult<NativeResult> {
-        let arg = arguments.pop_front().unwrap();
-        let signer_reference = arg.value_as::<ContainerRef>()?;
-        let address_reference = Value(signer_reference.borrow_elem(0)?);
-        let cost = native_gas(context.cost_table(), NativeCostIndex::SIGNER_BORROW, 1);
-        Ok(NativeResult::ok(cost, vec![address_reference]))
+        let container = match type_param {
+            Type::U8 => Value::vector_u8(iter::empty::<u8>()),
+            Type::U64 => Value::vector_u64(iter::empty::<u64>()),
+            Type::U128 => Value::vector_u128(iter::empty::<u128>()),
+            Type::Bool => Value::vector_bool(iter::empty::<bool>()),
+            Type::Address => Value::vector_address(iter::empty::<AccountAddress>()),
+
+            Type::Signer => Value(ValueImpl::new_container(Container::Resource(vec![]))),
+
+            Type::Vector(_) | Type::Struct(_) | Type::StructInstantiation(_, _) => {
+                if context.is_resource(type_param)? {
+                    Value(ValueImpl::new_container(Container::Resource(vec![])))
+                } else {
+                    Value(ValueImpl::new_container(Container::General(vec![])))
+                }
+            }
+
+            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
+                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!("invalid type param for vector: {:?}", type_param)))
+            }
+        };
+
+        Ok(NativeResult::ok(cost, vec![container]))
+    }
+
+    pub fn destroy_empty(
+        self,
+        cost: GasUnits<GasCarrier>,
+        type_param: &Type,
+        context: &impl NativeContext,
+    ) -> VMResult<NativeResult> {
+        let v = self.0.borrow();
+        check_elem_layout(context, type_param, &*v)?;
+
+        let is_empty = match &*v {
+            Container::U8(v) => v.is_empty(),
+            Container::U64(v) => v.is_empty(),
+            Container::U128(v) => v.is_empty(),
+            Container::Bool(v) => v.is_empty(),
+            Container::Address(v) => v.is_empty(),
+
+            Container::Resource(v) | Container::General(v) => v.is_empty(),
+        };
+
+        if is_empty {
+            Ok(NativeResult::ok(cost, vec![]))
+        } else {
+            Ok(NativeResult::err(
+                cost,
+                VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                    .with_sub_status(DESTROY_NON_EMPTY_VEC),
+            ))
+        }
     }
 }
 
@@ -2132,8 +2111,6 @@ impl Display for Locals {
 #[allow(dead_code)]
 pub mod debug {
     use super::*;
-    use crate::{loaded_data::runtime_types::Type, natives::function::NativeContext};
-    use move_core_types::gas_schedule::ZERO_GAS_UNITS;
     use std::fmt::Write;
 
     fn print_value_impl<B: Write>(buf: &mut B, ty: &FatType, val: &ValueImpl) -> VMResult<()> {
@@ -2319,7 +2296,7 @@ pub mod debug {
         }
     }
 
-    fn print_reference<B: Write>(buf: &mut B, val_ty: &FatType, r: &Reference) -> VMResult<()> {
+    pub fn print_reference<B: Write>(buf: &mut B, val_ty: &FatType, r: &Reference) -> VMResult<()> {
         match &r.0 {
             ReferenceImpl::ContainerRef(r) => print_container_ref(buf, val_ty, r),
             ReferenceImpl::IndexedRef(r) => print_indexed_ref(buf, val_ty, r),
@@ -2351,49 +2328,6 @@ pub mod debug {
             | Container::Address(_) => unreachable!(),
         }
     }
-
-    #[allow(unused_mut)]
-    #[allow(unused_variables)]
-    pub fn native_print(
-        context: &mut impl NativeContext,
-        ty_args: Vec<Type>,
-        mut args: VecDeque<Value>,
-    ) -> VMResult<NativeResult> {
-        debug_assert!(ty_args.len() == 1);
-        debug_assert!(args.len() == 1);
-
-        // No-op if the feature flag is not present.
-        #[cfg(feature = "debug_module")]
-        {
-            let mut ty_args = context.convert_to_fat_types(ty_args)?;
-            let ty = ty_args.pop().unwrap();
-            let r: Reference = args.pop_back().unwrap().value_as()?;
-
-            let mut buf = String::new();
-            print_reference(&mut buf, &ty, &r)?;
-            println!("[debug] {}", buf);
-        }
-
-        Ok(NativeResult::ok(ZERO_GAS_UNITS, vec![]))
-    }
-
-    #[allow(unused_variables)]
-    pub fn native_print_stack_trace(
-        context: &mut impl NativeContext,
-        ty_args: Vec<Type>,
-        mut _arguments: VecDeque<Value>,
-    ) -> VMResult<NativeResult> {
-        debug_assert!(ty_args.is_empty());
-
-        #[cfg(feature = "debug_module")]
-        {
-            let mut s = String::new();
-            context.print_stack_trace(&mut s)?;
-            println!("{}", s);
-        }
-
-        Ok(NativeResult::ok(ZERO_GAS_UNITS, vec![]))
-    }
 }
 
 /***************************************************************************************
@@ -2415,6 +2349,7 @@ pub mod debug {
  *   is to involve an explicit representation of the type layout.
  *
  **************************************************************************************/
+use crate::{loaded_data::runtime_types::Type, natives::function::NativeContext};
 use serde::{
     de::Error as DeError,
     ser::{Error as SerError, SerializeSeq, SerializeTuple},
