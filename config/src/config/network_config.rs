@@ -20,6 +20,13 @@ use std::{collections::HashMap, convert::TryFrom, path::PathBuf, string::ToStrin
 const NETWORK_PEERS_DEFAULT: &str = "network_peers.config.toml";
 const SEED_PEERS_DEFAULT: &str = "seed_peers.toml";
 
+/// Current supported protocol negotiation handshake version.
+///
+/// See [`perform_handshake`] in `network/src/transport.rs`
+// TODO(philiphayes): ideally this constant lives somewhere in network/ ...
+// might need to extract into a separate network_constants crate or something.
+pub const HANDSHAKE_VERSION: u8 = 0;
+
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]

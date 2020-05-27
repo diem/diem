@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{constants, error::Error, SecureBackends};
+use libra_config::config::HANDSHAKE_VERSION;
 use libra_crypto::{ed25519::Ed25519PublicKey, hash::CryptoHash, x25519, ValidCryptoMaterial};
 use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_KEY, VALIDATOR_NETWORK_KEY,
@@ -50,14 +51,14 @@ impl ValidatorConfig {
         let validator_address = self
             .validator_address
             .clone()
-            .append_prod_protos(validator_network_key.clone(), constants::HANDSHAKE_VERSION);
+            .append_prod_protos(validator_network_key.clone(), HANDSHAKE_VERSION);
         let raw_validator_address = RawNetworkAddress::try_from(&validator_address)
             .map_err(|e| Error::UnexpectedError(format!("(raw_validator_address) {}", e)))?;
 
         let fullnode_address = self
             .fullnode_address
             .clone()
-            .append_prod_protos(fullnode_network_key.clone(), constants::HANDSHAKE_VERSION);
+            .append_prod_protos(fullnode_network_key.clone(), HANDSHAKE_VERSION);
         let raw_fullnode_address = RawNetworkAddress::try_from(&fullnode_address)
             .map_err(|e| Error::UnexpectedError(format!("(raw_fullnode_address) {}", e)))?;
 
