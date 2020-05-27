@@ -6,8 +6,8 @@ use anyhow::{ensure, format_err, Result};
 use executor::db_bootstrapper;
 use libra_config::{
     config::{
-        ConsensusType, NodeConfig, RemoteService, SafetyRulesService, SecureBackend,
-        SeedPeersConfig, Token, VaultConfig, HANDSHAKE_VERSION,
+        ConsensusType, NodeConfig, RemoteService, SafetyRulesService, SecureBackend, Token,
+        VaultConfig,
     },
     generator,
 };
@@ -141,11 +141,17 @@ impl ValidatorConfig {
     pub fn build(&self) -> Result<NodeConfig> {
         let mut configs = self.build_set()?;
 
-        // Extract and format first node's advertised address for the cluster
-        // bootstrap.
-        let seed_peers = self.build_seed_peers(&configs[0])?;
+        // Extract and format first node's advertised address to use as the seed
+        // peer for bootstrapping other validator nodes.
+        let seed_config = &configs[0]
+            .validator_network
+            .as_ref()
+            .ok_or(Error::MissingValidatorNetwork)?;
+        let seed_peers = generator::build_seed_peers(&seed_config, self.bootstrap.clone());
 
+        // Pull out this specific node from the generated validator configs.
         let mut config = configs.swap_remove(self.index);
+
         let validator_network = config
             .validator_network
             .as_mut()
@@ -276,28 +282,6 @@ impl ValidatorConfig {
         }
 
         Ok(())
-    }
-
-    fn build_seed_peers(&self, config: &NodeConfig) -> Result<SeedPeersConfig> {
-        let seed_config = config
-            .validator_network
-            .as_ref()
-            .ok_or(Error::MissingValidatorNetwork)?;
-
-        let seed_pubkey = seed_config
-            .network_keypairs
-            .as_ref()
-            .ok_or(Error::MissingNetworkKeyPairs)?
-            .identity_keypair
-            .public_key();
-        let seed_base_addr = self.bootstrap.clone();
-        let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, HANDSHAKE_VERSION);
-
-        let mut seed_peers = SeedPeersConfig::default();
-        seed_peers
-            .seed_peers
-            .insert(seed_config.peer_id, vec![seed_addr]);
-        Ok(seed_peers)
     }
 }
 
