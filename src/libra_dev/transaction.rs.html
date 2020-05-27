@@ -781,6 +781,32 @@
 <span id="781">781</span>
 <span id="782">782</span>
 <span id="783">783</span>
+<span id="784">784</span>
+<span id="785">785</span>
+<span id="786">786</span>
+<span id="787">787</span>
+<span id="788">788</span>
+<span id="789">789</span>
+<span id="790">790</span>
+<span id="791">791</span>
+<span id="792">792</span>
+<span id="793">793</span>
+<span id="794">794</span>
+<span id="795">795</span>
+<span id="796">796</span>
+<span id="797">797</span>
+<span id="798">798</span>
+<span id="799">799</span>
+<span id="800">800</span>
+<span id="801">801</span>
+<span id="802">802</span>
+<span id="803">803</span>
+<span id="804">804</span>
+<span id="805">805</span>
+<span id="806">806</span>
+<span id="807">807</span>
+<span id="808">808</span>
+<span id="809">809</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -801,13 +827,15 @@
 };
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::{<span class="self">self</span>, <span class="ident">AccountAddress</span>},
-    <span class="ident">account_config</span>::{<span class="ident">lbr_type_tag</span>, <span class="ident">LBR_NAME</span>},
+    <span class="ident">account_config</span>::{
+        <span class="ident">from_currency_code_string</span>, <span class="ident">lbr_type_tag</span>, <span class="ident">type_tag_for_currency_code</span>, <span class="ident">LBR_NAME</span>,
+    },
     <span class="ident">transaction</span>::{
         <span class="ident">authenticator</span>::<span class="ident">AuthenticationKey</span>, <span class="ident">helpers</span>::<span class="ident">TransactionSigner</span>, <span class="ident">RawTransaction</span>,
         <span class="ident">SignedTransaction</span>, <span class="ident">TransactionArgument</span>, <span class="ident">TransactionPayload</span>,
     },
 };
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">slice</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">ffi</span>::<span class="ident">CStr</span>, <span class="ident">slice</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
 <span class="kw">use</span> <span class="ident">transaction_builder</span>::{<span class="ident">encode_transfer_with_metadata_script</span>, <span class="ident">get_transaction_name</span>};
 
 <span class="attribute">#[<span class="ident">no_mangle</span>]</span>
@@ -815,9 +843,11 @@
     <span class="ident">sender_private_key_bytes</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,
     <span class="ident">receiver</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,
     <span class="ident">sequence</span>: <span class="ident">u64</span>,
+    <span class="ident">identifier</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">i8</span>,
     <span class="ident">num_coins</span>: <span class="ident">u64</span>,
     <span class="ident">max_gas_amount</span>: <span class="ident">u64</span>,
     <span class="ident">gas_unit_price</span>: <span class="ident">u64</span>,
+    <span class="ident">gas_identifier</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">i8</span>,
     <span class="ident">expiration_time_secs</span>: <span class="ident">u64</span>,
     <span class="ident">metadata_bytes</span>: <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">u8</span>,
     <span class="ident">metadata_len</span>: <span class="ident">usize</span>,
@@ -874,8 +904,21 @@
     };
     <span class="kw">let</span> <span class="ident">expiration_time</span> <span class="op">=</span> <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="ident">expiration_time_secs</span>);
 
+    <span class="kw">let</span> <span class="ident">coin_type_tag</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">from_currency_code_string</span>(
+        <span class="ident">CStr</span>::<span class="ident">from_ptr</span>(<span class="ident">identifier</span>)
+            .<span class="ident">to_string_lossy</span>()
+            .<span class="ident">into_owned</span>()
+            .<span class="ident">as_str</span>(),
+    ) {
+        <span class="prelude-val">Ok</span>(<span class="ident">coin_ident</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">type_tag_for_currency_code</span>(<span class="ident">coin_ident</span>),
+        <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">update_last_error</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Invalid coin identifier: {}&quot;</span>, <span class="ident">e</span>.<span class="ident">to_string</span>()));
+            <span class="kw">return</span> <span class="ident">LibraStatus</span>::<span class="ident">InvalidArgument</span>;
+        }
+    };
+
     <span class="kw">let</span> <span class="ident">program</span> <span class="op">=</span> <span class="ident">encode_transfer_with_metadata_script</span>(
-        <span class="ident">lbr_type_tag</span>(),
+        <span class="ident">coin_type_tag</span>,
         <span class="kw-2">&amp;</span><span class="ident">receiver_address</span>,
         <span class="ident">receiver_auth_key</span>.<span class="ident">prefix</span>().<span class="ident">to_vec</span>(),
         <span class="ident">num_coins</span>,
@@ -889,7 +932,9 @@
         <span class="ident">payload</span>,
         <span class="ident">max_gas_amount</span>,
         <span class="ident">gas_unit_price</span>,
-        <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
+        <span class="ident">CStr</span>::<span class="ident">from_ptr</span>(<span class="ident">gas_identifier</span>)
+            .<span class="ident">to_string_lossy</span>()
+            .<span class="ident">into_owned</span>(),
         <span class="ident">expiration_time</span>,
     );
 
@@ -1279,14 +1324,18 @@
         <span class="kw">let</span> <span class="ident">buf_ptr</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">len</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">0</span>;
 
+        <span class="kw">let</span> <span class="ident">coin_ident</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">ffi</span>::<span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">LBR_NAME</span>).<span class="ident">expect</span>(<span class="string">&quot;Invalid ident&quot;</span>);
+
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">unsafe</span> {
             <span class="ident">libra_SignedTransactionBytes_from</span>(
                 <span class="ident">private_key_bytes</span>.<span class="ident">as_ptr</span>(),
                 <span class="ident">receiver_auth_key</span>.<span class="ident">as_ref</span>().<span class="ident">as_ptr</span>(),
                 <span class="ident">sequence</span>,
+                <span class="ident">coin_ident</span>.<span class="ident">as_ptr</span>(),
                 <span class="ident">amount</span>,
                 <span class="ident">max_gas_amount</span>,
                 <span class="ident">gas_unit_price</span>,
+                <span class="ident">coin_ident</span>.<span class="ident">as_ptr</span>(),
                 <span class="ident">expiration_time_secs</span>,
                 <span class="ident">metadata</span>.<span class="ident">as_ptr</span>(),
                 <span class="ident">metadata</span>.<span class="ident">len</span>(),
@@ -1330,14 +1379,17 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf2</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">null_mut</span>();
         <span class="kw">let</span> <span class="ident">buf_ptr2</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf2</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">len2</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">0</span>;
+        <span class="kw">let</span> <span class="ident">coin_idnet</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">ffi</span>::<span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">LBR_NAME</span>).<span class="ident">expect</span>(<span class="string">&quot;Invalid ident&quot;</span>);
         <span class="kw">let</span> <span class="ident">result2</span> <span class="op">=</span> <span class="kw">unsafe</span> {
             <span class="ident">libra_SignedTransactionBytes_from</span>(
                 <span class="ident">private_key_bytes</span>.<span class="ident">as_ptr</span>(),
                 <span class="ident">receiver_auth_key</span>.<span class="ident">as_ref</span>().<span class="ident">as_ptr</span>(),
                 <span class="ident">sequence</span>,
+                <span class="ident">coin_idnet</span>.<span class="ident">as_ptr</span>(),
                 <span class="ident">amount</span>,
                 <span class="ident">max_gas_amount</span>,
                 <span class="ident">gas_unit_price</span>,
+                <span class="ident">coin_idnet</span>.<span class="ident">as_ptr</span>(),
                 <span class="ident">expiration_time_secs</span>,
                 <span class="ident">metadata</span>.<span class="ident">as_ptr</span>(),
                 <span class="ident">metadata</span>.<span class="ident">len</span>(),
