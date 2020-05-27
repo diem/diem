@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["local_storage",""]],"trait":[["Adapter","`Adapter` defines the interfaces of the storage backend we use for backup and restore."]]});

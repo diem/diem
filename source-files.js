@@ -2,7 +2,7 @@ var N = null;var sourcesIndex = {};
 sourcesIndex["accumulator"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["admission_control_proto"] = {"name":"","dirs":[{"name":"proto","files":["mod.rs"]}],"files":["lib.rs"]};
 sourcesIndex["admission_control_service"] = {"name":"","files":["admission_control_service.rs","counters.rs","lib.rs"]};
-sourcesIndex["backup_cli"] = {"name":"","dirs":[{"name":"adapter","dirs":[{"name":"local_storage","files":["mod.rs"]}],"files":["mod.rs"]}],"files":["backup.rs","lib.rs","restore.rs"]};
+sourcesIndex["backup_cli"] = {"name":"","dirs":[{"name":"storage","dirs":[{"name":"local_fs","files":["mod.rs"]}],"files":["mod.rs"]}],"files":["backup.rs","lib.rs","restore.rs"]};
 sourcesIndex["backup_service"] = {"name":"","files":["handlers.rs","lib.rs"]};
 sourcesIndex["borrow_graph"] = {"name":"","files":["graph.rs","lib.rs","paths.rs","references.rs","shared.rs"]};
 sourcesIndex["bounded_executor"] = {"name":"","files":["lib.rs"]};

@@ -65,15 +65,13 @@
 <span id="65">65</span>
 <span id="66">66</span>
 <span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">adapter</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">backup</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">restore</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">storage</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span>;
@@ -83,8 +81,6 @@
 <span class="kw">use</span> <span class="ident">bytes</span>::{<span class="ident">Bytes</span>, <span class="ident">BytesMut</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">convert</span>::<span class="ident">TryInto</span>;
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">io</span>::{<span class="ident">AsyncRead</span>, <span class="ident">AsyncReadExt</span>};
-
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">FileHandle</span> <span class="op">=</span> <span class="ident">String</span>;
 
 <span class="attribute">#[<span class="ident">async_trait</span>]</span>
 <span class="kw">trait</span> <span class="ident">ReadRecordBytes</span> {

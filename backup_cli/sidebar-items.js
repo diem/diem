@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["adapter",""],["backup",""],["restore",""]],"type":[["FileHandle",""]]});
+initSidebarItems({"mod":[["backup",""],["restore",""],["storage",""]]});
