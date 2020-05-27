@@ -520,6 +520,35 @@ impl Arbitrary for NetworkAddress {
     }
 }
 
+#[cfg(any(test, feature = "fuzzing"))]
+pub fn arb_libranet_addr() -> impl Strategy<Value = NetworkAddress> {
+    let arb_transport_protos = prop_oneof![
+        any::<u16>().prop_map(|port| vec![Protocol::Memory(port)]),
+        any::<(Ipv4Addr, u16)>()
+            .prop_map(|(addr, port)| vec![Protocol::Ip4(addr), Protocol::Tcp(port)]),
+        any::<(Ipv6Addr, u16)>()
+            .prop_map(|(addr, port)| vec![Protocol::Ip6(addr), Protocol::Tcp(port)]),
+        any::<(DnsName, u16)>()
+            .prop_map(|(name, port)| vec![Protocol::Dns(name), Protocol::Tcp(port)]),
+        any::<(DnsName, u16)>()
+            .prop_map(|(name, port)| vec![Protocol::Dns4(name), Protocol::Tcp(port)]),
+        any::<(DnsName, u16)>()
+            .prop_map(|(name, port)| vec![Protocol::Dns6(name), Protocol::Tcp(port)]),
+    ];
+    let arb_libranet_protos = prop_oneof![
+        any::<(x25519::PublicKey, u8)>()
+            .prop_map(|(pubkey, hs)| vec![Protocol::NoiseIK(pubkey), Protocol::Handshake(hs)]),
+        any::<u8>().prop_map(|hs| vec![Protocol::PeerIdExchange, Protocol::Handshake(hs)]),
+    ];
+
+    (arb_transport_protos, arb_libranet_protos).prop_map(
+        |(mut transport_protos, mut libranet_protos)| {
+            transport_protos.append(&mut libranet_protos);
+            NetworkAddress::new(transport_protos)
+        },
+    )
+}
+
 //////////////
 // Protocol //
 //////////////
@@ -763,38 +792,47 @@ pub fn parse_handshake(protos: &[Protocol]) -> Option<(u8, &[Protocol])> {
     }
 }
 
-/// Extract the second item of a 2-tuple.
-fn snd<T, U>(arg: (T, U)) -> U {
-    arg.1
-}
-
 /// parse canonical libranet protocols
 ///
 /// See: `NetworkAddress::is_libranet_addr(&self)`
 fn parse_libranet_protos(protos: &[Protocol]) -> Option<&[Protocol]> {
+    // parse base transport layer
+    // ---
     // parse_ip_tcp
     // <or> parse_dns_tcp
-    // <or> cfg(test) parse_memory
+    // <or> cfg!(test) parse_memory
 
-    let opt_transport_suffix = parse_ip_tcp(protos).map(snd);
-    let opt_transport_suffix = opt_transport_suffix.or_else(|| parse_dns_tcp(protos).map(snd));
-    #[cfg(test)]
-    let opt_transport_suffix = opt_transport_suffix.or_else(|| parse_memory(protos).map(snd));
-    let transport_suffix = opt_transport_suffix?;
+    let transport_suffix = None
+        .or_else(|| parse_ip_tcp(protos).map(|x| x.1))
+        .or_else(|| parse_dns_tcp(protos).map(|x| x.1))
+        .or_else(|| {
+            if cfg!(test) {
+                parse_memory(protos).map(|x| x.1)
+            } else {
+                None
+            }
+        })?;
 
-    // and then: parse_noise_ik
-    //           <or> cfg(test) parse_peerid_ex
+    // parse authentication layer
+    // ---
+    // parse_noise_ik
+    // <or> cfg!(test) parse_peerid_ex
 
-    let opt_auth_suffix = parse_noise_ik(transport_suffix).map(snd);
-    #[cfg(test)]
-    let opt_auth_suffix = opt_auth_suffix.or_else(|| parse_peerid_ex(protos));
-    let auth_suffix = opt_auth_suffix?;
+    let auth_suffix = None
+        .or_else(|| parse_noise_ik(transport_suffix).map(|x| x.1))
+        .or_else(|| {
+            if cfg!(test) {
+                parse_peerid_ex(transport_suffix)
+            } else {
+                None
+            }
+        })?;
 
-    // and then: parse_handshake
+    // parse handshake layer
 
-    let handshake_suffix = parse_handshake(auth_suffix).map(snd)?;
+    let handshake_suffix = parse_handshake(auth_suffix).map(|x| x.1)?;
 
-    // and then: ensure no trailing protos after handshake
+    // ensure no trailing protos after handshake
 
     if handshake_suffix.is_empty() {
         Some(protos)
@@ -1056,6 +1094,21 @@ mod test {
             let addr_str = addr.to_string();
             let addr_parsed = NetworkAddress::from_str(&addr_str).unwrap();
             assert_eq!(addr, addr_parsed);
+        }
+
+        #[test]
+        fn test_is_libranet_addr(addr in arb_libranet_addr()) {
+            assert!(addr.is_libranet_addr(), "addr.is_libranet_addr() = false; addr: '{}'", addr);
+        }
+
+        #[test]
+        fn test_is_not_libranet_addr_with_trailing(
+            addr in arb_libranet_addr(),
+            addr_suffix in any::<NetworkAddress>(),
+        ) {
+            // A valid LibraNet addr w/ unexpected trailing protocols should not parse.
+            let addr = addr.extend_from_slice(addr_suffix.as_slice());
+            assert!(!addr.is_libranet_addr(), "addr.is_libranet_addr() = true; addr: '{}'", addr);
         }
     }
 }

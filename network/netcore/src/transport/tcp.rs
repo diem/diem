@@ -94,10 +94,13 @@ impl Transport for TcpTransport {
     }
 
     fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
-        let (hostport, _addr_suffix) =
-            parse_hostport(addr.as_slice()).ok_or_else(|| invalid_addr_error(&addr))?;
+        let (addr_string, _addr_suffix) =
+            parse_addr_and_port(addr.as_slice()).ok_or_else(|| invalid_addr_error(&addr))?;
+        // TODO(philiphayes): use `tokio::net::lookup_host()` then filter the results
+        // so e.g. `Protocol::Dns4` only returns `SocketAddrV4`s and `Protocol::Dns6`
+        // only returns `SocketAddrV6`.
         let f: Pin<Box<dyn Future<Output = io::Result<TcpStream>> + Send + 'static>> =
-            Box::pin(TcpStream::connect(hostport));
+            Box::pin(TcpStream::connect(addr_string));
 
         Ok(TcpOutbound {
             inner: f,
@@ -208,7 +211,7 @@ fn invalid_addr_error(addr: &NetworkAddress) -> io::Error {
     )
 }
 
-fn parse_hostport(protos: &[Protocol]) -> Option<(String, &[Protocol])> {
+fn parse_addr_and_port(protos: &[Protocol]) -> Option<(String, &[Protocol])> {
     parse_ip_tcp(protos)
         .map(|((ip, port), suffix)| (format!("{}:{}", ip, port), suffix))
         .or_else(|| {
