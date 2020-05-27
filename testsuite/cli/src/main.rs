@@ -201,16 +201,12 @@ fn print_help(client_info: &str, commands: &[std::sync::Arc<dyn Command>]) {
 
 /// Retrieve a waypoint given the URL.
 fn retrieve_waypoint(url_str: &str) -> anyhow::Result<Waypoint> {
-    let response = ureq::get(url_str).timeout_connect(10_000).call();
-    match response.status() {
-        200 => response
-            .into_string()
-            .map_err(|_| anyhow::format_err!("Failed to parse waypoint from URL {}", url_str))
-            .and_then(|r| Waypoint::from_str(r.trim())),
-        _ => Err(anyhow::format_err!(
-            "URL {} returned {}",
-            url_str,
-            response.status_line()
-        )),
-    }
+    let client = reqwest::blocking::ClientBuilder::new().build()?;
+    let response = client.get(url_str).send()?;
+
+    Ok(response
+        .error_for_status()
+        .map_err(|_| anyhow::format_err!("Failed to retrieve waypoint from URL {}", url_str))?
+        .text()
+        .map(|r| Waypoint::from_str(r.trim()))??)
 }
