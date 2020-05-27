@@ -1693,6 +1693,14 @@
 <span id="1693">1693</span>
 <span id="1694">1694</span>
 <span id="1695">1695</span>
+<span id="1696">1696</span>
+<span id="1697">1697</span>
+<span id="1698">1698</span>
+<span id="1699">1699</span>
+<span id="1700">1700</span>
+<span id="1701">1701</span>
+<span id="1702">1702</span>
+<span id="1703">1703</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1729,6 +1737,7 @@
         <span class="ident">parse_transaction_argument</span>, <span class="ident">Module</span>, <span class="ident">RawTransaction</span>, <span class="ident">Script</span>, <span class="ident">SignedTransaction</span>,
         <span class="ident">TransactionArgument</span>, <span class="ident">TransactionPayload</span>, <span class="ident">Version</span>,
     },
+    <span class="ident">vm_error</span>::<span class="ident">StatusCode</span>,
     <span class="ident">waypoint</span>::<span class="ident">Waypoint</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_wallet</span>::{<span class="ident">io_utils</span>, <span class="ident">WalletLibrary</span>};
@@ -2087,7 +2096,7 @@
         <span class="self">self</span>.<span class="ident">client</span>
             .<span class="ident">submit_transaction</span>(<span class="self">self</span>.<span class="ident">accounts</span>.<span class="ident">get_mut</span>(<span class="ident">sender_ref_id</span>), <span class="ident">txn</span>)<span class="question-mark">?</span>;
         <span class="kw">if</span> <span class="ident">is_blocking</span> {
-            <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(<span class="ident">sender_address</span>, <span class="ident">sequence_number</span>);
+            <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(<span class="ident">sender_address</span>, <span class="ident">sequence_number</span>)<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(())
     }
@@ -2294,13 +2303,17 @@
         )<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">submit_transaction</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sender</span>), <span class="ident">txn</span>)<span class="question-mark">?</span>;
         <span class="kw">if</span> <span class="ident">is_blocking</span> {
-            <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(<span class="ident">sender</span>.<span class="ident">address</span>, <span class="ident">sender</span>.<span class="ident">sequence_number</span>);
+            <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(<span class="ident">sender</span>.<span class="ident">address</span>, <span class="ident">sender</span>.<span class="ident">sequence_number</span>)<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Waits for the next transaction for a specific address and prints it</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">wait_for_transaction</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">account</span>: <span class="ident">AccountAddress</span>, <span class="ident">sequence_number</span>: <span class="ident">u64</span>) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">wait_for_transaction</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">account</span>: <span class="ident">AccountAddress</span>,
+        <span class="ident">sequence_number</span>: <span class="ident">u64</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">max_iterations</span> <span class="op">=</span> <span class="number">5000</span>;
         <span class="macro">print</span><span class="macro">!</span>(
             <span class="string">&quot;waiting for {} with sequence number {}&quot;</span>,
@@ -2314,11 +2327,18 @@
                 .<span class="ident">get_txn_by_acc_seq</span>(<span class="ident">account</span>, <span class="ident">sequence_number</span> <span class="op">-</span> <span class="number">1</span>, <span class="bool-val">true</span>)
             {
                 <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">txn_view</span>)) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;transaction is stored!&quot;</span>);
-                    <span class="kw">if</span> <span class="ident">txn_view</span>.<span class="ident">events</span>.<span class="ident">is_empty</span>() {
-                        <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;no events emitted&quot;</span>);
+                    <span class="kw">if</span> <span class="ident">txn_view</span>.<span class="ident">vm_status</span> <span class="op">=</span><span class="op">=</span> <span class="ident">StatusCode</span>::<span class="ident">EXECUTED</span> {
+                        <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;transaction executed!&quot;</span>);
+                        <span class="kw">if</span> <span class="ident">txn_view</span>.<span class="ident">events</span>.<span class="ident">is_empty</span>() {
+                            <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;no events emitted&quot;</span>);
+                        }
+                        <span class="kw">break</span> <span class="prelude-val">Ok</span>(());
+                    } <span class="kw">else</span> {
+                        <span class="kw">break</span> <span class="prelude-val">Err</span>(<span class="macro">format_err</span><span class="macro">!</span>(
+                            <span class="string">&quot;transaction failed to execute; status: {:?}!&quot;</span>,
+                            <span class="ident">txn_view</span>.<span class="ident">vm_status</span>
+                        ));
                     }
-                    <span class="kw">break</span>;
                 }
                 <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Response with error: {:?}&quot;</span>, <span class="ident">e</span>);
@@ -2385,7 +2405,7 @@
         }
 
         <span class="kw">if</span> <span class="ident">is_blocking</span> {
-            <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(<span class="ident">sender_address</span>, <span class="ident">sender_sequence</span>);
+            <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(<span class="ident">sender_address</span>, <span class="ident">sender_sequence</span>)<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(<span class="ident">IndexAndSequence</span> {
@@ -2569,9 +2589,7 @@
 
         <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">submit_transaction</span>(<span class="prelude-val">None</span>, <span class="ident">transaction</span>)<span class="question-mark">?</span>;
         <span class="comment">// blocking by default (until transaction completion)</span>
-        <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(<span class="ident">sender_address</span>, <span class="ident">sender_sequence</span> <span class="op">+</span> <span class="number">1</span>);
-
-        <span class="prelude-val">Ok</span>(())
+        <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(<span class="ident">sender_address</span>, <span class="ident">sender_sequence</span> <span class="op">+</span> <span class="number">1</span>)
     }
 
     <span class="kw">fn</span> <span class="ident">submit_program</span>(
@@ -2589,9 +2607,7 @@
 
         <span class="self">self</span>.<span class="ident">client</span>
             .<span class="ident">submit_transaction</span>(<span class="self">self</span>.<span class="ident">accounts</span>.<span class="ident">get_mut</span>(<span class="ident">sender_ref_id</span>), <span class="ident">txn</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(<span class="ident">sender_address</span>, <span class="ident">sequence_number</span> <span class="op">+</span> <span class="number">1</span>);
-
-        <span class="prelude-val">Ok</span>(())
+        <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(<span class="ident">sender_address</span>, <span class="ident">sequence_number</span> <span class="op">+</span> <span class="number">1</span>)
     }
 
     <span class="doccomment">/// Publish Move module</span>
@@ -3030,7 +3046,7 @@
             <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(
                 <span class="ident">sender_address</span>,
                 <span class="self">self</span>.<span class="ident">faucet_account</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>().<span class="ident">sequence_number</span>,
-            );
+            )<span class="question-mark">?</span>;
         }
         <span class="ident">resp</span>
     }
@@ -3065,7 +3081,7 @@
         }
         <span class="kw">let</span> <span class="ident">sequence_number</span> <span class="op">=</span> <span class="ident">body</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="kw">if</span> <span class="ident">is_blocking</span> {
-            <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(<span class="ident">association_address</span>(), <span class="ident">sequence_number</span>);
+            <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(<span class="ident">association_address</span>(), <span class="ident">sequence_number</span>)<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())
