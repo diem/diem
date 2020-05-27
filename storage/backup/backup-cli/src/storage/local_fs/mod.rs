@@ -19,7 +19,7 @@ use tokio::{
 #[derive(StructOpt)]
 pub struct LocalFsOpt {
     #[structopt(
-        long = "local-backup-store",
+        long = "dir",
         parse(from_os_str),
         help = "Target local dir to hold backups."
     )]

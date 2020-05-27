@@ -23,7 +23,7 @@ use tokio_util::compat::FuturesAsyncReadCompatExt;
 pub struct BackupServiceClientOpt {
     #[structopt(
         long = "backup-service-port",
-        about = "Backup service port. The service must listen on localhost."
+        help = "Backup service port. The service must listen on localhost."
     )]
     pub port: u16,
 }
@@ -95,7 +95,7 @@ impl BackupServiceClient {
 
 #[derive(StructOpt)]
 pub struct GlobalBackupOpt {
-    #[structopt(long = "max-chunk-size", about = "Maximum chunk file size in bytes.")]
+    #[structopt(long = "max-chunk-size", help = "Maximum chunk file size in bytes.")]
     pub max_chunk_size: usize,
 }
 
@@ -103,7 +103,7 @@ pub struct GlobalBackupOpt {
 pub struct StateSnapshotBackupOpt {
     #[structopt(
         long = "state-version",
-        about = "Version at which a state snapshot to be taken."
+        help = "Version at which a state snapshot to be taken."
     )]
     pub version: Version,
 }

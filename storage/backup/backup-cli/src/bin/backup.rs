@@ -1,12 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::{Context, Result};
 use backup_cli::{
     backup::{
         BackupServiceClient, BackupServiceClientOpt, GlobalBackupOpt,
         StateSnapshotBackupController, StateSnapshotBackupOpt,
     },
-    storage::local_fs::{LocalFs, LocalFsOpt},
+    storage::StorageOpt,
 };
 use std::sync::Arc;
 use structopt::StructOpt;
@@ -22,21 +23,23 @@ struct Opt {
     #[structopt(flatten)]
     client: BackupServiceClientOpt,
 
-    #[structopt(flatten)]
-    storage: LocalFsOpt,
+    #[structopt(subcommand)]
+    storage: StorageOpt,
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     let opt = Opt::from_args();
     let client = Arc::new(BackupServiceClient::new_with_opt(opt.client));
-    let storage = Arc::new(LocalFs::new_with_opt(opt.storage));
+    let storage = opt.storage.init_storage().await?;
 
     let manifest =
         StateSnapshotBackupController::new(opt.state_snapshot, opt.global, client, storage)
             .run()
             .await
-            .expect("Failed to backup account state.");
+            .context("Failed to backup account state.")?;
 
     println!("Success. Manifest saved to {}", &manifest);
+
+    Ok(())
 }
