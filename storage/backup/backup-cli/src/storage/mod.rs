@@ -17,8 +17,8 @@ pub trait BackupStorage {
     /// Hint that a bunch of files are gonna be created related to a backup identified by `name`,
     /// which is unique to the content of the backup, i.e. it won't be the same name unless you are
     /// backing up exactly the same thing.
-    /// Storage can choose to take actions like create a dedicated folder for do nothing.
-    /// Returns a string to identify this operation in potential file creation requests.
+    /// Storage can choose to take actions like create a dedicated folder or do nothing.
+    /// Returns a string to identify this operation in potential succeeding file creation requests.
     async fn create_backup(&self, name: &str) -> Result<BackupHandle>;
     /// Ask to create a file for write, `backup_handle` was returned by `create_backup` to identify
     /// the current backup.
