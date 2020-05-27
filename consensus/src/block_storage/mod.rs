@@ -33,6 +33,8 @@ pub enum VoteReceptionResult {
     NewTimeoutCertificate(Arc<TimeoutCertificate>),
     /// There might be some issues adding a vote
     ErrorAddingVote(VerifyError),
+    /// The vote is not for the current round.
+    UnexpectedRound(u64, u64),
 }
 
 pub trait BlockReader: Send + Sync {

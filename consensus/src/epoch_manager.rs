@@ -322,7 +322,6 @@ impl<T: Payload> EpochManager<T> {
         let mut processor = RoundManager::new(
             epoch_info,
             block_store,
-            last_vote,
             pacemaker,
             proposer_election,
             proposal_generator,
@@ -332,7 +331,7 @@ impl<T: Payload> EpochManager<T> {
             self.storage.clone(),
             self.time_service.clone(),
         );
-        processor.start().await;
+        processor.start(last_vote).await;
         self.processor = Some(RoundProcessor::Normal(processor));
         info!("RoundManager started");
     }
