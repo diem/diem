@@ -495,11 +495,7 @@ impl<T: Payload> RoundManager<T> {
         let consensus_state = self.safety_rules.consensus_state()?;
         counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_round() as i64);
 
-        if let Some(new_round_event) = self.pacemaker.process_certificates(
-            Some(sync_info.highest_quorum_cert().certified_block().round()),
-            sync_info.highest_timeout_certificate().map(|tc| tc.round()),
-            Some(sync_info.highest_commit_round()),
-        ) {
+        if let Some(new_round_event) = self.pacemaker.process_certificates(sync_info) {
             self.process_new_round_event(new_round_event).await;
         }
         Ok(())
@@ -805,17 +801,9 @@ impl<T: Payload> RoundManager<T> {
 
     /// To jump start new round with the current certificates we have.
     pub async fn start(&mut self, last_vote_sent: Option<Vote>) {
-        let hqc_round = Some(
-            self.block_store
-                .highest_quorum_cert()
-                .certified_block()
-                .round(),
-        );
-        let htc_round = self.block_store.highest_timeout_cert().map(|tc| tc.round());
-        let last_committed_round = Some(self.block_store.root().round());
         let new_round_event = self
             .pacemaker
-            .process_certificates(hqc_round, htc_round, last_committed_round)
+            .process_certificates(self.block_store.sync_info())
             .expect("Can not jump start a pacemaker from existing certificates.");
         if let Some(vote) = last_vote_sent {
             self.pacemaker.record_vote(vote);
