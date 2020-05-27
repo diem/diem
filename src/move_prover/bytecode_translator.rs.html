@@ -1640,6 +1640,16 @@
 <span id="1640">1640</span>
 <span id="1641">1641</span>
 <span id="1642">1642</span>
+<span id="1643">1643</span>
+<span id="1644">1644</span>
+<span id="1645">1645</span>
+<span id="1646">1646</span>
+<span id="1647">1647</span>
+<span id="1648">1648</span>
+<span id="1649">1649</span>
+<span id="1650">1650</span>
+<span id="1651">1651</span>
+<span id="1652">1652</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1763,7 +1773,8 @@
         );
         <span class="self">self</span>.<span class="ident">writer</span>
             .<span class="ident">set_location</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">env</span>.<span class="ident">internal_loc</span>());
-        <span class="kw">let</span> <span class="ident">spec_translator</span> <span class="op">=</span> <span class="ident">SpecTranslator</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module_env</span>, <span class="bool-val">false</span>);
+        <span class="kw">let</span> <span class="ident">spec_translator</span> <span class="op">=</span>
+            <span class="ident">SpecTranslator</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">clone</span>(), <span class="self">self</span>.<span class="ident">options</span>, <span class="bool-val">false</span>);
         <span class="ident">spec_translator</span>.<span class="ident">translate_spec_vars</span>();
         <span class="ident">spec_translator</span>.<span class="ident">translate_spec_funs</span>();
         <span class="self">self</span>.<span class="ident">translate_structs</span>();
@@ -1870,8 +1881,9 @@
         }
 
         <span class="comment">// Emit invariant functions.</span>
-        <span class="kw">let</span> <span class="ident">spec_translator</span> <span class="op">=</span> <span class="ident">SpecTranslator</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="kw-2">&amp;</span><span class="ident">struct_env</span>.<span class="ident">module_env</span>, <span class="bool-val">false</span>);
-        <span class="ident">spec_translator</span>.<span class="ident">translate_invariant_functions</span>(<span class="kw-2">&amp;</span><span class="ident">struct_env</span>);
+        <span class="kw">let</span> <span class="ident">spec_translator</span> <span class="op">=</span>
+            <span class="ident">SpecTranslator</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="ident">struct_env</span>.<span class="ident">clone</span>(), <span class="self">self</span>.<span class="ident">options</span>, <span class="bool-val">false</span>);
+        <span class="ident">spec_translator</span>.<span class="ident">translate_invariant_functions</span>();
     }
 
     <span class="doccomment">/// Translates struct accessors (pack/unpack).</span>
@@ -1933,8 +1945,9 @@
         );
 
         <span class="comment">// Insert invariant code.</span>
-        <span class="kw">let</span> <span class="ident">spec_translator</span> <span class="op">=</span> <span class="ident">SpecTranslator</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="kw-2">&amp;</span><span class="ident">struct_env</span>.<span class="ident">module_env</span>, <span class="bool-val">false</span>);
-        <span class="ident">spec_translator</span>.<span class="ident">emit_pack_invariants</span>(<span class="ident">struct_env</span>, <span class="string">&quot;$struct&quot;</span>);
+        <span class="kw">let</span> <span class="ident">spec_translator</span> <span class="op">=</span>
+            <span class="ident">SpecTranslator</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="ident">struct_env</span>.<span class="ident">clone</span>(), <span class="self">self</span>.<span class="ident">options</span>, <span class="bool-val">false</span>);
+        <span class="ident">spec_translator</span>.<span class="ident">emit_pack_invariants</span>(<span class="string">&quot;$struct&quot;</span>);
 
         <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">unindent</span>();
         <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;}\n&quot;</span>);
@@ -1966,8 +1979,9 @@
         }
 
         <span class="comment">// Insert invariant checking code.</span>
-        <span class="kw">let</span> <span class="ident">spec_translator</span> <span class="op">=</span> <span class="ident">SpecTranslator</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="kw-2">&amp;</span><span class="ident">struct_env</span>.<span class="ident">module_env</span>, <span class="bool-val">false</span>);
-        <span class="ident">spec_translator</span>.<span class="ident">emit_unpack_invariants</span>(<span class="ident">struct_env</span>, <span class="string">&quot;$struct&quot;</span>);
+        <span class="kw">let</span> <span class="ident">spec_translator</span> <span class="op">=</span>
+            <span class="ident">SpecTranslator</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="ident">struct_env</span>.<span class="ident">clone</span>(), <span class="self">self</span>.<span class="ident">options</span>, <span class="bool-val">false</span>);
+        <span class="ident">spec_translator</span>.<span class="ident">emit_unpack_invariants</span>(<span class="string">&quot;$struct&quot;</span>);
 
         <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">unindent</span>();
         <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;}\n&quot;</span>);
@@ -2012,7 +2026,7 @@
     <span class="doccomment">/// Translates the given function.</span>
     <span class="kw">fn</span> <span class="ident">translate_function</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">func_target</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionTarget</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) {
         <span class="kw">if</span> <span class="ident">func_target</span>.<span class="ident">is_native</span>() {
-            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">options</span>.<span class="ident">native_stubs</span> {
+            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">options</span>.<span class="ident">prover</span>.<span class="ident">native_stubs</span> {
                 <span class="self">self</span>.<span class="ident">generate_function_sig</span>(<span class="ident">func_target</span>, <span class="bool-val">true</span>);
                 <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;;&quot;</span>);
                 <span class="self">self</span>.<span class="ident">generate_function_spec</span>(<span class="ident">func_target</span>);
@@ -2049,7 +2063,7 @@
         }
         <span class="comment">// We look up the `verify` pragma property first in this function, then in</span>
         <span class="comment">// the module, and finally fall back to the value of option `--verify`.</span>
-        <span class="kw">let</span> <span class="ident">default</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">options</span>.<span class="ident">verify_scope</span> {
+        <span class="kw">let</span> <span class="ident">default</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">options</span>.<span class="ident">prover</span>.<span class="ident">verify_scope</span> {
             <span class="ident">VerificationScope</span>::<span class="ident">Public</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">func_target</span>.<span class="ident">func_env</span>.<span class="ident">is_public</span>(),
             <span class="ident">VerificationScope</span>::<span class="ident">All</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
             <span class="ident">VerificationScope</span>::<span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
@@ -2133,7 +2147,7 @@
                 <span class="kw-2">&amp;</span><span class="ident">local_str</span>,
                 <span class="ident">local_type</span>,
                 <span class="ident">mode</span>,
-                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">options</span>.<span class="ident">template_context</span>.<span class="ident">type_requires</span>,
+                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">options</span>.<span class="ident">backend</span>.<span class="ident">type_requires</span>,
             );
             <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="kw-2">&amp;</span><span class="ident">type_check</span>);
         }
@@ -2141,7 +2155,8 @@
 
     <span class="doccomment">/// Emit code for the function specification.</span>
     <span class="kw">fn</span> <span class="ident">generate_function_spec</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">func_target</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionTarget</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) {
-        <span class="ident">SpecTranslator</span>::<span class="ident">new_for_spec_in_impl</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="ident">func_target</span>, <span class="bool-val">true</span>).<span class="ident">translate_conditions</span>();
+        <span class="ident">SpecTranslator</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="ident">func_target</span>.<span class="ident">clone</span>(), <span class="self">self</span>.<span class="ident">options</span>, <span class="bool-val">true</span>)
+            .<span class="ident">translate_conditions</span>();
     }
 
     <span class="doccomment">/// Emit code for spec inside function implementation.</span>
@@ -2150,7 +2165,7 @@
         <span class="ident">func_target</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionTarget</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
         <span class="ident">block_id</span>: <span class="ident">SpecBlockId</span>,
     ) {
-        <span class="ident">SpecTranslator</span>::<span class="ident">new_for_spec_in_impl</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="ident">func_target</span>, <span class="bool-val">true</span>)
+        <span class="ident">SpecTranslator</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="ident">func_target</span>.<span class="ident">clone</span>(), <span class="self">self</span>.<span class="ident">options</span>, <span class="bool-val">true</span>)
             .<span class="ident">translate_conditions_inside_impl</span>(<span class="ident">block_id</span>);
     }
 
@@ -2168,7 +2183,8 @@
         <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;call $InitVerification();&quot;</span>);
 
         <span class="comment">// (b) assume implicit preconditions.</span>
-        <span class="kw">let</span> <span class="ident">spec_translator</span> <span class="op">=</span> <span class="ident">SpecTranslator</span>::<span class="ident">new_for_spec_in_impl</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="ident">func_target</span>, <span class="bool-val">false</span>);
+        <span class="kw">let</span> <span class="ident">spec_translator</span> <span class="op">=</span>
+            <span class="ident">SpecTranslator</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="ident">func_target</span>.<span class="ident">clone</span>(), <span class="self">self</span>.<span class="ident">options</span>, <span class="bool-val">false</span>);
         <span class="ident">spec_translator</span>.<span class="ident">assume_preconditions</span>();
 
         <span class="comment">// (c) assume reference parameters to be based on the Param(i) Location, ensuring</span>
@@ -2567,11 +2583,15 @@
                         <span class="kw">if</span> <span class="ident">callee_env</span>.<span class="ident">module_env</span>.<span class="ident">get_id</span>()
                             <span class="op">!</span><span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">func_env</span>.<span class="ident">module_env</span>.<span class="ident">get_id</span>()
                         {
-                            <span class="kw">let</span> <span class="ident">spec_translator</span> <span class="op">=</span>
-                                <span class="ident">SpecTranslator</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="kw-2">&amp;</span><span class="ident">callee_env</span>.<span class="ident">module_env</span>, <span class="bool-val">false</span>)
-                                    .<span class="ident">set_type_args</span>(<span class="ident">type_actuals</span>.<span class="ident">clone</span>());
-                            <span class="ident">spec_translator</span>
-                                .<span class="ident">assume_module_preconditions</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">targets</span>.<span class="ident">get_target</span>(<span class="kw-2">&amp;</span><span class="ident">callee_env</span>));
+                            <span class="kw">let</span> <span class="ident">callee_target</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">targets</span>.<span class="ident">get_target</span>(<span class="kw-2">&amp;</span><span class="ident">callee_env</span>).<span class="ident">clone</span>();
+                            <span class="kw">let</span> <span class="ident">spec_translator</span> <span class="op">=</span> <span class="ident">SpecTranslator</span>::<span class="ident">new</span>(
+                                <span class="self">self</span>.<span class="ident">writer</span>,
+                                <span class="ident">callee_target</span>,
+                                <span class="self">self</span>.<span class="ident">options</span>,
+                                <span class="bool-val">false</span>,
+                            )
+                            .<span class="ident">set_type_args</span>(<span class="ident">type_actuals</span>.<span class="ident">clone</span>());
+                            <span class="ident">spec_translator</span>.<span class="ident">assume_module_preconditions</span>();
                         }
 
                         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">dest_str</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">new</span>();

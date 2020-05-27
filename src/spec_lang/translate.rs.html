@@ -4127,6 +4127,19 @@
 <span id="4127">4127</span>
 <span id="4128">4128</span>
 <span id="4129">4129</span>
+<span id="4130">4130</span>
+<span id="4131">4131</span>
+<span id="4132">4132</span>
+<span id="4133">4133</span>
+<span id="4134">4134</span>
+<span id="4135">4135</span>
+<span id="4136">4136</span>
+<span id="4137">4137</span>
+<span id="4138">4138</span>
+<span id="4139">4139</span>
+<span id="4140">4140</span>
+<span id="4141">4141</span>
+<span id="4142">4142</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -4744,8 +4757,21 @@
                 <span class="self">self</span>,
                 <span class="self">self</span>.<span class="ident">builtin_fun_symbol</span>(<span class="string">&quot;old&quot;</span>),
                 <span class="ident">SpecFunEntry</span> {
-                    <span class="ident">loc</span>,
+                    <span class="ident">loc</span>: <span class="ident">loc</span>.<span class="ident">clone</span>(),
                     <span class="ident">oper</span>: <span class="ident">Operation</span>::<span class="ident">Old</span>,
+                    <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">param_t</span>.<span class="ident">clone</span>()],
+                    <span class="ident">arg_types</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">param_t</span>.<span class="ident">clone</span>()],
+                    <span class="ident">result_type</span>: <span class="ident">param_t</span>.<span class="ident">clone</span>(),
+                },
+            );
+
+            <span class="comment">// Tracing</span>
+            <span class="ident">add_builtin</span>(
+                <span class="self">self</span>,
+                <span class="self">self</span>.<span class="ident">builtin_fun_symbol</span>(<span class="string">&quot;TRACE&quot;</span>),
+                <span class="ident">SpecFunEntry</span> {
+                    <span class="ident">loc</span>,
+                    <span class="ident">oper</span>: <span class="ident">Operation</span>::<span class="ident">Trace</span>,
                     <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">param_t</span>.<span class="ident">clone</span>()],
                     <span class="ident">arg_types</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">param_t</span>.<span class="ident">clone</span>()],
                     <span class="ident">result_type</span>: <span class="ident">param_t</span>.<span class="ident">clone</span>(),

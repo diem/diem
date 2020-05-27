@@ -1159,6 +1159,7 @@
 <span id="1159">1159</span>
 <span id="1160">1160</span>
 <span id="1161">1161</span>
+<span id="1162">1162</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1171,7 +1172,7 @@
 <span class="kw">use</span> <span class="ident">num</span>::<span class="ident">BigUint</span>;
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
 <span class="kw">use</span> <span class="ident">regex</span>::<span class="ident">Regex</span>;
-<span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Serialize</span>;
+<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">spec_lang</span>::{
     <span class="ident">ast</span>::{<span class="ident">ModuleName</span>, <span class="ident">SpecBlockInfo</span>, <span class="ident">SpecBlockTarget</span>},
     <span class="ident">code_writer</span>::<span class="ident">CodeWriter</span>,
@@ -1241,7 +1242,8 @@
 ];
 
 <span class="doccomment">/// Options passed into the documentation generator.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DocgenOptions</span> {
     <span class="doccomment">/// The level where we start sectioning. Often markdown sections are rendered with</span>
     <span class="doccomment">/// unnecessary large section fonts, setting this value high reduces the size.</span>

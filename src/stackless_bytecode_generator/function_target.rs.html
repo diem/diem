@@ -339,6 +339,20 @@
 <span id="339">339</span>
 <span id="340">340</span>
 <span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -369,6 +383,20 @@
 
     <span class="comment">// Used for debugging and testing, containing any attached annotation formatters.</span>
     <span class="ident">annotation_formatters</span>: <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="ident">AnnotationFormatter</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;env</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">FunctionTarget</span><span class="op">&lt;</span><span class="lifetime">&#39;env</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="comment">// Annotation formatters are transient and forgotten on clone.</span>
+        <span class="comment">// TODO: move name_to_index and annotation_formatters into  function target data.</span>
+        <span class="comment">//   FunctionTarget itself should be a cheap handle which can easily be cloned.</span>
+        <span class="self">Self</span> {
+            <span class="ident">func_env</span>: <span class="self">self</span>.<span class="ident">func_env</span>,
+            <span class="ident">data</span>: <span class="self">self</span>.<span class="ident">data</span>,
+            <span class="ident">name_to_index</span>: <span class="self">self</span>.<span class="ident">name_to_index</span>.<span class="ident">clone</span>(),
+            <span class="ident">annotation_formatters</span>: <span class="ident">RefCell</span>::<span class="ident">new</span>(<span class="macro">vec</span><span class="macro">!</span>[]),
+        }
+    }
 }
 
 <span class="doccomment">/// Holds the owned data belonging to a FunctionTarget, which can be rewritten using</span>

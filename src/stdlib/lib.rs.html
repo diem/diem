@@ -350,14 +350,14 @@
         <span class="ident">options</span>.<span class="ident">move_deps</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">dep_path</span>.<span class="ident">to_string</span>()]
     }
     <span class="ident">options</span>.<span class="ident">verbosity_level</span> <span class="op">=</span> <span class="ident">LevelFilter</span>::<span class="ident">Warn</span>;
-    <span class="ident">options</span>.<span class="ident">docgen</span> <span class="op">=</span> <span class="bool-val">true</span>;
-    <span class="ident">options</span>.<span class="ident">docgen_options</span>.<span class="ident">include_impl</span> <span class="op">=</span> <span class="bool-val">true</span>;
-    <span class="ident">options</span>.<span class="ident">docgen_options</span>.<span class="ident">include_private_fun</span> <span class="op">=</span> <span class="bool-val">true</span>;
-    <span class="ident">options</span>.<span class="ident">docgen_options</span>.<span class="ident">specs_inlined</span> <span class="op">=</span> <span class="bool-val">false</span>;
+    <span class="ident">options</span>.<span class="ident">run_docgen</span> <span class="op">=</span> <span class="bool-val">true</span>;
+    <span class="ident">options</span>.<span class="ident">docgen</span>.<span class="ident">include_impl</span> <span class="op">=</span> <span class="bool-val">true</span>;
+    <span class="ident">options</span>.<span class="ident">docgen</span>.<span class="ident">include_private_fun</span> <span class="op">=</span> <span class="bool-val">true</span>;
+    <span class="ident">options</span>.<span class="ident">docgen</span>.<span class="ident">specs_inlined</span> <span class="op">=</span> <span class="bool-val">false</span>;
     <span class="kw">if</span> <span class="op">!</span><span class="ident">doc_path</span>.<span class="ident">is_empty</span>() {
-        <span class="ident">options</span>.<span class="ident">docgen_options</span>.<span class="ident">doc_path</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">doc_path</span>.<span class="ident">to_string</span>()];
+        <span class="ident">options</span>.<span class="ident">docgen</span>.<span class="ident">doc_path</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">doc_path</span>.<span class="ident">to_string</span>()];
     }
-    <span class="ident">options</span>.<span class="ident">docgen_options</span>.<span class="ident">output_directory</span> <span class="op">=</span> <span class="ident">output_path</span>.<span class="ident">to_string</span>();
+    <span class="ident">options</span>.<span class="ident">docgen</span>.<span class="ident">output_directory</span> <span class="op">=</span> <span class="ident">output_path</span>.<span class="ident">to_string</span>();
     <span class="ident">options</span>.<span class="ident">setup_logging_for_test</span>();
     <span class="ident">move_prover</span>::<span class="ident">run_move_prover_errors_to_stderr</span>(<span class="ident">options</span>).<span class="ident">unwrap</span>();
 }

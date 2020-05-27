@@ -445,137 +445,6 @@
 <span id="445">445</span>
 <span id="446">446</span>
 <span id="447">447</span>
-<span id="448">448</span>
-<span id="449">449</span>
-<span id="450">450</span>
-<span id="451">451</span>
-<span id="452">452</span>
-<span id="453">453</span>
-<span id="454">454</span>
-<span id="455">455</span>
-<span id="456">456</span>
-<span id="457">457</span>
-<span id="458">458</span>
-<span id="459">459</span>
-<span id="460">460</span>
-<span id="461">461</span>
-<span id="462">462</span>
-<span id="463">463</span>
-<span id="464">464</span>
-<span id="465">465</span>
-<span id="466">466</span>
-<span id="467">467</span>
-<span id="468">468</span>
-<span id="469">469</span>
-<span id="470">470</span>
-<span id="471">471</span>
-<span id="472">472</span>
-<span id="473">473</span>
-<span id="474">474</span>
-<span id="475">475</span>
-<span id="476">476</span>
-<span id="477">477</span>
-<span id="478">478</span>
-<span id="479">479</span>
-<span id="480">480</span>
-<span id="481">481</span>
-<span id="482">482</span>
-<span id="483">483</span>
-<span id="484">484</span>
-<span id="485">485</span>
-<span id="486">486</span>
-<span id="487">487</span>
-<span id="488">488</span>
-<span id="489">489</span>
-<span id="490">490</span>
-<span id="491">491</span>
-<span id="492">492</span>
-<span id="493">493</span>
-<span id="494">494</span>
-<span id="495">495</span>
-<span id="496">496</span>
-<span id="497">497</span>
-<span id="498">498</span>
-<span id="499">499</span>
-<span id="500">500</span>
-<span id="501">501</span>
-<span id="502">502</span>
-<span id="503">503</span>
-<span id="504">504</span>
-<span id="505">505</span>
-<span id="506">506</span>
-<span id="507">507</span>
-<span id="508">508</span>
-<span id="509">509</span>
-<span id="510">510</span>
-<span id="511">511</span>
-<span id="512">512</span>
-<span id="513">513</span>
-<span id="514">514</span>
-<span id="515">515</span>
-<span id="516">516</span>
-<span id="517">517</span>
-<span id="518">518</span>
-<span id="519">519</span>
-<span id="520">520</span>
-<span id="521">521</span>
-<span id="522">522</span>
-<span id="523">523</span>
-<span id="524">524</span>
-<span id="525">525</span>
-<span id="526">526</span>
-<span id="527">527</span>
-<span id="528">528</span>
-<span id="529">529</span>
-<span id="530">530</span>
-<span id="531">531</span>
-<span id="532">532</span>
-<span id="533">533</span>
-<span id="534">534</span>
-<span id="535">535</span>
-<span id="536">536</span>
-<span id="537">537</span>
-<span id="538">538</span>
-<span id="539">539</span>
-<span id="540">540</span>
-<span id="541">541</span>
-<span id="542">542</span>
-<span id="543">543</span>
-<span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
-<span id="547">547</span>
-<span id="548">548</span>
-<span id="549">549</span>
-<span id="550">550</span>
-<span id="551">551</span>
-<span id="552">552</span>
-<span id="553">553</span>
-<span id="554">554</span>
-<span id="555">555</span>
-<span id="556">556</span>
-<span id="557">557</span>
-<span id="558">558</span>
-<span id="559">559</span>
-<span id="560">560</span>
-<span id="561">561</span>
-<span id="562">562</span>
-<span id="563">563</span>
-<span id="564">564</span>
-<span id="565">565</span>
-<span id="566">566</span>
-<span id="567">567</span>
-<span id="568">568</span>
-<span id="569">569</span>
-<span id="570">570</span>
-<span id="571">571</span>
-<span id="572">572</span>
-<span id="573">573</span>
-<span id="574">574</span>
-<span id="575">575</span>
-<span id="576">576</span>
-<span id="577">577</span>
-<span id="578">578</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -584,10 +453,11 @@
 
 <span class="doccomment">//! Functionality related to the command line interface of the Move prover.</span>
 
+<span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">anyhow</span>;
 <span class="kw">use</span> <span class="ident">clap</span>::{<span class="ident">App</span>, <span class="ident">Arg</span>};
 <span class="kw">use</span> <span class="ident">docgen</span>::<span class="ident">docgen</span>::<span class="ident">DocgenOptions</span>;
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">LevelFilter</span>;
-<span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Serialize</span>;
+<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">simplelog</span>::{
     <span class="ident">CombinedLogger</span>, <span class="ident">Config</span>, <span class="ident">ConfigBuilder</span>, <span class="ident">LevelPadding</span>, <span class="ident">SimpleLogger</span>, <span class="ident">TermLogger</span>, <span class="ident">TerminalMode</span>,
 };
@@ -615,7 +485,7 @@
 <span class="kw">static</span> <span class="ident">TEST_MODE</span>: <span class="ident">AtomicBool</span> <span class="op">=</span> <span class="ident">AtomicBool</span>::<span class="ident">new</span>(<span class="bool-val">false</span>);
 
 <span class="doccomment">/// Default for what functions to verify.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">VerificationScope</span> {
     <span class="doccomment">/// Verify only public functions.</span>
     <span class="ident">Public</span>,
@@ -625,27 +495,99 @@
     <span class="prelude-val">None</span>,
 }
 
-<span class="doccomment">/// Represents options provided to the tool.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">VerificationScope</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span>::<span class="ident">Public</span>
+    }
+}
+
+<span class="doccomment">/// Represents options provided to the tool. Most of those options are configured via a toml</span>
+<span class="doccomment">/// source; some over the command line flags.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Options</span> {
     <span class="doccomment">/// Path to the boogie prelude. The special string `INLINE_PRELUDE` is used to refer to</span>
     <span class="doccomment">/// a prelude build into this binary.</span>
     <span class="kw">pub</span> <span class="ident">prelude_path</span>: <span class="ident">String</span>,
     <span class="doccomment">/// The path to the boogie output which represents the verification problem.</span>
     <span class="kw">pub</span> <span class="ident">output_path</span>: <span class="ident">String</span>,
-    <span class="doccomment">/// Whether to run the documentation generator instead of the prover.</span>
-    <span class="kw">pub</span> <span class="ident">docgen</span>: <span class="ident">bool</span>,
-    <span class="doccomment">/// Options for the document generator.</span>
-    <span class="kw">pub</span> <span class="ident">docgen_options</span>: <span class="ident">DocgenOptions</span>,
-    <span class="doccomment">/// An account address to use if none is specified in the source.</span>
-    <span class="kw">pub</span> <span class="ident">account_address</span>: <span class="ident">String</span>,
     <span class="doccomment">/// Verbosity level for logging.</span>
     <span class="kw">pub</span> <span class="ident">verbosity_level</span>: <span class="ident">LevelFilter</span>,
+    <span class="doccomment">/// Whether to run the documentation generator instead of the prover.</span>
+    <span class="kw">pub</span> <span class="ident">run_docgen</span>: <span class="ident">bool</span>,
+    <span class="doccomment">/// An account address to use if none is specified in the source.</span>
+    <span class="kw">pub</span> <span class="ident">account_address</span>: <span class="ident">String</span>,
     <span class="doccomment">/// The paths to the Move sources.</span>
     <span class="kw">pub</span> <span class="ident">move_sources</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The paths to any dependencies for the Move sources. Those will not be verified but</span>
     <span class="doccomment">/// can be used by `move_sources`.</span>
     <span class="kw">pub</span> <span class="ident">move_deps</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Options for the prover.</span>
+    <span class="kw">pub</span> <span class="ident">prover</span>: <span class="ident">ProverOptions</span>,
+    <span class="doccomment">/// Options for the prover backend.</span>
+    <span class="kw">pub</span> <span class="ident">backend</span>: <span class="ident">BackendOptions</span>,
+    <span class="doccomment">/// Options for the documentation generator.</span>
+    <span class="kw">pub</span> <span class="ident">docgen</span>: <span class="ident">DocgenOptions</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Options</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">prelude_path</span>: <span class="ident">INLINE_PRELUDE</span>.<span class="ident">to_string</span>(),
+            <span class="ident">output_path</span>: <span class="string">&quot;output.bpl&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="ident">run_docgen</span>: <span class="bool-val">false</span>,
+            <span class="ident">account_address</span>: <span class="string">&quot;0x234567&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="ident">verbosity_level</span>: <span class="ident">LevelFilter</span>::<span class="ident">Info</span>,
+            <span class="ident">move_sources</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="ident">move_deps</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="ident">docgen</span>: <span class="ident">DocgenOptions</span>::<span class="ident">default</span>(),
+            <span class="ident">prover</span>: <span class="ident">ProverOptions</span>::<span class="ident">default</span>(),
+            <span class="ident">backend</span>: <span class="ident">BackendOptions</span>::<span class="ident">default</span>(),
+        }
+    }
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">deny_unknown_fields</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ProverOptions</span> {
+    <span class="doccomment">/// Whether to only generate backend code.</span>
+    <span class="kw">pub</span> <span class="ident">generate_only</span>: <span class="ident">bool</span>,
+    <span class="doccomment">/// Whether to generate stubs for native functions.</span>
+    <span class="kw">pub</span> <span class="ident">native_stubs</span>: <span class="ident">bool</span>,
+    <span class="doccomment">/// Whether to minimize execution traces in errors.</span>
+    <span class="kw">pub</span> <span class="ident">minimize_execution_trace</span>: <span class="ident">bool</span>,
+    <span class="doccomment">/// Whether to omit debug information in generated model.</span>
+    <span class="kw">pub</span> <span class="ident">omit_model_debug</span>: <span class="ident">bool</span>,
+    <span class="doccomment">/// Whether output for e.g. diagnosis shall be stable/redacted so it can be used in test</span>
+    <span class="doccomment">/// output.</span>
+    <span class="kw">pub</span> <span class="ident">stable_test_output</span>: <span class="ident">bool</span>,
+    <span class="doccomment">/// Scope of what functions to verify.</span>
+    <span class="kw">pub</span> <span class="ident">verify_scope</span>: <span class="ident">VerificationScope</span>,
+    <span class="doccomment">/// Whether to emit global axiom that resources are well-formed.</span>
+    <span class="kw">pub</span> <span class="ident">resource_wellformed_axiom</span>: <span class="ident">bool</span>,
+    <span class="doccomment">/// Whether to automatically debug trace values of specification expression leafs.</span>
+    <span class="kw">pub</span> <span class="ident">debug_trace</span>: <span class="ident">bool</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">ProverOptions</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">generate_only</span>: <span class="bool-val">false</span>,
+            <span class="ident">native_stubs</span>: <span class="bool-val">false</span>,
+            <span class="ident">minimize_execution_trace</span>: <span class="bool-val">true</span>,
+            <span class="ident">omit_model_debug</span>: <span class="bool-val">false</span>,
+            <span class="ident">stable_test_output</span>: <span class="bool-val">false</span>,
+            <span class="ident">verify_scope</span>: <span class="ident">VerificationScope</span>::<span class="ident">Public</span>,
+            <span class="ident">resource_wellformed_axiom</span>: <span class="bool-val">true</span>,
+            <span class="ident">debug_trace</span>: <span class="bool-val">false</span>,
+        }
+    }
+}
+
+<span class="doccomment">/// Backend options.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">deny_unknown_fields</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BackendOptions</span> {
     <span class="doccomment">/// Path to the boogie executable.</span>
     <span class="kw">pub</span> <span class="ident">boogie_exe</span>: <span class="ident">String</span>,
     <span class="doccomment">/// Path to the z3 executable.</span>
@@ -656,46 +598,40 @@
     <span class="kw">pub</span> <span class="ident">cvc4_exe</span>: <span class="ident">String</span>,
     <span class="doccomment">/// List of flags to pass on to boogie.</span>
     <span class="kw">pub</span> <span class="ident">boogie_flags</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Whether to only generate boogie.</span>
-    <span class="kw">pub</span> <span class="ident">generate_only</span>: <span class="ident">bool</span>,
-    <span class="doccomment">/// Whether to generate stubs for native functions.</span>
-    <span class="kw">pub</span> <span class="ident">native_stubs</span>: <span class="ident">bool</span>,
-    <span class="doccomment">/// Whether to minimize execution traces in errors.</span>
-    <span class="kw">pub</span> <span class="ident">minimize_execution_trace</span>: <span class="ident">bool</span>,
-    <span class="doccomment">/// Whether to omit debug information in generated model.</span>
-    <span class="kw">pub</span> <span class="ident">omit_model_debug</span>: <span class="ident">bool</span>,
     <span class="doccomment">/// Whether to use native array theory.</span>
     <span class="kw">pub</span> <span class="ident">use_array_theory</span>: <span class="ident">bool</span>,
-    <span class="doccomment">/// Whether output for e.g. diagnosis shall be stable/redacted so it can be used in test</span>
-    <span class="doccomment">/// output.</span>
-    <span class="kw">pub</span> <span class="ident">stable_test_output</span>: <span class="ident">bool</span>,
-    <span class="doccomment">/// Scope of what functions to verify</span>
-    <span class="kw">pub</span> <span class="ident">verify_scope</span>: <span class="ident">VerificationScope</span>,
-    <span class="doccomment">/// Template context for prelude. This is map from variable names into strings (or values</span>
-    <span class="doccomment">/// represented as strings)</span>
-    <span class="kw">pub</span> <span class="ident">template_context</span>: <span class="ident">PreludeTemplateContext</span>,
-    <span class="doccomment">/// How many times to call boogie on the verification problem. This is used for benchmarking.</span>
-    <span class="kw">pub</span> <span class="ident">bench_repeat</span>: <span class="ident">usize</span>,
     <span class="doccomment">/// Whether to produce an SMT file for each verification problem.</span>
     <span class="kw">pub</span> <span class="ident">generate_smt</span>: <span class="ident">bool</span>,
-}
-
-<span class="doccomment">/// Options used for prelude template. See `prelude.bpl` for documentation.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PreludeTemplateContext</span> {
-    <span class="kw">pub</span> <span class="ident">array_theory</span>: <span class="ident">bool</span>,
+    <span class="doccomment">/// Whether native instead of stratified equality should be used.</span>
     <span class="kw">pub</span> <span class="ident">native_equality</span>: <span class="ident">bool</span>,
+    <span class="doccomment">/// A string determining the type of requires used for parameter type checks. Can be</span>
+    <span class="doccomment">/// `&quot;requires&quot;` or `&quot;free requires`&quot;.</span>
     <span class="kw">pub</span> <span class="ident">type_requires</span>: <span class="ident">String</span>,
+    <span class="doccomment">/// The depth until which stratified functions are expanded.</span>
     <span class="kw">pub</span> <span class="ident">stratification_depth</span>: <span class="ident">usize</span>,
+    <span class="doccomment">/// A string to be used to inline a function of medium size. Can be empty or `{:inline}`.</span>
     <span class="kw">pub</span> <span class="ident">aggressive_func_inline</span>: <span class="ident">String</span>,
+    <span class="doccomment">/// A string to be used to inline a function of small size. Can be empty or `{:inline}`.</span>
     <span class="kw">pub</span> <span class="ident">func_inline</span>: <span class="ident">String</span>,
+    <span class="doccomment">/// A bound to apply to the length of serialization results.</span>
     <span class="kw">pub</span> <span class="ident">serialize_bound</span>: <span class="ident">usize</span>,
+    <span class="doccomment">/// How many times to call the prover backend for the verification problem. This is used for</span>
+    <span class="doccomment">/// benchmarking.</span>
+    <span class="kw">pub</span> <span class="ident">bench_repeat</span>: <span class="ident">usize</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">PreludeTemplateContext</span> {
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">BackendOptions</span> {
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">get_env</span> <span class="op">=</span> <span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">var</span>(<span class="ident">s</span>).<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">String</span>::<span class="ident">new</span>());
         <span class="self">Self</span> {
-            <span class="ident">array_theory</span>: <span class="bool-val">false</span>,
+            <span class="ident">bench_repeat</span>: <span class="number">1</span>,
+            <span class="ident">boogie_exe</span>: <span class="ident">get_env</span>(<span class="string">&quot;BOOGIE_EXE&quot;</span>),
+            <span class="ident">z3_exe</span>: <span class="ident">get_env</span>(<span class="string">&quot;Z3_EXE&quot;</span>),
+            <span class="ident">use_cvc4</span>: <span class="bool-val">false</span>,
+            <span class="ident">cvc4_exe</span>: <span class="ident">get_env</span>(<span class="string">&quot;CVC4_EXE&quot;</span>),
+            <span class="ident">boogie_flags</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="ident">use_array_theory</span>: <span class="bool-val">false</span>,
+            <span class="ident">generate_smt</span>: <span class="bool-val">false</span>,
             <span class="ident">native_equality</span>: <span class="bool-val">false</span>,
             <span class="ident">type_requires</span>: <span class="string">&quot;free requires&quot;</span>.<span class="ident">to_owned</span>(),
             <span class="ident">stratification_depth</span>: <span class="number">4</span>,
@@ -706,44 +642,22 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Options</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">Options</span> {
-            <span class="ident">prelude_path</span>: <span class="ident">INLINE_PRELUDE</span>.<span class="ident">to_string</span>(),
-            <span class="ident">output_path</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">docgen</span>: <span class="bool-val">false</span>,
-            <span class="ident">docgen_options</span>: <span class="ident">DocgenOptions</span>::<span class="ident">default</span>(),
-            <span class="ident">account_address</span>: <span class="string">&quot;0x234567&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">verbosity_level</span>: <span class="ident">LevelFilter</span>::<span class="ident">Info</span>,
-            <span class="ident">move_sources</span>: <span class="macro">vec</span><span class="macro">!</span>[],
-            <span class="ident">move_deps</span>: <span class="macro">vec</span><span class="macro">!</span>[],
-            <span class="ident">boogie_exe</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">z3_exe</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">use_cvc4</span>: <span class="bool-val">false</span>,
-            <span class="ident">cvc4_exe</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">boogie_flags</span>: <span class="macro">vec</span><span class="macro">!</span>[],
-            <span class="ident">generate_only</span>: <span class="bool-val">false</span>,
-            <span class="ident">native_stubs</span>: <span class="bool-val">false</span>,
-            <span class="ident">minimize_execution_trace</span>: <span class="bool-val">true</span>,
-            <span class="ident">omit_model_debug</span>: <span class="bool-val">false</span>,
-            <span class="ident">use_array_theory</span>: <span class="bool-val">false</span>,
-            <span class="ident">stable_test_output</span>: <span class="bool-val">false</span>,
-            <span class="ident">verify_scope</span>: <span class="ident">VerificationScope</span>::<span class="ident">Public</span>,
-            <span class="ident">template_context</span>: <span class="ident">PreludeTemplateContext</span>::<span class="ident">default</span>(),
-            <span class="ident">bench_repeat</span>: <span class="number">1</span>,
-            <span class="ident">generate_smt</span>: <span class="bool-val">false</span>,
-        }
-    }
-}
-
 <span class="kw">impl</span> <span class="ident">Options</span> {
+    <span class="doccomment">/// Creates options from toml configuration source.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_from_toml</span>(<span class="ident">toml_source</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Options</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">toml</span>::<span class="ident">from_str</span>(<span class="ident">toml_source</span>)<span class="question-mark">?</span>)
+    }
+
+    <span class="doccomment">/// Creates options from toml configuration file.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_from_toml_file</span>(<span class="ident">toml_file</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Options</span><span class="op">&gt;</span> {
+        <span class="self">Self</span>::<span class="ident">create_from_toml</span>(<span class="kw-2">&amp;</span><span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">read_to_string</span>(<span class="ident">toml_file</span>)<span class="question-mark">?</span>)
+    }
+
     <span class="comment">// Creates options from command line arguments. This parses the arguments and terminates</span>
     <span class="comment">// the program on errors, printing usage information. The first argument is expected to be</span>
     <span class="comment">// the program name.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">initialize_from_args</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">args</span>: <span class="kw-2">&amp;</span>[<span class="ident">String</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_from_args</span>(<span class="ident">args</span>: <span class="kw-2">&amp;</span>[<span class="ident">String</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Options</span><span class="op">&gt;</span> {
         <span class="comment">// Clap definition of the command line interface.</span>
-        <span class="comment">// TODO: this has grown to much and needs factorization and better grouping, as well</span>
-        <span class="comment">//   as the option to read things from a file.</span>
         <span class="kw">let</span> <span class="ident">is_number</span> <span class="op">=</span> <span class="op">|</span><span class="ident">s</span>: <span class="ident">String</span><span class="op">|</span> {
             <span class="ident">s</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>()
                 .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
@@ -754,35 +668,47 @@
             .<span class="ident">about</span>(<span class="string">&quot;The Move Prover&quot;</span>)
             .<span class="ident">author</span>(<span class="string">&quot;The Libra Core Contributors&quot;</span>)
             .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;prelude&quot;</span>)
-                    .<span class="ident">short</span>(<span class="string">&quot;p&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;prelude&quot;</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;BOOGIE_FILE&quot;</span>)
-                    .<span class="ident">default_value</span>(<span class="kw-2">&amp;</span><span class="ident">INLINE_PRELUDE</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;path to an alternative boogie prelude&quot;</span>),
+                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;config&quot;</span>)
+                    .<span class="ident">short</span>(<span class="string">&quot;c&quot;</span>)
+                    .<span class="ident">long</span>(<span class="string">&quot;config&quot;</span>)
+                    .<span class="ident">takes_value</span>(<span class="bool-val">true</span>)
+                    .<span class="ident">value_name</span>(<span class="string">&quot;TOML_FILE&quot;</span>)
+                    .<span class="ident">env</span>(<span class="string">&quot;MOVE_PROVER_CONFIG&quot;</span>)
+                    .<span class="ident">help</span>(<span class="string">&quot;path to a configuration file. \
+                     Values in this file will be overridden by command line flags&quot;</span>),
+            )
+            .<span class="ident">arg</span>(
+                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;config-str&quot;</span>)
+                    .<span class="ident">conflicts_with</span>(<span class="string">&quot;config&quot;</span>)
+                    .<span class="ident">short</span>(<span class="string">&quot;C&quot;</span>)
+                    .<span class="ident">long</span>(<span class="string">&quot;config-str&quot;</span>)
+                    .<span class="ident">takes_value</span>(<span class="bool-val">true</span>)
+                    .<span class="ident">multiple</span>(<span class="bool-val">true</span>)
+                    .<span class="ident">number_of_values</span>(<span class="number">1</span>)
+                    .<span class="ident">value_name</span>(<span class="string">&quot;TOML_STRING&quot;</span>)
+                    .<span class="ident">help</span>(<span class="string">&quot;inline configuration string in toml syntax. Can be repeated. \
+                     Use as in `-C=prover.opt=value -C=backend.opt=value`&quot;</span>),
+            )
+            .<span class="ident">arg</span>(
+                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;print-config&quot;</span>)
+                    .<span class="ident">long</span>(<span class="string">&quot;print-config&quot;</span>)
+                    .<span class="ident">help</span>(<span class="string">&quot;prints the effective toml configuration, then exits&quot;</span>)
             )
             .<span class="ident">arg</span>(
                 <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;output&quot;</span>)
                     .<span class="ident">short</span>(<span class="string">&quot;o&quot;</span>)
                     .<span class="ident">long</span>(<span class="string">&quot;output&quot;</span>)
+                    .<span class="ident">takes_value</span>(<span class="bool-val">true</span>)
                     .<span class="ident">value_name</span>(<span class="string">&quot;BOOGIE_FILE&quot;</span>)
                     .<span class="ident">help</span>(<span class="string">&quot;path to the boogie output which represents the verification problem&quot;</span>),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;address&quot;</span>)
-                    .<span class="ident">short</span>(<span class="string">&quot;a&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;address&quot;</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;ACCOUNT ADDRESS&quot;</span>)
-                    .<span class="ident">default_value</span>(<span class="string">&quot;0x234567&quot;</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;account address to use if none is provided in the source&quot;</span>),
             )
             .<span class="ident">arg</span>(
                 <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;verbosity&quot;</span>)
                     .<span class="ident">short</span>(<span class="string">&quot;v&quot;</span>)
                     .<span class="ident">long</span>(<span class="string">&quot;verbose&quot;</span>)
+                    .<span class="ident">takes_value</span>(<span class="bool-val">true</span>)
                     .<span class="ident">possible_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;error&quot;</span>, <span class="string">&quot;warn&quot;</span>, <span class="string">&quot;info&quot;</span>, <span class="string">&quot;debug&quot;</span>])
-                    .<span class="ident">default_value</span>(<span class="string">&quot;info&quot;</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;verbosity level&quot;</span>),
+                    .<span class="ident">help</span>(<span class="string">&quot;verbosity level.&quot;</span>),
             )
             .<span class="ident">arg</span>(
                 <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;generate-only&quot;</span>)
@@ -791,212 +717,34 @@
                     .<span class="ident">help</span>(<span class="string">&quot;only generate boogie file but do not call boogie&quot;</span>),
             )
             .<span class="ident">arg</span>(
+                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;trace&quot;</span>)
+                    .<span class="ident">long</span>(<span class="string">&quot;trace&quot;</span>)
+                    .<span class="ident">short</span>(<span class="string">&quot;t&quot;</span>)
+                    .<span class="ident">help</span>(<span class="string">&quot;enables automatic tracing of expressions in prover errors&quot;</span>)
+            )
+            .<span class="ident">arg</span>(
                 <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;docgen&quot;</span>)
                     .<span class="ident">long</span>(<span class="string">&quot;docgen&quot;</span>)
                     .<span class="ident">help</span>(<span class="string">&quot;run the documentation generator instead of the prover. \
                     Generated docs will be written into the directory at `--output=&lt;path&gt;`&quot;</span>),
             )
             .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;doc-include-impl&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;doc-include-impl&quot;</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;BOOL&quot;</span>)
-                    .<span class="ident">default_value</span>(<span class="string">&quot;true&quot;</span>)
-                    .<span class="ident">possible_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;true&quot;</span>, <span class="string">&quot;false&quot;</span>])
-                    .<span class="ident">require_equals</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;whether to include implementations in generated docs.&quot;</span>),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;doc-include-private&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;doc-include-private&quot;</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;BOOL&quot;</span>)
-                    .<span class="ident">default_value</span>(<span class="string">&quot;false&quot;</span>)
-                    .<span class="ident">possible_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;true&quot;</span>, <span class="string">&quot;false&quot;</span>])
-                    .<span class="ident">require_equals</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;whether private functions shall be included in generated docs.&quot;</span>),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;doc-spec-inline&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;doc-spec-inline&quot;</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;BOOL&quot;</span>)
-                    .<span class="ident">default_value</span>(<span class="string">&quot;true&quot;</span>)
-                    .<span class="ident">possible_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;true&quot;</span>, <span class="string">&quot;false&quot;</span>])
-                    .<span class="ident">require_equals</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;whether to generate specifications inline with declarations \
-                     or put them into a separate section.&quot;</span>),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;doc-collapsed-sections&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;doc-collapsed-sections&quot;</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;BOOL&quot;</span>)
-                    .<span class="ident">default_value</span>(<span class="string">&quot;true&quot;</span>)
-                    .<span class="ident">possible_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;true&quot;</span>, <span class="string">&quot;false&quot;</span>])
-                    .<span class="ident">require_equals</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;whether to use collapsed sections for some details&quot;</span>)
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;doc-path&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;doc-path&quot;</span>)
-                    .<span class="ident">multiple</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">number_of_values</span>(<span class="number">1</span>)
-                    .<span class="ident">takes_value</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;PATH&quot;</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;path to a directory where documentation is looked up&quot;</span>)
-            )
-            .<span class="ident">arg</span>(
                 <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;verify&quot;</span>)
                     .<span class="ident">long</span>(<span class="string">&quot;verify&quot;</span>)
+                    .<span class="ident">takes_value</span>(<span class="bool-val">true</span>)
                     .<span class="ident">possible_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;public&quot;</span>, <span class="string">&quot;all&quot;</span>, <span class="string">&quot;none&quot;</span>])
-                    .<span class="ident">default_value</span>(<span class="string">&quot;public&quot;</span>)
                     .<span class="ident">value_name</span>(<span class="string">&quot;SCOPE&quot;</span>)
                     .<span class="ident">help</span>(<span class="string">&quot;default scope of verification \
                     (can be overridden by `pragma verify=true|false`)&quot;</span>),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;native-stubs&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;native-stubs&quot;</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;whether to generate stubs for native functions&quot;</span>),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;omit-model-debug&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;omit-model-debug&quot;</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;whether to omit code for model debugging&quot;</span>),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;boogie-exe&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;boogie-exe&quot;</span>)
-                    .<span class="ident">default_value</span>(<span class="string">&quot;boogie&quot;</span>)
-                    .<span class="ident">env</span>(<span class="string">&quot;BOOGIE_EXE&quot;</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;PATH&quot;</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;path to the boogie executable&quot;</span>),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;z3-exe&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;z3-exe&quot;</span>)
-                    .<span class="ident">default_value</span>(<span class="string">&quot;z3&quot;</span>)
-                    .<span class="ident">env</span>(<span class="string">&quot;Z3_EXE&quot;</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;PATH&quot;</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;path to the z3 executable&quot;</span>),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;use-cvc4&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;use-cvc4&quot;</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;whether to use cvc4 instead of z3 as a backend&quot;</span>),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;cvc4-exe&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;cvc4-exe&quot;</span>)
-                    .<span class="ident">takes_value</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">default_value</span>(<span class="string">&quot;cvc4&quot;</span>)
-                    .<span class="ident">env</span>(<span class="string">&quot;CVC4_EXE&quot;</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;PATH&quot;</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;path to the cvc4 executable&quot;</span>),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;use-array-theory&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;use-array-theory&quot;</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;BOOL&quot;</span>)
-                    .<span class="ident">default_value</span>(<span class="string">&quot;false&quot;</span>)
-                    .<span class="ident">possible_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;true&quot;</span>, <span class="string">&quot;false&quot;</span>])
-                    .<span class="ident">require_equals</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;whether to use native array theory. This implies --use-native-equality.&quot;</span>),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;use-native-equality&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;use-native-equality&quot;</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;BOOL&quot;</span>)
-                    .<span class="ident">default_value</span>(<span class="string">&quot;false&quot;</span>)
-                    .<span class="ident">possible_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;true&quot;</span>, <span class="string">&quot;false&quot;</span>])
-                    .<span class="ident">require_equals</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;whether to use native equality.&quot;</span>),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;aggressive-func-inline&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;aggressive-func-inline&quot;</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;BOOL&quot;</span>)
-                    .<span class="ident">default_value</span>(<span class="string">&quot;false&quot;</span>)
-                    .<span class="ident">possible_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;true&quot;</span>, <span class="string">&quot;false&quot;</span>])
-                    .<span class="ident">require_equals</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">help</span>(
-                        <span class="string">&quot;whether to aggressively inline prelude functions&quot;</span>,
-                    ),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;type-requires&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;type-requires&quot;</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;BOOL&quot;</span>)
-                    .<span class="ident">default_value</span>(<span class="string">&quot;false&quot;</span>)
-                    .<span class="ident">possible_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;true&quot;</span>, <span class="string">&quot;false&quot;</span>])
-                    .<span class="ident">require_equals</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">help</span>(
-                        <span class="string">&quot;whether prelude functions should require type correctness instead of assuming it&quot;</span>,
-                    ),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;serialize-bound&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;serialize-bound&quot;</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;NUMBER&quot;</span>)
-                    .<span class="ident">default_value</span>(<span class="string">&quot;4&quot;</span>)
-                    .<span class="ident">validator</span>(<span class="ident">is_number</span>)
-                    .<span class="ident">require_equals</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">help</span>(
-                        <span class="string">&quot;a bound for the length of the result vector of LCS::to_bytes(). \
-                        Currently, solver runtime increases exponentially with the size of this value. \
-                        Use 0 for no bound&quot;</span>
-                    ),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;stratification-depth&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;stratification-depth&quot;</span>)
-                    .<span class="ident">takes_value</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;DEPTH&quot;</span>)
-                    .<span class="ident">default_value</span>(<span class="string">&quot;4&quot;</span>)
-                    .<span class="ident">validator</span>(<span class="ident">is_number</span>)
-                    .<span class="ident">help</span>(
-                        <span class="string">&quot;depth to which stratified functions in the prelude are expanded&quot;</span>,
-                    ),
             )
             .<span class="ident">arg</span>(
                 <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;bench-repeat&quot;</span>)
                     .<span class="ident">long</span>(<span class="string">&quot;bench-repeat&quot;</span>)
                     .<span class="ident">takes_value</span>(<span class="bool-val">true</span>)
                     .<span class="ident">value_name</span>(<span class="string">&quot;COUNT&quot;</span>)
-                    .<span class="ident">default_value</span>(<span class="string">&quot;1&quot;</span>)
                     .<span class="ident">validator</span>(<span class="ident">is_number</span>)
                     .<span class="ident">help</span>(
-                        <span class="string">&quot;for benchmarking: how many times to call the solver on the verification problem&quot;</span>,
-                    ),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;generate-smt&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;generate-smt&quot;</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;BOOL&quot;</span>)
-                    .<span class="ident">default_value</span>(<span class="string">&quot;false&quot;</span>)
-                    .<span class="ident">possible_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;true&quot;</span>, <span class="string">&quot;false&quot;</span>])
-                    .<span class="ident">require_equals</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">help</span>(
-                        <span class="string">&quot;whether to generate an smtlib file for each verification problem.\
-                        This can be used to call the solver directly, for debugging&quot;</span>,
-                    ),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;boogie-flags&quot;</span>)
-                    .<span class="ident">short</span>(<span class="string">&quot;B&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;boogie&quot;</span>)
-                    .<span class="ident">multiple</span>(<span class="bool-val">true</span>)
-                    <span class="comment">// See documentation of multiple() why the next option is needed.</span>
-                    <span class="comment">// This effectively still allows us to have `-B opt1 -B opt2 ...`,</span>
-                    <span class="comment">// but not `-B opt1 opt2` because the latter messes with positional</span>
-                    <span class="comment">// arguments.</span>
-                    .<span class="ident">number_of_values</span>(<span class="number">1</span>)
-                    .<span class="ident">takes_value</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;BOOGIE_FLAG&quot;</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;specifies a flag to be passed on to boogie&quot;</span>),
-            )
-            .<span class="ident">arg</span>(
-                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;stable-test-output&quot;</span>)
-                    .<span class="ident">long</span>(<span class="string">&quot;stable-test-output&quot;</span>)
-                    .<span class="ident">help</span>(
-                        <span class="string">&quot;whether diagnosis output should be stable/redacted so it can be used in baseline tests&quot;</span>,
+                        <span class="string">&quot;for benchmarking: how many times to call the backend on the verification problem&quot;</span>,
                     ),
             )
             .<span class="ident">arg</span>(
@@ -1006,8 +754,9 @@
                     .<span class="ident">multiple</span>(<span class="bool-val">true</span>)
                     .<span class="ident">number_of_values</span>(<span class="number">1</span>)
                     .<span class="ident">takes_value</span>(<span class="bool-val">true</span>)
-                    .<span class="ident">value_name</span>(<span class="string">&quot;PATH_TO_DEPENDENCY_FILE&quot;</span>)
-                    .<span class="ident">help</span>(<span class="string">&quot;the Move library files, which will not be verified&quot;</span>)
+                    .<span class="ident">value_name</span>(<span class="string">&quot;PATH_TO_DEPENDENCY&quot;</span>)
+                    .<span class="ident">help</span>(<span class="string">&quot;path to a Move file, or a directory which will be searched for \
+                    Move files, containing dependencies which will not be verified&quot;</span>)
             )
             .<span class="ident">arg</span>(
                 <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;sources&quot;</span>)
@@ -1015,14 +764,16 @@
                     .<span class="ident">value_name</span>(<span class="string">&quot;PATH_TO_SOURCE_FILE&quot;</span>)
                     .<span class="ident">min_values</span>(<span class="number">1</span>)
                     .<span class="ident">help</span>(<span class="string">&quot;the source files to verify&quot;</span>),
-            );
+            )
+            .<span class="ident">after_help</span>(<span class="string">&quot;More options available via `--config file` or `--config-str str`. \
+            Use `--print-config` to see format and current values. \
+            See `move-prover/src/cli.rs::Option` for documentation.&quot;</span>);
 
         <span class="comment">// Parse the arguments. This will abort the program on parsing errors and print help.</span>
         <span class="comment">// It will also accept options like --help.</span>
         <span class="kw">let</span> <span class="ident">matches</span> <span class="op">=</span> <span class="ident">cli</span>.<span class="ident">get_matches_from</span>(<span class="ident">args</span>);
-        <span class="kw">let</span> <span class="ident">get_with_default</span> <span class="op">=</span> <span class="op">|</span><span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">|</span> <span class="ident">matches</span>.<span class="ident">value_of</span>(<span class="ident">s</span>).<span class="ident">expect</span>(<span class="string">&quot;Expected default&quot;</span>).<span class="ident">to_string</span>();
-        <span class="kw">let</span> <span class="ident">get_bool</span> <span class="op">=</span> <span class="op">|</span><span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">|</span> <span class="ident">get_with_default</span>(<span class="ident">s</span>).<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>();
-        <span class="kw">let</span> <span class="ident">get_int</span> <span class="op">=</span> <span class="op">|</span><span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">|</span> <span class="ident">get_with_default</span>(<span class="ident">s</span>).<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>();
+
+        <span class="comment">// Initialize options.</span>
         <span class="kw">let</span> <span class="ident">get_vec</span> <span class="op">=</span> <span class="op">|</span><span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">|</span> <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
             <span class="kw">match</span> <span class="ident">matches</span>.<span class="ident">values_of</span>(<span class="ident">s</span>) {
                 <span class="prelude-val">Some</span>(<span class="ident">vs</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">vs</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">to_string</span>()).<span class="ident">collect</span>(),
@@ -1030,67 +781,54 @@
             }
         };
 
-        <span class="self">self</span>.<span class="ident">prelude_path</span> <span class="op">=</span> <span class="ident">get_with_default</span>(<span class="string">&quot;prelude&quot;</span>);
-        <span class="self">self</span>.<span class="ident">account_address</span> <span class="op">=</span> <span class="ident">get_with_default</span>(<span class="string">&quot;address&quot;</span>);
-        <span class="self">self</span>.<span class="ident">verbosity_level</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">get_with_default</span>(<span class="string">&quot;verbosity&quot;</span>).<span class="ident">as_str</span>() {
-            <span class="string">&quot;error&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">LevelFilter</span>::<span class="ident">Error</span>,
-            <span class="string">&quot;warn&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">LevelFilter</span>::<span class="ident">Warn</span>,
-            <span class="string">&quot;info&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">LevelFilter</span>::<span class="ident">Info</span>,
-            <span class="string">&quot;debug&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">LevelFilter</span>::<span class="ident">Debug</span>,
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;should not happen&quot;</span>),
-        };
-        <span class="self">self</span>.<span class="ident">generate_only</span> <span class="op">=</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;generate-only&quot;</span>);
-        <span class="self">self</span>.<span class="ident">native_stubs</span> <span class="op">=</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;native-stubs&quot;</span>);
-        <span class="self">self</span>.<span class="ident">omit_model_debug</span> <span class="op">=</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;omit-model-debug&quot;</span>);
-        <span class="self">self</span>.<span class="ident">use_cvc4</span> <span class="op">=</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;use-cvc4&quot;</span>);
-        <span class="self">self</span>.<span class="ident">boogie_exe</span> <span class="op">=</span> <span class="ident">get_with_default</span>(<span class="string">&quot;boogie-exe&quot;</span>);
-        <span class="self">self</span>.<span class="ident">z3_exe</span> <span class="op">=</span> <span class="ident">get_with_default</span>(<span class="string">&quot;z3-exe&quot;</span>);
-        <span class="self">self</span>.<span class="ident">cvc4_exe</span> <span class="op">=</span> <span class="ident">get_with_default</span>(<span class="string">&quot;cvc4-exe&quot;</span>);
-        <span class="self">self</span>.<span class="ident">boogie_flags</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="string">&quot;boogie-flags&quot;</span>);
-        <span class="self">self</span>.<span class="ident">move_sources</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="string">&quot;sources&quot;</span>);
-        <span class="self">self</span>.<span class="ident">move_deps</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="string">&quot;dependencies&quot;</span>);
-        <span class="self">self</span>.<span class="ident">stable_test_output</span> <span class="op">=</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;stable-test-output&quot;</span>);
-        <span class="self">self</span>.<span class="ident">verify_scope</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">get_with_default</span>(<span class="string">&quot;verify&quot;</span>).<span class="ident">as_str</span>() {
-            <span class="string">&quot;public&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">VerificationScope</span>::<span class="ident">Public</span>,
-            <span class="string">&quot;all&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">VerificationScope</span>::<span class="ident">All</span>,
-            <span class="string">&quot;none&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">VerificationScope</span>::<span class="prelude-val">None</span>,
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;should not happen&quot;</span>),
-        };
-        <span class="kw">if</span> <span class="ident">get_bool</span>(<span class="string">&quot;use-array-theory&quot;</span>)<span class="question-mark">?</span> {
-            <span class="self">self</span>.<span class="ident">use_array_theory</span> <span class="op">=</span> <span class="bool-val">true</span>;
-            <span class="self">self</span>.<span class="ident">template_context</span>.<span class="ident">array_theory</span> <span class="op">=</span> <span class="bool-val">true</span>;
-            <span class="self">self</span>.<span class="ident">template_context</span>.<span class="ident">native_equality</span> <span class="op">=</span> <span class="bool-val">true</span>;
-        }
-        <span class="self">self</span>.<span class="ident">template_context</span>.<span class="ident">native_equality</span> <span class="op">=</span> <span class="ident">get_bool</span>(<span class="string">&quot;use-native-equality&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">if</span> <span class="ident">get_bool</span>(<span class="string">&quot;aggressive-func-inline&quot;</span>)<span class="question-mark">?</span> {
-            <span class="self">self</span>.<span class="ident">template_context</span>.<span class="ident">aggressive_func_inline</span> <span class="op">=</span> <span class="string">&quot;{:inline}&quot;</span>.<span class="ident">to_owned</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">options</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;config&quot;</span>) {
+            <span class="self">Self</span>::<span class="ident">create_from_toml_file</span>(<span class="ident">matches</span>.<span class="ident">value_of</span>(<span class="string">&quot;config&quot;</span>).<span class="ident">unwrap</span>())<span class="question-mark">?</span>
+        } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;config-str&quot;</span>) {
+            <span class="kw">let</span> <span class="ident">config_lines</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="string">&quot;config-str&quot;</span>).<span class="ident">join</span>(<span class="string">&quot;\n&quot;</span>);
+            <span class="self">Self</span>::<span class="ident">create_from_toml</span>(<span class="kw-2">&amp;</span><span class="ident">config_lines</span>)<span class="question-mark">?</span>
         } <span class="kw">else</span> {
-            <span class="self">self</span>.<span class="ident">template_context</span>.<span class="ident">aggressive_func_inline</span> <span class="op">=</span> <span class="string">&quot;&quot;</span>.<span class="ident">to_owned</span>();
-        }
-        <span class="kw">if</span> <span class="ident">get_bool</span>(<span class="string">&quot;type-requires&quot;</span>)<span class="question-mark">?</span> {
-            <span class="self">self</span>.<span class="ident">template_context</span>.<span class="ident">type_requires</span> <span class="op">=</span> <span class="string">&quot;requires&quot;</span>.<span class="ident">to_owned</span>();
-        } <span class="kw">else</span> {
-            <span class="self">self</span>.<span class="ident">template_context</span>.<span class="ident">type_requires</span> <span class="op">=</span> <span class="string">&quot;free requires&quot;</span>.<span class="ident">to_owned</span>();
-        }
-        <span class="self">self</span>.<span class="ident">template_context</span>.<span class="ident">serialize_bound</span> <span class="op">=</span> <span class="ident">get_int</span>(<span class="string">&quot;serialize-bound&quot;</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">template_context</span>.<span class="ident">stratification_depth</span> <span class="op">=</span> <span class="ident">get_int</span>(<span class="string">&quot;stratification-depth&quot;</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">bench_repeat</span> <span class="op">=</span> <span class="ident">get_int</span>(<span class="string">&quot;bench-repeat&quot;</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">generate_smt</span> <span class="op">=</span> <span class="ident">get_bool</span>(<span class="string">&quot;generate-smt&quot;</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">docgen</span> <span class="op">=</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;docgen&quot;</span>);
-        <span class="self">self</span>.<span class="ident">docgen_options</span>.<span class="ident">include_impl</span> <span class="op">=</span> <span class="ident">get_bool</span>(<span class="string">&quot;doc-include-impl&quot;</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">docgen_options</span>.<span class="ident">include_private_fun</span> <span class="op">=</span> <span class="ident">get_bool</span>(<span class="string">&quot;doc-include-private&quot;</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">docgen_options</span>.<span class="ident">specs_inlined</span> <span class="op">=</span> <span class="ident">get_bool</span>(<span class="string">&quot;doc-spec-inline&quot;</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">docgen_options</span>.<span class="ident">collapsed_sections</span> <span class="op">=</span> <span class="ident">get_bool</span>(<span class="string">&quot;doc-collapsed-sections&quot;</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">output_path</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;output&quot;</span>) {
-            <span class="ident">get_with_default</span>(<span class="string">&quot;output&quot;</span>)
-        } <span class="kw">else</span> <span class="kw">if</span> <span class="self">self</span>.<span class="ident">docgen</span> {
-            <span class="string">&quot;doc&quot;</span>.<span class="ident">to_string</span>()
-        } <span class="kw">else</span> {
-            <span class="string">&quot;output.bpl&quot;</span>.<span class="ident">to_string</span>()
+            <span class="ident">Options</span>::<span class="ident">default</span>()
         };
-        <span class="self">self</span>.<span class="ident">docgen_options</span>.<span class="ident">output_directory</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">output_path</span>.<span class="ident">clone</span>();
-        <span class="self">self</span>.<span class="ident">docgen_options</span>.<span class="ident">doc_path</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="string">&quot;doc-path&quot;</span>);
-        <span class="prelude-val">Ok</span>(())
+
+        <span class="comment">// Analyze arguments.</span>
+        <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;output&quot;</span>) {
+            <span class="ident">options</span>.<span class="ident">output_path</span> <span class="op">=</span> <span class="ident">matches</span>.<span class="ident">value_of</span>(<span class="string">&quot;output&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">to_string</span>();
+        }
+        <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;verbosity&quot;</span>) {
+            <span class="ident">options</span>.<span class="ident">verbosity_level</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">matches</span>.<span class="ident">value_of</span>(<span class="string">&quot;verbosity&quot;</span>).<span class="ident">unwrap</span>() {
+                <span class="string">&quot;error&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">LevelFilter</span>::<span class="ident">Error</span>,
+                <span class="string">&quot;warn&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">LevelFilter</span>::<span class="ident">Warn</span>,
+                <span class="string">&quot;info&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">LevelFilter</span>::<span class="ident">Info</span>,
+                <span class="string">&quot;debug&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">LevelFilter</span>::<span class="ident">Debug</span>,
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;should not happen&quot;</span>),
+            }
+        }
+        <span class="ident">options</span>.<span class="ident">move_sources</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="string">&quot;sources&quot;</span>);
+        <span class="ident">options</span>.<span class="ident">move_deps</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="string">&quot;dependencies&quot;</span>);
+        <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;verify&quot;</span>) {
+            <span class="ident">options</span>.<span class="ident">prover</span>.<span class="ident">verify_scope</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">matches</span>.<span class="ident">value_of</span>(<span class="string">&quot;verify&quot;</span>).<span class="ident">unwrap</span>() {
+                <span class="string">&quot;public&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">VerificationScope</span>::<span class="ident">Public</span>,
+                <span class="string">&quot;all&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">VerificationScope</span>::<span class="ident">All</span>,
+                <span class="string">&quot;none&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">VerificationScope</span>::<span class="prelude-val">None</span>,
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;should not happen&quot;</span>),
+            }
+        }
+        <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;bench-repeat&quot;</span>) {
+            <span class="ident">options</span>.<span class="ident">backend</span>.<span class="ident">bench_repeat</span> <span class="op">=</span>
+                <span class="ident">matches</span>.<span class="ident">value_of</span>(<span class="string">&quot;bench-repeat&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        }
+        <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;docgen&quot;</span>) {
+            <span class="ident">options</span>.<span class="ident">run_docgen</span> <span class="op">=</span> <span class="bool-val">true</span>;
+        }
+        <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;trace&quot;</span>) {
+            <span class="ident">options</span>.<span class="ident">prover</span>.<span class="ident">debug_trace</span> <span class="op">=</span> <span class="bool-val">true</span>;
+        }
+        <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;print-config&quot;</span>) {
+            <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">toml</span>::<span class="ident">to_string</span>(<span class="kw-2">&amp;</span><span class="ident">options</span>).<span class="ident">unwrap</span>());
+            <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;exiting&quot;</span>))
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">options</span>)
+        }
     }
 
     <span class="doccomment">/// Sets up logging based on provided options. This should be called as early as possible</span>
@@ -1119,18 +857,18 @@
 
     <span class="doccomment">/// Returns command line to call boogie.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_boogie_command</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">boogie_file</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="self">self</span>.<span class="ident">boogie_exe</span>.<span class="ident">clone</span>()];
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="self">self</span>.<span class="ident">backend</span>.<span class="ident">boogie_exe</span>.<span class="ident">clone</span>()];
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">add</span> <span class="op">=</span> <span class="op">|</span><span class="ident">sl</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>]<span class="op">|</span> <span class="ident">result</span>.<span class="ident">extend</span>(<span class="ident">sl</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> (<span class="kw-2">*</span><span class="ident">s</span>).<span class="ident">to_string</span>()));
         <span class="ident">add</span>(<span class="ident">DEFAULT_BOOGIE_FLAGS</span>);
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">use_cvc4</span> {
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">backend</span>.<span class="ident">use_cvc4</span> {
             <span class="ident">add</span>(<span class="kw-2">&amp;</span>[
                 <span class="string">&quot;-proverOpt:SOLVER=cvc4&quot;</span>,
-                <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;-proverOpt:PROVER_PATH={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">cvc4_exe</span>),
+                <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;-proverOpt:PROVER_PATH={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">backend</span>.<span class="ident">cvc4_exe</span>),
             ]);
         } <span class="kw">else</span> {
-            <span class="ident">add</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;-proverOpt:PROVER_PATH={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">z3_exe</span>)]);
+            <span class="ident">add</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;-proverOpt:PROVER_PATH={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">backend</span>.<span class="ident">z3_exe</span>)]);
         }
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">use_array_theory</span> {
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">backend</span>.<span class="ident">use_array_theory</span> {
             <span class="ident">add</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-useArrayTheory&quot;</span>]);
         }
         <span class="ident">add</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-proverOpt:O:smt.QI.EAGER_THRESHOLD=100&quot;</span>]);
@@ -1140,10 +878,10 @@
         <span class="comment">//add(&amp;[&quot;-proverOpt:O:trace=true&quot;]);</span>
         <span class="comment">//add(&amp;[&quot;-proverOpt:VERBOSITY=3&quot;]);</span>
         <span class="comment">//add(&amp;[&quot;-proverOpt:C:-st&quot;]);</span>
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">generate_smt</span> {
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">backend</span>.<span class="ident">generate_smt</span> {
             <span class="ident">add</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;-proverLog:@PROC@.smt&quot;</span>]);
         }
-        <span class="kw">for</span> <span class="ident">f</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">boogie_flags</span> {
+        <span class="kw">for</span> <span class="ident">f</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">backend</span>.<span class="ident">boogie_flags</span> {
             <span class="ident">add</span>(<span class="kw-2">&amp;</span>[<span class="ident">f</span>.<span class="ident">as_str</span>()]);
         }
         <span class="ident">add</span>(<span class="kw-2">&amp;</span>[<span class="ident">boogie_file</span>]);

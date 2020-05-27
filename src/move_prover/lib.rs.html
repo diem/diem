@@ -260,6 +260,7 @@
 <span id="260">260</span>
 <span id="261">261</span>
 <span id="262">262</span>
+<span id="263">263</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -328,7 +329,7 @@
         <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;exiting with checking errors&quot;</span>));
     }
     <span class="comment">// Until this point, prover and docgen have same code. Here we part ways.</span>
-    <span class="kw">if</span> <span class="ident">options</span>.<span class="ident">docgen</span> {
+    <span class="kw">if</span> <span class="ident">options</span>.<span class="ident">run_docgen</span> {
         <span class="kw">return</span> <span class="ident">run_docgen</span>(<span class="kw-2">&amp;</span><span class="ident">env</span>, <span class="kw-2">&amp;</span><span class="ident">options</span>, <span class="ident">now</span>);
     }
     <span class="kw">let</span> <span class="ident">targets</span> <span class="op">=</span> <span class="ident">create_and_process_bytecode</span>(<span class="kw-2">&amp;</span><span class="ident">options</span>, <span class="kw-2">&amp;</span><span class="ident">env</span>);
@@ -347,7 +348,7 @@
     <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;writing boogie to {}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">options</span>.<span class="ident">output_path</span>);
     <span class="ident">writer</span>.<span class="ident">process_result</span>(<span class="op">|</span><span class="ident">result</span><span class="op">|</span> <span class="ident">fs</span>::<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">options</span>.<span class="ident">output_path</span>, <span class="ident">result</span>))<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">translator_elapsed</span> <span class="op">=</span> <span class="ident">now</span>.<span class="ident">elapsed</span>();
-    <span class="kw">if</span> <span class="op">!</span><span class="ident">options</span>.<span class="ident">generate_only</span> {
+    <span class="kw">if</span> <span class="op">!</span><span class="ident">options</span>.<span class="ident">prover</span>.<span class="ident">generate_only</span> {
         <span class="kw">let</span> <span class="ident">boogie_file_id</span> <span class="op">=</span>
             <span class="ident">writer</span>.<span class="ident">process_result</span>(<span class="op">|</span><span class="ident">result</span><span class="op">|</span> <span class="ident">env</span>.<span class="ident">add_source</span>(<span class="kw-2">&amp;</span><span class="ident">options</span>.<span class="ident">output_path</span>, <span class="ident">result</span>, <span class="bool-val">false</span>));
         <span class="kw">let</span> <span class="ident">boogie</span> <span class="op">=</span> <span class="ident">BoogieWrapper</span> {
@@ -357,9 +358,9 @@
             <span class="ident">options</span>: <span class="kw-2">&amp;</span><span class="ident">options</span>,
             <span class="ident">boogie_file_id</span>,
         };
-        <span class="ident">boogie</span>.<span class="ident">call_boogie_and_verify_output</span>(<span class="ident">options</span>.<span class="ident">bench_repeat</span>, <span class="kw-2">&amp;</span><span class="ident">options</span>.<span class="ident">output_path</span>)<span class="question-mark">?</span>;
+        <span class="ident">boogie</span>.<span class="ident">call_boogie_and_verify_output</span>(<span class="ident">options</span>.<span class="ident">backend</span>.<span class="ident">bench_repeat</span>, <span class="kw-2">&amp;</span><span class="ident">options</span>.<span class="ident">output_path</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">boogie_elapsed</span> <span class="op">=</span> <span class="ident">now</span>.<span class="ident">elapsed</span>();
-        <span class="kw">if</span> <span class="ident">options</span>.<span class="ident">bench_repeat</span> <span class="op">&lt;</span><span class="op">=</span> <span class="number">1</span> {
+        <span class="kw">if</span> <span class="ident">options</span>.<span class="ident">backend</span>.<span class="ident">bench_repeat</span> <span class="op">&lt;</span><span class="op">=</span> <span class="number">1</span> {
             <span class="macro">info</span><span class="macro">!</span>(
                 <span class="string">&quot;{:.3}s translator, {:.3}s solver&quot;</span>,
                 <span class="ident">translator_elapsed</span>.<span class="ident">as_secs_f64</span>(),
@@ -369,8 +370,9 @@
             <span class="macro">info</span><span class="macro">!</span>(
                 <span class="string">&quot;{:.3}s translator, {:.3}s solver (average over {} solver runs)&quot;</span>,
                 <span class="ident">translator_elapsed</span>.<span class="ident">as_secs_f64</span>(),
-                (<span class="ident">boogie_elapsed</span> <span class="op">-</span> <span class="ident">translator_elapsed</span>).<span class="ident">as_secs_f64</span>() <span class="op">/</span> (<span class="ident">options</span>.<span class="ident">bench_repeat</span> <span class="kw">as</span> <span class="ident">f64</span>),
-                <span class="ident">options</span>.<span class="ident">bench_repeat</span>
+                (<span class="ident">boogie_elapsed</span> <span class="op">-</span> <span class="ident">translator_elapsed</span>).<span class="ident">as_secs_f64</span>()
+                    <span class="op">/</span> (<span class="ident">options</span>.<span class="ident">backend</span>.<span class="ident">bench_repeat</span> <span class="kw">as</span> <span class="ident">f64</span>),
+                <span class="ident">options</span>.<span class="ident">backend</span>.<span class="ident">bench_repeat</span>
             );
         }
 
@@ -388,7 +390,7 @@
 }
 
 <span class="kw">fn</span> <span class="ident">run_docgen</span>(<span class="ident">env</span>: <span class="kw-2">&amp;</span><span class="ident">GlobalEnv</span>, <span class="ident">options</span>: <span class="kw-2">&amp;</span><span class="ident">Options</span>, <span class="ident">now</span>: <span class="ident">Instant</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">generator</span> <span class="op">=</span> <span class="ident">Docgen</span>::<span class="ident">new</span>(<span class="ident">env</span>, <span class="kw-2">&amp;</span><span class="ident">options</span>.<span class="ident">docgen_options</span>);
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">generator</span> <span class="op">=</span> <span class="ident">Docgen</span>::<span class="ident">new</span>(<span class="ident">env</span>, <span class="kw-2">&amp;</span><span class="ident">options</span>.<span class="ident">docgen</span>);
     <span class="kw">let</span> <span class="ident">checking_elapsed</span> <span class="op">=</span> <span class="ident">now</span>.<span class="ident">elapsed</span>();
     <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;generating documentation&quot;</span>);
     <span class="ident">generator</span>.<span class="ident">gen</span>();
@@ -420,10 +422,10 @@
     <span class="ident">handlebars</span>.<span class="ident">register_helper</span>(
         <span class="string">&quot;stratified&quot;</span>,
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">StratificationHelper</span>::<span class="ident">new</span>(
-            <span class="ident">options</span>.<span class="ident">template_context</span>.<span class="ident">stratification_depth</span>,
+            <span class="ident">options</span>.<span class="ident">backend</span>.<span class="ident">stratification_depth</span>,
         )),
     );
-    <span class="kw">let</span> <span class="ident">expanded_content</span> <span class="op">=</span> <span class="ident">handlebars</span>.<span class="ident">render_template</span>(<span class="kw-2">&amp;</span><span class="ident">content</span>, <span class="kw-2">&amp;</span><span class="ident">options</span>.<span class="ident">template_context</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">expanded_content</span> <span class="op">=</span> <span class="ident">handlebars</span>.<span class="ident">render_template</span>(<span class="kw-2">&amp;</span><span class="ident">content</span>, <span class="kw-2">&amp;</span><span class="ident">options</span>)<span class="question-mark">?</span>;
     <span class="macro">emitln</span><span class="macro">!</span>(<span class="ident">writer</span>, <span class="kw-2">&amp;</span><span class="ident">expanded_content</span>);
     <span class="prelude-val">Ok</span>(())
 }
