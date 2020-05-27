@@ -930,6 +930,13 @@ module LibraAccount {
             Libra::deposit(&mut transaction_fee_balance.coin, transaction_fee);
         }
     }
+
+    // Bump the sequence number of an account. This function should be used only for bumping the sequence number when
+    // a writeset transaction is committed.
+    fun bump_sequence_number(signer: &signer) acquires T {
+        let sender_account = borrow_global_mut<T>(Signer::address_of(signer));
+        sender_account.sequence_number = sender_account.sequence_number + 1;
+    }
 }
 
 }

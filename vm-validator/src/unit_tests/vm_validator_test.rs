@@ -384,7 +384,7 @@ fn test_validate_non_genesis_write_set() {
 
     let address = account_config::association_address();
     let transaction =
-        transaction_test_helpers::get_write_set_txn(address, 1, &key, key.public_key(), None)
+        transaction_test_helpers::get_write_set_txn(address, 2, &key, key.public_key(), None)
             .into_inner();
     let ret = vm_validator.validate_transaction(transaction).unwrap();
     assert_eq!(ret.status().unwrap().major_status, StatusCode::ABORTED);

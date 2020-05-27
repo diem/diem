@@ -82,6 +82,7 @@
 -  [Function `assert_can_freeze`](#0x0_LibraAccount_assert_can_freeze)
 -  [Function `prologue`](#0x0_LibraAccount_prologue)
 -  [Function `epilogue`](#0x0_LibraAccount_epilogue)
+-  [Function `bump_sequence_number`](#0x0_LibraAccount_bump_sequence_number)
 
 
 
@@ -2581,6 +2582,31 @@ also be added. This account will be a child of
         <b>let</b> transaction_fee_balance = borrow_global_mut&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(0xFEE);
         <a href="libra.md#0x0_Libra_deposit">Libra::deposit</a>(&<b>mut</b> transaction_fee_balance.coin, transaction_fee);
     }
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_LibraAccount_bump_sequence_number"></a>
+
+## Function `bump_sequence_number`
+
+
+
+<pre><code><b>fun</b> <a href="#0x0_LibraAccount_bump_sequence_number">bump_sequence_number</a>(signer: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="#0x0_LibraAccount_bump_sequence_number">bump_sequence_number</a>(signer: &signer) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
+    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(signer));
+    sender_account.sequence_number = sender_account.sequence_number + 1;
 }
 </code></pre>
 
