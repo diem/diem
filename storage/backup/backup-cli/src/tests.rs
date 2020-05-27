@@ -5,7 +5,7 @@ use crate::{
     backup::{
         BackupServiceClient, GlobalBackupOpt, StateSnapshotBackupController, StateSnapshotBackupOpt,
     },
-    restore::restore_account_state,
+    restore::{StateSnapshotRestoreController, StateSnapshotRestoreOpt},
     storage::{local_fs::LocalFs, BackupStorage},
 };
 use backup_service::start_backup_service;
@@ -14,17 +14,17 @@ use libra_proptest_helpers::ValueGenerator;
 use libra_temppath::TempPath;
 use libra_types::transaction::PRE_GENESIS_VERSION;
 use libradb::{test_helper::arb_blocks_to_commit, LibraDB};
-use std::{borrow::Borrow, sync::Arc};
+use std::sync::Arc;
 use storage_interface::{DbReader, DbWriter};
 
-fn tmp_db_empty() -> (TempPath, LibraDB) {
+fn tmp_db_empty() -> (TempPath, Arc<LibraDB>) {
     let tmpdir = TempPath::new();
-    let db = LibraDB::new_for_test(&tmpdir);
+    let db = Arc::new(LibraDB::new_for_test(&tmpdir));
 
     (tmpdir, db)
 }
 
-fn tmp_db_with_random_content() -> (TempPath, LibraDB) {
+fn tmp_db_with_random_content() -> (TempPath, Arc<LibraDB>) {
     let (tmpdir, db) = tmp_db_empty();
     let mut cur_ver = 0;
     for (txns_to_commit, ledger_info_with_sigs) in
@@ -45,8 +45,7 @@ fn tmp_db_with_random_content() -> (TempPath, LibraDB) {
 #[test]
 fn end_to_end() {
     let (_src_db_dir, src_db) = tmp_db_with_random_content();
-    let src_db = Arc::new(src_db);
-    let tgt_db_dir = TempPath::new();
+    let (_tgt_db_dir, tgt_db) = tmp_db_empty();
     let backup_dir = TempPath::new();
     backup_dir.create_as_dir().unwrap();
     let store: Arc<dyn BackupStorage> = Arc::new(LocalFs::new(backup_dir.path().to_path_buf()));
@@ -69,17 +68,16 @@ fn end_to_end() {
         )
         .unwrap();
 
-    rt.block_on(restore_account_state(
-        store.borrow(),
-        &manifest_handle,
-        PRE_GENESIS_VERSION,
-        &tgt_db_dir,
-    ))
-    .unwrap();
-    let tgt_db = LibraDB::open(
-        &tgt_db_dir,
-        true, /* readonly */
-        None, /* pruner */
+    rt.block_on(
+        StateSnapshotRestoreController::new(
+            StateSnapshotRestoreOpt {
+                manifest_handle,
+                version: PRE_GENESIS_VERSION,
+            },
+            store,
+            Arc::clone(&tgt_db),
+        )
+        .run(),
     )
     .unwrap();
     assert_eq!(
