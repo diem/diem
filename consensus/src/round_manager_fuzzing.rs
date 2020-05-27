@@ -136,7 +136,6 @@ fn create_node_for_fuzzing() -> RoundManager<TestPayload> {
     RoundManager::new(
         epoch_info,
         Arc::clone(&block_store),
-        None,
         pacemaker,
         proposer_election,
         proposal_generator,

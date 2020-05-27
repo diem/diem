@@ -29,7 +29,7 @@ use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
 
 use crate::{
-    block_storage::{BlockReader, BlockRetriever, BlockStore, PendingVotes, VoteReceptionResult},
+    block_storage::{BlockReader, BlockRetriever, BlockStore, VoteReceptionResult},
     counters,
     liveness::{
         pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
@@ -180,7 +180,6 @@ impl<T: Payload> RecoveryManager<T> {
 pub struct RoundManager<T> {
     epoch_info: EpochInfo,
     block_store: Arc<BlockStore<T>>,
-    pending_votes: PendingVotes,
     pacemaker: Pacemaker,
     proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
     proposal_generator: ProposalGenerator<T>,
@@ -189,15 +188,12 @@ pub struct RoundManager<T> {
     txn_manager: Box<dyn TxnManager<Payload = T>>,
     storage: Arc<dyn PersistentLivenessStorage<T>>,
     time_service: Arc<dyn TimeService>,
-    // Cache of the last sent vote message.
-    last_vote_sent: Option<Vote>,
 }
 
 impl<T: Payload> RoundManager<T> {
     pub fn new(
         epoch_info: EpochInfo,
         block_store: Arc<BlockStore<T>>,
-        last_vote_sent: Option<Vote>,
         pacemaker: Pacemaker,
         proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
         proposal_generator: ProposalGenerator<T>,
@@ -209,12 +205,10 @@ impl<T: Payload> RoundManager<T> {
     ) -> Self {
         counters::BLOCK_RETRIEVAL_COUNT.get();
         counters::STATE_SYNC_COUNT.get();
-        let pending_votes = PendingVotes::new();
 
         Self {
             epoch_info,
             block_store,
-            pending_votes,
             pacemaker,
             proposer_election,
             proposal_generator,
@@ -223,7 +217,6 @@ impl<T: Payload> RoundManager<T> {
             network,
             storage,
             time_service,
-            last_vote_sent,
         }
     }
 
@@ -434,7 +427,7 @@ impl<T: Payload> RoundManager<T> {
             return;
         }
 
-        let (use_last_vote, mut timeout_vote) = match self.last_vote_sent.take() {
+        let (use_last_vote, mut timeout_vote) = match self.pacemaker.vote_sent() {
             Some(vote) if vote.vote_data().proposed().round() == round => (true, vote),
             _ => {
                 // Didn't vote in this round yet, generate a backup vote
@@ -468,7 +461,7 @@ impl<T: Payload> RoundManager<T> {
             }
         }
 
-        self.last_vote_sent.replace(timeout_vote.clone());
+        self.pacemaker.record_vote(timeout_vote.clone());
         let timeout_vote_msg = VoteMsg::new(timeout_vote, self.block_store.sync_info());
         self.network.broadcast_vote(timeout_vote_msg).await
     }
@@ -541,7 +534,7 @@ impl<T: Payload> RoundManager<T> {
             .get_valid_proposers(proposal_round + 1);
         debug!("{}Voted: {} {}", Fg(Green), Fg(Reset), vote);
 
-        self.last_vote_sent.replace(vote.clone());
+        self.pacemaker.record_vote(vote.clone());
         let vote_msg = VoteMsg::new(vote, self.block_store.sync_info());
         self.network.send_vote(vote_msg, recipients).await;
     }
@@ -703,17 +696,15 @@ impl<T: Payload> RoundManager<T> {
                     .log();
                 return;
             }
-        } else {
-            // Sync up for timeout votes only.
-            if self
-                .sync_up(vote_msg.sync_info(), vote_msg.vote().author(), true)
-                .await
-                .is_err()
-            {
-                warn!("Stop vote processing because of sync up error.");
-                return;
-            };
         }
+        if self
+            .sync_up(vote_msg.sync_info(), vote_msg.vote().author(), true)
+            .await
+            .is_err()
+        {
+            warn!("Stop vote processing because of sync up error.");
+            return;
+        };
         if let Err(e) = self.add_vote(vote_msg.vote()).await {
             error!("Error adding a new vote: {:?}", e);
         }
@@ -735,9 +726,7 @@ impl<T: Payload> RoundManager<T> {
             return Ok(());
         }
         // Add the vote and check whether it completes a new QC or a TC
-        let res = self
-            .pending_votes
-            .insert_vote(vote, &self.epoch_info.verifier);
+        let res = self.pacemaker.insert_vote(vote, &self.epoch_info.verifier);
         match res {
             VoteReceptionResult::NewQuorumCertificate(qc) => {
                 // Note that the block might not be present locally, in which case we cannot calculate
@@ -815,7 +804,7 @@ impl<T: Payload> RoundManager<T> {
     }
 
     /// To jump start new round with the current certificates we have.
-    pub async fn start(&mut self) {
+    pub async fn start(&mut self, last_vote_sent: Option<Vote>) {
         let hqc_round = Some(
             self.block_store
                 .highest_quorum_cert()
@@ -828,6 +817,9 @@ impl<T: Payload> RoundManager<T> {
             .pacemaker
             .process_certificates(hqc_round, htc_round, last_committed_round)
             .expect("Can not jump start a pacemaker from existing certificates.");
+        if let Some(vote) = last_vote_sent {
+            self.pacemaker.record_vote(vote);
+        }
         self.process_new_round_event(new_round_event).await;
     }
 

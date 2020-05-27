@@ -192,7 +192,6 @@ impl NodeSetup {
         let mut round_manager = RoundManager::new(
             epoch_info,
             Arc::clone(&block_store),
-            last_vote_sent,
             pacemaker,
             proposer_election,
             proposal_generator,
@@ -202,7 +201,7 @@ impl NodeSetup {
             storage.clone(),
             time_service,
         );
-        block_on(round_manager.start());
+        block_on(round_manager.start(last_vote_sent));
         Self {
             block_store,
             round_manager,

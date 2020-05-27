@@ -1,12 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::block_storage::{PendingVotes, VoteReceptionResult};
 use crate::{
     counters,
     util::time_service::{SendTask, TimeService},
 };
 use consensus_types::common::Round;
+use consensus_types::vote::Vote;
 use libra_logger::prelude::*;
+use libra_types::validator_verifier::ValidatorVerifier;
 use std::{
     fmt,
     sync::Arc,
@@ -146,6 +149,10 @@ pub struct Pacemaker {
     time_service: Arc<dyn TimeService>,
     // To send local timeout events to the subscriber (e.g., SMR)
     timeout_sender: channel::Sender<Round>,
+    // Votes received fot the current round.
+    pending_votes: PendingVotes,
+    // Vote sent locally for the current round.
+    vote_sent: Option<Vote>,
 }
 
 #[allow(dead_code)]
@@ -168,6 +175,8 @@ impl Pacemaker {
             current_round_deadline: Instant::now(),
             time_service,
             timeout_sender,
+            pending_votes: PendingVotes::new(),
+            vote_sent: None,
         }
     }
 
@@ -212,6 +221,8 @@ impl Pacemaker {
         if new_round > self.current_round {
             // Start a new round.
             self.current_round = new_round;
+            self.pending_votes = PendingVotes::new();
+            self.vote_sent = None;
             let timeout = self.setup_timeout();
             // The new round reason is QCReady in case both QC and TC are equal
             let new_round_reason = if qc_round >= tc_round {
@@ -228,6 +239,31 @@ impl Pacemaker {
             return Some(new_round_event);
         }
         None
+    }
+
+    pub fn insert_vote(
+        &mut self,
+        vote: &Vote,
+        verifier: &ValidatorVerifier,
+    ) -> VoteReceptionResult {
+        if vote.vote_data().proposed().round() == self.current_round {
+            self.pending_votes.insert_vote(vote, verifier)
+        } else {
+            VoteReceptionResult::UnexpectedRound(
+                vote.vote_data().proposed().round(),
+                self.current_round,
+            )
+        }
+    }
+
+    pub fn record_vote(&mut self, vote: Vote) {
+        if vote.vote_data().proposed().round() == self.current_round {
+            self.vote_sent = Some(vote);
+        }
+    }
+
+    pub fn vote_sent(&self) -> Option<Vote> {
+        self.vote_sent.clone()
     }
 
     /// Setup the timeout task and return the duration of the current timeout
