@@ -64,6 +64,10 @@ pub fn run_move_prover<W: WriteColor>(
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with checking errors"));
     }
+    if env.has_warnings() {
+        env.report_warnings(error_writer);
+    }
+
     // Until this point, prover and docgen have same code. Here we part ways.
     if options.docgen {
         return run_docgen(&env, &options, now);

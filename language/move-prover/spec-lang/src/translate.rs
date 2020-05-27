@@ -66,6 +66,9 @@ pub struct Translator<'env> {
     spec_var_table: BTreeMap<QualifiedSymbol, SpecVarEntry>,
     /// A symbol table for specification schemas.
     spec_schema_table: BTreeMap<QualifiedSymbol, SpecSchemaEntry>,
+    /// A symbol table storing unused schemas, used later to generate warnings. All schemas
+    /// are initially in the table and are removed when they are used in expressions.
+    unused_schema_table: BTreeMap<QualifiedSymbol, Loc>,
     // A symbol table for structs.
     struct_table: BTreeMap<QualifiedSymbol, StructEntry>,
     /// A reverse mapping from ModuleId/StructId pairs to QualifiedSymbol. This
@@ -145,6 +148,7 @@ impl<'env> Translator<'env> {
             spec_fun_table: BTreeMap::new(),
             spec_var_table: BTreeMap::new(),
             spec_schema_table: BTreeMap::new(),
+            unused_schema_table: BTreeMap::new(),
             struct_table: BTreeMap::new(),
             reverse_struct_table: BTreeMap::new(),
             fun_table: BTreeMap::new(),
@@ -242,6 +246,7 @@ impl<'env> Translator<'env> {
                 &format!("previous declaration of `{}`", schema_display),
             );
         }
+        self.unused_schema_table.insert(name, loc.clone());
     }
 
     /// Defines a struct type.
@@ -1168,6 +1173,14 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 
         // Perform post reduction of module invariants.
         self.reduce_module_invariants();
+
+        // Warn about unused schemas.
+        for (schema_name, loc) in &self.parent.unused_schema_table {
+            self.parent.env.warn(
+                loc,
+                &format!("unused schema {}", schema_name.display(self.symbol_pool())),
+            );
+        }
     }
 }
 
@@ -2023,6 +2036,9 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         args_opt: Option<&EA::Fields<EA::Exp>>,
     ) {
         let schema_name = self.module_access_to_qualified(maccess);
+
+        // Remove schema from unused table since it is used in an expression
+        self.parent.unused_schema_table.remove(&schema_name);
 
         // We need to temporarily detach the schema entry from the parent table because of
         // borrowing problems, as we need to traverse it while at the same time mutate self.

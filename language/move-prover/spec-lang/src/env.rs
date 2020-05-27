@@ -342,6 +342,12 @@ impl GlobalEnv {
         self.error_with_notes(loc, msg, vec![]);
     }
 
+    /// Adds a warning to this environment.
+    pub fn warn(&self, loc: &Loc, msg: &str) {
+        let diag = Diagnostic::new_warning(msg, Label::new(loc.file_id, loc.span, ""));
+        self.add_diag(diag);
+    }
+
     /// Returns the unknown location.
     pub fn unknown_loc(&self) -> Loc {
         self.unknown_loc.clone()
@@ -423,9 +429,34 @@ impl GlobalEnv {
             .any(|d| d.severity >= Severity::Error)
     }
 
-    /// Writes accumulated diagnostics to writer.
+    /// Returns true if diagnostics have warning severity or worse.
+    pub fn has_warnings(&self) -> bool {
+        self.diags
+            .borrow()
+            .iter()
+            .any(|d| d.severity >= Severity::Warning)
+    }
+
+    /// Writes accumulated errors to writer.
     pub fn report_errors<W: WriteColor>(&self, writer: &mut W) {
-        for diag in self.diags.borrow().iter() {
+        for diag in self
+            .diags
+            .borrow()
+            .iter()
+            .filter(|d| d.severity >= Severity::Error)
+        {
+            emit(writer, &Config::default(), &self.source_files, diag).expect("emit must not fail");
+        }
+    }
+
+    /// Writes accumulated diagnostics with warning severity or worse to writer.
+    pub fn report_warnings<W: WriteColor>(&self, writer: &mut W) {
+        for diag in self
+            .diags
+            .borrow()
+            .iter()
+            .filter(|d| d.severity >= Severity::Warning)
+        {
             emit(writer, &Config::default(), &self.source_files, diag).expect("emit must not fail");
         }
     }
