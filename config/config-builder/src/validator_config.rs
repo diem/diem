@@ -6,8 +6,8 @@ use anyhow::{ensure, format_err, Result};
 use executor::db_bootstrapper;
 use libra_config::{
     config::{
-        ConsensusType, NodeConfig, RemoteService, SafetyRulesService, SecureBackend, Token,
-        VaultConfig,
+        ConsensusType, NodeConfig, OnDiskStorageConfig, RemoteService, SafetyRulesService,
+        SecureBackend, Token, VaultConfig,
     },
     generator,
 };
@@ -108,23 +108,18 @@ impl ValidatorConfig {
         self
     }
 
-    pub fn safety_rules_backend(&mut self, safety_rules_backend: Option<String>) -> &mut Self {
+    pub fn safety_rules_backend(
+        &mut self,
+        safety_rules_backend: Option<String>,
+        safety_rules_host: Option<String>,
+        safety_rules_namespace: Option<String>,
+        safety_rules_token: Option<String>,
+    ) -> &mut Self {
         self.safety_rules_backend = safety_rules_backend;
-        self
-    }
-
-    pub fn safety_rules_host(&mut self, safety_rules_host: Option<String>) -> &mut Self {
         self.safety_rules_host = safety_rules_host;
-        self
-    }
-
-    pub fn safety_rules_namespace(&mut self, safety_rules_namespace: Option<String>) -> &mut Self {
         self.safety_rules_namespace = safety_rules_namespace;
-        self
-    }
-
-    pub fn safety_rules_token(&mut self, safety_rules_token: Option<String>) -> &mut Self {
         self.safety_rules_token = safety_rules_token;
+
         self
     }
 
@@ -261,7 +256,7 @@ impl ValidatorConfig {
         if let Some(backend) = &self.safety_rules_backend {
             safety_rules_config.backend = match backend.as_str() {
                 "in-memory" => SecureBackend::InMemoryStorage,
-                "on-disk" => safety_rules_config.backend.clone(),
+                "on-disk" => SecureBackend::OnDiskStorage(OnDiskStorageConfig::default()),
                 "vault" => SecureBackend::Vault(VaultConfig {
                     namespace: self.safety_rules_namespace.clone(),
                     server: self
