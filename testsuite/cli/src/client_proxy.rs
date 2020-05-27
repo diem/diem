@@ -611,7 +611,7 @@ impl ClientProxy {
         sequence_number: u64,
     ) -> Result<()> {
         let mut max_iterations = 5000;
-        print!(
+        println!(
             "waiting for {} with sequence number {}",
             account, sequence_number
         );
