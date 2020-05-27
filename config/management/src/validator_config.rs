@@ -120,7 +120,7 @@ impl ValidatorConfig {
 
 fn ed25519_from_storage(
     key_name: &'static str,
-    storage: &mut dyn Storage,
+    storage: &dyn Storage,
 ) -> Result<Ed25519PublicKey, Error> {
     Ok(storage
         .get_public_key(key_name)
@@ -130,7 +130,7 @@ fn ed25519_from_storage(
 
 fn x25519_from_storage(
     key_name: &'static str,
-    storage: &mut dyn Storage,
+    storage: &dyn Storage,
 ) -> Result<x25519::PublicKey, Error> {
     let edkey = ed25519_from_storage(key_name, storage)?;
     x25519::PublicKey::from_ed25519_public_bytes(&edkey.to_bytes())
