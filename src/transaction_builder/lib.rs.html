@@ -453,6 +453,12 @@
 <span id="453">453</span>
 <span id="454">454</span>
 <span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -880,20 +886,26 @@
 <span class="comment">//...........................................................................</span>
 
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {
-    <span class="ident">name</span>: <span class="ident">create_parent_vasp_account</span>,
-    <span class="ident">args</span>: [<span class="ident">address</span>: <span class="ident">Address</span>, <span class="ident">auth_key_prefix</span>: <span class="ident">Bytes</span>, <span class="ident">human_name</span>: <span class="ident">Bytes</span>, <span class="ident">base_url</span>: <span class="ident">Bytes</span>, <span class="ident">compliance_public_key</span>: <span class="ident">Bytes</span>],
+    <span class="ident">name</span>: <span class="ident">encode_create_parent_vasp_account</span>,
+    <span class="ident">type_arg</span>: <span class="ident">currency</span>,
+    <span class="ident">args</span>: [<span class="ident">address</span>: <span class="ident">Address</span>, <span class="ident">auth_key_prefix</span>: <span class="ident">Bytes</span>, <span class="ident">human_name</span>: <span class="ident">Bytes</span>, <span class="ident">base_url</span>: <span class="ident">Bytes</span>, <span class="ident">compliance_public_key</span>: <span class="ident">Bytes</span>, <span class="ident">add_all_currencies</span>: <span class="ident">Bool</span>],
     <span class="ident">script</span>: <span class="ident">CreateParentVaspAccount</span>,
     <span class="ident">doc</span>: <span class="string">&quot;Create an account with the ParentVASP role at `address` with authentication key\
-          `auth_key_prefix` | `new_account_address`.&quot;</span>
+          `auth_key_prefix` | `new_account_address` and a 0 balance of type `currency`. If\
+          `add_all_currencies` is true, 0 balances for all available currencies in the system will\
+          also be added. This can only be invoked by an Association account.&quot;</span>
 }
 
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {
-    <span class="ident">name</span>: <span class="ident">create_child_vasp_account</span>,
-    <span class="ident">args</span>: [<span class="ident">address</span>: <span class="ident">Address</span>, <span class="ident">auth_key_prefix</span>: <span class="ident">Bytes</span>],
+    <span class="ident">name</span>: <span class="ident">encode_create_child_vasp_account</span>,
+    <span class="ident">type_arg</span>: <span class="ident">currency</span>,
+    <span class="ident">args</span>: [<span class="ident">address</span>: <span class="ident">Address</span>, <span class="ident">auth_key_prefix</span>: <span class="ident">Bytes</span>, <span class="ident">add_all_currencies</span>: <span class="ident">Bool</span>],
     <span class="ident">script</span>: <span class="ident">CreateChildVaspAccount</span>,
     <span class="ident">doc</span>: <span class="string">&quot;Create an account with the ChildVASP role at `address` with authentication key\
-          `auth_key_prefix` | `new_account_address`. This account will be a child of the\
-          transaction sender, which must be a ParentVASP.&quot;</span>
+          `auth_key_prefix` | `new_account_address` and a 0 balance of type `currency`. If\
+          `add_all_currencies` is true, 0 balances for all available currencies in the system will\
+          also be added to the account. This account will be a child of the transaction sender\
+          which must be a ParentVASP.&quot;</span>
 }
 
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {

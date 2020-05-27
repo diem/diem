@@ -365,6 +365,9 @@
 <span id="365">365</span>
 <span id="366">366</span>
 <span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -542,7 +545,10 @@
         <span class="ident">GENESIS_MODULE_NAME</span>,
         <span class="string">&quot;initialize_txn_fee_account&quot;</span>,
         <span class="macro">vec</span><span class="macro">!</span>[],
-        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">genesis_auth_key</span>.<span class="ident">to_vec</span>())],
+        <span class="macro">vec</span><span class="macro">!</span>[
+            <span class="ident">Value</span>::<span class="ident">transaction_argument_signer_reference</span>(<span class="ident">fee_account_address</span>),
+            <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">genesis_auth_key</span>.<span class="ident">to_vec</span>()),
+        ],
     );
 
     <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">root_association_address</span>);
