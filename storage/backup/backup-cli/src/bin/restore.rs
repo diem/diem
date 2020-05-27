@@ -1,9 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::{Context, Result};
 use backup_cli::{
     restore::{GlobalRestoreOpt, StateSnapshotRestoreController, StateSnapshotRestoreOpt},
-    storage::local_fs::{LocalFs, LocalFsOpt},
+    storage::StorageOpt,
 };
 use libradb::LibraDB;
 use std::sync::Arc;
@@ -17,12 +18,12 @@ struct Opt {
     #[structopt(flatten)]
     state_snapshot: StateSnapshotRestoreOpt,
 
-    #[structopt(flatten)]
-    storage: LocalFsOpt,
+    #[structopt(subcommand)]
+    storage: StorageOpt,
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     let opt = Opt::from_args();
 
     let db = Arc::new(
@@ -33,11 +34,13 @@ async fn main() {
         )
         .expect("Failed opening DB."),
     );
-    let storage = Arc::new(LocalFs::new_with_opt(opt.storage));
+    let storage = opt.storage.init_storage().await?;
     StateSnapshotRestoreController::new(opt.state_snapshot, storage, db)
         .run()
         .await
-        .expect("Failed restoring state_snapshot.");
+        .context("Failed restoring state_snapshot.")?;
 
     println!("Finished restoring account state.");
+
+    Ok(())
 }

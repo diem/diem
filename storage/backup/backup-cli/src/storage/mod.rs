@@ -1,10 +1,20 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+pub mod command_adapter;
 pub mod local_fs;
 
+#[cfg(test)]
+mod test_util;
+
+use crate::storage::{
+    command_adapter::{CommandAdapter, CommandAdapterOpt},
+    local_fs::{LocalFs, LocalFsOpt},
+};
 use anyhow::Result;
 use async_trait::async_trait;
+use std::sync::Arc;
+use structopt::StructOpt;
 use tokio::io::{AsyncRead, AsyncWrite};
 
 pub type BackupHandle = String;
@@ -32,4 +42,19 @@ pub trait BackupStorage {
         &self,
         file_handle: &FileHandleRef,
     ) -> Result<Box<dyn AsyncRead + Send + Unpin>>;
+}
+
+#[derive(StructOpt)]
+pub enum StorageOpt {
+    LocalFs(LocalFsOpt),
+    CommandAdapter(CommandAdapterOpt),
+}
+
+impl StorageOpt {
+    pub async fn init_storage(self) -> Result<Arc<dyn BackupStorage>> {
+        Ok(match self {
+            StorageOpt::LocalFs(opt) => Arc::new(LocalFs::new_with_opt(opt)),
+            StorageOpt::CommandAdapter(opt) => Arc::new(CommandAdapter::new_with_opt(opt).await?),
+        })
+    }
 }
