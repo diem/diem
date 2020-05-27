@@ -13,7 +13,10 @@ use anyhow::Result;
 use jellyfish_merkle::iterator::JellyfishMerkleIterator;
 use libra_crypto::hash::HashValue;
 use libra_types::{
-    account_state_blob::AccountStateBlob, proof::SparseMerkleRangeProof, transaction::Version,
+    account_state_blob::AccountStateBlob,
+    ledger_info::LedgerInfoWithSignatures,
+    proof::{SparseMerkleRangeProof, TransactionInfoWithProof},
+    transaction::Version,
 };
 use std::sync::Arc;
 
@@ -81,9 +84,24 @@ impl BackupHandler {
             .get_account_state_range_proof(rightmost_key, version)
     }
 
-    /// Get the latest version and state root hash.
+    /// Gets the latest version and state root hash.
     pub fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
         let (version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
         Ok((version, txn_info.state_root_hash()))
+    }
+
+    /// Gets the proof of the state root at specified version.
+    /// N.B. the `LedgerInfo` returned will always be in the same epoch of the version.
+    pub fn get_state_root_proof(
+        &self,
+        version: Version,
+    ) -> Result<(TransactionInfoWithProof, LedgerInfoWithSignatures)> {
+        let epoch = self.ledger_store.get_epoch(version)?;
+        let ledger_info = self.ledger_store.get_latest_ledger_info_in_epoch(epoch)?;
+        let txn_info = self
+            .ledger_store
+            .get_transaction_info_with_proof(version, ledger_info.ledger_info().version())?;
+
+        Ok((txn_info, ledger_info))
     }
 }

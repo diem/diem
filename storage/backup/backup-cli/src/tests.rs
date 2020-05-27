@@ -55,7 +55,7 @@ fn end_to_end() {
     let mut rt = start_backup_service(config.storage.backup_service_port, src_db);
     let client = Arc::new(BackupServiceClient::new(config.storage.backup_service_port));
     let (version, state_root_hash) = rt.block_on(client.get_latest_state_root()).unwrap();
-    let handles = rt
+    let (handles, output_state_root_hash) = rt
         .block_on(
             StateSnapshotBackupController::new(
                 StateSnapshotBackupOpt { version },
@@ -68,6 +68,7 @@ fn end_to_end() {
             .run(),
         )
         .unwrap();
+    assert_eq!(state_root_hash, output_state_root_hash);
 
     rt.block_on(restore_account_state(
         store.borrow(),
