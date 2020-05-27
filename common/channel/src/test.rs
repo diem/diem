@@ -7,7 +7,7 @@ use futures::{
     task::{noop_waker, Context, Poll},
     FutureExt, SinkExt, StreamExt,
 };
-use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
+use rusty_fork::rusty_fork_test;
 use std::{thread, time::Duration};
 
 #[test]
