@@ -457,7 +457,7 @@
     <span class="ident">setup_vm_config</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">genesis_context</span>, <span class="ident">vm_publishing_option</span>);
     <span class="ident">reconfigure</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">genesis_context</span>);
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">interpreter_context</span> <span class="op">=</span> <span class="ident">genesis_context</span>.<span class="ident">into_interpreter_context</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">interpreter_context</span> <span class="op">=</span> <span class="ident">genesis_context</span>.<span class="ident">into_data_store</span>();
     <span class="ident">publish_stdlib</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">interpreter_context</span>, <span class="ident">stdlib_modules</span>);
 
     <span class="ident">verify_genesis_write_set</span>(<span class="ident">interpreter_context</span>.<span class="ident">events</span>());

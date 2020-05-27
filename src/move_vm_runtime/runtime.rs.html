@@ -179,7 +179,6 @@
 <span id="179">179</span>
 <span id="180">180</span>
 <span id="181">181</span>
-<span id="182">182</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -190,13 +189,11 @@
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>};
 <span class="kw">use</span> <span class="ident">move_core_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
+    <span class="ident">gas_schedule</span>::{<span class="ident">AbstractMemorySize</span>, <span class="ident">GasCarrier</span>},
     <span class="ident">identifier</span>::<span class="ident">IdentStr</span>,
     <span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">TypeTag</span>},
 };
-<span class="kw">use</span> <span class="ident">move_vm_types</span>::{
-    <span class="ident">data_store</span>::<span class="ident">DataStore</span>, <span class="ident">gas_schedule</span>::<span class="ident">CostStrategy</span>, <span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>,
-    <span class="ident">values</span>::<span class="ident">Value</span>,
-};
+<span class="kw">use</span> <span class="ident">move_vm_types</span>::{<span class="ident">data_store</span>::<span class="ident">DataStore</span>, <span class="ident">gas_schedule</span>::<span class="ident">CostStrategy</span>, <span class="ident">values</span>::<span class="ident">Value</span>};
 <span class="kw">use</span> <span class="ident">vm</span>::{
     <span class="ident">access</span>::<span class="ident">ModuleAccess</span>,
     <span class="ident">errors</span>::{<span class="ident">verification_error</span>, <span class="ident">vm_error</span>, <span class="ident">Location</span>, <span class="ident">VMResult</span>},
@@ -219,8 +216,8 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">publish_module</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">module</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
         <span class="ident">sender</span>: <span class="kw-2">&amp;</span><span class="ident">AccountAddress</span>,
+        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">compiled_module</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">CompiledModule</span>::<span class="ident">deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">module</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">module</span>,
@@ -261,9 +258,10 @@
         <span class="ident">script</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
         <span class="ident">ty_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TypeTag</span><span class="op">&gt;</span>,
         <span class="kw-2">mut</span> <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&gt;</span>,
-        <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
+        <span class="ident">sender</span>: <span class="ident">AccountAddress</span>,
+        <span class="ident">txn_size</span>: <span class="ident">AbstractMemorySize</span><span class="op">&lt;</span><span class="ident">GasCarrier</span><span class="op">&gt;</span>,
         <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
-        <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
+        <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">fn</span> <span class="ident">is_signer_reference</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">SignatureToken</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
             <span class="kw">use</span> <span class="ident">SignatureToken</span> <span class="kw">as</span> <span class="ident">S</span>;
@@ -283,21 +281,19 @@
             .<span class="ident">verify_ty_args</span>(<span class="ident">main</span>.<span class="ident">type_parameters</span>(), <span class="kw-2">&amp;</span><span class="ident">type_params</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">first_param_opt</span> <span class="op">=</span> <span class="ident">main</span>.<span class="ident">parameters</span>().<span class="number">0</span>.<span class="ident">get</span>(<span class="number">0</span>);
         <span class="kw">if</span> <span class="ident">first_param_opt</span>.<span class="ident">map_or</span>(<span class="bool-val">false</span>, <span class="op">|</span><span class="ident">sig</span><span class="op">|</span> <span class="ident">is_signer_reference</span>(<span class="ident">sig</span>)) {
-            <span class="ident">args</span>.<span class="ident">insert</span>(
-                <span class="number">0</span>,
-                <span class="ident">Value</span>::<span class="ident">transaction_argument_signer_reference</span>(<span class="ident">txn_data</span>.<span class="ident">sender</span>()),
-            )
+            <span class="ident">args</span>.<span class="ident">insert</span>(<span class="number">0</span>, <span class="ident">Value</span>::<span class="ident">transaction_argument_signer_reference</span>(<span class="ident">sender</span>))
         }
         <span class="ident">verify_args</span>(<span class="ident">main</span>.<span class="ident">parameters</span>(), <span class="kw-2">&amp;</span><span class="ident">args</span>)<span class="question-mark">?</span>;
 
         <span class="ident">Interpreter</span>::<span class="ident">entrypoint</span>(
-            <span class="ident">data_store</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">loader</span>,
-            <span class="ident">txn_data</span>,
-            <span class="ident">cost_strategy</span>,
             <span class="ident">main</span>,
             <span class="ident">type_params</span>,
             <span class="ident">args</span>,
+            <span class="ident">sender</span>,
+            <span class="ident">txn_size</span>,
+            <span class="ident">data_store</span>,
+            <span class="ident">cost_strategy</span>,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">loader</span>,
         )
     }
 
@@ -307,9 +303,10 @@
         <span class="ident">function_name</span>: <span class="kw-2">&amp;</span><span class="ident">IdentStr</span>,
         <span class="ident">ty_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TypeTag</span><span class="op">&gt;</span>,
         <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&gt;</span>,
-        <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
+        <span class="ident">sender</span>: <span class="ident">AccountAddress</span>,
+        <span class="ident">txn_size</span>: <span class="ident">AbstractMemorySize</span><span class="op">&lt;</span><span class="ident">GasCarrier</span><span class="op">&gt;</span>,
         <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
-        <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
+        <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">type_params</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
         <span class="kw">for</span> <span class="ident">ty</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">ty_args</span> {
@@ -325,13 +322,14 @@
         <span class="comment">//verify_args(func.parameters(), &amp;args)?;</span>
 
         <span class="ident">Interpreter</span>::<span class="ident">entrypoint</span>(
-            <span class="ident">data_store</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">loader</span>,
-            <span class="ident">txn_data</span>,
-            <span class="ident">cost_strategy</span>,
             <span class="ident">func</span>,
             <span class="ident">type_params</span>,
             <span class="ident">args</span>,
+            <span class="ident">sender</span>,
+            <span class="ident">txn_size</span>,
+            <span class="ident">data_store</span>,
+            <span class="ident">cost_strategy</span>,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">loader</span>,
         )
     }
 
