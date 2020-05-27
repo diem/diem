@@ -39,7 +39,7 @@ fn failed_transaction_cleanup_test() {
         &account::lbr_currency_code(),
     );
     assert!(!out1.write_set().is_empty());
-    assert!(out1.gas_used() == 180_000);
+    assert_eq!(out1.gas_used(), 90_000);
     assert!(!out1.status().is_discarded());
     assert_eq!(
         out1.status().vm_status().major_status,
