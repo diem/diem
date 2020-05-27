@@ -7,7 +7,7 @@ use executor::db_bootstrapper;
 use libra_config::{
     config::{
         ConsensusType, NodeConfig, RemoteService, SafetyRulesService, SecureBackend,
-        SeedPeersConfig, Token, VaultConfig,
+        SeedPeersConfig, Token, VaultConfig, HANDSHAKE_VERSION,
     },
     generator,
 };
@@ -284,7 +284,6 @@ impl ValidatorConfig {
             .as_ref()
             .ok_or(Error::MissingValidatorNetwork)?;
 
-        let seed_handshake = 0;
         let seed_pubkey = seed_config
             .network_keypairs
             .as_ref()
@@ -292,7 +291,7 @@ impl ValidatorConfig {
             .identity_keypair
             .public_key();
         let seed_base_addr = self.bootstrap.clone();
-        let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, seed_handshake);
+        let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, HANDSHAKE_VERSION);
 
         let mut seed_peers = SeedPeersConfig::default();
         seed_peers

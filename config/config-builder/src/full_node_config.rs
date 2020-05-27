@@ -6,6 +6,7 @@ use anyhow::{ensure, Result};
 use libra_config::{
     config::{
         NetworkPeersConfig, NodeConfig, PeerNetworkId, RoleType, SeedPeersConfig, UpstreamConfig,
+        HANDSHAKE_VERSION,
     },
     utils,
 };
@@ -252,7 +253,6 @@ impl FullNodeConfig {
             .last()
             .ok_or(Error::MissingFullNodeNetwork)?;
 
-        let seed_handshake = 0;
         let seed_pubkey = seed_config
             .network_keypairs
             .as_ref()
@@ -260,7 +260,7 @@ impl FullNodeConfig {
             .identity_keypair
             .public_key();
         let seed_base_addr = self.bootstrap.clone();
-        let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, seed_handshake);
+        let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, HANDSHAKE_VERSION);
 
         let mut seed_peers = SeedPeersConfig::default();
         seed_peers

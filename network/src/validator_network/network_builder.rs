@@ -20,7 +20,7 @@ use crate::{
     protocols::{
         discovery::{self, Discovery},
         health_checker::{self, HealthChecker},
-        wire::handshake::v1::{MessagingProtocolVersion, SupportedProtocols},
+        wire::handshake::v1::SupportedProtocols,
     },
     transport,
     transport::*,
@@ -28,7 +28,7 @@ use crate::{
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use futures::stream::StreamExt;
-use libra_config::config::RoleType;
+use libra_config::config::{RoleType, HANDSHAKE_VERSION};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     x25519,
@@ -65,9 +65,6 @@ pub const PING_FAILURES_TOLERATED: u64 = 10;
 pub const MAX_CONCURRENT_NETWORK_REQS: usize = 100;
 pub const MAX_CONCURRENT_NETWORK_NOTIFS: usize = 100;
 pub const MAX_CONNECTION_DELAY_MS: u64 = 10 * 60 * 1000 /* 10 minutes */;
-
-// TODO(philiphayes): remove when transport returns fully rendered network address
-pub const HANDSHAKE_VERSION: u8 = MessagingProtocolVersion::V1 as u8;
 
 #[derive(Debug)]
 pub enum AuthenticationMode {

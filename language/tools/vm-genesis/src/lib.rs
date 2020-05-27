@@ -11,7 +11,7 @@ use crate::{
     genesis_gas_schedule::INITIAL_GAS_SCHEDULE,
 };
 use bytecode_verifier::VerifiedModule;
-use libra_config::config::NodeConfig;
+use libra_config::config::{NodeConfig, HANDSHAKE_VERSION};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey, Uniform, ValidCryptoMaterial,
@@ -36,9 +36,6 @@ use vm::access::ModuleAccess;
 const GENESIS_SEED: [u8; 32] = [42; 32];
 
 const GENESIS_MODULE_NAME: &str = "Genesis";
-
-// TODO(philiphayes): probably not the right place to put this...
-const HANDSHAKE_VERSION: u8 = 0;
 
 pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::new(|| {
     let mut rng = StdRng::from_seed(GENESIS_SEED);
