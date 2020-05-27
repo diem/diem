@@ -19,13 +19,18 @@ use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::proposal_msg::ProposalMsg;
 use futures::{channel::mpsc, executor::block_on};
 use libra_types::{
-    epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures,
-    validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier,
+    epoch_change::EpochChangeProof,
+    epoch_state::EpochState,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    on_chain_config::ValidatorSet,
+    validator_info::ValidatorInfo,
+    validator_signer::ValidatorSigner,
+    validator_verifier::ValidatorVerifier,
 };
 use network::peer_manager::{ConnectionRequestSender, PeerManagerRequestSender};
 use once_cell::sync::Lazy;
-use safety_rules::{test_utils, SafetyRules};
-use std::{num::NonZeroUsize, sync::Arc};
+use safety_rules::{test_utils, SafetyRules, TSafetyRules};
+use std::{collections::BTreeMap, num::NonZeroUsize, sync::Arc};
 use tokio::runtime::Runtime;
 
 // This generates a proposal for round 1
@@ -63,6 +68,16 @@ fn build_empty_store(
     ))
 }
 
+// helpers for safety rule initialization
+fn make_initial_epoch_change_proof(signer: &ValidatorSigner) -> EpochChangeProof {
+    let validator_info =
+        ValidatorInfo::new_with_test_network_keys(signer.author(), signer.public_key(), 1);
+    let validator_set = ValidatorSet::new(vec![validator_info]);
+    let li = LedgerInfo::mock_genesis(Some(validator_set));
+    let lis = LedgerInfoWithSignatures::new(li, BTreeMap::new());
+    EpochChangeProof::new(vec![lis], false)
+}
+
 // TODO: MockStorage -> EmptyStorage
 fn create_round_state() -> RoundState {
     let base_timeout = std::time::Duration::new(60, 0);
@@ -85,7 +100,9 @@ fn create_node_for_fuzzing() -> RoundManager {
     let (initial_data, storage) = MockStorage::start_for_testing(validator_set);
 
     // TODO: remove
-    let safety_rules = SafetyRules::new(signer.author(), test_utils::test_storage(&signer));
+    let proof = make_initial_epoch_change_proof(&signer);
+    let mut safety_rules = SafetyRules::new(signer.author(), test_utils::test_storage(&signer));
+    safety_rules.initialize(&proof).unwrap();
 
     // TODO: mock channels
     let (network_reqs_tx, _network_reqs_rx) =
