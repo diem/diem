@@ -19,5 +19,5 @@ libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 
 [dev-dependencies]
 libra-types = { path = "../../types", version = "0.1.0"  }
-rusty-fork = "0.2.1"
+rusty-fork = "0.3.0"
 tokio = { version = "0.2.21", features = ["full"] }

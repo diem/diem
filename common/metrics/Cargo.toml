@@ -21,5 +21,5 @@ serde_json = "1.0.53"
 tokio = "0.2"
 
 [dev-dependencies]
-rusty-fork = "0.2.1"
+rusty-fork = "0.3.0"
 assert_approx_eq = "1.1.0"
