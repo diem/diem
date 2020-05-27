@@ -921,6 +921,7 @@
         <span class="ident">mempool_status</span>::{<span class="ident">MempoolStatus</span>, <span class="ident">MempoolStatusCode</span>},
         <span class="ident">proof</span>::{
             <span class="ident">AccountStateProof</span>, <span class="ident">AccumulatorConsistencyProof</span>, <span class="ident">AccumulatorProof</span>, <span class="ident">SparseMerkleProof</span>,
+            <span class="ident">TransactionInfoWithProof</span>,
         },
         <span class="ident">test_helpers</span>::<span class="ident">transaction_test_helpers</span>::<span class="ident">get_test_signed_txn</span>,
         <span class="ident">transaction</span>::{
@@ -1081,8 +1082,7 @@
         );
 
         <span class="ident">AccountStateProof</span>::<span class="ident">new</span>(
-            <span class="ident">AccumulatorProof</span>::<span class="ident">new</span>(<span class="macro">vec</span><span class="macro">!</span>[]),
-            <span class="ident">transaction_info</span>,
+            <span class="ident">TransactionInfoWithProof</span>::<span class="ident">new</span>(<span class="ident">AccumulatorProof</span>::<span class="ident">new</span>(<span class="macro">vec</span><span class="macro">!</span>[]), <span class="ident">transaction_info</span>),
             <span class="ident">SparseMerkleProof</span>::<span class="ident">new</span>(<span class="prelude-val">None</span>, <span class="macro">vec</span><span class="macro">!</span>[]),
         )
     }

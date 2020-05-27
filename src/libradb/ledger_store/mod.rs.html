@@ -432,7 +432,7 @@
     <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>,
     <span class="ident">proof</span>::{
         <span class="ident">definition</span>::<span class="ident">LeafCount</span>, <span class="ident">position</span>::<span class="ident">Position</span>, <span class="ident">AccumulatorConsistencyProof</span>,
-        <span class="ident">TransactionAccumulatorProof</span>, <span class="ident">TransactionAccumulatorRangeProof</span>,
+        <span class="ident">TransactionAccumulatorProof</span>, <span class="ident">TransactionAccumulatorRangeProof</span>, <span class="ident">TransactionInfoWithProof</span>,
     },
     <span class="ident">transaction</span>::{<span class="ident">TransactionInfo</span>, <span class="ident">Version</span>},
 };
@@ -669,10 +669,10 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">version</span>: <span class="ident">Version</span>,
         <span class="ident">ledger_version</span>: <span class="ident">Version</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">TransactionInfo</span>, <span class="ident">TransactionAccumulatorProof</span>)<span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>((
-            <span class="self">self</span>.<span class="ident">get_transaction_info</span>(<span class="ident">version</span>)<span class="question-mark">?</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TransactionInfoWithProof</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">TransactionInfoWithProof</span>::<span class="ident">new</span>(
             <span class="self">self</span>.<span class="ident">get_transaction_proof</span>(<span class="ident">version</span>, <span class="ident">ledger_version</span>)<span class="question-mark">?</span>,
+            <span class="self">self</span>.<span class="ident">get_transaction_info</span>(<span class="ident">version</span>)<span class="question-mark">?</span>,
         ))
     }
 

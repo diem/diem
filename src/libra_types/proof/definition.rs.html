@@ -754,60 +754,6 @@
 <span id="754">754</span>
 <span id="755">755</span>
 <span id="756">756</span>
-<span id="757">757</span>
-<span id="758">758</span>
-<span id="759">759</span>
-<span id="760">760</span>
-<span id="761">761</span>
-<span id="762">762</span>
-<span id="763">763</span>
-<span id="764">764</span>
-<span id="765">765</span>
-<span id="766">766</span>
-<span id="767">767</span>
-<span id="768">768</span>
-<span id="769">769</span>
-<span id="770">770</span>
-<span id="771">771</span>
-<span id="772">772</span>
-<span id="773">773</span>
-<span id="774">774</span>
-<span id="775">775</span>
-<span id="776">776</span>
-<span id="777">777</span>
-<span id="778">778</span>
-<span id="779">779</span>
-<span id="780">780</span>
-<span id="781">781</span>
-<span id="782">782</span>
-<span id="783">783</span>
-<span id="784">784</span>
-<span id="785">785</span>
-<span id="786">786</span>
-<span id="787">787</span>
-<span id="788">788</span>
-<span id="789">789</span>
-<span id="790">790</span>
-<span id="791">791</span>
-<span id="792">792</span>
-<span id="793">793</span>
-<span id="794">794</span>
-<span id="795">795</span>
-<span id="796">796</span>
-<span id="797">797</span>
-<span id="798">798</span>
-<span id="799">799</span>
-<span id="800">800</span>
-<span id="801">801</span>
-<span id="802">802</span>
-<span id="803">803</span>
-<span id="804">804</span>
-<span id="805">805</span>
-<span id="806">806</span>
-<span id="807">807</span>
-<span id="808">808</span>
-<span id="809">809</span>
-<span id="810">810</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1313,13 +1259,10 @@
     }
 }
 
-<span class="doccomment">/// The complete proof used to authenticate a `Transaction` object.  This structure consists of an</span>
-<span class="doccomment">/// `AccumulatorProof` from `LedgerInfo` to `TransactionInfo` the verifier needs to verify the</span>
-<span class="doccomment">/// correctness of the `TransactionInfo` object, and the `TransactionInfo` object that is supposed</span>
-<span class="doccomment">/// to match the `Transaction`.</span>
+<span class="doccomment">/// `TransactionInfo` and a `TransactionAccumulatorProof` connecting it to the ledger root.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>), <span class="ident">derive</span>(<span class="ident">Arbitrary</span>))]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TransactionProof</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TransactionInfoWithProof</span> {
     <span class="doccomment">/// The accumulator proof from ledger info root to leaf that authenticates the hash of the</span>
     <span class="doccomment">/// `TransactionInfo` object.</span>
     <span class="ident">ledger_info_to_transaction_info_proof</span>: <span class="ident">TransactionAccumulatorProof</span>,
@@ -1328,8 +1271,8 @@
     <span class="ident">transaction_info</span>: <span class="ident">TransactionInfo</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">TransactionProof</span> {
-    <span class="doccomment">/// Constructs a new `TransactionProof` object using given</span>
+<span class="kw">impl</span> <span class="ident">TransactionInfoWithProof</span> {
+    <span class="doccomment">/// Constructs a new `TransactionWithProof` object using given</span>
     <span class="doccomment">/// `ledger_info_to_transaction_info_proof`.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">ledger_info_to_transaction_info_proof</span>: <span class="ident">TransactionAccumulatorProof</span>,
@@ -1351,33 +1294,9 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transaction_info</span>
     }
 
-    <span class="doccomment">/// Verifies that a `Transaction` with hash value of `transaction_hash` is the version</span>
-    <span class="doccomment">/// `transaction_version` transaction in the ledger using the provided proof.  If</span>
-    <span class="doccomment">/// `event_root_hash` is provided, it&#39;s also verified against the proof.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">ledger_info</span>: <span class="kw-2">&amp;</span><span class="ident">LedgerInfo</span>,
-        <span class="ident">transaction_hash</span>: <span class="ident">HashValue</span>,
-        <span class="ident">event_root_hash</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>,
-        <span class="ident">transaction_version</span>: <span class="ident">Version</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="ident">transaction_hash</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">transaction_info</span>.<span class="ident">transaction_hash</span>(),
-            <span class="string">&quot;The hash of transaction does not match the transaction info in proof. \
-             Transaction hash: {:x}. Transaction hash provided by proof: {:x}.&quot;</span>,
-            <span class="ident">transaction_hash</span>,
-            <span class="self">self</span>.<span class="ident">transaction_info</span>.<span class="ident">transaction_hash</span>()
-        );
-
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">event_root_hash</span>) <span class="op">=</span> <span class="ident">event_root_hash</span> {
-            <span class="macro">ensure</span><span class="macro">!</span>(
-                <span class="ident">event_root_hash</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">transaction_info</span>.<span class="ident">event_root_hash</span>(),
-                <span class="string">&quot;Event root hash ({}) doesn&#39;t match that in the transaction info ({}).&quot;</span>,
-                <span class="ident">event_root_hash</span>,
-                <span class="self">self</span>.<span class="ident">transaction_info</span>.<span class="ident">event_root_hash</span>(),
-            );
-        }
-
+    <span class="doccomment">/// Verifies that the `TransactionInfo` exists in the ledger represented by the `LedgerInfo`</span>
+    <span class="doccomment">/// at specified version.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ledger_info</span>: <span class="kw-2">&amp;</span><span class="ident">LedgerInfo</span>, <span class="ident">transaction_version</span>: <span class="ident">Version</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="ident">verify_transaction_info</span>(
             <span class="ident">ledger_info</span>,
             <span class="ident">transaction_version</span>,
@@ -1394,12 +1313,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>), <span class="ident">derive</span>(<span class="ident">Arbitrary</span>))]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AccountStateProof</span> {
-    <span class="doccomment">/// The accumulator proof from ledger info root to leaf that authenticates the hash of the</span>
-    <span class="doccomment">/// `TransactionInfo` object.</span>
-    <span class="ident">ledger_info_to_transaction_info_proof</span>: <span class="ident">TransactionAccumulatorProof</span>,
-
-    <span class="doccomment">/// The `TransactionInfo` object at the leaf of the accumulator.</span>
-    <span class="ident">transaction_info</span>: <span class="ident">TransactionInfo</span>,
+    <span class="ident">transaction_info_with_proof</span>: <span class="ident">TransactionInfoWithProof</span>,
 
     <span class="doccomment">/// The sparse merkle proof from state root to the account state.</span>
     <span class="ident">transaction_info_to_account_proof</span>: <span class="ident">SparseMerkleProof</span>,
@@ -1409,25 +1323,18 @@
     <span class="doccomment">/// Constructs a new `AccountStateProof` using given `ledger_info_to_transaction_info_proof`,</span>
     <span class="doccomment">/// `transaction_info` and `transaction_info_to_account_proof`.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">ledger_info_to_transaction_info_proof</span>: <span class="ident">TransactionAccumulatorProof</span>,
-        <span class="ident">transaction_info</span>: <span class="ident">TransactionInfo</span>,
+        <span class="ident">transaction_info_with_proof</span>: <span class="ident">TransactionInfoWithProof</span>,
         <span class="ident">transaction_info_to_account_proof</span>: <span class="ident">SparseMerkleProof</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">AccountStateProof</span> {
-            <span class="ident">ledger_info_to_transaction_info_proof</span>,
-            <span class="ident">transaction_info</span>,
+            <span class="ident">transaction_info_with_proof</span>,
             <span class="ident">transaction_info_to_account_proof</span>,
         }
     }
 
-    <span class="doccomment">/// Returns the `ledger_info_to_transaction_info_proof` object in this proof.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ledger_info_to_transaction_info_proof</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">TransactionAccumulatorProof</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">ledger_info_to_transaction_info_proof</span>
-    }
-
-    <span class="doccomment">/// Returns the `transaction_info` object in this proof.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">transaction_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">TransactionInfo</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transaction_info</span>
+    <span class="doccomment">/// Returns the `transaction_info_with_proof` object in this proof.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">transaction_info_with_proof</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">TransactionInfoWithProof</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transaction_info_with_proof</span>
     }
 
     <span class="doccomment">/// Returns the `transaction_info_to_account_proof` object in this proof.</span>
@@ -1446,17 +1353,16 @@
         <span class="ident">account_state_blob</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">AccountStateBlob</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">transaction_info_to_account_proof</span>.<span class="ident">verify</span>(
-            <span class="self">self</span>.<span class="ident">transaction_info</span>.<span class="ident">state_root_hash</span>(),
+            <span class="self">self</span>.<span class="ident">transaction_info_with_proof</span>
+                .<span class="ident">transaction_info</span>
+                .<span class="ident">state_root_hash</span>(),
             <span class="ident">account_address_hash</span>,
             <span class="ident">account_state_blob</span>,
         )<span class="question-mark">?</span>;
 
-        <span class="ident">verify_transaction_info</span>(
-            <span class="ident">ledger_info</span>,
-            <span class="ident">state_version</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transaction_info</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">ledger_info_to_transaction_info_proof</span>,
-        )<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">transaction_info_with_proof</span>
+            .<span class="ident">verify</span>(<span class="ident">ledger_info</span>, <span class="ident">state_version</span>)<span class="question-mark">?</span>;
+
         <span class="prelude-val">Ok</span>(())
     }
 }
@@ -1467,12 +1373,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>), <span class="ident">derive</span>(<span class="ident">Arbitrary</span>))]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EventProof</span> {
-    <span class="doccomment">/// The accumulator proof from ledger info root to leaf that authenticates the hash of the</span>
-    <span class="doccomment">/// `TransactionInfo` object.</span>
-    <span class="ident">ledger_info_to_transaction_info_proof</span>: <span class="ident">TransactionAccumulatorProof</span>,
-
-    <span class="doccomment">/// The `TransactionInfo` object at the leaf of the accumulator.</span>
-    <span class="ident">transaction_info</span>: <span class="ident">TransactionInfo</span>,
+    <span class="ident">transaction_info_with_proof</span>: <span class="ident">TransactionInfoWithProof</span>,
 
     <span class="doccomment">/// The accumulator proof from event root to the actual event.</span>
     <span class="ident">transaction_info_to_event_proof</span>: <span class="ident">EventAccumulatorProof</span>,
@@ -1482,25 +1383,18 @@
     <span class="doccomment">/// Constructs a new `EventProof` using given `ledger_info_to_transaction_info_proof`,</span>
     <span class="doccomment">/// `transaction_info` and `transaction_info_to_event_proof`.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">ledger_info_to_transaction_info_proof</span>: <span class="ident">TransactionAccumulatorProof</span>,
-        <span class="ident">transaction_info</span>: <span class="ident">TransactionInfo</span>,
+        <span class="ident">transaction_info_with_proof</span>: <span class="ident">TransactionInfoWithProof</span>,
         <span class="ident">transaction_info_to_event_proof</span>: <span class="ident">EventAccumulatorProof</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">EventProof</span> {
-            <span class="ident">ledger_info_to_transaction_info_proof</span>,
-            <span class="ident">transaction_info</span>,
+            <span class="ident">transaction_info_with_proof</span>,
             <span class="ident">transaction_info_to_event_proof</span>,
         }
     }
 
-    <span class="doccomment">/// Returns the `ledger_info_to_transaction_info_proof` object in this proof.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ledger_info_to_transaction_info_proof</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">TransactionAccumulatorProof</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">ledger_info_to_transaction_info_proof</span>
-    }
-
-    <span class="doccomment">/// Returns the `transaction_info` object in this proof.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">transaction_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">TransactionInfo</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transaction_info</span>
+    <span class="doccomment">/// Returns the `transaction_info_with_proof` object in this proof.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">transaction_info_with_proof</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">TransactionInfoWithProof</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transaction_info_with_proof</span>
     }
 
     <span class="doccomment">/// Returns the `transaction_info_to_event_proof` object in this proof.</span>
@@ -1517,17 +1411,15 @@
         <span class="ident">event_version_within_transaction</span>: <span class="ident">Version</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">transaction_info_to_event_proof</span>.<span class="ident">verify</span>(
-            <span class="self">self</span>.<span class="ident">transaction_info</span>.<span class="ident">event_root_hash</span>(),
+            <span class="self">self</span>.<span class="ident">transaction_info_with_proof</span>
+                .<span class="ident">transaction_info</span>()
+                .<span class="ident">event_root_hash</span>(),
             <span class="ident">event_hash</span>,
             <span class="ident">event_version_within_transaction</span>,
         )<span class="question-mark">?</span>;
 
-        <span class="ident">verify_transaction_info</span>(
-            <span class="ident">ledger_info</span>,
-            <span class="ident">transaction_version</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transaction_info</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">ledger_info_to_transaction_info_proof</span>,
-        )<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">transaction_info_with_proof</span>
+            .<span class="ident">verify</span>(<span class="ident">ledger_info</span>, <span class="ident">transaction_version</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }

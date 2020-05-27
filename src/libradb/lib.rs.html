@@ -962,9 +962,6 @@
 <span id="962">962</span>
 <span id="963">963</span>
 <span id="964">964</span>
-<span id="965">965</span>
-<span id="966">966</span>
-<span id="967">967</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1034,7 +1031,7 @@
     <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>,
     <span class="ident">proof</span>::{
         <span class="ident">AccountStateProof</span>, <span class="ident">AccumulatorConsistencyProof</span>, <span class="ident">EventProof</span>, <span class="ident">SparseMerkleProof</span>,
-        <span class="ident">SparseMerkleRangeProof</span>, <span class="ident">TransactionListProof</span>, <span class="ident">TransactionProof</span>,
+        <span class="ident">SparseMerkleRangeProof</span>, <span class="ident">TransactionListProof</span>,
     },
     <span class="ident">transaction</span>::{
         <span class="ident">TransactionInfo</span>, <span class="ident">TransactionListWithProof</span>, <span class="ident">TransactionToCommit</span>, <span class="ident">TransactionWithProof</span>,
@@ -1185,12 +1182,9 @@
         <span class="ident">ledger_version</span>: <span class="ident">Version</span>,
         <span class="ident">fetch_events</span>: <span class="ident">bool</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TransactionWithProof</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> {
-            <span class="kw">let</span> (<span class="ident">txn_info</span>, <span class="ident">txn_info_accumulator_proof</span>) <span class="op">=</span> <span class="self">self</span>
-                .<span class="ident">ledger_store</span>
-                .<span class="ident">get_transaction_info_with_proof</span>(<span class="ident">version</span>, <span class="ident">ledger_version</span>)<span class="question-mark">?</span>;
-            <span class="ident">TransactionProof</span>::<span class="ident">new</span>(<span class="ident">txn_info_accumulator_proof</span>, <span class="ident">txn_info</span>)
-        };
+        <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">ledger_store</span>
+            .<span class="ident">get_transaction_info_with_proof</span>(<span class="ident">version</span>, <span class="ident">ledger_version</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">transaction</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">transaction_store</span>.<span class="ident">get_transaction</span>(<span class="ident">version</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// If events were requested, also fetch those.</span>
@@ -1477,10 +1471,10 @@
                     <span class="ident">seq</span>,
                     <span class="ident">event</span>.<span class="ident">sequence_number</span>()
                 );
-                <span class="kw">let</span> (<span class="ident">txn_info</span>, <span class="ident">txn_info_proof</span>) <span class="op">=</span> <span class="self">self</span>
+                <span class="kw">let</span> <span class="ident">txn_info_with_proof</span> <span class="op">=</span> <span class="self">self</span>
                     .<span class="ident">ledger_store</span>
                     .<span class="ident">get_transaction_info_with_proof</span>(<span class="ident">ver</span>, <span class="ident">ledger_version</span>)<span class="question-mark">?</span>;
-                <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="ident">EventProof</span>::<span class="ident">new</span>(<span class="ident">txn_info_proof</span>, <span class="ident">txn_info</span>, <span class="ident">event_proof</span>);
+                <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="ident">EventProof</span>::<span class="ident">new</span>(<span class="ident">txn_info_with_proof</span>, <span class="ident">event_proof</span>);
                 <span class="prelude-val">Ok</span>(<span class="ident">EventWithProof</span>::<span class="ident">new</span>(<span class="ident">ver</span>, <span class="ident">idx</span>, <span class="ident">event</span>, <span class="ident">proof</span>))
             })
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
@@ -1798,7 +1792,7 @@
             <span class="ident">latest_version</span>
         );
 
-        <span class="kw">let</span> (<span class="ident">txn_info</span>, <span class="ident">txn_info_accumulator_proof</span>) <span class="op">=</span> <span class="self">self</span>
+        <span class="kw">let</span> <span class="ident">txn_info_with_proof</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">ledger_store</span>
             .<span class="ident">get_transaction_info_with_proof</span>(<span class="ident">version</span>, <span class="ident">ledger_version</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> (<span class="ident">account_state_blob</span>, <span class="ident">sparse_merkle_proof</span>) <span class="op">=</span> <span class="self">self</span>
@@ -1807,7 +1801,7 @@
         <span class="prelude-val">Ok</span>(<span class="ident">AccountStateWithProof</span>::<span class="ident">new</span>(
             <span class="ident">version</span>,
             <span class="ident">account_state_blob</span>,
-            <span class="ident">AccountStateProof</span>::<span class="ident">new</span>(<span class="ident">txn_info_accumulator_proof</span>, <span class="ident">txn_info</span>, <span class="ident">sparse_merkle_proof</span>),
+            <span class="ident">AccountStateProof</span>::<span class="ident">new</span>(<span class="ident">txn_info_with_proof</span>, <span class="ident">sparse_merkle_proof</span>),
         ))
     }
 

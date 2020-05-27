@@ -369,6 +369,20 @@
 <span id="369">369</span>
 <span id="370">370</span>
 <span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -390,8 +404,8 @@
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">proof</span>::{
     <span class="ident">definition</span>::{
         <span class="ident">AccountStateProof</span>, <span class="ident">AccumulatorConsistencyProof</span>, <span class="ident">AccumulatorProof</span>, <span class="ident">AccumulatorRangeProof</span>,
-        <span class="ident">EventProof</span>, <span class="ident">SparseMerkleProof</span>, <span class="ident">SparseMerkleRangeProof</span>, <span class="ident">TransactionListProof</span>,
-        <span class="ident">TransactionProof</span>,
+        <span class="ident">EventProof</span>, <span class="ident">SparseMerkleProof</span>, <span class="ident">SparseMerkleRangeProof</span>, <span class="ident">TransactionInfoWithProof</span>,
+        <span class="ident">TransactionListProof</span>,
     },
     <span class="ident">SparseMerkleLeafNode</span>,
 };
@@ -603,7 +617,7 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">TransactionProof</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TransactionProof</span> {
+<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">TransactionProof</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TransactionInfoWithProof</span> {
     <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">Error</span>;
 
     <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">proto_proof</span>: <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">TransactionProof</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
@@ -616,15 +630,15 @@
             .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Missing transaction_info&quot;</span>))<span class="question-mark">?</span>
             .<span class="ident">try_into</span>()<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">TransactionProof</span>::<span class="ident">new</span>(
+        <span class="prelude-val">Ok</span>(<span class="ident">TransactionInfoWithProof</span>::<span class="ident">new</span>(
             <span class="ident">ledger_info_to_transaction_info_proof</span>,
             <span class="ident">transaction_info</span>,
         ))
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">TransactionProof</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">TransactionProof</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">proof</span>: <span class="ident">TransactionProof</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">TransactionInfoWithProof</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw">crate</span>::<span class="ident">proto</span>::<span class="ident">types</span>::<span class="ident">TransactionProof</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">proof</span>: <span class="ident">TransactionInfoWithProof</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">ledger_info_to_transaction_info_proof</span>: <span class="prelude-val">Some</span>(
                 <span class="ident">proof</span>.<span class="ident">ledger_info_to_transaction_info_proof</span>().<span class="ident">into</span>(),
@@ -652,8 +666,7 @@
             .<span class="ident">try_into</span>()<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">AccountStateProof</span>::<span class="ident">new</span>(
-            <span class="ident">ledger_info_to_transaction_info_proof</span>,
-            <span class="ident">transaction_info</span>,
+            <span class="ident">TransactionInfoWithProof</span>::<span class="ident">new</span>(<span class="ident">ledger_info_to_transaction_info_proof</span>, <span class="ident">transaction_info</span>),
             <span class="ident">transaction_info_to_account_proof</span>,
         ))
     }
@@ -663,9 +676,17 @@
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">proof</span>: <span class="ident">AccountStateProof</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">ledger_info_to_transaction_info_proof</span>: <span class="prelude-val">Some</span>(
-                <span class="ident">proof</span>.<span class="ident">ledger_info_to_transaction_info_proof</span>().<span class="ident">into</span>(),
+                <span class="ident">proof</span>
+                    .<span class="ident">transaction_info_with_proof</span>()
+                    .<span class="ident">ledger_info_to_transaction_info_proof</span>()
+                    .<span class="ident">into</span>(),
             ),
-            <span class="ident">transaction_info</span>: <span class="prelude-val">Some</span>(<span class="ident">proof</span>.<span class="ident">transaction_info</span>().<span class="ident">into</span>()),
+            <span class="ident">transaction_info</span>: <span class="prelude-val">Some</span>(
+                <span class="ident">proof</span>
+                    .<span class="ident">transaction_info_with_proof</span>()
+                    .<span class="ident">transaction_info</span>()
+                    .<span class="ident">into</span>(),
+            ),
             <span class="ident">transaction_info_to_account_proof</span>: <span class="prelude-val">Some</span>(
                 <span class="ident">proof</span>.<span class="ident">transaction_info_to_account_proof</span>().<span class="ident">into</span>(),
             ),
@@ -691,8 +712,7 @@
             .<span class="ident">try_into</span>()<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">EventProof</span>::<span class="ident">new</span>(
-            <span class="ident">ledger_info_to_transaction_info_proof</span>,
-            <span class="ident">transaction_info</span>,
+            <span class="ident">TransactionInfoWithProof</span>::<span class="ident">new</span>(<span class="ident">ledger_info_to_transaction_info_proof</span>, <span class="ident">transaction_info</span>),
             <span class="ident">transaction_info_to_event_proof</span>,
         ))
     }
@@ -702,9 +722,17 @@
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">proof</span>: <span class="ident">EventProof</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">ledger_info_to_transaction_info_proof</span>: <span class="prelude-val">Some</span>(
-                <span class="ident">proof</span>.<span class="ident">ledger_info_to_transaction_info_proof</span>().<span class="ident">into</span>(),
+                <span class="ident">proof</span>
+                    .<span class="ident">transaction_info_with_proof</span>()
+                    .<span class="ident">ledger_info_to_transaction_info_proof</span>()
+                    .<span class="ident">into</span>(),
             ),
-            <span class="ident">transaction_info</span>: <span class="prelude-val">Some</span>(<span class="ident">proof</span>.<span class="ident">transaction_info</span>().<span class="ident">into</span>()),
+            <span class="ident">transaction_info</span>: <span class="prelude-val">Some</span>(
+                <span class="ident">proof</span>
+                    .<span class="ident">transaction_info_with_proof</span>()
+                    .<span class="ident">transaction_info</span>()
+                    .<span class="ident">into</span>(),
+            ),
             <span class="ident">transaction_info_to_event_proof</span>: <span class="prelude-val">Some</span>(<span class="ident">proof</span>.<span class="ident">transaction_info_to_event_proof</span>().<span class="ident">into</span>()),
         }
     }
