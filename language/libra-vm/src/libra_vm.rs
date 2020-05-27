@@ -584,6 +584,24 @@ impl LibraVM {
 
         let mut data_store = TransactionDataCache::new(remote_cache);
 
+        // Bump the sequence number of sender.
+        let gas_schedule = zero_cost_schedule();
+        let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
+
+        self.move_vm.execute_function(
+            &account_config::ACCOUNT_MODULE,
+            &BUMP_SEQUENCE_NUMBER_NAME,
+            vec![],
+            vec![Value::transaction_argument_signer_reference(
+                txn_data.sender,
+            )],
+            txn_data.sender,
+            txn_data.transaction_size,
+            &mut data_store,
+            &mut cost_strategy,
+        )?;
+
+        // Emit the reconfiguration event
         self.run_writeset_epilogue(&mut data_store, change_set, &txn_data)?;
 
         if let Err(e) = self.read_writeset(remote_cache, &change_set.write_set()) {

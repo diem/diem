@@ -86,6 +86,8 @@ pub static CREATE_ACCOUNT_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("create_unhosted_account").unwrap());
 pub static PROLOGUE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("prologue").unwrap());
 pub static EPILOGUE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("epilogue").unwrap());
+pub static BUMP_SEQUENCE_NUMBER_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("bump_sequence_number").unwrap());
 pub static BLOCK_PROLOGUE: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("block_prologue").unwrap());
 pub static DISTRIBUTE_TXN_FEES: Lazy<Identifier> =
