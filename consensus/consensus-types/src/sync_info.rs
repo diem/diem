@@ -41,6 +41,9 @@ impl SyncInfo {
         highest_commit_cert: QuorumCert,
         highest_timeout_cert: Option<TimeoutCertificate>,
     ) -> Self {
+        // No need to include HTC if it's lower than HQC
+        let highest_timeout_cert = highest_timeout_cert
+            .filter(|tc| tc.round() > highest_quorum_cert.certified_block().round());
         Self {
             highest_quorum_cert,
             highest_commit_cert,
