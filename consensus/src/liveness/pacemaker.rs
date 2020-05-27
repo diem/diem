@@ -1,13 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::block_storage::{PendingVotes, VoteReceptionResult};
 use crate::{
+    block_storage::{PendingVotes, VoteReceptionResult},
     counters,
     util::time_service::{SendTask, TimeService},
 };
-use consensus_types::common::Round;
-use consensus_types::vote::Vote;
+use consensus_types::{common::Round, sync_info::SyncInfo, vote::Vote};
 use libra_logger::prelude::*;
 use libra_types::validator_verifier::ValidatorVerifier;
 use std::{
@@ -204,20 +203,11 @@ impl Pacemaker {
 
     /// Notify the Pacemaker about the potentially new QC, TC, and highest committed round.
     /// Note that some of these values might not be available by the caller.
-    pub fn process_certificates(
-        &mut self,
-        hqc_round: Option<Round>,
-        htc_round: Option<Round>,
-        highest_committed_round: Option<Round>,
-    ) -> Option<NewRoundEvent> {
-        let qc_round = hqc_round.unwrap_or(0);
-        let tc_round = htc_round.unwrap_or(0);
-        if let Some(committed_round) = highest_committed_round {
-            if committed_round > self.highest_committed_round {
-                self.highest_committed_round = committed_round;
-            }
+    pub fn process_certificates(&mut self, sync_info: SyncInfo) -> Option<NewRoundEvent> {
+        if sync_info.highest_commit_round() > self.highest_committed_round {
+            self.highest_committed_round = sync_info.highest_commit_round();
         }
-        let new_round = std::cmp::max(qc_round, tc_round) + 1;
+        let new_round = sync_info.highest_round() + 1;
         if new_round > self.current_round {
             // Start a new round.
             self.current_round = new_round;
@@ -225,7 +215,7 @@ impl Pacemaker {
             self.vote_sent = None;
             let timeout = self.setup_timeout();
             // The new round reason is QCReady in case both QC and TC are equal
-            let new_round_reason = if qc_round >= tc_round {
+            let new_round_reason = if sync_info.highest_timeout_certificate().is_none() {
                 NewRoundReason::QCReady
             } else {
                 NewRoundReason::Timeout

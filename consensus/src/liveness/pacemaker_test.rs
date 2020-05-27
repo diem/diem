@@ -8,9 +8,17 @@ use crate::{
     util::mock_time_service::SimulatedTimeService,
 };
 
-use consensus_types::common::Round;
+use consensus_types::{
+    common::Round, quorum_cert::QuorumCert, sync_info::SyncInfo, timeout::Timeout,
+    timeout_certificate::TimeoutCertificate, vote_data::VoteData,
+};
 use futures::StreamExt;
-use std::{sync::Arc, time::Duration};
+use libra_crypto::HashValue;
+use libra_types::{
+    block_info::BlockInfo,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+};
+use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
 #[test]
 fn test_pacemaker_time_interval() {
@@ -31,7 +39,7 @@ async fn test_basic_timeout() {
     let (mut pm, mut timeout_rx) = make_pacemaker();
 
     // jump start the pacemaker
-    pm.process_certificates(Some(0), None, None);
+    pm.process_certificates(generate_sync_info(Some(0), None, None));
     for _ in 0..2 {
         let round = timeout_rx.next().await.unwrap();
         // Here we just test timeout send retry,
@@ -45,15 +53,29 @@ async fn test_basic_timeout() {
 fn test_round_event_generation() {
     let (mut pm, _) = make_pacemaker();
     // Happy path with new QC
-    expect_qc(2, pm.process_certificates(Some(1), None, None));
+    expect_qc(
+        2,
+        pm.process_certificates(generate_sync_info(Some(1), None, None)),
+    );
     // Old QC does not generate anything
-    assert!(pm.process_certificates(Some(1), None, None).is_none());
+    assert!(pm
+        .process_certificates(generate_sync_info(Some(1), None, None))
+        .is_none());
     // A TC for a higher round
-    expect_timeout(3, pm.process_certificates(None, Some(2), None));
+    expect_timeout(
+        3,
+        pm.process_certificates(generate_sync_info(None, Some(2), None)),
+    );
     // In case both QC and TC are present choose the one with the higher value
-    expect_timeout(4, pm.process_certificates(Some(2), Some(3), None));
+    expect_timeout(
+        4,
+        pm.process_certificates(generate_sync_info(Some(2), Some(3), None)),
+    );
     // In case both QC and TC are present with the same value, choose QC
-    expect_qc(5, pm.process_certificates(Some(4), Some(4), None));
+    expect_qc(
+        5,
+        pm.process_certificates(generate_sync_info(Some(4), Some(4), None)),
+    );
 }
 
 fn make_pacemaker() -> (Pacemaker, channel::Receiver<Round>) {
@@ -76,4 +98,45 @@ fn expect_timeout(round: Round, event: Option<NewRoundEvent>) {
     let event = event.unwrap();
     assert_eq!(round, event.round);
     assert_eq!(event.reason, NewRoundReason::Timeout);
+}
+
+fn generate_sync_info(
+    quorum_round: Option<Round>,
+    timeout_round: Option<Round>,
+    commit_round: Option<Round>,
+) -> SyncInfo {
+    let quorum_round = quorum_round.unwrap_or(0);
+    let timeout_round = timeout_round.unwrap_or(0);
+    let commit_round = commit_round.unwrap_or(0);
+    let commit_block = BlockInfo::new(
+        1,
+        commit_round,
+        HashValue::zero(),
+        HashValue::zero(),
+        0,
+        0,
+        None,
+    );
+    let ledger_info = LedgerInfoWithSignatures::new(
+        LedgerInfo::new(commit_block, HashValue::zero()),
+        BTreeMap::new(),
+    );
+    let quorum_cert = QuorumCert::new(
+        VoteData::new(
+            BlockInfo::new(
+                1,
+                quorum_round,
+                HashValue::zero(),
+                HashValue::zero(),
+                0,
+                0,
+                None,
+            ),
+            BlockInfo::empty(),
+        ),
+        ledger_info,
+    );
+    let commit_cert = quorum_cert.clone();
+    let timeout_cert = TimeoutCertificate::new(Timeout::new(1, timeout_round));
+    SyncInfo::new(quorum_cert, commit_cert, Some(timeout_cert))
 }
