@@ -226,6 +226,42 @@ impl TSafetyRules for SafetyRules {
     /// @TODO verify QC matches preferred round
     fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
         debug!("Incoming proposal to sign.");
+        let proposal_epoch = block_data.epoch();
+        let proposal_round = block_data.round();
+        let last_voted_round = self.persistent_storage.last_voted_round()?;
+
+        // proposed epoch must match the current epoch
+        self.verify_epoch(proposal_epoch)?;
+
+        // proposed round must be increasing
+        if proposal_round <= last_voted_round {
+            debug!(
+                "Block round is older than last_voted_round ({} <= {})",
+                proposal_round, last_voted_round
+            );
+            return Err(Error::OldProposal {
+                proposal_round,
+                last_voted_round,
+            });
+        }
+
+        // Done checking the block epochs, now checking and verifying QC correctness
+        let qc = block_data.quorum_cert();
+        let qc_round = qc.certified_block().round();
+        let preferred_round = self.persistent_storage.preferred_round()?;
+
+        self.verify_qc(qc)?;
+
+        if qc_round < preferred_round {
+            debug!(
+                "QC round does not match preferred round {} < {}",
+                qc_round, preferred_round
+            );
+            return Err(Error::InvalidQuorumCertificate(
+                "QC's certified round is older than the preferred round".into(),
+            ));
+        }
+
         COUNTERS.sign_proposal.inc();
         Ok(Block::new_proposal_from_block_data(
             block_data,
