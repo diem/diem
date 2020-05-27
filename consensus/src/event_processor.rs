@@ -499,15 +499,10 @@ impl<T: Payload> EventProcessor<T> {
         let consensus_state = self.safety_rules.consensus_state()?;
         counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_round() as i64);
 
-        let root = self.block_store.root();
         if let Some(new_round_event) = self.pacemaker.process_certificates(
             Some(sync_info.highest_quorum_cert().certified_block().round()),
             sync_info.highest_timeout_certificate().map(|tc| tc.round()),
-            if root.is_nil_block() {
-                None
-            } else {
-                Some(root.round())
-            },
+            Some(sync_info.highest_commit_round()),
         ) {
             self.process_new_round_event(new_round_event).await;
         }
