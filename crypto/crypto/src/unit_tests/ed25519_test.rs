@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate as libra_crypto;
 use crate::{
     ed25519::{
         Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature, ED25519_PRIVATE_KEY_LENGTH,
@@ -17,7 +18,12 @@ use core::{
 };
 
 use crate::hash::HashValue;
+use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use proptest::{collection::vec, prelude::*};
+use serde::{Deserialize, Serialize};
+
+#[derive(CryptoHasher, LCSCryptoHash, Serialize, Deserialize)]
+struct CryptoHashable(pub usize);
 
 proptest! {
 
@@ -147,6 +153,19 @@ proptest! {
         prop_assert_eq!(ED25519_SIGNATURE_LENGTH, serialized.len());
         let deserialized = Ed25519Signature::try_from(serialized).unwrap();
         prop_assert!(deserialized.verify_arbitrary_msg(&msg, &keypair.public_key).is_ok());
+    }
+
+    #[test]
+    fn test_signature_verification_from_struct(
+        x in any::<usize>(),
+        keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()
+    ) {
+        let hashable = CryptoHashable(x);
+        let signature = keypair.private_key.sign(&hashable).expect("all `RawTransaction` objects should LCS-serialize correctly");
+        let serialized: &[u8] = &(signature.to_bytes());
+        prop_assert_eq!(ED25519_SIGNATURE_LENGTH, serialized.len());
+        let deserialized = Ed25519Signature::try_from(serialized).unwrap();
+        prop_assert!(deserialized.verify_struct_msg(&hashable, &keypair.public_key).is_ok());
     }
 
     // Check for canonical S.

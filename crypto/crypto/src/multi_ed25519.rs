@@ -11,6 +11,7 @@ use crate::{
         Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature, ED25519_PRIVATE_KEY_LENGTH,
         ED25519_PUBLIC_KEY_LENGTH, ED25519_SIGNATURE_LENGTH,
     },
+    hash::{CryptoHash, CryptoHasher},
     traits::*,
     HashValue,
 };
@@ -18,6 +19,7 @@ use anyhow::{anyhow, Result};
 use core::convert::TryFrom;
 use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
 use rand::Rng;
+use serde::Serialize;
 use std::{convert::TryInto, fmt};
 
 const MAX_NUM_OF_KEYS: usize = 32;
@@ -152,6 +154,25 @@ impl SigningKey for MultiEd25519PrivateKey {
                 }),
         );
         MultiEd25519Signature { signatures, bitmap }
+    }
+
+    fn sign<T: CryptoHash + Serialize>(
+        &self,
+        message: &T,
+    ) -> Result<MultiEd25519Signature, CryptoMaterialError> {
+        let mut bitmap = [0u8; BITMAP_NUM_OF_BYTES];
+        let signatures: Vec<Ed25519Signature> = self
+            .private_keys
+            .iter()
+            .take(self.threshold as usize)
+            .enumerate()
+            .map(|(i, item)| {
+                bitmap_set_bit(&mut bitmap, i);
+                item.sign(message)
+            })
+            .collect::<Result<_, _>>()?;
+
+        Ok(MultiEd25519Signature { signatures, bitmap })
     }
 
     #[cfg(any(test, feature = "fuzzing"))]
@@ -470,6 +491,17 @@ impl Signature for MultiEd25519Signature {
     /// Checks that `self` is valid for `message` using `public_key`.
     fn verify(&self, message: &HashValue, public_key: &MultiEd25519PublicKey) -> Result<()> {
         self.verify_arbitrary_msg(message.as_ref(), public_key)
+    }
+
+    fn verify_struct_msg<T: CryptoHash + Serialize>(
+        &self,
+        message: &T,
+        public_key: &MultiEd25519PublicKey,
+    ) -> Result<()> {
+        let mut bytes = <T as CryptoHash>::Hasher::seed().to_vec();
+        lcs::serialize_into(&mut bytes, &message)
+            .map_err(|_| CryptoMaterialError::SerializationError)?;
+        Self::verify_arbitrary_msg(self, &bytes, public_key)
     }
 
     /// Checks that `self` is valid for an arbitrary &[u8] `message` using `public_key`.
