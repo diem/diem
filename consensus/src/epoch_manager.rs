@@ -4,7 +4,6 @@
 use crate::{
     block_storage::BlockStore,
     counters,
-    event_processor::{EventProcessor, SyncProcessor, UnverifiedEvent, VerifiedEvent},
     liveness::{
         leader_reputation::{ActiveInactiveHeuristic, LeaderReputation, LibraDBBackend},
         multi_proposer_election::MultiProposer,
@@ -16,6 +15,7 @@ use crate::{
     network::{IncomingBlockRetrievalRequest, NetworkReceivers, NetworkSender},
     network_interface::{ConsensusMsg, ConsensusNetworkSender},
     persistent_liveness_storage::{LedgerRecoveryData, PersistentLivenessStorage, RecoveryData},
+    round_manager::{RecoveryManager, RoundManager, UnverifiedEvent, VerifiedEvent},
     state_replication::{StateComputer, TxnManager},
     util::time_service::TimeService,
 };
@@ -42,14 +42,13 @@ use std::{
     time::{Duration, Instant},
 };
 
-/// The enum contains two processor
-/// SyncProcessor is used to process events in order to sync up with peer if we can't recover from local consensusdb
-/// EventProcessor is used for normal event handling.
-/// We suppress clippy warning here because we expect most of the time we will have EventProcessor
+/// RecoveryManager is used to process events in order to sync up with peer if we can't recover from local consensusdb
+/// RoundManager is used for normal event handling.
+/// We suppress clippy warning here because we expect most of the time we will have RoundManager
 #[allow(clippy::large_enum_variant)]
-pub enum Processor<T> {
-    SyncProcessor(SyncProcessor<T>),
-    EventProcessor(EventProcessor<T>),
+pub enum RoundProcessor<T> {
+    Recovery(RecoveryManager<T>),
+    Normal(RoundManager<T>),
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -67,7 +66,7 @@ impl<T: Payload> LivenessStorageData<T> {
     }
 }
 
-// Manager the components that shared across epoch and spawn per-epoch EventProcessor with
+// Manager the components that shared across epoch and spawn per-epoch RoundManager with
 // epoch-specific input.
 pub struct EpochManager<T> {
     author: Author,
@@ -80,7 +79,7 @@ pub struct EpochManager<T> {
     state_computer: Arc<dyn StateComputer<Payload = T>>,
     storage: Arc<dyn PersistentLivenessStorage<T>>,
     safety_rules_manager: SafetyRulesManager<T>,
-    processor: Option<Processor<T>>,
+    processor: Option<RoundProcessor<T>>,
 }
 
 impl<T: Payload> EpochManager<T> {
@@ -118,8 +117,8 @@ impl<T: Payload> EpochManager<T> {
             .as_ref()
             .expect("EpochManager not started yet")
         {
-            Processor::EventProcessor(p) => p.epoch_info(),
-            Processor::SyncProcessor(p) => p.epoch_info(),
+            RoundProcessor::Normal(p) => p.epoch_info(),
+            RoundProcessor::Recovery(p) => p.epoch_info(),
         }
     }
 
@@ -259,12 +258,8 @@ impl<T: Payload> EpochManager<T> {
         // state_computer notifies reconfiguration in another channel
     }
 
-    async fn start_event_processor(
-        &mut self,
-        recovery_data: RecoveryData<T>,
-        epoch_info: EpochInfo,
-    ) {
-        // Release the previous EventProcessor, especially the SafetyRule client
+    async fn start_round_manager(&mut self, recovery_data: RecoveryData<T>, epoch_info: EpochInfo) {
+        // Release the previous RoundManager, especially the SafetyRule client
         self.processor = None;
         counters::EPOCH.set(epoch_info.epoch as i64);
         counters::CURRENT_EPOCH_VALIDATORS.set(epoch_info.verifier.len() as i64);
@@ -324,7 +319,7 @@ impl<T: Payload> EpochManager<T> {
             epoch_info.verifier.clone(),
         );
 
-        let mut processor = EventProcessor::new(
+        let mut processor = RoundManager::new(
             epoch_info,
             block_store,
             last_vote,
@@ -338,15 +333,15 @@ impl<T: Payload> EpochManager<T> {
             self.time_service.clone(),
         );
         processor.start().await;
-        self.processor = Some(Processor::EventProcessor(processor));
-        info!("EventProcessor started");
+        self.processor = Some(RoundProcessor::Normal(processor));
+        info!("RoundManager started");
     }
 
     // Depending on what data we can extract from consensusdb, we may or may not have an
     // event processor at startup. If we need to sync up with peers for blocks to construct
     // a valid block store, which is required to construct an event processor, we will take
     // care of the sync up here.
-    async fn start_sync_processor(
+    async fn start_recovery_manager(
         &mut self,
         ledger_recovery_data: LedgerRecoveryData,
         epoch_info: EpochInfo,
@@ -357,7 +352,7 @@ impl<T: Payload> EpochManager<T> {
             self.self_sender.clone(),
             epoch_info.verifier.clone(),
         );
-        self.processor = Some(Processor::SyncProcessor(SyncProcessor::new(
+        self.processor = Some(RoundProcessor::Recovery(RecoveryManager::new(
             epoch_info,
             network_sender,
             self.storage.clone(),
@@ -384,10 +379,10 @@ impl<T: Payload> EpochManager<T> {
 
         match self.storage.start() {
             LivenessStorageData::RecoveryData(initial_data) => {
-                self.start_event_processor(initial_data, epoch_info).await
+                self.start_round_manager(initial_data, epoch_info).await
             }
             LivenessStorageData::LedgerRecoveryData(ledger_recovery_data) => {
-                self.start_sync_processor(ledger_recovery_data, epoch_info)
+                self.start_recovery_manager(ledger_recovery_data, epoch_info)
                     .await
             }
         }
@@ -444,7 +439,7 @@ impl<T: Payload> EpochManager<T> {
 
     async fn process_event(&mut self, peer_id: AccountAddress, event: VerifiedEvent<T>) {
         match self.processor_mut() {
-            Processor::SyncProcessor(p) => {
+            RoundProcessor::Recovery(p) => {
                 let result = match event {
                     VerifiedEvent::ProposalMsg(proposal) => p.process_proposal_msg(*proposal).await,
                     VerifiedEvent::VoteMsg(vote) => p.process_vote(*vote).await,
@@ -454,12 +449,12 @@ impl<T: Payload> EpochManager<T> {
                 match result {
                     Ok(data) => {
                         info!("Recovered from SyncProcessor");
-                        self.start_event_processor(data, epoch_info).await
+                        self.start_round_manager(data, epoch_info).await
                     }
                     Err(e) => error!("{:?}", e),
                 }
             }
-            Processor::EventProcessor(p) => match event {
+            RoundProcessor::Normal(p) => match event {
                 VerifiedEvent::ProposalMsg(proposal) => p.process_proposal_msg(*proposal).await,
                 VerifiedEvent::VoteMsg(vote) => p.process_vote(*vote).await,
                 VerifiedEvent::SyncInfo(sync_info) => {
@@ -469,7 +464,7 @@ impl<T: Payload> EpochManager<T> {
         }
     }
 
-    fn processor_mut(&mut self) -> &mut Processor<T> {
+    fn processor_mut(&mut self) -> &mut RoundProcessor<T> {
         self.processor
             .as_mut()
             .expect("EpochManager not started yet")
@@ -477,15 +472,15 @@ impl<T: Payload> EpochManager<T> {
 
     pub async fn process_block_retrieval(&mut self, request: IncomingBlockRetrievalRequest) {
         match self.processor_mut() {
-            Processor::EventProcessor(p) => p.process_block_retrieval(request).await,
-            _ => warn!("EventProcessor not started yet"),
+            RoundProcessor::Normal(p) => p.process_block_retrieval(request).await,
+            _ => warn!("RoundManager not started yet"),
         }
     }
 
     pub async fn process_local_timeout(&mut self, round: u64) {
         match self.processor_mut() {
-            Processor::EventProcessor(p) => p.process_local_timeout(round).await,
-            _ => unreachable!("EventProcessor not started yet"),
+            RoundProcessor::Normal(p) => p.process_local_timeout(round).await,
+            _ => unreachable!("RoundManager not started yet"),
         }
     }
 

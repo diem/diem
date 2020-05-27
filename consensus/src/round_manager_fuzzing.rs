@@ -3,7 +3,6 @@
 
 use crate::{
     block_storage::BlockStore,
-    event_processor::EventProcessor,
     liveness::{
         pacemaker::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
         proposal_generator::ProposalGenerator,
@@ -12,6 +11,7 @@ use crate::{
     network::NetworkSender,
     network_interface::ConsensusNetworkSender,
     persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
+    round_manager::RoundManager,
     test_utils::{EmptyStateComputer, MockStorage, MockTransactionManager, TestPayload},
     util::mock_time_service::SimulatedTimeService,
 };
@@ -30,9 +30,9 @@ use tokio::runtime::Runtime;
 
 // This generates a proposal for round 1
 pub fn generate_corpus_proposal() -> Vec<u8> {
-    let mut event_processor = create_node_for_fuzzing();
+    let mut round_manager = create_node_for_fuzzing();
     block_on(async {
-        let proposal = event_processor
+        let proposal = round_manager
             .generate_proposal(NewRoundEvent {
                 round: 1,
                 reason: NewRoundReason::QCReady,
@@ -72,8 +72,8 @@ fn create_pacemaker() -> Pacemaker {
     Pacemaker::new(time_interval, time_service, pacemaker_timeout_sender)
 }
 
-// Creates an EventProcessor for fuzzing
-fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
+// Creates an RoundManager for fuzzing
+fn create_node_for_fuzzing() -> RoundManager<TestPayload> {
     // signer is re-used accross fuzzing runs
     let signer = FUZZING_SIGNER.clone();
 
@@ -133,7 +133,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     let proposer_election = Box::new(RotatingProposer::new(vec![signer.author()], 1));
 
     // event processor
-    EventProcessor::new(
+    RoundManager::new(
         epoch_info,
         Arc::clone(&block_store),
         None,
@@ -151,7 +151,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
 // This functions fuzzes a Proposal protobuffer (not a ConsensusMsg)
 pub fn fuzz_proposal(data: &[u8]) {
     // create node
-    let mut event_processor = create_node_for_fuzzing();
+    let mut round_manager = create_node_for_fuzzing();
 
     let proposal: ProposalMsg<TestPayload> = match lcs::from_bytes(data) {
         Ok(xx) => xx,
@@ -176,7 +176,7 @@ pub fn fuzz_proposal(data: &[u8]) {
     block_on(async move {
         // TODO: make sure this obtains a vote when testing
         // TODO: make sure that if this obtains a vote, it's for round 1, etc.
-        event_processor.process_proposal_msg(proposal).await;
+        round_manager.process_proposal_msg(proposal).await;
     });
 }
 
