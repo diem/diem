@@ -9,7 +9,10 @@ use anyhow::Result;
 use bytes::Bytes;
 use futures::stream::TryStreamExt;
 use libra_crypto::HashValue;
-use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
+use libra_types::{
+    account_state_blob::AccountStateBlob, ledger_info::LedgerInfoWithSignatures,
+    proof::TransactionInfoWithProof, transaction::Version,
+};
 use std::{mem::size_of, sync::Arc};
 use structopt::StructOpt;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
@@ -78,6 +81,15 @@ impl BackupServiceClient {
     async fn get_state_snapshot(&self, version: Version) -> Result<impl AsyncRead> {
         self.get(&format!("state_snapshot/{}", version)).await
     }
+
+    async fn get_state_root_proof(&self, version: Version) -> Result<Vec<u8>> {
+        let mut buf = Vec::new();
+        self.get(&format!("state_root_proof/{}", version))
+            .await?
+            .read_to_end(&mut buf)
+            .await?;
+        Ok(buf)
+    }
 }
 
 #[derive(StructOpt)]
@@ -117,11 +129,11 @@ impl StateSnapshotBackupController {
         }
     }
 
-    pub async fn run(self) -> Result<Vec<(FileHandle, FileHandle)>> {
+    pub async fn run(self) -> Result<(Vec<(FileHandle, FileHandle)>, HashValue)> {
         let backup_handle = self.storage.create_backup(&self.backup_name()).await?;
 
         let mut chunk_bytes = vec![];
-        let mut ret = vec![];
+        let mut chunks = vec![];
         let mut current_idx: usize = 0;
         let mut chunk_first_idx: usize = 0;
 
@@ -142,7 +154,8 @@ impl StateSnapshotBackupController {
                             .expect("max_chunk_size should be larger than account size."),
                     )
                     .await?;
-                ret.push((chunk_handle, proof_handle));
+
+                chunks.push((chunk_handle, proof_handle));
                 chunk_bytes = vec![];
                 chunk_first_idx = current_idx + 1;
             }
@@ -165,9 +178,14 @@ impl StateSnapshotBackupController {
                 &prev_record_bytes.expect("Should have at least one account."),
             )
             .await?;
-        ret.push((chunk_handle, proof_handle));
+        chunks.push((chunk_handle, proof_handle));
 
-        Ok(ret)
+        let proof_bytes = self.client.get_state_root_proof(self.version).await?;
+        let (txn_info, ledger_info): (TransactionInfoWithProof, LedgerInfoWithSignatures) =
+            lcs::from_bytes(&proof_bytes)?;
+        assert_eq!(ledger_info.ledger_info().version(), self.version);
+
+        Ok((chunks, txn_info.transaction_info().state_root_hash()))
     }
 }
 

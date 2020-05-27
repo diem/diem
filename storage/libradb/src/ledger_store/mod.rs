@@ -149,6 +149,12 @@ impl LedgerStore {
             .store(Arc::new(Some(ledger_info_with_sigs)));
     }
 
+    pub fn get_latest_ledger_info_in_epoch(&self, epoch: u64) -> Result<LedgerInfoWithSignatures> {
+        self.db.get::<LedgerInfoSchema>(&epoch)?.ok_or_else(|| {
+            LibraDbError::NotFound(format!("Last LedgerInfo of epoch {}", epoch)).into()
+        })
+    }
+
     fn get_epoch_state(&self, epoch: u64) -> Result<EpochState> {
         ensure!(epoch > 0, "EpochState only queryable for epoch >= 1.",);
 

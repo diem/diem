@@ -32,7 +32,7 @@ async fn main() {
     let client = Arc::new(BackupServiceClient::new_with_opt(opt.client));
     let storage = Arc::new(LocalFs::new_with_opt(opt.storage));
 
-    let file_handles =
+    let (file_handles, _state_root_hash) =
         StateSnapshotBackupController::new(opt.state_snapshot, opt.global, client, storage)
             .run()
             .await
