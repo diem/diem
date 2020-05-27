@@ -28,11 +28,15 @@
 //! ```
 //! **Note**: The above example generates a private key using a private function intended only for
 //! testing purposes. Production code should find an alternate means for secure key generation.
-
-use crate::{traits::*, HashValue};
+use crate::{
+    hash::{CryptoHash, CryptoHasher},
+    traits::*,
+    HashValue,
+};
 use anyhow::{anyhow, Result};
 use core::convert::TryFrom;
 use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
+use serde::Serialize;
 use std::{cmp::Ordering, fmt};
 
 /// The length of the Ed25519PrivateKey
@@ -214,6 +218,19 @@ impl SigningKey for Ed25519PrivateKey {
     type VerifyingKeyMaterial = Ed25519PublicKey;
     type SignatureMaterial = Ed25519Signature;
 
+    fn sign<T: CryptoHash + Serialize>(
+        &self,
+        message: &T,
+    ) -> Result<Ed25519Signature, CryptoMaterialError> {
+        let mut bytes = <T::Hasher as CryptoHasher>::seed().to_vec();
+        lcs::serialize_into(&mut bytes, &message)
+            .map_err(|_| CryptoMaterialError::SerializationError)?;
+        Ok(Ed25519PrivateKey::sign_arbitrary_message(
+            &self,
+            bytes.as_ref(),
+        ))
+    }
+
     fn sign_message(&self, message: &HashValue) -> Ed25519Signature {
         Ed25519PrivateKey::sign_arbitrary_message(&self, message.as_ref())
     }
@@ -388,6 +405,17 @@ impl Signature for Ed25519Signature {
         self.verify_arbitrary_msg(message.as_ref(), public_key)
     }
 
+    fn verify_struct_msg<T: CryptoHash + Serialize>(
+        &self,
+        message: &T,
+        public_key: &Ed25519PublicKey,
+    ) -> Result<()> {
+        let mut bytes = <T::Hasher as CryptoHasher>::seed().to_vec();
+        lcs::serialize_into(&mut bytes, &message)
+            .map_err(|_| CryptoMaterialError::SerializationError)?;
+        Self::verify_arbitrary_msg(self, &bytes, public_key)
+    }
+
     /// Checks that `self` is valid for an arbitrary &[u8] `message` using `public_key`.
     /// Outside of this crate, this particular function should only be used for native signature
     /// verification in move
@@ -462,7 +490,7 @@ impl TryFrom<&[u8]> for Ed25519Signature {
 // Those are required by the implementation of hash above
 impl PartialEq for Ed25519Signature {
     fn eq(&self, other: &Ed25519Signature) -> bool {
-        self.to_bytes().as_ref() == other.to_bytes().as_ref()
+        self.to_bytes()[..] == other.to_bytes()[..]
     }
 }
 
