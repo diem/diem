@@ -21,18 +21,20 @@
 <span id="21">21</span>
 <span id="22">22</span>
 <span id="23">23</span>
+<span id="24">24</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="doccomment">/// Helper macros. Used to simplify adding new RpcHandler to Registry</span>
 <span class="doccomment">/// `registry` - name of local registry variable</span>
-<span class="doccomment">/// `method` - name of new rpc method</span>
+<span class="doccomment">/// `name`  - name for the rpc method</span>
+<span class="doccomment">/// `method` - method name of new rpc method</span>
 <span class="doccomment">/// `num_args` - number of method arguments</span>
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">register_rpc_method</span> {
-    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">registry</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>: <span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">num_args</span>: <span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {
+    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">registry</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">name</span>: <span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>: <span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">num_args</span>: <span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {
         <span class="macro-nonterminal">$</span><span class="macro-nonterminal">registry</span>.<span class="ident">insert</span>(
-            <span class="macro">stringify</span><span class="macro">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>).<span class="ident">to_string</span>(),
+            <span class="macro-nonterminal">$</span><span class="macro-nonterminal">name</span>.<span class="ident">to_string</span>(),
             <span class="ident">Box</span>::<span class="ident">new</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">service</span>, <span class="ident">request</span><span class="op">|</span> {
                 <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
                     <span class="macro">ensure</span><span class="macro">!</span>(

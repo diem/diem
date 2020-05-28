@@ -326,6 +326,16 @@
 <span id="326">326</span>
 <span id="327">327</span>
 <span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -642,16 +652,26 @@
 <span class="doccomment">/// Note that RPC method name will equal to name of function</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">build_registry</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RpcRegistry</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">RpcRegistry</span>::<span class="ident">new</span>();
-    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="ident">submit</span>, <span class="number">1</span>);
-    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="ident">get_metadata</span>, <span class="number">0</span>);
-    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="ident">get_account_state</span>, <span class="number">1</span>);
-    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="ident">get_transactions</span>, <span class="number">3</span>);
-    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="ident">get_account_transaction</span>, <span class="number">3</span>);
-    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="ident">get_events</span>, <span class="number">3</span>);
-    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="ident">currencies_info</span>, <span class="number">0</span>);
+    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="string">&quot;submit&quot;</span>, <span class="ident">submit</span>, <span class="number">1</span>);
+    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="string">&quot;get_metadata&quot;</span>, <span class="ident">get_metadata</span>, <span class="number">0</span>);
+    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="string">&quot;get_account_state&quot;</span>, <span class="ident">get_account_state</span>, <span class="number">1</span>);
+    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="string">&quot;get_transactions&quot;</span>, <span class="ident">get_transactions</span>, <span class="number">3</span>);
+    <span class="macro">register_rpc_method</span><span class="macro">!</span>(
+        <span class="ident">registry</span>,
+        <span class="string">&quot;get_account_transaction&quot;</span>,
+        <span class="ident">get_account_transaction</span>,
+        <span class="number">3</span>
+    );
+    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="string">&quot;get_events&quot;</span>, <span class="ident">get_events</span>, <span class="number">3</span>);
+    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="string">&quot;get_currencies&quot;</span>, <span class="ident">currencies_info</span>, <span class="number">0</span>);
 
-    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="ident">get_state_proof</span>, <span class="number">1</span>);
-    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="ident">get_account_state_with_proof</span>, <span class="number">3</span>);
+    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="string">&quot;get_state_proof&quot;</span>, <span class="ident">get_state_proof</span>, <span class="number">1</span>);
+    <span class="macro">register_rpc_method</span><span class="macro">!</span>(
+        <span class="ident">registry</span>,
+        <span class="string">&quot;get_account_state_with_proof&quot;</span>,
+        <span class="ident">get_account_state_with_proof</span>,
+        <span class="number">3</span>
+    );
 
     <span class="ident">registry</span>
 }
