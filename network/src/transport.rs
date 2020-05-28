@@ -214,7 +214,7 @@ pub fn build_memory_noise_transport(
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
     let noise_config = Arc::new(NoiseWrapper::new(identity_key));
-    let noise_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::new()));
+    let noise_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::default()));
     let mut own_handshake = HandshakeMsg::new();
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
@@ -225,7 +225,7 @@ pub fn build_memory_noise_transport(
                 .upgrade_connection(
                     socket,
                     origin,
-                    noise_timestamps,
+                    Some(noise_timestamps),
                     remote_public_key,
                     Some(&trusted_peers),
                 )
@@ -252,7 +252,6 @@ pub fn build_unauthenticated_memory_noise_transport(
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
     let noise_config = Arc::new(NoiseWrapper::new(identity_key));
-    let noise_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::new()));
     let mut own_handshake = HandshakeMsg::new();
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
@@ -261,7 +260,7 @@ pub fn build_unauthenticated_memory_noise_transport(
             async move {
                 let remote_public_key = addr.find_noise_proto();
                 let (remote_static_key, socket) = noise_config
-                    .upgrade_connection(socket, origin, noise_timestamps, remote_public_key, None)
+                    .upgrade_connection(socket, origin, None, remote_public_key, None)
                     .await?;
 
                 // Generate PeerId from x25519::PublicKey.
@@ -308,7 +307,7 @@ pub fn build_tcp_noise_transport(
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let noise_config = Arc::new(NoiseWrapper::new(identity_key));
-    let noise_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::new()));
+    let noise_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::default()));
     let mut own_handshake = HandshakeMsg::new();
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
@@ -319,7 +318,7 @@ pub fn build_tcp_noise_transport(
                 .upgrade_connection(
                     socket,
                     origin,
-                    noise_timestamps,
+                    Some(noise_timestamps),
                     remote_public_key,
                     Some(&trusted_peers),
                 )
@@ -352,7 +351,6 @@ pub fn build_unauthenticated_tcp_noise_transport(
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let noise_config = Arc::new(NoiseWrapper::new(identity_key));
-    let noise_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::new()));
     let mut own_handshake = HandshakeMsg::new();
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
@@ -361,7 +359,7 @@ pub fn build_unauthenticated_tcp_noise_transport(
             async move {
                 let remote_public_key = addr.find_noise_proto();
                 let (remote_static_key, socket) = noise_config
-                    .upgrade_connection(socket, origin, noise_timestamps, remote_public_key, None)
+                    .upgrade_connection(socket, origin, None, remote_public_key, None)
                     .await?;
 
                 // Generate PeerId from x25519::PublicKey.
