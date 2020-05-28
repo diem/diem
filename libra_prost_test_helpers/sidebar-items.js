@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["assert_protobuf_encode_decode","Assert that protobuf encoding and decoding roundtrips correctly."]],"trait":[["MessageExt",""]]});

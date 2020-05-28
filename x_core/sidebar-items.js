@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["XCoreContext","Core context shared across all of x."]]});
+initSidebarItems({"enum":[["SystemError","A system error that happened while running a lint."]],"struct":[["DebugIgnore","A newtype wrapper that causes this field to be ignored while being debugged."],["WorkspaceSubset","Information collected about a subset of members of a workspace."],["XCoreContext","Core context shared across all of x."]],"type":[["Result","Type alias for the return type for `run` methods."]]});

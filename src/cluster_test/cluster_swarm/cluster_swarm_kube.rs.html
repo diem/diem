@@ -608,7 +608,6 @@
 <span id="608">608</span>
 <span id="609">609</span>
 <span id="610">610</span>
-<span id="611">611</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -628,7 +627,6 @@
     <span class="ident">Config</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">util</span>::<span class="ident">retry</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">cluster_swarm</span>::<span class="ident">ClusterSwarm</span>, <span class="ident">instance</span>::<span class="ident">Instance</span>};
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">distributions</span>::<span class="ident">Alphanumeric</span>, <span class="ident">thread_rng</span>, <span class="ident">Rng</span>};
@@ -661,7 +659,7 @@
         <span class="ident">Command</span>::<span class="ident">new</span>(<span class="string">&quot;/usr/local/bin/kubectl&quot;</span>)
             .<span class="ident">arg</span>(<span class="string">&quot;proxy&quot;</span>)
             .<span class="ident">spawn</span>()<span class="question-mark">?</span>;
-        <span class="ident">retry</span>::<span class="ident">retry_async</span>(<span class="ident">retry</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">2000</span>, <span class="number">60</span>), <span class="op">|</span><span class="op">|</span> {
+        <span class="ident">libra_retrier</span>::<span class="ident">retry_async</span>(<span class="ident">libra_retrier</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">2000</span>, <span class="number">60</span>), <span class="op">|</span><span class="op">|</span> {
             <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
                 <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Running healthcheck on http://127.0.0.1:8001&quot;</span>);
                 <span class="ident">reqwest</span>::<span class="ident">get</span>(<span class="string">&quot;http://127.0.0.1:8001&quot;</span>).<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">text</span>().<span class="kw">await</span><span class="question-mark">?</span>;
@@ -759,7 +757,7 @@
     }
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">wait_job_completion</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">job_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">back_off_limit</span>: <span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span> {
-        <span class="ident">retry</span>::<span class="ident">retry_async</span>(<span class="ident">retry</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">5000</span>, <span class="number">20</span>), <span class="op">|</span><span class="op">|</span> {
+        <span class="ident">libra_retrier</span>::<span class="ident">retry_async</span>(<span class="ident">libra_retrier</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">5000</span>, <span class="number">20</span>), <span class="op">|</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">job_api</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">Job</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Api</span>::<span class="ident">namespaced</span>(<span class="self">self</span>.<span class="ident">client</span>.<span class="ident">clone</span>(), <span class="ident">DEFAULT_NAMESPACE</span>);
             <span class="kw">let</span> <span class="ident">job_name</span> <span class="op">=</span> <span class="ident">job_name</span>.<span class="ident">to_string</span>();
             <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
@@ -817,7 +815,7 @@
     }
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_pod_node_and_ip</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">pod_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">String</span>)<span class="op">&gt;</span> {
-        <span class="ident">retry</span>::<span class="ident">retry_async</span>(<span class="ident">retry</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">10000</span>, <span class="number">60</span>), <span class="op">|</span><span class="op">|</span> {
+        <span class="ident">libra_retrier</span>::<span class="ident">retry_async</span>(<span class="ident">libra_retrier</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">10000</span>, <span class="number">60</span>), <span class="op">|</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">pod_api</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">Pod</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Api</span>::<span class="ident">namespaced</span>(<span class="self">self</span>.<span class="ident">client</span>.<span class="ident">clone</span>(), <span class="ident">DEFAULT_NAMESPACE</span>);
             <span class="kw">let</span> <span class="ident">pod_name</span> <span class="op">=</span> <span class="ident">pod_name</span>.<span class="ident">to_string</span>();
             <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
@@ -867,7 +865,7 @@
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Deleting {} {}&quot;</span>, <span class="ident">T</span>::<span class="ident">KIND</span>, <span class="ident">name</span>);
         <span class="kw">let</span> <span class="ident">resource_api</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Api</span>::<span class="ident">namespaced</span>(<span class="self">self</span>.<span class="ident">client</span>.<span class="ident">clone</span>(), <span class="ident">DEFAULT_NAMESPACE</span>);
         <span class="ident">resource_api</span>.<span class="ident">delete</span>(<span class="ident">name</span>, <span class="kw-2">&amp;</span><span class="ident">Default</span>::<span class="ident">default</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="ident">retry</span>::<span class="ident">retry_async</span>(<span class="ident">retry</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">5000</span>, <span class="number">30</span>), <span class="op">|</span><span class="op">|</span> {
+        <span class="ident">libra_retrier</span>::<span class="ident">retry_async</span>(<span class="ident">libra_retrier</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">5000</span>, <span class="number">30</span>), <span class="op">|</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">pod_api</span> <span class="op">=</span> <span class="ident">resource_api</span>.<span class="ident">clone</span>();
             <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">name</span>.<span class="ident">to_string</span>();
             <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
@@ -952,7 +950,7 @@
 <span class="attribute">#[<span class="ident">async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">ClusterSwarm</span> <span class="kw">for</span> <span class="ident">ClusterSwarmKube</span> {
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">remove_all_network_effects</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="ident">retry</span>::<span class="ident">retry_async</span>(<span class="ident">retry</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">5000</span>, <span class="number">3</span>), <span class="op">|</span><span class="op">|</span> {
+        <span class="ident">libra_retrier</span>::<span class="ident">retry_async</span>(<span class="ident">libra_retrier</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">5000</span>, <span class="number">3</span>), <span class="op">|</span><span class="op">|</span> {
             <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="kw">async</span> <span class="kw">move</span> { <span class="self">self</span>.<span class="ident">remove_all_network_effects_helper</span>().<span class="kw">await</span> })
         })
         .<span class="kw">await</span>

@@ -79,7 +79,6 @@
 <span id="79">79</span>
 <span id="80">80</span>
 <span id="81">81</span>
-<span id="82">82</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -93,7 +92,6 @@
 };
 <span class="kw">use</span> <span class="ident">rusoto_core</span>::<span class="ident">Region</span>;
 <span class="kw">use</span> <span class="ident">rusoto_sts</span>::<span class="ident">WebIdentityProvider</span>;
-<span class="kw">use</span> <span class="ident">util</span>::<span class="ident">retry</span>;
 
 <span class="doccomment">/// set_asg_size sets the size of the given autoscaling group</span>
 <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">set_asg_size</span>(
@@ -122,7 +120,7 @@
     <span class="kw">if</span> <span class="op">!</span><span class="ident">wait_for_completion</span> {
         <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
     }
-    <span class="ident">retry</span>::<span class="ident">retry_async</span>(<span class="ident">retry</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">10_000</span>, <span class="number">30</span>), <span class="op">|</span><span class="op">|</span> {
+    <span class="ident">libra_retrier</span>::<span class="ident">retry_async</span>(<span class="ident">libra_retrier</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">10_000</span>, <span class="number">30</span>), <span class="op">|</span><span class="op">|</span> {
         <span class="kw">let</span> <span class="ident">asc_clone</span> <span class="op">=</span> <span class="ident">asc</span>.<span class="ident">clone</span>();
         <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
             <span class="kw">let</span> <span class="ident">auto_scaling_group_names_type</span> <span class="op">=</span> <span class="ident">AutoScalingGroupNamesType</span> {

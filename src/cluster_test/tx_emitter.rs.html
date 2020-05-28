@@ -787,7 +787,6 @@
 <span id="787">787</span>
 <span id="788">788</span>
 <span id="789">789</span>
-<span id="790">790</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -834,7 +833,6 @@
     <span class="ident">sync</span>::<span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">AtomicU64</span>, <span class="ident">Ordering</span>},
 };
 <span class="kw">use</span> <span class="ident">tokio</span>::{<span class="ident">task</span>::<span class="ident">JoinHandle</span>, <span class="ident">time</span>};
-<span class="kw">use</span> <span class="ident">util</span>::<span class="ident">retry</span>;
 
 <span class="kw">const</span> <span class="ident">MAX_TXN_BATCH_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">100</span>; <span class="comment">// Max transactions per account in mempool</span>
 
@@ -1437,7 +1435,7 @@
         <span class="ident">account</span>.<span class="ident">address</span>
     );
     <span class="kw">for</span> <span class="ident">request</span> <span class="kw">in</span> <span class="ident">txn</span> {
-        <span class="ident">retry</span>::<span class="ident">retry_async</span>(<span class="ident">retry</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">5_000</span>, <span class="number">20</span>), <span class="op">|</span><span class="op">|</span> {
+        <span class="ident">libra_retrier</span>::<span class="ident">retry_async</span>(<span class="ident">libra_retrier</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">5_000</span>, <span class="number">20</span>), <span class="op">|</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">clone</span>();
             <span class="kw">let</span> <span class="ident">c</span> <span class="op">=</span> <span class="ident">client</span>.<span class="ident">clone</span>();
             <span class="kw">let</span> <span class="ident">client_name</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">client</span>);

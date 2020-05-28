@@ -192,8 +192,6 @@
 <span id="192">192</span>
 <span id="193">193</span>
 <span id="194">194</span>
-<span id="195">195</span>
-<span id="196">196</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -204,13 +202,11 @@
 <span class="doccomment">//! [Arcanist](https://secure.phabricator.com/book/phabricator/article/arcanist_lint)&#39;s lint engine.</span>
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">content</span>;
-<span class="kw">mod</span> <span class="ident">errors</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">file</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">package</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">project</span>;
 <span class="kw">mod</span> <span class="ident">runner</span>;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">errors</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">runner</span>::<span class="kw-2">*</span>;
 
 <span class="kw">use</span> <span class="ident">guppy</span>::<span class="ident">PackageId</span>;
@@ -387,9 +383,9 @@
         <span class="ident">file</span>::<span class="ident">FileContext</span>,
         <span class="ident">package</span>::{<span class="ident">PackageContext</span>, <span class="ident">PackageLinter</span>},
         <span class="ident">project</span>::{<span class="ident">ProjectContext</span>, <span class="ident">ProjectLinter</span>},
-        <span class="ident">LintFormatter</span>, <span class="ident">LintKind</span>, <span class="ident">LintLevel</span>, <span class="ident">LintMessage</span>, <span class="ident">LintSource</span>, <span class="ident">Linter</span>, <span class="prelude-ty">Result</span>, <span class="ident">RunStatus</span>,
-        <span class="ident">SkipReason</span>, <span class="ident">SystemError</span>,
+        <span class="ident">LintFormatter</span>, <span class="ident">LintKind</span>, <span class="ident">LintLevel</span>, <span class="ident">LintMessage</span>, <span class="ident">LintSource</span>, <span class="ident">Linter</span>, <span class="ident">RunStatus</span>, <span class="ident">SkipReason</span>,
     };
+    <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">x_core</span>::{<span class="prelude-ty">Result</span>, <span class="ident">SystemError</span>};
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "x_lint";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
