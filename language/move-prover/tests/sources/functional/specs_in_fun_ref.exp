@@ -1,0 +1,24 @@
+Move prover returns: exiting with boogie verification errors
+error:  This assertion might not hold.
+
+    ┌── tests/sources/functional/specs_in_fun_ref.move:35:13 ───
+    │
+ 35 │             assert x == y;
+    │             ^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/specs_in_fun_ref.move:32:5: simple3 (entry)
+
+error:  This loop invariant might not be maintained by the loop.
+
+     ┌── tests/sources/functional/specs_in_fun_ref.move:115:17 ───
+     │
+ 115 │                 assert x == 0;
+     │                 ^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/specs_in_fun_ref.move:110:5: simple7 (entry)
+     =     at tests/sources/functional/specs_in_fun_ref.move:111:13: simple7
+     =     at tests/sources/functional/specs_in_fun_ref.move:114:13: simple7
+     =         x = <redacted>
+     =     at tests/sources/functional/specs_in_fun_ref.move:113:9: simple7
+     =         x = <redacted>
+     =     at tests/sources/functional/specs_in_fun_ref.move:119:19: simple7

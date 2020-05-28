@@ -48,10 +48,11 @@ impl FunctionTargetProcessor for EliminateMutRefsProcessor {
                 let ty = local_types[idx].clone();
                 ref_param_proxy_map.insert(idx, local_types.len());
                 local_types.push(ty.clone());
-                data.ref_param_map.insert(idx, return_types.len());
+                data.ref_param_return_map.insert(idx, return_types.len());
                 return_types.push(EliminateMutRefs::transform_type(ty));
             }
         }
+        data.param_proxy_map = param_proxy_map.clone();
 
         let mut max_ref_params_per_type = BTreeMap::new();
         for bytecode in &data.code {

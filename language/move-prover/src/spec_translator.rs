@@ -70,6 +70,8 @@ pub struct SpecTranslator<'env> {
     supports_native_old: bool,
     /// Whether we are currently in the context of translating an `old(...)` expression.
     in_old: RefCell<bool>,
+    /// Whether we are currently translating an assert or assume specification.
+    in_assert_or_assume: RefCell<bool>,
     /// Whether we are currently translating an ensures specification.
     in_ensures: RefCell<bool>,
     /// The current target for invariant fields, a pair of strings for current and old value.
@@ -143,6 +145,7 @@ impl<'env> SpecTranslator<'env> {
             writer,
             supports_native_old,
             in_old: RefCell::new(false),
+            in_assert_or_assume: RefCell::new(false),
             in_ensures: RefCell::new(false),
             invariant_target: RefCell::new(("".to_string(), "".to_string())),
             fresh_var_count: RefCell::new(0),
@@ -322,6 +325,7 @@ impl<'env> SpecTranslator<'env> {
         let func_target = self.function_target();
         let spec = func_target.get_spec_on_impl(block_id);
         if !spec.conditions.is_empty() {
+            *self.in_assert_or_assume.borrow_mut() = true;
             self.translate_seq(spec.conditions.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
                 emit!(
@@ -336,6 +340,7 @@ impl<'env> SpecTranslator<'env> {
                 self.translate_exp(&cond.exp);
                 emit!(self.writer, ");")
             });
+            *self.in_assert_or_assume.borrow_mut() = false;
             emitln!(self.writer);
         }
     }
@@ -981,9 +986,17 @@ impl<'env> SpecTranslator<'env> {
                 if let SpecEnv::Function(func_target) = &self.spec_env {
                     if let Some(local_index) = func_target.get_local_index(name) {
                         ty = func_target.get_local_type(*local_index);
+                        // The following sequence of if tests are mutually disjoint.
                         if *self.in_ensures.borrow() && !*self.in_old.borrow() {
                             if let Some(return_index) = func_target.get_return_index(*local_index) {
                                 var_name = Rc::new(format!("$ret{}", return_index));
+                            }
+                        }
+                        if *self.in_assert_or_assume.borrow() {
+                            if let Some(proxy_index) = func_target.get_proxy_index(*local_index) {
+                                var_name = func_target
+                                    .symbol_pool()
+                                    .string(func_target.get_local_name(*proxy_index));
                             }
                         }
                     }
