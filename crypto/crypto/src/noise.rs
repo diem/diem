@@ -88,8 +88,13 @@ const PROTOCOL_NAME: &[u8] = b"Noise_IK_25519_AESGCM_SHA256\0\0\0\0";
 const AES_NONCE_SIZE: usize = 12;
 
 /// A handy const fn to get the expanded size of a plaintext after encryption
-const fn encrypted_len(plaintext_len: usize) -> usize {
+pub const fn encrypted_len(plaintext_len: usize) -> usize {
     plaintext_len + AES_GCM_TAGLEN
+}
+
+/// A handy const fn to get the size of a plaintext from a ciphertext size
+pub const fn decrypted_len(ciphertext_len: usize) -> usize {
+    ciphertext_len - AES_GCM_TAGLEN
 }
 
 /// A handy const fn to get the size of the first handshake message

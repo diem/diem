@@ -9,7 +9,7 @@ use futures::{
     sink::SinkExt,
     stream::{Stream, StreamExt},
 };
-use libra_crypto::test_utils::TEST_SEED;
+use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform as _};
 use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
 use memsocket::MemorySocket;
@@ -21,9 +21,13 @@ use netcore::{
         Transport, TransportExt,
     },
 };
-use noise::{NoiseConfig, NoiseSocket};
+use network::noise_wrapper::{session::NoiseSession, AntiReplayTimestamps, NoiseWrapper};
 use rand::prelude::*;
-use std::{env, ffi::OsString, sync::Arc};
+use std::{
+    env,
+    ffi::OsString,
+    sync::{Arc, RwLock},
+};
 use tokio::runtime::Handle;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
@@ -76,21 +80,31 @@ impl Args {
 }
 
 /// Build a MemorySocket + Noise transport
-pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseSocket<MemorySocket>> {
-    MemoryTransport::default().and_then(move |socket, _addr, origin| async move {
+pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseSession<MemorySocket>> {
+    MemoryTransport::default().and_then(move |socket, addr, origin| async move {
         let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
-        let noise_config = Arc::new(NoiseConfig::new_random(&mut rng));
-        let (_remote_static_key, socket) = noise_config.upgrade_connection(socket, origin).await?;
+        let private = x25519::PrivateKey::generate(&mut rng);
+        let noise_config = Arc::new(NoiseWrapper::new(private));
+        let noise_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::new()));
+        let remote_public_key = addr.find_noise_proto();
+        let (_remote_static_key, socket) = noise_config
+            .upgrade_connection(socket, origin, noise_timestamps, remote_public_key, None)
+            .await?;
         Ok(socket)
     })
 }
 
 /// Build a Tcp + Noise transport
-pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseSocket<TcpSocket>> {
-    TcpTransport::default().and_then(move |socket, _addr, origin| async move {
+pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseSession<TcpSocket>> {
+    TcpTransport::default().and_then(move |socket, addr, origin| async move {
         let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
-        let noise_config = Arc::new(NoiseConfig::new_random(&mut rng));
-        let (_remote_static_key, socket) = noise_config.upgrade_connection(socket, origin).await?;
+        let private = x25519::PrivateKey::generate(&mut rng);
+        let noise_config = Arc::new(NoiseWrapper::new(private));
+        let noise_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::new()));
+        let remote_public_key = addr.find_noise_proto();
+        let (_remote_static_key, socket) = noise_config
+            .upgrade_connection(socket, origin, noise_timestamps, remote_public_key, None)
+            .await?;
         Ok(socket)
     })
 }

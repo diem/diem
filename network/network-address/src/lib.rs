@@ -373,9 +373,9 @@ impl NetworkAddress {
     /// A temporary, hacky function to parse out the first `/ln-noise-ik/<pubkey>` from
     /// a `NetworkAddress`. We can remove this soon, when we move to the interim
     /// "monolithic" transport model.
-    pub fn find_noise_proto(&self) -> Option<&x25519::PublicKey> {
+    pub fn find_noise_proto(&self) -> Option<x25519::PublicKey> {
         self.0.iter().find_map(|proto| match proto {
-            Protocol::NoiseIK(pubkey) => Some(pubkey),
+            Protocol::NoiseIK(pubkey) => Some(*pubkey),
             _ => None,
         })
     }
