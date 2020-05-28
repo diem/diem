@@ -98,6 +98,12 @@ impl Account {
         Self::new_genesis_account(account_config::association_address())
     }
 
+    /// Creates a new account representing treasury compliance in memory.
+    /// The account will use [`GENESIS_KEYPAIR`][struct@GENESIS_KEYPAIR] as its keypair.
+    pub fn new_blessed_tc() -> Self {
+        Self::new_genesis_account(account_config::treasury_compliance_account_address())
+    }
+
     /// Returns the address of the account. This is a hash of the public key the account was created
     /// with.
     ///
