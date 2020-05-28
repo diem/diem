@@ -9,7 +9,7 @@
 macro_rules! register_rpc_method {
     ($registry:expr, $name: expr, $method: expr, $num_args: expr) => {
         $registry.insert(
-            stringify!($name).to_string(),
+            $name.to_string(),
             Box::new(move |service, request| {
                 Box::pin(async move {
                     ensure!(

@@ -314,7 +314,7 @@ async fn get_account_state_with_proof(
 pub(crate) fn build_registry() -> RpcRegistry {
     let mut registry = RpcRegistry::new();
     register_rpc_method!(registry, "submit", submit, 1);
-    register_rpc_method!(registry, "get_metaata", get_metadata, 0);
+    register_rpc_method!(registry, "get_metadata", get_metadata, 0);
     register_rpc_method!(registry, "get_account_state", get_account_state, 1);
     register_rpc_method!(registry, "get_transactions", get_transactions, 3);
     register_rpc_method!(
