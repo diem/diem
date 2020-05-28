@@ -31,7 +31,7 @@ use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
     epoch_change::EpochChangeProof,
-    epoch_info::EpochInfo,
+    epoch_state::EpochState,
     on_chain_config::{OnChainConfigPayload, ValidatorSet},
 };
 use network::protocols::network::Event;
@@ -111,19 +111,19 @@ impl<T: Payload> EpochManager<T> {
         }
     }
 
-    fn epoch_info(&self) -> &EpochInfo {
+    fn epoch_state(&self) -> &EpochState {
         match self
             .processor
             .as_ref()
             .expect("EpochManager not started yet")
         {
-            RoundProcessor::Normal(p) => p.epoch_info(),
-            RoundProcessor::Recovery(p) => p.epoch_info(),
+            RoundProcessor::Normal(p) => p.epoch_state(),
+            RoundProcessor::Recovery(p) => p.epoch_state(),
         }
     }
 
     fn epoch(&self) -> u64 {
-        self.epoch_info().epoch
+        self.epoch_state().epoch
     }
 
     fn create_round_state(
@@ -144,15 +144,15 @@ impl<T: Payload> EpochManager<T> {
     /// Create a proposer election handler based on proposers
     fn create_proposer_election(
         &self,
-        epoch_info: &EpochInfo,
+        epoch_state: &EpochState,
     ) -> Box<dyn ProposerElection<T> + Send + Sync> {
-        let proposers = epoch_info
+        let proposers = epoch_state
             .verifier
             .get_ordered_account_addresses_iter()
             .collect::<Vec<_>>();
         match self.config.proposer_type {
             ConsensusProposerType::MultipleOrderedProposers => {
-                Box::new(MultiProposer::new(epoch_info.epoch, proposers, 2))
+                Box::new(MultiProposer::new(epoch_state.epoch, proposers, 2))
             }
             ConsensusProposerType::RotatingProposer => Box::new(RotatingProposer::new(
                 proposers,
@@ -239,7 +239,7 @@ impl<T: Payload> EpochManager<T> {
     }
 
     async fn start_new_epoch(&mut self, proof: EpochChangeProof) {
-        let ledger_info = match proof.verify(self.epoch_info()) {
+        let ledger_info = match proof.verify(self.epoch_state()) {
             Ok(ledger_info) => ledger_info,
             Err(e) => {
                 error!("Invalid EpochChangeProof: {:?}", e);
@@ -258,15 +258,19 @@ impl<T: Payload> EpochManager<T> {
         // state_computer notifies reconfiguration in another channel
     }
 
-    async fn start_round_manager(&mut self, recovery_data: RecoveryData<T>, epoch_info: EpochInfo) {
+    async fn start_round_manager(
+        &mut self,
+        recovery_data: RecoveryData<T>,
+        epoch_state: EpochState,
+    ) {
         // Release the previous RoundManager, especially the SafetyRule client
         self.processor = None;
-        counters::EPOCH.set(epoch_info.epoch as i64);
-        counters::CURRENT_EPOCH_VALIDATORS.set(epoch_info.verifier.len() as i64);
-        counters::CURRENT_EPOCH_QUORUM_SIZE.set(epoch_info.verifier.quorum_voting_power() as i64);
+        counters::EPOCH.set(epoch_state.epoch as i64);
+        counters::CURRENT_EPOCH_VALIDATORS.set(epoch_state.verifier.len() as i64);
+        counters::CURRENT_EPOCH_QUORUM_SIZE.set(epoch_state.verifier.quorum_voting_power() as i64);
         info!(
             "Starting {} with genesis {}",
-            epoch_info,
+            epoch_state,
             recovery_data.root_block(),
         );
         let last_vote = recovery_data.last_vote();
@@ -311,16 +315,16 @@ impl<T: Payload> EpochManager<T> {
             self.create_round_state(self.time_service.clone(), self.timeout_sender.clone());
 
         info!("Create ProposerElection");
-        let proposer_election = self.create_proposer_election(&epoch_info);
+        let proposer_election = self.create_proposer_election(&epoch_state);
         let network_sender = NetworkSender::new(
             self.author,
             self.network_sender.clone(),
             self.self_sender.clone(),
-            epoch_info.verifier.clone(),
+            epoch_state.verifier.clone(),
         );
 
         let mut processor = RoundManager::new(
-            epoch_info,
+            epoch_state,
             block_store,
             round_state,
             proposer_election,
@@ -343,16 +347,16 @@ impl<T: Payload> EpochManager<T> {
     async fn start_recovery_manager(
         &mut self,
         ledger_recovery_data: LedgerRecoveryData,
-        epoch_info: EpochInfo,
+        epoch_state: EpochState,
     ) {
         let network_sender = NetworkSender::new(
             self.author,
             self.network_sender.clone(),
             self.self_sender.clone(),
-            epoch_info.verifier.clone(),
+            epoch_state.verifier.clone(),
         );
         self.processor = Some(RoundProcessor::Recovery(RecoveryManager::new(
-            epoch_info,
+            epoch_state,
             network_sender,
             self.storage.clone(),
             self.state_computer.clone(),
@@ -365,7 +369,7 @@ impl<T: Payload> EpochManager<T> {
         let validator_set: ValidatorSet = payload
             .get()
             .expect("failed to get ValidatorSet from payload");
-        let epoch_info = EpochInfo {
+        let epoch_state = EpochState {
             epoch: payload.epoch(),
             verifier: (&validator_set).into(),
         };
@@ -378,10 +382,10 @@ impl<T: Payload> EpochManager<T> {
 
         match self.storage.start() {
             LivenessStorageData::RecoveryData(initial_data) => {
-                self.start_round_manager(initial_data, epoch_info).await
+                self.start_round_manager(initial_data, epoch_state).await
             }
             LivenessStorageData::LedgerRecoveryData(ledger_recovery_data) => {
-                self.start_recovery_manager(ledger_recovery_data, epoch_info)
+                self.start_recovery_manager(ledger_recovery_data, epoch_state)
                     .await
             }
         }
@@ -393,7 +397,7 @@ impl<T: Payload> EpochManager<T> {
         consensus_msg: ConsensusMsg<T>,
     ) {
         if let Some(event) = self.process_epoch(peer_id, consensus_msg).await {
-            match event.verify(&self.epoch_info().verifier) {
+            match event.verify(&self.epoch_state().verifier) {
                 Ok(event) => self.process_event(peer_id, event).await,
                 Err(err) => warn!("Message failed verification: {:?}", err),
             }
@@ -444,11 +448,11 @@ impl<T: Payload> EpochManager<T> {
                     VerifiedEvent::VoteMsg(vote) => p.process_vote(*vote).await,
                     _ => Err(anyhow!("Unexpected VerifiedEvent during startup")),
                 };
-                let epoch_info = p.epoch_info().clone();
+                let epoch_state = p.epoch_state().clone();
                 match result {
                     Ok(data) => {
                         info!("Recovered from SyncProcessor");
-                        self.start_round_manager(data, epoch_info).await
+                        self.start_round_manager(data, epoch_state).await
                     }
                     Err(e) => error!("{:?}", e),
                 }

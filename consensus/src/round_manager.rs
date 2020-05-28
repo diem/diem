@@ -23,7 +23,7 @@ use debug_interface::prelude::*;
 use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
-use libra_types::{epoch_info::EpochInfo, validator_verifier::ValidatorVerifier};
+use libra_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier};
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
@@ -106,7 +106,7 @@ pub mod round_manager_fuzzing;
 /// If the node can't recover corresponding blocks from local storage, RecoveryManager is responsible
 /// for processing the events carrying sync info and use the info to retrieve blocks from peers
 pub struct RecoveryManager<T> {
-    epoch_info: EpochInfo,
+    epoch_state: EpochState,
     network: NetworkSender<T>,
     storage: Arc<dyn PersistentLivenessStorage<T>>,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
@@ -115,14 +115,14 @@ pub struct RecoveryManager<T> {
 
 impl<T: Payload> RecoveryManager<T> {
     pub fn new(
-        epoch_info: EpochInfo,
+        epoch_state: EpochState,
         network: NetworkSender<T>,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         ledger_recovery_data: LedgerRecoveryData,
     ) -> Self {
         RecoveryManager {
-            epoch_info,
+            epoch_state,
             network,
             storage,
             state_computer,
@@ -146,13 +146,13 @@ impl<T: Payload> RecoveryManager<T> {
     }
 
     async fn sync_up(&mut self, sync_info: &SyncInfo, peer: Author) -> Result<RecoveryData<T>> {
-        sync_info.verify(&self.epoch_info.verifier)?;
+        sync_info.verify(&self.epoch_state.verifier)?;
         ensure!(
             sync_info.highest_round() > self.ledger_recovery_data.commit_round(),
             "Received sync info has lower round number than committed block"
         );
         ensure!(
-            sync_info.epoch() == self.epoch_info.epoch,
+            sync_info.epoch() == self.epoch_state.epoch,
             "Received sync info is in different epoch than committed block"
         );
         let mut retriever = BlockRetriever::new(self.network.clone(), peer);
@@ -167,8 +167,8 @@ impl<T: Payload> RecoveryManager<T> {
         Ok(recovery_data)
     }
 
-    pub fn epoch_info(&self) -> &EpochInfo {
-        &self.epoch_info
+    pub fn epoch_state(&self) -> &EpochState {
+        &self.epoch_state
     }
 }
 
@@ -178,7 +178,7 @@ impl<T: Payload> RecoveryManager<T> {
 /// The caller is responsible for running the event loops and driving the execution via some
 /// executors.
 pub struct RoundManager<T> {
-    epoch_info: EpochInfo,
+    epoch_state: EpochState,
     block_store: Arc<BlockStore<T>>,
     round_state: RoundState,
     proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
@@ -192,7 +192,7 @@ pub struct RoundManager<T> {
 
 impl<T: Payload> RoundManager<T> {
     pub fn new(
-        epoch_info: EpochInfo,
+        epoch_state: EpochState,
         block_store: Arc<BlockStore<T>>,
         round_state: RoundState,
         proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
@@ -207,7 +207,7 @@ impl<T: Payload> RoundManager<T> {
         counters::STATE_SYNC_COUNT.get();
 
         Self {
-            epoch_info,
+            epoch_state,
             block_store,
             round_state,
             proposer_election,
@@ -383,13 +383,15 @@ impl<T: Payload> RoundManager<T> {
             );
             // Some information in SyncInfo is ahead of what we have locally.
             // First verify the SyncInfo (didn't verify it in the yet).
-            sync_info.verify(&self.epoch_info().verifier).map_err(|e| {
-                security_log(SecurityEvent::InvalidSyncInfoMsg)
-                    .error(&e)
-                    .data(&sync_info)
-                    .log();
-                e
-            })?;
+            sync_info
+                .verify(&self.epoch_state().verifier)
+                .map_err(|e| {
+                    security_log(SecurityEvent::InvalidSyncInfoMsg)
+                        .error(&e)
+                        .data(&sync_info)
+                        .log();
+                    e
+                })?;
             self.block_store
                 .add_certs(&sync_info, self.create_block_retriever(author))
                 .await
@@ -655,7 +657,7 @@ impl<T: Payload> RoundManager<T> {
                     .clone(),
             ),
             block.clone(),
-            executed_block.compute_result().epoch_info().clone(),
+            executed_block.compute_result().epoch_state().clone(),
         );
 
         let vote = self
@@ -731,7 +733,7 @@ impl<T: Payload> RoundManager<T> {
         // Add the vote and check whether it completes a new QC or a TC
         let res = self
             .round_state
-            .insert_vote(vote, &self.epoch_info.verifier);
+            .insert_vote(vote, &self.epoch_state.verifier);
         match res {
             VoteReceptionResult::NewQuorumCertificate(qc) => {
                 // Note that the block might not be present locally, in which case we cannot calculate
@@ -826,7 +828,7 @@ impl<T: Payload> RoundManager<T> {
         self.safety_rules.consensus_state().unwrap()
     }
 
-    pub fn epoch_info(&self) -> &EpochInfo {
-        &self.epoch_info
+    pub fn epoch_state(&self) -> &EpochState {
+        &self.epoch_state
     }
 }

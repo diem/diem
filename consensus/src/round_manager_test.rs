@@ -42,7 +42,7 @@ use futures::{
 };
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
-    epoch_info::EpochInfo,
+    epoch_state::EpochState,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     validator_signer::ValidatorSigner,
     validator_verifier::{random_validator_verifier, ValidatorVerifier},
@@ -128,11 +128,11 @@ impl NodeSetup {
         initial_data: RecoveryData<TestPayload>,
         safety_rules_manager: SafetyRulesManager<TestPayload>,
     ) -> Self {
-        let epoch_info = EpochInfo {
+        let epoch_state = EpochState {
             epoch: 1,
             verifier: storage.get_validator_set().into(),
         };
-        let validators = epoch_info.verifier.clone();
+        let validators = epoch_state.verifier.clone();
         let (network_reqs_tx, network_reqs_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (connection_reqs_tx, _) =
@@ -190,7 +190,7 @@ impl NodeSetup {
         safety_rules.initialize(&proof).unwrap();
 
         let mut round_manager = RoundManager::new(
-            epoch_info,
+            epoch_state,
             Arc::clone(&block_store),
             round_state,
             proposer_election,
@@ -406,7 +406,7 @@ fn sync_info_carried_on_timeout_vote() {
             block_0.gen_block_info(
                 parent_block_info.executed_state_id(),
                 parent_block_info.version(),
-                parent_block_info.next_epoch_info().cloned(),
+                parent_block_info.next_epoch_state().cloned(),
             ),
             parent_block_info.clone(),
             None,
@@ -718,7 +718,7 @@ fn sync_info_sent_on_stale_sync_info() {
         block_0.gen_block_info(
             parent_block_info.executed_state_id(),
             parent_block_info.version(),
-            parent_block_info.next_epoch_info().cloned(),
+            parent_block_info.next_epoch_state().cloned(),
         ),
         parent_block_info.clone(),
         None,

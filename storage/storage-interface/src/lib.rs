@@ -11,7 +11,7 @@ use libra_types::{
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::ContractEvent,
     epoch_change::EpochChangeProof,
-    epoch_info::EpochInfo,
+    epoch_state::EpochState,
     event::EventKey,
     get_with_proof::{RequestItem, ResponseItem},
     ledger_info::LedgerInfoWithSignatures,
@@ -37,7 +37,7 @@ pub struct StartupInfo {
     pub latest_ledger_info: LedgerInfoWithSignatures,
     /// If the above ledger info doesn't carry a validator set, the latest validator set. Otherwise
     /// `None`.
-    pub latest_epoch_info: Option<EpochInfo>,
+    pub latest_epoch_state: Option<EpochState>,
     pub committed_tree_state: TreeState,
     pub synced_tree_state: Option<TreeState>,
 }
@@ -45,26 +45,26 @@ pub struct StartupInfo {
 impl StartupInfo {
     pub fn new(
         latest_ledger_info: LedgerInfoWithSignatures,
-        latest_epoch_info: Option<EpochInfo>,
+        latest_epoch_state: Option<EpochState>,
         committed_tree_state: TreeState,
         synced_tree_state: Option<TreeState>,
     ) -> Self {
         Self {
             latest_ledger_info,
-            latest_epoch_info,
+            latest_epoch_state,
             committed_tree_state,
             synced_tree_state,
         }
     }
 
-    pub fn get_epoch_info(&self) -> &EpochInfo {
+    pub fn get_epoch_state(&self) -> &EpochState {
         self.latest_ledger_info
             .ledger_info()
-            .next_epoch_info()
+            .next_epoch_state()
             .unwrap_or_else(|| {
-                self.latest_epoch_info
+                self.latest_epoch_state
                     .as_ref()
-                    .expect("EpochInfo must exist")
+                    .expect("EpochState must exist")
             })
     }
 }

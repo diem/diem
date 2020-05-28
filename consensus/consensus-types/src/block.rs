@@ -9,7 +9,7 @@ use crate::{
 use anyhow::{bail, ensure, format_err};
 use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash, HashValue};
 use libra_types::{
-    block_info::BlockInfo, block_metadata::BlockMetadata, epoch_info::EpochInfo,
+    block_info::BlockInfo, block_metadata::BlockMetadata, epoch_state::EpochState,
     ledger_info::LedgerInfo, transaction::Version, validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
 };
@@ -107,7 +107,7 @@ impl<T> Block<T> {
         &self,
         executed_state_id: HashValue,
         version: Version,
-        next_epoch_info: Option<EpochInfo>,
+        next_epoch_state: Option<EpochState>,
     ) -> BlockInfo {
         BlockInfo::new(
             self.epoch(),
@@ -116,7 +116,7 @@ impl<T> Block<T> {
             executed_state_id,
             version,
             self.timestamp_usecs(),
-            next_epoch_info,
+            next_epoch_state,
         )
     }
 }

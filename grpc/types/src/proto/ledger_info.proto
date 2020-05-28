@@ -71,7 +71,7 @@ message LedgerInfo {
 
   // An optional field with the validator set for the next epoch in case it's
   // the last ledger info in the current epoch.
-  bytes next_epoch_info = 8;
+  bytes next_epoch_state = 8;
 }
 
 /// The validator node returns this structure which includes signatures

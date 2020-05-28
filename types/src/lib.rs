@@ -12,7 +12,7 @@ pub mod block_info;
 pub mod block_metadata;
 pub mod contract_event;
 pub mod epoch_change;
-pub mod epoch_info;
+pub mod epoch_state;
 pub mod event;
 pub mod get_with_proof;
 pub mod ledger_info;

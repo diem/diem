@@ -50,7 +50,7 @@ fn test_nil_block() {
         nil_block.gen_block_info(
             parent_block_info.executed_state_id(),
             parent_block_info.version(),
-            parent_block_info.next_epoch_info().cloned(),
+            parent_block_info.next_epoch_state().cloned(),
         ),
         nil_block.quorum_cert().certified_block().clone(),
         None,

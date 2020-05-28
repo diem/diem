@@ -4,7 +4,7 @@
 use crate::{
     account_address::AccountAddress,
     block_info::{BlockInfo, Round},
-    epoch_info::EpochInfo,
+    epoch_state::EpochState,
     on_chain_config::ValidatorSet,
     transaction::Version,
     validator_verifier::{ValidatorVerifier, VerifyError},
@@ -114,8 +114,8 @@ impl LedgerInfo {
         self.commit_info.timestamp_usecs()
     }
 
-    pub fn next_epoch_info(&self) -> Option<&EpochInfo> {
-        self.commit_info.next_epoch_info()
+    pub fn next_epoch_state(&self) -> Option<&EpochState> {
+        self.commit_info.next_epoch_state()
     }
 
     /// Returns hash of consensus voting data in this `LedgerInfo`.

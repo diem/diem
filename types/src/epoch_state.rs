@@ -12,16 +12,16 @@ use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt};
 
-/// EpochInfo represents a trusted validator set to validate messages from the specific epoch,
+/// EpochState represents a trusted validator set to validate messages from the specific epoch,
 /// it could be updated with EpochChangeProof.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct EpochInfo {
+pub struct EpochState {
     pub epoch: u64,
     pub verifier: ValidatorVerifier,
 }
 
-impl EpochInfo {
+impl EpochState {
     pub fn empty() -> Self {
         Self {
             epoch: 0,
@@ -30,7 +30,7 @@ impl EpochInfo {
     }
 }
 
-impl Verifier for EpochInfo {
+impl Verifier for EpochState {
     fn verify(&self, ledger_info: &LedgerInfoWithSignatures) -> anyhow::Result<()> {
         ensure!(
             self.epoch == ledger_info.ledger_info().epoch(),
@@ -51,11 +51,11 @@ impl Verifier for EpochInfo {
     }
 }
 
-impl fmt::Display for EpochInfo {
+impl fmt::Display for EpochState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "EpochInfo [epoch: {}, validator: {}]",
+            "EpochState [epoch: {}, validator: {}]",
             self.epoch, self.verifier
         )
     }

@@ -19,7 +19,7 @@ use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::proposal_msg::ProposalMsg;
 use futures::{channel::mpsc, executor::block_on};
 use libra_types::{
-    epoch_info::EpochInfo, ledger_info::LedgerInfoWithSignatures,
+    epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures,
     validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier,
 };
 use network::peer_manager::{ConnectionRequestSender, PeerManagerRequestSender};
@@ -100,7 +100,7 @@ fn create_node_for_fuzzing() -> RoundManager<TestPayload> {
     );
     let (self_sender, _self_receiver) = channel::new_test(8);
 
-    let epoch_info = EpochInfo {
+    let epoch_state = EpochState {
         epoch: 1,
         verifier: storage.get_validator_set().into(),
     };
@@ -108,7 +108,7 @@ fn create_node_for_fuzzing() -> RoundManager<TestPayload> {
         signer.author(),
         network_sender,
         self_sender,
-        epoch_info.verifier.clone(),
+        epoch_state.verifier.clone(),
     );
 
     // TODO: mock
@@ -134,7 +134,7 @@ fn create_node_for_fuzzing() -> RoundManager<TestPayload> {
 
     // event processor
     RoundManager::new(
-        epoch_info,
+        epoch_state,
         Arc::clone(&block_store),
         round_state,
         proposer_election,

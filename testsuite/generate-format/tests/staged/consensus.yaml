@@ -30,9 +30,9 @@ BlockInfo:
         TYPENAME: HashValue
     - version: U64
     - timestamp_usecs: U64
-    - next_epoch_info:
+    - next_epoch_state:
         OPTION:
-          TYPENAME: EpochInfo
+          TYPENAME: EpochState
 BlockRetrievalRequest:
   STRUCT:
     - block_id:
@@ -106,7 +106,7 @@ EpochChangeProof:
         SEQ:
           TYPENAME: LedgerInfoWithSignatures
     - more: BOOL
-EpochInfo:
+EpochState:
   STRUCT:
     - epoch: U64
     - verifier:

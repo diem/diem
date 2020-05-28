@@ -3,7 +3,7 @@
 
 use crate::{accumulator_extension_proof::AccumulatorExtensionProof, block::Block};
 use libra_crypto::hash::TransactionAccumulatorHasher;
-use libra_types::epoch_info::EpochInfo;
+use libra_types::epoch_state::EpochState;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
@@ -18,19 +18,19 @@ pub struct VoteProposal<T> {
     #[serde(bound(deserialize = "Block<T>: Deserialize<'de>"))]
     block: Block<T>,
     /// An optional field containing the next epoch info.
-    next_epoch_info: Option<EpochInfo>,
+    next_epoch_state: Option<EpochState>,
 }
 
 impl<T> VoteProposal<T> {
     pub fn new(
         accumulator_extension_proof: AccumulatorExtensionProof<TransactionAccumulatorHasher>,
         block: Block<T>,
-        next_epoch_info: Option<EpochInfo>,
+        next_epoch_state: Option<EpochState>,
     ) -> Self {
         Self {
             accumulator_extension_proof,
             block,
-            next_epoch_info,
+            next_epoch_state,
         }
     }
 
@@ -44,8 +44,8 @@ impl<T> VoteProposal<T> {
         &self.block
     }
 
-    pub fn next_epoch_info(&self) -> Option<&EpochInfo> {
-        self.next_epoch_info.as_ref()
+    pub fn next_epoch_state(&self) -> Option<&EpochState> {
+        self.next_epoch_state.as_ref()
     }
 }
 

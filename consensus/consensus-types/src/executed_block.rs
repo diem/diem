@@ -78,7 +78,7 @@ impl<T> ExecutedBlock<T> {
         self.block().gen_block_info(
             self.compute_result().root_hash(),
             self.compute_result().version(),
-            self.compute_result().epoch_info().clone(),
+            self.compute_result().epoch_state().clone(),
         )
     }
 }

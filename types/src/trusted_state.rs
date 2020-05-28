@@ -84,9 +84,9 @@ impl TrustedState {
         {
             // Verify the EpochChangeProof to move us into the latest epoch.
             let epoch_change_li = epoch_change_proof.verify(self.verifier.as_ref())?;
-            let new_epoch_info = epoch_change_li
+            let new_epoch_state = epoch_change_li
                 .ledger_info()
-                .next_epoch_info()
+                .next_epoch_state()
                 .cloned()
                 .ok_or_else(|| {
                     format_err!(
@@ -95,7 +95,7 @@ impl TrustedState {
                 })?;
 
             // Verify the latest ledger info inside the latest epoch.
-            let new_verifier = Arc::new(new_epoch_info);
+            let new_verifier = Arc::new(new_epoch_state);
 
             // If these are the same, then we do not have a LI for the next Epoch and hence there
             // is nothing to verify.
@@ -154,13 +154,13 @@ impl TryFrom<&LedgerInfo> for TrustedState {
     type Error = anyhow::Error;
 
     fn try_from(ledger_info: &LedgerInfo) -> Result<Self> {
-        let epoch_info = ledger_info.next_epoch_info().cloned().ok_or_else(|| {
-            format_err!("No EpochInfo in LedgerInfo; it must not be on an epoch boundary")
+        let epoch_state = ledger_info.next_epoch_state().cloned().ok_or_else(|| {
+            format_err!("No EpochState in LedgerInfo; it must not be on an epoch boundary")
         })?;
 
         Ok(Self {
             verified_state: Waypoint::new_epoch_boundary(ledger_info)?,
-            verifier: Arc::new(epoch_info),
+            verifier: Arc::new(epoch_state),
         })
     }
 }

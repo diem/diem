@@ -57,7 +57,7 @@ fn print_head(db: &LibraDB) -> Result<()> {
 
     info!("Signatures: {:?}", si.latest_ledger_info.signatures());
 
-    info!("Current EpochInfo: {}", si.get_epoch_info());
+    info!("Current EpochState: {}", si.get_epoch_state());
 
     let backup = db.get_backup_handler();
     let iter = backup.get_account_iter(version)?;

@@ -10,7 +10,7 @@ use crate::{
     block_metadata::BlockMetadata,
     contract_event::ContractEvent,
     epoch_change::EpochChangeProof,
-    epoch_info::EpochInfo,
+    epoch_state::EpochState,
     event::{EventHandle, EventKey},
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -974,10 +974,10 @@ impl BlockInfoGen {
 
         let current_epoch = universe.get_epoch();
         // The first LedgerInfo should always carry a validator set.
-        let (epoch, next_epoch_info) = if current_epoch == 0 || self.new_epoch {
+        let (epoch, next_epoch_state) = if current_epoch == 0 || self.new_epoch {
             (
                 universe.get_and_bump_epoch(),
-                Some(EpochInfo {
+                Some(EpochState {
                     epoch: current_epoch + 1,
                     verifier: (&ValidatorSet::empty()).into(),
                 }),
@@ -993,7 +993,7 @@ impl BlockInfoGen {
             self.executed_state_id,
             universe.bump_and_get_version(block_size),
             self.timestamp_usecs,
-            next_epoch_info,
+            next_epoch_state,
         )
     }
 }

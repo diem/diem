@@ -84,7 +84,7 @@ impl UpdateToLatestLedgerResponse {
 
 /// Verifies content of an [`UpdateToLatestLedgerResponse`] against the proofs it
 /// carries and the content of the corresponding [`UpdateToLatestLedgerRequest`]
-/// Return EpochInfo if there're epoch change events.
+/// Return EpochState if there're epoch change events.
 pub fn verify_update_to_latest_ledger_response<'a>(
     trusted_state: &TrustedState,
     req_client_known_version: u64,

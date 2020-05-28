@@ -9,7 +9,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_config::lbr_type_tag,
     block_info::BlockInfo,
-    epoch_info::EpochInfo,
+    epoch_state::EpochState,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::ValidatorSet,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
@@ -33,12 +33,12 @@ pub struct MockStorage {
     // All epochs are built s.t. a single signature is enough for quorum cert
     signer: ValidatorSigner,
     // A validator verifier of the latest epoch
-    epoch_info: EpochInfo,
+    epoch_state: EpochState,
 }
 
 impl MockStorage {
     pub fn new(genesis_li: LedgerInfoWithSignatures, signer: ValidatorSigner) -> Self {
-        let epoch_info = genesis_li.ledger_info().next_epoch_info().unwrap().clone();
+        let epoch_state = genesis_li.ledger_info().next_epoch_state().unwrap().clone();
         let epoch_num = genesis_li.ledger_info().epoch() + 1;
         let mut ledger_infos = HashMap::new();
         ledger_infos.insert(0, genesis_li);
@@ -48,7 +48,7 @@ impl MockStorage {
             ledger_infos,
             epoch_num,
             signer,
-            epoch_info,
+            epoch_state,
         }
     }
 
@@ -89,7 +89,7 @@ impl MockStorage {
         SynchronizerState::new(
             self.highest_local_li(),
             self.synced_trees().clone(),
-            self.epoch_info.clone(),
+            self.epoch_state.clone(),
         )
     }
 
@@ -132,9 +132,9 @@ impl MockStorage {
             verified_target_li.ledger_info().epoch(),
             verified_target_li.clone(),
         );
-        if let Some(next_epoch_info) = verified_target_li.ledger_info().next_epoch_info() {
-            self.epoch_num = next_epoch_info.epoch;
-            self.epoch_info = next_epoch_info.clone();
+        if let Some(next_epoch_state) = verified_target_li.ledger_info().next_epoch_state() {
+            self.epoch_num = next_epoch_state.epoch;
+            self.epoch_state = next_epoch_state.clone();
         }
     }
 
@@ -177,7 +177,7 @@ impl MockStorage {
 
     // add the LI to the current highest version and sign it
     fn add_li(&mut self, validator_set: Option<ValidatorSet>) {
-        let epoch_info = validator_set.map(|set| EpochInfo {
+        let epoch_state = validator_set.map(|set| EpochState {
             epoch: self.epoch_num() + 1,
             verifier: (&set).into(),
         });
@@ -189,7 +189,7 @@ impl MockStorage {
                 HashValue::zero(),
                 self.version(),
                 0,
-                epoch_info,
+                epoch_state,
             ),
             HashValue::zero(),
         );
@@ -211,10 +211,10 @@ impl MockStorage {
         self.add_li(Some(validator_set));
         self.epoch_num += 1;
         self.signer = signer;
-        self.epoch_info = self
+        self.epoch_state = self
             .highest_local_li()
             .ledger_info()
-            .next_epoch_info()
+            .next_epoch_state()
             .unwrap()
             .clone();
     }

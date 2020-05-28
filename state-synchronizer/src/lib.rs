@@ -9,8 +9,8 @@
 
 use executor_types::ExecutedTrees;
 use libra_types::{
-    account_address::AccountAddress, epoch_info::EpochInfo, ledger_info::LedgerInfoWithSignatures,
-    validator_verifier::ValidatorVerifier,
+    account_address::AccountAddress, epoch_state::EpochState,
+    ledger_info::LedgerInfoWithSignatures, validator_verifier::ValidatorVerifier,
 };
 pub use synchronizer::{StateSyncClient, StateSynchronizer};
 
@@ -38,20 +38,20 @@ pub struct SynchronizerState {
     pub synced_trees: ExecutedTrees,
     // Corresponds to the current epoch if the highest local LI is in the middle of the epoch,
     // or the next epoch if the highest local LI is the final LI in the current epoch.
-    pub trusted_epoch: EpochInfo,
+    pub trusted_epoch: EpochState,
 }
 
 impl SynchronizerState {
     pub fn new(
         highest_local_li: LedgerInfoWithSignatures,
         synced_trees: ExecutedTrees,
-        current_epoch_info: EpochInfo,
+        current_epoch_state: EpochState,
     ) -> Self {
         let trusted_epoch = highest_local_li
             .ledger_info()
-            .next_epoch_info()
+            .next_epoch_state()
             .cloned()
-            .unwrap_or(current_epoch_info);
+            .unwrap_or(current_epoch_state);
         SynchronizerState {
             highest_local_li,
             synced_trees,

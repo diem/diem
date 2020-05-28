@@ -22,7 +22,7 @@ impl TryFrom<crate::proto::types::LedgerInfo> for LedgerInfo {
         let round = proto.round;
         let timestamp_usecs = proto.timestamp_usecs;
 
-        let next_epoch_info = lcs::from_bytes(&proto.next_epoch_info)?;
+        let next_epoch_state = lcs::from_bytes(&proto.next_epoch_state)?;
         Ok(LedgerInfo::new(
             BlockInfo::new(
                 epoch,
@@ -31,7 +31,7 @@ impl TryFrom<crate::proto::types::LedgerInfo> for LedgerInfo {
                 transaction_accumulator_hash,
                 version,
                 timestamp_usecs,
-                next_epoch_info,
+                next_epoch_state,
             ),
             consensus_data_hash,
         ))
@@ -48,8 +48,8 @@ impl From<LedgerInfo> for crate::proto::types::LedgerInfo {
             epoch: ledger_info.epoch(),
             round: ledger_info.round(),
             timestamp_usecs: ledger_info.timestamp_usecs(),
-            next_epoch_info: lcs::to_bytes(&ledger_info.next_epoch_info())
-                .expect("failed to serialize EpochInfo"),
+            next_epoch_state: lcs::to_bytes(&ledger_info.next_epoch_state())
+                .expect("failed to serialize EpochState"),
         }
     }
 }
