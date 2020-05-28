@@ -70,7 +70,6 @@
 <span id="70">70</span>
 <span id="71">71</span>
 <span id="72">72</span>
-<span id="73">73</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -122,8 +121,7 @@
     ));
     <span class="kw">let</span> <span class="ident">time_service</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">ClockTimeService</span>::<span class="ident">new</span>(<span class="ident">runtime</span>.<span class="ident">handle</span>().<span class="ident">clone</span>()));
 
-    <span class="kw">let</span> (<span class="ident">timeout_sender</span>, <span class="ident">timeout_receiver</span>) <span class="op">=</span>
-        <span class="ident">channel</span>::<span class="ident">new</span>(<span class="number">1_024</span>, <span class="kw-2">&amp;</span><span class="ident">counters</span>::<span class="ident">PENDING_PACEMAKER_TIMEOUTS</span>);
+    <span class="kw">let</span> (<span class="ident">timeout_sender</span>, <span class="ident">timeout_receiver</span>) <span class="op">=</span> <span class="ident">channel</span>::<span class="ident">new</span>(<span class="number">1_024</span>, <span class="kw-2">&amp;</span><span class="ident">counters</span>::<span class="ident">PENDING_ROUND_TIMEOUTS</span>);
     <span class="kw">let</span> (<span class="ident">self_sender</span>, <span class="ident">self_receiver</span>) <span class="op">=</span> <span class="ident">channel</span>::<span class="ident">new</span>(<span class="number">1_024</span>, <span class="kw-2">&amp;</span><span class="ident">counters</span>::<span class="ident">PENDING_SELF_MESSAGES</span>);
 
     <span class="kw">let</span> <span class="ident">epoch_mgr</span> <span class="op">=</span> <span class="ident">EpochManager</span>::<span class="ident">new</span>(

@@ -60,7 +60,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">accumulator_extension_proof</span>::<span class="ident">AccumulatorExtensionProof</span>, <span class="ident">block</span>::<span class="ident">Block</span>};
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">TransactionAccumulatorHasher</span>;
-<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">epoch_info</span>::<span class="ident">EpochInfo</span>;
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">epoch_state</span>::<span class="ident">EpochState</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>::{<span class="ident">Display</span>, <span class="ident">Formatter</span>};
 
@@ -75,19 +75,19 @@
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">bound</span>(<span class="ident">deserialize</span> <span class="op">=</span> <span class="string">&quot;Block&lt;T&gt;: Deserialize&lt;&#39;de&gt;&quot;</span>))]</span>
     <span class="ident">block</span>: <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
     <span class="doccomment">/// An optional field containing the next epoch info.</span>
-    <span class="ident">next_epoch_info</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EpochInfo</span><span class="op">&gt;</span>,
+    <span class="ident">next_epoch_state</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EpochState</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">VoteProposal</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">accumulator_extension_proof</span>: <span class="ident">AccumulatorExtensionProof</span><span class="op">&lt;</span><span class="ident">TransactionAccumulatorHasher</span><span class="op">&gt;</span>,
         <span class="ident">block</span>: <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-        <span class="ident">next_epoch_info</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EpochInfo</span><span class="op">&gt;</span>,
+        <span class="ident">next_epoch_state</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EpochState</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">accumulator_extension_proof</span>,
             <span class="ident">block</span>,
-            <span class="ident">next_epoch_info</span>,
+            <span class="ident">next_epoch_state</span>,
         }
     }
 
@@ -101,8 +101,8 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">block</span>
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">next_epoch_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">EpochInfo</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">next_epoch_info</span>.<span class="ident">as_ref</span>()
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">next_epoch_state</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">EpochState</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">next_epoch_state</span>.<span class="ident">as_ref</span>()
     }
 }
 

@@ -70,7 +70,7 @@
     <span class="kw">pub</span> <span class="ident">max_block_size</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">contiguous_rounds</span>: <span class="ident">u32</span>,
     <span class="kw">pub</span> <span class="ident">max_pruned_blocks_in_mem</span>: <span class="ident">usize</span>,
-    <span class="kw">pub</span> <span class="ident">pacemaker_initial_timeout_ms</span>: <span class="ident">u64</span>,
+    <span class="kw">pub</span> <span class="ident">round_initial_timeout_ms</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">proposer_type</span>: <span class="ident">ConsensusProposerType</span>,
     <span class="kw">pub</span> <span class="ident">safety_rules</span>: <span class="ident">SafetyRulesConfig</span>,
 }
@@ -85,7 +85,7 @@
             }),
             <span class="ident">contiguous_rounds</span>: <span class="number">2</span>,
             <span class="ident">max_pruned_blocks_in_mem</span>: <span class="number">10000</span>,
-            <span class="ident">pacemaker_initial_timeout_ms</span>: <span class="number">1000</span>,
+            <span class="ident">round_initial_timeout_ms</span>: <span class="number">1000</span>,
             <span class="ident">safety_rules</span>: <span class="ident">SafetyRulesConfig</span>::<span class="ident">default</span>(),
         }
     }

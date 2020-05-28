@@ -504,7 +504,7 @@
 
         <span class="comment">// We start from the block that storage&#39;s latest ledger info, if storage has end-epoch</span>
         <span class="comment">// LedgerInfo, we generate the virtual genesis block</span>
-        <span class="kw">let</span> <span class="ident">root_id</span> <span class="op">=</span> <span class="kw">if</span> <span class="self">self</span>.<span class="ident">storage_ledger</span>.<span class="ident">next_epoch_info</span>().<span class="ident">is_some</span>() {
+        <span class="kw">let</span> <span class="ident">root_id</span> <span class="op">=</span> <span class="kw">if</span> <span class="self">self</span>.<span class="ident">storage_ledger</span>.<span class="ident">next_epoch_state</span>().<span class="ident">is_some</span>() {
             <span class="kw">let</span> <span class="ident">genesis</span> <span class="op">=</span> <span class="ident">Block</span>::<span class="ident">make_genesis_block_from_ledger_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">storage_ledger</span>);
             <span class="kw">let</span> <span class="ident">genesis_qc</span> <span class="op">=</span> <span class="ident">QuorumCert</span>::<span class="ident">certificate_for_genesis_from_ledger_info</span>(
                 <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">storage_ledger</span>,

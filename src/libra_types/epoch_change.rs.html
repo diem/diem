@@ -386,7 +386,7 @@
             <span class="comment">// trusted) validator sets.</span>
             <span class="ident">verifier_ref</span> <span class="op">=</span> <span class="ident">ledger_info_with_sigs</span>
                 .<span class="ident">ledger_info</span>()
-                .<span class="ident">next_epoch_info</span>()
+                .<span class="ident">next_epoch_state</span>()
                 .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;LedgerInfo doesn&#39;t carry a ValidatorSet&quot;</span>))<span class="question-mark">?</span>;
         }
 
@@ -409,7 +409,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">block_info</span>::<span class="ident">BlockInfo</span>, <span class="ident">epoch_info</span>::<span class="ident">EpochInfo</span>, <span class="ident">waypoint</span>::<span class="ident">Waypoint</span>};
+    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">block_info</span>::<span class="ident">BlockInfo</span>, <span class="ident">epoch_state</span>::<span class="ident">EpochState</span>, <span class="ident">waypoint</span>::<span class="ident">Waypoint</span>};
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">verify_epoch_change_proof</span>() {
@@ -429,7 +429,7 @@
             <span class="ident">validator_verifier</span>.<span class="ident">push</span>(<span class="ident">current_verifier</span>.<span class="ident">clone</span>());
             <span class="kw">let</span> (<span class="ident">next_signers</span>, <span class="ident">next_verifier</span>) <span class="op">=</span>
                 <span class="ident">random_validator_verifier</span>((<span class="kw-2">*</span><span class="ident">epoch</span> <span class="op">+</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">usize</span>, <span class="prelude-val">None</span>, <span class="bool-val">true</span>);
-            <span class="kw">let</span> <span class="ident">epoch_info</span> <span class="op">=</span> <span class="ident">EpochInfo</span> {
+            <span class="kw">let</span> <span class="ident">epoch_state</span> <span class="op">=</span> <span class="ident">EpochState</span> {
                 <span class="ident">epoch</span>: <span class="kw-2">*</span><span class="ident">epoch</span> <span class="op">+</span> <span class="number">1</span>,
                 <span class="ident">verifier</span>: <span class="ident">next_verifier</span>.<span class="ident">clone</span>(),
             };
@@ -441,7 +441,7 @@
                     <span class="ident">HashValue</span>::<span class="ident">zero</span>(),
                     <span class="ident">current_version</span>,
                     <span class="number">0</span>,
-                    <span class="prelude-val">Some</span>(<span class="ident">epoch_info</span>),
+                    <span class="prelude-val">Some</span>(<span class="ident">epoch_state</span>),
                 ),
                 <span class="ident">HashValue</span>::<span class="ident">zero</span>(),
             );
@@ -458,7 +458,7 @@
         <span class="comment">// Test well-formed proof will succeed</span>
         <span class="kw">let</span> <span class="ident">proof_1</span> <span class="op">=</span> <span class="ident">EpochChangeProof</span>::<span class="ident">new</span>(<span class="ident">valid_ledger_info</span>.<span class="ident">clone</span>(), <span class="comment">/* more = */</span> <span class="bool-val">false</span>);
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">proof_1</span>
-            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">EpochInfo</span> {
+            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">EpochState</span> {
                 <span class="ident">epoch</span>: <span class="ident">all_epoch</span>[<span class="number">0</span>],
                 <span class="ident">verifier</span>: <span class="ident">validator_verifier</span>[<span class="number">0</span>].<span class="ident">clone</span>(),
             })
@@ -467,7 +467,7 @@
         <span class="kw">let</span> <span class="ident">proof_2</span> <span class="op">=</span>
             <span class="ident">EpochChangeProof</span>::<span class="ident">new</span>(<span class="ident">valid_ledger_info</span>[<span class="number">2</span>..<span class="number">5</span>].<span class="ident">to_vec</span>(), <span class="comment">/* more = */</span> <span class="bool-val">false</span>);
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">proof_2</span>
-            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">EpochInfo</span> {
+            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">EpochState</span> {
                 <span class="ident">epoch</span>: <span class="ident">all_epoch</span>[<span class="number">2</span>],
                 <span class="ident">verifier</span>: <span class="ident">validator_verifier</span>[<span class="number">2</span>].<span class="ident">clone</span>()
             })
@@ -475,7 +475,7 @@
 
         <span class="comment">// Test proof with stale prefix will verify</span>
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">proof_1</span>
-            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">EpochInfo</span> {
+            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">EpochState</span> {
                 <span class="ident">epoch</span>: <span class="ident">all_epoch</span>[<span class="number">4</span>],
                 <span class="ident">verifier</span>: <span class="ident">validator_verifier</span>[<span class="number">4</span>].<span class="ident">clone</span>()
             })
@@ -484,7 +484,7 @@
         <span class="comment">// Test empty proof will fail verification</span>
         <span class="kw">let</span> <span class="ident">proof_3</span> <span class="op">=</span> <span class="ident">EpochChangeProof</span>::<span class="ident">new</span>(<span class="macro">vec</span><span class="macro">!</span>[], <span class="comment">/* more = */</span> <span class="bool-val">false</span>);
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">proof_3</span>
-            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">EpochInfo</span> {
+            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">EpochState</span> {
                 <span class="ident">epoch</span>: <span class="ident">all_epoch</span>[<span class="number">0</span>],
                 <span class="ident">verifier</span>: <span class="ident">validator_verifier</span>[<span class="number">0</span>].<span class="ident">clone</span>()
             })
@@ -495,7 +495,7 @@
         <span class="ident">list</span>.<span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">valid_ledger_info</span>[<span class="number">8</span>..<span class="number">9</span>]);
         <span class="kw">let</span> <span class="ident">proof_4</span> <span class="op">=</span> <span class="ident">EpochChangeProof</span>::<span class="ident">new</span>(<span class="ident">list</span>, <span class="comment">/* more = */</span> <span class="bool-val">false</span>);
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">proof_4</span>
-            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">EpochInfo</span> {
+            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">EpochState</span> {
                 <span class="ident">epoch</span>: <span class="ident">all_epoch</span>[<span class="number">3</span>],
                 <span class="ident">verifier</span>: <span class="ident">validator_verifier</span>[<span class="number">3</span>].<span class="ident">clone</span>()
             })
@@ -506,7 +506,7 @@
         <span class="ident">list</span>.<span class="ident">reverse</span>();
         <span class="kw">let</span> <span class="ident">proof_5</span> <span class="op">=</span> <span class="ident">EpochChangeProof</span>::<span class="ident">new</span>(<span class="ident">list</span>, <span class="comment">/* more = */</span> <span class="bool-val">false</span>);
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">proof_5</span>
-            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">EpochInfo</span> {
+            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">EpochState</span> {
                 <span class="ident">epoch</span>: <span class="ident">all_epoch</span>[<span class="number">9</span>],
                 <span class="ident">verifier</span>: <span class="ident">validator_verifier</span>[<span class="number">9</span>].<span class="ident">clone</span>()
             })
@@ -521,7 +521,7 @@
             <span class="comment">/* more = */</span> <span class="bool-val">false</span>,
         );
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">proof_6</span>
-            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">EpochInfo</span> {
+            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">EpochState</span> {
                 <span class="ident">epoch</span>: <span class="ident">all_epoch</span>[<span class="number">0</span>],
                 <span class="ident">verifier</span>: <span class="ident">validator_verifier</span>[<span class="number">0</span>].<span class="ident">clone</span>()
             })

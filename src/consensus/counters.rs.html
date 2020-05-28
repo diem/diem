@@ -486,11 +486,11 @@
     .<span class="ident">unwrap</span>()
 });
 
-<span class="doccomment">/// This counter is set to the last round reported by the local pacemaker.</span>
+<span class="doccomment">/// This counter is set to the last round reported by the local round_state.</span>
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">CURRENT_ROUND</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntGauge</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
     <span class="macro">register_int_gauge</span><span class="macro">!</span>(
         <span class="string">&quot;libra_consensus_current_round&quot;</span>,
-        <span class="string">&quot;This counter is set to the last round reported by the local pacemaker.&quot;</span>
+        <span class="string">&quot;This counter is set to the last round reported by the local round_state.&quot;</span>
     )
     .<span class="ident">unwrap</span>()
 });
@@ -582,7 +582,7 @@
 });
 
 <span class="comment">//////////////////////</span>
-<span class="comment">// PACEMAKER COUNTERS</span>
+<span class="comment">// RoundState COUNTERS</span>
 <span class="comment">//////////////////////</span>
 <span class="doccomment">/// Count of the rounds that gathered QC since last restart.</span>
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">QC_ROUNDS_COUNT</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounter</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
@@ -847,11 +847,11 @@
     .<span class="ident">unwrap</span>()
 });
 
-<span class="doccomment">/// Count of the pending outbound pacemaker timeouts</span>
-<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">PENDING_PACEMAKER_TIMEOUTS</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntGauge</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
+<span class="doccomment">/// Count of the pending outbound round timeouts</span>
+<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">PENDING_ROUND_TIMEOUTS</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntGauge</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
     <span class="macro">register_int_gauge</span><span class="macro">!</span>(
-        <span class="string">&quot;libra_consensus_pending_pacemaker_timeouts&quot;</span>,
-        <span class="string">&quot;Count of the pending outbound pacemaker timeouts&quot;</span>
+        <span class="string">&quot;libra_consensus_pending_round_timeouts&quot;</span>,
+        <span class="string">&quot;Count of the pending outbound round timeouts&quot;</span>
     )
     .<span class="ident">unwrap</span>()
 });

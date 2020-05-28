@@ -420,7 +420,7 @@
     <span class="ident">account_state_blob</span>::{<span class="ident">AccountStateBlob</span>, <span class="ident">AccountStateWithProof</span>},
     <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>,
     <span class="ident">epoch_change</span>::<span class="ident">EpochChangeProof</span>,
-    <span class="ident">epoch_info</span>::<span class="ident">EpochInfo</span>,
+    <span class="ident">epoch_state</span>::<span class="ident">EpochState</span>,
     <span class="ident">event</span>::<span class="ident">EventKey</span>,
     <span class="ident">get_with_proof</span>::{<span class="ident">RequestItem</span>, <span class="ident">ResponseItem</span>},
     <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>,
@@ -446,7 +446,7 @@
     <span class="kw">pub</span> <span class="ident">latest_ledger_info</span>: <span class="ident">LedgerInfoWithSignatures</span>,
     <span class="doccomment">/// If the above ledger info doesn&#39;t carry a validator set, the latest validator set. Otherwise</span>
     <span class="doccomment">/// `None`.</span>
-    <span class="kw">pub</span> <span class="ident">latest_epoch_info</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EpochInfo</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">latest_epoch_state</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EpochState</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">committed_tree_state</span>: <span class="ident">TreeState</span>,
     <span class="kw">pub</span> <span class="ident">synced_tree_state</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TreeState</span><span class="op">&gt;</span>,
 }
@@ -454,26 +454,26 @@
 <span class="kw">impl</span> <span class="ident">StartupInfo</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">latest_ledger_info</span>: <span class="ident">LedgerInfoWithSignatures</span>,
-        <span class="ident">latest_epoch_info</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EpochInfo</span><span class="op">&gt;</span>,
+        <span class="ident">latest_epoch_state</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EpochState</span><span class="op">&gt;</span>,
         <span class="ident">committed_tree_state</span>: <span class="ident">TreeState</span>,
         <span class="ident">synced_tree_state</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TreeState</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">latest_ledger_info</span>,
-            <span class="ident">latest_epoch_info</span>,
+            <span class="ident">latest_epoch_state</span>,
             <span class="ident">committed_tree_state</span>,
             <span class="ident">synced_tree_state</span>,
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_epoch_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">EpochInfo</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_epoch_state</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">EpochState</span> {
         <span class="self">self</span>.<span class="ident">latest_ledger_info</span>
             .<span class="ident">ledger_info</span>()
-            .<span class="ident">next_epoch_info</span>()
+            .<span class="ident">next_epoch_state</span>()
             .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-                <span class="self">self</span>.<span class="ident">latest_epoch_info</span>
+                <span class="self">self</span>.<span class="ident">latest_epoch_state</span>
                     .<span class="ident">as_ref</span>()
-                    .<span class="ident">expect</span>(<span class="string">&quot;EpochInfo must exist&quot;</span>)
+                    .<span class="ident">expect</span>(<span class="string">&quot;EpochState must exist&quot;</span>)
             })
     }
 }

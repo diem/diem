@@ -329,7 +329,7 @@
     <span class="ident">T</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Serialize</span>,
 {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_genesis_from_ledger_info</span>(<span class="ident">ledger_info</span>: <span class="kw-2">&amp;</span><span class="ident">LedgerInfo</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">ledger_info</span>.<span class="ident">next_epoch_info</span>().<span class="ident">is_some</span>());
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">ledger_info</span>.<span class="ident">next_epoch_state</span>().<span class="ident">is_some</span>());
         <span class="kw">let</span> <span class="ident">ancestor</span> <span class="op">=</span> <span class="ident">BlockInfo</span>::<span class="ident">new</span>(
             <span class="ident">ledger_info</span>.<span class="ident">epoch</span>(),
             <span class="number">0</span>,                 <span class="comment">/* round */</span>

@@ -194,9 +194,9 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">block_storage</span>::<span class="ident">BlockStore</span>,
     <span class="ident">liveness</span>::{
-        <span class="ident">pacemaker</span>::{<span class="ident">ExponentialTimeInterval</span>, <span class="ident">NewRoundEvent</span>, <span class="ident">NewRoundReason</span>, <span class="ident">Pacemaker</span>},
         <span class="ident">proposal_generator</span>::<span class="ident">ProposalGenerator</span>,
         <span class="ident">rotating_proposer_election</span>::<span class="ident">RotatingProposer</span>,
+        <span class="ident">round_state</span>::{<span class="ident">ExponentialTimeInterval</span>, <span class="ident">NewRoundEvent</span>, <span class="ident">NewRoundReason</span>, <span class="ident">RoundState</span>},
     },
     <span class="ident">network</span>::<span class="ident">NetworkSender</span>,
     <span class="ident">network_interface</span>::<span class="ident">ConsensusNetworkSender</span>,
@@ -209,7 +209,7 @@
 <span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">proposal_msg</span>::<span class="ident">ProposalMsg</span>;
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">channel</span>::<span class="ident">mpsc</span>, <span class="ident">executor</span>::<span class="ident">block_on</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">epoch_info</span>::<span class="ident">EpochInfo</span>, <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>,
+    <span class="ident">epoch_state</span>::<span class="ident">EpochState</span>, <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>,
     <span class="ident">validator_signer</span>::<span class="ident">ValidatorSigner</span>, <span class="ident">validator_verifier</span>::<span class="ident">ValidatorVerifier</span>,
 };
 <span class="kw">use</span> <span class="ident">network</span>::<span class="ident">peer_manager</span>::{<span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerRequestSender</span>};
@@ -254,12 +254,12 @@
 }
 
 <span class="comment">// TODO: MockStorage -&gt; EmptyStorage</span>
-<span class="kw">fn</span> <span class="ident">create_pacemaker</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Pacemaker</span> {
+<span class="kw">fn</span> <span class="ident">create_round_state</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RoundState</span> {
     <span class="kw">let</span> <span class="ident">base_timeout</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">new</span>(<span class="number">60</span>, <span class="number">0</span>);
     <span class="kw">let</span> <span class="ident">time_interval</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">ExponentialTimeInterval</span>::<span class="ident">fixed</span>(<span class="ident">base_timeout</span>));
-    <span class="kw">let</span> (<span class="ident">pacemaker_timeout_sender</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">channel</span>::<span class="ident">new_test</span>(<span class="number">1_024</span>);
+    <span class="kw">let</span> (<span class="ident">round_timeout_sender</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">channel</span>::<span class="ident">new_test</span>(<span class="number">1_024</span>);
     <span class="kw">let</span> <span class="ident">time_service</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">SimulatedTimeService</span>::<span class="ident">new</span>());
-    <span class="ident">Pacemaker</span>::<span class="ident">new</span>(<span class="ident">time_interval</span>, <span class="ident">time_service</span>, <span class="ident">pacemaker_timeout_sender</span>)
+    <span class="ident">RoundState</span>::<span class="ident">new</span>(<span class="ident">time_interval</span>, <span class="ident">time_service</span>, <span class="ident">round_timeout_sender</span>)
 }
 
 <span class="comment">// Creates an RoundManager for fuzzing</span>
@@ -290,7 +290,7 @@
     );
     <span class="kw">let</span> (<span class="ident">self_sender</span>, <span class="ident">_self_receiver</span>) <span class="op">=</span> <span class="ident">channel</span>::<span class="ident">new_test</span>(<span class="number">8</span>);
 
-    <span class="kw">let</span> <span class="ident">epoch_info</span> <span class="op">=</span> <span class="ident">EpochInfo</span> {
+    <span class="kw">let</span> <span class="ident">epoch_state</span> <span class="op">=</span> <span class="ident">EpochState</span> {
         <span class="ident">epoch</span>: <span class="number">1</span>,
         <span class="ident">verifier</span>: <span class="ident">storage</span>.<span class="ident">get_validator_set</span>().<span class="ident">into</span>(),
     };
@@ -298,7 +298,7 @@
         <span class="ident">signer</span>.<span class="ident">author</span>(),
         <span class="ident">network_sender</span>,
         <span class="ident">self_sender</span>,
-        <span class="ident">epoch_info</span>.<span class="ident">verifier</span>.<span class="ident">clone</span>(),
+        <span class="ident">epoch_state</span>.<span class="ident">verifier</span>.<span class="ident">clone</span>(),
     );
 
     <span class="comment">// TODO: mock</span>
@@ -317,16 +317,16 @@
     );
 
     <span class="comment">//</span>
-    <span class="kw">let</span> <span class="ident">pacemaker</span> <span class="op">=</span> <span class="ident">create_pacemaker</span>();
+    <span class="kw">let</span> <span class="ident">round_state</span> <span class="op">=</span> <span class="ident">create_round_state</span>();
 
     <span class="comment">// TODO: have two different nodes, one for proposing, one for accepting a proposal</span>
     <span class="kw">let</span> <span class="ident">proposer_election</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">RotatingProposer</span>::<span class="ident">new</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">signer</span>.<span class="ident">author</span>()], <span class="number">1</span>));
 
     <span class="comment">// event processor</span>
     <span class="ident">RoundManager</span>::<span class="ident">new</span>(
-        <span class="ident">epoch_info</span>,
+        <span class="ident">epoch_state</span>,
         <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">block_store</span>),
-        <span class="ident">pacemaker</span>,
+        <span class="ident">round_state</span>,
         <span class="ident">proposer_election</span>,
         <span class="ident">proposal_generator</span>,
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">safety_rules</span>),

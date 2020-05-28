@@ -299,7 +299,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">block_info</span>::{<span class="ident">BlockInfo</span>, <span class="ident">Round</span>},
-    <span class="ident">epoch_info</span>::<span class="ident">EpochInfo</span>,
+    <span class="ident">epoch_state</span>::<span class="ident">EpochState</span>,
     <span class="ident">on_chain_config</span>::<span class="ident">ValidatorSet</span>,
     <span class="ident">transaction</span>::<span class="ident">Version</span>,
     <span class="ident">validator_verifier</span>::{<span class="ident">ValidatorVerifier</span>, <span class="ident">VerifyError</span>},
@@ -409,8 +409,8 @@
         <span class="self">self</span>.<span class="ident">commit_info</span>.<span class="ident">timestamp_usecs</span>()
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">next_epoch_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">EpochInfo</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">commit_info</span>.<span class="ident">next_epoch_info</span>()
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">next_epoch_state</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">EpochState</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">commit_info</span>.<span class="ident">next_epoch_state</span>()
     }
 
     <span class="doccomment">/// Returns hash of consensus voting data in this `LedgerInfo`.</span>

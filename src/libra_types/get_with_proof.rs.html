@@ -517,7 +517,7 @@
 
 <span class="doccomment">/// Verifies content of an [`UpdateToLatestLedgerResponse`] against the proofs it</span>
 <span class="doccomment">/// carries and the content of the corresponding [`UpdateToLatestLedgerRequest`]</span>
-<span class="doccomment">/// Return EpochInfo if there&#39;re epoch change events.</span>
+<span class="doccomment">/// Return EpochState if there&#39;re epoch change events.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_update_to_latest_ledger_response</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(
     <span class="ident">trusted_state</span>: <span class="kw-2">&amp;</span><span class="ident">TrustedState</span>,
     <span class="ident">req_client_known_version</span>: <span class="ident">u64</span>,

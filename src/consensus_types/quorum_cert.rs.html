@@ -195,7 +195,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ends_epoch</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">signed_ledger_info</span>
             .<span class="ident">ledger_info</span>()
-            .<span class="ident">next_epoch_info</span>()
+            .<span class="ident">next_epoch_state</span>()
             .<span class="ident">is_some</span>()
     }
 

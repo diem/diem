@@ -350,7 +350,7 @@
             .<span class="ident">get_startup_info</span>()<span class="question-mark">?</span>
             .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;[state sync] Failed to access storage info&quot;</span>))<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">current_epoch_info</span> <span class="op">=</span> <span class="ident">storage_info</span>.<span class="ident">get_epoch_info</span>().<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">current_epoch_state</span> <span class="op">=</span> <span class="ident">storage_info</span>.<span class="ident">get_epoch_state</span>().<span class="ident">clone</span>();
 
         <span class="kw">let</span> <span class="ident">synced_trees</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">synced_tree_state</span>) <span class="op">=</span> <span class="ident">storage_info</span>.<span class="ident">synced_tree_state</span> {
             <span class="ident">ExecutedTrees</span>::<span class="ident">from</span>(<span class="ident">synced_tree_state</span>)
@@ -361,7 +361,7 @@
         <span class="prelude-val">Ok</span>(<span class="ident">SynchronizerState</span>::<span class="ident">new</span>(
             <span class="ident">storage_info</span>.<span class="ident">latest_ledger_info</span>,
             <span class="ident">synced_trees</span>,
-            <span class="ident">current_epoch_info</span>,
+            <span class="ident">current_epoch_state</span>,
         ))
     }
 

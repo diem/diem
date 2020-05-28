@@ -410,7 +410,7 @@
         <span class="ident">shared_storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">MockSharedStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">ledger_info</span>: <span class="ident">LedgerInfo</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">li</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">ledger_info</span>.<span class="ident">next_epoch_info</span>().<span class="ident">is_some</span>() {
+        <span class="kw">let</span> <span class="ident">li</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">ledger_info</span>.<span class="ident">next_epoch_state</span>().<span class="ident">is_some</span>() {
             <span class="ident">ledger_info</span>.<span class="ident">clone</span>()
         } <span class="kw">else</span> {
             <span class="kw">let</span> <span class="ident">validator_set</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">shared_storage</span>.<span class="ident">validator_set</span>.<span class="ident">clone</span>());

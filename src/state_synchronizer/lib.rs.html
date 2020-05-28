@@ -87,8 +87,8 @@
 
 <span class="kw">use</span> <span class="ident">executor_types</span>::<span class="ident">ExecutedTrees</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">epoch_info</span>::<span class="ident">EpochInfo</span>, <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>,
-    <span class="ident">validator_verifier</span>::<span class="ident">ValidatorVerifier</span>,
+    <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">epoch_state</span>::<span class="ident">EpochState</span>,
+    <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>, <span class="ident">validator_verifier</span>::<span class="ident">ValidatorVerifier</span>,
 };
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">synchronizer</span>::{<span class="ident">StateSyncClient</span>, <span class="ident">StateSynchronizer</span>};
 
@@ -116,20 +116,20 @@
     <span class="kw">pub</span> <span class="ident">synced_trees</span>: <span class="ident">ExecutedTrees</span>,
     <span class="comment">// Corresponds to the current epoch if the highest local LI is in the middle of the epoch,</span>
     <span class="comment">// or the next epoch if the highest local LI is the final LI in the current epoch.</span>
-    <span class="kw">pub</span> <span class="ident">trusted_epoch</span>: <span class="ident">EpochInfo</span>,
+    <span class="kw">pub</span> <span class="ident">trusted_epoch</span>: <span class="ident">EpochState</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">SynchronizerState</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">highest_local_li</span>: <span class="ident">LedgerInfoWithSignatures</span>,
         <span class="ident">synced_trees</span>: <span class="ident">ExecutedTrees</span>,
-        <span class="ident">current_epoch_info</span>: <span class="ident">EpochInfo</span>,
+        <span class="ident">current_epoch_state</span>: <span class="ident">EpochState</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">trusted_epoch</span> <span class="op">=</span> <span class="ident">highest_local_li</span>
             .<span class="ident">ledger_info</span>()
-            .<span class="ident">next_epoch_info</span>()
+            .<span class="ident">next_epoch_state</span>()
             .<span class="ident">cloned</span>()
-            .<span class="ident">unwrap_or</span>(<span class="ident">current_epoch_info</span>);
+            .<span class="ident">unwrap_or</span>(<span class="ident">current_epoch_state</span>);
         <span class="ident">SynchronizerState</span> {
             <span class="ident">highest_local_li</span>,
             <span class="ident">synced_trees</span>,

@@ -1660,7 +1660,7 @@
         <span class="kw">let</span> <span class="ident">new_version</span> <span class="op">=</span>
             <span class="self">self</span>.<span class="ident">local_state</span>.<span class="ident">highest_version_in_local_storage</span>() <span class="op">+</span> <span class="ident">txn_list_with_proof</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>;
         <span class="kw">let</span> <span class="ident">new_epoch</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">response_li</span>.<span class="ident">ledger_info</span>().<span class="ident">version</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">new_version</span>
-            <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">response_li</span>.<span class="ident">ledger_info</span>().<span class="ident">next_epoch_info</span>().<span class="ident">is_some</span>()
+            <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">response_li</span>.<span class="ident">ledger_info</span>().<span class="ident">next_epoch_state</span>().<span class="ident">is_some</span>()
         {
             <span class="comment">// This chunk is going to finish the current epoch, optimistically request a chunk</span>
             <span class="comment">// from the next epoch.</span>

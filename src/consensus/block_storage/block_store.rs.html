@@ -518,7 +518,7 @@
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">HashValue</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
-<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">epoch_info</span>::<span class="ident">EpochInfo</span>;
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">epoch_state</span>::<span class="ident">EpochState</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>, <span class="ident">transaction</span>::<span class="ident">TransactionStatus</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::{<span class="ident">vec_deque</span>::<span class="ident">VecDeque</span>, <span class="ident">HashMap</span>},
@@ -806,7 +806,7 @@
                 <span class="ident">parent_block</span>.<span class="ident">compute_result</span>().<span class="ident">root_hash</span>(),
                 <span class="ident">parent_block</span>.<span class="ident">compute_result</span>().<span class="ident">frozen_subtree_roots</span>().<span class="ident">clone</span>(),
                 <span class="ident">parent_block</span>.<span class="ident">compute_result</span>().<span class="ident">num_leaves</span>(),
-                <span class="ident">parent_block</span>.<span class="ident">compute_result</span>().<span class="ident">epoch_info</span>().<span class="ident">clone</span>(),
+                <span class="ident">parent_block</span>.<span class="ident">compute_result</span>().<span class="ident">epoch_state</span>().<span class="ident">clone</span>(),
                 <span class="macro">vec</span><span class="macro">!</span>[], <span class="comment">/* compute_status */</span>
                 <span class="macro">vec</span><span class="macro">!</span>[], <span class="comment">/* transaction_info_hashes */</span>
             )
@@ -986,7 +986,7 @@
                     <span class="ident">compute_result</span>.<span class="ident">root_hash</span>(),
                     <span class="ident">compute_result</span>.<span class="ident">frozen_subtree_roots</span>().<span class="ident">clone</span>(),
                     <span class="ident">compute_result</span>.<span class="ident">num_leaves</span>(),
-                    <span class="prelude-val">Some</span>(<span class="ident">EpochInfo</span>::<span class="ident">empty</span>()),
+                    <span class="prelude-val">Some</span>(<span class="ident">EpochState</span>::<span class="ident">empty</span>()),
                     <span class="ident">compute_result</span>.<span class="ident">compute_status</span>().<span class="ident">clone</span>(),
                     <span class="ident">compute_result</span>.<span class="ident">transaction_info_hashes</span>().<span class="ident">clone</span>(),
                 ),

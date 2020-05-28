@@ -1129,7 +1129,7 @@
     <span class="doccomment">/// An optional field with the validator set for the next epoch in case it&#39;s</span>
     <span class="doccomment">/// the last ledger info in the current epoch.</span>
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">bytes</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;8&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">next_epoch_info</span>: <span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">next_epoch_state</span>: <span class="ident">std</span>::<span class="ident">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 <span class="comment">//// The validator node returns this structure which includes signatures</span>
 <span class="comment">//// from each validator to confirm the state.  The client needs to only pass</span>

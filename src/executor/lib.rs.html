@@ -769,6 +769,7 @@
 <span id="769">769</span>
 <span id="770">770</span>
 <span id="771">771</span>
+<span id="772">772</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -799,7 +800,7 @@
     <span class="ident">account_state</span>::<span class="ident">AccountState</span>,
     <span class="ident">account_state_blob</span>::<span class="ident">AccountStateBlob</span>,
     <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>,
-    <span class="ident">epoch_info</span>::<span class="ident">EpochInfo</span>,
+    <span class="ident">epoch_state</span>::<span class="ident">EpochState</span>,
     <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>,
     <span class="ident">on_chain_config</span>,
     <span class="ident">proof</span>::{<span class="ident">accumulator</span>::<span class="ident">InMemoryAccumulator</span>, <span class="ident">definition</span>::<span class="ident">LeafCount</span>, <span class="ident">SparseMerkleProof</span>},
@@ -903,17 +904,18 @@
                 <span class="string">&quot;Version of a given epoch LI does not match local computation.&quot;</span>
             );
             <span class="macro">ensure</span><span class="macro">!</span>(
-                <span class="ident">epoch_change_li</span>.<span class="ident">ledger_info</span>().<span class="ident">next_epoch_info</span>().<span class="ident">is_some</span>(),
+                <span class="ident">epoch_change_li</span>.<span class="ident">ledger_info</span>().<span class="ident">next_epoch_state</span>().<span class="ident">is_some</span>(),
                 <span class="string">&quot;Epoch change LI does not carry validator set&quot;</span>
             );
             <span class="macro">ensure</span><span class="macro">!</span>(
-                <span class="ident">epoch_change_li</span>.<span class="ident">ledger_info</span>().<span class="ident">next_epoch_info</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">new_output</span>.<span class="ident">epoch_info</span>().<span class="ident">as_ref</span>(),
+                <span class="ident">epoch_change_li</span>.<span class="ident">ledger_info</span>().<span class="ident">next_epoch_state</span>()
+                    <span class="op">=</span><span class="op">=</span> <span class="ident">new_output</span>.<span class="ident">epoch_state</span>().<span class="ident">as_ref</span>(),
                 <span class="string">&quot;New validator set of a given epoch LI does not match local computation&quot;</span>
             );
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">epoch_change_li</span>));
         }
         <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="ident">new_output</span>.<span class="ident">epoch_info</span>().<span class="ident">is_none</span>(),
+            <span class="ident">new_output</span>.<span class="ident">epoch_state</span>().<span class="ident">is_none</span>(),
             <span class="string">&quot;End of epoch chunk based on local computation but no EoE LedgerInfo provided.&quot;</span>
         );
         <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
@@ -970,12 +972,12 @@
         <span class="comment">// transactions that will be discarded, since they do not go into the transaction</span>
         <span class="comment">// accumulator.</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">txn_info_hashes</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">next_epoch_info</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">next_epoch_state</span> <span class="op">=</span> <span class="prelude-val">None</span>;
 
         <span class="kw">let</span> <span class="ident">proof_reader</span> <span class="op">=</span> <span class="ident">ProofReader</span>::<span class="ident">new</span>(<span class="ident">account_to_proof</span>);
         <span class="kw">let</span> <span class="ident">new_epoch_event_key</span> <span class="op">=</span> <span class="ident">on_chain_config</span>::<span class="ident">new_epoch_event_key</span>();
         <span class="kw">for</span> (<span class="ident">vm_output</span>, <span class="ident">txn</span>) <span class="kw">in</span> <span class="ident">itertools</span>::<span class="ident">zip_eq</span>(<span class="ident">vm_outputs</span>.<span class="ident">into_iter</span>(), <span class="ident">transactions</span>.<span class="ident">iter</span>()) {
-            <span class="kw">if</span> <span class="ident">next_epoch_info</span>.<span class="ident">is_some</span>() {
+            <span class="kw">if</span> <span class="ident">next_epoch_state</span>.<span class="ident">is_some</span>() {
                 <span class="ident">txn_data</span>.<span class="ident">push</span>(<span class="ident">TransactionData</span>::<span class="ident">new</span>(
                     <span class="ident">HashMap</span>::<span class="ident">new</span>(),
                     <span class="macro">vec</span><span class="macro">!</span>[],
@@ -1047,7 +1049,7 @@
             <span class="ident">current_state_tree</span> <span class="op">=</span> <span class="ident">state_tree</span>;
 
             <span class="comment">// check for change in validator set</span>
-            <span class="ident">next_epoch_info</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">vm_output</span>
+            <span class="ident">next_epoch_state</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">vm_output</span>
                 .<span class="ident">events</span>()
                 .<span class="ident">iter</span>()
                 .<span class="ident">any</span>(<span class="op">|</span><span class="ident">event</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">event</span>.<span class="ident">key</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">new_epoch_event_key</span>)
@@ -1068,7 +1070,7 @@
                             .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Configuration does not exist&quot;</span>))
                     })
                     .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Association account does not exist&quot;</span>))<span class="question-mark">?</span><span class="question-mark">?</span>;
-                <span class="prelude-val">Some</span>(<span class="ident">EpochInfo</span> {
+                <span class="prelude-val">Some</span>(<span class="ident">EpochState</span> {
                     <span class="ident">epoch</span>: <span class="ident">configuration</span>.<span class="ident">epoch</span>(),
                     <span class="ident">verifier</span>: (<span class="kw-2">&amp;</span><span class="ident">validator_set</span>).<span class="ident">into</span>(),
                 })
@@ -1085,7 +1087,7 @@
                 <span class="ident">current_state_tree</span>,
                 <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">current_transaction_accumulator</span>),
             ),
-            <span class="ident">next_epoch_info</span>,
+            <span class="ident">next_epoch_state</span>,
         ))
     }
 

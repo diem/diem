@@ -273,8 +273,8 @@
         <span class="ident">executor</span>.<span class="ident">execute_block</span>((<span class="ident">block_id</span>, <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">genesis_txn</span>.<span class="ident">clone</span>()]), <span class="kw-2">*</span><span class="ident">PRE_GENESIS_BLOCK_ID</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="ident">root_hash</span> <span class="op">=</span> <span class="ident">result</span>.<span class="ident">root_hash</span>();
-    <span class="kw">let</span> <span class="ident">next_epoch_info</span> <span class="op">=</span> <span class="ident">result</span>
-        .<span class="ident">epoch_info</span>()
+    <span class="kw">let</span> <span class="ident">next_epoch_state</span> <span class="op">=</span> <span class="ident">result</span>
+        .<span class="ident">epoch_state</span>()
         .<span class="ident">as_ref</span>()
         .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Genesis transaction must emit a epoch change.&quot;</span>))<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">executed_trees</span> <span class="op">=</span> <span class="ident">executor</span>.<span class="ident">get_executed_trees</span>(<span class="ident">block_id</span>)<span class="question-mark">?</span>;
@@ -299,7 +299,7 @@
                 <span class="ident">root_hash</span>,
                 <span class="ident">genesis_version</span>,
                 <span class="ident">timestamp_usecs</span>,
-                <span class="prelude-val">Some</span>(<span class="ident">next_epoch_info</span>.<span class="ident">clone</span>()),
+                <span class="prelude-val">Some</span>(<span class="ident">next_epoch_state</span>.<span class="ident">clone</span>()),
             ),
             <span class="ident">HashValue</span>::<span class="ident">zero</span>(), <span class="comment">/* consensus_data_hash */</span>
         ),

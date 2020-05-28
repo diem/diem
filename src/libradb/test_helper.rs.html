@@ -213,7 +213,7 @@
                 <span class="ident">cur_txn_accu_hash</span>,
                 <span class="ident">partial_ledger_info</span>.<span class="ident">version</span>(),
                 <span class="ident">partial_ledger_info</span>.<span class="ident">timestamp_usecs</span>(),
-                <span class="ident">partial_ledger_info</span>.<span class="ident">next_epoch_info</span>().<span class="ident">cloned</span>(),
+                <span class="ident">partial_ledger_info</span>.<span class="ident">next_epoch_state</span>().<span class="ident">cloned</span>(),
             );
             <span class="kw">let</span> <span class="ident">ledger_info</span> <span class="op">=</span>
                 <span class="ident">LedgerInfo</span>::<span class="ident">new</span>(<span class="ident">block_info</span>, <span class="ident">partial_ledger_info</span>.<span class="ident">consensus_data_hash</span>());

@@ -533,7 +533,7 @@
     <span class="kw">let</span> (<span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">actual_epoch_change_lis</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">db</span>.<span class="ident">update_to_latest_ledger</span>(<span class="number">0</span>, <span class="ident">Vec</span>::<span class="ident">new</span>()).<span class="ident">unwrap</span>();
     <span class="kw">let</span> <span class="ident">expected_epoch_change_lis</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">ledger_infos_with_sigs</span>
         .<span class="ident">iter</span>()
-        .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">info</span><span class="op">|</span> <span class="ident">info</span>.<span class="ident">ledger_info</span>().<span class="ident">next_epoch_info</span>().<span class="ident">is_some</span>())
+        .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">info</span><span class="op">|</span> <span class="ident">info</span>.<span class="ident">ledger_info</span>().<span class="ident">next_epoch_state</span>().<span class="ident">is_some</span>())
         .<span class="ident">cloned</span>()
         .<span class="ident">collect</span>();
     <span class="macro">assert_eq</span><span class="macro">!</span>(

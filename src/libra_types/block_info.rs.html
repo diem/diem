@@ -178,7 +178,7 @@
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">epoch_info</span>::<span class="ident">EpochInfo</span>, <span class="ident">on_chain_config</span>::<span class="ident">ValidatorSet</span>, <span class="ident">transaction</span>::<span class="ident">Version</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">epoch_state</span>::<span class="ident">EpochState</span>, <span class="ident">on_chain_config</span>::<span class="ident">ValidatorSet</span>, <span class="ident">transaction</span>::<span class="ident">Version</span>};
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">HashValue</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">ACCUMULATOR_PLACEHOLDER_HASH</span>;
@@ -216,7 +216,7 @@
     <span class="doccomment">/// The timestamp this block was proposed by a proposer.</span>
     <span class="ident">timestamp_usecs</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// An optional field containing the next epoch info</span>
-    <span class="ident">next_epoch_info</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EpochInfo</span><span class="op">&gt;</span>,
+    <span class="ident">next_epoch_state</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EpochState</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">BlockInfo</span> {
@@ -227,7 +227,7 @@
         <span class="ident">executed_state_id</span>: <span class="ident">HashValue</span>,
         <span class="ident">version</span>: <span class="ident">Version</span>,
         <span class="ident">timestamp_usecs</span>: <span class="ident">u64</span>,
-        <span class="ident">next_epoch_info</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EpochInfo</span><span class="op">&gt;</span>,
+        <span class="ident">next_epoch_state</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EpochState</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">epoch</span>,
@@ -236,7 +236,7 @@
             <span class="ident">executed_state_id</span>,
             <span class="ident">version</span>,
             <span class="ident">timestamp_usecs</span>,
-            <span class="ident">next_epoch_info</span>,
+            <span class="ident">next_epoch_state</span>,
         }
     }
 
@@ -248,7 +248,7 @@
             <span class="ident">executed_state_id</span>: <span class="ident">HashValue</span>::<span class="ident">zero</span>(),
             <span class="ident">version</span>: <span class="number">0</span>,
             <span class="ident">timestamp_usecs</span>: <span class="number">0</span>,
-            <span class="ident">next_epoch_info</span>: <span class="prelude-val">None</span>,
+            <span class="ident">next_epoch_state</span>: <span class="prelude-val">None</span>,
         }
     }
 
@@ -261,7 +261,7 @@
             <span class="ident">executed_state_id</span>: <span class="ident">HashValue</span>::<span class="ident">zero</span>(),
             <span class="ident">version</span>: <span class="number">0</span>,
             <span class="ident">timestamp_usecs</span>: <span class="number">0</span>,
-            <span class="ident">next_epoch_info</span>: <span class="prelude-val">None</span>,
+            <span class="ident">next_epoch_state</span>: <span class="prelude-val">None</span>,
         }
     }
 
@@ -283,7 +283,7 @@
             <span class="ident">executed_state_id</span>: <span class="ident">genesis_state_root_hash</span>,
             <span class="ident">version</span>: <span class="ident">GENESIS_VERSION</span>,
             <span class="ident">timestamp_usecs</span>: <span class="ident">GENESIS_TIMESTAMP_USECS</span>,
-            <span class="ident">next_epoch_info</span>: <span class="prelude-val">Some</span>(<span class="ident">EpochInfo</span> {
+            <span class="ident">next_epoch_state</span>: <span class="prelude-val">Some</span>(<span class="ident">EpochState</span> {
                 <span class="ident">epoch</span>: <span class="number">1</span>,
                 <span class="ident">verifier</span>: (<span class="kw-2">&amp;</span><span class="ident">validator_set</span>).<span class="ident">into</span>(),
             }),
@@ -300,7 +300,7 @@
 
     <span class="doccomment">/// The epoch after this block committed</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">next_block_epoch</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
-        <span class="self">self</span>.<span class="ident">next_epoch_info</span>().<span class="ident">map_or</span>(<span class="self">self</span>.<span class="ident">epoch</span>(), <span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">epoch</span>)
+        <span class="self">self</span>.<span class="ident">next_epoch_state</span>().<span class="ident">map_or</span>(<span class="self">self</span>.<span class="ident">epoch</span>(), <span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">epoch</span>)
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">epoch</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
@@ -312,15 +312,15 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">has_reconfiguration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">next_epoch_info</span>.<span class="ident">is_some</span>()
+        <span class="self">self</span>.<span class="ident">next_epoch_state</span>.<span class="ident">is_some</span>()
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
         <span class="self">self</span>.<span class="ident">id</span>
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">next_epoch_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">EpochInfo</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">next_epoch_info</span>.<span class="ident">as_ref</span>()
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">next_epoch_state</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">EpochState</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">next_epoch_state</span>.<span class="ident">as_ref</span>()
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">round</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Round</span> {
@@ -340,14 +340,14 @@
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Formatter</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
         <span class="macro">write</span><span class="macro">!</span>(
             <span class="ident">f</span>,
-            <span class="string">&quot;BlockInfo: [epoch: {}, round: {}, id: {}, executed_state_id: {}, version: {}, timestamp (us): {}, next_epoch_info: {}]&quot;</span>,
+            <span class="string">&quot;BlockInfo: [epoch: {}, round: {}, id: {}, executed_state_id: {}, version: {}, timestamp (us): {}, next_epoch_state: {}]&quot;</span>,
             <span class="self">self</span>.<span class="ident">epoch</span>(),
             <span class="self">self</span>.<span class="ident">round</span>(),
             <span class="self">self</span>.<span class="ident">id</span>(),
             <span class="self">self</span>.<span class="ident">executed_state_id</span>(),
             <span class="self">self</span>.<span class="ident">version</span>(),
             <span class="self">self</span>.<span class="ident">timestamp_usecs</span>(),
-            <span class="self">self</span>.<span class="ident">next_epoch_info</span>.<span class="ident">as_ref</span>().<span class="ident">map_or</span>(<span class="string">&quot;None&quot;</span>.<span class="ident">to_string</span>(), <span class="op">|</span><span class="ident">epoch_info</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">epoch_info</span>)),
+            <span class="self">self</span>.<span class="ident">next_epoch_state</span>.<span class="ident">as_ref</span>().<span class="ident">map_or</span>(<span class="string">&quot;None&quot;</span>.<span class="ident">to_string</span>(), <span class="op">|</span><span class="ident">epoch_state</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">epoch_state</span>)),
         )
     }
 }

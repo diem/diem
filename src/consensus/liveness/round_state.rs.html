@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `consensus/src/liveness/pacemaker.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>pacemaker.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../consensus/index.html'><div class='logo-container'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `consensus/src/liveness/round_state.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>round_state.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../consensus/index.html'><div class='logo-container'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -331,7 +331,7 @@
     }
 }
 
-<span class="doccomment">/// NewRoundEvents produced by Pacemaker are guaranteed to be monotonically increasing.</span>
+<span class="doccomment">/// NewRoundEvents produced by RoundState are guaranteed to be monotonically increasing.</span>
 <span class="doccomment">/// NewRoundEvents are consumed by the rest of the system: they can cause sending new proposals</span>
 <span class="doccomment">/// or voting for some proposals that wouldn&#39;t have been voted otherwise.</span>
 <span class="doccomment">/// The duration is populated for debugging and testing</span>
@@ -354,7 +354,7 @@
 
 <span class="doccomment">/// Determines the maximum round duration based on the round difference between the current</span>
 <span class="doccomment">/// round and the committed round</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">PacemakerTimeInterval</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span> {
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">RoundTimeInterval</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span> {
     <span class="doccomment">/// Use the index of the round after the highest quorum certificate to commit a block and</span>
     <span class="doccomment">/// return the duration for this round</span>
     <span class="doccomment">///</span>
@@ -394,7 +394,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">base</span>: <span class="ident">Duration</span>, <span class="ident">exponent_base</span>: <span class="ident">f64</span>, <span class="ident">max_exponent</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="macro">assert</span><span class="macro">!</span>(
             <span class="ident">max_exponent</span> <span class="op">&lt;</span> <span class="number">32</span>,
-            <span class="string">&quot;max_exponent for PacemakerTimeInterval should be &lt;32&quot;</span>
+            <span class="string">&quot;max_exponent for RoundStateTimeInterval should be &lt;32&quot;</span>
         );
         <span class="macro">assert</span><span class="macro">!</span>(
             <span class="ident">exponent_base</span>.<span class="ident">powf</span>(<span class="ident">max_exponent</span> <span class="kw">as</span> <span class="ident">f64</span>).<span class="ident">ceil</span>() <span class="op">&lt;</span> <span class="ident">f64</span>::<span class="ident">from</span>(<span class="ident">std</span>::<span class="ident">u32</span>::<span class="ident">MAX</span>),
@@ -408,7 +408,7 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">PacemakerTimeInterval</span> <span class="kw">for</span> <span class="ident">ExponentialTimeInterval</span> {
+<span class="kw">impl</span> <span class="ident">RoundTimeInterval</span> <span class="kw">for</span> <span class="ident">ExponentialTimeInterval</span> {
     <span class="kw">fn</span> <span class="ident">get_round_duration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">round_index_after_committed_qc</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Duration</span> {
         <span class="kw">let</span> <span class="ident">pow</span> <span class="op">=</span> <span class="ident">round_index_after_committed_qc</span>.<span class="ident">min</span>(<span class="self">self</span>.<span class="ident">max_exponent</span>) <span class="kw">as</span> <span class="ident">u32</span>;
         <span class="kw">let</span> <span class="ident">base_multiplier</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">exponent_base</span>.<span class="ident">powf</span>(<span class="ident">f64</span>::<span class="ident">from</span>(<span class="ident">pow</span>));
@@ -417,27 +417,27 @@
     }
 }
 
-<span class="doccomment">/// `Pacemaker` is a Pacemaker implementation that is responsible for generating the new round</span>
-<span class="doccomment">/// and local timeout events.</span>
+<span class="doccomment">/// `RoundState` contains information about a specific round and moves forward when</span>
+<span class="doccomment">/// receives new certificates.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// A round `r` starts in the following cases:</span>
 <span class="doccomment">/// * there is a QuorumCert for round `r-1`,</span>
 <span class="doccomment">/// * there is a TimeoutCertificate for round `r-1`.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// Round interval calculation is the responsibility of the PacemakerTimeoutInterval trait. It</span>
+<span class="doccomment">/// Round interval calculation is the responsibility of the RoundStateTimeoutInterval trait. It</span>
 <span class="doccomment">/// depends on the delta between the current round and the highest committed round (the intuition is</span>
 <span class="doccomment">/// that we want to exponentially grow the interval the further the current round is from the last</span>
 <span class="doccomment">/// committed round).</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Whenever a new round starts a local timeout is set following the round interval. This local</span>
 <span class="doccomment">/// timeout is going to send the timeout events once in interval until the new round starts.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Pacemaker</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RoundState</span> {
     <span class="comment">// Determines the time interval for a round given the number of non-committed rounds since</span>
     <span class="comment">// last commit.</span>
-    <span class="ident">time_interval</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PacemakerTimeInterval</span><span class="op">&gt;</span>,
+    <span class="ident">time_interval</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RoundTimeInterval</span><span class="op">&gt;</span>,
     <span class="comment">// Highest known committed round as reported by the caller. The caller might choose not to</span>
-    <span class="comment">// inform the Pacemaker about certain committed rounds (e.g., NIL blocks): in this case the</span>
-    <span class="comment">// committed round in Pacemaker might lag behind the committed round of a block tree.</span>
+    <span class="comment">// inform the RoundState about certain committed rounds (e.g., NIL blocks): in this case the</span>
+    <span class="comment">// committed round in RoundState might lag behind the committed round of a block tree.</span>
     <span class="ident">highest_committed_round</span>: <span class="ident">Round</span>,
     <span class="comment">// Current round is max{highest_qc, highest_tc} + 1.</span>
     <span class="ident">current_round</span>: <span class="ident">Round</span>,
@@ -455,9 +455,9 @@
 }
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-<span class="kw">impl</span> <span class="ident">Pacemaker</span> {
+<span class="kw">impl</span> <span class="ident">RoundState</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">time_interval</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PacemakerTimeInterval</span><span class="op">&gt;</span>,
+        <span class="ident">time_interval</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RoundTimeInterval</span><span class="op">&gt;</span>,
         <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
         <span class="ident">timeout_sender</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">Round</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
@@ -501,7 +501,7 @@
         <span class="bool-val">true</span>
     }
 
-    <span class="doccomment">/// Notify the Pacemaker about the potentially new QC, TC, and highest committed round.</span>
+    <span class="doccomment">/// Notify the RoundState about the potentially new QC, TC, and highest committed round.</span>
     <span class="doccomment">/// Note that some of these values might not be available by the caller.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">process_certificates</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">sync_info</span>: <span class="ident">SyncInfo</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NewRoundEvent</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="ident">sync_info</span>.<span class="ident">highest_commit_round</span>() <span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">highest_committed_round</span> {

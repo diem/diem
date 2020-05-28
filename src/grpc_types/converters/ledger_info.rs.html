@@ -97,7 +97,7 @@
         <span class="kw">let</span> <span class="ident">round</span> <span class="op">=</span> <span class="ident">proto</span>.<span class="ident">round</span>;
         <span class="kw">let</span> <span class="ident">timestamp_usecs</span> <span class="op">=</span> <span class="ident">proto</span>.<span class="ident">timestamp_usecs</span>;
 
-        <span class="kw">let</span> <span class="ident">next_epoch_info</span> <span class="op">=</span> <span class="ident">lcs</span>::<span class="ident">from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">proto</span>.<span class="ident">next_epoch_info</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">next_epoch_state</span> <span class="op">=</span> <span class="ident">lcs</span>::<span class="ident">from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">proto</span>.<span class="ident">next_epoch_state</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">LedgerInfo</span>::<span class="ident">new</span>(
             <span class="ident">BlockInfo</span>::<span class="ident">new</span>(
                 <span class="ident">epoch</span>,
@@ -106,7 +106,7 @@
                 <span class="ident">transaction_accumulator_hash</span>,
                 <span class="ident">version</span>,
                 <span class="ident">timestamp_usecs</span>,
-                <span class="ident">next_epoch_info</span>,
+                <span class="ident">next_epoch_state</span>,
             ),
             <span class="ident">consensus_data_hash</span>,
         ))
@@ -123,8 +123,8 @@
             <span class="ident">epoch</span>: <span class="ident">ledger_info</span>.<span class="ident">epoch</span>(),
             <span class="ident">round</span>: <span class="ident">ledger_info</span>.<span class="ident">round</span>(),
             <span class="ident">timestamp_usecs</span>: <span class="ident">ledger_info</span>.<span class="ident">timestamp_usecs</span>(),
-            <span class="ident">next_epoch_info</span>: <span class="ident">lcs</span>::<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">ledger_info</span>.<span class="ident">next_epoch_info</span>())
-                .<span class="ident">expect</span>(<span class="string">&quot;failed to serialize EpochInfo&quot;</span>),
+            <span class="ident">next_epoch_state</span>: <span class="ident">lcs</span>::<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">ledger_info</span>.<span class="ident">next_epoch_state</span>())
+                .<span class="ident">expect</span>(<span class="string">&quot;failed to serialize EpochState&quot;</span>),
         }
     }
 }
