@@ -27,7 +27,7 @@
   </tr>
 </table>
 
-<h2>Pacemaker</h2>
+<h2>RoundState</h2>
 <table style="width: 90%;" cellpadding="10px">
   <tr>
     {{ template "graph_in_table" (args "qcRoundsRate" "Rounds with QC per sec" "irate(consensus{op='qc_rounds_count'}[1m])" "rounds per sec") }}

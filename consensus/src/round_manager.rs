@@ -32,9 +32,9 @@ use crate::{
     block_storage::{BlockReader, BlockRetriever, BlockStore, VoteReceptionResult},
     counters,
     liveness::{
-        pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
         proposal_generator::ProposalGenerator,
         proposer_election::ProposerElection,
+        round_state::{NewRoundEvent, NewRoundReason, RoundState},
     },
     network::{IncomingBlockRetrievalRequest, NetworkSender},
     network_interface::ConsensusMsg,
@@ -180,7 +180,7 @@ impl<T: Payload> RecoveryManager<T> {
 pub struct RoundManager<T> {
     epoch_info: EpochInfo,
     block_store: Arc<BlockStore<T>>,
-    pacemaker: Pacemaker,
+    round_state: RoundState,
     proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
     proposal_generator: ProposalGenerator<T>,
     safety_rules: Box<dyn TSafetyRules<T> + Send + Sync>,
@@ -194,7 +194,7 @@ impl<T: Payload> RoundManager<T> {
     pub fn new(
         epoch_info: EpochInfo,
         block_store: Arc<BlockStore<T>>,
-        pacemaker: Pacemaker,
+        round_state: RoundState,
         proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
         proposal_generator: ProposalGenerator<T>,
         safety_rules: Box<dyn TSafetyRules<T> + Send + Sync>,
@@ -209,7 +209,7 @@ impl<T: Payload> RoundManager<T> {
         Self {
             epoch_info,
             block_store,
-            pacemaker,
+            round_state,
             proposer_election,
             proposal_generator,
             safety_rules,
@@ -276,7 +276,7 @@ impl<T: Payload> RoundManager<T> {
             .proposal_generator
             .generate_proposal(
                 new_round_event.round,
-                self.pacemaker.current_round_deadline(),
+                self.round_state.current_round_deadline(),
             )
             .await?;
         let signed_proposal = self.safety_rules.sign_proposal(proposal)?;
@@ -310,10 +310,10 @@ impl<T: Payload> RoundManager<T> {
     /// which is going to eventually trigger one winning proposal per round
     async fn pre_process_proposal(&mut self, proposal_msg: ProposalMsg<T>) -> Option<Block<T>> {
         trace_event!("round_manager::pre_process_proposal", {"block", proposal_msg.proposal().id()});
-        // Pacemaker is going to be updated with all the proposal certificates later,
-        // but it's known that the pacemaker's round is not going to decrease so we can already
+        // RoundState is going to be updated with all the proposal certificates later,
+        // but it's known that the round_state's round is not going to decrease so we can already
         // filter out the proposals from old rounds.
-        let current_round = self.pacemaker.current_round();
+        let current_round = self.round_state.current_round();
         if proposal_msg.round() < current_round {
             return None;
         }
@@ -340,8 +340,8 @@ impl<T: Payload> RoundManager<T> {
             return None;
         }
 
-        // pacemaker may catch up with the SyncInfo, check again
-        let current_round = self.pacemaker.current_round();
+        // round_state may catch up with the SyncInfo, check again
+        let current_round = self.round_state.current_round();
         if proposal_msg.round() != current_round {
             return None;
         }
@@ -351,7 +351,7 @@ impl<T: Payload> RoundManager<T> {
     }
 
     /// The function makes sure that it brings the missing dependencies from the QC and LedgerInfo
-    /// of the given sync info and update the pacemaker with the certificates if succeed.
+    /// of the given sync info and update the round_state with the certificates if succeed.
     /// Returns Error in case sync mgr failed to bring the missing dependencies.
     /// We'll try to help the remote if the SyncInfo lags behind and the flag is set.
     async fn sync_up(
@@ -398,7 +398,7 @@ impl<T: Payload> RoundManager<T> {
                     e
                 })?;
 
-            // Update safety rules and pacemaker and potentially start a new round.
+            // Update safety rules and round_state and potentially start a new round.
             self.process_certificates().await?;
         }
         Ok(())
@@ -422,12 +422,12 @@ impl<T: Payload> RoundManager<T> {
     /// proposal and votes.
     /// 3) If neither primary nor secondary proposals are available, vote for a NIL block.
     pub async fn process_local_timeout(&mut self, round: Round) {
-        if !self.pacemaker.process_local_timeout(round) {
+        if !self.round_state.process_local_timeout(round) {
             // The timeout event is late: the node has already moved to another round.
             return;
         }
 
-        let (use_last_vote, mut timeout_vote) = match self.pacemaker.vote_sent() {
+        let (use_last_vote, mut timeout_vote) = match self.round_state.vote_sent() {
             Some(vote) if vote.vote_data().proposed().round() == round => (true, vote),
             _ => {
                 // Didn't vote in this round yet, generate a backup vote
@@ -461,7 +461,7 @@ impl<T: Payload> RoundManager<T> {
             }
         }
 
-        self.pacemaker.record_vote(timeout_vote.clone());
+        self.round_state.record_vote(timeout_vote.clone());
         let timeout_vote_msg = VoteMsg::new(timeout_vote, self.block_store.sync_info());
         self.network.broadcast_vote(timeout_vote_msg).await
     }
@@ -495,7 +495,7 @@ impl<T: Payload> RoundManager<T> {
         let consensus_state = self.safety_rules.consensus_state()?;
         counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_round() as i64);
 
-        if let Some(new_round_event) = self.pacemaker.process_certificates(sync_info) {
+        if let Some(new_round_event) = self.round_state.process_certificates(sync_info) {
             self.process_new_round_event(new_round_event).await;
         }
         Ok(())
@@ -530,7 +530,7 @@ impl<T: Payload> RoundManager<T> {
             .get_valid_proposers(proposal_round + 1);
         debug!("{}Voted: {} {}", Fg(Green), Fg(Reset), vote);
 
-        self.pacemaker.record_vote(vote.clone());
+        self.round_state.record_vote(vote.clone());
         let vote_msg = VoteMsg::new(vote, self.block_store.sync_info());
         self.network.send_vote(vote_msg, recipients).await;
     }
@@ -539,7 +539,7 @@ impl<T: Payload> RoundManager<T> {
         &self,
         block_timestamp_us: u64,
     ) -> Result<(), WaitingError> {
-        let current_round_deadline = self.pacemaker.current_round_deadline();
+        let current_round_deadline = self.round_state.current_round_deadline();
         match wait_if_possible(
             self.time_service.as_ref(),
             Duration::from_micros(block_timestamp_us),
@@ -620,21 +620,21 @@ impl<T: Payload> RoundManager<T> {
         }
         let block = executed_block.block();
 
-        // Checking pacemaker round again, because multiple proposed_block can now race
+        // Checking round_state round again, because multiple proposed_block can now race
         // during async block retrieval
         ensure!(
-            block.round() == self.pacemaker.current_round(),
-            "Proposal {} rejected because round is incorrect. Pacemaker: {}, proposed_block: {}",
+            block.round() == self.round_state.current_round(),
+            "Proposal {} rejected because round is incorrect. RoundState: {}, proposed_block: {}",
             block,
-            self.pacemaker.current_round(),
+            self.round_state.current_round(),
             block.round(),
         );
 
         // Short circuit if already voted.
         ensure!(
-            self.pacemaker.vote_sent().is_none(),
+            self.round_state.vote_sent().is_none(),
             "Already vote on this round {}",
-            self.pacemaker.current_round()
+            self.round_state.current_round()
         );
 
         let parent_block = self
@@ -676,7 +676,7 @@ impl<T: Payload> RoundManager<T> {
     /// 1. Filter out votes for rounds that should not be processed by this validator (to avoid
     /// potential attacks).
     /// 2. Add the vote to the store and check whether it finishes a QC.
-    /// 3. Once the QC successfully formed, notify the Pacemaker.
+    /// 3. Once the QC successfully formed, notify the RoundState.
     pub async fn process_vote(&mut self, vote_msg: VoteMsg) {
         trace_code_block!("round_manager::process_vote", {"block", vote_msg.proposed_block_id()});
         // Check whether this validator is a valid recipient of the vote.
@@ -729,7 +729,9 @@ impl<T: Payload> RoundManager<T> {
             return Ok(());
         }
         // Add the vote and check whether it completes a new QC or a TC
-        let res = self.pacemaker.insert_vote(vote, &self.epoch_info.verifier);
+        let res = self
+            .round_state
+            .insert_vote(vote, &self.epoch_info.verifier);
         match res {
             VoteReceptionResult::NewQuorumCertificate(qc) => {
                 // Note that the block might not be present locally, in which case we cannot calculate
@@ -809,11 +811,11 @@ impl<T: Payload> RoundManager<T> {
     /// To jump start new round with the current certificates we have.
     pub async fn start(&mut self, last_vote_sent: Option<Vote>) {
         let new_round_event = self
-            .pacemaker
+            .round_state
             .process_certificates(self.block_store.sync_info())
-            .expect("Can not jump start a pacemaker from existing certificates.");
+            .expect("Can not jump start a round_state from existing certificates.");
         if let Some(vote) = last_vote_sent {
-            self.pacemaker.record_vote(vote);
+            self.round_state.record_vote(vote);
         }
         self.process_new_round_event(new_round_event).await;
     }

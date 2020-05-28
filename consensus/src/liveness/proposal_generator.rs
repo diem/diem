@@ -28,7 +28,7 @@ mod proposal_generator_test;
 /// used by a validator that believes it's a valid candidate for serving as a proposer at a given
 /// round.
 /// ProposalGenerator is the one choosing the branch to extend:
-/// - round is given by the caller (typically determined by Pacemaker).
+/// - round is given by the caller (typically determined by RoundState).
 /// The transactions for the proposed block are delivered by TxnManager.
 ///
 /// TxnManager should be aware of the pending transactions in the branch that it is extending,

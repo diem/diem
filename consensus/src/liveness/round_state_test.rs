@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    liveness::pacemaker::{
-        ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker, PacemakerTimeInterval,
+    liveness::round_state::{
+        ExponentialTimeInterval, NewRoundEvent, NewRoundReason, RoundState, RoundTimeInterval,
     },
     util::mock_time_service::SimulatedTimeService,
 };
@@ -21,7 +21,7 @@ use libra_types::{
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
 #[test]
-fn test_pacemaker_time_interval() {
+fn test_round_time_interval() {
     let interval = ExponentialTimeInterval::new(Duration::from_millis(3000), 1.5, 2);
     assert_eq!(3000, interval.get_round_duration(0).as_millis());
     assert_eq!(4500, interval.get_round_duration(1).as_millis());
@@ -34,11 +34,11 @@ fn test_pacemaker_time_interval() {
 }
 
 #[tokio::test]
-/// Verify that Pacemaker properly outputs local timeout events upon timeout
+/// Verify that RoundState properly outputs local timeout events upon timeout
 async fn test_basic_timeout() {
-    let (mut pm, mut timeout_rx) = make_pacemaker();
+    let (mut pm, mut timeout_rx) = make_round_state();
 
-    // jump start the pacemaker
+    // jump start the round_state
     pm.process_certificates(generate_sync_info(Some(0), None, None));
     for _ in 0..2 {
         let round = timeout_rx.next().await.unwrap();
@@ -51,7 +51,7 @@ async fn test_basic_timeout() {
 
 #[test]
 fn test_round_event_generation() {
-    let (mut pm, _) = make_pacemaker();
+    let (mut pm, _) = make_round_state();
     // Happy path with new QC
     expect_qc(
         2,
@@ -78,12 +78,12 @@ fn test_round_event_generation() {
     );
 }
 
-fn make_pacemaker() -> (Pacemaker, channel::Receiver<Round>) {
+fn make_round_state() -> (RoundState, channel::Receiver<Round>) {
     let time_interval = Box::new(ExponentialTimeInterval::fixed(Duration::from_millis(2)));
     let simulated_time = SimulatedTimeService::auto_advance_until(Duration::from_millis(4));
     let (timeout_tx, timeout_rx) = channel::new_test(1_024);
     (
-        Pacemaker::new(time_interval, Arc::new(simulated_time), timeout_tx),
+        RoundState::new(time_interval, Arc::new(simulated_time), timeout_tx),
         timeout_rx,
     )
 }
