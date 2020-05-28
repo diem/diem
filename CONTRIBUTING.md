@@ -51,7 +51,7 @@ request workflow is as follows:
 3. If you have changed APIs, update the documentation. Make sure the
    documentation builds.
 4. Ensure all tests and lints pass on each and every commit that is part of
-   your pull request.
+   your pull request. `cargo x lint && cargo xfmt && cargo xclippy --all-targets`
 5. If you haven't already, complete the Contributor License Agreement (CLA).
 6. Submit your pull request.
 
