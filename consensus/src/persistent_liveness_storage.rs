@@ -86,7 +86,7 @@ impl LedgerRecoveryData {
 
         // We start from the block that storage's latest ledger info, if storage has end-epoch
         // LedgerInfo, we generate the virtual genesis block
-        let root_id = if self.storage_ledger.next_epoch_info().is_some() {
+        let root_id = if self.storage_ledger.next_epoch_state().is_some() {
             let genesis = Block::make_genesis_block_from_ledger_info(&self.storage_ledger);
             let genesis_qc = QuorumCert::certificate_for_genesis_from_ledger_info(
                 &self.storage_ledger,

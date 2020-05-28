@@ -27,7 +27,7 @@ use libra_types::{
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
-    epoch_info::EpochInfo,
+    epoch_state::EpochState,
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config,
     proof::{accumulator::InMemoryAccumulator, definition::LeafCount, SparseMerkleProof},
@@ -131,17 +131,18 @@ where
                 "Version of a given epoch LI does not match local computation."
             );
             ensure!(
-                epoch_change_li.ledger_info().next_epoch_info().is_some(),
+                epoch_change_li.ledger_info().next_epoch_state().is_some(),
                 "Epoch change LI does not carry validator set"
             );
             ensure!(
-                epoch_change_li.ledger_info().next_epoch_info() == new_output.epoch_info().as_ref(),
+                epoch_change_li.ledger_info().next_epoch_state()
+                    == new_output.epoch_state().as_ref(),
                 "New validator set of a given epoch LI does not match local computation"
             );
             return Ok(Some(epoch_change_li));
         }
         ensure!(
-            new_output.epoch_info().is_none(),
+            new_output.epoch_state().is_none(),
             "End of epoch chunk based on local computation but no EoE LedgerInfo provided."
         );
         Ok(None)
@@ -198,12 +199,12 @@ where
         // transactions that will be discarded, since they do not go into the transaction
         // accumulator.
         let mut txn_info_hashes = vec![];
-        let mut next_epoch_info = None;
+        let mut next_epoch_state = None;
 
         let proof_reader = ProofReader::new(account_to_proof);
         let new_epoch_event_key = on_chain_config::new_epoch_event_key();
         for (vm_output, txn) in itertools::zip_eq(vm_outputs.into_iter(), transactions.iter()) {
-            if next_epoch_info.is_some() {
+            if next_epoch_state.is_some() {
                 txn_data.push(TransactionData::new(
                     HashMap::new(),
                     vec![],
@@ -275,7 +276,7 @@ where
             current_state_tree = state_tree;
 
             // check for change in validator set
-            next_epoch_info = if vm_output
+            next_epoch_state = if vm_output
                 .events()
                 .iter()
                 .any(|event| *event.key() == new_epoch_event_key)
@@ -296,7 +297,7 @@ where
                             .ok_or_else(|| format_err!("Configuration does not exist"))
                     })
                     .ok_or_else(|| format_err!("Association account does not exist"))??;
-                Some(EpochInfo {
+                Some(EpochState {
                     epoch: configuration.epoch(),
                     verifier: (&validator_set).into(),
                 })
@@ -313,7 +314,7 @@ where
                 current_state_tree,
                 Arc::new(current_transaction_accumulator),
             ),
-            next_epoch_info,
+            next_epoch_state,
         ))
     }
 

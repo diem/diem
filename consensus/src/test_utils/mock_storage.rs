@@ -77,7 +77,7 @@ impl<T: Payload> MockStorage<T> {
         shared_storage: Arc<MockSharedStorage<T>>,
         ledger_info: LedgerInfo,
     ) -> Self {
-        let li = if ledger_info.next_epoch_info().is_some() {
+        let li = if ledger_info.next_epoch_state().is_some() {
             ledger_info.clone()
         } else {
             let validator_set = Some(shared_storage.validator_set.clone());

@@ -285,7 +285,7 @@ fn service_handles_remote_query() {
     let query_res =
         rt.block_on(mock_network_tx.query_discovery_set(other_peer_id, query_req.clone()));
 
-    // verify response and ratchet epoch_info
+    // verify response and ratchet epoch_state
     let (trusted_state_change, opt_validator_set) = query_res
         .verify_and_ratchet(&query_req, &trusted_state)
         .unwrap();

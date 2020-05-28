@@ -65,7 +65,7 @@ impl QuorumCert {
     pub fn ends_epoch(&self) -> bool {
         self.signed_ledger_info
             .ledger_info()
-            .next_epoch_info()
+            .next_epoch_state()
             .is_some()
     }
 

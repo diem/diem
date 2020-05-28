@@ -5,7 +5,7 @@ use crate::{
     account_address::AccountAddress,
     block_info::BlockInfo,
     epoch_change::EpochChangeProof,
-    epoch_info::EpochInfo,
+    epoch_state::EpochState,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::Version,
     trusted_state::{TrustedState, TrustedStateChange},
@@ -55,9 +55,9 @@ fn arb_validator_sets(
 }
 
 /// Convert a slice of `ValidatorSigner` (includes the private signing key) into
-/// the public-facing `EpochInfo` type (just the public key).
-fn into_epoch_info(epoch: u64, signers: &[ValidatorSigner]) -> EpochInfo {
-    EpochInfo {
+/// the public-facing `EpochState` type (just the public key).
+fn into_epoch_state(epoch: u64, signers: &[ValidatorSigner]) -> EpochState {
+    EpochState {
         epoch,
         verifier: ValidatorVerifier::new(
             signers
@@ -88,7 +88,7 @@ fn sign_ledger_info(
 fn new_mock_ledger_info(
     epoch: u64,
     version: Version,
-    next_epoch_info: Option<EpochInfo>,
+    next_epoch_state: Option<EpochState>,
 ) -> LedgerInfo {
     LedgerInfo::new(
         BlockInfo::new(
@@ -98,7 +98,7 @@ fn new_mock_ledger_info(
             HashValue::zero(), /* executed_state_id */
             version,
             0, /* timestamp_usecs */
-            next_epoch_info,
+            next_epoch_state,
         ),
         HashValue::zero(),
     )
@@ -191,7 +191,7 @@ fn arb_update_proof(
                     .zip(next_sets)
                     .zip(version_deltas)
                     .map(|((curr_vset, next_vset), version_delta)| {
-                        let next_vset = into_epoch_info(epoch + 1, next_vset);
+                        let next_vset = into_epoch_state(epoch + 1, next_vset);
                         let ledger_info = new_mock_ledger_info(epoch, version, Some(next_vset));
                         let signatures = sign_ledger_info(&curr_vset[..], &ledger_info);
 
@@ -236,7 +236,7 @@ proptest! {
         let expected_latest_epoch_change_li = lis_with_sigs.last().cloned();
         let expected_validator_set = expected_latest_epoch_change_li
             .as_ref()
-            .and_then(|li_with_sigs| li_with_sigs.ledger_info().next_epoch_info());
+            .and_then(|li_with_sigs| li_with_sigs.ledger_info().next_epoch_state());
 
         let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
         let trusted_state_change = trusted_state
@@ -250,7 +250,7 @@ proptest! {
             } => {
                 assert_eq!(new_state.latest_version(), expected_latest_version);
                 assert_eq!(Some(latest_epoch_change_li), expected_latest_epoch_change_li.as_ref());
-                assert_eq!(latest_epoch_change_li.ledger_info().next_epoch_info(), expected_validator_set);
+                assert_eq!(latest_epoch_change_li.ledger_info().next_epoch_state(), expected_validator_set);
             }
             _ => panic!("Ratcheting from a waypoint should always provide the epoch for that waypoint"),
         };
@@ -311,7 +311,7 @@ proptest! {
         let expected_latest_epoch_change_li = lis_with_sigs.last().cloned();
         let expected_validator_set = expected_latest_epoch_change_li
             .as_ref()
-            .and_then(|li_with_sigs| li_with_sigs.ledger_info().next_epoch_info());
+            .and_then(|li_with_sigs| li_with_sigs.ledger_info().next_epoch_state());
 
         let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
         let trusted_state_change = trusted_state
@@ -325,7 +325,7 @@ proptest! {
             } => {
                 assert_eq!(new_state.latest_version(), expected_latest_version);
                 assert_eq!(Some(latest_epoch_change_li), expected_latest_epoch_change_li.as_ref());
-                assert_eq!(latest_epoch_change_li.ledger_info().next_epoch_info(), expected_validator_set);
+                assert_eq!(latest_epoch_change_li.ledger_info().next_epoch_state(), expected_validator_set);
             }
             TrustedStateChange::Version {
                 new_state,
@@ -454,7 +454,7 @@ proptest! {
     ) {
         // We've ratched beyond the response change proof, so attempting to ratchet
         // that change proof should just return `TrustedStateChange::Stale`.
-        let epoch_change_li = new_mock_ledger_info(123 /* epoch */, 456 /* version */, Some(EpochInfo::empty()));
+        let epoch_change_li = new_mock_ledger_info(123 /* epoch */, 456 /* version */, Some(EpochState::empty()));
         let trusted_state = TrustedState::try_from(&epoch_change_li).unwrap();
 
         let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);

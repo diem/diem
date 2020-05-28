@@ -102,8 +102,8 @@ pub fn calculate_genesis<V: VMExecutor>(
         executor.execute_block((block_id, vec![genesis_txn.clone()]), *PRE_GENESIS_BLOCK_ID)?;
 
     let root_hash = result.root_hash();
-    let next_epoch_info = result
-        .epoch_info()
+    let next_epoch_state = result
+        .epoch_state()
         .as_ref()
         .ok_or_else(|| format_err!("Genesis transaction must emit a epoch change."))?;
     let executed_trees = executor.get_executed_trees(block_id)?;
@@ -128,7 +128,7 @@ pub fn calculate_genesis<V: VMExecutor>(
                 root_hash,
                 genesis_version,
                 timestamp_usecs,
-                Some(next_epoch_info.clone()),
+                Some(next_epoch_state.clone()),
             ),
             HashValue::zero(), /* consensus_data_hash */
         ),

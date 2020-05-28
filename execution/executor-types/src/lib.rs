@@ -15,7 +15,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
-    epoch_info::EpochInfo,
+    epoch_state::EpochState,
     ledger_info::LedgerInfoWithSignatures,
     proof::{accumulator::InMemoryAccumulator, SparseMerkleProof},
     transaction::{Transaction, TransactionListWithProof, TransactionStatus, Version},
@@ -93,7 +93,7 @@ pub struct StateComputeResult {
     /// This state must be persisted to ensure that on restart that the version is calculated correctly.
     num_leaves: u64,
     /// If set, this is the new epoch info that should be changed to if this block is committed.
-    epoch_info: Option<EpochInfo>,
+    epoch_state: Option<EpochState>,
     /// The compute status (success/failure) of the given payload. The specific details are opaque
     /// for StateMachineReplication, which is merely passing it between StateComputer and
     /// TxnManager.
@@ -107,7 +107,7 @@ impl StateComputeResult {
         root_hash: HashValue,
         frozen_subtree_roots: Vec<HashValue>,
         num_leaves: u64,
-        epoch_info: Option<EpochInfo>,
+        epoch_state: Option<EpochState>,
         compute_status: Vec<TransactionStatus>,
         transaction_info_hashes: Vec<HashValue>,
     ) -> Self {
@@ -115,7 +115,7 @@ impl StateComputeResult {
             root_hash,
             frozen_subtree_roots,
             num_leaves,
-            epoch_info,
+            epoch_state,
             compute_status,
             transaction_info_hashes,
         }
@@ -135,8 +135,8 @@ impl StateComputeResult {
         &self.compute_status
     }
 
-    pub fn epoch_info(&self) -> &Option<EpochInfo> {
-        &self.epoch_info
+    pub fn epoch_state(&self) -> &Option<EpochState> {
+        &self.epoch_state
     }
 
     pub fn transaction_info_hashes(&self) -> &Vec<HashValue> {
@@ -152,7 +152,7 @@ impl StateComputeResult {
     }
 
     pub fn has_reconfiguration(&self) -> bool {
-        self.epoch_info.is_some()
+        self.epoch_state.is_some()
     }
 }
 
@@ -253,19 +253,19 @@ pub struct ProcessedVMOutput {
     executed_trees: ExecutedTrees,
 
     /// If set, this is the new epoch info that should be changed to if this block is committed.
-    epoch_info: Option<EpochInfo>,
+    epoch_state: Option<EpochState>,
 }
 
 impl ProcessedVMOutput {
     pub fn new(
         transaction_data: Vec<TransactionData>,
         executed_trees: ExecutedTrees,
-        epoch_info: Option<EpochInfo>,
+        epoch_state: Option<EpochState>,
     ) -> Self {
         ProcessedVMOutput {
             transaction_data,
             executed_trees,
-            epoch_info,
+            epoch_state,
         }
     }
 
@@ -285,8 +285,8 @@ impl ProcessedVMOutput {
         self.executed_trees().version()
     }
 
-    pub fn epoch_info(&self) -> &Option<EpochInfo> {
-        &self.epoch_info
+    pub fn epoch_state(&self) -> &Option<EpochState> {
+        &self.epoch_state
     }
 
     pub fn state_compute_result(&self) -> StateComputeResult {
@@ -298,7 +298,7 @@ impl ProcessedVMOutput {
             // next epoch that is part of a block execution.
             root_hash: self.accu_root(),
             num_leaves: txn_accu.num_leaves(),
-            epoch_info: self.epoch_info.clone(),
+            epoch_state: self.epoch_state.clone(),
             frozen_subtree_roots: txn_accu.frozen_subtree_roots().clone(),
             compute_status: self
                 .transaction_data()

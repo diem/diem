@@ -51,7 +51,7 @@ fn get_last_version(ledger_infos_with_sigs: &[LedgerInfoWithSignatures]) -> Vers
 fn get_num_epoch_changes(ledger_infos_with_sigs: &[LedgerInfoWithSignatures]) -> usize {
     ledger_infos_with_sigs
         .iter()
-        .filter(|x| x.ledger_info().next_epoch_info().is_some())
+        .filter(|x| x.ledger_info().next_epoch_state().is_some())
         .count()
 }
 
@@ -94,7 +94,7 @@ proptest! {
                 let li = ledger_info_with_sigs.ledger_info();
                 start_epoch <= li.epoch()
                     && li.epoch() < end_epoch
-                    && li.next_epoch_info().is_some()
+                    && li.next_epoch_state().is_some()
             })
             .collect::<Vec<_>>();
         prop_assert_eq!(more, all_epoch_changes.len() > limit);
@@ -128,18 +128,18 @@ proptest! {
     }
 
     #[test]
-    fn test_get_epoch_info(ledger_infos_with_sigs in arb_ledger_infos_with_sigs()) {
+    fn test_get_epoch_state(ledger_infos_with_sigs in arb_ledger_infos_with_sigs()) {
         let tmp_dir = TempPath::new();
         let db = set_up(&tmp_dir, &ledger_infos_with_sigs);
 
-        assert!(db.ledger_store.get_epoch_info(0).is_err());
+        assert!(db.ledger_store.get_epoch_state(0).is_err());
 
         for li_with_sigs in ledger_infos_with_sigs {
             let li = li_with_sigs.ledger_info();
-            if li.next_epoch_info().is_some() {
+            if li.next_epoch_state().is_some() {
                 assert_eq!(
-                    db.ledger_store.get_epoch_info(li.epoch()+1).unwrap(),
-                    *li.next_epoch_info().unwrap(),
+                    db.ledger_store.get_epoch_state(li.epoch()+1).unwrap(),
+                    *li.next_epoch_state().unwrap(),
                 );
             }
 
@@ -164,12 +164,12 @@ proptest! {
         let startup_info = db.ledger_store.get_startup_info().unwrap().unwrap();
         let latest_li = ledger_infos_with_sigs.last().unwrap().ledger_info();
         assert_eq!(startup_info.latest_ledger_info, *ledger_infos_with_sigs.last().unwrap());
-        let expected_epoch_info = if latest_li.next_epoch_info().is_none() {
-            Some(db.ledger_store.get_epoch_info(latest_li.epoch()).unwrap())
+        let expected_epoch_state = if latest_li.next_epoch_state().is_none() {
+            Some(db.ledger_store.get_epoch_state(latest_li.epoch()).unwrap())
         } else {
             None
         };
-        assert_eq!(startup_info.latest_epoch_info, expected_epoch_info);
+        assert_eq!(startup_info.latest_epoch_state, expected_epoch_state);
         let committed_version = get_last_version(&ledger_infos_with_sigs);
         assert_eq!(
             startup_info.committed_tree_state.account_state_root_hash,
