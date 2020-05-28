@@ -487,6 +487,14 @@
 <span id="487">487</span>
 <span id="488">488</span>
 <span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -503,7 +511,7 @@
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">bail</span>, <span class="ident">ensure</span>, <span class="ident">format_err</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">consensus_types</span>::{
     <span class="ident">block</span>::<span class="ident">Block</span>, <span class="ident">common</span>::<span class="ident">Payload</span>, <span class="ident">executed_block</span>::<span class="ident">ExecutedBlock</span>, <span class="ident">quorum_cert</span>::<span class="ident">QuorumCert</span>,
-    <span class="ident">timeout_certificate</span>::<span class="ident">TimeoutCertificate</span>,
+    <span class="ident">sync_info</span>::<span class="ident">SyncInfo</span>, <span class="ident">timeout_certificate</span>::<span class="ident">TimeoutCertificate</span>,
 };
 <span class="kw">use</span> <span class="ident">debug_interface</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">executor_types</span>::<span class="ident">StateComputeResult</span>;
@@ -926,6 +934,14 @@
 
     <span class="kw">fn</span> <span class="ident">highest_timeout_cert</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">TimeoutCertificate</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>().<span class="ident">highest_timeout_cert</span>()
+    }
+
+    <span class="kw">fn</span> <span class="ident">sync_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SyncInfo</span> {
+        <span class="ident">SyncInfo</span>::<span class="ident">new</span>(
+            <span class="self">self</span>.<span class="ident">highest_quorum_cert</span>().<span class="ident">as_ref</span>().<span class="ident">clone</span>(),
+            <span class="self">self</span>.<span class="ident">highest_commit_cert</span>().<span class="ident">as_ref</span>().<span class="ident">clone</span>(),
+            <span class="self">self</span>.<span class="ident">highest_timeout_cert</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">tc</span><span class="op">|</span> <span class="ident">tc</span>.<span class="ident">as_ref</span>().<span class="ident">clone</span>()),
+        )
     }
 }
 

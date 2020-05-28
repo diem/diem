@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `consensus/src/event_processor_fuzzing.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>event_processor_fuzzing.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../consensus/index.html'><div class='logo-container'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `consensus/src/round_manager_fuzzing.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>round_manager_fuzzing.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../consensus/index.html'><div class='logo-container'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -187,14 +187,12 @@
 <span id="187">187</span>
 <span id="188">188</span>
 <span id="189">189</span>
-<span id="190">190</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">block_storage</span>::<span class="ident">BlockStore</span>,
-    <span class="ident">event_processor</span>::<span class="ident">EventProcessor</span>,
     <span class="ident">liveness</span>::{
         <span class="ident">pacemaker</span>::{<span class="ident">ExponentialTimeInterval</span>, <span class="ident">NewRoundEvent</span>, <span class="ident">NewRoundReason</span>, <span class="ident">Pacemaker</span>},
         <span class="ident">proposal_generator</span>::<span class="ident">ProposalGenerator</span>,
@@ -203,6 +201,7 @@
     <span class="ident">network</span>::<span class="ident">NetworkSender</span>,
     <span class="ident">network_interface</span>::<span class="ident">ConsensusNetworkSender</span>,
     <span class="ident">persistent_liveness_storage</span>::{<span class="ident">PersistentLivenessStorage</span>, <span class="ident">RecoveryData</span>},
+    <span class="ident">round_manager</span>::<span class="ident">RoundManager</span>,
     <span class="ident">test_utils</span>::{<span class="ident">EmptyStateComputer</span>, <span class="ident">MockStorage</span>, <span class="ident">MockTransactionManager</span>, <span class="ident">TestPayload</span>},
     <span class="ident">util</span>::<span class="ident">mock_time_service</span>::<span class="ident">SimulatedTimeService</span>,
 };
@@ -221,9 +220,9 @@
 
 <span class="comment">// This generates a proposal for round 1</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate_corpus_proposal</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">event_processor</span> <span class="op">=</span> <span class="ident">create_node_for_fuzzing</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">round_manager</span> <span class="op">=</span> <span class="ident">create_node_for_fuzzing</span>();
     <span class="ident">block_on</span>(<span class="kw">async</span> {
-        <span class="kw">let</span> <span class="ident">proposal</span> <span class="op">=</span> <span class="ident">event_processor</span>
+        <span class="kw">let</span> <span class="ident">proposal</span> <span class="op">=</span> <span class="ident">round_manager</span>
             .<span class="ident">generate_proposal</span>(<span class="ident">NewRoundEvent</span> {
                 <span class="ident">round</span>: <span class="number">1</span>,
                 <span class="ident">reason</span>: <span class="ident">NewRoundReason</span>::<span class="ident">QCReady</span>,
@@ -263,8 +262,8 @@
     <span class="ident">Pacemaker</span>::<span class="ident">new</span>(<span class="ident">time_interval</span>, <span class="ident">time_service</span>, <span class="ident">pacemaker_timeout_sender</span>)
 }
 
-<span class="comment">// Creates an EventProcessor for fuzzing</span>
-<span class="kw">fn</span> <span class="ident">create_node_for_fuzzing</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">EventProcessor</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span> {
+<span class="comment">// Creates an RoundManager for fuzzing</span>
+<span class="kw">fn</span> <span class="ident">create_node_for_fuzzing</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RoundManager</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span> {
     <span class="comment">// signer is re-used accross fuzzing runs</span>
     <span class="kw">let</span> <span class="ident">signer</span> <span class="op">=</span> <span class="ident">FUZZING_SIGNER</span>.<span class="ident">clone</span>();
 
@@ -324,10 +323,9 @@
     <span class="kw">let</span> <span class="ident">proposer_election</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">RotatingProposer</span>::<span class="ident">new</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">signer</span>.<span class="ident">author</span>()], <span class="number">1</span>));
 
     <span class="comment">// event processor</span>
-    <span class="ident">EventProcessor</span>::<span class="ident">new</span>(
+    <span class="ident">RoundManager</span>::<span class="ident">new</span>(
         <span class="ident">epoch_info</span>,
         <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">block_store</span>),
-        <span class="prelude-val">None</span>,
         <span class="ident">pacemaker</span>,
         <span class="ident">proposer_election</span>,
         <span class="ident">proposal_generator</span>,
@@ -342,7 +340,7 @@
 <span class="comment">// This functions fuzzes a Proposal protobuffer (not a ConsensusMsg)</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fuzz_proposal</span>(<span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) {
     <span class="comment">// create node</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">event_processor</span> <span class="op">=</span> <span class="ident">create_node_for_fuzzing</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">round_manager</span> <span class="op">=</span> <span class="ident">create_node_for_fuzzing</span>();
 
     <span class="kw">let</span> <span class="ident">proposal</span>: <span class="ident">ProposalMsg</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">lcs</span>::<span class="ident">from_bytes</span>(<span class="ident">data</span>) {
         <span class="prelude-val">Ok</span>(<span class="ident">xx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">xx</span>,
@@ -367,7 +365,7 @@
     <span class="ident">block_on</span>(<span class="kw">async</span> <span class="kw">move</span> {
         <span class="comment">// TODO: make sure this obtains a vote when testing</span>
         <span class="comment">// TODO: make sure that if this obtains a vote, it&#39;s for round 1, etc.</span>
-        <span class="ident">event_processor</span>.<span class="ident">process_proposal_msg</span>(<span class="ident">proposal</span>).<span class="kw">await</span>;
+        <span class="ident">round_manager</span>.<span class="ident">process_proposal_msg</span>(<span class="ident">proposal</span>).<span class="kw">await</span>;
     });
 }
 

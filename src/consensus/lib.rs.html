@@ -57,12 +57,12 @@
 <span class="kw">mod</span> <span class="ident">consensusdb</span>;
 <span class="kw">mod</span> <span class="ident">counters</span>;
 <span class="kw">mod</span> <span class="ident">epoch_manager</span>;
-<span class="kw">mod</span> <span class="ident">event_processor</span>;
 <span class="kw">mod</span> <span class="ident">liveness</span>;
 <span class="kw">mod</span> <span class="ident">network</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">network_tests</span>;
 <span class="kw">mod</span> <span class="ident">persistent_liveness_storage</span>;
+<span class="kw">mod</span> <span class="ident">round_manager</span>;
 <span class="kw">mod</span> <span class="ident">state_computer</span>;
 <span class="kw">mod</span> <span class="ident">state_replication</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
@@ -78,6 +78,6 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">network_interface</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">event_processor</span>::<span class="ident">event_processor_fuzzing</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">round_manager</span>::<span class="ident">round_manager_fuzzing</span>;
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "consensus";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

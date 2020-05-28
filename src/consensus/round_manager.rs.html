@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `consensus/src/event_processor.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>event_processor.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../consensus/index.html'><div class='logo-container'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `consensus/src/round_manager.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>round_manager.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../consensus/index.html'><div class='logo-container'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -828,37 +828,6 @@
 <span id="828">828</span>
 <span id="829">829</span>
 <span id="830">830</span>
-<span id="831">831</span>
-<span id="832">832</span>
-<span id="833">833</span>
-<span id="834">834</span>
-<span id="835">835</span>
-<span id="836">836</span>
-<span id="837">837</span>
-<span id="838">838</span>
-<span id="839">839</span>
-<span id="840">840</span>
-<span id="841">841</span>
-<span id="842">842</span>
-<span id="843">843</span>
-<span id="844">844</span>
-<span id="845">845</span>
-<span id="846">846</span>
-<span id="847">847</span>
-<span id="848">848</span>
-<span id="849">849</span>
-<span id="850">850</span>
-<span id="851">851</span>
-<span id="852">852</span>
-<span id="853">853</span>
-<span id="854">854</span>
-<span id="855">855</span>
-<span id="856">856</span>
-<span id="857">857</span>
-<span id="858">858</span>
-<span id="859">859</span>
-<span id="860">860</span>
-<span id="861">861</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -891,7 +860,7 @@
 <span class="kw">use</span> <span class="ident">safety_rules</span>::<span class="ident">TSafetyRules</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">block_storage</span>::{<span class="ident">BlockReader</span>, <span class="ident">BlockRetriever</span>, <span class="ident">BlockStore</span>, <span class="ident">PendingVotes</span>, <span class="ident">VoteReceptionResult</span>},
+    <span class="ident">block_storage</span>::{<span class="ident">BlockReader</span>, <span class="ident">BlockRetriever</span>, <span class="ident">BlockStore</span>, <span class="ident">VoteReceptionResult</span>},
     <span class="ident">counters</span>,
     <span class="ident">liveness</span>::{
         <span class="ident">pacemaker</span>::{<span class="ident">NewRoundEvent</span>, <span class="ident">NewRoundReason</span>, <span class="ident">Pacemaker</span>},
@@ -958,16 +927,16 @@
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="attribute">#[<span class="ident">path</span> <span class="op">=</span> <span class="string">&quot;event_processor_test.rs&quot;</span>]</span>
-<span class="kw">mod</span> <span class="ident">event_processor_test</span>;
+<span class="attribute">#[<span class="ident">path</span> <span class="op">=</span> <span class="string">&quot;round_manager_test.rs&quot;</span>]</span>
+<span class="kw">mod</span> <span class="ident">round_manager_test</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
-<span class="attribute">#[<span class="ident">path</span> <span class="op">=</span> <span class="string">&quot;event_processor_fuzzing.rs&quot;</span>]</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">event_processor_fuzzing</span>;
+<span class="attribute">#[<span class="ident">path</span> <span class="op">=</span> <span class="string">&quot;round_manager_fuzzing.rs&quot;</span>]</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">round_manager_fuzzing</span>;
 
-<span class="doccomment">/// During the event of the node can&#39;t recover from local data, StartupSyncProcessor is responsible</span>
+<span class="doccomment">/// If the node can&#39;t recover corresponding blocks from local storage, RecoveryManager is responsible</span>
 <span class="doccomment">/// for processing the events carrying sync info and use the info to retrieve blocks from peers</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SyncProcessor</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RecoveryManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="ident">epoch_info</span>: <span class="ident">EpochInfo</span>,
     <span class="ident">network</span>: <span class="ident">NetworkSender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
     <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
@@ -975,7 +944,7 @@
     <span class="ident">ledger_recovery_data</span>: <span class="ident">LedgerRecoveryData</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">SyncProcessor</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">RecoveryManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">epoch_info</span>: <span class="ident">EpochInfo</span>,
         <span class="ident">network</span>: <span class="ident">NetworkSender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
@@ -983,7 +952,7 @@
         <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">ledger_recovery_data</span>: <span class="ident">LedgerRecoveryData</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">SyncProcessor</span> {
+        <span class="ident">RecoveryManager</span> {
             <span class="ident">epoch_info</span>,
             <span class="ident">network</span>,
             <span class="ident">storage</span>,
@@ -1034,15 +1003,14 @@
     }
 }
 
-<span class="doccomment">/// Consensus SMR is working in an event based fashion: EventProcessor is responsible for</span>
+<span class="doccomment">/// Consensus SMR is working in an event based fashion: RoundManager is responsible for</span>
 <span class="doccomment">/// processing the individual events (e.g., process_new_round, process_proposal, process_vote,</span>
 <span class="doccomment">/// etc.). It is exposing the async processing functions for each event type.</span>
 <span class="doccomment">/// The caller is responsible for running the event loops and driving the execution via some</span>
 <span class="doccomment">/// executors.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EventProcessor</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RoundManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="ident">epoch_info</span>: <span class="ident">EpochInfo</span>,
     <span class="ident">block_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">pending_votes</span>: <span class="ident">PendingVotes</span>,
     <span class="ident">pacemaker</span>: <span class="ident">Pacemaker</span>,
     <span class="ident">proposer_election</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ProposerElection</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
     <span class="ident">proposal_generator</span>: <span class="ident">ProposalGenerator</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
@@ -1051,15 +1019,12 @@
     <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
-    <span class="comment">// Cache of the last sent vote message.</span>
-    <span class="ident">last_vote_sent</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vote</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">EventProcessor</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">RoundManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">epoch_info</span>: <span class="ident">EpochInfo</span>,
         <span class="ident">block_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">last_vote_sent</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vote</span><span class="op">&gt;</span>,
         <span class="ident">pacemaker</span>: <span class="ident">Pacemaker</span>,
         <span class="ident">proposer_election</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ProposerElection</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
         <span class="ident">proposal_generator</span>: <span class="ident">ProposalGenerator</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
@@ -1071,12 +1036,10 @@
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">counters</span>::<span class="ident">BLOCK_RETRIEVAL_COUNT</span>.<span class="ident">get</span>();
         <span class="ident">counters</span>::<span class="ident">STATE_SYNC_COUNT</span>.<span class="ident">get</span>();
-        <span class="kw">let</span> <span class="ident">pending_votes</span> <span class="op">=</span> <span class="ident">PendingVotes</span>::<span class="ident">new</span>();
 
         <span class="self">Self</span> {
             <span class="ident">epoch_info</span>,
             <span class="ident">block_store</span>,
-            <span class="ident">pending_votes</span>,
             <span class="ident">pacemaker</span>,
             <span class="ident">proposer_election</span>,
             <span class="ident">proposal_generator</span>,
@@ -1085,7 +1048,6 @@
             <span class="ident">network</span>,
             <span class="ident">storage</span>,
             <span class="ident">time_service</span>,
-            <span class="ident">last_vote_sent</span>,
         }
     }
 
@@ -1154,10 +1116,13 @@
                 .<span class="ident">trace_transactions</span>(<span class="ident">payload</span>, <span class="ident">signed_proposal</span>.<span class="ident">id</span>());
         }
         <span class="macro">trace_edge</span><span class="macro">!</span>(<span class="string">&quot;parent_proposal&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">signed_proposal</span>.<span class="ident">parent_id</span>()}, {<span class="string">&quot;block&quot;</span>, <span class="ident">signed_proposal</span>.<span class="ident">id</span>()});
-        <span class="macro">trace_event</span><span class="macro">!</span>(<span class="string">&quot;event_processor::generate_proposal&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">signed_proposal</span>.<span class="ident">id</span>()});
+        <span class="macro">trace_event</span><span class="macro">!</span>(<span class="string">&quot;round_manager::generate_proposal&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">signed_proposal</span>.<span class="ident">id</span>()});
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Propose {}&quot;</span>, <span class="ident">signed_proposal</span>);
         <span class="comment">// return proposal</span>
-        <span class="prelude-val">Ok</span>(<span class="ident">ProposalMsg</span>::<span class="ident">new</span>(<span class="ident">signed_proposal</span>, <span class="self">self</span>.<span class="ident">gen_sync_info</span>()))
+        <span class="prelude-val">Ok</span>(<span class="ident">ProposalMsg</span>::<span class="ident">new</span>(
+            <span class="ident">signed_proposal</span>,
+            <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">sync_info</span>(),
+        ))
     }
 
     <span class="doccomment">/// Process a ProposalMsg, pre_process would bring all the dependencies and filter out invalid</span>
@@ -1175,7 +1140,7 @@
     <span class="doccomment">/// 2. forwarding the proposals to the ProposerElection queue,</span>
     <span class="doccomment">/// which is going to eventually trigger one winning proposal per round</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">pre_process_proposal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposal_msg</span>: <span class="ident">ProposalMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="macro">trace_event</span><span class="macro">!</span>(<span class="string">&quot;event_processor::pre_process_proposal&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">proposal_msg</span>.<span class="ident">proposal</span>().<span class="ident">id</span>()});
+        <span class="macro">trace_event</span><span class="macro">!</span>(<span class="string">&quot;round_manager::pre_process_proposal&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">proposal_msg</span>.<span class="ident">proposal</span>().<span class="ident">id</span>()});
         <span class="comment">// Pacemaker is going to be updated with all the proposal certificates later,</span>
         <span class="comment">// but it&#39;s known that the pacemaker&#39;s round is not going to decrease so we can already</span>
         <span class="comment">// filter out the proposals from old rounds.</span>
@@ -1226,7 +1191,7 @@
         <span class="ident">author</span>: <span class="ident">Author</span>,
         <span class="ident">help_remote</span>: <span class="ident">bool</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">local_sync_info</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">gen_sync_info</span>();
+        <span class="kw">let</span> <span class="ident">local_sync_info</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">sync_info</span>();
         <span class="kw">if</span> <span class="ident">sync_info</span>.<span class="ident">is_stale</span>(<span class="kw-2">&amp;</span><span class="ident">local_sync_info</span>) {
             <span class="kw">if</span> <span class="ident">help_remote</span> {
                 <span class="ident">counters</span>::<span class="ident">SYNC_INFO_MSGS_SENT_COUNT</span>.<span class="ident">inc</span>();
@@ -1293,7 +1258,7 @@
             <span class="kw">return</span>;
         }
 
-        <span class="kw">let</span> (<span class="ident">use_last_vote</span>, <span class="kw-2">mut</span> <span class="ident">timeout_vote</span>) <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">last_vote_sent</span>.<span class="ident">take</span>() {
+        <span class="kw">let</span> (<span class="ident">use_last_vote</span>, <span class="kw-2">mut</span> <span class="ident">timeout_vote</span>) <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">pacemaker</span>.<span class="ident">vote_sent</span>() {
             <span class="prelude-val">Some</span>(<span class="ident">vote</span>) <span class="kw">if</span> <span class="ident">vote</span>.<span class="ident">vote_data</span>().<span class="ident">proposed</span>().<span class="ident">round</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">round</span> <span class="op">=</span><span class="op">&gt;</span> (<span class="bool-val">true</span>, <span class="ident">vote</span>),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="comment">// Didn&#39;t vote in this round yet, generate a backup vote</span>
@@ -1327,8 +1292,8 @@
             }
         }
 
-        <span class="self">self</span>.<span class="ident">last_vote_sent</span>.<span class="ident">replace</span>(<span class="ident">timeout_vote</span>.<span class="ident">clone</span>());
-        <span class="kw">let</span> <span class="ident">timeout_vote_msg</span> <span class="op">=</span> <span class="ident">VoteMsg</span>::<span class="ident">new</span>(<span class="ident">timeout_vote</span>, <span class="self">self</span>.<span class="ident">gen_sync_info</span>());
+        <span class="self">self</span>.<span class="ident">pacemaker</span>.<span class="ident">record_vote</span>(<span class="ident">timeout_vote</span>.<span class="ident">clone</span>());
+        <span class="kw">let</span> <span class="ident">timeout_vote_msg</span> <span class="op">=</span> <span class="ident">VoteMsg</span>::<span class="ident">new</span>(<span class="ident">timeout_vote</span>, <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">sync_info</span>());
         <span class="self">self</span>.<span class="ident">network</span>.<span class="ident">broadcast_vote</span>(<span class="ident">timeout_vote_msg</span>).<span class="kw">await</span>
     }
 
@@ -1356,21 +1321,12 @@
 
     <span class="doccomment">/// This function is called only after all the dependencies of the given QC have been retrieved.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_certificates</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">sync_info</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">gen_sync_info</span>();
+        <span class="kw">let</span> <span class="ident">sync_info</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">sync_info</span>();
         <span class="self">self</span>.<span class="ident">safety_rules</span>.<span class="ident">update</span>(<span class="ident">sync_info</span>.<span class="ident">highest_quorum_cert</span>())<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">consensus_state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">safety_rules</span>.<span class="ident">consensus_state</span>()<span class="question-mark">?</span>;
         <span class="ident">counters</span>::<span class="ident">PREFERRED_BLOCK_ROUND</span>.<span class="ident">set</span>(<span class="ident">consensus_state</span>.<span class="ident">preferred_round</span>() <span class="kw">as</span> <span class="ident">i64</span>);
 
-        <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">root</span>();
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">new_round_event</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">pacemaker</span>.<span class="ident">process_certificates</span>(
-            <span class="prelude-val">Some</span>(<span class="ident">sync_info</span>.<span class="ident">highest_quorum_cert</span>().<span class="ident">certified_block</span>().<span class="ident">round</span>()),
-            <span class="ident">sync_info</span>.<span class="ident">highest_timeout_certificate</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">tc</span><span class="op">|</span> <span class="ident">tc</span>.<span class="ident">round</span>()),
-            <span class="kw">if</span> <span class="ident">root</span>.<span class="ident">is_nil_block</span>() {
-                <span class="prelude-val">None</span>
-            } <span class="kw">else</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">root</span>.<span class="ident">round</span>())
-            },
-        ) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">new_round_event</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">pacemaker</span>.<span class="ident">process_certificates</span>(<span class="ident">sync_info</span>) {
             <span class="self">self</span>.<span class="ident">process_new_round_event</span>(<span class="ident">new_round_event</span>).<span class="kw">await</span>;
         }
         <span class="prelude-val">Ok</span>(())
@@ -1382,7 +1338,7 @@
     <span class="doccomment">/// 3. In case a validator chooses to vote, send the vote to the representatives at the next</span>
     <span class="doccomment">/// position.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_proposed_block</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposal</span>: <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) {
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;EventProcessor: process_proposed_block {}&quot;</span>, <span class="ident">proposal</span>);
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;RoundManager: process_proposed_block {}&quot;</span>, <span class="ident">proposal</span>);
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">time_to_receival</span>) <span class="op">=</span>
             <span class="ident">duration_since_epoch</span>().<span class="ident">checked_sub</span>(<span class="ident">Duration</span>::<span class="ident">from_micros</span>(<span class="ident">proposal</span>.<span class="ident">timestamp_usecs</span>()))
@@ -1405,8 +1361,8 @@
             .<span class="ident">get_valid_proposers</span>(<span class="ident">proposal_round</span> <span class="op">+</span> <span class="number">1</span>);
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{}Voted: {} {}&quot;</span>, <span class="ident">Fg</span>(<span class="ident">Green</span>), <span class="ident">Fg</span>(<span class="ident">Reset</span>), <span class="ident">vote</span>);
 
-        <span class="self">self</span>.<span class="ident">last_vote_sent</span>.<span class="ident">replace</span>(<span class="ident">vote</span>.<span class="ident">clone</span>());
-        <span class="kw">let</span> <span class="ident">vote_msg</span> <span class="op">=</span> <span class="ident">VoteMsg</span>::<span class="ident">new</span>(<span class="ident">vote</span>, <span class="self">self</span>.<span class="ident">gen_sync_info</span>());
+        <span class="self">self</span>.<span class="ident">pacemaker</span>.<span class="ident">record_vote</span>(<span class="ident">vote</span>.<span class="ident">clone</span>());
+        <span class="kw">let</span> <span class="ident">vote_msg</span> <span class="op">=</span> <span class="ident">VoteMsg</span>::<span class="ident">new</span>(<span class="ident">vote</span>, <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">sync_info</span>());
         <span class="self">self</span>.<span class="ident">network</span>.<span class="ident">send_vote</span>(<span class="ident">vote_msg</span>, <span class="ident">recipients</span>).<span class="kw">await</span>;
     }
 
@@ -1473,22 +1429,6 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Generate sync info that can be attached to an outgoing message</span>
-    <span class="kw">fn</span> <span class="ident">gen_sync_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SyncInfo</span> {
-        <span class="kw">let</span> <span class="ident">hqc</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">highest_quorum_cert</span>().<span class="ident">as_ref</span>().<span class="ident">clone</span>();
-        <span class="comment">// No need to include HTC if it&#39;s lower than HQC</span>
-        <span class="kw">let</span> <span class="ident">htc</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">block_store</span>
-            .<span class="ident">highest_timeout_cert</span>()
-            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">tc</span><span class="op">|</span> <span class="ident">tc</span>.<span class="ident">round</span>() <span class="op">&gt;</span> <span class="ident">hqc</span>.<span class="ident">certified_block</span>().<span class="ident">round</span>())
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">tc</span><span class="op">|</span> <span class="ident">tc</span>.<span class="ident">as_ref</span>().<span class="ident">clone</span>());
-        <span class="ident">SyncInfo</span>::<span class="ident">new</span>(
-            <span class="ident">hqc</span>,
-            <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">highest_commit_cert</span>().<span class="ident">as_ref</span>().<span class="ident">clone</span>(),
-            <span class="ident">htc</span>,
-        )
-    }
-
     <span class="doccomment">/// The function generates a VoteMsg for a given proposed_block:</span>
     <span class="doccomment">/// * first execute the block and add it to the block store</span>
     <span class="doccomment">/// * then verify the voting rules</span>
@@ -1497,7 +1437,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// This function assumes that it might be called from different tasks concurrently.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">execute_and_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposed_block</span>: <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vote</span><span class="op">&gt;</span> {
-        <span class="macro">trace_code_block</span><span class="macro">!</span>(<span class="string">&quot;event_processor::execute_and_vote&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">proposed_block</span>.<span class="ident">id</span>()});
+        <span class="macro">trace_code_block</span><span class="macro">!</span>(<span class="string">&quot;round_manager::execute_and_vote&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">proposed_block</span>.<span class="ident">id</span>()});
         <span class="kw">let</span> <span class="ident">executed_block</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">block_store</span>
             .<span class="ident">execute_and_insert_block</span>(<span class="ident">proposed_block</span>)
@@ -1519,6 +1459,13 @@
             <span class="ident">block</span>,
             <span class="self">self</span>.<span class="ident">pacemaker</span>.<span class="ident">current_round</span>(),
             <span class="ident">block</span>.<span class="ident">round</span>(),
+        );
+
+        <span class="comment">// Short circuit if already voted.</span>
+        <span class="macro">ensure</span><span class="macro">!</span>(
+            <span class="self">self</span>.<span class="ident">pacemaker</span>.<span class="ident">vote_sent</span>().<span class="ident">is_none</span>(),
+            <span class="string">&quot;Already vote on this round {}&quot;</span>,
+            <span class="self">self</span>.<span class="ident">pacemaker</span>.<span class="ident">current_round</span>()
         );
 
         <span class="kw">let</span> <span class="ident">parent_block</span> <span class="op">=</span> <span class="self">self</span>
@@ -1562,7 +1509,7 @@
     <span class="doccomment">/// 2. Add the vote to the store and check whether it finishes a QC.</span>
     <span class="doccomment">/// 3. Once the QC successfully formed, notify the Pacemaker.</span>
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">vote_msg</span>: <span class="ident">VoteMsg</span>) {
-        <span class="macro">trace_code_block</span><span class="macro">!</span>(<span class="string">&quot;event_processor::process_vote&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">vote_msg</span>.<span class="ident">proposed_block_id</span>()});
+        <span class="macro">trace_code_block</span><span class="macro">!</span>(<span class="string">&quot;round_manager::process_vote&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">vote_msg</span>.<span class="ident">proposed_block_id</span>()});
         <span class="comment">// Check whether this validator is a valid recipient of the vote.</span>
         <span class="kw">if</span> <span class="op">!</span><span class="ident">vote_msg</span>.<span class="ident">vote</span>().<span class="ident">is_timeout</span>() {
             <span class="comment">// Unlike timeout votes regular votes are sent to the leaders of the next round only.</span>
@@ -1583,17 +1530,15 @@
                     .<span class="ident">log</span>();
                 <span class="kw">return</span>;
             }
-        } <span class="kw">else</span> {
-            <span class="comment">// Sync up for timeout votes only.</span>
-            <span class="kw">if</span> <span class="self">self</span>
-                .<span class="ident">sync_up</span>(<span class="ident">vote_msg</span>.<span class="ident">sync_info</span>(), <span class="ident">vote_msg</span>.<span class="ident">vote</span>().<span class="ident">author</span>(), <span class="bool-val">true</span>)
-                .<span class="kw">await</span>
-                .<span class="ident">is_err</span>()
-            {
-                <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Stop vote processing because of sync up error.&quot;</span>);
-                <span class="kw">return</span>;
-            };
         }
+        <span class="kw">if</span> <span class="self">self</span>
+            .<span class="ident">sync_up</span>(<span class="ident">vote_msg</span>.<span class="ident">sync_info</span>(), <span class="ident">vote_msg</span>.<span class="ident">vote</span>().<span class="ident">author</span>(), <span class="bool-val">true</span>)
+            .<span class="kw">await</span>
+            .<span class="ident">is_err</span>()
+        {
+            <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Stop vote processing because of sync up error.&quot;</span>);
+            <span class="kw">return</span>;
+        };
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">add_vote</span>(<span class="ident">vote_msg</span>.<span class="ident">vote</span>()).<span class="kw">await</span> {
             <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error adding a new vote: {:?}&quot;</span>, <span class="ident">e</span>);
         }
@@ -1615,9 +1560,7 @@
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
         }
         <span class="comment">// Add the vote and check whether it completes a new QC or a TC</span>
-        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">pending_votes</span>
-            .<span class="ident">insert_vote</span>(<span class="ident">vote</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">epoch_info</span>.<span class="ident">verifier</span>);
+        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">pacemaker</span>.<span class="ident">insert_vote</span>(<span class="ident">vote</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">epoch_info</span>.<span class="ident">verifier</span>);
         <span class="kw">match</span> <span class="ident">res</span> {
             <span class="ident">VoteReceptionResult</span>::<span class="ident">NewQuorumCertificate</span>(<span class="ident">qc</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="comment">// Note that the block might not be present locally, in which case we cannot calculate</span>
@@ -1695,19 +1638,14 @@
     }
 
     <span class="doccomment">/// To jump start new round with the current certificates we have.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="kw">let</span> <span class="ident">hqc_round</span> <span class="op">=</span> <span class="prelude-val">Some</span>(
-            <span class="self">self</span>.<span class="ident">block_store</span>
-                .<span class="ident">highest_quorum_cert</span>()
-                .<span class="ident">certified_block</span>()
-                .<span class="ident">round</span>(),
-        );
-        <span class="kw">let</span> <span class="ident">htc_round</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">highest_timeout_cert</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">tc</span><span class="op">|</span> <span class="ident">tc</span>.<span class="ident">round</span>());
-        <span class="kw">let</span> <span class="ident">last_committed_round</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">root</span>().<span class="ident">round</span>());
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">last_vote_sent</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vote</span><span class="op">&gt;</span>) {
         <span class="kw">let</span> <span class="ident">new_round_event</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">pacemaker</span>
-            .<span class="ident">process_certificates</span>(<span class="ident">hqc_round</span>, <span class="ident">htc_round</span>, <span class="ident">last_committed_round</span>)
+            .<span class="ident">process_certificates</span>(<span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">sync_info</span>())
             .<span class="ident">expect</span>(<span class="string">&quot;Can not jump start a pacemaker from existing certificates.&quot;</span>);
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">vote</span>) <span class="op">=</span> <span class="ident">last_vote_sent</span> {
+            <span class="self">self</span>.<span class="ident">pacemaker</span>.<span class="ident">record_vote</span>(<span class="ident">vote</span>);
+        }
         <span class="self">self</span>.<span class="ident">process_new_round_event</span>(<span class="ident">new_round_event</span>).<span class="kw">await</span>;
     }
 

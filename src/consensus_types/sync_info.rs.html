@@ -122,6 +122,9 @@
 <span id="122">122</span>
 <span id="123">123</span>
 <span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -166,6 +169,9 @@
         <span class="ident">highest_commit_cert</span>: <span class="ident">QuorumCert</span>,
         <span class="ident">highest_timeout_cert</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TimeoutCertificate</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="comment">// No need to include HTC if it&#39;s lower than HQC</span>
+        <span class="kw">let</span> <span class="ident">highest_timeout_cert</span> <span class="op">=</span> <span class="ident">highest_timeout_cert</span>
+            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">tc</span><span class="op">|</span> <span class="ident">tc</span>.<span class="ident">round</span>() <span class="op">&gt;</span> <span class="ident">highest_quorum_cert</span>.<span class="ident">certified_block</span>().<span class="ident">round</span>());
         <span class="self">Self</span> {
             <span class="ident">highest_quorum_cert</span>,
             <span class="ident">highest_commit_cert</span>,

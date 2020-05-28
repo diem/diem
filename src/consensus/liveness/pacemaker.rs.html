@@ -271,16 +271,44 @@
 <span id="271">271</span>
 <span id="272">272</span>
 <span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">block_storage</span>::{<span class="ident">PendingVotes</span>, <span class="ident">VoteReceptionResult</span>},
     <span class="ident">counters</span>,
     <span class="ident">util</span>::<span class="ident">time_service</span>::{<span class="ident">SendTask</span>, <span class="ident">TimeService</span>},
 };
-<span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">common</span>::<span class="ident">Round</span>;
+<span class="kw">use</span> <span class="ident">consensus_types</span>::{<span class="ident">common</span>::<span class="ident">Round</span>, <span class="ident">sync_info</span>::<span class="ident">SyncInfo</span>, <span class="ident">vote</span>::<span class="ident">Vote</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">validator_verifier</span>::<span class="ident">ValidatorVerifier</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">fmt</span>,
     <span class="ident">sync</span>::<span class="ident">Arc</span>,
@@ -420,6 +448,10 @@
     <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
     <span class="comment">// To send local timeout events to the subscriber (e.g., SMR)</span>
     <span class="ident">timeout_sender</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">Round</span><span class="op">&gt;</span>,
+    <span class="comment">// Votes received fot the current round.</span>
+    <span class="ident">pending_votes</span>: <span class="ident">PendingVotes</span>,
+    <span class="comment">// Vote sent locally for the current round.</span>
+    <span class="ident">vote_sent</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vote</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
@@ -442,6 +474,8 @@
             <span class="ident">current_round_deadline</span>: <span class="ident">Instant</span>::<span class="ident">now</span>(),
             <span class="ident">time_service</span>,
             <span class="ident">timeout_sender</span>,
+            <span class="ident">pending_votes</span>: <span class="ident">PendingVotes</span>::<span class="ident">new</span>(),
+            <span class="ident">vote_sent</span>: <span class="prelude-val">None</span>,
         }
     }
 
@@ -469,26 +503,19 @@
 
     <span class="doccomment">/// Notify the Pacemaker about the potentially new QC, TC, and highest committed round.</span>
     <span class="doccomment">/// Note that some of these values might not be available by the caller.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">process_certificates</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">hqc_round</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Round</span><span class="op">&gt;</span>,
-        <span class="ident">htc_round</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Round</span><span class="op">&gt;</span>,
-        <span class="ident">highest_committed_round</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Round</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NewRoundEvent</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">qc_round</span> <span class="op">=</span> <span class="ident">hqc_round</span>.<span class="ident">unwrap_or</span>(<span class="number">0</span>);
-        <span class="kw">let</span> <span class="ident">tc_round</span> <span class="op">=</span> <span class="ident">htc_round</span>.<span class="ident">unwrap_or</span>(<span class="number">0</span>);
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">committed_round</span>) <span class="op">=</span> <span class="ident">highest_committed_round</span> {
-            <span class="kw">if</span> <span class="ident">committed_round</span> <span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">highest_committed_round</span> {
-                <span class="self">self</span>.<span class="ident">highest_committed_round</span> <span class="op">=</span> <span class="ident">committed_round</span>;
-            }
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">process_certificates</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">sync_info</span>: <span class="ident">SyncInfo</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NewRoundEvent</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="ident">sync_info</span>.<span class="ident">highest_commit_round</span>() <span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">highest_committed_round</span> {
+            <span class="self">self</span>.<span class="ident">highest_committed_round</span> <span class="op">=</span> <span class="ident">sync_info</span>.<span class="ident">highest_commit_round</span>();
         }
-        <span class="kw">let</span> <span class="ident">new_round</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">cmp</span>::<span class="ident">max</span>(<span class="ident">qc_round</span>, <span class="ident">tc_round</span>) <span class="op">+</span> <span class="number">1</span>;
+        <span class="kw">let</span> <span class="ident">new_round</span> <span class="op">=</span> <span class="ident">sync_info</span>.<span class="ident">highest_round</span>() <span class="op">+</span> <span class="number">1</span>;
         <span class="kw">if</span> <span class="ident">new_round</span> <span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">current_round</span> {
             <span class="comment">// Start a new round.</span>
             <span class="self">self</span>.<span class="ident">current_round</span> <span class="op">=</span> <span class="ident">new_round</span>;
+            <span class="self">self</span>.<span class="ident">pending_votes</span> <span class="op">=</span> <span class="ident">PendingVotes</span>::<span class="ident">new</span>();
+            <span class="self">self</span>.<span class="ident">vote_sent</span> <span class="op">=</span> <span class="prelude-val">None</span>;
             <span class="kw">let</span> <span class="ident">timeout</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">setup_timeout</span>();
             <span class="comment">// The new round reason is QCReady in case both QC and TC are equal</span>
-            <span class="kw">let</span> <span class="ident">new_round_reason</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">qc_round</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">tc_round</span> {
+            <span class="kw">let</span> <span class="ident">new_round_reason</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">sync_info</span>.<span class="ident">highest_timeout_certificate</span>().<span class="ident">is_none</span>() {
                 <span class="ident">NewRoundReason</span>::<span class="ident">QCReady</span>
             } <span class="kw">else</span> {
                 <span class="ident">NewRoundReason</span>::<span class="ident">Timeout</span>
@@ -502,6 +529,31 @@
             <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">new_round_event</span>);
         }
         <span class="prelude-val">None</span>
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_vote</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">vote</span>: <span class="kw-2">&amp;</span><span class="ident">Vote</span>,
+        <span class="ident">verifier</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorVerifier</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VoteReceptionResult</span> {
+        <span class="kw">if</span> <span class="ident">vote</span>.<span class="ident">vote_data</span>().<span class="ident">proposed</span>().<span class="ident">round</span>() <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">current_round</span> {
+            <span class="self">self</span>.<span class="ident">pending_votes</span>.<span class="ident">insert_vote</span>(<span class="ident">vote</span>, <span class="ident">verifier</span>)
+        } <span class="kw">else</span> {
+            <span class="ident">VoteReceptionResult</span>::<span class="ident">UnexpectedRound</span>(
+                <span class="ident">vote</span>.<span class="ident">vote_data</span>().<span class="ident">proposed</span>().<span class="ident">round</span>(),
+                <span class="self">self</span>.<span class="ident">current_round</span>,
+            )
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">record_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">vote</span>: <span class="ident">Vote</span>) {
+        <span class="kw">if</span> <span class="ident">vote</span>.<span class="ident">vote_data</span>().<span class="ident">proposed</span>().<span class="ident">round</span>() <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">current_round</span> {
+            <span class="self">self</span>.<span class="ident">vote_sent</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">vote</span>);
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">vote_sent</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vote</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">vote_sent</span>.<span class="ident">clone</span>()
     }
 
     <span class="doccomment">/// Setup the timeout task and return the duration of the current timeout</span>

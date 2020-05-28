@@ -70,6 +70,12 @@
 <span id="70">70</span>
 <span id="71">71</span>
 <span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -86,6 +92,7 @@
 <span class="kw">mod</span> <span class="ident">pending_votes</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">block_store</span>::{<span class="ident">sync_manager</span>::<span class="ident">BlockRetriever</span>, <span class="ident">BlockStore</span>};
+<span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">sync_info</span>::<span class="ident">SyncInfo</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">pending_votes</span>::<span class="ident">PendingVotes</span>;
 
 <span class="doccomment">/// Result of the vote processing. The failure case (Verification error) is returned</span>
@@ -105,6 +112,8 @@
     <span class="ident">NewTimeoutCertificate</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">TimeoutCertificate</span><span class="op">&gt;</span>),
     <span class="doccomment">/// There might be some issues adding a vote</span>
     <span class="ident">ErrorAddingVote</span>(<span class="ident">VerifyError</span>),
+    <span class="doccomment">/// The vote is not for the current round.</span>
+    <span class="ident">UnexpectedRound</span>(<span class="ident">u64</span>, <span class="ident">u64</span>),
 }
 
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">BlockReader</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
@@ -142,6 +151,9 @@
 
     <span class="doccomment">/// Return the highest timeout certificate if available.</span>
     <span class="kw">fn</span> <span class="ident">highest_timeout_cert</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">TimeoutCertificate</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Return the combination of highest quorum cert, timeout cert and commit cert.</span>
+    <span class="kw">fn</span> <span class="ident">sync_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SyncInfo</span>;
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "consensus";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

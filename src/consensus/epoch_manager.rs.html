@@ -520,12 +520,6 @@
 <span id="520">520</span>
 <span id="521">521</span>
 <span id="522">522</span>
-<span id="523">523</span>
-<span id="524">524</span>
-<span id="525">525</span>
-<span id="526">526</span>
-<span id="527">527</span>
-<span id="528">528</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -533,7 +527,6 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">block_storage</span>::<span class="ident">BlockStore</span>,
     <span class="ident">counters</span>,
-    <span class="ident">event_processor</span>::{<span class="ident">EventProcessor</span>, <span class="ident">SyncProcessor</span>, <span class="ident">UnverifiedEvent</span>, <span class="ident">VerifiedEvent</span>},
     <span class="ident">liveness</span>::{
         <span class="ident">leader_reputation</span>::{<span class="ident">ActiveInactiveHeuristic</span>, <span class="ident">LeaderReputation</span>, <span class="ident">LibraDBBackend</span>},
         <span class="ident">multi_proposer_election</span>::<span class="ident">MultiProposer</span>,
@@ -545,6 +538,7 @@
     <span class="ident">network</span>::{<span class="ident">IncomingBlockRetrievalRequest</span>, <span class="ident">NetworkReceivers</span>, <span class="ident">NetworkSender</span>},
     <span class="ident">network_interface</span>::{<span class="ident">ConsensusMsg</span>, <span class="ident">ConsensusNetworkSender</span>},
     <span class="ident">persistent_liveness_storage</span>::{<span class="ident">LedgerRecoveryData</span>, <span class="ident">PersistentLivenessStorage</span>, <span class="ident">RecoveryData</span>},
+    <span class="ident">round_manager</span>::{<span class="ident">RecoveryManager</span>, <span class="ident">RoundManager</span>, <span class="ident">UnverifiedEvent</span>, <span class="ident">VerifiedEvent</span>},
     <span class="ident">state_replication</span>::{<span class="ident">StateComputer</span>, <span class="ident">TxnManager</span>},
     <span class="ident">util</span>::<span class="ident">time_service</span>::<span class="ident">TimeService</span>,
 };
@@ -571,14 +565,13 @@
     <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">Instant</span>},
 };
 
-<span class="doccomment">/// The enum contains two processor</span>
-<span class="doccomment">/// SyncProcessor is used to process events in order to sync up with peer if we can&#39;t recover from local consensusdb</span>
-<span class="doccomment">/// EventProcessor is used for normal event handling.</span>
-<span class="doccomment">/// We suppress clippy warning here because we expect most of the time we will have EventProcessor</span>
+<span class="doccomment">/// RecoveryManager is used to process events in order to sync up with peer if we can&#39;t recover from local consensusdb</span>
+<span class="doccomment">/// RoundManager is used for normal event handling.</span>
+<span class="doccomment">/// We suppress clippy warning here because we expect most of the time we will have RoundManager</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">large_enum_variant</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Processor</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="ident">SyncProcessor</span>(<span class="ident">SyncProcessor</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>),
-    <span class="ident">EventProcessor</span>(<span class="ident">EventProcessor</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>),
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">RoundProcessor</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="ident">Recovery</span>(<span class="ident">RecoveryManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>),
+    <span class="ident">Normal</span>(<span class="ident">RoundManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>),
 }
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">large_enum_variant</span>)]</span>
@@ -596,7 +589,7 @@
     }
 }
 
-<span class="comment">// Manager the components that shared across epoch and spawn per-epoch EventProcessor with</span>
+<span class="comment">// Manager the components that shared across epoch and spawn per-epoch RoundManager with</span>
 <span class="comment">// epoch-specific input.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EpochManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="ident">author</span>: <span class="ident">Author</span>,
@@ -609,7 +602,7 @@
     <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">safety_rules_manager</span>: <span class="ident">SafetyRulesManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">processor</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Processor</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">processor</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">RoundProcessor</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">EpochManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
@@ -647,8 +640,8 @@
             .<span class="ident">as_ref</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;EpochManager not started yet&quot;</span>)
         {
-            <span class="ident">Processor</span>::<span class="ident">EventProcessor</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">epoch_info</span>(),
-            <span class="ident">Processor</span>::<span class="ident">SyncProcessor</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">epoch_info</span>(),
+            <span class="ident">RoundProcessor</span>::<span class="ident">Normal</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">epoch_info</span>(),
+            <span class="ident">RoundProcessor</span>::<span class="ident">Recovery</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">epoch_info</span>(),
         }
     }
 
@@ -788,12 +781,8 @@
         <span class="comment">// state_computer notifies reconfiguration in another channel</span>
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start_event_processor</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">recovery_data</span>: <span class="ident">RecoveryData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-        <span class="ident">epoch_info</span>: <span class="ident">EpochInfo</span>,
-    ) {
-        <span class="comment">// Release the previous EventProcessor, especially the SafetyRule client</span>
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start_round_manager</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">recovery_data</span>: <span class="ident">RecoveryData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">epoch_info</span>: <span class="ident">EpochInfo</span>) {
+        <span class="comment">// Release the previous RoundManager, especially the SafetyRule client</span>
         <span class="self">self</span>.<span class="ident">processor</span> <span class="op">=</span> <span class="prelude-val">None</span>;
         <span class="ident">counters</span>::<span class="ident">EPOCH</span>.<span class="ident">set</span>(<span class="ident">epoch_info</span>.<span class="ident">epoch</span> <span class="kw">as</span> <span class="ident">i64</span>);
         <span class="ident">counters</span>::<span class="ident">CURRENT_EPOCH_VALIDATORS</span>.<span class="ident">set</span>(<span class="ident">epoch_info</span>.<span class="ident">verifier</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">i64</span>);
@@ -853,10 +842,9 @@
             <span class="ident">epoch_info</span>.<span class="ident">verifier</span>.<span class="ident">clone</span>(),
         );
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">processor</span> <span class="op">=</span> <span class="ident">EventProcessor</span>::<span class="ident">new</span>(
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">processor</span> <span class="op">=</span> <span class="ident">RoundManager</span>::<span class="ident">new</span>(
             <span class="ident">epoch_info</span>,
             <span class="ident">block_store</span>,
-            <span class="ident">last_vote</span>,
             <span class="ident">pacemaker</span>,
             <span class="ident">proposer_election</span>,
             <span class="ident">proposal_generator</span>,
@@ -866,16 +854,16 @@
             <span class="self">self</span>.<span class="ident">storage</span>.<span class="ident">clone</span>(),
             <span class="self">self</span>.<span class="ident">time_service</span>.<span class="ident">clone</span>(),
         );
-        <span class="ident">processor</span>.<span class="ident">start</span>().<span class="kw">await</span>;
-        <span class="self">self</span>.<span class="ident">processor</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">Processor</span>::<span class="ident">EventProcessor</span>(<span class="ident">processor</span>));
-        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;EventProcessor started&quot;</span>);
+        <span class="ident">processor</span>.<span class="ident">start</span>(<span class="ident">last_vote</span>).<span class="kw">await</span>;
+        <span class="self">self</span>.<span class="ident">processor</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">RoundProcessor</span>::<span class="ident">Normal</span>(<span class="ident">processor</span>));
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;RoundManager started&quot;</span>);
     }
 
     <span class="comment">// Depending on what data we can extract from consensusdb, we may or may not have an</span>
     <span class="comment">// event processor at startup. If we need to sync up with peers for blocks to construct</span>
     <span class="comment">// a valid block store, which is required to construct an event processor, we will take</span>
     <span class="comment">// care of the sync up here.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start_sync_processor</span>(
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start_recovery_manager</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">ledger_recovery_data</span>: <span class="ident">LedgerRecoveryData</span>,
         <span class="ident">epoch_info</span>: <span class="ident">EpochInfo</span>,
@@ -886,7 +874,7 @@
             <span class="self">self</span>.<span class="ident">self_sender</span>.<span class="ident">clone</span>(),
             <span class="ident">epoch_info</span>.<span class="ident">verifier</span>.<span class="ident">clone</span>(),
         );
-        <span class="self">self</span>.<span class="ident">processor</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">Processor</span>::<span class="ident">SyncProcessor</span>(<span class="ident">SyncProcessor</span>::<span class="ident">new</span>(
+        <span class="self">self</span>.<span class="ident">processor</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">RoundProcessor</span>::<span class="ident">Recovery</span>(<span class="ident">RecoveryManager</span>::<span class="ident">new</span>(
             <span class="ident">epoch_info</span>,
             <span class="ident">network_sender</span>,
             <span class="self">self</span>.<span class="ident">storage</span>.<span class="ident">clone</span>(),
@@ -913,10 +901,10 @@
 
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">storage</span>.<span class="ident">start</span>() {
             <span class="ident">LivenessStorageData</span>::<span class="ident">RecoveryData</span>(<span class="ident">initial_data</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="self">self</span>.<span class="ident">start_event_processor</span>(<span class="ident">initial_data</span>, <span class="ident">epoch_info</span>).<span class="kw">await</span>
+                <span class="self">self</span>.<span class="ident">start_round_manager</span>(<span class="ident">initial_data</span>, <span class="ident">epoch_info</span>).<span class="kw">await</span>
             }
             <span class="ident">LivenessStorageData</span>::<span class="ident">LedgerRecoveryData</span>(<span class="ident">ledger_recovery_data</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="self">self</span>.<span class="ident">start_sync_processor</span>(<span class="ident">ledger_recovery_data</span>, <span class="ident">epoch_info</span>)
+                <span class="self">self</span>.<span class="ident">start_recovery_manager</span>(<span class="ident">ledger_recovery_data</span>, <span class="ident">epoch_info</span>)
                     .<span class="kw">await</span>
             }
         }
@@ -973,7 +961,7 @@
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_event</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">peer_id</span>: <span class="ident">AccountAddress</span>, <span class="ident">event</span>: <span class="ident">VerifiedEvent</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">processor_mut</span>() {
-            <span class="ident">Processor</span>::<span class="ident">SyncProcessor</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">RoundProcessor</span>::<span class="ident">Recovery</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">event</span> {
                     <span class="ident">VerifiedEvent</span>::<span class="ident">ProposalMsg</span>(<span class="ident">proposal</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">process_proposal_msg</span>(<span class="kw-2">*</span><span class="ident">proposal</span>).<span class="kw">await</span>,
                     <span class="ident">VerifiedEvent</span>::<span class="ident">VoteMsg</span>(<span class="ident">vote</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">process_vote</span>(<span class="kw-2">*</span><span class="ident">vote</span>).<span class="kw">await</span>,
@@ -983,12 +971,12 @@
                 <span class="kw">match</span> <span class="ident">result</span> {
                     <span class="prelude-val">Ok</span>(<span class="ident">data</span>) <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Recovered from SyncProcessor&quot;</span>);
-                        <span class="self">self</span>.<span class="ident">start_event_processor</span>(<span class="ident">data</span>, <span class="ident">epoch_info</span>).<span class="kw">await</span>
+                        <span class="self">self</span>.<span class="ident">start_round_manager</span>(<span class="ident">data</span>, <span class="ident">epoch_info</span>).<span class="kw">await</span>
                     }
                     <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">e</span>),
                 }
             }
-            <span class="ident">Processor</span>::<span class="ident">EventProcessor</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">event</span> {
+            <span class="ident">RoundProcessor</span>::<span class="ident">Normal</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">event</span> {
                 <span class="ident">VerifiedEvent</span>::<span class="ident">ProposalMsg</span>(<span class="ident">proposal</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">process_proposal_msg</span>(<span class="kw-2">*</span><span class="ident">proposal</span>).<span class="kw">await</span>,
                 <span class="ident">VerifiedEvent</span>::<span class="ident">VoteMsg</span>(<span class="ident">vote</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">process_vote</span>(<span class="kw-2">*</span><span class="ident">vote</span>).<span class="kw">await</span>,
                 <span class="ident">VerifiedEvent</span>::<span class="ident">SyncInfo</span>(<span class="ident">sync_info</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -998,7 +986,7 @@
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">processor_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Processor</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">processor_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">RoundProcessor</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">processor</span>
             .<span class="ident">as_mut</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;EpochManager not started yet&quot;</span>)
@@ -1006,15 +994,15 @@
 
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_block_retrieval</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">IncomingBlockRetrievalRequest</span>) {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">processor_mut</span>() {
-            <span class="ident">Processor</span>::<span class="ident">EventProcessor</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">process_block_retrieval</span>(<span class="ident">request</span>).<span class="kw">await</span>,
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;EventProcessor not started yet&quot;</span>),
+            <span class="ident">RoundProcessor</span>::<span class="ident">Normal</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">process_block_retrieval</span>(<span class="ident">request</span>).<span class="kw">await</span>,
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;RoundManager not started yet&quot;</span>),
         }
     }
 
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_local_timeout</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">round</span>: <span class="ident">u64</span>) {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">processor_mut</span>() {
-            <span class="ident">Processor</span>::<span class="ident">EventProcessor</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">process_local_timeout</span>(<span class="ident">round</span>).<span class="kw">await</span>,
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;EventProcessor not started yet&quot;</span>),
+            <span class="ident">RoundProcessor</span>::<span class="ident">Normal</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">process_local_timeout</span>(<span class="ident">round</span>).<span class="kw">await</span>,
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;RoundManager not started yet&quot;</span>),
         }
     }
 
