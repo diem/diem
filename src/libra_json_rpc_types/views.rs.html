@@ -932,7 +932,7 @@
                     <span class="prelude-val">Err</span>(<span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Unable to parse PeerToPeer arguments&quot;</span>))
                 }
             }
-            <span class="string">&quot;mint_transaction&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="string">&quot;mint&quot;</span> <span class="op">|</span> <span class="string">&quot;mint_lbr_to_address&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">if</span> <span class="kw">let</span> [<span class="ident">TransactionArgument</span>::<span class="ident">Address</span>(<span class="ident">receiver</span>), <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">auth_key_prefix</span>), <span class="ident">TransactionArgument</span>::<span class="ident">U64</span>(<span class="ident">amount</span>)] <span class="op">=</span>
                     <span class="kw-2">&amp;</span><span class="ident">args</span>[..]
                 {

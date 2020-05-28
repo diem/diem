@@ -2050,9 +2050,22 @@
         })<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">gas_unit_price</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">space_delim_strings</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">3</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">space_delim_strings</span>[<span class="number">4</span>].<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">space_delim_strings</span>[<span class="number">3</span>].<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
                 <span class="ident">format_parse_data_error</span>(
                     <span class="string">&quot;gas_unit_price&quot;</span>,
+                    <span class="ident">InputType</span>::<span class="ident">UnsignedInt</span>,
+                    <span class="ident">space_delim_strings</span>[<span class="number">3</span>],
+                    <span class="ident">error</span>,
+                )
+            })<span class="question-mark">?</span>)
+        } <span class="kw">else</span> {
+            <span class="prelude-val">None</span>
+        };
+
+        <span class="kw">let</span> <span class="ident">max_gas_amount</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">space_delim_strings</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">4</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">space_delim_strings</span>[<span class="number">4</span>].<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+                <span class="ident">format_parse_data_error</span>(
+                    <span class="string">&quot;max_gas_amount&quot;</span>,
                     <span class="ident">InputType</span>::<span class="ident">UnsignedInt</span>,
                     <span class="ident">space_delim_strings</span>[<span class="number">4</span>],
                     <span class="ident">error</span>,
@@ -2062,21 +2075,8 @@
             <span class="prelude-val">None</span>
         };
 
-        <span class="kw">let</span> <span class="ident">max_gas_amount</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">space_delim_strings</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">4</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">space_delim_strings</span>[<span class="number">5</span>].<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                <span class="ident">format_parse_data_error</span>(
-                    <span class="string">&quot;max_gas_amount&quot;</span>,
-                    <span class="ident">InputType</span>::<span class="ident">UnsignedInt</span>,
-                    <span class="ident">space_delim_strings</span>[<span class="number">5</span>],
-                    <span class="ident">error</span>,
-                )
-            })<span class="question-mark">?</span>)
-        } <span class="kw">else</span> {
-            <span class="prelude-val">None</span>
-        };
-
         <span class="kw">let</span> <span class="ident">gas_currency_code</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">space_delim_strings</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">5</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">space_delim_strings</span>[<span class="number">6</span>].<span class="ident">to_owned</span>())
+            <span class="prelude-val">Some</span>(<span class="ident">space_delim_strings</span>[<span class="number">5</span>].<span class="ident">to_owned</span>())
         } <span class="kw">else</span> {
             <span class="prelude-val">None</span>
         };
