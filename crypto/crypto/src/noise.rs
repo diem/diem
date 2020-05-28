@@ -632,13 +632,13 @@ impl NoiseSession {
     /// the function encrypts in place, and returns the authentication tag as result
     pub fn write_message_in_place<'a>(
         &mut self,
-        plaintext: &'a mut [u8],
+        message: &'a mut [u8],
     ) -> Result<Vec<u8>, NoiseError> {
         // checks
         if !self.valid {
             return Err(NoiseError::SessionClosed);
         }
-        if plaintext.len() > MAX_SIZE_NOISE_MSG - AES_GCM_TAGLEN {
+        if message.len() > MAX_SIZE_NOISE_MSG - AES_GCM_TAGLEN {
             return Err(NoiseError::PayloadTooLarge);
         }
 
@@ -649,7 +649,7 @@ impl NoiseSession {
         let nonce = GenericArray::from_slice(&nonce);
 
         let authentication_tag = aead
-            .encrypt_in_place_detached(nonce, b"", plaintext)
+            .encrypt_in_place_detached(nonce, b"", message)
             .map_err(|_| NoiseError::Encrypt)?;
 
         // increment nonce
@@ -663,17 +663,17 @@ impl NoiseSession {
     /// the function decrypts in place, and returns a subslice without the auth tag
     pub fn read_message_in_place<'a>(
         &mut self,
-        ciphertext: &'a mut [u8],
+        message: &'a mut [u8],
     ) -> Result<&'a [u8], NoiseError> {
         // checks
         if !self.valid {
             return Err(NoiseError::SessionClosed);
         }
-        if ciphertext.len() > MAX_SIZE_NOISE_MSG {
+        if message.len() > MAX_SIZE_NOISE_MSG {
             self.valid = false;
             return Err(NoiseError::ReceivedMsgTooLarge);
         }
-        if ciphertext.len() < AES_GCM_TAGLEN {
+        if message.len() < AES_GCM_TAGLEN {
             self.valid = false;
             return Err(NoiseError::ResponseBufferTooSmall);
         }
@@ -685,8 +685,7 @@ impl NoiseSession {
         nonce.extend_from_slice(&self.read_nonce.to_be_bytes());
         let nonce = GenericArray::from_slice(&nonce);
 
-        let (buffer, authentication_tag) =
-            ciphertext.split_at_mut(ciphertext.len() - AES_GCM_TAGLEN);
+        let (buffer, authentication_tag) = message.split_at_mut(message.len() - AES_GCM_TAGLEN);
         let authentication_tag = GenericArray::from_slice(authentication_tag);
         aead.decrypt_in_place_detached(nonce, b"", buffer, authentication_tag)
             .map_err(|_| {
