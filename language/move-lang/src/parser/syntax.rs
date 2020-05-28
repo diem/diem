@@ -434,14 +434,17 @@ fn parse_byte_string<'input>(tokens: &mut Lexer<'input>) -> Result<Vec<u8>, Erro
     let s = tokens.content();
     assert!(s.starts_with("x\""));
     let mut hex_string = String::from(&s[2..s.len() - 1]);
-    if hex_string.len() % 2 != 0 {
+    let adjust = if hex_string.len() % 2 != 0 {
         hex_string.insert(0, '0');
-    }
+        1
+    } else {
+        0
+    };
     tokens.advance()?;
     match hex::decode(hex_string.as_str()) {
         Ok(vec) => Ok(vec),
         Err(hex::FromHexError::InvalidHexCharacter { c, index }) => {
-            let offset = start_loc + 1 + index;
+            let offset = start_loc + 2 - adjust + index;
             let loc = make_loc(tokens.file_name(), offset, offset);
             Err(vec![(
                 loc,
