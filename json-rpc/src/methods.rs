@@ -313,16 +313,26 @@ async fn get_account_state_with_proof(
 /// Note that RPC method name will equal to name of function
 pub(crate) fn build_registry() -> RpcRegistry {
     let mut registry = RpcRegistry::new();
-    register_rpc_method!(registry, submit, 1);
-    register_rpc_method!(registry, get_metadata, 0);
-    register_rpc_method!(registry, get_account_state, 1);
-    register_rpc_method!(registry, get_transactions, 3);
-    register_rpc_method!(registry, get_account_transaction, 3);
-    register_rpc_method!(registry, get_events, 3);
-    register_rpc_method!(registry, currencies_info, 0);
+    register_rpc_method!(registry, "submit", submit, 1);
+    register_rpc_method!(registry, "get_metaata", get_metadata, 0);
+    register_rpc_method!(registry, "get_account_state", get_account_state, 1);
+    register_rpc_method!(registry, "get_transactions", get_transactions, 3);
+    register_rpc_method!(
+        registry,
+        "get_account_transaction",
+        get_account_transaction,
+        3
+    );
+    register_rpc_method!(registry, "get_events", get_events, 3);
+    register_rpc_method!(registry, "get_currencies", currencies_info, 0);
 
-    register_rpc_method!(registry, get_state_proof, 1);
-    register_rpc_method!(registry, get_account_state_with_proof, 3);
+    register_rpc_method!(registry, "get_state_proof", get_state_proof, 1);
+    register_rpc_method!(
+        registry,
+        "get_account_state_with_proof",
+        get_account_state_with_proof,
+        3
+    );
 
     registry
 }
