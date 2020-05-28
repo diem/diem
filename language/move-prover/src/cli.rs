@@ -355,8 +355,12 @@ impl Options {
                 _ => unreachable!("should not happen"),
             }
         }
-        options.move_sources = get_vec("sources");
-        options.move_deps = get_vec("dependencies");
+        if matches.occurrences_of("sources") > 0 {
+            options.move_sources = get_vec("sources");
+        }
+        if matches.occurrences_of("dependencies") > 0 {
+            options.move_deps = get_vec("dependencies");
+        }
         if matches.is_present("verify") {
             options.prover.verify_scope = match matches.value_of("verify").unwrap() {
                 "public" => VerificationScope::Public,
