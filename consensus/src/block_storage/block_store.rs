@@ -23,7 +23,7 @@ use libra_logger::prelude::*;
 use libra_types::epoch_state::EpochState;
 use libra_types::{ledger_info::LedgerInfoWithSignatures, transaction::TransactionStatus};
 use std::{
-    collections::{vec_deque::VecDeque, HashMap},
+    collections::vec_deque::VecDeque,
     sync::{Arc, RwLock},
     time::Duration,
 };
@@ -100,31 +100,28 @@ impl<T: Payload> BlockStore<T> {
     ) -> Self {
         let highest_tc = initial_data.highest_timeout_certificate();
         let (root, root_metadata, blocks, quorum_certs) = initial_data.take();
-        let inner = Arc::new(RwLock::new(Self::build_block_tree(
+        Self::build(
             root,
             root_metadata,
             blocks,
             quorum_certs,
             highest_tc,
-            Arc::clone(&state_computer),
-            max_pruned_blocks_in_mem,
-        )));
-        BlockStore {
-            inner,
             state_computer,
             storage,
-        }
+            max_pruned_blocks_in_mem,
+        )
     }
 
-    fn build_block_tree(
+    fn build(
         root: RootInfo<T>,
         root_metadata: RootMetadata,
         blocks: Vec<Block<T>>,
         quorum_certs: Vec<QuorumCert>,
         highest_timeout_cert: Option<TimeoutCertificate>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
+        storage: Arc<dyn PersistentLivenessStorage<T>>,
         max_pruned_blocks_in_mem: usize,
-    ) -> BlockTree<T> {
+    ) -> Self {
         let RootInfo(root_block, root_qc, root_li) = root;
         //verify root is correct
         assert_eq!(
@@ -149,47 +146,38 @@ impl<T: Payload> BlockStore<T> {
                 root_metadata.accu_hash,
                 root_metadata.frozen_root_hashes,
                 root_metadata.num_leaves, /* num_leaves */
-                None,                     /* validators */
+                None,                     /* epoch_state */
                 vec![],                   /* compute_status */
                 vec![],                   /* transaction_info_hashes */
             ),
         );
-        let mut tree = BlockTree::new(
+        let tree = BlockTree::new(
             executed_root_block,
             root_qc,
             root_li,
             max_pruned_blocks_in_mem,
             highest_timeout_cert.map(Arc::new),
         );
-        let quorum_certs = quorum_certs
-            .into_iter()
-            .map(|qc| (qc.certified_block().id(), qc))
-            .collect::<HashMap<_, _>>();
-
+        let block_store = Self {
+            inner: Arc::new(RwLock::new(tree)),
+            state_computer,
+            storage,
+        };
         for block in blocks {
-            assert!(!block.is_genesis_block());
-            let output = state_computer
-                .compute(&block, block.parent_id())
-                .unwrap_or_else(|e| panic!("Execute block {} emits error: {}", block.id(), e));
-            // if this block is certified, ensure we agree with the certified state.
-            if let Some(qc) = quorum_certs.get(&block.id()) {
-                assert_eq!(
-                    qc.certified_block().executed_state_id(),
-                    output.root_hash(),
-                    "We have inconsistent executed state with Quorum Cert for block {}",
-                    block.id()
-                );
-            }
-            tree.insert_block(ExecutedBlock::new(block, output))
-                .expect("Block insertion failed while build the tree");
+            block_store
+                .execute_and_insert_block(block)
+                .unwrap_or_else(|e| {
+                    panic!("[BlockStore] failed to insert block during build {:?}", e)
+                });
         }
-
-        quorum_certs.into_iter().for_each(|(_, qc)| {
-            tree.insert_quorum_cert(qc)
-                .expect("QuorumCert insertion failed while build the tree")
-        });
-
-        tree
+        for qc in quorum_certs {
+            block_store
+                .insert_single_quorum_cert(qc)
+                .unwrap_or_else(|e| {
+                    panic!("[BlockStore] failed to insert quorum during build{:?}", e)
+                });
+        }
+        block_store
     }
 
     /// Commit the given block id with the proof, returns () on success or error
@@ -240,13 +228,14 @@ impl<T: Payload> BlockStore<T> {
         let max_pruned_blocks_in_mem = self.inner.read().unwrap().max_pruned_blocks_in_mem();
         // Rollover the previous highest TC from the old tree to the new one.
         let prev_htc = self.highest_timeout_cert().map(|tc| tc.as_ref().clone());
-        let tree = Self::build_block_tree(
+        let BlockStore { inner, .. } = Self::build(
             root,
             root_metadata,
             blocks,
             quorum_certs,
             prev_htc,
             Arc::clone(&self.state_computer),
+            Arc::clone(&self.storage),
             max_pruned_blocks_in_mem,
         );
         let to_remove = self.inner.read().unwrap().get_all_block_id();
@@ -254,7 +243,11 @@ impl<T: Payload> BlockStore<T> {
             // it's fine to fail here, the next restart will try to clean up dangling blocks again.
             error!("fail to delete block: {:?}", e);
         }
-        *self.inner.write().unwrap() = tree;
+        // Unwrap the new tree and replace the existing tree.
+        *self.inner.write().unwrap() = Arc::try_unwrap(inner)
+            .unwrap_or_else(|_| panic!("New block tree is not shared"))
+            .into_inner()
+            .unwrap();
         // If we fail to commit B_i via state computer and crash, after restart our highest commit cert
         // will not match the latest commit B_j(j<i) of state computer.
         // This introduces an inconsistent state if we send out SyncInfo and others try to sync to
