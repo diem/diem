@@ -15,13 +15,16 @@ use crate::{
     keygen::KeyGen,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, traits::SigningKey, PrivateKey, Uniform};
-use libra_types::{account_config, transaction::authenticator::AuthenticationKey};
+use libra_types::{
+    account_config,
+    transaction::{authenticator::AuthenticationKey, TransactionStatus},
+    vm_error::{StatusCode, VMStatus},
+};
 use move_core_types::{
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
 };
 use transaction_builder::*;
-
 #[test]
 fn register_preburn_burn() {
     // TODO: use Coin1 or Coin2 in this test instead of LBR
@@ -89,13 +92,10 @@ fn freeze_unfreeze_account() {
         name: Identifier::new("FreezingPrivilege").unwrap(),
         type_params: vec![],
     });
-
-    // TODO: we need to either run this from 0xB1E55ED or find a way to give the freezing cap to
-    // an arbitrary account
+    let blessed = Account::new_blessed_tc();
     // Execute freeze on account
-    /*executor.execute_and_apply(
-        association.signed_script_txn(encode_freeze_account(*account.address()), 3),
-    );*/
+    executor
+        .execute_and_apply(blessed.signed_script_txn(encode_freeze_account(*account.address()), 0));
 
     // Attempt rotate key txn from frozen account
     let privkey = Ed25519PrivateKey::generate_for_testing();
@@ -103,22 +103,22 @@ fn freeze_unfreeze_account() {
     let new_key_hash = AuthenticationKey::ed25519(&pubkey).to_vec();
     let txn = rotate_key_txn(&account, new_key_hash, 0);
 
-    let _output = &executor.execute_transaction(txn);
-    /*assert_eq!(
+    let output = &executor.execute_transaction(txn.clone());
+    assert_eq!(
         output.status(),
         &TransactionStatus::Discard(VMStatus::new(StatusCode::SENDING_ACCOUNT_FROZEN)),
-    );*/
+    );
 
     // Execute unfreeze on account
-    /*executor.execute_and_apply(
-        association.signed_script_txn(encode_unfreeze_account(*account.address()), 4),
+    executor.execute_and_apply(
+        blessed.signed_script_txn(encode_unfreeze_account(*account.address()), 1),
     );
     // execute rotate key transaction from unfrozen account now succeeds
     let output = &executor.execute_transaction(txn);
     assert_eq!(
         output.status(),
         &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
-    );*/
+    );
 }
 
 #[test]
