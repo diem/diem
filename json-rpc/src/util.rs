@@ -3,12 +3,13 @@
 
 /// Helper macros. Used to simplify adding new RpcHandler to Registry
 /// `registry` - name of local registry variable
-/// `method` - name of new rpc method
+/// `name`  - name for the rpc method
+/// `method` - method name of new rpc method
 /// `num_args` - number of method arguments
 macro_rules! register_rpc_method {
-    ($registry:expr, $method: expr, $num_args: expr) => {
+    ($registry:expr, $name: expr, $method: expr, $num_args: expr) => {
         $registry.insert(
-            stringify!($method).to_string(),
+            stringify!($name).to_string(),
             Box::new(move |service, request| {
                 Box::pin(async move {
                     ensure!(

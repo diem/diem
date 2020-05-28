@@ -1,4 +1,6 @@
 # Subscribe to potential API changing PRs
-/client/json-rpc/src/views.rs @thefallentree @phoenix-antigravity @christinacelee
+/json-rpc/types/src/views.rs @thefallentree
+/json-rpc/src/methods.rs @thefallentree
+/json-rpc/src/json-rpc-spec.md @thefallentree
 # Subscribe to LCS format changes
 /testsuite/generate-format/tests/staged/libra.yaml @thefallentree @matbd
