@@ -21,10 +21,7 @@ use std::{
 use libra_config::config::NetworkPeerInfo;
 use libra_crypto::{noise, x25519};
 use libra_types::PeerId;
-use netcore::{
-    negotiate::{negotiate_inbound, negotiate_outbound_interactive},
-    transport::ConnectionOrigin,
-};
+use netcore::transport::ConnectionOrigin;
 
 use crate::noise_wrapper::session::NoiseSession;
 
@@ -58,9 +55,6 @@ pub type AntiReplayTimestamps = HashMap<x25519::PublicKey, u64>;
 //   in order to pass them to the noise implementaiton
 //
 
-/// TODO: why do we expose this to the outer protocol?
-const NOISE_PROTOCOL: &[u8] = b"/noise_ik_25519_aesgcm_sha256/1.0.0";
-
 /// The Noise configuration to be used to perform a protocol upgrade on an underlying socket.
 pub struct NoiseWrapper(noise::NoiseConfig);
 
@@ -85,27 +79,6 @@ impl NoiseWrapper {
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
-        // Perform protocol negotiation
-        // TODO: should we really be doing this here?
-        let (socket, proto) = match origin {
-            ConnectionOrigin::Outbound => {
-                negotiate_outbound_interactive(socket, [NOISE_PROTOCOL]).await?
-            }
-            ConnectionOrigin::Inbound => negotiate_inbound(socket, [NOISE_PROTOCOL]).await?,
-        };
-
-        // check that the correct protocol was negotiated
-        if proto != NOISE_PROTOCOL {
-            if cfg!(test) {
-                panic!("noise: incorrect protocol negotiated");
-            } else {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "noise: incorrect protocol negotiated",
-                ));
-            }
-        }
-
         // perform the noise handshake
         let socket = match origin {
             ConnectionOrigin::Outbound => {
