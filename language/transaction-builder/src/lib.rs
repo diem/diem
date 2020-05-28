@@ -453,6 +453,28 @@ encode_txn_script! {
           which must be a ParentVASP."
 }
 
+//...........................................................................
+// Treasury Compliance Scripts
+//...........................................................................
+
+encode_txn_script! {
+    name: encode_tiered_mint,
+    type_arg: coin_type,
+    args: [designated_dealer_address: Address, mint_amount: U64, tier_index: U64],
+    script: TieredMint,
+    doc: "Mints 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.\
+          Max valid tier index is 3 since there are max 4 tiers per DD.
+          Sender should be treasury compliance account and receiver authorized DD"
+}
+
+encode_txn_script! {
+    name: encode_create_designated_dealer,
+    type_arg: coin_type,
+    args: [new_account_address: Address, auth_key_prefix: Bytes],
+    script: CreateDesignatedDealer,
+    doc: "Creates designated dealer at 'new_account_address"
+}
+
 encode_txn_script! {
     name: encode_freeze_account,
     args: [addr: Address],

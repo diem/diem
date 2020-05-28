@@ -11,7 +11,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_config::{
         self, from_currency_code_string, type_tag_for_currency_code, AccountResource,
-        BalanceResource, ReceivedPaymentEvent, SentPaymentEvent, LBR_NAME,
+        BalanceResource, ReceivedPaymentEvent, SentPaymentEvent, COIN1_NAME, COIN2_NAME, LBR_NAME,
     },
     event::EventHandle,
     transaction::{
@@ -37,6 +37,14 @@ pub const DEFAULT_EXPIRATION_TIME: u64 = 40_000;
 
 pub fn lbr_currency_code() -> Identifier {
     from_currency_code_string(LBR_NAME).unwrap()
+}
+
+pub fn coin1_currency_code() -> Identifier {
+    from_currency_code_string(COIN1_NAME).unwrap()
+}
+
+pub fn coin2_currency_code() -> Identifier {
+    from_currency_code_string(COIN2_NAME).unwrap()
 }
 
 /// Details about a Libra account.

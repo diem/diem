@@ -8,10 +8,46 @@ use crate::{
     transaction_status_eq,
 };
 use libra_types::{
+    account_config,
     transaction::TransactionStatus,
     vm_error::{StatusCode, VMStatus},
 };
 use transaction_builder::*;
+
+#[test]
+fn tiered_mint_designated_dealer() {
+    let mut executor = FakeExecutor::from_genesis_file();
+    let blessed = Account::new_blessed_tc();
+    // account to represent designated dealer
+    let dd = Account::new();
+    executor.execute_and_apply(blessed.signed_script_txn(
+        encode_create_designated_dealer(
+            account_config::coin1_tag(),
+            *dd.address(),
+            dd.auth_key_prefix(),
+        ),
+        0,
+    ));
+    let mint_amount = 1_000;
+    let tier_index = 0;
+    executor.execute_and_apply(blessed.signed_script_txn(
+        encode_tiered_mint(
+            account_config::coin1_tag(),
+            *dd.address(),
+            mint_amount,
+            tier_index,
+        ),
+        1,
+    ));
+    let dd_post_mint = executor
+        .read_account_resource(&dd)
+        .expect("receiver must exist");
+    let dd_balance = executor
+        .read_balance_resource(&dd, account::coin1_currency_code())
+        .expect("receiver balance must exist");
+    assert_eq!(mint_amount, dd_balance.coin());
+    assert_eq!(0, dd_post_mint.sequence_number());
+}
 
 #[test]
 fn mint_to_existing() {
