@@ -346,9 +346,22 @@ impl ClientProxy {
         })?;
 
         let gas_unit_price = if space_delim_strings.len() > 3 {
-            Some(space_delim_strings[4].parse::<u64>().map_err(|error| {
+            Some(space_delim_strings[3].parse::<u64>().map_err(|error| {
                 format_parse_data_error(
                     "gas_unit_price",
+                    InputType::UnsignedInt,
+                    space_delim_strings[3],
+                    error,
+                )
+            })?)
+        } else {
+            None
+        };
+
+        let max_gas_amount = if space_delim_strings.len() > 4 {
+            Some(space_delim_strings[4].parse::<u64>().map_err(|error| {
+                format_parse_data_error(
+                    "max_gas_amount",
                     InputType::UnsignedInt,
                     space_delim_strings[4],
                     error,
@@ -358,21 +371,8 @@ impl ClientProxy {
             None
         };
 
-        let max_gas_amount = if space_delim_strings.len() > 4 {
-            Some(space_delim_strings[5].parse::<u64>().map_err(|error| {
-                format_parse_data_error(
-                    "max_gas_amount",
-                    InputType::UnsignedInt,
-                    space_delim_strings[5],
-                    error,
-                )
-            })?)
-        } else {
-            None
-        };
-
         let gas_currency_code = if space_delim_strings.len() > 5 {
-            Some(space_delim_strings[6].to_owned())
+            Some(space_delim_strings[5].to_owned())
         } else {
             None
         };

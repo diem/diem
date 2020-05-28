@@ -403,7 +403,7 @@ impl From<TransactionPayload> for ScriptView {
                     Err(format_err!("Unable to parse PeerToPeer arguments"))
                 }
             }
-            "mint_transaction" => {
+            "mint" | "mint_lbr_to_address" => {
                 if let [TransactionArgument::Address(receiver), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount)] =
                     &args[..]
                 {
