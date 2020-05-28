@@ -2041,6 +2041,9 @@
 <span id="2041">2041</span>
 <span id="2042">2042</span>
 <span id="2043">2043</span>
+<span id="2044">2044</span>
+<span id="2045">2045</span>
+<span id="2046">2046</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2478,14 +2481,17 @@
     <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">tokens</span>.<span class="ident">content</span>();
     <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">s</span>.<span class="ident">starts_with</span>(<span class="string">&quot;x\&quot;&quot;</span>));
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hex_string</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="ident">s</span>[<span class="number">2</span>..<span class="ident">s</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span>]);
-    <span class="kw">if</span> <span class="ident">hex_string</span>.<span class="ident">len</span>() <span class="op">%</span> <span class="number">2</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
+    <span class="kw">let</span> <span class="ident">adjust</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">hex_string</span>.<span class="ident">len</span>() <span class="op">%</span> <span class="number">2</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
         <span class="ident">hex_string</span>.<span class="ident">insert</span>(<span class="number">0</span>, <span class="string">&#39;0&#39;</span>);
-    }
+        <span class="number">1</span>
+    } <span class="kw">else</span> {
+        <span class="number">0</span>
+    };
     <span class="ident">tokens</span>.<span class="ident">advance</span>()<span class="question-mark">?</span>;
     <span class="kw">match</span> <span class="ident">hex</span>::<span class="ident">decode</span>(<span class="ident">hex_string</span>.<span class="ident">as_str</span>()) {
         <span class="prelude-val">Ok</span>(<span class="ident">vec</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">vec</span>),
         <span class="prelude-val">Err</span>(<span class="ident">hex</span>::<span class="ident">FromHexError</span>::<span class="ident">InvalidHexCharacter</span> { <span class="ident">c</span>, <span class="ident">index</span> }) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">start_loc</span> <span class="op">+</span> <span class="number">1</span> <span class="op">+</span> <span class="ident">index</span>;
+            <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">start_loc</span> <span class="op">+</span> <span class="number">2</span> <span class="op">-</span> <span class="ident">adjust</span> <span class="op">+</span> <span class="ident">index</span>;
             <span class="kw">let</span> <span class="ident">loc</span> <span class="op">=</span> <span class="ident">make_loc</span>(<span class="ident">tokens</span>.<span class="ident">file_name</span>(), <span class="ident">offset</span>, <span class="ident">offset</span>);
             <span class="prelude-val">Err</span>(<span class="macro">vec</span><span class="macro">!</span>[(
                 <span class="ident">loc</span>,
