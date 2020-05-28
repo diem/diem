@@ -601,7 +601,7 @@ mod test {
 
         // perform the handshake
         let (client_session, server_session) = block_on(join(
-            client.dial(dialer_socket, server_public_key),
+            client.dial(dialer_socket, false, server_public_key),
             server.accept(listener_socket, None, trusted_peers),
         ));
 
