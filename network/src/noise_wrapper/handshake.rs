@@ -10,7 +10,6 @@
 //! [socket]: network::noise_wrapper::socket
 
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
-use once_cell::sync::Lazy;
 use std::{
     collections::HashMap,
     io,
@@ -25,85 +24,36 @@ use netcore::transport::ConnectionOrigin;
 
 use crate::noise_wrapper::session::NoiseSession;
 
-// Timestamp
-// --------
-// We parse the client message and then enforce two things:
-// - the client sent us a timestamp in a range [-60s, +10s]
-// - the client is not re-using an older timestamp from that range
-//
-// if these are invalid, we avoid computing crypto to perform the answer
-// if these are valid, we store the new timestamp (even if it's older than the last received)
-// the last point assumes that a real client would not do this.
-// this is not a measure against real validators spamming us
-
-/// we're willing to tolerate a client timestamp 10 seconds in the future
-static MAX_FUTURE_TIMESTAMP: Lazy<time::Duration> = Lazy::new(|| time::Duration::from_secs(10));
-
-/// we store client timestamps (to prevent replay) for up to 60 seconds
-static EXPIRATION_TIMESTAMP: Lazy<time::Duration> = Lazy::new(|| time::Duration::from_secs(60));
-
-/// hashmap to store client timestamps if a connection succeeds
+/// In the validator network, a client message is accompanied with a timestamp.
+/// This is in order to prevent replay attacks, where the attacker does not know the client's static key,
+/// but can still replay a handshake message in order to force a peer into performing a few Diffie-Hellman key exchange operations.
+///
+/// Thus, to prevent replay attacks a responder will always check if the timestamp is strictly increasing,
+/// effectively considering it as a stateful counter.
+///
+/// If the client timestamp has been seen before, or is not strictly increasing,
+/// we can abort the handshake early and avoid heavy Diffie-Hellman computations.
+/// If the client timestamp is valid, we store it.
 #[derive(Default)]
-pub struct AntiReplayTimestamps(HashMap<x25519::PublicKey, Vec<u64>>);
+pub struct AntiReplayTimestamps(HashMap<x25519::PublicKey, u64>);
 
 impl AntiReplayTimestamps {
-    /// Prune timestamps that have expired (called when timestamps are being stored)
-    fn prune_old_timestamps(&mut self) {
-        let now: u64 = time::SystemTime::now()
-            .duration_since(time::UNIX_EPOCH)
-            .expect("system clock should work")
-            .as_secs();
-
-        let mut entries_to_delete = vec![];
-        for (pubkey, timestamps) in self.0.iter_mut() {
-            // create new vector of valid timestamps
-            let mut valid_timestamps = vec![];
-            for timestamp in timestamps.iter() {
-                if timestamp > &now {
-                    valid_timestamps.push(*timestamp);
-                }
-            }
-            // any changes?
-            match valid_timestamps.len() {
-                // no more timestamps, delete the pubkey entry
-                0 => entries_to_delete.push(*pubkey),
-                // no changes
-                d if d == timestamps.len() => (),
-                // some changes
-                _ => *timestamps = valid_timestamps,
-            };
-        }
-
-        // remove empty pubkey entries
-        for pubkey in entries_to_delete {
-            self.0.remove(&pubkey);
-        }
-    }
-
     /// Returns true if the timestamp has already been observed for this peer
+    /// or if it's an old timestamp
     pub fn is_replay(&self, pubkey: x25519::PublicKey, timestamp: u64) -> bool {
-        if let Some(timestamps) = self.0.get(&pubkey) {
-            for t in timestamps {
-                if t == &timestamp {
-                    return true;
-                }
-            }
+        if let Some(last_timestamp) = self.0.get(&pubkey) {
+            &timestamp <= last_timestamp
+        } else {
+            false
         }
-        false
     }
 
     /// Stores the timestamp
-    // TODO: do we want to limit the number of timestamps that one pubkey can make us store?
-    // TODO: what about an unlimited amount of pubkeys? (in full node)
     pub fn store_timestamp(&mut self, pubkey: x25519::PublicKey, timestamp: u64) {
-        // first insert the timestamp
         self.0
             .entry(pubkey)
-            .and_modify(|timestamps| timestamps.push(timestamp))
-            .or_insert_with(|| vec![timestamp]);
-
-        // then see if we can prune some timestamps in the table
-        self.prune_old_timestamps();
+            .and_modify(|last_timestamp| *last_timestamp = timestamp)
+            .or_insert(timestamp);
     }
 }
 
@@ -154,7 +104,8 @@ impl NoiseWrapper {
                         ));
                     }
                 };
-                self.dial(socket, remote_public_key).await?
+                self.dial(socket, anti_replay_timestamps.is_some(), remote_public_key)
+                    .await?
             }
             ConnectionOrigin::Inbound => {
                 self.accept(socket, anti_replay_timestamps, trusted_peers)
@@ -170,18 +121,22 @@ impl NoiseWrapper {
     pub async fn dial<TSocket>(
         &self,
         mut socket: TSocket,
+        validator_network: bool,
         remote_public_key: x25519::PublicKey,
     ) -> io::Result<NoiseSession<TSocket>>
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
-        // create prologue as current timestamp in seconds, and send it
-        let now: u64 = time::SystemTime::now()
-            .duration_since(time::UNIX_EPOCH)
-            .expect("system clock should work")
-            .as_secs();
-        let prologue = now.to_le_bytes(); // 5 -> [0, 0, 0, 0, 0, 0, 0, 5]
-        socket.write_all(&prologue).await?;
+        // on the validator network, send prologue as current timestamp (in seconds)
+        let mut prologue = [0u8; 8];
+        if validator_network {
+            let now: u64 = time::SystemTime::now()
+                .duration_since(time::UNIX_EPOCH)
+                .expect("system clock should work")
+                .as_secs();
+            prologue = now.to_le_bytes(); // 5 -> [0, 0, 0, 0, 0, 0, 0, 5]
+            socket.write_all(&prologue).await?;
+        }
 
         // create first handshake message  (-> e, es, s, ss)
         let mut rng = rand::rngs::OsRng;
@@ -237,40 +192,13 @@ impl NoiseWrapper {
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
-        // receives prologue as the client timestamp in seconds
+        // on the validator network, receive prologue as the client timestamp (in seconds)
         let mut prologue = [0u8; 8];
-        socket.read_exact(&mut prologue).await?;
-        let client_timestamp_u64 = u64::from_le_bytes(prologue);
-        let client_timestamp = time::Duration::from_secs(client_timestamp_u64);
-
-        // check the client timestamp
-        // TODO: security logging (mimoo)
-        let now = time::SystemTime::now()
-            .duration_since(time::UNIX_EPOCH)
-            .expect("system clock should work");
-
-        match client_timestamp {
-            t if t > now && t - now > *MAX_FUTURE_TIMESTAMP => {
-                // if the client timestamp is too far in the future, abort
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    format!(
-                        "noise: client initiated connection with a timestamp too far in the future: {}",
-                        client_timestamp_u64
-                    ),
-                ));
-            }
-            t if t < now && now - t > *EXPIRATION_TIMESTAMP => {
-                // if the client timestamp is expired, abort
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    format!(
-                        "noise: client initiated connection with an expired timestamp: {}",
-                        client_timestamp_u64
-                    ),
-                ));
-            }
-            _ => (),
+        let client_timestamp = if anti_replay_timestamps.is_some() {
+            socket.read_exact(&mut prologue).await?;
+            u64::from_le_bytes(prologue)
+        } else {
+            0
         };
 
         // receive the initiation message
@@ -310,13 +238,13 @@ impl NoiseWrapper {
         // check the timestamp is not a replay
         if let Some(anti_replay_timestamps) = &anti_replay_timestamps {
             let anti_replay_timestamps = anti_replay_timestamps.read().unwrap();
-            if anti_replay_timestamps.is_replay(their_public_key, client_timestamp_u64) {
+            if anti_replay_timestamps.is_replay(their_public_key, client_timestamp) {
                 // TODO: security logging the ip + blocking the ip? (mimoo)
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
                     format!(
                         "noise: client initiated connection with a timestamp already seen before: {}",
-                        client_timestamp_u64
+                        client_timestamp
                     ),
                 ));
             }
@@ -339,7 +267,7 @@ impl NoiseWrapper {
         // the connection succeeded, store the client timestamp for replay prevention
         if let Some(anti_replay_timestamps) = &anti_replay_timestamps {
             let mut anti_replay_timestamps = anti_replay_timestamps.write().unwrap();
-            anti_replay_timestamps.store_timestamp(their_public_key, client_timestamp_u64);
+            anti_replay_timestamps.store_timestamp(their_public_key, client_timestamp);
         }
 
         // finalize the connection
@@ -400,7 +328,7 @@ mod test {
 
         // perform the handshake
         let (client_session, server_session) = block_on(join(
-            client.dial(dialer_socket, server_public_key),
+            client.dial(dialer_socket, true, server_public_key),
             server.accept(listener_socket, Some(anti_replay_timestamps), trusted_peers),
         ));
 

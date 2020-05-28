@@ -112,7 +112,7 @@ fn generate_first_two_messages() -> (Vec<u8>, Vec<u8>) {
 
     // perform the handshake
     let (client_session, server_session) = block_on(join(
-        initiator.dial(dialer_socket, public_key),
+        initiator.dial(dialer_socket, false, public_key),
         responder.accept(listener_socket, None, None),
     ));
 
@@ -193,7 +193,7 @@ pub fn fuzz_initiator(data: &[u8]) {
     let fake_socket = FakeSocket { content: data };
 
     // send a message, then read fuzz data
-    let _ = block_on(initiator.dial(fake_socket, public_key));
+    let _ = block_on(initiator.dial(fake_socket, false, public_key));
 }
 
 pub fn fuzz_responder(data: &[u8]) {
