@@ -94,14 +94,12 @@ fn setup_discovery(
 
 async fn expect_address_update(
     conn_mgr_reqs_rx: &mut channel::Receiver<ConnectivityRequest>,
-    expected_peer_id: PeerId,
-    expected_addrs: &[NetworkAddress],
+    expected_address_map: HashMap<PeerId, Vec<NetworkAddress>>,
 ) {
     match conn_mgr_reqs_rx.next().await.unwrap() {
-        ConnectivityRequest::UpdateAddresses(src, peer_id, addrs) => {
+        ConnectivityRequest::UpdateAddresses(src, address_map) => {
             assert_eq!(DiscoverySource::Gossip, src);
-            assert_eq!(expected_peer_id, peer_id);
-            assert_eq!(expected_addrs, &addrs[..]);
+            assert_eq!(expected_address_map, address_map);
         }
         req => {
             panic!("Unexpected request to connectivity manager: {:?}", req);
@@ -157,7 +155,7 @@ fn inbound() {
     let (_, mut conn_mgr_reqs_rx, mut network_notifs_tx, _, _) = setup_discovery(
         &mut rt,
         self_peer_id,
-        self_addrs,
+        self_addrs.clone(),
         self_signer,
         trusted_peers.clone(),
     );
@@ -187,7 +185,17 @@ fn inbound() {
         delivered_rx.await.unwrap();
 
         // Connectivity manager receives address of other peer.
-        expect_address_update(&mut conn_mgr_reqs_rx, other_peer_id, &other_addrs[..]).await;
+        expect_address_update(
+            &mut conn_mgr_reqs_rx,
+            [
+                (other_peer_id, other_addrs),
+                (self_peer_id, self_addrs.clone()),
+            ]
+            .iter()
+            .cloned()
+            .collect(),
+        )
+        .await;
 
         // Send a message from other peer containing their updated discovery note
         // and another peer's new note.
@@ -229,9 +237,19 @@ fn inbound() {
             .unwrap();
         delivered_rx.await.unwrap();
 
-        // Connectivity manager receives address of other peer.
-        expect_address_update(&mut conn_mgr_reqs_rx, new_peer_id, &new_addrs[..]).await;
-        expect_address_update(&mut conn_mgr_reqs_rx, other_peer_id, &other_addrs[..]).await;
+        // Connectivity manager receives new addresses.
+        expect_address_update(
+            &mut conn_mgr_reqs_rx,
+            [
+                (new_peer_id, new_addrs),
+                (other_peer_id, other_addrs),
+                (self_peer_id, self_addrs),
+            ]
+            .iter()
+            .cloned()
+            .collect(),
+        )
+        .await;
     };
     rt.block_on(f_network);
 }

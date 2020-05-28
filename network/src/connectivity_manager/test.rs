@@ -217,8 +217,10 @@ fn connect_to_seeds_on_startup() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                seed_peer_id,
-                vec![seed_addr.clone()],
+                [(seed_peer_id, vec![seed_addr.clone()])]
+                    .iter()
+                    .cloned()
+                    .collect(),
             ))
             .await
             .unwrap();
@@ -233,8 +235,10 @@ fn connect_to_seeds_on_startup() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                seed_peer_id,
-                vec![new_seed_addr.clone()],
+                [(seed_peer_id, vec![new_seed_addr.clone()])]
+                    .iter()
+                    .cloned()
+                    .collect(),
             ))
             .await
             .unwrap();
@@ -312,8 +316,10 @@ fn addr_change() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_address.clone()],
+                [(other_peer_id, vec![other_address.clone()])]
+                    .iter()
+                    .cloned()
+                    .collect(),
             ))
             .await
             .unwrap();
@@ -342,8 +348,10 @@ fn addr_change() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_address.clone()],
+                [(other_peer_id, vec![other_address.clone()])]
+                    .iter()
+                    .cloned()
+                    .collect(),
             ))
             .await
             .unwrap();
@@ -358,8 +366,10 @@ fn addr_change() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_address_new.clone()],
+                [(other_peer_id, vec![other_address_new.clone()])]
+                    .iter()
+                    .cloned()
+                    .collect(),
             ))
             .await
             .unwrap();
@@ -420,8 +430,10 @@ fn lost_connection() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_address.clone()],
+                [(other_peer_id, vec![other_address.clone()])]
+                    .iter()
+                    .cloned()
+                    .collect(),
             ))
             .await
             .unwrap();
@@ -494,8 +506,10 @@ fn disconnect() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_address.clone()],
+                [(other_peer_id, vec![other_address.clone()])]
+                    .iter()
+                    .cloned()
+                    .collect(),
             ))
             .await
             .unwrap();
@@ -561,8 +575,10 @@ fn retry_on_failure() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_address.clone()],
+                [(other_peer_id, vec![other_address.clone()])]
+                    .iter()
+                    .cloned()
+                    .collect(),
             ))
             .await
             .unwrap();
@@ -665,8 +681,10 @@ fn no_op_requests() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_address.clone()],
+                [(other_peer_id, vec![other_address.clone()])]
+                    .iter()
+                    .cloned()
+                    .collect(),
             ))
             .await
             .unwrap();
@@ -774,8 +792,10 @@ fn backoff_on_failure() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                peer_a,
-                vec![peer_a_address.clone()],
+                [(peer_a, vec![peer_a_address.clone()])]
+                    .iter()
+                    .cloned()
+                    .collect(),
             ))
             .await
             .unwrap();
@@ -784,8 +804,10 @@ fn backoff_on_failure() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                peer_b,
-                vec![peer_b_address.clone()],
+                [(peer_b, vec![peer_b_address.clone()])]
+                    .iter()
+                    .cloned()
+                    .collect(),
             ))
             .await
             .unwrap();
@@ -853,8 +875,13 @@ fn multiple_addrs_basic() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_addr_1.clone(), other_addr_2.clone()],
+                [(
+                    other_peer_id,
+                    vec![other_addr_1.clone(), other_addr_2.clone()],
+                )]
+                .iter()
+                .cloned()
+                .collect(),
             ))
             .await
             .unwrap();
@@ -921,8 +948,13 @@ fn multiple_addrs_wrapping() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_addr_1.clone(), other_addr_2.clone()],
+                [(
+                    other_peer_id,
+                    vec![other_addr_1.clone(), other_addr_2.clone()],
+                )]
+                .iter()
+                .cloned()
+                .collect(),
             ))
             .await
             .unwrap();
@@ -1006,12 +1038,17 @@ fn multiple_addrs_shrinking() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![
-                    other_addr_1.clone(),
-                    other_addr_2.clone(),
-                    other_addr_3.clone(),
-                ],
+                [(
+                    other_peer_id,
+                    vec![
+                        other_addr_1.clone(),
+                        other_addr_2.clone(),
+                        other_addr_3.clone(),
+                    ],
+                )]
+                .iter()
+                .cloned()
+                .collect(),
             ))
             .await
             .unwrap();
@@ -1042,8 +1079,13 @@ fn multiple_addrs_shrinking() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                other_peer_id,
-                vec![other_addr_4.clone(), other_addr_5.clone()],
+                [(
+                    other_peer_id,
+                    vec![other_addr_4.clone(), other_addr_5.clone()],
+                )]
+                .iter()
+                .cloned()
+                .collect(),
             ))
             .await
             .unwrap();
