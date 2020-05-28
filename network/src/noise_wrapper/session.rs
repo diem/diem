@@ -551,7 +551,7 @@ where
 mod test {
     use super::*;
 
-    use crate::noise_wrapper::handshake::{AntiReplayTimestamps, NoiseWrapper};
+    use crate::noise_wrapper::handshake::NoiseWrapper;
     use futures::{
         executor::block_on,
         future::join,
@@ -598,12 +598,11 @@ mod test {
     ) -> io::Result<(NoiseSession<MemorySocket>, NoiseSession<MemorySocket>)> {
         // create an in-memory socket for testing
         let (dialer_socket, listener_socket) = MemorySocket::new_pair();
-        let anti_replay_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::new()));
 
         // perform the handshake
         let (client_session, server_session) = block_on(join(
             client.dial(dialer_socket, server_public_key),
-            server.accept(listener_socket, anti_replay_timestamps, trusted_peers),
+            server.accept(listener_socket, None, trusted_peers),
         ));
 
         //

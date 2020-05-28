@@ -45,7 +45,7 @@
 //! let (dialer_socket, listener_socket) = MemorySocket::new_pair();
 //!
 //! // anti-replay timestamps
-//! let anti_replay_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::new()));
+//! let anti_replay_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::default()));
 //!
 //! // perform the handshake
 //! let (client_session, server_session) = executor::block_on(future::join(

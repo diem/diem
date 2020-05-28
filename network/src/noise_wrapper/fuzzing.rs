@@ -8,7 +8,7 @@
 // This fuzzes the wrappers we have around our Noise library.
 //
 
-use crate::noise_wrapper::{AntiReplayTimestamps, NoiseWrapper};
+use crate::noise_wrapper::NoiseWrapper;
 use futures::{
     executor::block_on,
     future::join,
@@ -20,11 +20,7 @@ use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform as _};
 use memsocket::MemorySocket;
 use once_cell::sync::Lazy;
 use rand_core::SeedableRng;
-use std::{
-    io,
-    pin::Pin,
-    sync::{Arc, RwLock},
-};
+use std::{io, pin::Pin};
 
 //
 // Corpus generation
@@ -115,10 +111,9 @@ fn generate_first_two_messages() -> (Vec<u8>, Vec<u8>) {
     let (dialer_socket, listener_socket) = ExposingSocket::new_pair();
 
     // perform the handshake
-    let anti_replay_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::new()));
     let (client_session, server_session) = block_on(join(
         initiator.dial(dialer_socket, public_key),
-        responder.accept(listener_socket, anti_replay_timestamps, None),
+        responder.accept(listener_socket, None, None),
     ));
 
     // take result
@@ -208,10 +203,9 @@ pub fn fuzz_responder(data: &[u8]) {
 
     // setup NoiseSession
     let fake_socket = FakeSocket { content: data };
-    let anti_replay_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::new()));
 
     // read fuzz data
-    let _ = block_on(responder.accept(fake_socket, anti_replay_timestamps, None));
+    let _ = block_on(responder.accept(fake_socket, None, None));
 }
 
 //
