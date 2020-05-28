@@ -56,7 +56,7 @@ impl TryFrom<(String, Value)> for JsonRpcResponse {
                 let metadata: BlockMetadata = serde_json::from_value(value)?;
                 Ok(JsonRpcResponse::BlockMetadataResponse(metadata))
             }
-            "currencies_info" => {
+            "get_currencies" => {
                 let info: Vec<CurrencyInfoView> = serde_json::from_value(value)?;
                 Ok(JsonRpcResponse::CurrenciesResponse(info))
             }

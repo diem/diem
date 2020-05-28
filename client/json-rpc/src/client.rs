@@ -52,7 +52,7 @@ impl JsonRpcBatch {
     }
 
     pub fn add_get_currencies_info(&mut self) {
-        self.add_request("currencies_info".to_string(), vec![]);
+        self.add_request("get_currencies".to_string(), vec![]);
     }
 
     pub fn add_get_transactions_request(
