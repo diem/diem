@@ -54,6 +54,8 @@ mod test;
 
 /// The ConnectivityManager actor.
 pub struct ConnectivityManager<TTicker, TBackoff> {
+    /// PeerId of this node.
+    self_peer_id: PeerId,
     /// Nodes which are eligible to join the network.
     eligible: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     /// PeerId and address of remote peers to which this peer is connected.
@@ -97,7 +99,7 @@ pub enum DiscoverySource {
 #[derive(Debug)]
 pub enum ConnectivityRequest {
     /// Request to update known addresses of peer with id `PeerId` to given list.
-    UpdateAddresses(DiscoverySource, PeerId, Vec<NetworkAddress>),
+    UpdateAddresses(DiscoverySource, HashMap<PeerId, Vec<NetworkAddress>>),
     /// Update set of nodes eligible to join the network.
     UpdateEligibleNodes(HashMap<PeerId, NetworkPublicKeys>),
     /// Gets current size of dial queue. This is useful in tests.
@@ -159,6 +161,7 @@ where
         info!("ConnectivityManager: {} seed peers", peer_addresses.len());
 
         Self {
+            self_peer_id,
             eligible,
             connected: HashMap::new(),
             peer_addresses,
@@ -372,16 +375,21 @@ where
 
     fn handle_request(&mut self, req: ConnectivityRequest) {
         match req {
-            ConnectivityRequest::UpdateAddresses(src, peer_id, addrs) => {
-                trace!(
-                    "Received updated addresses for peer: {} from {:?} discovery source",
-                    peer_id.short_str(),
-                    src,
-                );
-                self.update_peer_addrs(src, peer_id, addrs);
-                // Ensure that the next dial attempt starts from the first addr.
-                if let Some(dial_state) = self.dial_states.get_mut(&peer_id) {
-                    dial_state.reset_addr();
+            ConnectivityRequest::UpdateAddresses(src, address_map) => {
+                for (peer_id, addrs) in address_map {
+                    trace!(
+                        "Received updated addresses for peer: {} from {:?} discovery source",
+                        peer_id.short_str(),
+                        src,
+                    );
+                    // Do not include self_peer_id in the address list for dialing.
+                    if peer_id != self.self_peer_id {
+                        self.update_peer_addrs(src, peer_id, addrs);
+                        // Ensure that the next dial attempt starts from the first addr.
+                        if let Some(dial_state) = self.dial_states.get_mut(&peer_id) {
+                            dial_state.reset_addr();
+                        }
+                    }
                 }
             }
             ConnectivityRequest::UpdateEligibleNodes(nodes) => {

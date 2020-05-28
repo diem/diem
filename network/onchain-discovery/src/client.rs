@@ -302,63 +302,30 @@ where
         let latest_discovery_set =
             DiscoverySetInternal::from_validator_set(self.role, validator_set);
 
-        let mut prev_discovery_set =
+        let prev_discovery_set =
             mem::replace(&mut self.latest_discovery_set, latest_discovery_set.clone());
 
         // TODO(philiphayes): ConnectivityManager supports multiple identity pubkeys per
         // peer (will accept connections from any in set, and do { pubkeys } x { addrs }
         // when attempting to dial).
 
-        // pull out here to satisfy borrow checker
-        let self_peer_id = self.peer_id;
-
         // Compare the latest and previous discovery sets to determine if
         // we need to update the connectivity manager that a peer is
-        // advertising new addresses. In an effort to maintain
-        // connectivity, we will also merge in the previous advertised
-        // addresses.
-        let update_addr_reqs = latest_discovery_set
-            .0
-            .into_iter()
-            .filter(|(peer_id, _discovery_info)| &self_peer_id != peer_id)
-            .filter_map(|(peer_id, DiscoveryInfoInternal(_id_pubkey, addrs))| {
-                let prev_discovery_info_opt = prev_discovery_set.0.remove(&peer_id);
-
-                let mut addrs = addrs;
-
-                match prev_discovery_info_opt {
-                    // if there's a change between prev and new discovery set,
-                    // send an update request with duplicate addresses removed.
-                    Some(DiscoveryInfoInternal(_prev_id_pubkey, prev_addrs))
-                        if addrs != prev_addrs =>
-                    {
-                        for addr in prev_addrs.into_iter() {
-                            if !addrs.contains(&addr) {
-                                addrs.push(addr);
-                            }
-                        }
-
-                        Some(ConnectivityRequest::UpdateAddresses(
-                            DiscoverySource::OnChain,
-                            peer_id,
-                            addrs,
-                        ))
-                    }
-                    // no change, don't send an update request
-                    Some(_) => None,
-                    // a validator has been added or we're starting up; always
-                    // send an update request.
-                    None => Some(ConnectivityRequest::UpdateAddresses(
-                        DiscoverySource::OnChain,
-                        peer_id,
-                        addrs,
-                    )),
-                }
-            });
-
-        for update_addr_req in update_addr_reqs {
+        // advertising new addresses.
+        if self.latest_discovery_set != prev_discovery_set {
+            let update_addr_reqs = self
+                .latest_discovery_set
+                .0
+                .iter()
+                .map(|(peer_id, DiscoveryInfoInternal(_id_pubkey, addrs))| {
+                    (*peer_id, addrs.clone())
+                })
+                .collect();
             self.network_tx
-                .send_connectivity_request(update_addr_req)
+                .send_connectivity_request(ConnectivityRequest::UpdateAddresses(
+                    DiscoverySource::OnChain,
+                    update_addr_reqs,
+                ))
                 .await
                 .unwrap();
         }
