@@ -983,6 +983,12 @@
 <span id="983">983</span>
 <span id="984">984</span>
 <span id="985">985</span>
+<span id="986">986</span>
+<span id="987">987</span>
+<span id="988">988</span>
+<span id="989">989</span>
+<span id="990">990</span>
+<span id="991">991</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1082,6 +1088,12 @@
     <span class="doccomment">/// the account will use [`GENESIS_KEYPAIR`][struct@GENESIS_KEYPAIR] as its keypair.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_association</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span>::<span class="ident">new_genesis_account</span>(<span class="ident">account_config</span>::<span class="ident">association_address</span>())
+    }
+
+    <span class="doccomment">/// Creates a new account representing treasury compliance in memory.</span>
+    <span class="doccomment">/// The account will use [`GENESIS_KEYPAIR`][struct@GENESIS_KEYPAIR] as its keypair.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_blessed_tc</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span>::<span class="ident">new_genesis_account</span>(<span class="ident">account_config</span>::<span class="ident">treasury_compliance_account_address</span>())
     }
 
     <span class="doccomment">/// Returns the address of the account. This is a hash of the public key the account was created</span>
