@@ -50,7 +50,8 @@ pub struct FunctionTargetData {
     pub code: Vec<Bytecode>,
     pub local_types: Vec<Type>,
     pub return_types: Vec<Type>,
-    pub ref_param_map: BTreeMap<usize, usize>,
+    pub param_proxy_map: BTreeMap<usize, usize>,
+    pub ref_param_return_map: BTreeMap<usize, usize>,
     pub acquires_global_resources: Vec<StructId>,
     pub locations: BTreeMap<AttrId, Loc>,
     pub annotations: Annotations,
@@ -231,9 +232,15 @@ impl<'env> FunctionTarget<'env> {
 
     /// Gets index of return parameter for a reference input parameter
     pub fn get_return_index(&self, idx: usize) -> Option<&usize> {
-        self.data.ref_param_map.get(&idx)
+        self.data.ref_param_return_map.get(&idx)
     }
 
+    /// Gets index of mutable proxy variable for an input parameter
+    pub fn get_proxy_index(&self, idx: usize) -> Option<&usize> {
+        self.data.param_proxy_map.get(&idx)
+    }
+
+    /// Returns whether a call to this function ends lifetime of input references
     pub fn call_ends_lifetime(&self) -> bool {
         self.is_public() && self.get_return_types().iter().all(|ty| !ty.is_reference())
     }
