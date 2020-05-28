@@ -7,10 +7,10 @@ use crate::{
     liveness::{
         leader_reputation::{ActiveInactiveHeuristic, LeaderReputation, LibraDBBackend},
         multi_proposer_election::MultiProposer,
-        pacemaker::{ExponentialTimeInterval, Pacemaker},
         proposal_generator::ProposalGenerator,
         proposer_election::ProposerElection,
         rotating_proposer_election::{choose_leader, RotatingProposer},
+        round_state::{ExponentialTimeInterval, RoundState},
     },
     network::{IncomingBlockRetrievalRequest, NetworkReceivers, NetworkSender},
     network_interface::{ConsensusMsg, ConsensusNetworkSender},
@@ -126,19 +126,19 @@ impl<T: Payload> EpochManager<T> {
         self.epoch_info().epoch
     }
 
-    fn create_pacemaker(
+    fn create_round_state(
         &self,
         time_service: Arc<dyn TimeService>,
         timeout_sender: channel::Sender<Round>,
-    ) -> Pacemaker {
+    ) -> RoundState {
         // 1.5^6 ~= 11
         // Timeout goes from initial_timeout to initial_timeout*11 in 6 steps
         let time_interval = Box::new(ExponentialTimeInterval::new(
-            Duration::from_millis(self.config.pacemaker_initial_timeout_ms),
+            Duration::from_millis(self.config.round_initial_timeout_ms),
             1.5,
             6,
         ));
-        Pacemaker::new(time_interval, time_service, timeout_sender)
+        RoundState::new(time_interval, time_service, timeout_sender)
     }
 
     /// Create a proposer election handler based on proposers
@@ -306,9 +306,9 @@ impl<T: Payload> EpochManager<T> {
             self.config.max_block_size,
         );
 
-        info!("Create Pacemaker");
-        let pacemaker =
-            self.create_pacemaker(self.time_service.clone(), self.timeout_sender.clone());
+        info!("Create RoundState");
+        let round_state =
+            self.create_round_state(self.time_service.clone(), self.timeout_sender.clone());
 
         info!("Create ProposerElection");
         let proposer_election = self.create_proposer_election(&epoch_info);
@@ -322,7 +322,7 @@ impl<T: Payload> EpochManager<T> {
         let mut processor = RoundManager::new(
             epoch_info,
             block_store,
-            pacemaker,
+            round_state,
             proposer_election,
             proposal_generator,
             safety_rules,
@@ -485,7 +485,7 @@ impl<T: Payload> EpochManager<T> {
 
     pub async fn start(
         mut self,
-        mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
+        mut round_timeout_sender_rx: channel::Receiver<Round>,
         mut network_receivers: NetworkReceivers<T>,
         mut reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     ) {
@@ -509,7 +509,7 @@ impl<T: Payload> EpochManager<T> {
                     idle_duration = pre_select_instant.elapsed();
                     self.process_block_retrieval(block_retrieval).await
                 }
-                round = pacemaker_timeout_sender_rx.select_next_some() => {
+                round = round_timeout_sender_rx.select_next_some() => {
                     idle_duration = pre_select_instant.elapsed();
                     self.process_local_timeout(round).await
                 }

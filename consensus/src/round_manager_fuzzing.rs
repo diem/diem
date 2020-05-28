@@ -4,9 +4,9 @@
 use crate::{
     block_storage::BlockStore,
     liveness::{
-        pacemaker::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
         proposal_generator::ProposalGenerator,
         rotating_proposer_election::RotatingProposer,
+        round_state::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, RoundState},
     },
     network::NetworkSender,
     network_interface::ConsensusNetworkSender,
@@ -64,12 +64,12 @@ fn build_empty_store(
 }
 
 // TODO: MockStorage -> EmptyStorage
-fn create_pacemaker() -> Pacemaker {
+fn create_round_state() -> RoundState {
     let base_timeout = std::time::Duration::new(60, 0);
     let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
-    let (pacemaker_timeout_sender, _) = channel::new_test(1_024);
+    let (round_timeout_sender, _) = channel::new_test(1_024);
     let time_service = Arc::new(SimulatedTimeService::new());
-    Pacemaker::new(time_interval, time_service, pacemaker_timeout_sender)
+    RoundState::new(time_interval, time_service, round_timeout_sender)
 }
 
 // Creates an RoundManager for fuzzing
@@ -127,7 +127,7 @@ fn create_node_for_fuzzing() -> RoundManager<TestPayload> {
     );
 
     //
-    let pacemaker = create_pacemaker();
+    let round_state = create_round_state();
 
     // TODO: have two different nodes, one for proposing, one for accepting a proposal
     let proposer_election = Box::new(RotatingProposer::new(vec![signer.author()], 1));
@@ -136,7 +136,7 @@ fn create_node_for_fuzzing() -> RoundManager<TestPayload> {
     RoundManager::new(
         epoch_info,
         Arc::clone(&block_store),
-        pacemaker,
+        round_state,
         proposer_election,
         proposal_generator,
         Box::new(safety_rules),

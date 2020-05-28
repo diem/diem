@@ -4,10 +4,10 @@
 use crate::{
     block_storage::{BlockReader, BlockStore},
     liveness::{
-        pacemaker::{ExponentialTimeInterval, Pacemaker},
         proposal_generator::ProposalGenerator,
         proposer_election::ProposerElection,
         rotating_proposer_election::RotatingProposer,
+        round_state::{ExponentialTimeInterval, RoundState},
     },
     network::{IncomingBlockRetrievalRequest, NetworkSender},
     network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
@@ -70,11 +70,11 @@ pub struct NodeSetup {
 }
 
 impl NodeSetup {
-    fn create_pacemaker(time_service: Arc<dyn TimeService>) -> Pacemaker {
+    fn create_round_state(time_service: Arc<dyn TimeService>) -> RoundState {
         let base_timeout = Duration::new(60, 0);
         let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
-        let (pacemaker_timeout_sender, _) = channel::new_test(1_024);
-        Pacemaker::new(time_interval, time_service, pacemaker_timeout_sender)
+        let (round_timeout_sender, _) = channel::new_test(1_024);
+        RoundState::new(time_interval, time_service, round_timeout_sender)
     }
 
     fn create_proposer_election(
@@ -183,7 +183,7 @@ impl NodeSetup {
             1,
         );
 
-        let pacemaker = Self::create_pacemaker(time_service.clone());
+        let round_state = Self::create_round_state(time_service.clone());
         let proposer_election = Self::create_proposer_election(proposer_author);
         let mut safety_rules = safety_rules_manager.client();
         let proof = storage.retrieve_epoch_change_proof(0).unwrap();
@@ -192,7 +192,7 @@ impl NodeSetup {
         let mut round_manager = RoundManager::new(
             epoch_info,
             Arc::clone(&block_store),
-            pacemaker,
+            round_state,
             proposer_election,
             proposal_generator,
             safety_rules,
@@ -349,7 +349,7 @@ fn no_vote_on_old_proposal() {
 #[test]
 /// We don't vote for proposals that 'skips' rounds
 /// After that when we then receive proposal for correct round, we vote for it
-/// Basically it checks that adversary can not send proposal and skip rounds violating pacemaker
+/// Basically it checks that adversary can not send proposal and skip rounds violating round_state
 /// rules
 fn no_vote_on_mismatch_round() {
     let mut runtime = consensus_runtime();

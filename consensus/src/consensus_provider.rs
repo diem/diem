@@ -48,8 +48,7 @@ pub fn start_consensus(
     ));
     let time_service = Arc::new(ClockTimeService::new(runtime.handle().clone()));
 
-    let (timeout_sender, timeout_receiver) =
-        channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
+    let (timeout_sender, timeout_receiver) = channel::new(1_024, &counters::PENDING_ROUND_TIMEOUTS);
     let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
 
     let epoch_mgr = EpochManager::new(

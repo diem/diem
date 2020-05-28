@@ -31,7 +31,7 @@ impl fmt::Display for NewRoundReason {
     }
 }
 
-/// NewRoundEvents produced by Pacemaker are guaranteed to be monotonically increasing.
+/// NewRoundEvents produced by RoundState are guaranteed to be monotonically increasing.
 /// NewRoundEvents are consumed by the rest of the system: they can cause sending new proposals
 /// or voting for some proposals that wouldn't have been voted otherwise.
 /// The duration is populated for debugging and testing
@@ -54,7 +54,7 @@ impl fmt::Display for NewRoundEvent {
 
 /// Determines the maximum round duration based on the round difference between the current
 /// round and the committed round
-pub trait PacemakerTimeInterval: Send + Sync + 'static {
+pub trait RoundTimeInterval: Send + Sync + 'static {
     /// Use the index of the round after the highest quorum certificate to commit a block and
     /// return the duration for this round
     ///
@@ -94,7 +94,7 @@ impl ExponentialTimeInterval {
     pub fn new(base: Duration, exponent_base: f64, max_exponent: usize) -> Self {
         assert!(
             max_exponent < 32,
-            "max_exponent for PacemakerTimeInterval should be <32"
+            "max_exponent for RoundStateTimeInterval should be <32"
         );
         assert!(
             exponent_base.powf(max_exponent as f64).ceil() < f64::from(std::u32::MAX),
@@ -108,7 +108,7 @@ impl ExponentialTimeInterval {
     }
 }
 
-impl PacemakerTimeInterval for ExponentialTimeInterval {
+impl RoundTimeInterval for ExponentialTimeInterval {
     fn get_round_duration(&self, round_index_after_committed_qc: usize) -> Duration {
         let pow = round_index_after_committed_qc.min(self.max_exponent) as u32;
         let base_multiplier = self.exponent_base.powf(f64::from(pow));
@@ -117,27 +117,27 @@ impl PacemakerTimeInterval for ExponentialTimeInterval {
     }
 }
 
-/// `Pacemaker` is a Pacemaker implementation that is responsible for generating the new round
-/// and local timeout events.
+/// `RoundState` contains information about a specific round and moves forward when
+/// receives new certificates.
 ///
 /// A round `r` starts in the following cases:
 /// * there is a QuorumCert for round `r-1`,
 /// * there is a TimeoutCertificate for round `r-1`.
 ///
-/// Round interval calculation is the responsibility of the PacemakerTimeoutInterval trait. It
+/// Round interval calculation is the responsibility of the RoundStateTimeoutInterval trait. It
 /// depends on the delta between the current round and the highest committed round (the intuition is
 /// that we want to exponentially grow the interval the further the current round is from the last
 /// committed round).
 ///
 /// Whenever a new round starts a local timeout is set following the round interval. This local
 /// timeout is going to send the timeout events once in interval until the new round starts.
-pub struct Pacemaker {
+pub struct RoundState {
     // Determines the time interval for a round given the number of non-committed rounds since
     // last commit.
-    time_interval: Box<dyn PacemakerTimeInterval>,
+    time_interval: Box<dyn RoundTimeInterval>,
     // Highest known committed round as reported by the caller. The caller might choose not to
-    // inform the Pacemaker about certain committed rounds (e.g., NIL blocks): in this case the
-    // committed round in Pacemaker might lag behind the committed round of a block tree.
+    // inform the RoundState about certain committed rounds (e.g., NIL blocks): in this case the
+    // committed round in RoundState might lag behind the committed round of a block tree.
     highest_committed_round: Round,
     // Current round is max{highest_qc, highest_tc} + 1.
     current_round: Round,
@@ -155,9 +155,9 @@ pub struct Pacemaker {
 }
 
 #[allow(dead_code)]
-impl Pacemaker {
+impl RoundState {
     pub fn new(
-        time_interval: Box<dyn PacemakerTimeInterval>,
+        time_interval: Box<dyn RoundTimeInterval>,
         time_service: Arc<dyn TimeService>,
         timeout_sender: channel::Sender<Round>,
     ) -> Self {
@@ -201,7 +201,7 @@ impl Pacemaker {
         true
     }
 
-    /// Notify the Pacemaker about the potentially new QC, TC, and highest committed round.
+    /// Notify the RoundState about the potentially new QC, TC, and highest committed round.
     /// Note that some of these values might not be available by the caller.
     pub fn process_certificates(&mut self, sync_info: SyncInfo) -> Option<NewRoundEvent> {
         if sync_info.highest_commit_round() > self.highest_committed_round {
