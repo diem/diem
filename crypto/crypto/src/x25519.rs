@@ -10,12 +10,11 @@
 //! # Examples
 //!
 //! ```
-//! use libra_crypto::{x25519, Uniform};
+//! use libra_crypto::{x25519, Uniform, test_utils::TEST_SEED};
 //! use rand::{rngs::StdRng, SeedableRng};
 //!
 //! // Derive an X25519 private key for testing.
-//! let seed = [1u8; 32];
-//! let mut rng: StdRng = SeedableRng::from_seed(seed);
+//! let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
 //! let private_key = x25519::PrivateKey::generate(&mut rng);
 //! let public_key = private_key.public_key();
 //!
