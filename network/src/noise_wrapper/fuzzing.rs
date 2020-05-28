@@ -5,11 +5,10 @@
 // Noise Fuzzing
 // =============
 //
-// This fuzzes the wrappers we have around the Noise library `snow`.
+// This fuzzes the wrappers we have around our Noise library.
 //
 
-use super::Handshake;
-use crate::{NoiseParams, NoiseSocket, NOISE_PARAMETER};
+use crate::noise_wrapper::{AntiReplayTimestamps, NoiseWrapper};
 use futures::{
     executor::block_on,
     future::join,
@@ -17,73 +16,25 @@ use futures::{
     ready,
     task::{Context, Poll},
 };
+use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform as _};
 use memsocket::MemorySocket;
 use once_cell::sync::Lazy;
-use rand_core::{impls, CryptoRng, RngCore};
-use snow::{
-    params::*,
-    resolvers::{CryptoResolver, DefaultResolver},
-    types::*,
-    Builder,
+use rand_core::SeedableRng;
+use std::{
+    io,
+    pin::Pin,
+    sync::{Arc, RwLock},
 };
-use std::{io, pin::Pin};
 
 //
 // Corpus generation
 // =================
 //
-// - CountingRng: needed to deterministically generate a keypair with snow.
-// - TestResolver: needed to use the deterministic RNG.
 // - ExposingSocket: a wrapper around MemorySocket to retrieve handshake messages being sent.
-// - NOISE_KEYPAIR: generates the same snow Keypair all the time.
+// - KEYPAIR: a unique keypair for fuzzing
 // - generate_first_two_messages: it will generate the first or second message in the handshake.
 // - generate_corpus: the function called by our fuzzer to retrieve the corpus.
 //
-
-// CountingRng is a deterministic RNG used for deterministic keypair generation
-#[derive(Default)]
-struct CountingRng(u64);
-impl RngCore for CountingRng {
-    fn next_u32(&mut self) -> u32 {
-        self.next_u64() as u32
-    }
-
-    fn next_u64(&mut self) -> u64 {
-        self.0 += 1;
-        self.0
-    }
-
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
-        impls::fill_bytes_via_next(self, dest)
-    }
-
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core::Error> {
-        Ok(self.fill_bytes(dest))
-    }
-}
-impl CryptoRng for CountingRng {}
-impl Random for CountingRng {}
-
-// TestResolver is needed to have a deterministic RNG in keypair generation
-struct TestResolver {}
-impl CryptoResolver for TestResolver {
-    fn resolve_rng(&self) -> Option<Box<dyn Random>> {
-        let rng = CountingRng(0);
-        Some(Box::new(rng))
-    }
-
-    fn resolve_dh(&self, choice: &DHChoice) -> Option<Box<dyn Dh>> {
-        DefaultResolver.resolve_dh(choice)
-    }
-
-    fn resolve_hash(&self, choice: &HashChoice) -> Option<Box<dyn Hash>> {
-        DefaultResolver.resolve_hash(choice)
-    }
-
-    fn resolve_cipher(&self, choice: &CipherChoice) -> Option<Box<dyn Cipher>> {
-        DefaultResolver.resolve_cipher(choice)
-    }
-}
 
 // ExposingSocket is needed to retrieve the noise messages peers will write on the socket
 struct ExposingSocket {
@@ -142,54 +93,37 @@ impl AsyncRead for ExposingSocket {
     }
 }
 
-// take_socket is implemented on parent structure to be able to retrieve our ExposingSocket
-impl NoiseSocket<ExposingSocket> {
-    fn take_socket(self) -> ExposingSocket {
-        self.socket
-    }
-}
-
 //
 // Actual code to generate corpus
 //
 
 // let's cache the deterministic keypair
-pub static NOISE_KEYPAIR: Lazy<snow::Keypair> = Lazy::new(|| {
-    let parameters: NoiseParams = NOISE_PARAMETER.parse().unwrap();
-    Builder::with_resolver(parameters, Box::new(TestResolver {}))
-        .generate_keypair()
-        .unwrap()
+pub static KEYPAIR: Lazy<(x25519::PrivateKey, x25519::PublicKey)> = Lazy::new(|| {
+    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
+    let private_key = x25519::PrivateKey::generate(&mut rng);
+    let public_key = private_key.public_key();
+    (private_key, public_key)
 });
 
 fn generate_first_two_messages() -> (Vec<u8>, Vec<u8>) {
     // build
-    let parameters: NoiseParams = NOISE_PARAMETER.parse().unwrap();
-    let initiator = snow::Builder::new(parameters.clone())
-        // why not use the same as the responder :D
-        .local_private_key(&NOISE_KEYPAIR.private)
-        .remote_public_key(&NOISE_KEYPAIR.public)
-        .build_initiator()
-        .unwrap();
-    let responder = snow::Builder::new(parameters)
-        .local_private_key(&NOISE_KEYPAIR.private)
-        .build_responder()
-        .unwrap();
+    let (private_key, public_key) = KEYPAIR.clone();
+    let initiator = NoiseWrapper::new(private_key.clone());
+    let responder = NoiseWrapper::new(private_key);
 
     // create exposing socket
     let (dialer_socket, listener_socket) = ExposingSocket::new_pair();
-    let (dialer, listener) = (
-        NoiseSocket::new(dialer_socket, initiator),
-        NoiseSocket::new(listener_socket, responder),
-    );
 
-    let (dialer, listener) = (Handshake(dialer), Handshake(listener));
-
-    let (dialer_result, listener_result) =
-        block_on(join(dialer.handshake_1rt(), listener.handshake_1rt()));
+    // perform the handshake
+    let anti_replay_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::new()));
+    let (client_session, server_session) = block_on(join(
+        initiator.dial(dialer_socket, public_key),
+        responder.accept(listener_socket, anti_replay_timestamps, None),
+    ));
 
     // take result
-    let init_msg = dialer_result.unwrap().take_socket().written;
-    let resp_msg = listener_result.unwrap().take_socket().written;
+    let init_msg = client_session.unwrap().take_socket().written;
+    let resp_msg = server_session.unwrap().take_socket().written;
 
     (init_msg, resp_msg)
 }
@@ -257,31 +191,27 @@ impl<'a> AsyncRead for FakeSocket<'a> {
 
 pub fn fuzz_initiator(data: &[u8]) {
     // setup initiator
-    let parameters: NoiseParams = NOISE_PARAMETER.parse().unwrap();
-    let initiator = snow::Builder::new(parameters)
-        .local_private_key(&NOISE_KEYPAIR.private)
-        .remote_public_key(&NOISE_KEYPAIR.public)
-        .build_initiator()
-        .unwrap();
-    // setup NoiseSocket
+    let (private_key, public_key) = KEYPAIR.clone();
+    let initiator = NoiseWrapper::new(private_key);
+
+    // setup NoiseSession
     let fake_socket = FakeSocket { content: data };
-    let handshake = Handshake::new(fake_socket, initiator);
+
     // send a message, then read fuzz data
-    let _ = block_on(handshake.handshake_1rt());
+    let _ = block_on(initiator.dial(fake_socket, public_key));
 }
 
 pub fn fuzz_responder(data: &[u8]) {
     // setup responder
-    let parameters: NoiseParams = NOISE_PARAMETER.parse().unwrap();
-    let responder = snow::Builder::new(parameters)
-        .local_private_key(&NOISE_KEYPAIR.private)
-        .build_responder()
-        .unwrap();
-    // setup NoiseSocket
+    let (private_key, _public_key) = KEYPAIR.clone();
+    let responder = NoiseWrapper::new(private_key);
+
+    // setup NoiseSession
     let fake_socket = FakeSocket { content: data };
-    let handshake = Handshake::new(fake_socket, responder);
+    let anti_replay_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::new()));
+
     // read fuzz data
-    let _ = block_on(handshake.handshake_1rt());
+    let _ = block_on(responder.accept(fake_socket, anti_replay_timestamps, None));
 }
 
 //

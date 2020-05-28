@@ -34,7 +34,6 @@ libra-json-rpc = { path = "../../json-rpc", version = "0.1.0", features = ["fuzz
 libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 move-vm-types = { path = "../../language/move-vm/types", version = "0.1.0", features = ["fuzzing"] }
 network = { path = "../../network", version = "0.1.0", features = ["fuzzing"] }
-noise = { path = "../../network/noise", features = ["fuzzing"]}
 vm = { path = "../../language/vm", version = "0.1.0", features = ["fuzzing"] }
 libradb = { path = "../../storage/libradb", version = "0.1.0", features = ["fuzzing"] }
 

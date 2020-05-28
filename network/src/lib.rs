@@ -23,6 +23,11 @@ mod peer;
 mod sink;
 mod transport;
 
+#[cfg(not(any(feature = "testing", feature = "fuzzing")))]
+mod noise_wrapper;
+#[cfg(any(feature = "testing", feature = "fuzzing"))]
+pub mod noise_wrapper;
+
 pub type DisconnectReason = peer::DisconnectReason;
 pub type ConnectivityRequest = connectivity_manager::ConnectivityRequest;
 pub type ProtocolId = protocols::wire::handshake::v1::ProtocolId;
