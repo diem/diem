@@ -1146,7 +1146,6 @@
 <span id="1146">1146</span>
 <span id="1147">1147</span>
 <span id="1148">1148</span>
-<span id="1149">1149</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2275,7 +2274,6 @@
     <span class="kw">let</span> <span class="ident">gas_used</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="ident">txn_data</span>
         .<span class="ident">max_gas_amount</span>()
         .<span class="ident">sub</span>(<span class="ident">cost_strategy</span>.<span class="ident">remaining_gas</span>())
-        .<span class="ident">mul</span>(<span class="ident">txn_data</span>.<span class="ident">gas_unit_price</span>())
         .<span class="ident">get</span>();
     <span class="kw">let</span> <span class="ident">write_set</span> <span class="op">=</span> <span class="ident">data_store</span>.<span class="ident">make_write_set</span>()<span class="question-mark">?</span>;
     <span class="ident">TXN_TOTAL_GAS_USAGE</span>.<span class="ident">observe</span>(<span class="ident">gas_used</span> <span class="kw">as</span> <span class="ident">f64</span>);
