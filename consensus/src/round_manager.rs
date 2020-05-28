@@ -630,6 +630,13 @@ impl<T: Payload> RoundManager<T> {
             block.round(),
         );
 
+        // Short circuit if already voted.
+        ensure!(
+            self.pacemaker.vote_sent().is_none(),
+            "Already vote on this round {}",
+            self.pacemaker.current_round()
+        );
+
         let parent_block = self
             .block_store
             .get_block(executed_block.parent_id())
