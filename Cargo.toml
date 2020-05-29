@@ -135,20 +135,25 @@ members = [
 # For more, see the "Conditional compilation for tests" section in documentation/coding_guidelines.md.
 default-members = [
     "config/config-builder",
+    "config/generate-key",
     "config/management",
+    "consensus/safety-rules",
     "client/libra-dev",
     "execution/db-bootstrapper",
+    "execution/execution-correctness",
     "testsuite/cli",
     "language/compiler",
     "language/move-prover",
+    "language/stdlib",
+    "language/move-lang",
     "language/tools/disassembler",
     "language/tools/genesis-viewer",
-    "language/tools/vm-genesis",
+    "language/tools/move-coverage",
+    "language/resource-viewer",
     "libra-node",
     "secure/key-manager",
     "storage/backup/backup-cli",
     "storage/inspector",
-    "storage/storage-service",
 ]
 
 [profile.release]

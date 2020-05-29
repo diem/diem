@@ -100,16 +100,15 @@ impl<'g> WorkspaceSubset<'g> {
         )?)
     }
 
-    /// Returns true if the given package ID is a member of the build set, including transitive
-    /// dependencies.
-    pub fn contains(&self, package_id: &PackageId) -> bool {
-        self.unified_set.features_for(package_id).is_some()
-    }
-
-    /// Returns true if the given package ID is a "root" member of this subset, ignoring transitive
-    /// dependencies.
-    pub fn is_root_member(&self, package_id: &PackageId) -> bool {
-        self.members.contains(package_id)
+    /// Returns the status of the given package ID in the subset.
+    pub fn status_of(&self, package_id: &PackageId) -> WorkspaceStatus {
+        if self.members.contains(package_id) {
+            WorkspaceStatus::RootMember
+        } else if self.unified_set.features_for(package_id).is_some() {
+            WorkspaceStatus::Dependency
+        } else {
+            WorkspaceStatus::Absent
+        }
     }
 
     /// Returns a list of root packages in this subset, ignoring transitive dependencies.
@@ -138,4 +137,15 @@ impl<'g> WorkspaceSubset<'g> {
     pub fn unified_set(&self) -> &FeatureSet<'g> {
         &self.unified_set
     }
+}
+
+/// The status of a particular package ID in a `WorkspaceSubset`.
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+pub enum WorkspaceStatus {
+    /// This package ID is a root member of the workspace subset.
+    RootMember,
+    /// This package ID is a dependency of the workspace subset, but not a root member.
+    Dependency,
+    /// This package ID is not a dependency of the workspace subset.
+    Absent,
 }
