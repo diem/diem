@@ -175,7 +175,7 @@ pub fn fuzz_proposal(data: &[u8]) {
     block_on(async move {
         // TODO: make sure this obtains a vote when testing
         // TODO: make sure that if this obtains a vote, it's for round 1, etc.
-        round_manager.process_proposal_msg(proposal).await;
+        let _ = round_manager.process_proposal_msg(proposal).await;
     });
 }
 
