@@ -19,9 +19,7 @@ pub trait ProposerElection<T> {
     /// used by e.g., voters for choosing the destinations for sending their votes to).
     fn get_valid_proposers(&self, round: Round) -> Vec<Author>;
 
-    /// Notify proposer election about a new proposal. The function doesn't return any information:
-    /// proposer election is going to notify the client about the chosen proposal via a dedicated
-    /// channel (to be passed in constructor).
+    /// Notify proposer election about a new proposal. Return the block if it's chosen.
     fn process_proposal(&mut self, proposal: Block<T>) -> Option<Block<T>>;
 
     /// Take the highest ranked backup proposal if available for a given round
