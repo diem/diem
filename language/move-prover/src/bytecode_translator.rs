@@ -153,14 +153,14 @@ impl<'env> ModuleTranslator<'env> {
     fn translate_struct_type(&self, struct_env: &StructEnv<'_>) {
         // Emit TypeName
         let struct_name = boogie_struct_name(&struct_env);
-        emitln!(self.writer, "const unique {}: TypeName;", struct_name);
+        emitln!(self.writer, "const unique {}: $TypeName;", struct_name);
 
         // Emit FieldNames
         for (i, field_env) in struct_env.get_fields().enumerate() {
             let field_name = boogie_field_name(&field_env);
             emitln!(
                 self.writer,
-                "const {}: FieldName;\naxiom {} == {};",
+                "const {}: $FieldName;\naxiom {} == {};",
                 field_name,
                 field_name,
                 i
@@ -172,16 +172,16 @@ impl<'env> ModuleTranslator<'env> {
             .get_type_parameters()
             .iter()
             .enumerate()
-            .map(|(i, _)| format!("$tv{}: TypeValue", i))
+            .map(|(i, _)| format!("$tv{}: $TypeValue", i))
             .join(", ");
 
-        let mut param_types = String::from("MapConstTypeValue(DefaultTypeValue())");
+        let mut param_types = String::from("$MapConstTypeValue($DefaultTypeValue())");
         let type_param_count = struct_env.get_type_parameters().len();
         for i in 0..type_param_count {
             param_types = format!("{}[{} := $tv{}]", param_types, i, i);
         }
-        let type_param_array = format!("TypeValueArray({}, {})", param_types, type_param_count);
-        let mut field_types = String::from("MapConstTypeValue(DefaultTypeValue())");
+        let type_param_array = format!("$TypeValueArray({}, {})", param_types, type_param_count);
+        let mut field_types = String::from("$MapConstTypeValue($DefaultTypeValue())");
         for field_env in struct_env.get_fields() {
             field_types = format!(
                 "{}[{} := {}]",
@@ -191,12 +191,12 @@ impl<'env> ModuleTranslator<'env> {
             );
         }
         let field_array = format!(
-            "TypeValueArray({}, {})",
+            "$TypeValueArray({}, {})",
             field_types,
             struct_env.get_field_count()
         );
         let type_value = format!(
-            "StructType({}, {}, {})",
+            "$StructType({}, {}, {})",
             struct_name, type_param_array, field_array
         );
         if struct_name == "$LibraAccount_T" {
@@ -213,14 +213,14 @@ impl<'env> ModuleTranslator<'env> {
             // function is forward-declared in the prelude, here we only add an axiom for it.
             emitln!(
                 self.writer,
-                "axiom (forall $tv0: TypeValue :: {}_type_value($tv0) == {});",
+                "axiom (forall $tv0: $TypeValue :: {}_type_value($tv0) == {});",
                 struct_name,
                 type_value
             );
         } else {
             emitln!(
                 self.writer,
-                "function {}_type_value({}): TypeValue {{\n    {}\n}}",
+                "function {}_type_value({}): $TypeValue {{\n    {}\n}}",
                 struct_name,
                 type_args,
                 type_value
@@ -240,26 +240,26 @@ impl<'env> ModuleTranslator<'env> {
             .get_type_parameters()
             .iter()
             .map(|TypeParameter(s, _)| {
-                format!("{}: TypeValue", s.display(struct_env.symbol_pool()))
+                format!("{}: $TypeValue", s.display(struct_env.symbol_pool()))
             })
             .join(", ");
         let args_str = struct_env
             .get_fields()
             .map(|field_env| {
                 format!(
-                    "{}: Value",
+                    "{}: $Value",
                     field_env.get_name().display(struct_env.symbol_pool())
                 )
             })
             .join(", ");
         emitln!(
             self.writer,
-            "procedure {{:inline 1}} {}_pack($file_id: int, $byte_index: int, $var_idx: int, {}) returns ($struct: Value)\n{{",
+            "procedure {{:inline 1}} {}_pack($file_id: int, $byte_index: int, $var_idx: int, {}) returns ($struct: $Value)\n{{",
             boogie_struct_name(struct_env),
             separate(vec![type_args_str.clone(), args_str.clone()], ", ")
         );
         self.writer.indent();
-        let mut ctor_expr = "MapConstValue(DefaultValue())".to_owned();
+        let mut ctor_expr = "$MapConstValue($DefaultValue())".to_owned();
         for field_env in struct_env.get_fields() {
             let field_param =
                 &format!("{}", field_env.get_name().display(struct_env.symbol_pool()));
@@ -279,7 +279,7 @@ impl<'env> ModuleTranslator<'env> {
         }
         emitln!(
             self.writer,
-            "$struct := Vector(ValueArray({}, {}));",
+            "$struct := $Vector($ValueArray({}, {}));",
             ctor_expr,
             struct_env.get_field_count()
         );
@@ -304,11 +304,11 @@ impl<'env> ModuleTranslator<'env> {
             self.writer,
             "procedure {{:inline 1}} {}_unpack({}) returns ({})\n{{",
             boogie_struct_name(struct_env),
-            separate(vec![type_args_str, "$struct: Value".to_string()], ", "),
+            separate(vec![type_args_str, "$struct: $Value".to_string()], ", "),
             args_str
         );
         self.writer.indent();
-        emitln!(self.writer, "assume is#Vector($struct);");
+        emitln!(self.writer, "assume is#$Vector($struct);");
         for field_env in struct_env.get_fields() {
             emitln!(
                 self.writer,
@@ -453,7 +453,7 @@ impl<'env> ModuleTranslator<'env> {
             .get_type_parameters()
             .iter()
             .map(|TypeParameter(s, _)| {
-                format!("{}: TypeValue", s.display(func_target.symbol_pool()))
+                format!("{}: $TypeValue", s.display(func_target.symbol_pool()))
             })
             .chain((0..func_target.get_parameter_count()).map(|i| {
                 let s = func_target.get_local_name(i);
@@ -546,8 +546,17 @@ impl<'env> ModuleTranslator<'env> {
                 let name = func_target
                     .symbol_pool()
                     .string(func_target.get_local_name(i));
-                emitln!(self.writer, "assume l#Reference({}) == Param({});", name, i);
-                emitln!(self.writer, "assume size#Path(p#Reference({})) == 0;", name);
+                emitln!(
+                    self.writer,
+                    "assume l#$Reference({}) == $Param({});",
+                    name,
+                    i
+                );
+                emitln!(
+                    self.writer,
+                    "assume size#Path(p#$Reference({})) == 0;",
+                    name
+                );
             }
         }
 
@@ -645,8 +654,8 @@ impl<'env> ModuleTranslator<'env> {
                 boogie_type_value(self.module_env.env, local_type)
             );
         }
-        emitln!(self.writer, "var $tmp: Value;");
-        emitln!(self.writer, "var $saved_m: Memory;");
+        emitln!(self.writer, "var $tmp: $Value;");
+        emitln!(self.writer, "var $saved_m: $Memory;");
 
         emitln!(self.writer, "\n// initialize function execution");
         emitln!(self.writer, "assert !$abort_flag;");
@@ -670,9 +679,9 @@ impl<'env> ModuleTranslator<'env> {
         for (i, ty) in func_target.get_return_types().iter().enumerate() {
             let ret_str = format!("$ret{}", i);
             if ty.is_reference() {
-                emitln!(self.writer, "{} := DefaultReference;", &ret_str);
+                emitln!(self.writer, "{} := $DefaultReference;", &ret_str);
             } else {
-                emitln!(self.writer, "{} := DefaultValue();", &ret_str);
+                emitln!(self.writer, "{} := $DefaultValue();", &ret_str);
             }
         }
         self.writer.unindent();
@@ -767,12 +776,12 @@ impl<'env> ModuleTranslator<'env> {
                 use BorrowNode::*;
                 match dest {
                     GlobalRoot(_) => {
-                        emitln!(self.writer, "call WritebackToGlobal({});", str_local(*src));
+                        emitln!(self.writer, "call $WritebackToGlobal({});", str_local(*src));
                     }
                     LocalRoot(idx) => {
                         emitln!(
                             self.writer,
-                            "call {} := WritebackToValue({}, {}, {});",
+                            "call {} := $WritebackToValue({}, {}, {});",
                             str_local(*idx),
                             str_local(*src),
                             idx,
@@ -782,7 +791,7 @@ impl<'env> ModuleTranslator<'env> {
                     Reference(idx) => {
                         emitln!(
                             self.writer,
-                            "call {} := WritebackToReference({}, {});",
+                            "call {} := $WritebackToReference({}, {});",
                             str_local(*idx),
                             str_local(*src),
                             str_local(*idx)
@@ -794,7 +803,7 @@ impl<'env> ModuleTranslator<'env> {
                 assert!(!srcs.is_empty());
                 emitln!(
                     self.writer,
-                    "call {} := Splice{}({}, {});",
+                    "call {} := $Splice{}({}, {});",
                     str_local(*dest),
                     srcs.len(),
                     srcs.iter()
@@ -814,7 +823,7 @@ impl<'env> ModuleTranslator<'env> {
             Jump(_, target) => emitln!(self.writer, "goto L{};", target.as_usize()),
             Branch(_, then_target, else_target, idx) => emitln!(
                 self.writer,
-                "$tmp := {};\nif (b#Boolean($tmp)) {{ goto L{}; }} else {{ goto L{}; }}",
+                "$tmp := {};\nif (b#$Boolean($tmp)) {{ goto L{}; }} else {{ goto L{}; }}",
                 str_local(*idx),
                 then_target.as_usize(),
                 else_target.as_usize(),
@@ -858,12 +867,12 @@ impl<'env> ModuleTranslator<'env> {
             }
             Load(_, idx, c) => {
                 let value = match c {
-                    Constant::Bool(true) => "Boolean(true)".to_string(),
-                    Constant::Bool(false) => "Boolean(false)".to_string(),
-                    Constant::U8(num) => format!("Integer({})", num),
-                    Constant::U64(num) => format!("Integer({})", num),
-                    Constant::U128(num) => format!("Integer({})", num),
-                    Constant::Address(val) => format!("Address({})", val),
+                    Constant::Bool(true) => "$Boolean(true)".to_string(),
+                    Constant::Bool(false) => "$Boolean(false)".to_string(),
+                    Constant::U8(num) => format!("$Integer({})", num),
+                    Constant::U64(num) => format!("$Integer({})", num),
+                    Constant::U128(num) => format!("$Integer({})", num),
+                    Constant::Address(val) => format!("$Address({})", val),
                     Constant::TxnSenderAddress => "$TxnSender($txn)".to_string(),
                     Constant::ByteArray(val) => boogie_byte_blob(val),
                 };
@@ -1448,7 +1457,7 @@ impl<'env> ModuleTranslator<'env> {
                         let op2 = srcs[1];
                         emitln!(
                             self.writer,
-                            "$tmp := Boolean(IsEqual({}, {}));",
+                            "$tmp := $Boolean($IsEqual({}, {}));",
                             str_local(op1),
                             str_local(op2)
                         );
@@ -1460,7 +1469,7 @@ impl<'env> ModuleTranslator<'env> {
                         let op2 = srcs[1];
                         emitln!(
                             self.writer,
-                            "$tmp := Boolean(!IsEqual({}, {}));",
+                            "$tmp := $Boolean(!$IsEqual({}, {}));",
                             str_local(op1),
                             str_local(op2)
                         );

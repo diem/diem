@@ -280,7 +280,7 @@ impl<'env> SpecTranslator<'env> {
                 .type_params
                 .iter()
                 .enumerate()
-                .map(|(i, _)| format!("$tv{}: TypeValue", i));
+                .map(|(i, _)| format!("$tv{}: $TypeValue", i));
             let params = fun.params.iter().map(|(name, ty)| {
                 format!(
                     "{}: {}",
@@ -291,7 +291,7 @@ impl<'env> SpecTranslator<'env> {
             let state_params = if fun.is_pure {
                 vec![]
             } else {
-                vec!["$m: Memory, $txn: Transaction".to_string()]
+                vec!["$m: $Memory, $txn: $Transaction".to_string()]
             };
             self.writer.set_location(&fun.loc);
             emitln!(
@@ -336,7 +336,7 @@ impl<'env> SpecTranslator<'env> {
                         "assume "
                     }
                 );
-                emit!(self.writer, "b#Boolean(");
+                emit!(self.writer, "b#$Boolean(");
                 self.translate_exp(&cond.exp);
                 emit!(self.writer, ");")
             });
@@ -369,7 +369,7 @@ impl<'env> SpecTranslator<'env> {
         if !requires.is_empty() {
             self.translate_seq(requires.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
-                emit!(self.writer, "requires b#Boolean(");
+                emit!(self.writer, "requires b#$Boolean(");
                 self.translate_exp(&cond.exp);
                 emit!(self.writer, ");")
             });
@@ -386,7 +386,7 @@ impl<'env> SpecTranslator<'env> {
             // reports positions only back per entire ensures, not individual sub-expression.)
             for c in &aborts_if {
                 self.writer.set_location(&c.loc);
-                emit!(self.writer, "ensures b#Boolean(old(");
+                emit!(self.writer, "ensures b#$Boolean(old(");
                 self.translate_exp(&c.exp);
                 emitln!(self.writer, ")) ==> $abort_flag;")
             }
@@ -398,7 +398,7 @@ impl<'env> SpecTranslator<'env> {
             self.writer.set_location(&func_target.get_loc());
             emit!(self.writer, "ensures $abort_flag ==> (");
             self.translate_seq(aborts_if.iter(), "\n    || ", |c| {
-                emit!(self.writer, "b#Boolean(old(");
+                emit!(self.writer, "b#$Boolean(old(");
                 self.translate_exp_parenthesised(&c.exp);
                 emit!(self.writer, "))")
             });
@@ -411,7 +411,7 @@ impl<'env> SpecTranslator<'env> {
             *self.in_ensures.borrow_mut() = true;
             self.translate_seq(ensures.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
-                emit!(self.writer, "ensures !$abort_flag ==> (b#Boolean(");
+                emit!(self.writer, "ensures !$abort_flag ==> (b#$Boolean(");
                 self.translate_exp(&cond.exp);
                 emit!(self.writer, "));")
             });
@@ -438,7 +438,7 @@ impl<'env> SpecTranslator<'env> {
         if !requires.is_empty() {
             self.translate_seq(requires.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
-                emit!(self.writer, "assume b#Boolean(");
+                emit!(self.writer, "assume b#$Boolean(");
                 self.translate_exp(&cond.exp);
                 emit!(self.writer, ");")
             });
@@ -458,7 +458,7 @@ impl<'env> SpecTranslator<'env> {
             if !requires.is_empty() {
                 self.translate_seq(requires.iter(), "\n", |cond| {
                     self.writer.set_location(&cond.loc);
-                    emit!(self.writer, "assume b#Boolean(");
+                    emit!(self.writer, "assume b#$Boolean(");
                     self.translate_exp(&cond.exp);
                     emit!(self.writer, ");")
                 });
@@ -510,7 +510,7 @@ impl<'env> SpecTranslator<'env> {
         };
         emitln!(
             self.writer,
-            "function {{:inline}} {}_is_well_formed_types($this: Value): bool {{",
+            "function {{:inline}} {}_is_well_formed_types($this: $Value): bool {{",
             boogie_struct_name(struct_env),
         );
         self.writer.indent();
@@ -520,13 +520,13 @@ impl<'env> SpecTranslator<'env> {
 
         emitln!(
             self.writer,
-            "function {{:inline}} {}_is_well_formed($this: Value): bool {{",
+            "function {{:inline}} {}_is_well_formed($this: $Value): bool {{",
             boogie_struct_name(struct_env),
         );
         self.writer.indent();
         emit_field_checks(WellFormedMode::WithInvariant);
         for inv in struct_env.get_spec().filter_kind(ConditionKind::Invariant) {
-            emit!(self.writer, "  && b#Boolean(");
+            emit!(self.writer, "  && b#$Boolean(");
             self.with_invariant_target("$this", "", || self.translate_exp(&inv.exp));
             emitln!(self.writer, ")");
         }
@@ -537,15 +537,15 @@ impl<'env> SpecTranslator<'env> {
         if struct_env.is_resource() && self.options.prover.resource_wellformed_axiom {
             // Emit axiom that for all addresses, this resource as stored in global memory
             // is well-formed.
-            emit!(self.writer, "axiom (forall m: Memory, a: Value");
+            emit!(self.writer, "axiom (forall m: $Memory, a: $Value");
             let mut type_args = vec![];
             for i in 0..struct_env.get_type_parameters().len() {
-                emit!(self.writer, ", $tv{}: TypeValue", i);
+                emit!(self.writer, ", $tv{}: $TypeValue", i);
                 type_args.push(Type::TypeParameter(i as u16));
             }
             emitln!(
                 self.writer,
-                " :: $Memory__is_well_formed(m) && is#Address(a) ==> "
+                " :: $Memory__is_well_formed(m) && is#$Address(a) ==> "
             );
             self.writer.indent();
             emitln!(
@@ -588,7 +588,7 @@ impl<'env> SpecTranslator<'env> {
     /// Translate type parameters for given struct.
     pub fn translate_type_parameters(struct_env: &StructEnv<'_>) -> Vec<String> {
         (0..struct_env.get_type_parameters().len())
-            .map(|i| format!("$tv{}: TypeValue", i))
+            .map(|i| format!("$tv{}: $TypeValue", i))
             .collect_vec()
     }
 
@@ -604,7 +604,7 @@ impl<'env> SpecTranslator<'env> {
             boogie_struct_name(struct_env),
             Self::translate_type_parameters(struct_env)
                 .into_iter()
-                .chain(vec!["$before: Value".to_string()])
+                .chain(vec!["$before: $Value".to_string()])
                 .join(", "),
         );
         self.writer.indent();
@@ -686,7 +686,7 @@ impl<'env> SpecTranslator<'env> {
             boogie_struct_name(struct_env),
             Self::translate_type_parameters(struct_env)
                 .into_iter()
-                .chain(vec!["$after: Value".to_string()])
+                .chain(vec!["$after: $Value".to_string()])
                 .join(", "),
         );
         self.writer.indent();
@@ -788,9 +788,9 @@ impl<'env> SpecTranslator<'env> {
             if inv.kind.get_spec_var_target().is_none() {
                 self.writer.set_location(&inv.loc);
                 if assume {
-                    emit!(self.writer, "assume b#Boolean(");
+                    emit!(self.writer, "assume b#$Boolean(");
                 } else {
-                    emit!(self.writer, "assert b#Boolean(");
+                    emit!(self.writer, "assert b#$Boolean(");
                 }
                 self.with_invariant_target(target, old_target, || self.translate_exp(&inv.exp));
                 emitln!(self.writer, ");");
@@ -914,7 +914,7 @@ impl<'env> SpecTranslator<'env> {
             }
             Exp::IfElse(node_id, cond, on_true, on_false) => {
                 self.set_writer_location(*node_id);
-                emit!(self.writer, "if (b#Boolean(");
+                emit!(self.writer, "if (b#$Boolean(");
                 self.translate_exp(cond);
                 emit!(self.writer, ")) then ");
                 self.translate_exp_parenthesised(on_true);
@@ -968,9 +968,9 @@ impl<'env> SpecTranslator<'env> {
 
     fn translate_value(&self, _node_id: NodeId, val: &Value) {
         match val {
-            Value::Address(addr) => emit!(self.writer, "Address({})", addr),
-            Value::Number(val) => emit!(self.writer, "Integer({})", val),
-            Value::Bool(val) => emit!(self.writer, "Boolean({})", val),
+            Value::Address(addr) => emit!(self.writer, "$Address({})", addr),
+            Value::Number(val) => emit!(self.writer, "$Integer({})", val),
+            Value::Bool(val) => emit!(self.writer, "$Boolean({})", val),
             Value::ByteArray(val) => emit!(self.writer, &boogie_byte_blob(val)),
         }
     }
@@ -1080,8 +1080,8 @@ impl<'env> SpecTranslator<'env> {
             Operation::Le => self.translate_rel_op("<=", args),
             Operation::Gt => self.translate_rel_op(">", args),
             Operation::Ge => self.translate_rel_op(">=", args),
-            Operation::Eq => self.translate_eq_neq("IsEqual", args),
-            Operation::Neq => self.translate_eq_neq("!IsEqual", args),
+            Operation::Eq => self.translate_eq_neq("$IsEqual", args),
+            Operation::Neq => self.translate_eq_neq("!$IsEqual", args),
 
             // Unary operators
             Operation::Not => self.translate_logical_unary_op("!", args),
@@ -1106,17 +1106,17 @@ impl<'env> SpecTranslator<'env> {
             Operation::Trace => self.trace_value(node_id, TraceItem::Explicit, || {
                 self.translate_exp(&args[0])
             }),
-            Operation::MaxU8 => emit!(self.writer, "Integer(MAX_U8)"),
-            Operation::MaxU64 => emit!(self.writer, "Integer(MAX_U64)"),
-            Operation::MaxU128 => emit!(self.writer, "Integer(MAX_U128)"),
+            Operation::MaxU8 => emit!(self.writer, "$Integer($MAX_U8)"),
+            Operation::MaxU64 => emit!(self.writer, "$Integer($MAX_U64)"),
+            Operation::MaxU128 => emit!(self.writer, "$Integer($MAX_U128)"),
         }
     }
 
     fn translate_pack(&self, args: &[Exp]) {
         emit!(
             self.writer,
-            "Vector({}EmptyValueArray",
-            "ExtendValueArray(".repeat(args.len())
+            "$Vector({}$EmptyValueArray",
+            "$ExtendValueArray(".repeat(args.len())
         );
         for arg in args.iter() {
             emit!(self.writer, ", ");
@@ -1274,19 +1274,19 @@ impl<'env> SpecTranslator<'env> {
                     } else {
                         emit!(
                             self.writer,
-                            "Boolean(({} {}: Value :: {} {} ",
+                            "$Boolean(({} {}: $Value :: {} {} ",
                             if is_all { "forall" } else { "exists" },
                             var_name,
                             type_check,
                             connective
                         );
-                        emit!(self.writer, "b#Boolean(");
+                        emit!(self.writer, "b#$Boolean(");
                         self.translate_exp(exp.as_ref());
                         emit!(self.writer, ")))");
                     }
                 } else {
                     let range_tmp = self.fresh_var_name("range");
-                    emit!(self.writer, "Boolean((var {} := ", range_tmp);
+                    emit!(self.writer, "$Boolean((var {} := ", range_tmp);
                     self.translate_exp(&args[0]);
                     if is_all {
                         emit!(self.writer, "; (forall {}: int :: ", quant_var);
@@ -1307,7 +1307,7 @@ impl<'env> SpecTranslator<'env> {
                     } else {
                         emit!(
                             self.writer,
-                            "$InRange({}, {}) {} (var {} := Integer({}); ",
+                            "$InRange({}, {}) {} (var {} := $Integer({}); ",
                             range_tmp,
                             quant_var,
                             connective,
@@ -1315,7 +1315,7 @@ impl<'env> SpecTranslator<'env> {
                             quant_var,
                         );
                     }
-                    emit!(self.writer, "b#Boolean(");
+                    emit!(self.writer, "b#$Boolean(");
                     self.translate_exp(exp.as_ref());
                     emit!(self.writer, ")))))");
                 }
@@ -1353,7 +1353,7 @@ impl<'env> SpecTranslator<'env> {
     }
 
     fn translate_eq_neq(&self, boogie_val_fun: &str, args: &[Exp]) {
-        emit!(self.writer, "Boolean(");
+        emit!(self.writer, "$Boolean(");
         emit!(self.writer, "{}(", boogie_val_fun);
         self.translate_exp(&args[0]);
         emit!(self.writer, ", ");
@@ -1363,31 +1363,31 @@ impl<'env> SpecTranslator<'env> {
     }
 
     fn translate_arith_op(&self, boogie_op: &str, args: &[Exp]) {
-        emit!(self.writer, "Integer(i#Integer(");
+        emit!(self.writer, "$Integer(i#$Integer(");
         self.translate_exp(&args[0]);
-        emit!(self.writer, ") {} i#Integer(", boogie_op);
+        emit!(self.writer, ") {} i#$Integer(", boogie_op);
         self.translate_exp(&args[1]);
         emit!(self.writer, "))");
     }
 
     fn translate_rel_op(&self, boogie_op: &str, args: &[Exp]) {
-        emit!(self.writer, "Boolean(i#Integer(");
+        emit!(self.writer, "$Boolean(i#$Integer(");
         self.translate_exp(&args[0]);
-        emit!(self.writer, ") {} i#Integer(", boogie_op);
+        emit!(self.writer, ") {} i#$Integer(", boogie_op);
         self.translate_exp(&args[1]);
         emit!(self.writer, "))");
     }
 
     fn translate_logical_op(&self, boogie_op: &str, args: &[Exp]) {
-        emit!(self.writer, "Boolean(b#Boolean(");
+        emit!(self.writer, "$Boolean(b#$Boolean(");
         self.translate_exp(&args[0]);
-        emit!(self.writer, ") {} b#Boolean(", boogie_op);
+        emit!(self.writer, ") {} b#$Boolean(", boogie_op);
         self.translate_exp(&args[1]);
         emit!(self.writer, "))");
     }
 
     fn translate_logical_unary_op(&self, boogie_op: &str, args: &[Exp]) {
-        emit!(self.writer, "Boolean({}b#Boolean(", boogie_op);
+        emit!(self.writer, "$Boolean({}b#$Boolean(", boogie_op);
         self.translate_exp(&args[0]);
         emit!(self.writer, "))");
     }
