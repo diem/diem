@@ -138,7 +138,7 @@ fn bench_memsocket_send(b: &mut Bencher, msg_len: &usize, server_addr: NetworkAd
 fn bench_memsocket_noise_send(b: &mut Bencher, msg_len: &usize, server_addr: NetworkAddress) {
     let mut runtime = Runtime::new().unwrap();
 
-    let client_transport = build_memsocket_noise_transport();
+    let client_transport = build_memsocket_noise_transport(None);
 
     // Benchmark sending some data to the server.
     let _client_stream =
@@ -177,7 +177,7 @@ fn bench_tcp_send_with_nodelay(b: &mut Bencher, msg_len: &usize, server_addr: Ne
 fn bench_tcp_noise_send(b: &mut Bencher, msg_len: &usize, server_addr: NetworkAddress) {
     let mut runtime = Runtime::new().unwrap();
 
-    let client_transport = build_tcp_noise_transport();
+    let client_transport = build_tcp_noise_transport(None, true);
 
     // Benchmark sending some data to the server.
     let _client_stream =
@@ -235,7 +235,7 @@ fn socket_bench(c: &mut Criterion) {
     );
     let memsocket_noise_addr = start_stream_server(
         &executor,
-        build_memsocket_noise_transport(),
+        build_memsocket_noise_transport(None),
         "/memory/0".parse().unwrap(),
     );
 
@@ -254,7 +254,7 @@ fn socket_bench(c: &mut Criterion) {
     );
     let local_tcp_noise_addr = start_stream_server(
         &executor,
-        build_tcp_noise_transport(),
+        build_tcp_noise_transport(None, true),
         "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
     );
 
@@ -330,12 +330,13 @@ fn bench_client_connection<F, T, S>(
             for _ in 0..concurrency {
                 let transport = transport_func();
                 let addr = server_addr.clone();
+                println!("debug: {}", addr);
                 loop {
                     if let Ok(fut) = transport.dial(addr.clone()) {
                         futures.push(async move {
                             match fut.await {
                                 Ok(_socket) => (),
-                                Err(e) => error!("Failed to upgrade {:?}", e),
+                                Err(e) => panic!("Failed to upgrade {:?}", e),
                             };
                         });
                         break;
@@ -376,7 +377,7 @@ fn connection_bench(c: &mut Criterion) {
                 bench_client_connection(
                     b,
                     *concurrency,
-                    build_tcp_noise_transport,
+                    || build_tcp_noise_transport(None, true),
                     noise_addr.clone(),
                 )
             },

@@ -76,13 +76,22 @@ impl Args {
 }
 
 /// Build a MemorySocket + Noise transport
-pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseStream<MemorySocket>> {
+pub fn build_memsocket_noise_transport(
+    private_key: Option<x25519::PrivateKey>,
+) -> impl Transport<Output = NoiseStream<MemorySocket>> {
+    // generate this peer's private key (if not provided)
+    let private_key = match private_key {
+        Some(key) => key,
+        None => {
+            let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
+            x25519::PrivateKey::generate(&mut rng)
+        }
+    };
+    let noise = Arc::new(NoiseWrapper::new(private_key));
+
     MemoryTransport::default().and_then(move |socket, addr, origin| async move {
-        let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
-        let private = x25519::PrivateKey::generate(&mut rng);
-        let noise_config = Arc::new(NoiseWrapper::new(private));
         let remote_public_key = addr.find_noise_proto();
-        let (_remote_static_key, socket) = noise_config
+        let (_remote_static_key, socket) = noise
             .upgrade_connection(socket, origin, None, remote_public_key, None)
             .await?;
         Ok(socket)
@@ -90,14 +99,31 @@ pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseStream<
 }
 
 /// Build a Tcp + Noise transport
-pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseStream<TcpSocket>> {
+pub fn build_tcp_noise_transport(
+    private_key: Option<x25519::PrivateKey>,
+    mutual_authentication: bool,
+) -> impl Transport<Output = NoiseStream<TcpSocket>> {
+    // generate this peer's private key (if not provided)
+    let private_key = match private_key {
+        Some(key) => key,
+        None => {
+            let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
+            x25519::PrivateKey::generate(&mut rng)
+        }
+    };
+    let noise = Arc::new(NoiseWrapper::new(private_key));
+
+    // are we in the validator or full node network?
+    let noise_timestamps = if mutual_authentication {
+        Some(Arc::new(RwLock::new(AntiReplayTimestamps::default())))
+    } else {
+        None
+    };
+
     TcpTransport::default().and_then(move |socket, addr, origin| async move {
-        let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
-        let private = x25519::PrivateKey::generate(&mut rng);
-        let noise_config = Arc::new(NoiseWrapper::new(private));
         let remote_public_key = addr.find_noise_proto();
-        let (_remote_static_key, socket) = noise_config
-            .upgrade_connection(socket, origin, None, remote_public_key, None)
+        let (_remote_static_key, socket) = noise
+            .upgrade_connection(socket, origin, noise_timestamps, remote_public_key, None)
             .await?;
         Ok(socket)
     })

@@ -155,7 +155,7 @@ impl NoiseWrapper {
                 payload.as_ref().map(|x| &x[..]),
                 &mut first_message,
             )
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("noise-wrapper: {}", e)))?;
 
         // write the first handshake message
         socket.write_all(&first_message).await?;
@@ -172,7 +172,7 @@ impl NoiseWrapper {
         let (_, session) = self
             .0
             .finalize_connection(initiator_state, &server_response)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("noise-wrapper: {}", e)))?;
 
         // finalize the connection
         Ok(NoiseStream::new(socket, session))
@@ -195,7 +195,7 @@ impl NoiseWrapper {
         let (their_public_key, handshake_state, payload) = self
             .0
             .parse_client_init_message(&[], &client_init_message)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("noise-wrapper: {}", e)))?;
 
         // make sure the public key is a validator before continuing (if we're in the validator network)
         if let Some(trusted_peers) = trusted_peers {
@@ -263,7 +263,7 @@ impl NoiseWrapper {
         let session = self
             .0
             .respond_to_client(&mut rng, handshake_state, None, &mut server_response)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("noise-wrapper: {}", e)))?;
 
         // send the response
         socket.write_all(&server_response).await?;
