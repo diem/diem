@@ -600,6 +600,13 @@
 <span id="600">600</span>
 <span id="601">601</span>
 <span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -922,6 +929,7 @@
     <span class="comment">// Updates local state by reconciling with notes received from some remote peer.</span>
     <span class="comment">// Assumption: `remote_notes` have already been verified for signature validity and content.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">reconcile</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">remote_peer</span>: <span class="ident">PeerId</span>, <span class="ident">remote_notes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">VerifiedNote</span><span class="op">&gt;</span>) {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">change_detected</span> <span class="op">=</span> <span class="bool-val">false</span>;
         <span class="comment">// If a peer is previously unknown, or has a newer epoch number, we update its</span>
         <span class="comment">// corresponding entry in the map.</span>
         <span class="kw">for</span> <span class="kw-2">mut</span> <span class="ident">note</span> <span class="kw">in</span> <span class="ident">remote_notes</span>.<span class="ident">into_iter</span>() {
@@ -977,22 +985,28 @@
                         <span class="self">self</span>.<span class="ident">note</span> <span class="op">=</span> <span class="ident">VerifiedNote</span>(<span class="ident">unverified_note</span>);
                         <span class="ident">note</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">note</span>.<span class="ident">clone</span>();
                     } <span class="kw">else</span> {
-                        <span class="comment">// The network addresses in the peer&#39;s discovery Note.</span>
-                        <span class="kw">let</span> <span class="ident">peer_addrs</span> <span class="op">=</span> <span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">addrs</span>().<span class="ident">clone</span>();
-
-                        <span class="self">self</span>.<span class="ident">conn_mgr_reqs_tx</span>
-                            .<span class="ident">send</span>(<span class="ident">ConnectivityRequest</span>::<span class="ident">UpdateAddresses</span>(
-                                <span class="ident">DiscoverySource</span>::<span class="ident">Gossip</span>,
-                                <span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">peer_id</span>,
-                                <span class="ident">peer_addrs</span>,
-                            ))
-                            .<span class="kw">await</span>
-                            .<span class="ident">expect</span>(<span class="string">&quot;ConnectivityRequest::UpdateAddresses send&quot;</span>);
+                        <span class="ident">change_detected</span> <span class="op">=</span> <span class="bool-val">true</span>;
                     }
                     <span class="comment">// Update internal state of the peer with new Note.</span>
                     <span class="self">self</span>.<span class="ident">known_peers</span>.<span class="ident">insert</span>(<span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">peer_id</span>, <span class="ident">note</span>);
                 }
             }
+        }
+
+        <span class="kw">if</span> <span class="ident">change_detected</span> {
+            <span class="self">self</span>.<span class="ident">conn_mgr_reqs_tx</span>
+                .<span class="ident">send</span>(<span class="ident">ConnectivityRequest</span>::<span class="ident">UpdateAddresses</span>(
+                    <span class="ident">DiscoverySource</span>::<span class="ident">Gossip</span>,
+                    <span class="self">self</span>.<span class="ident">known_peers</span>
+                        .<span class="ident">clone</span>()
+                        .<span class="ident">iter</span>()
+                        .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">peer_id</span>, <span class="ident">verified_note</span>)<span class="op">|</span> {
+                            (<span class="kw-2">*</span><span class="ident">peer_id</span>, <span class="ident">verified_note</span>.<span class="ident">as_note</span>().<span class="ident">addrs</span>().<span class="ident">clone</span>())
+                        })
+                        .<span class="ident">collect</span>(),
+                ))
+                .<span class="kw">await</span>
+                .<span class="ident">expect</span>(<span class="string">&quot;ConnectivityRequest::UpdateAddresses send&quot;</span>);
         }
     }
 
