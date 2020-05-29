@@ -84,7 +84,7 @@
 //! [crypto]: ../libra_crypto/noise/index.html
 
 pub mod handshake;
-pub mod session;
+pub mod stream;
 
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod fuzzing;

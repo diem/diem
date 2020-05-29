@@ -117,8 +117,8 @@ fn generate_first_two_messages() -> (Vec<u8>, Vec<u8>) {
     ));
 
     // take result
-    let init_msg = client_session.unwrap().take_socket().written;
-    let resp_msg = server_session.unwrap().take_socket().written;
+    let init_msg = client_session.unwrap().into_socket().written;
+    let resp_msg = server_session.unwrap().into_socket().written;
 
     (init_msg, resp_msg)
 }
@@ -189,7 +189,7 @@ pub fn fuzz_initiator(data: &[u8]) {
     let (private_key, public_key) = KEYPAIR.clone();
     let initiator = NoiseWrapper::new(private_key);
 
-    // setup NoiseSession
+    // setup NoiseStream
     let fake_socket = FakeSocket { content: data };
 
     // send a message, then read fuzz data
@@ -201,7 +201,7 @@ pub fn fuzz_responder(data: &[u8]) {
     let (private_key, _public_key) = KEYPAIR.clone();
     let responder = NoiseWrapper::new(private_key);
 
-    // setup NoiseSession
+    // setup NoiseStream
     let fake_socket = FakeSocket { content: data };
 
     // read fuzz data
