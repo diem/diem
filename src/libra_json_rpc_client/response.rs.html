@@ -186,6 +186,13 @@
 <span id="186">186</span>
 <span id="187">187</span>
 <span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -196,7 +203,7 @@
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">ensure</span>, <span class="ident">format_err</span>, <span class="ident">Error</span>, <span class="prelude-ty">Result</span>};
 
-<span class="kw">use</span> <span class="ident">serde_json</span>::<span class="ident">Value</span>;
+<span class="kw">use</span> <span class="ident">serde_json</span>::{<span class="ident">Number</span>, <span class="ident">Value</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">convert</span>::<span class="ident">TryFrom</span>;
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">large_enum_variant</span>)]</span>
@@ -211,6 +218,7 @@
     <span class="ident">BlockMetadataResponse</span>(<span class="ident">BlockMetadata</span>),
     <span class="ident">CurrenciesResponse</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">CurrencyInfoView</span><span class="op">&gt;</span>),
     <span class="ident">AccountStateWithProofResponse</span>(<span class="ident">AccountStateWithProofView</span>),
+    <span class="ident">NetworkStatusResponse</span>(<span class="ident">Number</span>),
     <span class="ident">UnknownResponse</span>(<span class="ident">Value</span>),
 }
 
@@ -272,6 +280,12 @@
             <span class="string">&quot;get_transactions&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">txns</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TransactionView</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_value</span>(<span class="ident">value</span>)<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(<span class="ident">JsonRpcResponse</span>::<span class="ident">TransactionsResponse</span>(<span class="ident">txns</span>))
+            }
+            <span class="string">&quot;get_network_status&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">connected_peers_count</span>: <span class="ident">Number</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_value</span>(<span class="ident">value</span>)<span class="question-mark">?</span>;
+                <span class="prelude-val">Ok</span>(<span class="ident">JsonRpcResponse</span>::<span class="ident">NetworkStatusResponse</span>(
+                    <span class="ident">connected_peers_count</span>,
+                ))
             }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">JsonRpcResponse</span>::<span class="ident">UnknownResponse</span>(<span class="ident">value</span>)),
         }

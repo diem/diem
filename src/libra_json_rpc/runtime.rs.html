@@ -247,6 +247,7 @@
 <span id="247">247</span>
 <span id="248">248</span>
 <span id="249">249</span>
+<span id="250">250</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -257,7 +258,7 @@
     <span class="ident">methods</span>::{<span class="ident">build_registry</span>, <span class="ident">JsonRpcRequest</span>, <span class="ident">JsonRpcService</span>, <span class="ident">RpcRegistry</span>},
 };
 <span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">future</span>::<span class="ident">join_all</span>;
-<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">NodeConfig</span>;
+<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="ident">NodeConfig</span>, <span class="ident">RoleType</span>};
 <span class="kw">use</span> <span class="ident">libra_mempool</span>::<span class="ident">MempoolClientSender</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>;
 <span class="kw">use</span> <span class="ident">serde_json</span>::{<span class="ident">map</span>::<span class="ident">Map</span>, <span class="ident">Value</span>};
@@ -275,6 +276,7 @@
     <span class="ident">address</span>: <span class="ident">SocketAddr</span>,
     <span class="ident">libra_db</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">DbReader</span><span class="op">&gt;</span>,
     <span class="ident">mp_sender</span>: <span class="ident">MempoolClientSender</span>,
+    <span class="ident">role</span>: <span class="ident">RoleType</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Runtime</span> {
     <span class="kw">let</span> <span class="ident">runtime</span> <span class="op">=</span> <span class="ident">Builder</span>::<span class="ident">new</span>()
         .<span class="ident">thread_name</span>(<span class="string">&quot;rpc-&quot;</span>)
@@ -284,7 +286,7 @@
         .<span class="ident">expect</span>(<span class="string">&quot;[rpc] failed to create runtime&quot;</span>);
 
     <span class="kw">let</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">build_registry</span>());
-    <span class="kw">let</span> <span class="ident">service</span> <span class="op">=</span> <span class="ident">JsonRpcService</span>::<span class="ident">new</span>(<span class="ident">libra_db</span>, <span class="ident">mp_sender</span>);
+    <span class="kw">let</span> <span class="ident">service</span> <span class="op">=</span> <span class="ident">JsonRpcService</span>::<span class="ident">new</span>(<span class="ident">libra_db</span>, <span class="ident">mp_sender</span>, <span class="ident">role</span>);
 
     <span class="kw">let</span> <span class="ident">handler</span> <span class="op">=</span> <span class="ident">warp</span>::<span class="ident">any</span>()
         .<span class="ident">and</span>(<span class="ident">warp</span>::<span class="ident">path</span>::<span class="ident">end</span>())
@@ -313,7 +315,7 @@
     <span class="ident">libra_db</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">DbReader</span><span class="op">&gt;</span>,
     <span class="ident">mp_sender</span>: <span class="ident">MempoolClientSender</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Runtime</span> {
-    <span class="ident">bootstrap</span>(<span class="ident">config</span>.<span class="ident">rpc</span>.<span class="ident">address</span>, <span class="ident">libra_db</span>, <span class="ident">mp_sender</span>)
+    <span class="ident">bootstrap</span>(<span class="ident">config</span>.<span class="ident">rpc</span>.<span class="ident">address</span>, <span class="ident">libra_db</span>, <span class="ident">mp_sender</span>, <span class="ident">config</span>.<span class="ident">base</span>.<span class="ident">role</span>)
 }
 
 <span class="doccomment">/// JSON RPC entry point</span>

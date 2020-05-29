@@ -110,7 +110,7 @@
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">runtime</span>::<span class="ident">bootstrap</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">test_bootstrap</span>;
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">utils</span>;
 <span class="kw">use</span> <span class="ident">libra_mempool</span>::<span class="ident">mocks</span>::<span class="ident">MockSharedMempool</span>;
 <span class="kw">use</span> <span class="ident">libra_proptest_helpers</span>::<span class="ident">ValueGenerator</span>;
@@ -153,7 +153,7 @@
 
     <span class="kw">let</span> <span class="ident">port</span> <span class="op">=</span> <span class="ident">utils</span>::<span class="ident">get_available_port</span>();
     <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;0.0.0.0:{}&quot;</span>, <span class="ident">port</span>);
-    <span class="kw">let</span> <span class="ident">_runtime</span> <span class="op">=</span> <span class="ident">bootstrap</span>(<span class="ident">address</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(), <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">db</span>), <span class="ident">smp</span>.<span class="ident">ac_client</span>);
+    <span class="kw">let</span> <span class="ident">_runtime</span> <span class="op">=</span> <span class="ident">test_bootstrap</span>(<span class="ident">address</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(), <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">db</span>), <span class="ident">smp</span>.<span class="ident">ac_client</span>);
 
     <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client</span>::<span class="ident">new</span>();
     <span class="kw">let</span> <span class="ident">url</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;http://{}&quot;</span>, <span class="ident">address</span>);

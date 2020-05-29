@@ -907,7 +907,7 @@
     <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">channel</span>::<span class="ident">mpsc</span>::<span class="ident">channel</span>, <span class="ident">StreamExt</span>};
     <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">utils</span>;
     <span class="kw">use</span> <span class="ident">libra_crypto</span>::{<span class="ident">ed25519</span>::<span class="ident">Ed25519PrivateKey</span>, <span class="ident">HashValue</span>, <span class="ident">PrivateKey</span>, <span class="ident">Uniform</span>};
-    <span class="kw">use</span> <span class="ident">libra_json_rpc</span>::<span class="ident">bootstrap</span>;
+    <span class="kw">use</span> <span class="ident">libra_json_rpc</span>::<span class="ident">test_bootstrap</span>;
     <span class="kw">use</span> <span class="ident">libra_types</span>::{
         <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
         <span class="ident">account_config</span>::{<span class="ident">AccountResource</span>, <span class="ident">BalanceResource</span>},
@@ -1048,7 +1048,7 @@
         <span class="kw">let</span> <span class="ident">port</span> <span class="op">=</span> <span class="ident">utils</span>::<span class="ident">get_available_port</span>();
         <span class="kw">let</span> <span class="ident">host</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="ident">address</span>, <span class="ident">port</span>);
         <span class="kw">let</span> (<span class="ident">mp_sender</span>, <span class="kw-2">mut</span> <span class="ident">mp_events</span>) <span class="op">=</span> <span class="ident">channel</span>(<span class="number">1024</span>);
-        <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">bootstrap</span>(<span class="ident">host</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(), <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">db</span>), <span class="ident">mp_sender</span>);
+        <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">test_bootstrap</span>(<span class="ident">host</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(), <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">db</span>), <span class="ident">mp_sender</span>);
 
         <span class="kw">let</span> <span class="ident">url</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;http://{}&quot;</span>, <span class="ident">host</span>);
         <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">JsonRpcClient</span>::<span class="ident">new</span>(<span class="ident">url</span>);

@@ -265,6 +265,10 @@
 <span id="265">265</span>
 <span id="266">266</span>
 <span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -376,6 +380,10 @@
                 <span class="macro">json</span><span class="macro">!</span>(<span class="ident">ledger_version</span>),
             ],
         );
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_get_network_status_request</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="self">self</span>.<span class="ident">add_request</span>(<span class="string">&quot;get_network_status&quot;</span>.<span class="ident">to_string</span>(), <span class="macro">vec</span><span class="macro">!</span>[]);
     }
 }
 
