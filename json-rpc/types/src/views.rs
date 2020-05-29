@@ -266,6 +266,7 @@ impl From<&Vec<u8>> for BytesView {
 pub struct TransactionView {
     pub version: u64,
     pub transaction: TransactionDataView,
+    pub hash: String,
     pub events: Vec<EventView>,
     pub vm_status: StatusCode,
     pub gas_used: u64,
