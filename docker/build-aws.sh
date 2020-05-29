@@ -23,13 +23,22 @@ BUILD_PROJECTS=()
 
 while [[ "$1" =~ ^- ]]; do case $1 in
   --build-all )
-    BUILD_PROJECTS=(libra-validator libra-cluster-test)
+    BUILD_PROJECTS=(libra-validator libra-cluster-test libra-init libra-mint libra-safety-rules)
     ;;
   --build-cluster-test )
     BUILD_PROJECTS=(libra-cluster-test)
     ;;
   --build-validator )
     BUILD_PROJECTS=(libra-validator)
+    ;;
+  --build-init )
+    BUILD_PROJECTS=(libra-init)
+    ;;
+  --build-mint )
+    BUILD_PROJECTS=(libra-mint)
+    ;;
+  --build-safety-rules )
+    BUILD_PROJECTS=(libra-safety-rules)
     ;;
   --version )
     shift;
