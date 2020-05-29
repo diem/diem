@@ -433,6 +433,24 @@
 <span id="433">433</span>
 <span id="434">434</span>
 <span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -684,7 +702,10 @@
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
     <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">storage_helper</span>::<span class="ident">StorageHelper</span>;
     <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>;
-    <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fs</span>::<span class="ident">File</span>, <span class="ident">io</span>::<span class="ident">Write</span>};
+    <span class="kw">use</span> <span class="ident">std</span>::{
+        <span class="ident">fs</span>::<span class="ident">File</span>,
+        <span class="ident">io</span>::{<span class="ident">Read</span>, <span class="ident">Write</span>},
+    };
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_end_to_end</span>() {
@@ -753,7 +774,14 @@
 
         <span class="comment">// Step 4) Produce genesis</span>
 
-        <span class="ident">helper</span>.<span class="ident">genesis</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">genesis_path</span> <span class="op">=</span> <span class="ident">libra_temppath</span>::<span class="ident">TempPath</span>::<span class="ident">new</span>();
+        <span class="ident">genesis_path</span>.<span class="ident">create_as_file</span>().<span class="ident">unwrap</span>();
+        <span class="ident">helper</span>.<span class="ident">genesis</span>(<span class="ident">genesis_path</span>.<span class="ident">path</span>()).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">File</span>::<span class="ident">open</span>(<span class="ident">genesis_path</span>.<span class="ident">path</span>()).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">contents</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">contents</span>.<span class="ident">is_empty</span>());
+        <span class="ident">file</span>.<span class="ident">read_to_end</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">contents</span>).<span class="ident">unwrap</span>();
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">contents</span>.<span class="ident">is_empty</span>());
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
@@ -820,12 +848,20 @@
         <span class="kw">let</span> <span class="ident">helper</span> <span class="op">=</span> <span class="ident">StorageHelper</span>::<span class="ident">new</span>();
         <span class="kw">let</span> <span class="ident">namespace</span> <span class="op">=</span> <span class="string">&quot;verify&quot;</span>;
 
-        <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">helper</span>.<span class="ident">verify</span>(<span class="ident">namespace</span>).<span class="ident">unwrap</span>().<span class="ident">split</span>(<span class="string">&quot;KeyNotSet&quot;</span>).<span class="ident">count</span>();
+        <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">helper</span>
+            .<span class="ident">verify</span>(<span class="ident">namespace</span>)
+            .<span class="ident">unwrap</span>()
+            .<span class="ident">split</span>(<span class="string">&quot;Key not set&quot;</span>)
+            .<span class="ident">count</span>();
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">output</span>, <span class="number">10</span>); <span class="comment">// 9 KeyNotSet results in 9 splits</span>
 
         <span class="ident">helper</span>.<span class="ident">initialize</span>(<span class="ident">namespace</span>.<span class="ident">into</span>());
 
-        <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">helper</span>.<span class="ident">verify</span>(<span class="ident">namespace</span>).<span class="ident">unwrap</span>().<span class="ident">split</span>(<span class="string">&quot;KeyNotSet&quot;</span>).<span class="ident">count</span>();
+        <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">helper</span>
+            .<span class="ident">verify</span>(<span class="ident">namespace</span>)
+            .<span class="ident">unwrap</span>()
+            .<span class="ident">split</span>(<span class="string">&quot;Key not set&quot;</span>)
+            .<span class="ident">count</span>();
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">output</span>, <span class="number">1</span>); <span class="comment">// 0 KeyNotSet results in 1 split</span>
     }
 
