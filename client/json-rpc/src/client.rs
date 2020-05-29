@@ -109,6 +109,10 @@ impl JsonRpcBatch {
             ],
         );
     }
+
+    pub fn add_get_network_status_request(&mut self) {
+        self.add_request("get_network_status".to_string(), vec![]);
+    }
 }
 
 #[derive(Clone)]

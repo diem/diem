@@ -584,6 +584,23 @@ fn test_get_state_proof() {
     assert_eq!(li.ledger_info().version(), version);
 }
 
+#[test]
+fn test_get_network_status() {
+    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1);
+
+    let mut batch = JsonRpcBatch::default();
+    batch.add_get_network_status_request();
+
+    if let JsonRpcResponse::NetworkStatusResponse(connected_peers) =
+        execute_batch_and_get_first_response(&client, &mut runtime, batch)
+    {
+        // expect no connected peers when no network is running
+        assert_eq!(connected_peers.as_u64().unwrap(), 0);
+    } else {
+        panic!("did not receive expected json rpc response");
+    }
+}
+
 /// Creates and returns a MockLibraDB, JsonRpcAsyncClient and corresponding server Runtime tuple for
 /// testing. The given channel_buffer specifies the buffer size of the mempool client sender channel.
 fn create_database_client_and_runtime(
