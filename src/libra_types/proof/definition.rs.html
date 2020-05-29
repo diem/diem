@@ -754,6 +754,53 @@
 <span id="754">754</span>
 <span id="755">755</span>
 <span id="756">756</span>
+<span id="757">757</span>
+<span id="758">758</span>
+<span id="759">759</span>
+<span id="760">760</span>
+<span id="761">761</span>
+<span id="762">762</span>
+<span id="763">763</span>
+<span id="764">764</span>
+<span id="765">765</span>
+<span id="766">766</span>
+<span id="767">767</span>
+<span id="768">768</span>
+<span id="769">769</span>
+<span id="770">770</span>
+<span id="771">771</span>
+<span id="772">772</span>
+<span id="773">773</span>
+<span id="774">774</span>
+<span id="775">775</span>
+<span id="776">776</span>
+<span id="777">777</span>
+<span id="778">778</span>
+<span id="779">779</span>
+<span id="780">780</span>
+<span id="781">781</span>
+<span id="782">782</span>
+<span id="783">783</span>
+<span id="784">784</span>
+<span id="785">785</span>
+<span id="786">786</span>
+<span id="787">787</span>
+<span id="788">788</span>
+<span id="789">789</span>
+<span id="790">790</span>
+<span id="791">791</span>
+<span id="792">792</span>
+<span id="793">793</span>
+<span id="794">794</span>
+<span id="795">795</span>
+<span id="796">796</span>
+<span id="797">797</span>
+<span id="798">798</span>
+<span id="799">799</span>
+<span id="800">800</span>
+<span id="801">801</span>
+<span id="802">802</span>
+<span id="803">803</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -761,8 +808,8 @@
 <span class="doccomment">//! This module has definition of various proofs.</span>
 
 <span class="kw">use</span> <span class="kw">super</span>::{
-    <span class="ident">position</span>::<span class="ident">Position</span>, <span class="ident">verify_transaction_info</span>, <span class="ident">MerkleTreeInternalNode</span>, <span class="ident">SparseMerkleInternalNode</span>,
-    <span class="ident">SparseMerkleLeafNode</span>,
+    <span class="ident">accumulator</span>::<span class="ident">InMemoryAccumulator</span>, <span class="ident">position</span>::<span class="ident">Position</span>, <span class="ident">verify_transaction_info</span>,
+    <span class="ident">MerkleTreeInternalNode</span>, <span class="ident">SparseMerkleInternalNode</span>, <span class="ident">SparseMerkleLeafNode</span>,
 };
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">account_state_blob</span>::<span class="ident">AccountStateBlob</span>,
@@ -1509,6 +1556,53 @@
             <span class="kw-2">&amp;</span><span class="ident">txn_info_hashes</span>,
         )<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="doccomment">/// A proof that first verifies that establishes correct computation of the root and then</span>
+<span class="doccomment">/// returns the new tree to acquire a new root and version. Note: this is used internally by</span>
+<span class="doccomment">/// VoteProposal hence why it exists within consensus-types andd not libra-types.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AccumulatorExtensionProof</span><span class="op">&lt;</span><span class="ident">H</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Represents the roots of all the full subtrees from left to right in the original accumulator.</span>
+    <span class="ident">frozen_subtree_roots</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// The total number of leaves in original accumulator.</span>
+    <span class="ident">num_leaves</span>: <span class="ident">LeafCount</span>,
+    <span class="doccomment">/// The values representing the newly appended leaves.</span>
+    <span class="ident">leaves</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>,
+
+    <span class="ident">hasher</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">H</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">H</span>: <span class="ident">CryptoHasher</span><span class="op">&gt;</span> <span class="ident">AccumulatorExtensionProof</span><span class="op">&lt;</span><span class="ident">H</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">frozen_subtree_roots</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>,
+        <span class="ident">num_leaves</span>: <span class="ident">LeafCount</span>,
+        <span class="ident">leaves</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">frozen_subtree_roots</span>,
+            <span class="ident">num_leaves</span>,
+            <span class="ident">leaves</span>,
+            <span class="ident">hasher</span>: <span class="ident">PhantomData</span>,
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">original_root</span>: <span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">InMemoryAccumulator</span><span class="op">&lt;</span><span class="ident">H</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">original_tree</span> <span class="op">=</span>
+            <span class="ident">InMemoryAccumulator</span>::<span class="op">&lt;</span><span class="ident">H</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">frozen_subtree_roots</span>.<span class="ident">clone</span>(), <span class="self">self</span>.<span class="ident">num_leaves</span>)<span class="question-mark">?</span>;
+        <span class="macro">ensure</span><span class="macro">!</span>(
+            <span class="ident">original_tree</span>.<span class="ident">root_hash</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">original_root</span>,
+            <span class="string">&quot;Root hashes do not match. Actual root hash: {:x}. Expected root hash: {:x}.&quot;</span>,
+            <span class="ident">original_tree</span>.<span class="ident">root_hash</span>(),
+            <span class="ident">original_root</span>
+        );
+
+        <span class="prelude-val">Ok</span>(<span class="ident">original_tree</span>.<span class="ident">append</span>(<span class="self">self</span>.<span class="ident">leaves</span>.<span class="ident">as_slice</span>()))
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">leaves</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">leaves</span>
     }
 }
 </pre></div>

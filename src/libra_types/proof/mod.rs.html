@@ -157,10 +157,10 @@
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">marker</span>::<span class="ident">PhantomData</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">definition</span>::{
-    <span class="ident">AccountStateProof</span>, <span class="ident">AccumulatorConsistencyProof</span>, <span class="ident">AccumulatorProof</span>, <span class="ident">AccumulatorRangeProof</span>,
-    <span class="ident">EventAccumulatorProof</span>, <span class="ident">EventProof</span>, <span class="ident">SparseMerkleProof</span>, <span class="ident">SparseMerkleRangeProof</span>,
-    <span class="ident">TransactionAccumulatorProof</span>, <span class="ident">TransactionAccumulatorRangeProof</span>, <span class="ident">TransactionInfoWithProof</span>,
-    <span class="ident">TransactionListProof</span>,
+    <span class="ident">AccountStateProof</span>, <span class="ident">AccumulatorConsistencyProof</span>, <span class="ident">AccumulatorExtensionProof</span>, <span class="ident">AccumulatorProof</span>,
+    <span class="ident">AccumulatorRangeProof</span>, <span class="ident">EventAccumulatorProof</span>, <span class="ident">EventProof</span>, <span class="ident">SparseMerkleProof</span>,
+    <span class="ident">SparseMerkleRangeProof</span>, <span class="ident">TransactionAccumulatorProof</span>, <span class="ident">TransactionAccumulatorRangeProof</span>,
+    <span class="ident">TransactionInfoWithProof</span>, <span class="ident">TransactionListProof</span>,
 };
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>

@@ -832,6 +832,8 @@
 <span id="832">832</span>
 <span id="833">833</span>
 <span id="834">834</span>
+<span id="835">835</span>
+<span id="836">836</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -842,7 +844,6 @@
 <span class="kw">use</span> <span class="ident">termion</span>::<span class="ident">color</span>::<span class="kw-2">*</span>;
 
 <span class="kw">use</span> <span class="ident">consensus_types</span>::{
-    <span class="ident">accumulator_extension_proof</span>::<span class="ident">AccumulatorExtensionProof</span>,
     <span class="ident">block</span>::<span class="ident">Block</span>,
     <span class="ident">block_retrieval</span>::{<span class="ident">BlockRetrievalResponse</span>, <span class="ident">BlockRetrievalStatus</span>},
     <span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Payload</span>, <span class="ident">Round</span>},
@@ -858,7 +859,10 @@
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">TransactionAccumulatorHasher</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_security_logger</span>::{<span class="ident">security_log</span>, <span class="ident">SecurityEvent</span>};
-<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">epoch_state</span>::<span class="ident">EpochState</span>, <span class="ident">validator_verifier</span>::<span class="ident">ValidatorVerifier</span>};
+<span class="kw">use</span> <span class="ident">libra_types</span>::{
+    <span class="ident">epoch_state</span>::<span class="ident">EpochState</span>, <span class="ident">proof</span>::<span class="ident">AccumulatorExtensionProof</span>,
+    <span class="ident">validator_verifier</span>::<span class="ident">ValidatorVerifier</span>,
+};
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">use</span> <span class="ident">safety_rules</span>::<span class="ident">ConsensusState</span>;
 <span class="kw">use</span> <span class="ident">safety_rules</span>::<span class="ident">TSafetyRules</span>;
