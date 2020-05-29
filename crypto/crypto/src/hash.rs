@@ -468,22 +468,20 @@ pub struct DefaultHasher {
 
 impl DefaultHasher {
     #[doc(hidden)]
-    pub fn prefixed_hash(buffer: &[u8]) -> [u8; 32] {
+    pub fn prefixed_hash(buffer: &[u8]) -> [u8; HashValue::LENGTH] {
+        // The salt is initial material we prefix to actual value bytes for
+        // domain separation. Its length is variable.
         let salt: Vec<u8> = [LIBRA_HASH_PREFIX, buffer].concat();
-        let mut hasher = Sha3::v256();
-        hasher.update(&salt);
-        let mut output = [0u8; 32];
-        hasher.finalize(&mut output);
-        output
+        // The seed is a fixed-length hash of the salt, thereby preventing
+        // suffix attacks on the domain separation bytes.
+        HashValue::sha3_256_of(&salt[..]).hash
     }
 
     #[doc(hidden)]
     pub fn new(typename: &[u8]) -> Self {
         let mut state = Sha3::v256();
         if !typename.is_empty() {
-            let mut salt = LIBRA_HASH_PREFIX.to_vec();
-            salt.extend_from_slice(typename);
-            state.update(HashValue::sha3_256_of(&salt[..]).as_ref());
+            state.update(&Self::prefixed_hash(typename));
         }
         DefaultHasher { state }
     }
