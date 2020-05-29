@@ -1385,6 +1385,19 @@
 <span id="1385">1385</span>
 <span id="1386">1386</span>
 <span id="1387">1387</span>
+<span id="1388">1388</span>
+<span id="1389">1389</span>
+<span id="1390">1390</span>
+<span id="1391">1391</span>
+<span id="1392">1392</span>
+<span id="1393">1393</span>
+<span id="1394">1394</span>
+<span id="1395">1395</span>
+<span id="1396">1396</span>
+<span id="1397">1397</span>
+<span id="1398">1398</span>
+<span id="1399">1399</span>
+<span id="1400">1400</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1458,6 +1471,8 @@
     <span class="ident">supports_native_old</span>: <span class="ident">bool</span>,
     <span class="doccomment">/// Whether we are currently in the context of translating an `old(...)` expression.</span>
     <span class="ident">in_old</span>: <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Whether we are currently translating an assert or assume specification.</span>
+    <span class="ident">in_assert_or_assume</span>: <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Whether we are currently translating an ensures specification.</span>
     <span class="ident">in_ensures</span>: <span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The current target for invariant fields, a pair of strings for current and old value.</span>
@@ -1531,6 +1546,7 @@
             <span class="ident">writer</span>,
             <span class="ident">supports_native_old</span>,
             <span class="ident">in_old</span>: <span class="ident">RefCell</span>::<span class="ident">new</span>(<span class="bool-val">false</span>),
+            <span class="ident">in_assert_or_assume</span>: <span class="ident">RefCell</span>::<span class="ident">new</span>(<span class="bool-val">false</span>),
             <span class="ident">in_ensures</span>: <span class="ident">RefCell</span>::<span class="ident">new</span>(<span class="bool-val">false</span>),
             <span class="ident">invariant_target</span>: <span class="ident">RefCell</span>::<span class="ident">new</span>((<span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(), <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>())),
             <span class="ident">fresh_var_count</span>: <span class="ident">RefCell</span>::<span class="ident">new</span>(<span class="number">0</span>),
@@ -1710,6 +1726,7 @@
         <span class="kw">let</span> <span class="ident">func_target</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">function_target</span>();
         <span class="kw">let</span> <span class="ident">spec</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_spec_on_impl</span>(<span class="ident">block_id</span>);
         <span class="kw">if</span> <span class="op">!</span><span class="ident">spec</span>.<span class="ident">conditions</span>.<span class="ident">is_empty</span>() {
+            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_assert_or_assume</span>.<span class="ident">borrow_mut</span>() <span class="op">=</span> <span class="bool-val">true</span>;
             <span class="self">self</span>.<span class="ident">translate_seq</span>(<span class="ident">spec</span>.<span class="ident">conditions</span>.<span class="ident">iter</span>(), <span class="string">&quot;\n&quot;</span>, <span class="op">|</span><span class="ident">cond</span><span class="op">|</span> {
                 <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">set_location</span>(<span class="kw-2">&amp;</span><span class="ident">cond</span>.<span class="ident">loc</span>);
                 <span class="macro">emit</span><span class="macro">!</span>(
@@ -1724,6 +1741,7 @@
                 <span class="self">self</span>.<span class="ident">translate_exp</span>(<span class="kw-2">&amp;</span><span class="ident">cond</span>.<span class="ident">exp</span>);
                 <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;);&quot;</span>)
             });
+            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_assert_or_assume</span>.<span class="ident">borrow_mut</span>() <span class="op">=</span> <span class="bool-val">false</span>;
             <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>);
         }
     }
@@ -2369,9 +2387,17 @@
                 <span class="kw">if</span> <span class="kw">let</span> <span class="ident">SpecEnv</span>::<span class="ident">Function</span>(<span class="ident">func_target</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">spec_env</span> {
                     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">local_index</span>) <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_index</span>(<span class="ident">name</span>) {
                         <span class="ident">ty</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_type</span>(<span class="kw-2">*</span><span class="ident">local_index</span>);
+                        <span class="comment">// The following sequence of if tests are mutually disjoint.</span>
                         <span class="kw">if</span> <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_ensures</span>.<span class="ident">borrow</span>() <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_old</span>.<span class="ident">borrow</span>() {
                             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">return_index</span>) <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_return_index</span>(<span class="kw-2">*</span><span class="ident">local_index</span>) {
                                 <span class="ident">var_name</span> <span class="op">=</span> <span class="ident">Rc</span>::<span class="ident">new</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$ret{}&quot;</span>, <span class="ident">return_index</span>));
+                            }
+                        }
+                        <span class="kw">if</span> <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_assert_or_assume</span>.<span class="ident">borrow</span>() {
+                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">proxy_index</span>) <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_proxy_index</span>(<span class="kw-2">*</span><span class="ident">local_index</span>) {
+                                <span class="ident">var_name</span> <span class="op">=</span> <span class="ident">func_target</span>
+                                    .<span class="ident">symbol_pool</span>()
+                                    .<span class="ident">string</span>(<span class="ident">func_target</span>.<span class="ident">get_local_name</span>(<span class="kw-2">*</span><span class="ident">proxy_index</span>));
                             }
                         }
                     }
