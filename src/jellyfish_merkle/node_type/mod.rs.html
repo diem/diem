@@ -700,6 +700,17 @@
 <span id="700">700</span>
 <span id="701">701</span>
 <span id="702">702</span>
+<span id="703">703</span>
+<span id="704">704</span>
+<span id="705">705</span>
+<span id="706">706</span>
+<span id="707">707</span>
+<span id="708">708</span>
+<span id="709">709</span>
+<span id="710">710</span>
+<span id="711">711</span>
+<span id="712">712</span>
+<span id="713">713</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -716,7 +727,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">node_type_test</span>;
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">nibble_path</span>::<span class="ident">NibblePath</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">nibble_path</span>::<span class="ident">NibblePath</span>, <span class="ident">ROOT_NIBBLE_HEIGHT</span>};
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">ensure</span>, <span class="ident">Context</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">BigEndian</span>, <span class="ident">LittleEndian</span>, <span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::{
@@ -813,6 +824,11 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="ident">val</span>);
         <span class="kw">let</span> <span class="ident">version</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">BigEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">num_nibbles</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u8</span>()<span class="question-mark">?</span> <span class="kw">as</span> <span class="ident">usize</span>;
+        <span class="macro">ensure</span><span class="macro">!</span>(
+            <span class="ident">num_nibbles</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">ROOT_NIBBLE_HEIGHT</span>,
+            <span class="string">&quot;Invalid number of nibbles: {}&quot;</span>,
+            <span class="ident">num_nibbles</span>,
+        );
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nibble_bytes</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>((<span class="ident">num_nibbles</span> <span class="op">+</span> <span class="number">1</span>) <span class="op">/</span> <span class="number">2</span>);
         <span class="ident">reader</span>.<span class="ident">read_to_end</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">nibble_bytes</span>)<span class="question-mark">?</span>;
         <span class="macro">ensure</span><span class="macro">!</span>(
@@ -824,6 +840,12 @@
         <span class="kw">let</span> <span class="ident">nibble_path</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">num_nibbles</span> <span class="op">%</span> <span class="number">2</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
             <span class="ident">NibblePath</span>::<span class="ident">new</span>(<span class="ident">nibble_bytes</span>)
         } <span class="kw">else</span> {
+            <span class="kw">let</span> <span class="ident">padding</span> <span class="op">=</span> <span class="ident">nibble_bytes</span>.<span class="ident">last</span>().<span class="ident">unwrap</span>() <span class="op">&amp;</span> <span class="number">0x0f</span>;
+            <span class="macro">ensure</span><span class="macro">!</span>(
+                <span class="ident">padding</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span>,
+                <span class="string">&quot;Padding nibble expected to be 0, got: {}&quot;</span>,
+                <span class="ident">padding</span>,
+            );
             <span class="ident">NibblePath</span>::<span class="ident">new_odd</span>(<span class="ident">nibble_bytes</span>)
         };
         <span class="prelude-val">Ok</span>(<span class="ident">NodeKey</span>::<span class="ident">new</span>(<span class="ident">version</span>, <span class="ident">nibble_path</span>))

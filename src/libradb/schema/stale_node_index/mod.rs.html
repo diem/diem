@@ -76,6 +76,7 @@
 <span id="76">76</span>
 <span id="77">77</span>
 <span id="78">78</span>
+<span id="79">79</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -96,7 +97,7 @@
 <span class="doccomment">//! `stale_since_version` is serialized in big endian so that records in RocksDB will be in order of</span>
 <span class="doccomment">//! its numeric value.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">schema</span>::{<span class="ident">ensure_slice_len_eq</span>, <span class="ident">STALE_NODE_INDEX_CF_NAME</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">schema</span>::{<span class="ident">ensure_slice_len_eq</span>, <span class="ident">ensure_slice_len_gt</span>, <span class="ident">STALE_NODE_INDEX_CF_NAME</span>};
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">BigEndian</span>, <span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
 <span class="kw">use</span> <span class="ident">jellyfish_merkle</span>::{<span class="ident">node_type</span>::<span class="ident">NodeKey</span>, <span class="ident">StaleNodeIndex</span>};
@@ -124,10 +125,11 @@
     }
 
     <span class="kw">fn</span> <span class="ident">decode_key</span>(<span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">version_size</span> <span class="op">=</span> <span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">Version</span><span class="op">&gt;</span>();
+        <span class="kw">const</span> <span class="ident">VERSION_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">Version</span><span class="op">&gt;</span>();
 
-        <span class="kw">let</span> <span class="ident">stale_since_version</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="ident">data</span>[..<span class="ident">version_size</span>]).<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">BigEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">node_key</span> <span class="op">=</span> <span class="ident">NodeKey</span>::<span class="ident">decode</span>(<span class="kw-2">&amp;</span><span class="ident">data</span>[<span class="ident">version_size</span>..])<span class="question-mark">?</span>;
+        <span class="ident">ensure_slice_len_gt</span>(<span class="ident">data</span>, <span class="ident">VERSION_SIZE</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">stale_since_version</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="ident">data</span>[..<span class="ident">VERSION_SIZE</span>]).<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">BigEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">node_key</span> <span class="op">=</span> <span class="ident">NodeKey</span>::<span class="ident">decode</span>(<span class="kw-2">&amp;</span><span class="ident">data</span>[<span class="ident">VERSION_SIZE</span>..])<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">stale_since_version</span>,

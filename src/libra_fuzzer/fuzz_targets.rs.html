@@ -109,6 +109,8 @@
 <span id="109">109</span>
 <span id="110">110</span>
 <span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -178,6 +180,7 @@
 <span class="kw">mod</span> <span class="ident">signed_transaction</span>;
 <span class="kw">mod</span> <span class="ident">sparse_merkle_proof</span>;
 <span class="kw">mod</span> <span class="ident">storage_save_blocks</span>;
+<span class="kw">mod</span> <span class="ident">storage_schema_decode</span>;
 <span class="kw">mod</span> <span class="ident">vm_value</span>;
 
 <span class="kw">static</span> <span class="ident">ALL_TARGETS</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">FuzzTargetImpl</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
@@ -193,6 +196,7 @@
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">signed_transaction</span>::<span class="ident">SignedTransactionTarget</span>::<span class="ident">default</span>()),
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">sparse_merkle_proof</span>::<span class="ident">SparseMerkleProofTarget</span>::<span class="ident">default</span>()),
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">storage_save_blocks</span>::<span class="ident">StorageSaveBlocks</span>::<span class="ident">default</span>()),
+        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">storage_schema_decode</span>::<span class="ident">StorageSchemaDecode</span>::<span class="ident">default</span>()),
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">vm_value</span>::<span class="ident">ValueTarget</span>::<span class="ident">default</span>()),
     ];
     <span class="ident">targets</span>
