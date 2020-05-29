@@ -95,7 +95,7 @@ More information might be available in the “message” field, but this is not 
 
 ```
 // Request: submits a transaction whose hex-encoded LCS byte representation is in params
-curl -X POST --data '{"jsonrpc":"2.0","method":"submit","params":["0909090909090909090909090909090900000000000000000200000077000000a11ceb0b0100070146000000020000000348000000030000000c4b000000040000000d4f0000000200000005510000000c000000045d00000010000000076d0000000a0000000000000100020000000300063c53454c463e046d61696e00000000000000000000000000000000000000ffff030001000200000000801a060000000000010000000000000011be6a5e0000000020000000664f6e8f36eacb1770fa879d86c2c1d0fafea145e84fa7d671ab7a011a54d50940000000f20e781a4b6275232f600921f2d098991b62e97dc9a45e357bbcc72f59e68e3c4aa54b86cb5226781c58f5dbf32da4ea5329072f3248516ce852f07f74ae220d"],"id":1}'
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"submit","params":["0909090909090909090909090909090900000000000000000200000077000000a11ceb0b0100070146000000020000000348000000030000000c4b000000040000000d4f0000000200000005510000000c000000045d00000010000000076d0000000a0000000000000100020000000300063c53454c463e046d61696e00000000000000000000000000000000000000ffff030001000200000000801a060000000000010000000000000011be6a5e0000000020000000664f6e8f36eacb1770fa879d86c2c1d0fafea145e84fa7d671ab7a011a54d50940000000f20e781a4b6275232f600921f2d098991b62e97dc9a45e357bbcc72f59e68e3c4aa54b86cb5226781c58f5dbf32da4ea5329072f3248516ce852f07f74ae220d"],"id":1}'
 
 // Response, for successful transaction submission
 {
@@ -170,28 +170,100 @@ if include_events is false, the events field in the Transaction object will be a
 
 
 ```
-// Request: fetches 10 transactions since version 100
-curl -X POST --data '{"jsonrpc":"2.0","method":"get_transactions","params":[100, 10, false],"id":1}'
+// Request: fetches 10 transactions since version 1000
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_transactions","params":[1000, 10, false],"id":1}'
 
 // Response
 {
-  "id":1,
-  "jsonrpc": "2.0",
-  "result": [
-    {
-      "version": 100,
-      "transaction_data": {
-         "type": "user"
-         "sender": "c94770007dda54cF92009BFF0dE90c06F603a09f",
-         "sequence_number": 10,
-         "max_gas_amount": 7000,
-         "gas_unit_price": 3,
-         "expiration_time": 1582007787665718,
-      },
-      "events": [] // empty because include_events is set to false
-    },
-    ...
-  ]
+    "id":1,
+    "jsonrpc":"2.0",
+    "result":[
+        {
+            "events":[
+
+            ],
+            "gas_used":0,
+            "transaction":{
+                "timestamp_usecs":1590615334931315,
+                "type":"blockmetadata"
+            },
+            "version":1000,
+            "vm_status":4001
+        },
+        {
+            "events":[
+
+            ],
+            "gas_used":0,
+            "transaction":{
+                "timestamp_usecs":1590615334945136,
+                "type":"blockmetadata"
+            },
+            "version":1001,
+            "vm_status":4001
+        },
+        {
+            "events":[
+
+            ],
+            "gas_used":0,
+            "transaction":{
+                "timestamp_usecs":1590615334959054,
+                "type":"blockmetadata"
+            },
+            "version":1002,
+            "vm_status":4001
+        },
+        {
+            "events":[
+
+            ],
+            "gas_used":0,
+            "transaction":{
+                "timestamp_usecs":1590615334973022,
+                "type":"blockmetadata"
+            },
+            "version":1003,
+            "vm_status":4001
+        },
+        {
+            "events":[
+
+            ],
+            "gas_used":0,
+            "transaction":{
+                "timestamp_usecs":1590615334987971,
+                "type":"blockmetadata"
+            },
+            "version":1004,
+            "vm_status":4001
+        },
+        {
+            "events":[
+
+            ],
+            "gas_used":0,
+            "transaction":{
+                "timestamp_usecs":1590615335001858,
+                "type":"blockmetadata"
+            },
+            "version":1005,
+            "vm_status":4001
+        },
+        {
+            "events":[
+
+            ],
+            "gas_used":0,
+            "transaction":{
+                "timestamp_usecs":1590615335016691,
+                "type":"blockmetadata"
+            },
+            "version":1006,
+            "vm_status":4001
+        },
+        ...
+    ]
 }
 ```
 
@@ -243,45 +315,38 @@ Null - If account does not exist
 
 ### Example
 
+```
+// Request: fetches account state for account address "0xc1fda0ec67c1b87bfb9e883e2080e530"
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_account_state","params":["c1fda0ec67c1b87bfb9e883e2080e530"],"id":1}'
 
-<table>
-  <tr>
-   <td><code>// Request: fetches account state for account address "0xc94770007dda54cF92009BFF0dE90c06F603a09f" \
-curl -X POST --data '{"jsonrpc":"2.0","method":"get_account_state","params":["c94770007dda54cF92009BFF0dE90c06F603a09f"],"id":1}' \
- \
-// Response for non-existent account \
-{ \
-  "id":1, \
-  "jsonrpc": "2.0", \
-  "result": null,    \
-}</code>
-<p>
-<code>// Response for existing account \
-{ \
-  "id":1, \
-  "jsonrpc": "2.0", \
-  "result": {</code>
-<p>
-<code>      "balance": 110, \
-      "sequence_number": 0,</code>
-<p>
-<code>      "authentication_key": "d2c0cebf3dc1c93e62a6af874296e2eda1e9b95c142b596cf312d881202f00b3", \
-      "sent_events_key": "000000000000000085477f27566af9c4fce82f39490d596a",</code>
-<p>
-<code>      "received_events_key": "010000000000000085477f27566af9c4fce82f39490d596a", \
-      "delegated_key_rotation_capability": false, \
-      "delegated_withdrawal_capability": true,</code>
-<p>
-<code>  }    \
-}</code>
-   </td>
-  </tr>
-  <tr>
-   <td>
-   </td>
-  </tr>
-</table>
 
+// Response
+{
+   "id":1,
+   "jsonrpc":"2.0",
+   "result":{
+      "authentication_key":"bbdcca6b06aa596ca700cb23ba74cc8ec1fda0ec67c1b87bfb9e883e2080e530",
+      "balances":[
+         {
+            "amount":200000000,
+            "currency":"LBR"
+         }
+      ],
+      "delegated_key_rotation_capability":false,
+      "delegated_withdrawal_capability":false,
+      "received_events_key":"0000000000000000c1fda0ec67c1b87bfb9e883e2080e530",
+      "sent_events_key":"0100000000000000c1fda0ec67c1b87bfb9e883e2080e530",
+      "sequence_number":1
+   }
+}
+
+// Sample Response for non-existent account
+{
+  "id":1,
+  "jsonrpc": "2.0",
+  "result": null,
+}
+```
 
 
 ##
@@ -348,24 +413,40 @@ Null - If transaction does not exist
 
 
 ```
-// Request: fetches transaction for account address "0xc94770007dda54cF92009BFF0dE90c06F603a09f" and sequence number 10, without including events associated with this transaction
-curl -X POST --data '{"jsonrpc":"2.0","method":"get_account_transaction","params":["c94770007dda54cF92009BFF0dE90c06F603a09f", 10, false],"id":1}'
+// Request: fetches transaction for account address "0xc1fda0ec67c1b87bfb9e883e2080e530" and sequence number 0, without including events associated with this transaction
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_account_transaction","params":["c1fda0ec67c1b87bfb9e883e2080e530", 0, false],"id":1}'
 
 // Response
 {
-  "id":1,
-  "jsonrpc": "2.0",
-  "result": {
-      "version": 100,
-      "transaction_data": {
-         "type": "user"
-         "sender": "c94770007dda54cF92009BFF0dE90c06F603a09f",
-         "sequence_number": 10,
-         "max_gas_amount": 7000,
-         "gas_unit_price": 3,
-         "expiration_time": 1582007787665718,
-      },
-      "events": [] // empty because include_events is set to false
+    "id":1,
+    "jsonrpc":"2.0",
+    "result":{
+        "events":[
+
+        ],
+        "gas_used":0,
+        "transaction":{
+            "expiration_time":1590680747,
+            "gas_unit_price":0,
+            "max_gas_amount":1000000,
+            "public_key":"500a9002995e1af93bbdaf977385ed507b174bb3dc6936efd72612d56198a19d",
+            "script":{
+                "amount":10000000,
+                "auth_key_prefix":"6484f428e88bba93de5053e051acb6ec",
+                "metadata":"",
+                "metadata_signature":"",
+                "receiver":"4ac94d88e90acd4cf0294e898e421e94",
+                "type":"peer_to_peer_transaction"
+            },
+            "script_hash":"c8bc3dda60e9662965b3223c22e3d3e3e7b6f698cf1a6930a449eb99daa35e7c",
+            "sender":"c1fda0ec67c1b87bfb9e883e2080e530",
+            "sequence_number":0,
+            "signature":"fe335285e5d87db25f86041d033414bfdf77ddae6f0dfbdc65ff4f5965ff810ef9c85ce00ede0820ce0cf5903f9ab3e93fa6e49bbf770aba9b083a985361fa01",
+            "signature_scheme":"Scheme::Ed25519",
+            "type":"user"
+        },
+        "version":4433485,
+        "vm_status":4001
     }
 }
 ```
@@ -430,7 +511,7 @@ None
 
 ```
 // Request: fetches current block metadata
-curl -X POST --data '{"jsonrpc":"2.0","method":"get_metadata","params":[],"id":1}'
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_metadata","params":[],"id":1}'
 
 // Response
 {
@@ -508,7 +589,44 @@ Returns array of [Event](#event---type) objects
 
 
 ```
-curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_events","params": ["0100000000000000e8fd8d238d9087e3e66e5e69f697f60debef4e3fe6cb8a0e7171195e24ad6a2e", 0, 10], "id":1}'
+//Request: get events associated with event stream key "0100000000000000c1fda0ec67c1b87bfb9e883e2080e530"
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_events","params": ["0100000000000000c1fda0ec67c1b87bfb9e883e2080e530", 0, 10], "id":1}'
+
+//Response
+{
+    "id":1,
+    "jsonrpc":"2.0",
+    "result":[
+        {
+            "data":{
+                "amount":{
+                    "amount":10000000,
+                    "currency":"LBR"
+                },
+                "metadata":"",
+                "receiver":"4ac94d88e90acd4cf0294e898e421e94",
+                "type":"sentpayment"
+            },
+            "key":"0100000000000000c1fda0ec67c1b87bfb9e883e2080e530",
+            "sequence_number":0,
+            "transaction_version":4433485
+        },
+        {
+            "data":{
+                "amount":{
+                    "amount":100000000,
+                    "currency":"LBR"
+                },
+                "metadata":"",
+                "receiver":"4ac94d88e90acd4cf0294e898e421e94",
+                "type":"sentpayment"
+            },
+            "key":"0100000000000000c1fda0ec67c1b87bfb9e883e2080e530",
+            "sequence_number":1,
+            "transaction_version":10099706
+        }
+    ]
+}
 ```
 
 
