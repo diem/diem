@@ -185,7 +185,7 @@ impl LibraClient {
     /// Gets the block metadata
     pub fn get_metadata(&mut self) -> Result<BlockMetadata> {
         let mut batch = JsonRpcBatch::new();
-        batch.add_get_metadata_request();
+        batch.add_get_metadata_request(None);
         let responses = self.client.execute(batch)?;
 
         match get_response_from_batch(0, &responses)? {
