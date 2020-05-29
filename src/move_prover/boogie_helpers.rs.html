@@ -424,14 +424,14 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">boogie_type_value</span>(<span class="ident">env</span>: <span class="kw-2">&amp;</span><span class="ident">GlobalEnv</span>, <span class="ident">ty</span>: <span class="kw-2">&amp;</span><span class="ident">Type</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
     <span class="kw">match</span> <span class="ident">ty</span> {
         <span class="ident">Type</span>::<span class="ident">Primitive</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">p</span> {
-            <span class="ident">PrimitiveType</span>::<span class="ident">Bool</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;BooleanType()&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="ident">PrimitiveType</span>::<span class="ident">Bool</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;$BooleanType()&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">PrimitiveType</span>::<span class="ident">U8</span> <span class="op">|</span> <span class="ident">PrimitiveType</span>::<span class="ident">U64</span> <span class="op">|</span> <span class="ident">PrimitiveType</span>::<span class="ident">U128</span> <span class="op">|</span> <span class="ident">PrimitiveType</span>::<span class="ident">Num</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="string">&quot;IntegerType()&quot;</span>.<span class="ident">to_string</span>()
+                <span class="string">&quot;$IntegerType()&quot;</span>.<span class="ident">to_string</span>()
             }
-            <span class="ident">PrimitiveType</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;AddressType()&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="ident">PrimitiveType</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;$AddressType()&quot;</span>.<span class="ident">to_string</span>(),
             <span class="comment">// TODO fix this for a real boogie type</span>
-            <span class="ident">PrimitiveType</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;AddressType()&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">PrimitiveType</span>::<span class="ident">Range</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;RangeType()&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="ident">PrimitiveType</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;$AddressType()&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="ident">PrimitiveType</span>::<span class="ident">Range</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;$RangeType()&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">PrimitiveType</span>::<span class="ident">TypeValue</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;$TypeType()&quot;</span>.<span class="ident">to_string</span>(),
         },
         <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">t</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$Vector_type_value({})&quot;</span>, <span class="ident">boogie_type_value</span>(<span class="ident">env</span>, <span class="ident">t</span>)),
@@ -473,9 +473,9 @@
 <span class="doccomment">/// Return boogie type for a local with given signature token.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">boogie_local_type</span>(<span class="ident">ty</span>: <span class="kw-2">&amp;</span><span class="ident">Type</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
     <span class="kw">if</span> <span class="ident">ty</span>.<span class="ident">is_reference</span>() {
-        <span class="string">&quot;Reference&quot;</span>.<span class="ident">to_string</span>()
+        <span class="string">&quot;$Reference&quot;</span>.<span class="ident">to_string</span>()
     } <span class="kw">else</span> {
-        <span class="string">&quot;Value&quot;</span>.<span class="ident">to_string</span>()
+        <span class="string">&quot;$Value&quot;</span>.<span class="ident">to_string</span>()
     }
 }
 
@@ -515,10 +515,10 @@
             <span class="ident">PrimitiveType</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$IsValidU64({})&quot;</span>, <span class="ident">name</span>)),
             <span class="ident">PrimitiveType</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$IsValidU128({})&quot;</span>, <span class="ident">name</span>)),
             <span class="ident">PrimitiveType</span>::<span class="ident">Num</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$IsValidNum({})&quot;</span>, <span class="ident">name</span>)),
-            <span class="ident">PrimitiveType</span>::<span class="ident">Bool</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;is#Boolean({})&quot;</span>, <span class="ident">name</span>)),
-            <span class="ident">PrimitiveType</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;is#Address({})&quot;</span>, <span class="ident">name</span>)),
+            <span class="ident">PrimitiveType</span>::<span class="ident">Bool</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;is#$Boolean({})&quot;</span>, <span class="ident">name</span>)),
+            <span class="ident">PrimitiveType</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;is#$Address({})&quot;</span>, <span class="ident">name</span>)),
             <span class="comment">// TODO fix this for a real boogie check</span>
-            <span class="ident">PrimitiveType</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;is#Address({})&quot;</span>, <span class="ident">name</span>)),
+            <span class="ident">PrimitiveType</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;is#$Address({})&quot;</span>, <span class="ident">name</span>)),
             <span class="ident">PrimitiveType</span>::<span class="ident">Range</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$IsValidRange({})&quot;</span>, <span class="ident">name</span>)),
             <span class="ident">PrimitiveType</span>::<span class="ident">TypeValue</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">conds</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;is#$Type({})&quot;</span>, <span class="ident">name</span>)),
         },
@@ -623,7 +623,7 @@
             <span class="string">&quot;var {} where (forall {} :: {});&quot;</span>,
             <span class="ident">declarator</span>,
             (<span class="number">0</span>..<span class="ident">param_count</span>)
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$tv{}: TypeValue&quot;</span>, <span class="ident">i</span>))
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$tv{}: $TypeValue&quot;</span>, <span class="ident">i</span>))
                 .<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>),
             <span class="ident">type_check</span>
         )
@@ -645,19 +645,19 @@
     <span class="macro">assert</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">ty</span>.<span class="ident">is_reference</span>());
     <span class="kw">if</span> <span class="ident">param_count</span> <span class="op">&gt;</span> <span class="number">0</span> {
         <span class="macro">format</span><span class="macro">!</span>(
-            <span class="string">&quot;{} : [{}]Value&quot;</span>,
+            <span class="string">&quot;{} : [{}]$Value&quot;</span>,
             <span class="ident">name</span>,
-            (<span class="number">0</span>..<span class="ident">param_count</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="string">&quot;TypeValue&quot;</span>).<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>)
+            (<span class="number">0</span>..<span class="ident">param_count</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="string">&quot;$TypeValue&quot;</span>).<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>)
         )
     } <span class="kw">else</span> {
-        <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{} : Value&quot;</span>, <span class="ident">name</span>)
+        <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{} : $Value&quot;</span>, <span class="ident">name</span>)
     }
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">boogie_byte_blob</span>(<span class="ident">val</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="string">&quot;$mk_vector()&quot;</span>.<span class="ident">to_string</span>();
     <span class="kw">for</span> <span class="ident">b</span> <span class="kw">in</span> <span class="ident">val</span> {
-        <span class="ident">res</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$push_back_vector({}, Integer({}))&quot;</span>, <span class="ident">res</span>, <span class="ident">b</span>);
+        <span class="ident">res</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$push_back_vector({}, $Integer({}))&quot;</span>, <span class="ident">res</span>, <span class="ident">b</span>);
     }
     <span class="ident">res</span>
 }

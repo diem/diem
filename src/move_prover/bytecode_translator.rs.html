@@ -1650,6 +1650,15 @@
 <span id="1650">1650</span>
 <span id="1651">1651</span>
 <span id="1652">1652</span>
+<span id="1653">1653</span>
+<span id="1654">1654</span>
+<span id="1655">1655</span>
+<span id="1656">1656</span>
+<span id="1657">1657</span>
+<span id="1658">1658</span>
+<span id="1659">1659</span>
+<span id="1660">1660</span>
+<span id="1661">1661</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1806,14 +1815,14 @@
     <span class="kw">fn</span> <span class="ident">translate_struct_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">struct_env</span>: <span class="kw-2">&amp;</span><span class="ident">StructEnv</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) {
         <span class="comment">// Emit TypeName</span>
         <span class="kw">let</span> <span class="ident">struct_name</span> <span class="op">=</span> <span class="ident">boogie_struct_name</span>(<span class="kw-2">&amp;</span><span class="ident">struct_env</span>);
-        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;const unique {}: TypeName;&quot;</span>, <span class="ident">struct_name</span>);
+        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;const unique {}: $TypeName;&quot;</span>, <span class="ident">struct_name</span>);
 
         <span class="comment">// Emit FieldNames</span>
         <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">field_env</span>) <span class="kw">in</span> <span class="ident">struct_env</span>.<span class="ident">get_fields</span>().<span class="ident">enumerate</span>() {
             <span class="kw">let</span> <span class="ident">field_name</span> <span class="op">=</span> <span class="ident">boogie_field_name</span>(<span class="kw-2">&amp;</span><span class="ident">field_env</span>);
             <span class="macro">emitln</span><span class="macro">!</span>(
                 <span class="self">self</span>.<span class="ident">writer</span>,
-                <span class="string">&quot;const {}: FieldName;\naxiom {} == {};&quot;</span>,
+                <span class="string">&quot;const {}: $FieldName;\naxiom {} == {};&quot;</span>,
                 <span class="ident">field_name</span>,
                 <span class="ident">field_name</span>,
                 <span class="ident">i</span>
@@ -1825,16 +1834,16 @@
             .<span class="ident">get_type_parameters</span>()
             .<span class="ident">iter</span>()
             .<span class="ident">enumerate</span>()
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">i</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$tv{}: TypeValue&quot;</span>, <span class="ident">i</span>))
+            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">i</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$tv{}: $TypeValue&quot;</span>, <span class="ident">i</span>))
             .<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>);
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">param_types</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;MapConstTypeValue(DefaultTypeValue())&quot;</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">param_types</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;$MapConstTypeValue($DefaultTypeValue())&quot;</span>);
         <span class="kw">let</span> <span class="ident">type_param_count</span> <span class="op">=</span> <span class="ident">struct_env</span>.<span class="ident">get_type_parameters</span>().<span class="ident">len</span>();
         <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">type_param_count</span> {
             <span class="ident">param_types</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}[{} := $tv{}]&quot;</span>, <span class="ident">param_types</span>, <span class="ident">i</span>, <span class="ident">i</span>);
         }
-        <span class="kw">let</span> <span class="ident">type_param_array</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;TypeValueArray({}, {})&quot;</span>, <span class="ident">param_types</span>, <span class="ident">type_param_count</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">field_types</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;MapConstTypeValue(DefaultTypeValue())&quot;</span>);
+        <span class="kw">let</span> <span class="ident">type_param_array</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$TypeValueArray({}, {})&quot;</span>, <span class="ident">param_types</span>, <span class="ident">type_param_count</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">field_types</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;$MapConstTypeValue($DefaultTypeValue())&quot;</span>);
         <span class="kw">for</span> <span class="ident">field_env</span> <span class="kw">in</span> <span class="ident">struct_env</span>.<span class="ident">get_fields</span>() {
             <span class="ident">field_types</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
                 <span class="string">&quot;{}[{} := {}]&quot;</span>,
@@ -1844,12 +1853,12 @@
             );
         }
         <span class="kw">let</span> <span class="ident">field_array</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-            <span class="string">&quot;TypeValueArray({}, {})&quot;</span>,
+            <span class="string">&quot;$TypeValueArray({}, {})&quot;</span>,
             <span class="ident">field_types</span>,
             <span class="ident">struct_env</span>.<span class="ident">get_field_count</span>()
         );
         <span class="kw">let</span> <span class="ident">type_value</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-            <span class="string">&quot;StructType({}, {}, {})&quot;</span>,
+            <span class="string">&quot;$StructType({}, {}, {})&quot;</span>,
             <span class="ident">struct_name</span>, <span class="ident">type_param_array</span>, <span class="ident">field_array</span>
         );
         <span class="kw">if</span> <span class="ident">struct_name</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;$LibraAccount_T&quot;</span> {
@@ -1866,14 +1875,14 @@
             <span class="comment">// function is forward-declared in the prelude, here we only add an axiom for it.</span>
             <span class="macro">emitln</span><span class="macro">!</span>(
                 <span class="self">self</span>.<span class="ident">writer</span>,
-                <span class="string">&quot;axiom (forall $tv0: TypeValue :: {}_type_value($tv0) == {});&quot;</span>,
+                <span class="string">&quot;axiom (forall $tv0: $TypeValue :: {}_type_value($tv0) == {});&quot;</span>,
                 <span class="ident">struct_name</span>,
                 <span class="ident">type_value</span>
             );
         } <span class="kw">else</span> {
             <span class="macro">emitln</span><span class="macro">!</span>(
                 <span class="self">self</span>.<span class="ident">writer</span>,
-                <span class="string">&quot;function {}_type_value({}): TypeValue {{\n    {}\n}}&quot;</span>,
+                <span class="string">&quot;function {}_type_value({}): $TypeValue {{\n    {}\n}}&quot;</span>,
                 <span class="ident">struct_name</span>,
                 <span class="ident">type_args</span>,
                 <span class="ident">type_value</span>
@@ -1893,26 +1902,26 @@
             .<span class="ident">get_type_parameters</span>()
             .<span class="ident">iter</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">TypeParameter</span>(<span class="ident">s</span>, <span class="kw">_</span>)<span class="op">|</span> {
-                <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}: TypeValue&quot;</span>, <span class="ident">s</span>.<span class="ident">display</span>(<span class="ident">struct_env</span>.<span class="ident">symbol_pool</span>()))
+                <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}: $TypeValue&quot;</span>, <span class="ident">s</span>.<span class="ident">display</span>(<span class="ident">struct_env</span>.<span class="ident">symbol_pool</span>()))
             })
             .<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>);
         <span class="kw">let</span> <span class="ident">args_str</span> <span class="op">=</span> <span class="ident">struct_env</span>
             .<span class="ident">get_fields</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">field_env</span><span class="op">|</span> {
                 <span class="macro">format</span><span class="macro">!</span>(
-                    <span class="string">&quot;{}: Value&quot;</span>,
+                    <span class="string">&quot;{}: $Value&quot;</span>,
                     <span class="ident">field_env</span>.<span class="ident">get_name</span>().<span class="ident">display</span>(<span class="ident">struct_env</span>.<span class="ident">symbol_pool</span>())
                 )
             })
             .<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>);
         <span class="macro">emitln</span><span class="macro">!</span>(
             <span class="self">self</span>.<span class="ident">writer</span>,
-            <span class="string">&quot;procedure {{:inline 1}} {}_pack($file_id: int, $byte_index: int, $var_idx: int, {}) returns ($struct: Value)\n{{&quot;</span>,
+            <span class="string">&quot;procedure {{:inline 1}} {}_pack($file_id: int, $byte_index: int, $var_idx: int, {}) returns ($struct: $Value)\n{{&quot;</span>,
             <span class="ident">boogie_struct_name</span>(<span class="ident">struct_env</span>),
             <span class="ident">separate</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">type_args_str</span>.<span class="ident">clone</span>(), <span class="ident">args_str</span>.<span class="ident">clone</span>()], <span class="string">&quot;, &quot;</span>)
         );
         <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">indent</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctor_expr</span> <span class="op">=</span> <span class="string">&quot;MapConstValue(DefaultValue())&quot;</span>.<span class="ident">to_owned</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctor_expr</span> <span class="op">=</span> <span class="string">&quot;$MapConstValue($DefaultValue())&quot;</span>.<span class="ident">to_owned</span>();
         <span class="kw">for</span> <span class="ident">field_env</span> <span class="kw">in</span> <span class="ident">struct_env</span>.<span class="ident">get_fields</span>() {
             <span class="kw">let</span> <span class="ident">field_param</span> <span class="op">=</span>
                 <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">field_env</span>.<span class="ident">get_name</span>().<span class="ident">display</span>(<span class="ident">struct_env</span>.<span class="ident">symbol_pool</span>()));
@@ -1932,7 +1941,7 @@
         }
         <span class="macro">emitln</span><span class="macro">!</span>(
             <span class="self">self</span>.<span class="ident">writer</span>,
-            <span class="string">&quot;$struct := Vector(ValueArray({}, {}));&quot;</span>,
+            <span class="string">&quot;$struct := $Vector($ValueArray({}, {}));&quot;</span>,
             <span class="ident">ctor_expr</span>,
             <span class="ident">struct_env</span>.<span class="ident">get_field_count</span>()
         );
@@ -1957,11 +1966,11 @@
             <span class="self">self</span>.<span class="ident">writer</span>,
             <span class="string">&quot;procedure {{:inline 1}} {}_unpack({}) returns ({})\n{{&quot;</span>,
             <span class="ident">boogie_struct_name</span>(<span class="ident">struct_env</span>),
-            <span class="ident">separate</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">type_args_str</span>, <span class="string">&quot;$struct: Value&quot;</span>.<span class="ident">to_string</span>()], <span class="string">&quot;, &quot;</span>),
+            <span class="ident">separate</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">type_args_str</span>, <span class="string">&quot;$struct: $Value&quot;</span>.<span class="ident">to_string</span>()], <span class="string">&quot;, &quot;</span>),
             <span class="ident">args_str</span>
         );
         <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">indent</span>();
-        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;assume is#Vector($struct);&quot;</span>);
+        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;assume is#$Vector($struct);&quot;</span>);
         <span class="kw">for</span> <span class="ident">field_env</span> <span class="kw">in</span> <span class="ident">struct_env</span>.<span class="ident">get_fields</span>() {
             <span class="macro">emitln</span><span class="macro">!</span>(
                 <span class="self">self</span>.<span class="ident">writer</span>,
@@ -2106,7 +2115,7 @@
             .<span class="ident">get_type_parameters</span>()
             .<span class="ident">iter</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">TypeParameter</span>(<span class="ident">s</span>, <span class="kw">_</span>)<span class="op">|</span> {
-                <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}: TypeValue&quot;</span>, <span class="ident">s</span>.<span class="ident">display</span>(<span class="ident">func_target</span>.<span class="ident">symbol_pool</span>()))
+                <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}: $TypeValue&quot;</span>, <span class="ident">s</span>.<span class="ident">display</span>(<span class="ident">func_target</span>.<span class="ident">symbol_pool</span>()))
             })
             .<span class="ident">chain</span>((<span class="number">0</span>..<span class="ident">func_target</span>.<span class="ident">get_parameter_count</span>()).<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> {
                 <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_name</span>(<span class="ident">i</span>);
@@ -2199,8 +2208,17 @@
                 <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">func_target</span>
                     .<span class="ident">symbol_pool</span>()
                     .<span class="ident">string</span>(<span class="ident">func_target</span>.<span class="ident">get_local_name</span>(<span class="ident">i</span>));
-                <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;assume l#Reference({}) == Param({});&quot;</span>, <span class="ident">name</span>, <span class="ident">i</span>);
-                <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;assume size#Path(p#Reference({})) == 0;&quot;</span>, <span class="ident">name</span>);
+                <span class="macro">emitln</span><span class="macro">!</span>(
+                    <span class="self">self</span>.<span class="ident">writer</span>,
+                    <span class="string">&quot;assume l#$Reference({}) == $Param({});&quot;</span>,
+                    <span class="ident">name</span>,
+                    <span class="ident">i</span>
+                );
+                <span class="macro">emitln</span><span class="macro">!</span>(
+                    <span class="self">self</span>.<span class="ident">writer</span>,
+                    <span class="string">&quot;assume size#Path(p#$Reference({})) == 0;&quot;</span>,
+                    <span class="ident">name</span>
+                );
             }
         }
 
@@ -2298,8 +2316,8 @@
                 <span class="ident">boogie_type_value</span>(<span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">env</span>, <span class="ident">local_type</span>)
             );
         }
-        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;var $tmp: Value;&quot;</span>);
-        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;var $saved_m: Memory;&quot;</span>);
+        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;var $tmp: $Value;&quot;</span>);
+        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;var $saved_m: $Memory;&quot;</span>);
 
         <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;\n// initialize function execution&quot;</span>);
         <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;assert !$abort_flag;&quot;</span>);
@@ -2323,9 +2341,9 @@
         <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">ty</span>) <span class="kw">in</span> <span class="ident">func_target</span>.<span class="ident">get_return_types</span>().<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
             <span class="kw">let</span> <span class="ident">ret_str</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$ret{}&quot;</span>, <span class="ident">i</span>);
             <span class="kw">if</span> <span class="ident">ty</span>.<span class="ident">is_reference</span>() {
-                <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;{} := DefaultReference;&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">ret_str</span>);
+                <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;{} := $DefaultReference;&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">ret_str</span>);
             } <span class="kw">else</span> {
-                <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;{} := DefaultValue();&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">ret_str</span>);
+                <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;{} := $DefaultValue();&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">ret_str</span>);
             }
         }
         <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">unindent</span>();
@@ -2420,12 +2438,12 @@
                 <span class="kw">use</span> <span class="ident">BorrowNode</span>::<span class="kw-2">*</span>;
                 <span class="kw">match</span> <span class="ident">dest</span> {
                     <span class="ident">GlobalRoot</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;call WritebackToGlobal({});&quot;</span>, <span class="ident">str_local</span>(<span class="kw-2">*</span><span class="ident">src</span>));
+                        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;call $WritebackToGlobal({});&quot;</span>, <span class="ident">str_local</span>(<span class="kw-2">*</span><span class="ident">src</span>));
                     }
                     <span class="ident">LocalRoot</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="macro">emitln</span><span class="macro">!</span>(
                             <span class="self">self</span>.<span class="ident">writer</span>,
-                            <span class="string">&quot;call {} := WritebackToValue({}, {}, {});&quot;</span>,
+                            <span class="string">&quot;call {} := $WritebackToValue({}, {}, {});&quot;</span>,
                             <span class="ident">str_local</span>(<span class="kw-2">*</span><span class="ident">idx</span>),
                             <span class="ident">str_local</span>(<span class="kw-2">*</span><span class="ident">src</span>),
                             <span class="ident">idx</span>,
@@ -2435,7 +2453,7 @@
                     <span class="ident">Reference</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="macro">emitln</span><span class="macro">!</span>(
                             <span class="self">self</span>.<span class="ident">writer</span>,
-                            <span class="string">&quot;call {} := WritebackToReference({}, {});&quot;</span>,
+                            <span class="string">&quot;call {} := $WritebackToReference({}, {});&quot;</span>,
                             <span class="ident">str_local</span>(<span class="kw-2">*</span><span class="ident">idx</span>),
                             <span class="ident">str_local</span>(<span class="kw-2">*</span><span class="ident">src</span>),
                             <span class="ident">str_local</span>(<span class="kw-2">*</span><span class="ident">idx</span>)
@@ -2447,7 +2465,7 @@
                 <span class="macro">assert</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">srcs</span>.<span class="ident">is_empty</span>());
                 <span class="macro">emitln</span><span class="macro">!</span>(
                     <span class="self">self</span>.<span class="ident">writer</span>,
-                    <span class="string">&quot;call {} := Splice{}({}, {});&quot;</span>,
+                    <span class="string">&quot;call {} := $Splice{}({}, {});&quot;</span>,
                     <span class="ident">str_local</span>(<span class="kw-2">*</span><span class="ident">dest</span>),
                     <span class="ident">srcs</span>.<span class="ident">len</span>(),
                     <span class="ident">srcs</span>.<span class="ident">iter</span>()
@@ -2467,7 +2485,7 @@
             <span class="ident">Jump</span>(<span class="kw">_</span>, <span class="ident">target</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;goto L{};&quot;</span>, <span class="ident">target</span>.<span class="ident">as_usize</span>()),
             <span class="ident">Branch</span>(<span class="kw">_</span>, <span class="ident">then_target</span>, <span class="ident">else_target</span>, <span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">emitln</span><span class="macro">!</span>(
                 <span class="self">self</span>.<span class="ident">writer</span>,
-                <span class="string">&quot;$tmp := {};\nif (b#Boolean($tmp)) {{ goto L{}; }} else {{ goto L{}; }}&quot;</span>,
+                <span class="string">&quot;$tmp := {};\nif (b#$Boolean($tmp)) {{ goto L{}; }} else {{ goto L{}; }}&quot;</span>,
                 <span class="ident">str_local</span>(<span class="kw-2">*</span><span class="ident">idx</span>),
                 <span class="ident">then_target</span>.<span class="ident">as_usize</span>(),
                 <span class="ident">else_target</span>.<span class="ident">as_usize</span>(),
@@ -2511,12 +2529,12 @@
             }
             <span class="ident">Load</span>(<span class="kw">_</span>, <span class="ident">idx</span>, <span class="ident">c</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">c</span> {
-                    <span class="ident">Constant</span>::<span class="ident">Bool</span>(<span class="bool-val">true</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;Boolean(true)&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">Constant</span>::<span class="ident">Bool</span>(<span class="bool-val">false</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;Boolean(false)&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">Constant</span>::<span class="ident">U8</span>(<span class="ident">num</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Integer({})&quot;</span>, <span class="ident">num</span>),
-                    <span class="ident">Constant</span>::<span class="ident">U64</span>(<span class="ident">num</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Integer({})&quot;</span>, <span class="ident">num</span>),
-                    <span class="ident">Constant</span>::<span class="ident">U128</span>(<span class="ident">num</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Integer({})&quot;</span>, <span class="ident">num</span>),
-                    <span class="ident">Constant</span>::<span class="ident">Address</span>(<span class="ident">val</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Address({})&quot;</span>, <span class="ident">val</span>),
+                    <span class="ident">Constant</span>::<span class="ident">Bool</span>(<span class="bool-val">true</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;$Boolean(true)&quot;</span>.<span class="ident">to_string</span>(),
+                    <span class="ident">Constant</span>::<span class="ident">Bool</span>(<span class="bool-val">false</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;$Boolean(false)&quot;</span>.<span class="ident">to_string</span>(),
+                    <span class="ident">Constant</span>::<span class="ident">U8</span>(<span class="ident">num</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$Integer({})&quot;</span>, <span class="ident">num</span>),
+                    <span class="ident">Constant</span>::<span class="ident">U64</span>(<span class="ident">num</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$Integer({})&quot;</span>, <span class="ident">num</span>),
+                    <span class="ident">Constant</span>::<span class="ident">U128</span>(<span class="ident">num</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$Integer({})&quot;</span>, <span class="ident">num</span>),
+                    <span class="ident">Constant</span>::<span class="ident">Address</span>(<span class="ident">val</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$Address({})&quot;</span>, <span class="ident">val</span>),
                     <span class="ident">Constant</span>::<span class="ident">TxnSenderAddress</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;$TxnSender($txn)&quot;</span>.<span class="ident">to_string</span>(),
                     <span class="ident">Constant</span>::<span class="ident">ByteArray</span>(<span class="ident">val</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">boogie_byte_blob</span>(<span class="ident">val</span>),
                 };
@@ -3101,7 +3119,7 @@
                         <span class="kw">let</span> <span class="ident">op2</span> <span class="op">=</span> <span class="ident">srcs</span>[<span class="number">1</span>];
                         <span class="macro">emitln</span><span class="macro">!</span>(
                             <span class="self">self</span>.<span class="ident">writer</span>,
-                            <span class="string">&quot;$tmp := Boolean(IsEqual({}, {}));&quot;</span>,
+                            <span class="string">&quot;$tmp := $Boolean($IsEqual({}, {}));&quot;</span>,
                             <span class="ident">str_local</span>(<span class="ident">op1</span>),
                             <span class="ident">str_local</span>(<span class="ident">op2</span>)
                         );
@@ -3113,7 +3131,7 @@
                         <span class="kw">let</span> <span class="ident">op2</span> <span class="op">=</span> <span class="ident">srcs</span>[<span class="number">1</span>];
                         <span class="macro">emitln</span><span class="macro">!</span>(
                             <span class="self">self</span>.<span class="ident">writer</span>,
-                            <span class="string">&quot;$tmp := Boolean(!IsEqual({}, {}));&quot;</span>,
+                            <span class="string">&quot;$tmp := $Boolean(!$IsEqual({}, {}));&quot;</span>,
                             <span class="ident">str_local</span>(<span class="ident">op1</span>),
                             <span class="ident">str_local</span>(<span class="ident">op2</span>)
                         );
