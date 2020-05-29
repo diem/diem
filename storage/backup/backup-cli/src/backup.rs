@@ -23,7 +23,10 @@ impl BackupServiceClient {
     pub fn new(port: u16) -> Self {
         Self {
             port,
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .no_proxy()
+                .build()
+                .expect("Http client should build."),
         }
     }
 
