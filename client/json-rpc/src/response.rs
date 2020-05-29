@@ -7,7 +7,7 @@ use crate::views::{
 };
 use anyhow::{ensure, format_err, Error, Result};
 
-use serde_json::Value;
+use serde_json::{Number, Value};
 use std::convert::TryFrom;
 
 #[allow(clippy::large_enum_variant)]
@@ -22,6 +22,7 @@ pub enum JsonRpcResponse {
     BlockMetadataResponse(BlockMetadata),
     CurrenciesResponse(Vec<CurrencyInfoView>),
     AccountStateWithProofResponse(AccountStateWithProofView),
+    NetworkStatusResponse(Number),
     UnknownResponse(Value),
 }
 
@@ -83,6 +84,12 @@ impl TryFrom<(String, Value)> for JsonRpcResponse {
             "get_transactions" => {
                 let txns: Vec<TransactionView> = serde_json::from_value(value)?;
                 Ok(JsonRpcResponse::TransactionsResponse(txns))
+            }
+            "get_network_status" => {
+                let connected_peers_count: Number = serde_json::from_value(value)?;
+                Ok(JsonRpcResponse::NetworkStatusResponse(
+                    connected_peers_count,
+                ))
             }
             _ => Ok(JsonRpcResponse::UnknownResponse(value)),
         }

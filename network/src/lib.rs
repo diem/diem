@@ -18,7 +18,7 @@ pub mod peer_manager;
 pub mod protocols;
 pub mod validator_network;
 
-mod counters;
+pub mod counters;
 mod peer;
 mod sink;
 mod transport;

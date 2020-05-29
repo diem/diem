@@ -381,7 +381,6 @@ where
                 counters::LIBRA_NETWORK_PEERS
                     .with_label_values(&[self.role.as_str(), "connected"])
                     .set(self.active_peers.len() as i64);
-
                 // If the connection was explicitly closed by an upstream client, send an ACK.
                 if let Some(oneshot_tx) = self
                     .outstanding_disconnect_requests

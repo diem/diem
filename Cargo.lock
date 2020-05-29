@@ -2488,6 +2488,7 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "libradb 0.1.0",
  "move-core-types 0.1.0",
+ "network 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.10.5 (registry+https://github.com/rust-lang/crates.io-index)",

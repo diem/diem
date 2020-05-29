@@ -7,7 +7,7 @@ use crate::{
     methods::{build_registry, JsonRpcRequest, JsonRpcService, RpcRegistry},
 };
 use futures::future::join_all;
-use libra_config::config::NodeConfig;
+use libra_config::config::{NodeConfig, RoleType};
 use libra_mempool::MempoolClientSender;
 use libra_types::ledger_info::LedgerInfoWithSignatures;
 use serde_json::{map::Map, Value};
@@ -25,6 +25,7 @@ pub fn bootstrap(
     address: SocketAddr,
     libra_db: Arc<dyn DbReader>,
     mp_sender: MempoolClientSender,
+    //    role: RoleType
 ) -> Runtime {
     let runtime = Builder::new()
         .thread_name("rpc-")
@@ -34,7 +35,7 @@ pub fn bootstrap(
         .expect("[rpc] failed to create runtime");
 
     let registry = Arc::new(build_registry());
-    let service = JsonRpcService::new(libra_db, mp_sender);
+    let service = JsonRpcService::new(libra_db, mp_sender, RoleType::Validator);
 
     let handler = warp::any()
         .and(warp::path::end())

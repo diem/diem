@@ -13,6 +13,7 @@ use anyhow::{ensure, format_err, Error, Result};
 use core::future::Future;
 use debug_interface::prelude::*;
 use futures::{channel::oneshot, SinkExt};
+use libra_config::config::RoleType;
 use libra_crypto::hash::CryptoHash;
 use libra_mempool::MempoolClientSender;
 use libra_types::{
@@ -30,15 +31,22 @@ use serde_json::Value;
 use std::{collections::HashMap, convert::TryFrom, ops::Deref, pin::Pin, str::FromStr, sync::Arc};
 use storage_interface::DbReader;
 
+use network::counters;
+
 #[derive(Clone)]
 pub(crate) struct JsonRpcService {
     db: Arc<dyn DbReader>,
     mempool_sender: MempoolClientSender,
+    role: RoleType,
 }
 
 impl JsonRpcService {
-    pub fn new(db: Arc<dyn DbReader>, mempool_sender: MempoolClientSender) -> Self {
-        Self { db, mempool_sender }
+    pub fn new(db: Arc<dyn DbReader>, mempool_sender: MempoolClientSender, role: RoleType) -> Self {
+        Self {
+            db,
+            mempool_sender,
+            role,
+        }
     }
 
     pub fn get_latest_ledger_info(&self) -> Result<LedgerInfoWithSignatures> {
@@ -320,6 +328,13 @@ async fn get_account_state_with_proof(
     )?)
 }
 
+/// Returns the number of peers this node is connected to
+async fn get_network_status(service: JsonRpcService, _request: JsonRpcRequest) -> Result<u64> {
+    let blah = counters::LIBRA_NETWORK_PEERS
+        .get_metric_with_label_values(&[service.role.as_str(), "connected"])?;
+    Ok(blah.get() as u64)
+}
+
 /// Builds registry of all available RPC methods
 /// To register new RPC method, add it via `register_rpc_method!` macros call
 /// Note that RPC method name will equal to name of function
@@ -345,6 +360,7 @@ pub(crate) fn build_registry() -> RpcRegistry {
         get_account_state_with_proof,
         3
     );
+    register_rpc_method!(registry, "get_network_status", get_network_status, 0);
 
     registry
 }
