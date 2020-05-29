@@ -8,7 +8,7 @@ pub struct StringError(String);
 pub const SENDER: &str = "0x8675309";
 
 pub const STD_LIB_DIR: &str = "../stdlib/modules";
-pub const FUNCTIONAL_TEST_DIR: &str = "tests/functional";
+pub const FUNCTIONAL_TEST_DIR: &str = "functional-tests/tests";
 pub const MOVE_CHECK_DIR: &str = "tests/move_check";
 pub const STD_LIB_TRANSACTION_SCRIPTS_DIR: &str = "../stdlib/transaction_scripts";
 pub const PATH_TO_IR_TESTS: &str = "../ir-testsuite/tests";
@@ -30,8 +30,8 @@ pub const COMPLETED_DIRECTORIES: &[&str; 4] = &[
 /// We need to replicate the specification of the (non-staged) stdlib files here since we can't
 /// import the stdlib crate: it will create a circular dependency since the stdlib needs the
 /// compiler to compile the stdlib and scripts.
-pub fn stdlib_files() -> Vec<String> {
-    let dirfiles = datatest_stable::utils::iterate_directory(Path::new(STD_LIB_DIR));
+pub fn stdlib_files(stdlib_dir: impl AsRef<Path>) -> Vec<String> {
+    let dirfiles = datatest_stable::utils::iterate_directory(stdlib_dir.as_ref());
     dirfiles
         .flat_map(|path| {
             if path.extension()?.to_str()? == MOVE_EXTENSION {

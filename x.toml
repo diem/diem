@@ -54,6 +54,7 @@ members = [
     "language/e2e-tests",
     "language/functional-tests",
     "language/ir-testsuite",
+    "language/move-lang/functional-tests",
     "language/move-prover/test-utils",
     "language/tools/test-generation",
     "language/tools/utils",

@@ -13,7 +13,7 @@ const KEEP_TMP: &str = "KEEP";
 // Runs all tests under the test/testsuite directory.
 fn sanity_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
     let mut targets = vec![path.to_str().unwrap().to_owned()];
-    targets.append(&mut stdlib_files());
+    targets.append(&mut stdlib_files(STD_LIB_DIR));
     let sender = Some(Address::LIBRA_CORE);
 
     let out_path = path.with_extension(OUT_EXT);

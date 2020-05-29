@@ -11,10 +11,13 @@ use move_lang::{
     compiled_unit::CompiledUnit,
     move_compile_no_report,
     shared::Address,
-    test_utils::{read_bool_var, stdlib_files, FUNCTIONAL_TEST_DIR},
+    test_utils::{read_bool_var, stdlib_files},
 };
 use std::{convert::TryFrom, fmt, io::Write, path::Path};
 use tempfile::NamedTempFile;
+
+pub const STD_LIB_DIR: &str = "../../stdlib/modules";
+pub const FUNCTIONAL_TEST_DIR: &str = "tests";
 
 struct MoveSourceCompiler {
     deps: Vec<String>,
@@ -95,7 +98,7 @@ impl Compiler for MoveSourceCompiler {
 }
 
 fn functional_testsuite(path: &Path) -> datatest_stable::Result<()> {
-    testsuite::functional_tests(MoveSourceCompiler::new(stdlib_files()), path)
+    testsuite::functional_tests(MoveSourceCompiler::new(stdlib_files(STD_LIB_DIR)), path)
 }
 
 datatest_stable::harness!(functional_testsuite, FUNCTIONAL_TEST_DIR, r".*\.move");
