@@ -445,6 +445,10 @@
 <span id="445">445</span>
 <span id="446">446</span>
 <span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -803,8 +807,12 @@
                 <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;should not happen&quot;</span>),
             }
         }
-        <span class="ident">options</span>.<span class="ident">move_sources</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="string">&quot;sources&quot;</span>);
-        <span class="ident">options</span>.<span class="ident">move_deps</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="string">&quot;dependencies&quot;</span>);
+        <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">occurrences_of</span>(<span class="string">&quot;sources&quot;</span>) <span class="op">&gt;</span> <span class="number">0</span> {
+            <span class="ident">options</span>.<span class="ident">move_sources</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="string">&quot;sources&quot;</span>);
+        }
+        <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">occurrences_of</span>(<span class="string">&quot;dependencies&quot;</span>) <span class="op">&gt;</span> <span class="number">0</span> {
+            <span class="ident">options</span>.<span class="ident">move_deps</span> <span class="op">=</span> <span class="ident">get_vec</span>(<span class="string">&quot;dependencies&quot;</span>);
+        }
         <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;verify&quot;</span>) {
             <span class="ident">options</span>.<span class="ident">prover</span>.<span class="ident">verify_scope</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">matches</span>.<span class="ident">value_of</span>(<span class="string">&quot;verify&quot;</span>).<span class="ident">unwrap</span>() {
                 <span class="string">&quot;public&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">VerificationScope</span>::<span class="ident">Public</span>,
