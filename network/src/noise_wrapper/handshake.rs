@@ -9,20 +9,18 @@
 //!
 //! [socket]: network::noise_wrapper::socket
 
+use crate::noise_wrapper::stream::NoiseStream;
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use libra_config::config::NetworkPeerInfo;
+use libra_crypto::{noise, x25519};
+use libra_types::PeerId;
+use netcore::transport::ConnectionOrigin;
 use std::{
     collections::HashMap,
     io,
     sync::{Arc, RwLock},
     time,
 };
-
-use libra_config::config::NetworkPeerInfo;
-use libra_crypto::{noise, x25519};
-use libra_types::PeerId;
-use netcore::transport::ConnectionOrigin;
-
-use crate::noise_wrapper::stream::NoiseStream;
 
 /// In a mutually authenticated network, a client message is accompanied with a timestamp.
 /// This is in order to prevent replay attacks, where the attacker does not know the client's static key,
@@ -56,6 +54,11 @@ impl AntiReplayTimestamps {
             .or_insert(timestamp);
     }
 }
+
+/// The timestamp is sent as a payload, so that it is encrypted.
+/// Note that a millisecond value is a 16-byte value in rust,
+/// but as we use it to store a duration since UNIX_EPOCH we will never use more than 8 bytes.
+const PAYLOAD_SIZE: usize = 8;
 
 // Noise Wrapper
 // -------------
@@ -127,35 +130,32 @@ impl NoiseWrapper {
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
-        // on the validator network, send prologue as current timestamp (in seconds)
-        let mut prologue = [0u8; 8];
-        if mutual_authentication {
+        // in mutual authenticated networks, send a payload of the current timestamp (in milliseconds)
+        let payload = if mutual_authentication {
             let now: u64 = time::SystemTime::now()
                 .duration_since(time::UNIX_EPOCH)
                 .expect("system clock should work")
-                .as_secs();
-            prologue = now.to_le_bytes(); // 5 -> [0, 0, 0, 0, 0, 0, 0, 5]
-            socket.write_all(&prologue).await?;
-        }
+                .as_millis() as u64;
+            // e.g. [157, 126, 253, 97, 114, 1, 0, 0]
+            let now = now.to_le_bytes().to_vec();
+            Some(now)
+        } else {
+            None
+        };
 
         // create first handshake message  (-> e, es, s, ss)
         let mut rng = rand::rngs::OsRng;
-        let mut first_message = [0u8; noise::handshake_init_msg_len(0)];
+        let mut first_message = [0u8; noise::handshake_init_msg_len(PAYLOAD_SIZE)];
         let initiator_state = self
             .0
             .initiate_connection(
                 &mut rng,
-                &prologue,
+                &[],
                 remote_public_key,
-                None,
+                payload.as_ref().map(|x| &x[..]),
                 &mut first_message,
             )
-            .map_err(|e| {
-                io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    format!("noise: wrong input passed {}", e),
-                )
-            })?;
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
         // write the first handshake message
         socket.write_all(&first_message).await?;
@@ -172,12 +172,7 @@ impl NoiseWrapper {
         let (_, session) = self
             .0
             .finalize_connection(initiator_state, &server_response)
-            .map_err(|e| {
-                io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    format!("noise: wrong message received {}", e),
-                )
-            })?;
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
         // finalize the connection
         Ok(NoiseStream::new(socket, session))
@@ -192,35 +187,26 @@ impl NoiseWrapper {
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
-        // on the validator network, receive prologue as the client timestamp (in seconds)
-        let mut prologue = [0u8; 8];
-        let client_timestamp = if anti_replay_timestamps.is_some() {
-            socket.read_exact(&mut prologue).await?;
-            u64::from_le_bytes(prologue)
-        } else {
-            0
-        };
-
         // receive the initiation message
-        let mut client_init_message = [0u8; noise::handshake_init_msg_len(0)];
+        let mut client_init_message = [0u8; noise::handshake_init_msg_len(PAYLOAD_SIZE)];
         socket.read_exact(&mut client_init_message).await?;
 
         // parse it
-        let (their_public_key, handshake_state, _) = self
+        let (their_public_key, handshake_state, payload) = self
             .0
-            .parse_client_init_message(&prologue, &client_init_message)
-            .map_err(|e| {
-                io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    format!("noise: wrong message received {}", e),
-                )
-            })?;
+            .parse_client_init_message(&[], &client_init_message)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
         // make sure the public key is a validator before continuing (if we're in the validator network)
         if let Some(trusted_peers) = trusted_peers {
             let found = trusted_peers
                 .read()
-                .unwrap()
+                .map_err(|_| {
+                    io::Error::new(
+                        io::ErrorKind::Other,
+                        "noise: unable to read trusted_peers lock",
+                    )
+                })?
                 .iter()
                 .any(|(_peer_id, public_keys)| public_keys.identity_public_key == their_public_key);
             if !found {
@@ -235,9 +221,27 @@ impl NoiseWrapper {
             }
         }
 
-        // check the timestamp is not a replay
+        // if on a mutually authenticated network
         if let Some(anti_replay_timestamps) = &anti_replay_timestamps {
-            let anti_replay_timestamps = anti_replay_timestamps.read().unwrap();
+            // check that the payload received as the client timestamp (in seconds)
+            if payload.len() != PAYLOAD_SIZE {
+                // TODO: security logging (mimoo)
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "noise: client initiated connection without an 8-byte timestamp",
+                ));
+            }
+            let mut client_timestamp = [0u8; PAYLOAD_SIZE];
+            client_timestamp.copy_from_slice(&payload);
+            let client_timestamp = u64::from_le_bytes(client_timestamp);
+
+            // check the timestamp is not a replay
+            let mut anti_replay_timestamps = anti_replay_timestamps.write().map_err(|_| {
+                io::Error::new(
+                    io::ErrorKind::Other,
+                    "noise: unable to read anti_replay_timestamps lock",
+                )
+            })?;
             if anti_replay_timestamps.is_replay(their_public_key, client_timestamp) {
                 // TODO: security logging the ip + blocking the ip? (mimoo)
                 return Err(io::Error::new(
@@ -248,27 +252,21 @@ impl NoiseWrapper {
                     ),
                 ));
             }
+
+            // store the timestamp
+            anti_replay_timestamps.store_timestamp(their_public_key, client_timestamp);
         }
 
-        // construct and send the response
+        // construct the response
         let mut rng = rand::rngs::OsRng;
         let mut server_response = [0u8; noise::handshake_resp_msg_len(0)];
         let session = self
             .0
             .respond_to_client(&mut rng, handshake_state, None, &mut server_response)
-            .map_err(|e| {
-                io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    format!("noise: wrong message received {}", e),
-                )
-            })?;
-        socket.write_all(&server_response).await?;
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
-        // the connection succeeded, store the client timestamp for replay prevention
-        if let Some(anti_replay_timestamps) = &anti_replay_timestamps {
-            let mut anti_replay_timestamps = anti_replay_timestamps.write().unwrap();
-            anti_replay_timestamps.store_timestamp(their_public_key, client_timestamp);
-        }
+        // send the response
+        socket.write_all(&server_response).await?;
 
         // finalize the connection
         Ok(NoiseStream::new(socket, session))
