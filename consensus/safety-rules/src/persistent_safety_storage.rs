@@ -41,7 +41,7 @@ impl PersistentSafetyStorage {
         private_key: Ed25519PrivateKey,
         waypoint: Waypoint,
     ) -> Result<()> {
-        internal_store.set(CONSENSUS_KEY, Value::Ed25519PrivateKey(private_key))?;
+        internal_store.import_private_key(CONSENSUS_KEY, private_key)?;
         internal_store.set(EPOCH, Value::U64(1))?;
         internal_store.set(LAST_VOTED_ROUND, Value::U64(0))?;
         internal_store.set(PREFERRED_ROUND, Value::U64(0))?;
@@ -56,16 +56,9 @@ impl PersistentSafetyStorage {
     }
 
     pub fn consensus_key(&self) -> Result<Ed25519PrivateKey> {
-        Ok(self
-            .internal_store
-            .get(CONSENSUS_KEY)
-            .and_then(|r| r.value.ed25519_private_key())?)
-    }
-
-    pub fn set_consensus_key(&mut self, consensus_key: Ed25519PrivateKey) -> Result<()> {
         self.internal_store
-            .set(CONSENSUS_KEY, Value::Ed25519PrivateKey(consensus_key))?;
-        Ok(())
+            .export_private_key(CONSENSUS_KEY)
+            .map_err(|e| e.into())
     }
 
     pub fn epoch(&self) -> Result<u64> {
