@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 base64 = "0.12.1"
+chrono = "0.4.9"
 rustls = "0.17.0"
 serde = { version = "1.0.111", features = ["derive"], default-features = false }
 serde_json = "1.0.53"

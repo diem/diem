@@ -22,7 +22,7 @@ const LIBRA_DEFAULT: &str = "libra_default";
 /// calls pointers to data keys, Vault has actually a secret that contains multiple key value
 /// pairs.
 pub struct VaultStorage {
-    client: Client,
+    pub client: Client,
     namespace: Option<String>,
 }
 
@@ -245,6 +245,19 @@ impl CryptoStorage for VaultStorage {
         let name = self.crypto_name(name);
         let vers = self.key_version(&name, &version)?;
         Ok(self.client.export_ed25519_key(&name, Some(vers))?)
+    }
+
+    fn import_private_key(&mut self, name: &str, key: Ed25519PrivateKey) -> Result<(), Error> {
+        let ns_name = self.crypto_name(name);
+        match self.get_public_key(name) {
+            Ok(_) => return Err(Error::KeyAlreadyExists(ns_name)),
+            Err(Error::KeyNotSet(_)) => (/* Expected this for new keys! */),
+            Err(e) => return Err(e),
+        }
+
+        self.client
+            .import_ed25519_key(&ns_name, &key)
+            .map_err(|e| e.into())
     }
 
     fn get_public_key(&self, name: &str) -> Result<PublicKeyResponse, Error> {

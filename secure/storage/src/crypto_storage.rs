@@ -29,6 +29,15 @@ pub trait CryptoStorage: Send + Sync {
     /// retrieve the private key, this call will fail with an error.
     fn export_private_key(&self, name: &str) -> Result<Ed25519PrivateKey, Error>;
 
+    /// An optional API that allows importing private keys. It will store the key at the given
+    /// name. This is not expected to be used in production and the API may throw unimplemented if
+    /// not used correctly. As this is purely a testing API, there is no defined behavior for
+    /// importing a key for a given name if that name already exists.  It only exists to allow
+    /// Libra to be run in test environments where a set of deterministic keys must be generated.
+    fn import_private_key(&mut self, _name: &str, _key: Ed25519PrivateKey) -> Result<(), Error> {
+        unimplemented!();
+    }
+
     /// Returns the private key for a given Ed25519 key pair version, as identified by the
     /// 'name' and 'version'. If the key pair at the specified version doesn't
     /// exist, or the caller doesn't have the appropriate permissions to retrieve the private key,

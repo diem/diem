@@ -20,10 +20,10 @@ const VAULT_NAMESPACE_3: &str = "namespace_3";
 /// storage resets can interfere between tests. To avoid this, we run each test sequentially, and
 /// reset the storage engine only after each test.
 const VAULT_TESTS: &[fn()] = &[
-    test_vault_crypto_policies,
-    test_vault_key_value_policies,
     test_suite_multiple_namespaces,
     test_suite_no_namespaces,
+    test_vault_crypto_policies,
+    test_vault_key_value_policies,
 ];
 
 /// A test for verifying VaultStorage properly implements the LibraSecureStorage API and enforces
