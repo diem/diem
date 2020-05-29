@@ -315,8 +315,8 @@
         );
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_get_metadata_request</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">add_request</span>(<span class="string">&quot;get_metadata&quot;</span>.<span class="ident">to_string</span>(), <span class="macro">vec</span><span class="macro">!</span>[]);
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_get_metadata_request</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">version</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>) {
+        <span class="self">self</span>.<span class="ident">add_request</span>(<span class="string">&quot;get_metadata&quot;</span>.<span class="ident">to_string</span>(), <span class="macro">vec</span><span class="macro">!</span>[<span class="macro">json</span><span class="macro">!</span>(<span class="ident">version</span>)]);
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_get_currencies_info</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {

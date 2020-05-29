@@ -336,6 +336,18 @@
 <span id="336">336</span>
 <span id="337">337</span>
 <span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -352,6 +364,7 @@
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">future</span>::<span class="ident">Future</span>;
 <span class="kw">use</span> <span class="ident">debug_interface</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">channel</span>::<span class="ident">oneshot</span>, <span class="ident">SinkExt</span>};
+<span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">CryptoHash</span>;
 <span class="kw">use</span> <span class="ident">libra_mempool</span>::<span class="ident">MempoolClientSender</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
@@ -454,13 +467,22 @@
     <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
 }
 
-<span class="doccomment">/// Returns the current blockchain metadata</span>
+<span class="doccomment">/// Returns the blockchain metadata for a specified version. If no version is specified, default to</span>
+<span class="doccomment">/// returning the current blockchain metadata</span>
 <span class="doccomment">/// Can be used to verify that target Full Node is up-to-date</span>
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_metadata</span>(<span class="ident">_service</span>: <span class="ident">JsonRpcService</span>, <span class="ident">request</span>: <span class="ident">JsonRpcRequest</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">BlockMetadata</span><span class="op">&gt;</span> {
-    <span class="prelude-val">Ok</span>(<span class="ident">BlockMetadata</span> {
-        <span class="ident">version</span>: <span class="ident">request</span>.<span class="ident">version</span>(),
-        <span class="ident">timestamp</span>: <span class="ident">request</span>.<span class="ident">ledger_info</span>.<span class="ident">ledger_info</span>().<span class="ident">timestamp_usecs</span>(),
-    })
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_metadata</span>(<span class="ident">service</span>: <span class="ident">JsonRpcService</span>, <span class="ident">request</span>: <span class="ident">JsonRpcRequest</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">BlockMetadata</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> (<span class="ident">version</span>, <span class="ident">timestamp</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">serde_json</span>::<span class="ident">from_value</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>(<span class="ident">request</span>.<span class="ident">get_param</span>(<span class="number">0</span>)) {
+        <span class="prelude-val">Ok</span>(<span class="ident">version</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">li</span> <span class="op">=</span> <span class="ident">service</span>.<span class="ident">db</span>.<span class="ident">get_ledger_info</span>(<span class="ident">version</span>)<span class="question-mark">?</span>;
+            (<span class="ident">version</span>, <span class="ident">li</span>.<span class="ident">ledger_info</span>().<span class="ident">timestamp_usecs</span>())
+        }
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> (
+            <span class="ident">request</span>.<span class="ident">version</span>(),
+            <span class="ident">request</span>.<span class="ident">ledger_info</span>.<span class="ident">ledger_info</span>().<span class="ident">timestamp_usecs</span>(),
+        ),
+    };
+
+    <span class="prelude-val">Ok</span>(<span class="ident">BlockMetadata</span> { <span class="ident">version</span>, <span class="ident">timestamp</span> })
 }
 
 <span class="doccomment">/// Returns transactions by range</span>
@@ -511,6 +533,7 @@
 
         <span class="ident">result</span>.<span class="ident">push</span>(<span class="ident">TransactionView</span> {
             <span class="ident">version</span>: <span class="ident">start_version</span> <span class="op">+</span> <span class="ident">v</span> <span class="kw">as</span> <span class="ident">u64</span>,
+            <span class="ident">hash</span>: <span class="ident">tx</span>.<span class="ident">hash</span>().<span class="ident">to_string</span>(),
             <span class="ident">transaction</span>: <span class="ident">tx</span>.<span class="ident">into</span>(),
             <span class="ident">events</span>,
             <span class="ident">vm_status</span>: <span class="ident">info</span>.<span class="ident">major_status</span>(),
@@ -553,6 +576,7 @@
 
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">TransactionView</span> {
             <span class="ident">version</span>: <span class="ident">tx_version</span>,
+            <span class="ident">hash</span>: <span class="ident">tx</span>.<span class="ident">transaction</span>.<span class="ident">hash</span>().<span class="ident">to_string</span>(),
             <span class="ident">transaction</span>: <span class="ident">tx</span>.<span class="ident">transaction</span>.<span class="ident">into</span>(),
             <span class="ident">events</span>,
             <span class="ident">vm_status</span>: <span class="ident">tx</span>.<span class="ident">proof</span>.<span class="ident">transaction_info</span>().<span class="ident">major_status</span>(),
@@ -653,7 +677,7 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">build_registry</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RpcRegistry</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">RpcRegistry</span>::<span class="ident">new</span>();
     <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="string">&quot;submit&quot;</span>, <span class="ident">submit</span>, <span class="number">1</span>);
-    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="string">&quot;get_metadata&quot;</span>, <span class="ident">get_metadata</span>, <span class="number">0</span>);
+    <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="string">&quot;get_metadata&quot;</span>, <span class="ident">get_metadata</span>, <span class="number">1</span>);
     <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="string">&quot;get_account_state&quot;</span>, <span class="ident">get_account_state</span>, <span class="number">1</span>);
     <span class="macro">register_rpc_method</span><span class="macro">!</span>(<span class="ident">registry</span>, <span class="string">&quot;get_transactions&quot;</span>, <span class="ident">get_transactions</span>, <span class="number">3</span>);
     <span class="macro">register_rpc_method</span><span class="macro">!</span>(

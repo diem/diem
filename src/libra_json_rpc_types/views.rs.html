@@ -526,6 +526,7 @@
 <span id="526">526</span>
 <span id="527">527</span>
 <span id="528">528</span>
+<span id="529">529</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -795,6 +796,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TransactionView</span> {
     <span class="kw">pub</span> <span class="ident">version</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">transaction</span>: <span class="ident">TransactionDataView</span>,
+    <span class="kw">pub</span> <span class="ident">hash</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">events</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">EventView</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">vm_status</span>: <span class="ident">StatusCode</span>,
     <span class="kw">pub</span> <span class="ident">gas_used</span>: <span class="ident">u64</span>,
