@@ -8,7 +8,7 @@
 //! This means that only the parts that we care about (the IK handshake) are implemented.
 //!
 //! Note that to benefit from hardware support for AES, you must build this crate with the following
-//! flags: `RUSTFLAGS="-Ctarget-cpu=sandybridge -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3"`.
+//! flags: `RUSTFLAGS="-Ctarget-cpu=skylake -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3"`.
 //!
 //! Usage example:
 //!

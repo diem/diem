@@ -28,7 +28,7 @@ else
   docker run --name libra-node-builder-container -d -i -t -v $DIR/../..:/libra $PROXY_RUN libra-node-builder bash
 fi
 
-docker exec -i -t libra-node-builder-container bash -c 'source /root/.cargo/env; cargo build --release -p libra-node --target-dir /target && /bin/cp /target/release/libra-node target/libra-node-builder/'
+docker exec -i -t libra-node-builder-container bash -c 'source /root/.cargo/env; RUSTFLAGS="-Ctarget-cpu=skylake -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3" cargo build --release -p libra-node --target-dir /target && /bin/cp /target/release/libra-node target/libra-node-builder/'
 
 DOCKERFILE="$(mktemp -t Dockerfile.XXXXXX)"
 awk '/^FROM.*AS prod/ { from=1 } /^COPY/ { sub(/--from=.*release/, "target/libra-node-builder", $0) } { if (from) print }' $DIR/../validator/Dockerfile > "$DOCKERFILE"

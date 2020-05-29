@@ -16,6 +16,7 @@ FROM toolchain AS builder
 
 COPY . /libra
 
+ENV RUSTFLAGS "-Ctarget-cpu=skylake -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3"
 RUN cargo build --release -p libra-node -p cli -p config-builder -p safety-rules && cd target/release && rm -r build deps incremental
 
 ### Production Image ###
@@ -65,9 +66,9 @@ RUN set -x; \
     PIDS=$( pgrep -f '^/usr/bin/python3 /usr/local/bin/gunicorn' | head -n 1 ); \
     COUNTER=5; \
     while [ -z $PIDS ] && [ $COUNTER -gt 0 ]; do \
-        sleep 1; \
-        PIDS=$( pgrep -f '^/usr/bin/python3 /usr/local/bin/gunicorn' | head -n 1 ); \
-        COUNTER=$(( $COUNTER - 1 )); \
+    sleep 1; \
+    PIDS=$( pgrep -f '^/usr/bin/python3 /usr/local/bin/gunicorn' | head -n 1 ); \
+    COUNTER=$(( $COUNTER - 1 )); \
     done; \
     if [ -z $PIDS ]; then exit 1; else kill -9 $PIDS || true; fi
 

@@ -3,7 +3,7 @@
 
 //! Don't forget to run this benchmark with AES-NI enable.
 //! You can do this by building with the following flags:
-//! `RUSTFLAGS="-Ctarget-cpu=sandybridge -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3"`.
+//! `RUSTFLAGS="-Ctarget-cpu=skylake -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3"`.
 //!
 
 #[macro_use]
