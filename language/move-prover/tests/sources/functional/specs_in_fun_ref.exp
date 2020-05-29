@@ -17,6 +17,7 @@ error:  This loop invariant might not be maintained by the loop.
      │
      =     at tests/sources/functional/specs_in_fun_ref.move:110:5: simple7 (entry)
      =     at tests/sources/functional/specs_in_fun_ref.move:111:13: simple7
+     =         n = <redacted>
      =     at tests/sources/functional/specs_in_fun_ref.move:114:13: simple7
      =         x = <redacted>
      =     at tests/sources/functional/specs_in_fun_ref.move:113:9: simple7

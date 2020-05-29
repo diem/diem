@@ -278,7 +278,7 @@ impl Options {
                 Arg::with_name("docgen")
                     .long("docgen")
                     .help("run the documentation generator instead of the prover. \
-                    Generated docs will be written into the directory at `--output=<path>`"),
+                    Generated docs will be written into the directory `./doc` unless configured otherwise via toml"),
             )
             .arg(
                 Arg::with_name("verify")

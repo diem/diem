@@ -934,7 +934,7 @@ impl<'env> SpecTranslator<'env> {
             true
         } else if self.options.prover.debug_trace {
             // Option for automatic tracing has been enabled
-            if item != TraceItem::Exp {
+            if item == TraceItem::Exp {
                 // Some arbitrary exp
                 true
             } else {

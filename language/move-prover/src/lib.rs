@@ -85,7 +85,7 @@ pub fn run_move_prover<W: WriteColor>(
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with boogie generation errors"));
     }
-    debug!("writing boogie to {}", &options.output_path);
+    debug!("writing boogie to `{}`", &options.output_path);
     writer.process_result(|result| fs::write(&options.output_path, result))?;
     let translator_elapsed = now.elapsed();
     if !options.prover.generate_only {
