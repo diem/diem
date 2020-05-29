@@ -261,6 +261,10 @@
 <span id="261">261</span>
 <span id="262">262</span>
 <span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -328,6 +332,10 @@
         <span class="ident">env</span>.<span class="ident">report_errors</span>(<span class="ident">error_writer</span>);
         <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;exiting with checking errors&quot;</span>));
     }
+    <span class="kw">if</span> <span class="ident">env</span>.<span class="ident">has_warnings</span>() {
+        <span class="ident">env</span>.<span class="ident">report_warnings</span>(<span class="ident">error_writer</span>);
+    }
+
     <span class="comment">// Until this point, prover and docgen have same code. Here we part ways.</span>
     <span class="kw">if</span> <span class="ident">options</span>.<span class="ident">run_docgen</span> {
         <span class="kw">return</span> <span class="ident">run_docgen</span>(<span class="kw-2">&amp;</span><span class="ident">env</span>, <span class="kw-2">&amp;</span><span class="ident">options</span>, <span class="ident">now</span>);

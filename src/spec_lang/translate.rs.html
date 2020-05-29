@@ -4140,6 +4140,22 @@
 <span id="4140">4140</span>
 <span id="4141">4141</span>
 <span id="4142">4142</span>
+<span id="4143">4143</span>
+<span id="4144">4144</span>
+<span id="4145">4145</span>
+<span id="4146">4146</span>
+<span id="4147">4147</span>
+<span id="4148">4148</span>
+<span id="4149">4149</span>
+<span id="4150">4150</span>
+<span id="4151">4151</span>
+<span id="4152">4152</span>
+<span id="4153">4153</span>
+<span id="4154">4154</span>
+<span id="4155">4155</span>
+<span id="4156">4156</span>
+<span id="4157">4157</span>
+<span id="4158">4158</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -4209,6 +4225,9 @@
     <span class="ident">spec_var_table</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">QualifiedSymbol</span>, <span class="ident">SpecVarEntry</span><span class="op">&gt;</span>,
     <span class="doccomment">/// A symbol table for specification schemas.</span>
     <span class="ident">spec_schema_table</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">QualifiedSymbol</span>, <span class="ident">SpecSchemaEntry</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// A symbol table storing unused schemas, used later to generate warnings. All schemas</span>
+    <span class="doccomment">/// are initially in the table and are removed when they are used in expressions.</span>
+    <span class="ident">unused_schema_table</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">QualifiedSymbol</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="comment">// A symbol table for structs.</span>
     <span class="ident">struct_table</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">QualifiedSymbol</span>, <span class="ident">StructEntry</span><span class="op">&gt;</span>,
     <span class="doccomment">/// A reverse mapping from ModuleId/StructId pairs to QualifiedSymbol. This</span>
@@ -4288,6 +4307,7 @@
             <span class="ident">spec_fun_table</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
             <span class="ident">spec_var_table</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
             <span class="ident">spec_schema_table</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
+            <span class="ident">unused_schema_table</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
             <span class="ident">struct_table</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
             <span class="ident">reverse_struct_table</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
             <span class="ident">fun_table</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
@@ -4385,6 +4405,7 @@
                 <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;previous declaration of `{}`&quot;</span>, <span class="ident">schema_display</span>),
             );
         }
+        <span class="self">self</span>.<span class="ident">unused_schema_table</span>.<span class="ident">insert</span>(<span class="ident">name</span>, <span class="ident">loc</span>.<span class="ident">clone</span>());
     }
 
     <span class="doccomment">/// Defines a struct type.</span>
@@ -5324,6 +5345,14 @@
 
         <span class="comment">// Perform post reduction of module invariants.</span>
         <span class="self">self</span>.<span class="ident">reduce_module_invariants</span>();
+
+        <span class="comment">// Warn about unused schemas.</span>
+        <span class="kw">for</span> (<span class="ident">schema_name</span>, <span class="ident">loc</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">parent</span>.<span class="ident">unused_schema_table</span> {
+            <span class="self">self</span>.<span class="ident">parent</span>.<span class="ident">env</span>.<span class="ident">warn</span>(
+                <span class="ident">loc</span>,
+                <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;unused schema {}&quot;</span>, <span class="ident">schema_name</span>.<span class="ident">display</span>(<span class="self">self</span>.<span class="ident">symbol_pool</span>())),
+            );
+        }
     }
 }
 
@@ -6179,6 +6208,9 @@
         <span class="ident">args_opt</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">EA</span>::<span class="ident">Fields</span><span class="op">&lt;</span><span class="ident">EA</span>::<span class="ident">Exp</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) {
         <span class="kw">let</span> <span class="ident">schema_name</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">module_access_to_qualified</span>(<span class="ident">maccess</span>);
+
+        <span class="comment">// Remove schema from unused table since it is used in an expression</span>
+        <span class="self">self</span>.<span class="ident">parent</span>.<span class="ident">unused_schema_table</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">schema_name</span>);
 
         <span class="comment">// We need to temporarily detach the schema entry from the parent table because of</span>
         <span class="comment">// borrowing problems, as we need to traverse it while at the same time mutate self.</span>
