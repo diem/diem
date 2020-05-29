@@ -3,17 +3,14 @@
 
 //! Project and package linters that run queries on guppy.
 
-use crate::{
-    config::{BannedDepsConfig, EnforcedAttributesConfig, OverlayConfig, TestOnlyConfig},
-    lint::toml::toml_mismatch_message,
-};
+use crate::config::{BannedDepsConfig, EnforcedAttributesConfig, OverlayConfig};
 use guppy::{graph::feature::FeatureFilterFn, Version};
 use std::{
     collections::{BTreeMap, HashMap},
     ffi::OsStr,
     iter,
-    path::Path,
 };
+use x_core::WorkspaceStatus;
 use x_lint::prelude::*;
 
 /// Ban certain crates from being used as direct dependencies or in the default build.
@@ -72,7 +69,7 @@ impl<'cfg> ProjectLinter for BannedDeps<'cfg> {
 
         let banned_default_build = &self.config.default_build;
         for (package, message) in filter_ban(banned_default_build) {
-            if default_members.contains(package.id()) {
+            if default_members.status_of(package.id()) != WorkspaceStatus::Absent {
                 out.write(
                     LintLevel::Error,
                     format!(
@@ -82,69 +79,6 @@ impl<'cfg> ProjectLinter for BannedDeps<'cfg> {
                     ),
                 );
             }
-        }
-
-        Ok(RunStatus::Executed)
-    }
-}
-
-/// Ensure that the list of test-only crates is up to date.
-#[derive(Debug)]
-pub struct TestOnlyMembers<'cfg> {
-    config: &'cfg TestOnlyConfig,
-}
-
-impl<'cfg> TestOnlyMembers<'cfg> {
-    pub fn new(config: &'cfg TestOnlyConfig) -> Self {
-        Self { config }
-    }
-}
-
-impl<'cfg> Linter for TestOnlyMembers<'cfg> {
-    fn name(&self) -> &'static str {
-        "test-only-members"
-    }
-}
-
-impl<'cfg> ProjectLinter for TestOnlyMembers<'cfg> {
-    fn run<'l>(
-        &self,
-        ctx: &ProjectContext<'l>,
-        out: &mut LintFormatter<'l, '_>,
-    ) -> Result<RunStatus<'l>> {
-        // Set of test-only members is all workspace members minus default ones.
-        let pkg_graph = ctx.package_graph()?;
-        let workspace = pkg_graph.workspace();
-        let default_members = ctx.default_members()?;
-        let mut expected: Vec<_> = workspace
-            .members()
-            .filter_map(|(path, package)| {
-                if default_members.contains(package.id()) {
-                    None
-                } else {
-                    Some(path)
-                }
-            })
-            .collect();
-        expected.sort();
-
-        if expected != self.config.members {
-            // Create the expected TestOnlyConfig struct.
-            let expected = TestOnlyConfig {
-                members: expected
-                    .into_iter()
-                    .map(|path| path.to_path_buf())
-                    .collect(),
-            };
-            out.write_kind(
-                LintKind::File(Path::new("x.toml")),
-                LintLevel::Error,
-                toml_mismatch_message(
-                    &expected,
-                    self.config,
-                    "test-only member list not canonical",
-                )?,
-            );
         }
 
         Ok(RunStatus::Executed)
