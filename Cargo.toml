@@ -65,6 +65,7 @@ members = [
     "language/move-core/types",
     "language/move-ir/types",
     "language/move-lang",
+    "language/move-lang/functional-tests",
     "language/move-prover",
     "language/move-prover/docgen",
     "language/move-prover/spec-lang",

@@ -29,21 +29,12 @@ borrow-graph = { path = "../borrow-graph" }
 bytecode-source-map = { path = "../compiler/bytecode-source-map" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 
-
-[dev-dependencies]
-functional-tests = { path = "../functional-tests", version = "0.1.0" }
-tempfile = "3.1.0"
-
 [[test]]
 name = "move_check_testsuite"
 harness = false
 
 [[test]]
 name = "stdlib_sanity_check"
-harness = false
-
-[[test]]
-name = "functional_testsuite"
 harness = false
 
 [[test]]
