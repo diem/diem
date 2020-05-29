@@ -459,6 +459,13 @@
 <span id="459">459</span>
 <span id="460">460</span>
 <span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -737,9 +744,16 @@
 
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {
     <span class="ident">name</span>: <span class="ident">encode_rotate_compliance_public_key_script</span>,
-    <span class="ident">args</span>: [<span class="ident">vasp_root_addr</span>: <span class="ident">Address</span>, <span class="ident">new_key</span>: <span class="ident">Bytes</span>],
+    <span class="ident">args</span>: [<span class="ident">new_key</span>: <span class="ident">Bytes</span>],
     <span class="ident">script</span>: <span class="ident">RotateCompliancePublicKey</span>,
     <span class="ident">doc</span>: <span class="string">&quot;Encode a program that rotates `vasp_root_addr`&#39;s compliance public key to `new_key`.&quot;</span>
+}
+
+<span class="macro">encode_txn_script</span><span class="macro">!</span> {
+    <span class="ident">name</span>: <span class="ident">encode_rotate_base_url_script</span>,
+    <span class="ident">args</span>: [<span class="ident">new_url</span>: <span class="ident">Bytes</span>],
+    <span class="ident">script</span>: <span class="ident">RotateBaseUrl</span>,
+    <span class="ident">doc</span>: <span class="string">&quot;Encode a program that rotates `vasp_root_addr`&#39;s base URL to `new_url`.&quot;</span>
 }
 
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {
