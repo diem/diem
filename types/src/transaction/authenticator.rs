@@ -160,7 +160,7 @@ impl AuthenticationKey {
 
     /// Create an authentication key from a preimage by taking its sha3 hash
     pub fn from_preimage(preimage: &AuthenticationKeyPreimage) -> AuthenticationKey {
-        AuthenticationKey::new(*HashValue::from_sha3_256(&preimage.0).as_ref())
+        AuthenticationKey::new(*HashValue::sha3_256_of(&preimage.0).as_ref())
     }
 
     /// Create an authentication key from an Ed25519 public key

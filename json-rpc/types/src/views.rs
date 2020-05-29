@@ -351,7 +351,7 @@ impl From<Transaction> for TransactionDataView {
             Transaction::WaypointWriteSet(_) => Ok(TransactionDataView::WriteSet {}),
             Transaction::UserTransaction(t) => {
                 let script_hash = match t.payload() {
-                    TransactionPayload::Script(s) => HashValue::from_sha3_256(s.code()),
+                    TransactionPayload::Script(s) => HashValue::sha3_256_of(s.code()),
                     _ => HashValue::zero(),
                 }
                 .to_hex();

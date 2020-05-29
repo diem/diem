@@ -411,7 +411,7 @@ fn test_extend_whitelist() {
     // Add script1 to whitelist.
     let new_whitelist = {
         let mut existing_list = StdlibScript::whitelist();
-        existing_list.push(*HashValue::from_sha3_256(&[]).as_ref());
+        existing_list.push(*HashValue::sha3_256_of(&[]).as_ref());
         existing_list
     };
 

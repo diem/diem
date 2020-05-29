@@ -181,9 +181,13 @@ impl HashValue {
         HashValue { hash }
     }
 
-    /// Convenience function to compute a sha3-256 HashValue of the buffer. It will handle hasher
-    /// creation, data feeding and finalization.
-    pub fn from_sha3_256(buffer: &[u8]) -> Self {
+    /// Convenience function that computes a `HashValue` internally equal to
+    /// the sha3_256 of a byte buffer. It will handle hasher creation, data
+    /// feeding and finalization.
+    ///
+    /// Note this will not result in the `<T as CryptoHash>::hash()` for any
+    /// reasonable struct T, as this computes a sha3 without any ornaments.
+    pub fn sha3_256_of(buffer: &[u8]) -> Self {
         let mut sha3 = Sha3::v256();
         sha3.update(buffer);
         HashValue::from_keccak(sha3)
@@ -479,7 +483,7 @@ impl DefaultHasher {
         if !typename.is_empty() {
             let mut salt = LIBRA_HASH_PREFIX.to_vec();
             salt.extend_from_slice(typename);
-            state.update(HashValue::from_sha3_256(&salt[..]).as_ref());
+            state.update(HashValue::sha3_256_of(&salt[..]).as_ref());
         }
         DefaultHasher { state }
     }

@@ -49,7 +49,7 @@ pub fn native_sha3_256(
         hash_arg.len(),
     );
 
-    let hash_vec = HashValue::from_sha3_256(hash_arg.as_slice()).to_vec();
+    let hash_vec = HashValue::sha3_256_of(hash_arg.as_slice()).to_vec();
     let return_values = vec![Value::vector_u8(hash_vec)];
     Ok(NativeResult::ok(cost, return_values))
 }
