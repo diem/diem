@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["COIN1_NAME",""],["COIN2_NAME",""]],"fn":[["coin1_tag",""],["coin2_tag",""]]});

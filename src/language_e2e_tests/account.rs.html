@@ -989,6 +989,14 @@
 <span id="989">989</span>
 <span id="990">990</span>
 <span id="991">991</span>
+<span id="992">992</span>
+<span id="993">993</span>
+<span id="994">994</span>
+<span id="995">995</span>
+<span id="996">996</span>
+<span id="997">997</span>
+<span id="998">998</span>
+<span id="999">999</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1003,7 +1011,7 @@
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">account_config</span>::{
         <span class="self">self</span>, <span class="ident">from_currency_code_string</span>, <span class="ident">type_tag_for_currency_code</span>, <span class="ident">AccountResource</span>,
-        <span class="ident">BalanceResource</span>, <span class="ident">ReceivedPaymentEvent</span>, <span class="ident">SentPaymentEvent</span>, <span class="ident">LBR_NAME</span>,
+        <span class="ident">BalanceResource</span>, <span class="ident">ReceivedPaymentEvent</span>, <span class="ident">SentPaymentEvent</span>, <span class="ident">COIN1_NAME</span>, <span class="ident">COIN2_NAME</span>, <span class="ident">LBR_NAME</span>,
     },
     <span class="ident">event</span>::<span class="ident">EventHandle</span>,
     <span class="ident">transaction</span>::{
@@ -1029,6 +1037,14 @@
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lbr_currency_code</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Identifier</span> {
     <span class="ident">from_currency_code_string</span>(<span class="ident">LBR_NAME</span>).<span class="ident">unwrap</span>()
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">coin1_currency_code</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Identifier</span> {
+    <span class="ident">from_currency_code_string</span>(<span class="ident">COIN1_NAME</span>).<span class="ident">unwrap</span>()
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">coin2_currency_code</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Identifier</span> {
+    <span class="ident">from_currency_code_string</span>(<span class="ident">COIN2_NAME</span>).<span class="ident">unwrap</span>()
 }
 
 <span class="doccomment">/// Details about a Libra account.</span>
