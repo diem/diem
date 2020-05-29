@@ -9,12 +9,12 @@
 //! You can run `socket_bench` across a real network by running this bench
 //! server remotely. For example,
 //!
-//! `TCP_ADDR=/ip6/::1/tcp/12345 cargo run --release -p socket-bench-server`
+//! `RUSTFLAGS="-Ctarget-cpu=skylake -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3" TCP_ADDR=/ip6/::1/tcp/12345 cargo run --release -p socket-bench-server`
 //!
 //! will run the socket bench server handling the remote_tcp benchmark. A
 //! corresponding client would exercise this benchmark using
 //!
-//! `TCP_ADDR=/ip6/::1/tcp/12345 cargo x bench -p network remote_tcp`
+//! `RUSTFLAGS="-Ctarget-cpu=skylake -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3" TCP_ADDR=/ip6/::1/tcp/12345 cargo x bench -p network remote_tcp`
 
 use libra_logger::info;
 use netcore::transport::tcp::TcpTransport;
