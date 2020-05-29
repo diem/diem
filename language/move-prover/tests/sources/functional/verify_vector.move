@@ -189,17 +189,25 @@ module VerifyVector {
     }
 
     // Return true if `e` is in the vector `v`
-    fun verify_contains<Element>(_v: &vector<Element>, _e: &Element): bool {
-//        let i = 0;
-//        let len = Vector::length(v);
-//        while (i < len) {
-//            if (Vector::borrow(v, i) == e) return true;
-//            i = i + 1;
-//        };
+    fun verify_contains<Element>(v: &vector<Element>, e: &Element): bool {
+        let i = 0;
+        let len = Vector::length(v);
+        while ({
+            spec {
+                assert !any(0..i,|j| v[j]==e);
+            };
+            i < len
+        }) {
+            if (Vector::borrow(v, i) == e) return true;
+            i = i + 1;
+        };
+        spec {
+            assert !any(v,|x| x==e);
+        };
         false
     }
-    spec fun verify_contains { // TODO: cannot verify loop
-        //ensures any(v,|x| x==e); //! A postcondition might not hold on this return path.
+    spec fun verify_contains {
+        ensures result == any(v,|x| x==e);
     }
 
     // Return true if `e` is in the vector `v`
