@@ -39,7 +39,7 @@ network = { path = "../network", version = "0.1.0" }
 storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
 
 [dev-dependencies]
-libra-json-rpc-client = { path = "../client/json-rpc", version = "0.1.0"}
+libra-json-rpc-client = { path = "../client/json-rpc", version = "0.1.0" }
 vm-validator = { path = "../vm-validator", version = "0.1.0" }
 
 [features]

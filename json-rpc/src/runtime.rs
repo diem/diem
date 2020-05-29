@@ -25,7 +25,7 @@ pub fn bootstrap(
     address: SocketAddr,
     libra_db: Arc<dyn DbReader>,
     mp_sender: MempoolClientSender,
-    //    role: RoleType
+    role: RoleType,
 ) -> Runtime {
     let runtime = Builder::new()
         .thread_name("rpc-")
@@ -35,7 +35,7 @@ pub fn bootstrap(
         .expect("[rpc] failed to create runtime");
 
     let registry = Arc::new(build_registry());
-    let service = JsonRpcService::new(libra_db, mp_sender, RoleType::Validator);
+    let service = JsonRpcService::new(libra_db, mp_sender, role);
 
     let handler = warp::any()
         .and(warp::path::end())
@@ -64,7 +64,7 @@ pub fn bootstrap_from_config(
     libra_db: Arc<dyn DbReader>,
     mp_sender: MempoolClientSender,
 ) -> Runtime {
-    bootstrap(config.rpc.address, libra_db, mp_sender)
+    bootstrap(config.rpc.address, libra_db, mp_sender, config.base.role)
 }
 
 /// JSON RPC entry point

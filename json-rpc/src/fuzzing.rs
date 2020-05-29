@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::runtime::bootstrap;
+use crate::test_bootstrap;
 use libra_config::utils;
 use libra_mempool::mocks::MockSharedMempool;
 use libra_proptest_helpers::ValueGenerator;
@@ -44,7 +44,7 @@ pub fn fuzzer(data: &[u8]) {
 
     let port = utils::get_available_port();
     let address = format!("0.0.0.0:{}", port);
-    let _runtime = bootstrap(address.parse().unwrap(), Arc::new(db), smp.ac_client);
+    let _runtime = test_bootstrap(address.parse().unwrap(), Arc::new(db), smp.ac_client);
 
     let client = Client::new();
     let url = format!("http://{}", address);
