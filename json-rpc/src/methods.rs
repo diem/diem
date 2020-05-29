@@ -117,7 +117,9 @@ async fn get_account_state(
         let account_state = AccountState::try_from(&blob)?;
         if let Some(account) = account_state.get_account_resource()? {
             let balances = account_state.get_balance_resources(&currencies)?;
-            return Ok(Some(AccountView::new(&account, balances)));
+            if let Some(account_role) = account_state.get_account_role()? {
+                return Ok(Some(AccountView::new(&account, balances, account_role)));
+            }
         }
     }
     Ok(None)

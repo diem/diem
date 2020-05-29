@@ -4,7 +4,8 @@
 use crate::{
     account_address::AccountAddress,
     account_config::{
-        type_tag_for_currency_code, AccountResource, BalanceResource, CurrencyInfoResource,
+        type_tag_for_currency_code, AccountResource, AccountRole, BalanceResource, ChildVASP,
+        ChildVASPRole, CurrencyInfoResource, EmptyRole, ParentVASP, ParentVASPRole, UnhostedRole,
         ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
     },
     block_metadata::{LibraBlockResource, NEW_BLOCK_EVENT_PATH},
@@ -59,6 +60,36 @@ impl AccountState {
 
     pub fn get_validator_config_resource(&self) -> Result<Option<ValidatorConfigResource>> {
         self.get_resource(&ValidatorConfigResource::resource_path())
+    }
+
+    pub fn get_account_role(&self) -> Result<Option<AccountRole>> {
+        if self
+            .0
+            .contains_key(&AccountRole::access_path_for::<ParentVASP>())
+        {
+            self.get_resource(&AccountRole::access_path_for::<ParentVASP>())
+                .map(|role| role.map(|role: ParentVASPRole| AccountRole::ParentVASP(role.role)))
+        } else if self
+            .0
+            .contains_key(&AccountRole::access_path_for::<ChildVASP>())
+        {
+            self.get_resource(&AccountRole::access_path_for::<ChildVASP>())
+                .map(|x| x.map(|role: ChildVASPRole| AccountRole::ChildVASP(role.role)))
+        } else if self
+            .0
+            .contains_key(&AccountRole::access_path_for::<UnhostedRole>())
+        {
+            self.get_resource(&AccountRole::access_path_for::<UnhostedRole>())
+                .map(|x| x.map(|_: UnhostedRole| AccountRole::Unhosted))
+        } else if self
+            .0
+            .contains_key(&AccountRole::access_path_for::<EmptyRole>())
+        {
+            self.get_resource(&AccountRole::access_path_for::<EmptyRole>())
+                .map(|x| x.map(|_: EmptyRole| AccountRole::Empty))
+        } else {
+            Ok(Some(AccountRole::Unknown))
+        }
     }
 
     pub fn get_currency_info_resource(
