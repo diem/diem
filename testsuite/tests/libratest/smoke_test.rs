@@ -817,6 +817,7 @@ fn test_external_transaction_signer() {
             sender: p_sender,
             sequence_number: p_sequence_number,
             gas_unit_price: p_gas_unit_price,
+            gas_currency: p_gas_currency,
             max_gas_amount: p_max_gas_amount,
             script,
             ..
@@ -824,17 +825,20 @@ fn test_external_transaction_signer() {
             assert_eq!(p_sender, sender_address.to_string());
             assert_eq!(p_sequence_number, sequence_number);
             assert_eq!(p_gas_unit_price, gas_unit_price);
+            assert_eq!(p_gas_currency, currency_code.to_string());
             assert_eq!(p_max_gas_amount, max_gas_amount);
             match script {
                 ScriptView::PeerToPeer {
                     receiver: p_receiver,
                     amount: p_amount,
+                    currency: p_currency,
                     auth_key_prefix,
                     metadata,
                     metadata_signature,
                 } => {
                     assert_eq!(p_receiver, receiver_address.to_string());
                     assert_eq!(p_amount, amount);
+                    assert_eq!(p_currency, currency_code.to_string());
                     assert_eq!(
                         auth_key_prefix
                             .into_bytes()
