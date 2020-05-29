@@ -3,7 +3,10 @@
 
 #![forbid(unsafe_code)]
 
-use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
+    PrivateKey,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{
@@ -273,6 +276,18 @@ impl Client {
         }
     }
 
+    pub fn import_ed25519_key(&self, name: &str, key: &Ed25519PrivateKey) -> Result<(), Error> {
+        let backup = base64::encode(serde_json::to_string(&KeyBackup::new(key))?);
+        let request = ureq::post(&format!("{}/v1/transit/restore/{}", self.host, name));
+        let resp = self
+            .upgrade_request(request)
+            .send_json(json!({ "backup": backup }));
+        match resp.status() {
+            204 => Ok(()),
+            _ => Err(resp.into()),
+        }
+    }
+
     pub fn list_keys(&self) -> Result<Vec<String>, Error> {
         let request = ureq::request("LIST", &format!("{}/v1/transit/keys", self.host));
         let resp = self.upgrade_request(request).call();
@@ -389,6 +404,133 @@ impl Client {
         }
         request
     }
+}
+
+/// Key backup / restore format
+/// Example:
+/// {
+///    "policy":{
+///       "name":"local_owner_key__consensus",
+///       "keys":{
+///          "1":{
+///             "key":"C3R5O8uAfrgv7sJmCMSLEp1R2HmkZtwdfGT/xVvZVvgCGo6TkWga/ojplJFMM+i2805X3CV7IRyNLCSJcr4AqQ==",
+///             "hmac_key":null,
+///             "time":"2020-05-29T06:27:38.1233515Z",
+///             "ec_x":null,
+///             "ec_y":null,
+///             "ec_d":null,
+///             "rsa_key":null,
+///             "public_key":"AhqOk5FoGv6I6ZSRTDPotvNOV9wleyEcjSwkiXK+AKk=",
+///             "convergent_version":0,
+///             "creation_time":1590733658
+///          }
+///       },
+///       "derived":false,
+///       "kdf":0,
+///       "convergent_encryption":false,
+///       "exportable":true,
+///       "min_decryption_version":1,
+///       "min_encryption_version":0,
+///       "latest_version":1,
+///       "archive_version":1,
+///       "archive_min_version":0,
+///       "min_available_version":0,
+///       "deletion_allowed":false,
+///       "convergent_version":0,
+///       "type":2,
+///       "backup_info":{
+///          "time":"2020-05-29T06:28:48.2937047Z",
+///          "version":1
+///       },
+///       "restore_info":null,
+///       "allow_plaintext_backup":true,
+///       "version_template":"",
+///       "storage_prefix":""
+///    }
+/// }
+///
+/// This is intended to be a very simple application of it only for the purpose of introducing a
+/// single key with no versioning history into Vault. This is /only/ for test purposes and not
+/// intended for production use cases.
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct KeyBackup {
+    policy: KeyBackupPolicy,
+}
+
+impl KeyBackup {
+    pub fn new(key: &Ed25519PrivateKey) -> Self {
+        let mut key_bytes = key.to_bytes().to_vec();
+        let pub_key_bytes = key.public_key().to_bytes();
+        key_bytes.extend(&pub_key_bytes);
+
+        let now = chrono::Utc::now();
+        let time_as_str = now.to_rfc3339();
+
+        let mut info = KeyBackupInfo::default();
+        info.key = Some(base64::encode(key_bytes));
+        info.public_key = Some(base64::encode(pub_key_bytes));
+        info.creation_time = now.timestamp_subsec_millis();
+        info.time = time_as_str.clone();
+
+        let mut key_backup = Self {
+            policy: KeyBackupPolicy::default(),
+        };
+
+        key_backup.policy.exportable = true;
+        key_backup.policy.min_decryption_version = 1;
+        key_backup.policy.latest_version = 1;
+        key_backup.policy.archive_version = 1;
+        key_backup.policy.backup_type = 2;
+        key_backup.policy.keys.insert(1, info);
+        key_backup.policy.backup_info.time = time_as_str;
+        key_backup.policy.backup_info.version = 1;
+        key_backup
+    }
+}
+
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct KeyBackupPolicy {
+    name: String,
+    keys: BTreeMap<u32, KeyBackupInfo>,
+    derived: bool,
+    kdf: u32,
+    convergent_encryption: bool,
+    exportable: bool,
+    min_decryption_version: u32,
+    min_encryption_version: u32,
+    latest_version: u32,
+    archive_version: u32,
+    archive_min_version: u32,
+    min_available_version: u32,
+    deletion_allowed: bool,
+    convergent_version: u32,
+    #[serde(rename = "type")]
+    backup_type: u32,
+    backup_info: BackupInfo,
+    restore_info: Option<()>,
+    allow_plaintext_backup: bool,
+    version_template: String,
+    storage_prefix: String,
+}
+
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct KeyBackupInfo {
+    key: Option<String>,
+    hhmac_key: Option<String>,
+    time: String,
+    ec_x: Option<String>,
+    ec_y: Option<String>,
+    ec_d: Option<String>,
+    rsa_key: Option<String>,
+    public_key: Option<String>,
+    convergent_version: u32,
+    creation_time: u32,
+}
+
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct BackupInfo {
+    time: String,
+    version: u32,
 }
 
 /// Provides a simple wrapper for all read APIs.

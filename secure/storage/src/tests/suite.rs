@@ -24,6 +24,7 @@ const STORAGE_TESTS: &[fn(&mut dyn Storage)] = &[
     test_get_uncreated_key_pair,
     test_hash_value,
     test_incremental_timestamp,
+    test_import_key,
     test_verify_incorrect_value_types,
 ];
 
@@ -98,6 +99,58 @@ fn test_get_set(storage: &mut dyn Storage) {
             .unwrap(),
         crypto_private_2
     );
+}
+
+/// This test ensures that a key can reasonably be imported.
+fn test_import_key(storage: &mut dyn Storage) {
+    let key_name = "key";
+    let imported_key_name = "imported_key";
+
+    // Prepare key
+
+    storage.create_key(key_name).unwrap();
+    let key = storage.export_private_key(key_name).unwrap();
+    let public_key = storage.get_public_key(key_name).unwrap().public_key;
+
+    // Restore and verify key
+
+    storage
+        .import_private_key(imported_key_name, key.clone())
+        .unwrap();
+    let imported_key = storage.export_private_key(imported_key_name).unwrap();
+    let imported_public_key = storage
+        .get_public_key(imported_key_name)
+        .unwrap()
+        .public_key;
+
+    assert_eq!(key, imported_key);
+    assert_eq!(public_key, imported_public_key);
+
+    // Verify valid keys
+
+    let message = HashValue::new([1; HashValue::LENGTH]);
+    let message_signature = storage.sign_message(imported_key_name, &message).unwrap();
+    message_signature
+        .verify(&message, &imported_public_key)
+        .unwrap();
+
+    // Ensure rotation still works
+
+    storage.rotate_key(imported_key_name).unwrap();
+    let rotated_imported_key = storage.export_private_key(imported_key_name).unwrap();
+    let rotated_imported_public_key = storage
+        .get_public_key(imported_key_name)
+        .unwrap()
+        .public_key;
+
+    let rotated_message_signature = storage.sign_message(imported_key_name, &message).unwrap();
+    rotated_message_signature
+        .verify(&message, &rotated_imported_public_key)
+        .unwrap();
+
+    assert_ne!(imported_key, rotated_imported_key);
+    assert_ne!(imported_public_key, rotated_imported_public_key);
+    assert_ne!(message_signature, rotated_message_signature);
 }
 
 /// This test stores different types of values into storage, retrieves them, and asserts
