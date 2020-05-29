@@ -1,0 +1,25 @@
+[package]
+name = "move-lang-functional-tests"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+publish = false
+edition = "2018"
+license = "Apache-2.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+
+[dev-dependencies]
+anyhow = "1.0.31"
+tempfile = "3.1.0"
+
+datatest-stable = { path = "../../../common/datatest-stable", version = "0.1.0" }
+functional-tests = { path = "../../functional-tests", version = "0.1.0" }
+libra-types = { path = "../../../types" }
+move-lang = { path = "..", version = "0.0.1" }
+
+[[test]]
+name = "functional_testsuite"
+harness = false
