@@ -27,11 +27,10 @@ use libra_types::{
     on_chain_config::{OnChainConfig, RegisteredCurrencies},
     transaction::SignedTransaction,
 };
+use network::counters;
 use serde_json::Value;
 use std::{collections::HashMap, convert::TryFrom, ops::Deref, pin::Pin, str::FromStr, sync::Arc};
 use storage_interface::DbReader;
-
-use network::counters;
 
 #[derive(Clone)]
 pub(crate) struct JsonRpcService {
