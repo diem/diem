@@ -13,7 +13,7 @@
 #[cfg(test)]
 mod node_type_test;
 
-use crate::nibble_path::NibblePath;
+use crate::{nibble_path::NibblePath, ROOT_NIBBLE_HEIGHT};
 use anyhow::{ensure, Context, Result};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use libra_crypto::{
@@ -110,6 +110,11 @@ impl NodeKey {
         let mut reader = Cursor::new(val);
         let version = reader.read_u64::<BigEndian>()?;
         let num_nibbles = reader.read_u8()? as usize;
+        ensure!(
+            num_nibbles <= ROOT_NIBBLE_HEIGHT,
+            "Invalid number of nibbles: {}",
+            num_nibbles,
+        );
         let mut nibble_bytes = Vec::with_capacity((num_nibbles + 1) / 2);
         reader.read_to_end(&mut nibble_bytes)?;
         ensure!(
@@ -121,6 +126,12 @@ impl NodeKey {
         let nibble_path = if num_nibbles % 2 == 0 {
             NibblePath::new(nibble_bytes)
         } else {
+            let padding = nibble_bytes.last().unwrap() & 0x0f;
+            ensure!(
+                padding == 0,
+                "Padding nibble expected to be 0, got: {}",
+                padding,
+            );
             NibblePath::new_odd(nibble_bytes)
         };
         Ok(NodeKey::new(version, nibble_path))

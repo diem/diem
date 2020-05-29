@@ -43,3 +43,52 @@ fn ensure_slice_len_eq(data: &[u8], len: usize) -> Result<()> {
     );
     Ok(())
 }
+
+fn ensure_slice_len_gt(data: &[u8], len: usize) -> Result<()> {
+    ensure!(
+        data.len() > len,
+        "Unexpected data len {}, expected to be greater than {}.",
+        data.len(),
+        len,
+    );
+    Ok(())
+}
+
+#[cfg(feature = "fuzzing")]
+pub mod fuzzing {
+    use schemadb::schema::{KeyCodec, Schema, ValueCodec};
+
+    macro_rules! decode_key_value {
+        ($schema_type: ty, $data: ident) => {
+            <<$schema_type as Schema>::Key as KeyCodec<$schema_type>>::decode_key($data);
+            <<$schema_type as Schema>::Value as ValueCodec<$schema_type>>::decode_value($data);
+        };
+    }
+
+    pub fn fuzz_decode(data: &[u8]) {
+        #[allow(unused_must_use)]
+        {
+            decode_key_value!(super::epoch_by_version::EpochByVersionSchema, data);
+            decode_key_value!(super::event::EventSchema, data);
+            decode_key_value!(super::event_accumulator::EventAccumulatorSchema, data);
+            decode_key_value!(super::event_by_key::EventByKeySchema, data);
+            decode_key_value!(
+                super::jellyfish_merkle_node::JellyfishMerkleNodeSchema,
+                data
+            );
+            decode_key_value!(super::ledger_counters::LedgerCountersSchema, data);
+            decode_key_value!(super::ledger_info::LedgerInfoSchema, data);
+            decode_key_value!(super::stale_node_index::StaleNodeIndexSchema, data);
+            decode_key_value!(super::transaction::TransactionSchema, data);
+            decode_key_value!(
+                super::transaction_accumulator::TransactionAccumulatorSchema,
+                data
+            );
+            decode_key_value!(
+                super::transaction_by_account::TransactionByAccountSchema,
+                data
+            );
+            decode_key_value!(super::transaction_info::TransactionInfoSchema, data);
+        }
+    }
+}

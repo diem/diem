@@ -17,7 +17,7 @@
 //! `stale_since_version` is serialized in big endian so that records in RocksDB will be in order of
 //! its numeric value.
 
-use crate::schema::{ensure_slice_len_eq, STALE_NODE_INDEX_CF_NAME};
+use crate::schema::{ensure_slice_len_eq, ensure_slice_len_gt, STALE_NODE_INDEX_CF_NAME};
 use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use jellyfish_merkle::{node_type::NodeKey, StaleNodeIndex};
@@ -45,10 +45,11 @@ impl KeyCodec<StaleNodeIndexSchema> for StaleNodeIndex {
     }
 
     fn decode_key(data: &[u8]) -> Result<Self> {
-        let version_size = size_of::<Version>();
+        const VERSION_SIZE: usize = size_of::<Version>();
 
-        let stale_since_version = (&data[..version_size]).read_u64::<BigEndian>()?;
-        let node_key = NodeKey::decode(&data[version_size..])?;
+        ensure_slice_len_gt(data, VERSION_SIZE)?;
+        let stale_since_version = (&data[..VERSION_SIZE]).read_u64::<BigEndian>()?;
+        let node_key = NodeKey::decode(&data[VERSION_SIZE..])?;
 
         Ok(Self {
             stale_since_version,
