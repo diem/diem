@@ -40,7 +40,7 @@ use crate::{
     },
     network::{IncomingBlockRetrievalRequest, NetworkSender},
     network_interface::ConsensusMsg,
-    persistent_liveness_storage::{LedgerRecoveryData, PersistentLivenessStorage, RecoveryData},
+    persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
     state_replication::{StateComputer, TxnManager},
     util::time_service::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
@@ -121,14 +121,14 @@ impl<T: Payload> RecoveryManager<T> {
         network: NetworkSender<T>,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
-        ledger_recovery_data: LedgerRecoveryData,
+        last_committed_round: Round,
     ) -> Self {
         RecoveryManager {
             epoch_state,
             network,
             storage,
             state_computer,
-            last_committed_round: ledger_recovery_data.commit_round(),
+            last_committed_round,
         }
     }
 
@@ -345,7 +345,7 @@ impl<T: Payload> RoundManager<T> {
 
         self.proposer_election
             .process_proposal(proposal_msg.take_proposal())
-            .ok_or(format_err!("[RoundManager] Not primary proposal"))
+            .ok_or_else(|| format_err!("[RoundManager] Not primary proposal"))
     }
 
     /// The function makes sure that it brings the missing dependencies from the QC and LedgerInfo
@@ -818,5 +818,9 @@ impl<T: Payload> RoundManager<T> {
 
     pub fn epoch_state(&self) -> &EpochState {
         &self.epoch_state
+    }
+
+    pub fn round_state(&self) -> &RoundState {
+        &self.round_state
     }
 }

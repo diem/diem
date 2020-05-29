@@ -354,7 +354,7 @@ impl<T: Payload> EpochManager<T> {
             network_sender,
             self.storage.clone(),
             self.state_computer.clone(),
-            ledger_recovery_data,
+            ledger_recovery_data.commit_round(),
         )));
         info!("SyncProcessor started");
     }
@@ -513,6 +513,9 @@ impl<T: Payload> EpochManager<T> {
             };
             if let Err(e) = result {
                 error!("{:?}", e);
+            }
+            if let RoundProcessor::Normal(p) = self.processor_mut() {
+                debug!("{}", p.round_state());
             }
             counters::EVENT_PROCESSING_LOOP_BUSY_DURATION_S
                 .observe_duration(pre_select_instant.elapsed() - idle_duration);

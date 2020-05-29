@@ -806,15 +806,19 @@ fn sync_on_partial_newer_sync_info() {
         for _ in 1..=4 {
             let proposal_msg = node.next_proposal().await;
 
-            node.round_manager.process_proposal_msg(proposal_msg).await;
+            node.round_manager
+                .process_proposal_msg(proposal_msg)
+                .await
+                .unwrap();
             let vote_msg = node.next_vote().await;
             // Adding vote to form a QC
-            node.round_manager.process_vote(vote_msg).await;
+            node.round_manager.process_vote(vote_msg).await.unwrap();
         }
         let block_4 = node.next_proposal().await;
         node.round_manager
             .process_proposal_msg(block_4.clone())
-            .await;
+            .await
+            .unwrap();
         // commit genesis and block 1
         for _ in 0..2 {
             let _ = node.commit_cb_receiver.next().await;
