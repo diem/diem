@@ -128,5 +128,29 @@ module LBR {
         Libra::destroy_zero(leftover2);
         lbr
     }
+
+    // **************** SPECIFICATIONS ****************
+
+    /*
+    This module defines the synthetic coin type called LBR and the operations on LBR coins. A global property that this
+    module has to satisfy is as follows: LBR must be backed by the reserve of fiat coins in order to exist. In the
+    current system, there are two fiat coins called coin1 and coin2. So, there must be a sufficient amounts of coin1
+    and coin2 respectively in the reserve to be backing LBR. Here, the "sufficient amount" is determined by the
+    pre-defined ratio of each of the fiat coins to the total value of LBR. To define this global property more precisely,
+
+    let reserve_coin1 refer to global<Reserve>(0xA550C18).coin1 (the reserve of coin1 backing LBR)
+    let reserve_coin2 refer to global<Reserve>(0xA550C18).coin2 (the reserve of coin2 backing LBR).
+    Let lbr_total_value be the synthetic variable that represents the total amount of LBR that exists.
+    Note: lbr_total_value could refer to global<Libra::CurrencyInfo<LBR::T>>(0xA550C18).total_value, but this may make
+    verification harder because one need prove a relational invariant of two modules (such as Libra and LBR).
+    The module invariant can be formulated as:
+    (1) lbr_total_value * r_coin1.ratio <= reserve_coin1.backing.value, and
+    (2) lbr_total_value * r_coin2.ratio <= reserve_coin2.backing.value
+    where '*' is the multiplication over real numbers. (Yet, it could be the FP multiplication. It should not matter.)
+
+    Note that to argue this, the system needs to satisfy the following property (beyond the scope of this module):
+    LBR coins should be created only through LBR::create, and there is no other way in the system. Specifically,
+    Libra::mint<LBR::T> should not be able to create LBR coins because if so, the invariant above may not be guaranteed.
+    */
 }
 }
