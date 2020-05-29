@@ -1,7 +1,7 @@
 #!/bin/bash
 # Copyright (c) The Libra Core Contributors
 # SPDX-License-Identifier: Apache-2.0
-set -ex
+set -e
 
 declare -a params
 if [ -n "${CFG_BASE_CONFIG}" ]; then # Path to base config
