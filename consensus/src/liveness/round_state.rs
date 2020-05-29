@@ -154,7 +154,28 @@ pub struct RoundState {
     vote_sent: Option<Vote>,
 }
 
-#[allow(dead_code)]
+// this is required by structured log
+impl fmt::Debug for RoundState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl fmt::Display for RoundState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Round: {} ", self.current_round)?;
+        write!(f, "Committed Round: {} ", self.highest_committed_round)?;
+        write!(f, "{} ", self.pending_votes)?;
+        write!(
+            f,
+            "Self Vote: {}",
+            self.vote_sent
+                .as_ref()
+                .map_or("None".to_string(), |v| v.to_string())
+        )
+    }
+}
+
 impl RoundState {
     pub fn new(
         time_interval: Box<dyn RoundTimeInterval>,
