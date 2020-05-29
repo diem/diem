@@ -16,6 +16,7 @@ use libra_types::{
 };
 use std::{
     collections::{BTreeMap, HashMap},
+    fmt,
     sync::Arc,
 };
 
@@ -198,5 +199,34 @@ impl PendingVotes {
         }
 
         Ok(())
+    }
+}
+
+impl fmt::Display for PendingVotes {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let (votes, timeout) = (
+            self.li_digest_to_votes
+                .iter()
+                .map(|(hash, li)| (hash, li.signatures().keys().collect::<Vec<_>>()))
+                .collect::<BTreeMap<_, _>>(),
+            self.round_to_tc
+                .iter()
+                .map(|(round, tc)| (round, tc.signatures().keys().collect::<Vec<_>>()))
+                .collect::<BTreeMap<_, _>>(),
+        );
+        write!(f, "PendingVotes: [")?;
+        for (hash, authors) in votes {
+            write!(f, "LI {} has {} votes {:?} ", hash, authors.len(), authors)?;
+        }
+        for (round, authors) in timeout {
+            write!(
+                f,
+                "Round {} has {} timeout {:?}",
+                round,
+                authors.len(),
+                authors
+            )?;
+        }
+        write!(f, "]")
     }
 }
