@@ -407,12 +407,11 @@ fn test_ability_to_read_move_data() {
 }
 
 fn verify_ability_to_read_move_data<T: LibraInterface>(node: Node<T>) {
-    assert!(node.libra.last_reconfiguration().is_ok());
-    assert!(node.libra.retrieve_validator_set().is_ok());
-    assert!(node.libra.retrieve_validator_config(node.account).is_ok());
-    assert!(node.libra.retrieve_validator_set().is_ok());
-    assert!(node.libra.retrieve_validator_info(node.account).is_ok());
-    assert!(node.libra.retrieve_libra_block_resource().is_ok());
+    node.libra.last_reconfiguration().unwrap();
+    node.libra.retrieve_validator_set().unwrap();
+    node.libra.retrieve_validator_config(node.account).unwrap();
+    node.libra.retrieve_validator_info(node.account).unwrap();
+    node.libra.retrieve_libra_block_resource().unwrap();
 }
 
 #[test]
@@ -491,8 +490,8 @@ fn test_key_manager_init_and_basic_rotation() {
 
 fn verify_init_and_basic_rotation<T: LibraInterface>(mut node: Node<T>) {
     // Verify correct initialization (on-chain and in storage)
-    assert!(node.key_manager.compare_storage_to_config().is_ok());
-    assert!(node.key_manager.compare_info_to_config().is_ok());
+    node.key_manager.compare_storage_to_config().unwrap();
+    node.key_manager.compare_info_to_config().unwrap();
     assert_eq!(node.time.now(), node.key_manager.last_rotation().unwrap());
     // No executions yet
     assert_eq!(0, node.key_manager.last_reconfiguration().unwrap());
@@ -564,7 +563,7 @@ fn verify_execute<T: LibraInterface>(config: &NodeConfig, mut node: Node<T>) {
 
     // Verify a single execution iteration will perform the rotation and re-sync everything
     node.update_libra_timestamp();
-    assert!(node.key_manager.execute_once().is_ok());
+    node.key_manager.execute_once().unwrap();
 
     // Verify nothing to be done after rotation
     node.update_libra_timestamp();
@@ -592,7 +591,7 @@ fn verify_execute<T: LibraInterface>(config: &NodeConfig, mut node: Node<T>) {
     // Verify that a single execution iteration will resubmit the transaction, which can then be
     // executed to re-sync everything up (on-chain).
     node.update_libra_timestamp();
-    assert!(node.key_manager.execute_once().is_ok());
+    node.key_manager.execute_once().unwrap();
     node.execute_and_commit(node.libra.take_all_transactions());
     assert_eq!(
         Action::NoAction,
@@ -631,7 +630,7 @@ fn verify_execute_error<T: LibraInterface>(mut node: Node<T>) {
     // Perform each execution iteration a few times to see that everything is working
     for _ in 0..5 {
         node.update_libra_timestamp();
-        assert!(node.key_manager.execute_once().is_ok());
+        node.key_manager.execute_once().unwrap();
     }
 
     // Delete all keys in secure storage to emulate a failure (e.g., so that the key manager should
