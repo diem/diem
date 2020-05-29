@@ -156,6 +156,18 @@ fn create_parent_and_child_vasp() {
         ),
         0,
     ));
+
+    let (_, new_compliance_public_key) = keygen.generate_keypair();
+    // rotate parent's compliance public key
+    executor.execute_and_apply(parent.signed_script_txn(
+        encode_rotate_base_url_script(new_compliance_public_key.to_bytes().to_vec()),
+        1,
+    ));
+
+    // rotate parent's base URL
+    executor.execute_and_apply(
+        parent.signed_script_txn(encode_rotate_base_url_script(b"new_name".to_vec()), 2),
+    );
 }
 
 #[test]

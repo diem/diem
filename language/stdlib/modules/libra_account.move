@@ -175,6 +175,12 @@ module LibraAccount {
         VASP::rotate_compliance_public_key(parent_vasp, new_key)
     }
 
+    public fun rotate_base_url(vasp: &signer, new_url: vector<u8>) acquires Role {
+        let parent_vasp =
+            &mut borrow_global_mut<Role<VASP::ParentVASP>>(Signer::address_of(vasp)).role_data;
+        VASP::rotate_base_url(parent_vasp, new_url)
+    }
+
     // TODO: temporary, remove when VASP account feature in E2E tests works
     public fun add_parent_vasp_role_from_association(
         association: &signer,

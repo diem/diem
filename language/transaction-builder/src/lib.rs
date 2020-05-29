@@ -275,9 +275,16 @@ encode_txn_script! {
 
 encode_txn_script! {
     name: encode_rotate_compliance_public_key_script,
-    args: [vasp_root_addr: Address, new_key: Bytes],
+    args: [new_key: Bytes],
     script: RotateCompliancePublicKey,
     doc: "Encode a program that rotates `vasp_root_addr`'s compliance public key to `new_key`."
+}
+
+encode_txn_script! {
+    name: encode_rotate_base_url_script,
+    args: [new_url: Bytes],
+    script: RotateBaseUrl,
+    doc: "Encode a program that rotates `vasp_root_addr`'s base URL to `new_url`."
 }
 
 encode_txn_script! {

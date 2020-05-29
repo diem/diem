@@ -104,6 +104,11 @@ module VASP {
         *&parent_vasp.base_url
     }
 
+    /// Rotate the base URL for the `parent_vasp` account to `new_url`
+    public fun rotate_base_url(parent_vasp: &mut ParentVASP, new_url: vector<u8>) {
+        parent_vasp.base_url = new_url
+    }
+
     // Return the compliance public key for the VASP account
     public fun compliance_public_key(parent_vasp: &ParentVASP): vector<u8> {
         *&parent_vasp.compliance_public_key

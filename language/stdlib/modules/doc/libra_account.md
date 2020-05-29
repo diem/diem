@@ -27,6 +27,7 @@
 -  [Function `base_url`](#0x0_LibraAccount_base_url)
 -  [Function `human_name`](#0x0_LibraAccount_human_name)
 -  [Function `rotate_compliance_public_key`](#0x0_LibraAccount_rotate_compliance_public_key)
+-  [Function `rotate_base_url`](#0x0_LibraAccount_rotate_base_url)
 -  [Function `add_parent_vasp_role_from_association`](#0x0_LibraAccount_add_parent_vasp_role_from_association)
 -  [Function `initialize`](#0x0_LibraAccount_initialize)
 -  [Function `deposit`](#0x0_LibraAccount_deposit)
@@ -774,6 +775,32 @@
     <b>let</b> parent_vasp =
         &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_LibraAccount_Role">Role</a>&lt;<a href="vasp.md#0x0_VASP_ParentVASP">VASP::ParentVASP</a>&gt;&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(vasp)).role_data;
     <a href="vasp.md#0x0_VASP_rotate_compliance_public_key">VASP::rotate_compliance_public_key</a>(parent_vasp, new_key)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_LibraAccount_rotate_base_url"></a>
+
+## Function `rotate_base_url`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_rotate_base_url">rotate_base_url</a>(vasp: &signer, new_url: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_rotate_base_url">rotate_base_url</a>(vasp: &signer, new_url: vector&lt;u8&gt;) <b>acquires</b> <a href="#0x0_LibraAccount_Role">Role</a> {
+    <b>let</b> parent_vasp =
+        &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_LibraAccount_Role">Role</a>&lt;<a href="vasp.md#0x0_VASP_ParentVASP">VASP::ParentVASP</a>&gt;&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(vasp)).role_data;
+    <a href="vasp.md#0x0_VASP_rotate_base_url">VASP::rotate_base_url</a>(parent_vasp, new_url)
 }
 </code></pre>
 
