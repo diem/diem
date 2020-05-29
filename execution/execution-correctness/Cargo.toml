@@ -24,10 +24,11 @@ libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0"
 serde = { version = "1.0.111", default-features = false }
 storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
 thiserror = "1.0.19"
+# this is actually a dev-dependency (see "Conditional compilation of tests" in coding_guidelines.md)
+executor-test-helpers = { path = "../executor-test-helpers", version = "0.1.0", optional = true }
 
 [dev-dependencies]
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
-executor-test-helpers = { path = "../executor-test-helpers", version = "0.1.0" }
 libradb = { path = "../../storage/libradb", version = "0.1.0" }
 storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
 storage-service = { path = "../../storage/storage-service", version = "0.1.0" }

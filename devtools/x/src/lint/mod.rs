@@ -10,6 +10,7 @@ mod guppy;
 mod license;
 mod toml;
 mod whitespace;
+mod workspace_classify;
 
 #[derive(Debug, StructOpt)]
 pub struct Args {
@@ -23,7 +24,6 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
     let project_linters: &[&dyn ProjectLinter] = &[
         &guppy::BannedDeps::new(&workspace_config.banned_deps),
         &guppy::DirectDepDups,
-        &guppy::TestOnlyMembers::new(&workspace_config.test_only),
     ];
 
     let package_linters: &[&dyn PackageLinter] = &[
@@ -32,6 +32,7 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
         &guppy::IrrelevantBuildDeps,
         &guppy::OverlayFeatures::new(&workspace_config.overlay),
         &guppy::WorkspaceHack,
+        &workspace_classify::DefaultOrTestOnly::new(&workspace_config.test_only),
     ];
 
     let content_linters: &[&dyn ContentLinter] = &[
@@ -54,7 +55,7 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
 
     for (source, message) in &results.messages {
         println!(
-            "[{}] [{}] [{}]: {}",
+            "[{}] [{}] [{}]: {}\n",
             message.level(),
             source.name(),
             source.kind(),

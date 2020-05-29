@@ -4,7 +4,7 @@
 use crate::{utils::project_root, Result};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
 };
@@ -77,7 +77,7 @@ pub struct OverlayConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct TestOnlyConfig {
     /// A list of test-only members
-    pub members: Vec<PathBuf>,
+    pub members: HashSet<PathBuf>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
