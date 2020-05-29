@@ -92,14 +92,14 @@ pub fn boogie_spec_fun_name(env: &ModuleEnv<'_>, id: SpecFunId) -> String {
 pub fn boogie_type_value(env: &GlobalEnv, ty: &Type) -> String {
     match ty {
         Type::Primitive(p) => match p {
-            PrimitiveType::Bool => "BooleanType()".to_string(),
+            PrimitiveType::Bool => "$BooleanType()".to_string(),
             PrimitiveType::U8 | PrimitiveType::U64 | PrimitiveType::U128 | PrimitiveType::Num => {
-                "IntegerType()".to_string()
+                "$IntegerType()".to_string()
             }
-            PrimitiveType::Address => "AddressType()".to_string(),
+            PrimitiveType::Address => "$AddressType()".to_string(),
             // TODO fix this for a real boogie type
-            PrimitiveType::Signer => "AddressType()".to_string(),
-            PrimitiveType::Range => "RangeType()".to_string(),
+            PrimitiveType::Signer => "$AddressType()".to_string(),
+            PrimitiveType::Range => "$RangeType()".to_string(),
             PrimitiveType::TypeValue => "$TypeType()".to_string(),
         },
         Type::Vector(t) => format!("$Vector_type_value({})", boogie_type_value(env, t)),
@@ -141,9 +141,9 @@ pub fn boogie_type_values(env: &GlobalEnv, args: &[Type]) -> String {
 /// Return boogie type for a local with given signature token.
 pub fn boogie_local_type(ty: &Type) -> String {
     if ty.is_reference() {
-        "Reference".to_string()
+        "$Reference".to_string()
     } else {
-        "Value".to_string()
+        "$Value".to_string()
     }
 }
 
@@ -183,10 +183,10 @@ fn boogie_well_formed_expr_impl(
             PrimitiveType::U64 => conds.push(format!("$IsValidU64({})", name)),
             PrimitiveType::U128 => conds.push(format!("$IsValidU128({})", name)),
             PrimitiveType::Num => conds.push(format!("$IsValidNum({})", name)),
-            PrimitiveType::Bool => conds.push(format!("is#Boolean({})", name)),
-            PrimitiveType::Address => conds.push(format!("is#Address({})", name)),
+            PrimitiveType::Bool => conds.push(format!("is#$Boolean({})", name)),
+            PrimitiveType::Address => conds.push(format!("is#$Address({})", name)),
             // TODO fix this for a real boogie check
-            PrimitiveType::Signer => conds.push(format!("is#Address({})", name)),
+            PrimitiveType::Signer => conds.push(format!("is#$Address({})", name)),
             PrimitiveType::Range => conds.push(format!("$IsValidRange({})", name)),
             PrimitiveType::TypeValue => conds.push(format!("is#$Type({})", name)),
         },
@@ -291,7 +291,7 @@ pub fn boogie_declare_global(env: &GlobalEnv, name: &str, param_count: usize, ty
             "var {} where (forall {} :: {});",
             declarator,
             (0..param_count)
-                .map(|i| format!("$tv{}: TypeValue", i))
+                .map(|i| format!("$tv{}: $TypeValue", i))
                 .join(", "),
             type_check
         )
@@ -313,19 +313,19 @@ pub fn boogie_global_declarator(
     assert!(!ty.is_reference());
     if param_count > 0 {
         format!(
-            "{} : [{}]Value",
+            "{} : [{}]$Value",
             name,
-            (0..param_count).map(|_| "TypeValue").join(", ")
+            (0..param_count).map(|_| "$TypeValue").join(", ")
         )
     } else {
-        format!("{} : Value", name)
+        format!("{} : $Value", name)
     }
 }
 
 pub fn boogie_byte_blob(val: &[u8]) -> String {
     let mut res = "$mk_vector()".to_string();
     for b in val {
-        res = format!("$push_back_vector({}, Integer({}))", res, b);
+        res = format!("$push_back_vector({}, $Integer({}))", res, b);
     }
     res
 }
