@@ -661,6 +661,16 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "assert !$abort_flag;");
         emitln!(self.writer, "$saved_m := $m;");
 
+        emitln!(self.writer, "\n// track values of parameters at entry time");
+        for i in 0..func_target.get_parameter_count() {
+            let local_name = func_target.get_local_name(i);
+            let local_str = format!("{}", local_name.display(func_target.symbol_pool()));
+            let s = self.track_local(func_target, func_target.get_loc(), i, &local_str);
+            if !s.is_empty() {
+                emitln!(self.writer, &s);
+            }
+        }
+
         emitln!(self.writer, "\n// bytecode translation starts here");
 
         // Generate bytecode

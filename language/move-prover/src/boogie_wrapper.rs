@@ -107,10 +107,7 @@ impl<'env> BoogieWrapper<'env> {
         for count in 0..bench_repeat {
             let output = Command::new(&args[0]).args(&args[1..]).output()?;
             if !output.status.success() {
-                return Err(anyhow!(
-                    "boogie exited with status {:?}",
-                    output.status.code()
-                ));
+                return Err(anyhow!("boogie exited with: {:?}", output));
             } else if count == bench_repeat - 1 {
                 if count > 0 {
                     info!("run #{} done", count + 1);
@@ -882,7 +879,7 @@ impl ModelValue {
     /// Extracts a vector from `(Vector value_array)`. This follows indirections in the model
     /// to extract the actual values.
     fn extract_vector(&self, model: &Model) -> Option<ModelValueVector> {
-        let args = self.extract_list("Vector")?;
+        let args = self.extract_list("$Vector")?;
         if args.len() != 1 {
             return None;
         }
@@ -890,17 +887,17 @@ impl ModelValue {
     }
 
     /// Extracts a value array from `(ValueArray map_key size)`. This follows indirections in the
-    /// model. We find the value array map at `Select_[$int]Value`. This has e.g. the form
+    /// model. We find the value array map at `Select_[$int]$Value`. This has e.g. the form
     ///
     /// ```model
-    ///   Select_[$int]Value -> {
+    ///   Select_[$int]$Value -> {
     //      |T@[Int]Value!val!1| 0 -> (Integer 2)
     //      |T@[Int]Value!val!1| 22 -> (Integer 2)
     //      else -> (Integer 0)
     //    }
     // ```
     fn extract_value_array(&self, model: &Model) -> Option<ModelValueVector> {
-        let args = self.extract_list("ValueArray")?;
+        let args = self.extract_list("$ValueArray")?;
         if args.len() != 2 {
             return None;
         }
@@ -908,7 +905,7 @@ impl ModelValue {
         let map_key = &args[0];
         let value_array_map = model
             .vars
-            .get(&ModelValue::literal("Select_[$int]Value"))?
+            .get(&ModelValue::literal("Select_[$int]$Value"))?
             .extract_map()?;
         let mut values = BTreeMap::new();
         let mut default = ModelValue::error();
@@ -996,25 +993,25 @@ impl ModelValue {
         match ty {
             Type::Primitive(PrimitiveType::U8) => Some(PrettyDoc::text(format!(
                 "{}u8",
-                self.extract_primitive("Integer")?
+                self.extract_primitive("$Integer")?
             ))),
             Type::Primitive(PrimitiveType::U64) => Some(PrettyDoc::text(
-                self.extract_primitive("Integer")?.to_string(),
+                self.extract_primitive("$Integer")?.to_string(),
             )),
             Type::Primitive(PrimitiveType::U128) => Some(PrettyDoc::text(format!(
                 "{}u128",
-                self.extract_primitive("Integer")?.to_string()
+                self.extract_primitive("$Integer")?.to_string()
             ))),
             Type::Primitive(PrimitiveType::Num) => Some(PrettyDoc::text(format!(
                 "{}u128",
-                self.extract_primitive("Integer")?.to_string()
+                self.extract_primitive("$Integer")?.to_string()
             ))),
             Type::Primitive(PrimitiveType::Bool) => Some(PrettyDoc::text(
-                self.extract_primitive("Boolean")?.to_string(),
+                self.extract_primitive("$Boolean")?.to_string(),
             )),
             Type::Primitive(PrimitiveType::Address) => {
                 let addr = BigInt::parse_bytes(
-                    &self.extract_primitive("Address")?.clone().into_bytes(),
+                    &self.extract_primitive("$Address")?.clone().into_bytes(),
                     10,
                 )?;
                 Some(PrettyDoc::text(format!("0x{}", &addr.to_str_radix(16))))

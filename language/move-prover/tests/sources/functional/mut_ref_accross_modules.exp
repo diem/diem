@@ -8,6 +8,7 @@ error:  This assertion might not hold.
     │
     =     at tests/sources/functional/mut_ref_accross_modules.move:64:5: decrement_invalid (entry)
     =     at tests/sources/functional/mut_ref_accross_modules.move:65:27: decrement_invalid
+    =         x = <redacted>,
     =         r = <redacted>
 
 error:  A postcondition might not hold on this return path.
@@ -19,6 +20,7 @@ error:  A postcondition might not hold on this return path.
     │
     =     at tests/sources/functional/mut_ref_accross_modules.move:58:5: increment_invalid (entry)
     =     at tests/sources/functional/mut_ref_accross_modules.move:59:27: increment_invalid
+    =         x = <redacted>
     =     at tests/sources/functional/mut_ref_accross_modules.move:58:5: increment_invalid (exit)
     =         result = <redacted>
 
