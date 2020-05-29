@@ -27,5 +27,7 @@ pub use runtime::{bootstrap, bootstrap_from_config};
 #[cfg(any(feature = "fuzzing", test))]
 /// Fuzzer for JSON RPC service
 pub mod fuzzing;
-#[cfg(test)]
+#[cfg(any(test, feature = "fuzzing"))]
 mod tests;
+#[cfg(any(test, feature = "fuzzing"))]
+pub use tests::test_bootstrap;

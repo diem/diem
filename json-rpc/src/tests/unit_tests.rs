@@ -3,8 +3,7 @@
 
 use crate::{
     errors::{JsonRpcError, ServerCode},
-    runtime::bootstrap,
-    tests::mock_db::MockLibraDB,
+    tests::utils::{test_bootstrap, MockLibraDB},
 };
 use futures::{channel::mpsc::channel, StreamExt};
 use libra_config::utils;
@@ -129,7 +128,7 @@ fn test_json_rpc_protocol() {
     let address = format!("0.0.0.0:{}", utils::get_available_port());
     let mock_db = mock_db();
     let mp_sender = channel(1024).0;
-    let _runtime = bootstrap(address.parse().unwrap(), Arc::new(mock_db), mp_sender);
+    let _runtime = test_bootstrap(address.parse().unwrap(), Arc::new(mock_db), mp_sender);
     let client = reqwest::blocking::Client::new();
 
     // check that only root path is accessible
@@ -182,7 +181,7 @@ fn test_transaction_submission() {
     let mock_db = mock_db();
     let port = utils::get_available_port();
     let address = format!("0.0.0.0:{}", port);
-    let mut runtime = bootstrap(address.parse().unwrap(), Arc::new(mock_db), mp_sender);
+    let mut runtime = test_bootstrap(address.parse().unwrap(), Arc::new(mock_db), mp_sender);
     let client = JsonRpcAsyncClient::new(
         reqwest::Url::from_str(format!("http://{}:{}", "127.0.0.1", port).as_str())
             .expect("invalid url"),
@@ -586,7 +585,7 @@ fn test_get_state_proof() {
 
 #[test]
 fn test_get_network_status() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1);
+    let (_mock_db, client, mut runtime) = create_database_client_and_runtime(1);
 
     let mut batch = JsonRpcBatch::default();
     batch.add_get_network_status_request();
@@ -613,7 +612,7 @@ fn create_database_client_and_runtime(
     let address = format!("{}:{}", host, port);
     let mp_sender = channel(channel_buffer).0;
 
-    let runtime = bootstrap(
+    let runtime = test_bootstrap(
         address.parse().unwrap(),
         Arc::new(mock_db.clone()),
         mp_sender,

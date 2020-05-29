@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{Error, Result};
+use libra_config::config::RoleType;
 use libra_crypto::HashValue;
+use libra_mempool::MempoolClientSender;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
@@ -20,8 +22,19 @@ use libra_types::{
     },
     vm_error::StatusCode,
 };
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, net::SocketAddr, sync::Arc};
 use storage_interface::{DbReader, StartupInfo, TreeState};
+use tokio::runtime::Runtime;
+
+/// Creates JSON RPC server for a Validator node
+/// Should only be used for unit-tests
+pub fn test_bootstrap(
+    address: SocketAddr,
+    libra_db: Arc<dyn DbReader>,
+    mp_sender: MempoolClientSender,
+) -> Runtime {
+    crate::bootstrap(address, libra_db, mp_sender, RoleType::Validator)
+}
 
 /// Lightweight mock of LibraDB
 #[derive(Clone)]
