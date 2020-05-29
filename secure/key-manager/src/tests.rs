@@ -371,7 +371,7 @@ fn setup_libra_interface_and_json_server(
     let host = format!("{}:{}", address, port);
 
     let (mp_sender, mut mp_events) = channel(1024);
-    let server = libra_json_rpc::bootstrap(host.parse().unwrap(), db_rw.reader, mp_sender);
+    let server = libra_json_rpc::test_bootstrap(host.parse().unwrap(), db_rw.reader, mp_sender);
 
     // Provide a VMValidator to the runtime.
     server.spawn(async move {

@@ -272,7 +272,7 @@ mod test {
     use futures::{channel::mpsc::channel, StreamExt};
     use libra_config::utils;
     use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
-    use libra_json_rpc::bootstrap;
+    use libra_json_rpc::test_bootstrap;
     use libra_types::{
         account_address::AccountAddress,
         account_config::{AccountResource, BalanceResource},
@@ -413,7 +413,7 @@ mod test {
         let port = utils::get_available_port();
         let host = format!("{}:{}", address, port);
         let (mp_sender, mut mp_events) = channel(1024);
-        let server = bootstrap(host.parse().unwrap(), Arc::new(db), mp_sender);
+        let server = test_bootstrap(host.parse().unwrap(), Arc::new(db), mp_sender);
 
         let url = format!("http://{}", host);
         let client = JsonRpcClient::new(url);
