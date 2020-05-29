@@ -116,13 +116,22 @@ async fn get_account_state(
     Ok(None)
 }
 
-/// Returns the current blockchain metadata
+/// Returns the blockchain metadata for a specified version. If no version is specified, default to
+/// returning the current blockchain metadata
 /// Can be used to verify that target Full Node is up-to-date
-async fn get_metadata(_service: JsonRpcService, request: JsonRpcRequest) -> Result<BlockMetadata> {
-    Ok(BlockMetadata {
-        version: request.version(),
-        timestamp: request.ledger_info.ledger_info().timestamp_usecs(),
-    })
+async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Result<BlockMetadata> {
+    let (version, timestamp) = match serde_json::from_value::<u64>(request.get_param(0)) {
+        Ok(version) => {
+            let li = service.db.get_ledger_info(version)?;
+            (version, li.ledger_info().timestamp_usecs())
+        }
+        _ => (
+            request.version(),
+            request.ledger_info.ledger_info().timestamp_usecs(),
+        ),
+    };
+
+    Ok(BlockMetadata { version, timestamp })
 }
 
 /// Returns transactions by range
@@ -317,7 +326,7 @@ async fn get_account_state_with_proof(
 pub(crate) fn build_registry() -> RpcRegistry {
     let mut registry = RpcRegistry::new();
     register_rpc_method!(registry, "submit", submit, 1);
-    register_rpc_method!(registry, "get_metadata", get_metadata, 0);
+    register_rpc_method!(registry, "get_metadata", get_metadata, 1);
     register_rpc_method!(registry, "get_account_state", get_account_state, 1);
     register_rpc_method!(registry, "get_transactions", get_transactions, 3);
     register_rpc_method!(

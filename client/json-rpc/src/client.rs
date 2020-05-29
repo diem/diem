@@ -47,8 +47,8 @@ impl JsonRpcBatch {
         );
     }
 
-    pub fn add_get_metadata_request(&mut self) {
-        self.add_request("get_metadata".to_string(), vec![]);
+    pub fn add_get_metadata_request(&mut self, version: Option<u64>) {
+        self.add_request("get_metadata".to_string(), vec![json!(version)]);
     }
 
     pub fn add_get_currencies_info(&mut self) {

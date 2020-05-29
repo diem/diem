@@ -312,7 +312,7 @@ fn test_get_metadata() {
 
     let (actual_version, actual_timestamp) = mock_db.get_latest_commit_metadata().unwrap();
     let mut batch = JsonRpcBatch::default();
-    batch.add_get_metadata_request();
+    batch.add_get_metadata_request(None);
 
     let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
 
