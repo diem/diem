@@ -29,7 +29,7 @@ libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1
 libradb = { path = "../../libradb", version = "0.1.0" }
 
 [dev-dependencies]
-proptest = "0.9.6"
+proptest = "0.10.0"
 
 backup-service = { path = "../backup-service", version = "0.1.0" }
 libra-config = { path = "../../../config", version = "0.1.0" }

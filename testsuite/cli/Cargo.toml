@@ -14,7 +14,7 @@ anyhow = "1.0"
 chrono = "0.4.11"
 tonic = "0.2"
 hex = "0.4.2"
-proptest = { version = "0.9.6", optional = true }
+proptest = { version = "0.10.0", optional = true }
 rustyline = "6.1.2"
 rust_decimal = "1.6.0"
 num-traits = "0.2"
@@ -42,7 +42,7 @@ stdlib = { path = "../../language/stdlib", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 
 [dev-dependencies]
-proptest = "0.9.6"
+proptest = "0.10.0"
 
 [features]
 default = []

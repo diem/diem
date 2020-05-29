@@ -11,7 +11,7 @@ edition = "2018"
 
 [dev-dependencies]
 petgraph = "0.5.1"
-proptest = "0.9.6"
+proptest = "0.10.0"
 
 bytecode-verifier = { path = "../", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }

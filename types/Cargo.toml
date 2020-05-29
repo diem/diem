@@ -17,8 +17,8 @@ hex = "0.4.2"
 itertools = { version = "0.9.0", default-features = false }
 once_cell = "1.4.0"
 mirai-annotations = "1.8.0"
-proptest = { version = "0.9.6", default-features = false, optional = true }
-proptest-derive = { version = "0.1.2", default-features = false, optional = true }
+proptest = { version = "0.10.0", default-features = false, optional = true }
+proptest-derive = { version = "0.2.0", default-features = false, optional = true }
 radix_trie = { version = "0.1.4", default-features = false }
 rand = "0.7.3"
 serde = { version = "1.0.110", default-features = false }
@@ -36,8 +36,8 @@ move-core-types = { path = "../language/move-core/types", version = "0.1.0" }
 
 [dev-dependencies]
 regex = "1.3.9"
-proptest = "0.9.6"
-proptest-derive = "0.1.2"
+proptest = "0.10.0"
+proptest-derive = "0.2.0"
 libra-prost-test-helpers = { path = "../common/prost-test-helpers", version = "0.1.0" }
 serde_json = "1.0.53"
 

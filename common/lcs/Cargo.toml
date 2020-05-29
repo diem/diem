@@ -16,8 +16,8 @@ serde = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]
 criterion = "=0.3.2"
-proptest = "0.9.6"
-proptest-derive = "0.1.2"
+proptest = "0.10.0"
+proptest-derive = "0.2.0"
 
 [[bench]]
 name = "lcs_bench"

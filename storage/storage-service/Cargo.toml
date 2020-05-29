@@ -27,12 +27,12 @@ libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 rand = { version = "0.7.3", optional = true }
 storage-client = { path = "../storage-client", version = "0.1.0", optional = true }
-proptest = { version = "0.9.6", optional = true }
+proptest = { version = "0.10.0", optional = true }
 
 [dev-dependencies]
 itertools = "0.9.0"
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
-proptest = "0.9.6"
+proptest = "0.10.0"
 
 [features]
 default = []
