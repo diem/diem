@@ -95,7 +95,7 @@ More information might be available in the “message” field, but this is not 
 
 ```
 // Request: submits a transaction whose hex-encoded LCS byte representation is in params
-curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"submit","params":["0909090909090909090909090909090900000000000000000200000077000000a11ceb0b0100070146000000020000000348000000030000000c4b000000040000000d4f0000000200000005510000000c000000045d00000010000000076d0000000a0000000000000100020000000300063c53454c463e046d61696e00000000000000000000000000000000000000ffff030001000200000000801a060000000000010000000000000011be6a5e0000000020000000664f6e8f36eacb1770fa879d86c2c1d0fafea145e84fa7d671ab7a011a54d50940000000f20e781a4b6275232f600921f2d098991b62e97dc9a45e357bbcc72f59e68e3c4aa54b86cb5226781c58f5dbf32da4ea5329072f3248516ce852f07f74ae220d"],"id":1}'
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"submit","params":["c1fda0ec67c1b87bfb9e883e2080e530040000000000000002f401a11ceb0b010007014600000002000000034800000011000000045900000004000000055d0000001c00000007790000004900000008c20000001000000009d200000022000000000000010001010100020203000003040101010006020602050a0200010501010405030a020a0205050a02030a020a020109000c4c696272614163636f756e74166372656174655f746573746e65745f6163636f756e74066578697374731d7061795f66726f6d5f73656e6465725f776974685f6d6574616461746100000000000000000000000000000000010105010e000a001101200305000508000a000b0138000a000a020b030b04380102010700000000000000000000000000000000034c425201540005034ac94d88e90acd4cf0294e898e421e9404106484f428e88bba93de5053e051acb6ec0180969800000000000400040040420f00000000000000000000000000034c42528c8dd15e000000000020500a9002995e1af93bbdaf977385ed507b174bb3dc6936efd72612d56198a19d4084766159c40c4e91e61e3dbc30a9553c3111a7a582981d57ce4dff0aa383a529209b15046850c5115ef16b0b2e0c861be71186effb1b5707495e12ca06fe660a"],"id": 1}'
 
 // Response, for successful transaction submission
 {
@@ -171,7 +171,7 @@ if include_events is false, the events field in the Transaction object will be a
 
 ```
 // Request: fetches 10 transactions since version 1000
-curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_transactions","params":[1000, 10, false],"id":1}'
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_transactions","params":[4433485, 10, false],"id":1}'
 
 // Response
 {
@@ -184,85 +184,29 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
             ],
             "gas_used":0,
             "transaction":{
-                "timestamp_usecs":1590615334931315,
-                "type":"blockmetadata"
+                "expiration_time":1590680747,
+                "gas_unit_price":0,
+                "max_gas_amount":1000000,
+                "public_key":"500a9002995e1af93bbdaf977385ed507b174bb3dc6936efd72612d56198a19d",
+                "script":{
+                    "amount":10000000,
+                    "auth_key_prefix":"6484f428e88bba93de5053e051acb6ec",
+                    "metadata":"",
+                    "metadata_signature":"",
+                    "receiver":"4ac94d88e90acd4cf0294e898e421e94",
+                    "type":"peer_to_peer_transaction"
+                },
+                "script_hash":"c8bc3dda60e9662965b3223c22e3d3e3e7b6f698cf1a6930a449eb99daa35e7c",
+                "sender":"c1fda0ec67c1b87bfb9e883e2080e530",
+                "sequence_number":0,
+                "signature":"fe335285e5d87db25f86041d033414bfdf77ddae6f0dfbdc65ff4f5965ff810ef9c85ce00ede0820ce0cf5903f9ab3e93fa6e49bbf770aba9b083a985361fa01",
+                "signature_scheme":"Scheme::Ed25519",
+                "type":"user"
             },
-            "version":1000,
+            "version":4433485,
             "vm_status":4001
         },
-        {
-            "events":[
-
-            ],
-            "gas_used":0,
-            "transaction":{
-                "timestamp_usecs":1590615334945136,
-                "type":"blockmetadata"
-            },
-            "version":1001,
-            "vm_status":4001
-        },
-        {
-            "events":[
-
-            ],
-            "gas_used":0,
-            "transaction":{
-                "timestamp_usecs":1590615334959054,
-                "type":"blockmetadata"
-            },
-            "version":1002,
-            "vm_status":4001
-        },
-        {
-            "events":[
-
-            ],
-            "gas_used":0,
-            "transaction":{
-                "timestamp_usecs":1590615334973022,
-                "type":"blockmetadata"
-            },
-            "version":1003,
-            "vm_status":4001
-        },
-        {
-            "events":[
-
-            ],
-            "gas_used":0,
-            "transaction":{
-                "timestamp_usecs":1590615334987971,
-                "type":"blockmetadata"
-            },
-            "version":1004,
-            "vm_status":4001
-        },
-        {
-            "events":[
-
-            ],
-            "gas_used":0,
-            "transaction":{
-                "timestamp_usecs":1590615335001858,
-                "type":"blockmetadata"
-            },
-            "version":1005,
-            "vm_status":4001
-        },
-        {
-            "events":[
-
-            ],
-            "gas_used":0,
-            "transaction":{
-                "timestamp_usecs":1590615335016691,
-                "type":"blockmetadata"
-            },
-            "version":1006,
-            "vm_status":4001
-        },
-        ...
+        ....
     ]
 }
 ```
