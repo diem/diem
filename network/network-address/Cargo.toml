@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 proptest = { version = "0.9.6", optional = true }
-proptest-derive = { version = "0.1.2", optional = true }
+proptest-derive = { version = "0.2.0", optional = true }
 serde = { version = "1.0.110", default-features = false }
 serde_bytes = "0.11.4"
 thiserror = "1.0"
@@ -23,7 +23,7 @@ libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0"
 [dev-dependencies]
 anyhow = "1.0"
 proptest = "0.9.6"
-proptest-derive = "0.1.2"
+proptest-derive = "0.2.0"
 
 [features]
 default = []
