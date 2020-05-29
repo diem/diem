@@ -156,6 +156,3 @@ lto = 'thin'
 
 [profile.bench]
 debug = true
-
-[patch.crates-io]
-proptest = { git = "https://github.com/mimoo/proptest.git", branch = "fuzzing" }

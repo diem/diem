@@ -12,7 +12,7 @@ publish = false
 [dependencies]
 vm = { path = "../../vm", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
-proptest = "0.9.6"
+proptest = "0.10.0"
 libra-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0" }
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 

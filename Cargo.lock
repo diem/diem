@@ -18,7 +18,7 @@ dependencies = [
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "mirai-annotations 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -284,7 +284,7 @@ dependencies = [
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "libradb 0.1.0",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.10.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
@@ -548,7 +548,7 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "move-core-types 0.1.0",
  "petgraph 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
  "vm 0.1.0",
 ]
@@ -728,7 +728,7 @@ dependencies = [
  "libra-wallet 0.1.0",
  "libra-workspace-hack 0.1.0",
  "num-traits 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.10.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "resource-viewer 0.1.0",
  "rust_decimal 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -906,7 +906,7 @@ dependencies = [
  "num-derive 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "safety-rules 0.1.0",
  "schemadb 0.1.0",
@@ -934,7 +934,7 @@ dependencies = [
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "mirai-annotations 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1393,7 +1393,7 @@ dependencies = [
  "libradb 0.1.0",
  "move-core-types 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "scratchpad 0.1.0",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1665,7 +1665,7 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "move-core-types 0.1.0",
  "network 0.1.0",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde-reflection 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1766,7 +1766,7 @@ dependencies = [
  "libra-prost-test-helpers 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-build 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -2011,7 +2011,7 @@ dependencies = [
  "libra-proptest-helpers 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
 ]
 
@@ -2114,8 +2114,8 @@ dependencies = [
  "mirai-annotations 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-derive 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
- "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest-derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.19 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2230,7 +2230,7 @@ dependencies = [
  "move-lang 0.0.1",
  "move-vm-runtime 0.1.0",
  "move-vm-types 0.1.0",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
 ]
 
@@ -2254,8 +2254,8 @@ dependencies = [
  "move-vm-runtime 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
- "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest-derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
  "transaction-builder 0.1.0",
@@ -2303,7 +2303,7 @@ dependencies = [
  "libra-canonical-serialization 0.1.0",
  "libra-proptest-helpers 0.1.0",
  "libra-workspace-hack 0.1.0",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2313,8 +2313,8 @@ version = "0.1.0"
 dependencies = [
  "criterion 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-workspace-hack 0.1.0",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
- "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest-derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.19 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -2362,8 +2362,8 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "mirai-annotations 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
- "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest-derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ripemd160 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2439,7 +2439,7 @@ dependencies = [
  "network 0.1.0",
  "noise 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusty-fork 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2489,7 +2489,7 @@ dependencies = [
  "libradb 0.1.0",
  "move-core-types 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.10.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2660,8 +2660,8 @@ dependencies = [
  "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",
  "libra-workspace-hack 0.1.0",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
- "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest-derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_bytes 0.11.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.19 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2672,7 +2672,7 @@ name = "libra-nibble"
 version = "0.1.0"
 dependencies = [
  "libra-workspace-hack 0.1.0",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2719,8 +2719,8 @@ version = "0.1.0"
 dependencies = [
  "crossbeam 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-workspace-hack 0.1.0",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
- "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest-derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2902,8 +2902,8 @@ dependencies = [
  "mirai-annotations 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "move-core-types 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
- "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest-derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "radix_trie 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2945,7 +2945,7 @@ dependencies = [
  "move-vm-runtime 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3012,8 +3012,8 @@ dependencies = [
  "num-traits 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-variants 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
- "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest-derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "schemadb 0.1.0",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3233,8 +3233,8 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "mirai-annotations 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
- "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest-derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "ref-cast 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3369,7 +3369,7 @@ dependencies = [
  "move-vm-natives 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
 ]
 
@@ -3384,7 +3384,7 @@ dependencies = [
  "mirai-annotations 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "move-core-types 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
@@ -3486,7 +3486,7 @@ dependencies = [
  "num-variants 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pin-project 0.4.17 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_bytes 0.11.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3533,7 +3533,7 @@ dependencies = [
  "memsocket 0.1.0",
  "netcore 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "snow 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4037,8 +4037,8 @@ dependencies = [
 
 [[package]]
 name = "proptest"
-version = "0.9.6"
-source = "git+https://github.com/mimoo/proptest.git?branch=fuzzing#6c8b41b44d4bd97f77776b73220f6fe3c03edbf1"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bit-set 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4050,13 +4050,13 @@ dependencies = [
  "rand_chacha 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_xorshift 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex-syntax 0.6.18 (registry+https://github.com/rust-lang/crates.io-index)",
- "rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rusty-fork 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "proptest-derive"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4703,17 +4703,6 @@ dependencies = [
 
 [[package]]
 name = "rusty-fork"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "fnv 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "quick-error 1.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "wait-timeout 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "rusty-fork"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
@@ -4804,7 +4793,7 @@ dependencies = [
  "libra-temppath 0.1.0",
  "libra-workspace-hack 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rocksdb 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -4827,7 +4816,7 @@ dependencies = [
  "libra-crypto 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4983,8 +4972,8 @@ name = "serializer-tests"
 version = "0.1.0"
 dependencies = [
  "libra-workspace-hack 0.1.0",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
- "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest-derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
 ]
 
@@ -5286,7 +5275,7 @@ dependencies = [
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "libradb 0.1.0",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-client 0.1.0",
  "storage-interface 0.1.0",
@@ -6203,8 +6192,8 @@ dependencies = [
  "move-core-types 0.1.0",
  "num-variants 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
- "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest-derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ref-cast 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -6228,8 +6217,8 @@ dependencies = [
  "move-vm-runtime 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)",
- "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest-derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
  "transaction-builder 0.1.0",
@@ -6825,8 +6814,8 @@ dependencies = [
 "checksum proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)" = "cf3d2011ab5c909338f7887f4fc896d35932e29146c12c8d01da6b22a80ba759"
 "checksum proc-macro2 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)" = "1502d12e458c49a4c9cbff560d0fe0060c252bc29799ed94ca2ed4bb665a0101"
 "checksum prometheus 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "dd0ced56dee39a6e960c15c74dc48849d614586db2eaada6497477af7c7811cd"
-"checksum proptest 0.9.6 (git+https://github.com/mimoo/proptest.git?branch=fuzzing)" = "<none>"
-"checksum proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "d31edb17edac73aeacc947bd61462dda15220584268896a58e12f053d767f15b"
+"checksum proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2520fe6373cf6a3a61e2d200e987c183778ade8d9248ac3e6614ab0edfe4a0c1"
+"checksum proptest-derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "051d9d20dbe9e9dfe594328b6eaab72ccf571fee818991dd1c1ba5469b5f32d4"
 "checksum prost 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ce49aefe0a6144a45de32927c77bd2859a5f7677b55f220ae5b744e87389c212"
 "checksum prost-build 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)" = "02b10678c913ecbd69350e8535c3aef91a8676c0773fc1d7b95cdd196d7f2f26"
 "checksum prost-derive 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)" = "537aa19b95acde10a12fec4301466386f757403de4cd4e5b4fa78fb5ecb18f72"
@@ -6885,7 +6874,6 @@ dependencies = [
 "checksum rustc_version 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
 "checksum rustls 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c0d4a31f5d68413404705d6982529b0e11a9aacd4839d1d6222ee3b8cb4015e1"
 "checksum rustversion 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "b3bba175698996010c4f6dce5e7f173b6eb781fce25d2cfc45e27091ce0b79f6"
-"checksum rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "3dd93264e10c577503e926bd1430193eeb5d21b059148910082245309b424fae"
 "checksum rusty-fork 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cb3dcc6e454c328bb824492db107ab7c0ae8fcffe4ad210136ef014458c1bc4f"
 "checksum rustyline 6.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1cd20b28d972040c627e209eb29f19c24a71a19d661cc5a220089176e20ee202"
 "checksum ryu 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "bfa8506c1de11c9c4e4c38863ccbe02a305c8188e85a05a784c9e11e1c3910c8"

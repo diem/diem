@@ -40,7 +40,7 @@ memsocket = { path = "memsocket", version = "0.1.0" }
 netcore = { path = "netcore", version = "0.1.0" }
 noise = { path = "noise", version = "0.1.0" }
 num-variants = { path = "../common/num-variants", version = "0.1.0" }
-proptest = { version = "0.9.6", default-features = true, optional = true }
+proptest = { version = "0.10.0", default-features = true, optional = true }
 stream-ratelimiter = { path = "../common/stream-ratelimiter", version = "0.1.0" }
 
 [dev-dependencies]

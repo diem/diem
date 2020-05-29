@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-proptest = "0.9.6"
+proptest = "0.10.0"
 rand = "0.7.3"
 serde = { version = "1.0.110", features = ["derive"] }
 serde-reflection = "0.3.0"

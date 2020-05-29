@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 mirai-annotations = { version = "1.8.0", default-features = false }
-proptest = { version = "0.9.6", optional = true }
+proptest = { version = "0.10.0", optional = true }
 serde = { version = "1.0.110", default-features = false }
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
@@ -20,7 +20,7 @@ libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 [dev-dependencies]
-proptest = "0.9.6"
+proptest = "0.10.0"
 
 [features]
 default = []
