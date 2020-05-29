@@ -5,9 +5,9 @@ use anyhow::{format_err, Error, Result};
 use libra_crypto::HashValue;
 use libra_types::{
     account_config::{
-        AccountResource, BalanceResource, BurnEvent, CancelBurnEvent, CurrencyInfoResource,
-        MintEvent, NewBlockEvent, NewEpochEvent, PreburnEvent, ReceivedPaymentEvent,
-        SentPaymentEvent, UpgradeEvent,
+        AccountResource, AccountRole, BalanceResource, BurnEvent, CancelBurnEvent,
+        CurrencyInfoResource, MintEvent, NewBlockEvent, NewEpochEvent, PreburnEvent,
+        ReceivedPaymentEvent, SentPaymentEvent, UpgradeEvent, LBR_NAME,
     },
     account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
@@ -18,8 +18,8 @@ use libra_types::{
     vm_error::StatusCode,
 };
 use move_core_types::{
-    identifier::{IdentStr, Identifier},
-    language_storage::TypeTag,
+    identifier::Identifier,
+    language_storage::{StructTag, TypeTag},
     move_resource::MoveResource,
 };
 use serde::{Deserialize, Serialize};
@@ -33,12 +33,31 @@ pub struct AmountView {
 }
 
 impl AmountView {
-    fn new(amount: u64, currency: &IdentStr) -> Self {
+    fn new(amount: u64, currency: &str) -> Self {
         Self {
             amount,
             currency: currency.to_string(),
         }
     }
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub enum AccountRoleView {
+    #[serde(rename = "unknown")]
+    Unknown,
+    #[serde(rename = "unhosted")]
+    Unhosted,
+    #[serde(rename = "empty")]
+    Empty,
+    #[serde(rename = "child_vasp")]
+    ChildVASP { parent_vasp_address: BytesView },
+    #[serde(rename = "parent_vasp")]
+    ParentVASP {
+        human_name: String,
+        base_url: String,
+        expiration_time: u64,
+        compliance_key: BytesView,
+    },
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
@@ -50,14 +69,21 @@ pub struct AccountView {
     pub received_events_key: BytesView,
     pub delegated_key_rotation_capability: bool,
     pub delegated_withdrawal_capability: bool,
+    pub role: AccountRoleView,
 }
 
 impl AccountView {
-    pub fn new(account: &AccountResource, balances: BTreeMap<Identifier, BalanceResource>) -> Self {
+    pub fn new(
+        account: &AccountResource,
+        balances: BTreeMap<Identifier, BalanceResource>,
+        account_role: AccountRole,
+    ) -> Self {
         Self {
             balances: balances
                 .into_iter()
-                .map(|(currency_code, balance)| AmountView::new(balance.coin(), &currency_code))
+                .map(|(currency_code, balance)| {
+                    AmountView::new(balance.coin(), &currency_code.as_str())
+                })
                 .collect(),
             sequence_number: account.sequence_number(),
             authentication_key: BytesView::from(account.authentication_key()),
@@ -65,6 +91,7 @@ impl AccountView {
             received_events_key: BytesView::from(account.received_events().key().as_bytes()),
             delegated_key_rotation_capability: account.delegated_key_rotation_capability(),
             delegated_withdrawal_capability: account.delegated_withdrawal_capability(),
+            role: AccountRoleView::from(account_role),
         }
     }
 }
@@ -129,8 +156,10 @@ impl From<(u64, ContractEvent)> for EventView {
         let event_data = if event.type_tag() == &TypeTag::Struct(ReceivedPaymentEvent::struct_tag())
         {
             if let Ok(received_event) = ReceivedPaymentEvent::try_from(&event) {
-                let amount_view =
-                    AmountView::new(received_event.amount(), received_event.currency_code());
+                let amount_view = AmountView::new(
+                    received_event.amount(),
+                    received_event.currency_code().as_str(),
+                );
                 Ok(EventDataView::ReceivedPayment {
                     amount: amount_view,
                     sender: BytesView::from(received_event.sender().as_ref()),
@@ -141,7 +170,8 @@ impl From<(u64, ContractEvent)> for EventView {
             }
         } else if event.type_tag() == &TypeTag::Struct(SentPaymentEvent::struct_tag()) {
             if let Ok(sent_event) = SentPaymentEvent::try_from(&event) {
-                let amount_view = AmountView::new(sent_event.amount(), sent_event.currency_code());
+                let amount_view =
+                    AmountView::new(sent_event.amount(), sent_event.currency_code().as_str());
                 Ok(EventDataView::SentPayment {
                     amount: amount_view,
                     receiver: BytesView::from(sent_event.receiver().as_ref()),
@@ -152,7 +182,8 @@ impl From<(u64, ContractEvent)> for EventView {
             }
         } else if event.type_tag() == &TypeTag::Struct(BurnEvent::struct_tag()) {
             if let Ok(burn_event) = BurnEvent::try_from(&event) {
-                let amount_view = AmountView::new(burn_event.amount(), burn_event.currency_code());
+                let amount_view =
+                    AmountView::new(burn_event.amount(), burn_event.currency_code().as_str());
                 let preburn_address = BytesView::from(burn_event.preburn_address().as_ref());
                 Ok(EventDataView::Burn {
                     amount: amount_view,
@@ -165,7 +196,7 @@ impl From<(u64, ContractEvent)> for EventView {
             if let Ok(cancel_burn_event) = CancelBurnEvent::try_from(&event) {
                 let amount_view = AmountView::new(
                     cancel_burn_event.amount(),
-                    cancel_burn_event.currency_code(),
+                    cancel_burn_event.currency_code().as_str(),
                 );
                 let preburn_address = BytesView::from(cancel_burn_event.preburn_address().as_ref());
                 Ok(EventDataView::CancelBurn {
@@ -177,7 +208,8 @@ impl From<(u64, ContractEvent)> for EventView {
             }
         } else if event.type_tag() == &TypeTag::Struct(MintEvent::struct_tag()) {
             if let Ok(mint_event) = MintEvent::try_from(&event) {
-                let amount_view = AmountView::new(mint_event.amount(), mint_event.currency_code());
+                let amount_view =
+                    AmountView::new(mint_event.amount(), mint_event.currency_code().as_str());
                 Ok(EventDataView::Mint {
                     amount: amount_view,
                 })
@@ -186,8 +218,10 @@ impl From<(u64, ContractEvent)> for EventView {
             }
         } else if event.type_tag() == &TypeTag::Struct(PreburnEvent::struct_tag()) {
             if let Ok(preburn_event) = PreburnEvent::try_from(&event) {
-                let amount_view =
-                    AmountView::new(preburn_event.amount(), preburn_event.currency_code());
+                let amount_view = AmountView::new(
+                    preburn_event.amount(),
+                    preburn_event.currency_code().as_str(),
+                );
                 let preburn_address = BytesView::from(preburn_event.preburn_address().as_ref());
                 Ok(EventDataView::Preburn {
                     amount: amount_view,
@@ -289,6 +323,7 @@ pub enum TransactionDataView {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
+        gas_currency: String,
         expiration_time: u64,
         script_hash: String,
         script: ScriptView,
@@ -316,12 +351,14 @@ pub enum ScriptView {
         receiver: String,
         auth_key_prefix: BytesView,
         amount: u64,
+        currency: String,
         metadata: BytesView,
         metadata_signature: BytesView,
     },
     #[serde(rename = "mint_transaction")]
     Mint {
         receiver: String,
+        currency: String,
         auth_key_prefix: BytesView,
         amount: u64,
     },
@@ -364,6 +401,7 @@ impl From<Transaction> for TransactionDataView {
                     sequence_number: t.sequence_number(),
                     max_gas_amount: t.max_gas_amount(),
                     gas_unit_price: t.gas_unit_price(),
+                    gas_currency: t.gas_currency_code().to_string(),
                     expiration_time: t.expiration_time().as_secs(),
                     script_hash,
                     script: t.into_raw_transaction().into_payload().into(),
@@ -375,17 +413,49 @@ impl From<Transaction> for TransactionDataView {
     }
 }
 
+impl From<AccountRole> for AccountRoleView {
+    fn from(role: AccountRole) -> Self {
+        match role {
+            AccountRole::Empty => AccountRoleView::Empty,
+            AccountRole::Unhosted => AccountRoleView::Unhosted,
+            AccountRole::Unknown => AccountRoleView::Unknown,
+            AccountRole::ChildVASP(child_vasp) => AccountRoleView::ChildVASP {
+                parent_vasp_address: BytesView::from(&child_vasp.parent_vasp_addr().to_vec()),
+            },
+            AccountRole::ParentVASP(parent_vasp) => AccountRoleView::ParentVASP {
+                human_name: parent_vasp.human_name().to_string(),
+                base_url: parent_vasp.base_url().to_string(),
+                expiration_time: parent_vasp.expiration_date(),
+                compliance_key: BytesView::from(parent_vasp.compliance_public_key()),
+            },
+        }
+    }
+}
+
 impl From<TransactionPayload> for ScriptView {
     fn from(value: TransactionPayload) -> Self {
         let empty_vec: Vec<TransactionArgument> = vec![];
+        let empty_ty_vec: Vec<String> = vec![];
+        let unknown_currency = "unknown_currency".to_string();
 
-        let (code, args) = match value {
-            TransactionPayload::Program => ("deprecated".to_string(), empty_vec),
-            TransactionPayload::WriteSet(_) => ("genesis".to_string(), empty_vec),
-            TransactionPayload::Script(script) => {
-                (get_transaction_name(script.code()), script.args().to_vec())
+        let (code, args, ty_args) = match value {
+            TransactionPayload::Program => ("deprecated".to_string(), empty_vec, empty_ty_vec),
+            TransactionPayload::WriteSet(_) => ("genesis".to_string(), empty_vec, empty_ty_vec),
+            TransactionPayload::Script(script) => (
+                get_transaction_name(script.code()),
+                script.args().to_vec(),
+                script
+                    .ty_args()
+                    .iter()
+                    .map(|type_tag| match type_tag {
+                        TypeTag::Struct(StructTag { module, .. }) => module.to_string(),
+                        tag => format!("{}", tag),
+                    })
+                    .collect(),
+            ),
+            TransactionPayload::Module(_) => {
+                ("module publishing".to_string(), empty_vec, empty_ty_vec)
             }
-            TransactionPayload::Module(_) => ("module publishing".to_string(), empty_vec),
         };
 
         let res = match code.as_str() {
@@ -397,6 +467,7 @@ impl From<TransactionPayload> for ScriptView {
                         receiver: receiver.to_string(),
                         auth_key_prefix: BytesView::from(auth_key_prefix),
                         amount: *amount,
+                        currency: ty_args.get(0).unwrap_or(&unknown_currency).to_string(),
                         metadata: BytesView::from(metadata),
                         metadata_signature: BytesView::from(metadata_signature),
                     })
@@ -404,14 +475,20 @@ impl From<TransactionPayload> for ScriptView {
                     Err(format_err!("Unable to parse PeerToPeer arguments"))
                 }
             }
-            "mint" | "mint_lbr_to_address" => {
+            name @ "mint" | name @ "mint_lbr_to_address" => {
                 if let [TransactionArgument::Address(receiver), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount)] =
                     &args[..]
                 {
+                    let currency = if name == "mint_lbr_to_address" {
+                        LBR_NAME.to_string()
+                    } else {
+                        ty_args.get(0).unwrap_or(&unknown_currency).to_string()
+                    };
                     Ok(ScriptView::Mint {
                         receiver: receiver.to_string(),
                         auth_key_prefix: BytesView::from(auth_key_prefix),
                         amount: *amount,
+                        currency,
                     })
                 } else {
                     Err(format_err!("Unable to parse PeerToPeer arguments"))
