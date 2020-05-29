@@ -29,7 +29,7 @@ storage-interface = { path = "../../storage-interface", version = "0.1.0" }
 libra-config = { path = "../../../config", version = "0.1.0" }
 libra-temppath = { path = "../../../common/temppath", version = "0.1.0" }
 
-reqwest = { version = "0.10.4", features = ["blocking", "json"], default_features = false }
+reqwest = { version = "0.10.5", features = ["blocking", "json"], default_features = false }
 
 [features]
 fuzzing = ["libradb/fuzzing"]
