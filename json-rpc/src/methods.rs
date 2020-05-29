@@ -13,6 +13,7 @@ use anyhow::{ensure, format_err, Error, Result};
 use core::future::Future;
 use debug_interface::prelude::*;
 use futures::{channel::oneshot, SinkExt};
+use libra_crypto::hash::CryptoHash;
 use libra_mempool::MempoolClientSender;
 use libra_types::{
     account_address::AccountAddress,
@@ -172,6 +173,7 @@ async fn get_transactions(
 
         result.push(TransactionView {
             version: start_version + v as u64,
+            hash: tx.hash().to_string(),
             transaction: tx.into(),
             events,
             vm_status: info.major_status(),
@@ -214,6 +216,7 @@ async fn get_account_transaction(
 
         Ok(Some(TransactionView {
             version: tx_version,
+            hash: tx.transaction.hash().to_string(),
             transaction: tx.transaction.into(),
             events,
             vm_status: tx.proof.transaction_info().major_status(),

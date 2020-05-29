@@ -8,7 +8,7 @@ use crate::{
 };
 use futures::{channel::mpsc::channel, StreamExt};
 use libra_config::utils;
-use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
+use libra_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, HashValue, PrivateKey, Uniform};
 use libra_json_rpc_client::{
     views::{
         AccountStateWithProofView, BlockMetadata, BytesView, EventView, StateProofView,
@@ -373,6 +373,7 @@ fn test_get_transactions() {
             let version = base_version + i as u64;
             assert_eq!(view.version, version);
             let (tx, status) = &mock_db.all_txns[version as usize];
+            assert_eq!(view.hash, tx.hash().to_string());
 
             // Check we returned correct events
             let expected_events = mock_db
@@ -447,6 +448,7 @@ fn test_get_account_transaction() {
                 .find_map(|(t, status)| {
                     if let Ok(x) = t.as_signed_user_txn() {
                         if x.sender() == *acc && x.sequence_number() == seq {
+                            assert_eq!(tx_view.hash, t.hash().to_string());
                             return Some((x, status));
                         }
                     }
