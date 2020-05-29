@@ -18,7 +18,7 @@ proptest = { version = "0.9.6", optional = true }
 rustyline = "6.1.2"
 rust_decimal = "1.6.0"
 num-traits = "0.2"
-reqwest = { version = "0.10.4", features = ["blocking", "json", "rustls-tls"], default-features = false }
+reqwest = { version = "0.10.5", features = ["blocking", "json", "rustls-tls"], default-features = false }
 serde = { version = "1.0.110", features = ["derive"] }
 structopt = "0.3.14"
 walkdir = "2.3.1"
