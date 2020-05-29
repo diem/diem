@@ -15,6 +15,7 @@
 -  [Function `is_parent_vasp`](#0x0_VASP_is_parent_vasp)
 -  [Function `human_name`](#0x0_VASP_human_name)
 -  [Function `base_url`](#0x0_VASP_base_url)
+-  [Function `rotate_base_url`](#0x0_VASP_rotate_base_url)
 -  [Function `compliance_public_key`](#0x0_VASP_compliance_public_key)
 -  [Function `rotate_compliance_public_key`](#0x0_VASP_rotate_compliance_public_key)
 -  [Function `expiration_date`](#0x0_VASP_expiration_date)
@@ -299,6 +300,33 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_VASP_base_url">base_url</a>(parent_vasp: &<a href="#0x0_VASP_ParentVASP">ParentVASP</a>): vector&lt;u8&gt; {
     *&parent_vasp.base_url
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_VASP_rotate_base_url"></a>
+
+## Function `rotate_base_url`
+
+Rotate the base URL for the
+<code>parent_vasp</code> account to
+<code>new_url</code>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_VASP_rotate_base_url">rotate_base_url</a>(parent_vasp: &<b>mut</b> <a href="#0x0_VASP_ParentVASP">VASP::ParentVASP</a>, new_url: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_VASP_rotate_base_url">rotate_base_url</a>(parent_vasp: &<b>mut</b> <a href="#0x0_VASP_ParentVASP">ParentVASP</a>, new_url: vector&lt;u8&gt;) {
+    parent_vasp.base_url = new_url
 }
 </code></pre>
 

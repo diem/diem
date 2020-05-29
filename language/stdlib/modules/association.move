@@ -196,12 +196,13 @@ module Association {
 
     /// ## Management of Association Privilege
 
-    /// Every `Root` address is also an association address.
-    /// > Note: There is just one root address, so I think it would have been clearer to write
-    /// > "invariant spec_addr_is_association(spec_root_address(sender()))"
-    spec schema RootAddressIsAssociationAddress {
+    // TODO: currently unused, fix
+    // Every `Root` address is also an association address.
+    // > Note: There is just one root address, so I think it would have been clearer to write
+    // > "invariant spec_addr_is_association(spec_root_address(sender()))"
+    /*spec schema RootAddressIsAssociationAddress {
         invariant all(domain<address>(), |a| exists<Root>(a) ==> spec_addr_is_association(a));
-    }
+    }*/
 
     /// Except functions called from initialize before invariant is established.
     /// > Note: Why doesn't this include initialize, root_address()?

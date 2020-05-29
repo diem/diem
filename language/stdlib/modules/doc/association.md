@@ -545,21 +545,6 @@ Only
 
 #### Management of Association Privilege
 
-Every
-<code><a href="#0x0_Association_Root">Root</a></code> address is also an association address.
-> Note: There is just one root address, so I think it would have been clearer to write
-> "invariant spec_addr_is_association(spec_root_address(sender()))"
-
-
-<a name="0x0_Association_RootAddressIsAssociationAddress"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x0_Association_RootAddressIsAssociationAddress">RootAddressIsAssociationAddress</a> {
-    <b>invariant</b> all(domain&lt;address&gt;(), |a| exists&lt;<a href="#0x0_Association_Root">Root</a>&gt;(a) ==&gt; <a href="#0x0_Association_spec_addr_is_association">spec_addr_is_association</a>(a));
-}
-</code></pre>
-
-
 Except functions called from initialize before invariant is established.
 > Note: Why doesn't this include initialize, root_address()?
 > The prover reports a violation of this property:
