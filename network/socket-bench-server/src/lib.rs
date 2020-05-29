@@ -21,7 +21,7 @@ use netcore::{
         Transport, TransportExt,
     },
 };
-use network::noise_wrapper::{session::NoiseSession, NoiseWrapper};
+use network::noise_wrapper::{stream::NoiseStream, NoiseWrapper};
 use rand::prelude::*;
 use std::{env, ffi::OsString, sync::Arc};
 use tokio::runtime::Handle;
@@ -76,7 +76,7 @@ impl Args {
 }
 
 /// Build a MemorySocket + Noise transport
-pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseSession<MemorySocket>> {
+pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseStream<MemorySocket>> {
     MemoryTransport::default().and_then(move |socket, addr, origin| async move {
         let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
         let private = x25519::PrivateKey::generate(&mut rng);
@@ -90,7 +90,7 @@ pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseSession
 }
 
 /// Build a Tcp + Noise transport
-pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseSession<TcpSocket>> {
+pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseStream<TcpSocket>> {
     TcpTransport::default().and_then(move |socket, addr, origin| async move {
         let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
         let private = x25519::PrivateKey::generate(&mut rng);

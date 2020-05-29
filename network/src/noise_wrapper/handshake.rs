@@ -5,7 +5,7 @@
 //! This module also implements additional anti-DoS mitigation,
 //! by including a timestamp in each handshake initialization message.
 //! Refer to the module's documentation for more information.
-//! A successful handshake returns a `NoiseSession` which is defined in [socket] module.
+//! A successful handshake returns a `NoiseStream` which is defined in [socket] module.
 //!
 //! [socket]: network::noise_wrapper::socket
 
@@ -22,9 +22,9 @@ use libra_crypto::{noise, x25519};
 use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
 
-use crate::noise_wrapper::session::NoiseSession;
+use crate::noise_wrapper::stream::NoiseStream;
 
-/// In the validator network, a client message is accompanied with a timestamp.
+/// In a mutually authenticated network, a client message is accompanied with a timestamp.
 /// This is in order to prevent replay attacks, where the attacker does not know the client's static key,
 /// but can still replay a handshake message in order to force a peer into performing a few Diffie-Hellman key exchange operations.
 ///
@@ -77,8 +77,8 @@ impl NoiseWrapper {
     }
 
     /// Perform a protocol upgrade on an underlying connection. In addition perform the noise IX
-    /// handshake to establish a noise session and exchange static public keys. Upon success,
-    /// returns the static public key of the remote as well as a NoiseSession.
+    /// handshake to establish a noise stream and exchange static public keys. Upon success,
+    /// returns the static public key of the remote as well as a NoiseStream.
     // TODO(mimoo, philp9): this code could be inlined in transport.rs once the monolithic network is done
     pub async fn upgrade_connection<TSocket>(
         &self,
@@ -87,7 +87,7 @@ impl NoiseWrapper {
         anti_replay_timestamps: Option<Arc<RwLock<AntiReplayTimestamps>>>,
         remote_public_key: Option<x25519::PublicKey>,
         trusted_peers: Option<&Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>>,
-    ) -> io::Result<(x25519::PublicKey, NoiseSession<TSocket>)>
+    ) -> io::Result<(x25519::PublicKey, NoiseStream<TSocket>)>
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
@@ -113,7 +113,7 @@ impl NoiseWrapper {
             }
         };
 
-        // return remote public key with a socket including the noise session
+        // return remote public key with a socket including the noise stream
         let remote_public_key = socket.get_remote_static();
         Ok((remote_public_key, socket))
     }
@@ -121,15 +121,15 @@ impl NoiseWrapper {
     pub async fn dial<TSocket>(
         &self,
         mut socket: TSocket,
-        validator_network: bool,
+        mutual_authentication: bool,
         remote_public_key: x25519::PublicKey,
-    ) -> io::Result<NoiseSession<TSocket>>
+    ) -> io::Result<NoiseStream<TSocket>>
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
         // on the validator network, send prologue as current timestamp (in seconds)
         let mut prologue = [0u8; 8];
-        if validator_network {
+        if mutual_authentication {
             let now: u64 = time::SystemTime::now()
                 .duration_since(time::UNIX_EPOCH)
                 .expect("system clock should work")
@@ -180,7 +180,7 @@ impl NoiseWrapper {
             })?;
 
         // finalize the connection
-        Ok(NoiseSession::new(socket, session))
+        Ok(NoiseStream::new(socket, session))
     }
 
     pub async fn accept<TSocket>(
@@ -188,7 +188,7 @@ impl NoiseWrapper {
         mut socket: TSocket,
         anti_replay_timestamps: Option<Arc<RwLock<AntiReplayTimestamps>>>,
         trusted_peers: Option<&Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>>,
-    ) -> io::Result<NoiseSession<TSocket>>
+    ) -> io::Result<NoiseStream<TSocket>>
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
@@ -271,7 +271,7 @@ impl NoiseWrapper {
         }
 
         // finalize the connection
-        Ok(NoiseSession::new(socket, session))
+        Ok(NoiseStream::new(socket, session))
     }
 }
 
@@ -321,7 +321,7 @@ mod test {
         server_public_key: x25519::PublicKey,
         server: NoiseWrapper,
         trusted_peers: Option<&Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>>,
-    ) -> io::Result<(NoiseSession<MemorySocket>, NoiseSession<MemorySocket>)> {
+    ) -> io::Result<(NoiseStream<MemorySocket>, NoiseStream<MemorySocket>)> {
         // create an in-memory socket for testing
         let (dialer_socket, listener_socket) = MemorySocket::new_pair();
         let anti_replay_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::default()));
