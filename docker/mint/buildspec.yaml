@@ -18,4 +18,4 @@ phases:
     commands:
       - echo Build completed on `date`
       # Tag and push the docker images
-      - SOURCE=libra_faucet:latest TARGET_REPO=$LIBRA_FAUCET_REPO TARGET_TAGS="${TAGS}:dev_$(git rev-parse --short=8  HEAD)" docker/tag-and-push.sh
+      - SOURCE=libra_mint:latest TARGET_REPO=$LIBRA_MINT_REPO TARGET_TAGS="${TAGS}:dev_$(git rev-parse --short=8  HEAD)" docker/tag-and-push.sh
