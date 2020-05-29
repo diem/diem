@@ -459,7 +459,7 @@ impl Type {
 impl<'a> fmt::Display for TypeDisplay<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         use Type::*;
-        let comma_list = |f: &mut Formatter<'_>, ts: &[Type]| {
+        let comma_list = |f: &mut Formatter<'_>, ts: &[Type]| -> fmt::Result {
             let mut first = true;
             for t in ts {
                 if first {
