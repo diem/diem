@@ -343,7 +343,7 @@ impl Loader {
         script_blob: &[u8],
         data_store: &mut dyn DataStore,
     ) -> VMResult<Arc<Function>> {
-        let hash_value = HashValue::from_sha3_256(script_blob);
+        let hash_value = HashValue::sha3_256_of(script_blob);
         if let Some(main) = self.scripts.lock().unwrap().get(&hash_value) {
             return Ok(main);
         }

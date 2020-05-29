@@ -47,7 +47,7 @@ fn test_cryptohasher_name() {
     let value = Bar {};
     let expected = {
         let mut digest = Sha3::v256();
-        digest.update(HashValue::from_sha3_256(&salt[..]).as_ref());
+        digest.update(HashValue::sha3_256_of(&salt[..]).as_ref());
         let mut hasher_bytes = [0u8; 32];
         digest.finalize(&mut hasher_bytes);
         hasher_bytes
@@ -64,7 +64,7 @@ fn test_lcs_cryptohash() {
     let value = Foo { a: 5, b: 1025 };
     let expected = {
         let mut digest = Sha3::v256();
-        digest.update(HashValue::from_sha3_256(&salt[..]).as_ref());
+        digest.update(HashValue::sha3_256_of(&salt[..]).as_ref());
         digest.update(&lcs::to_bytes(&value).unwrap());
         let mut hasher_bytes = [0u8; 32];
         digest.finalize(&mut hasher_bytes);

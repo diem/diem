@@ -416,7 +416,7 @@ fn test_get_transactions() {
                         assert_eq!(&t.sender().to_string(), sender);
                         // TODO: verify every field
                         if let TransactionPayload::Script(s) = t.payload() {
-                            assert_eq!(script_hash, &HashValue::from_sha3_256(s.code()).to_hex());
+                            assert_eq!(script_hash, &HashValue::sha3_256_of(s.code()).to_hex());
                         }
                     }
                     _ => panic!("Returned value doesn't match!"),
@@ -493,7 +493,7 @@ fn test_get_account_transaction() {
                     assert_eq!(seq, sequence_number);
 
                     if let TransactionPayload::Script(s) = expected_tx.payload() {
-                        assert_eq!(script_hash, HashValue::from_sha3_256(s.code()).to_hex());
+                        assert_eq!(script_hash, HashValue::sha3_256_of(s.code()).to_hex());
                     }
                 }
                 _ => panic!("wrong type"),

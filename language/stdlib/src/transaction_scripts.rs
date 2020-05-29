@@ -153,7 +153,7 @@ impl CompiledBytes {
 
     /// Return the sha3-256 hash of the script bytes
     fn hash_bytes(bytes: &[u8]) -> HashValue {
-        HashValue::from_sha3_256(bytes)
+        HashValue::sha3_256_of(bytes)
     }
 
     /// Convert this newtype wrapper into a vector of bytes

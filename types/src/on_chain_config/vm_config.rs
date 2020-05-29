@@ -35,7 +35,7 @@ impl VMPublishingOption {
         match self {
             VMPublishingOption::Open | VMPublishingOption::CustomScripts => true,
             VMPublishingOption::Locked(whitelist) => {
-                let hash_value = HashValue::from_sha3_256(program);
+                let hash_value = HashValue::sha3_256_of(program);
                 whitelist.contains(hash_value.as_ref())
             }
         }

@@ -15,7 +15,7 @@ use core::convert::TryFrom;
 use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, SeedableRng};
 
-static MESSAGE_HASH: Lazy<HashValue> = Lazy::new(|| HashValue::from_sha3_256(b"Test Message"));
+static MESSAGE_HASH: Lazy<HashValue> = Lazy::new(|| HashValue::sha3_256_of(b"Test Message"));
 
 // Helper function to generate N key pairs.
 fn generate_keys(n: usize) -> Vec<Ed25519PrivateKey> {
