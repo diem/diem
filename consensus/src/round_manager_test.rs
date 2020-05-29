@@ -282,10 +282,13 @@ fn new_round_on_quorum_cert() {
         let b1_id = proposal_msg.proposal().id();
         assert_eq!(proposal_msg.proposer(), node.signer.author());
 
-        node.round_manager.process_proposal_msg(proposal_msg).await;
+        node.round_manager
+            .process_proposal_msg(proposal_msg)
+            .await
+            .unwrap();
         let vote_msg = node.next_vote().await;
         // Adding vote to form a QC
-        node.round_manager.process_vote(vote_msg).await;
+        node.round_manager.process_vote(vote_msg).await.unwrap();
 
         // round 2 should start
         let proposal_msg = node.next_proposal().await;
@@ -313,7 +316,10 @@ fn vote_on_successful_proposal() {
 
         let proposal = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
         let proposal_id = proposal.id();
-        node.round_manager.process_proposed_block(proposal).await;
+        node.round_manager
+            .process_proposed_block(proposal)
+            .await
+            .unwrap();
         let vote_msg = node.next_vote().await;
         assert_eq!(vote_msg.vote().author(), node.signer.author());
         assert_eq!(vote_msg.vote().vote_data().proposed().id(), proposal_id);
@@ -342,8 +348,14 @@ fn no_vote_on_old_proposal() {
         // clear the message queue
         node.next_proposal().await;
 
-        node.round_manager.process_proposed_block(new_block).await;
-        node.round_manager.process_proposed_block(old_block).await;
+        node.round_manager
+            .process_proposed_block(new_block)
+            .await
+            .unwrap();
+        node.round_manager
+            .process_proposed_block(old_block)
+            .await
+            .unwrap_err();
         let vote_msg = node.next_vote().await;
         assert_eq!(vote_msg.vote().vote_data().proposed().id(), new_block_id);
         assert!(node.block_store.get_block(old_block_id).is_some());
@@ -371,10 +383,11 @@ fn no_vote_on_mismatch_round() {
             block_skip_round,
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         );
-        assert_eq!(
-            node.round_manager.pre_process_proposal(bad_proposal).await,
-            None
-        );
+        assert!(node
+            .round_manager
+            .pre_process_proposal(bad_proposal)
+            .await
+            .is_err());
         let good_proposal = ProposalMsg::<TestPayload>::new(
             correct_block.clone(),
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
@@ -382,8 +395,9 @@ fn no_vote_on_mismatch_round() {
         assert_eq!(
             node.round_manager
                 .pre_process_proposal(good_proposal.clone())
-                .await,
-            Some(good_proposal.take_proposal())
+                .await
+                .unwrap(),
+            good_proposal.take_proposal()
         );
     });
 }
@@ -400,7 +414,10 @@ fn sync_info_carried_on_timeout_vote() {
     timed_block_on(&mut runtime, async {
         let proposal_msg = node.next_proposal().await;
         let block_0 = proposal_msg.proposal().clone();
-        node.round_manager.process_proposal_msg(proposal_msg).await;
+        node.round_manager
+            .process_proposal_msg(proposal_msg)
+            .await
+            .unwrap();
         node.next_vote().await;
         let parent_block_info = block_0.quorum_cert().certified_block();
         // Populate block_0 and a quorum certificate for block_0 on non_proposer
@@ -419,7 +436,7 @@ fn sync_info_carried_on_timeout_vote() {
             .insert_single_quorum_cert(block_0_quorum_cert.clone())
             .unwrap();
 
-        node.round_manager.process_local_timeout(1).await;
+        node.round_manager.process_local_timeout(1).await.unwrap();
         let vote_msg_on_timeout = node.next_vote().await;
         assert!(vote_msg_on_timeout.vote().is_timeout());
         assert_eq!(
@@ -453,10 +470,11 @@ fn no_vote_on_invalid_proposer() {
             block_incorrect_proposer,
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         );
-        assert_eq!(
-            node.round_manager.pre_process_proposal(bad_proposal).await,
-            None
-        );
+        assert!(node
+            .round_manager
+            .pre_process_proposal(bad_proposal)
+            .await
+            .is_err());
         let good_proposal = ProposalMsg::<TestPayload>::new(
             correct_block.clone(),
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
@@ -465,8 +483,9 @@ fn no_vote_on_invalid_proposer() {
         assert_eq!(
             node.round_manager
                 .pre_process_proposal(good_proposal.clone())
-                .await,
-            Some(good_proposal.take_proposal())
+                .await
+                .unwrap(),
+            good_proposal.take_proposal(),
         );
     });
 }
@@ -498,19 +517,19 @@ fn new_round_on_timeout_certificate() {
         assert_eq!(
             node.round_manager
                 .pre_process_proposal(skip_round_proposal.clone())
-                .await,
-            Some(skip_round_proposal.take_proposal())
+                .await
+                .unwrap(),
+            skip_round_proposal.take_proposal()
         );
         let old_good_proposal = ProposalMsg::<TestPayload>::new(
             correct_block.clone(),
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         );
-        assert_eq!(
-            node.round_manager
-                .pre_process_proposal(old_good_proposal.clone())
-                .await,
-            None
-        );
+        assert!(node
+            .round_manager
+            .pre_process_proposal(old_good_proposal.clone())
+            .await
+            .is_err());
     });
 }
 
@@ -529,7 +548,10 @@ fn response_on_block_retrieval() {
         ProposalMsg::<TestPayload>::new(block, SyncInfo::new(genesis_qc.clone(), genesis_qc, None));
 
     timed_block_on(&mut runtime, async {
-        node.round_manager.process_proposal_msg(proposal).await;
+        node.round_manager
+            .process_proposal_msg(proposal)
+            .await
+            .unwrap();
 
         // first verify that we can retrieve the block if it's in the tree
         let (tx1, rx1) = oneshot::channel();
@@ -539,7 +561,8 @@ fn response_on_block_retrieval() {
         };
         node.round_manager
             .process_block_retrieval(single_block_request)
-            .await;
+            .await
+            .unwrap();
         match rx1.await {
             Ok(Ok(bytes)) => {
                 let response = match lcs::from_bytes(&bytes) {
@@ -561,7 +584,8 @@ fn response_on_block_retrieval() {
 
         node.round_manager
             .process_block_retrieval(missing_block_request)
-            .await;
+            .await
+            .unwrap();
         match rx2.await {
             Ok(Ok(bytes)) => {
                 let response = match lcs::from_bytes(&bytes) {
@@ -582,7 +606,8 @@ fn response_on_block_retrieval() {
         };
         node.round_manager
             .process_block_retrieval(many_block_request)
-            .await;
+            .await
+            .unwrap();
         match rx3.await {
             Ok(Ok(bytes)) => {
                 let response = match lcs::from_bytes(&bytes) {
@@ -636,7 +661,10 @@ fn recover_on_restart() {
                     Some(tc.clone()),
                 ),
             );
-            node.round_manager.process_proposal_msg(proposal_msg).await;
+            node.round_manager
+                .process_proposal_msg(proposal_msg)
+                .await
+                .unwrap();
         }
     });
 
@@ -665,7 +693,7 @@ fn nil_vote_on_timeout() {
         node.next_proposal().await;
         // Process the outgoing vote message and verify that it contains a round signature
         // and that the vote extends genesis.
-        node.round_manager.process_local_timeout(1).await;
+        node.round_manager.process_local_timeout(1).await.unwrap();
         let vote_msg = node.next_vote().await;
 
         let vote = vote_msg.vote();
@@ -691,14 +719,17 @@ fn vote_resent_on_timeout() {
     timed_block_on(&mut runtime, async {
         let proposal_msg = node.next_proposal().await;
         let id = proposal_msg.proposal().id();
-        node.round_manager.process_proposal_msg(proposal_msg).await;
+        node.round_manager
+            .process_proposal_msg(proposal_msg)
+            .await
+            .unwrap();
         let vote_msg = node.next_vote().await;
         let vote = vote_msg.vote();
         assert!(!vote.is_timeout());
         assert_eq!(vote.vote_data().proposed().id(), id);
         // Process the outgoing vote message and verify that it contains a round signature
         // and that the vote is the same as above.
-        node.round_manager.process_local_timeout(1).await;
+        node.round_manager.process_local_timeout(1).await.unwrap();
         let timeout_vote_msg = node.next_vote().await;
         let timeout_vote = timeout_vote_msg.vote();
 
@@ -743,7 +774,11 @@ fn sync_info_sent_on_stale_sync_info() {
         ahead_node.next_proposal().await;
         behind_node.next_proposal().await;
         // broadcast timeout
-        behind_node.round_manager.process_local_timeout(1).await;
+        behind_node
+            .round_manager
+            .process_local_timeout(1)
+            .await
+            .unwrap();
         let timeout_vote_msg = behind_node.next_vote().await;
         assert!(timeout_vote_msg.vote().is_timeout());
 
@@ -751,7 +786,8 @@ fn sync_info_sent_on_stale_sync_info() {
         ahead_node
             .round_manager
             .process_vote(timeout_vote_msg)
-            .await;
+            .await
+            .unwrap();
         let sync_info = behind_node.next_sync_info().await;
 
         assert_eq!(*sync_info.highest_quorum_cert(), block_0_quorum_cert);

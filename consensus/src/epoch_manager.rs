@@ -19,7 +19,7 @@ use crate::{
     state_replication::{StateComputer, TxnManager},
     util::time_service::TimeService,
 };
-use anyhow::anyhow;
+use anyhow::{anyhow, bail, ensure, Context};
 use channel::libra_channel;
 use consensus_types::{
     common::{Author, Payload, Round},
@@ -184,28 +184,24 @@ impl<T: Payload> EpochManager<T> {
         &mut self,
         request: EpochRetrievalRequest,
         peer_id: AccountAddress,
-    ) {
-        let proof = match self
+    ) -> anyhow::Result<()> {
+        let proof = self
             .storage
             .libra_db()
             .get_epoch_change_ledger_infos(request.start_epoch, request.end_epoch)
-        {
-            Ok(proof) => proof,
-            Err(e) => {
-                warn!("Failed to get epoch proof from storage: {:?}", e);
-                return;
-            }
-        };
+            .context("[EpochManager] Failed to get epoch proof")?;
         let msg = ConsensusMsg::EpochChangeProof::<T>(Box::new(proof));
-        if let Err(e) = self.network_sender.send_to(peer_id, msg) {
-            warn!(
-                "Failed to send a epoch retrieval to peer {}: {:?}",
-                peer_id, e
-            );
-        };
+        self.network_sender.send_to(peer_id, msg).context(format!(
+            "[EpochManager] Failed to send epoch proof to {}",
+            peer_id
+        ))
     }
 
-    async fn process_different_epoch(&mut self, different_epoch: u64, peer_id: AccountAddress) {
+    async fn process_different_epoch(
+        &mut self,
+        different_epoch: u64,
+        peer_id: AccountAddress,
+    ) -> anyhow::Result<()> {
         match different_epoch.cmp(&self.epoch()) {
             // We try to help nodes that have lower epoch than us
             Ordering::Less => {
@@ -225,36 +221,34 @@ impl<T: Payload> EpochManager<T> {
                     end_epoch: different_epoch,
                 };
                 let msg = ConsensusMsg::EpochRetrievalRequest::<T>(Box::new(request));
-                if let Err(e) = self.network_sender.send_to(peer_id, msg) {
-                    warn!(
-                        "Failed to send a epoch retrieval to peer {}: {:?}",
-                        peer_id, e
-                    );
-                }
+                self.network_sender.send_to(peer_id, msg).context(format!(
+                    "[EpochManager] Failed to send epoch retrieval to {}",
+                    peer_id
+                ))
             }
             Ordering::Equal => {
-                warn!("Same epoch should not come to process_different_epoch");
+                bail!("[EpochManager] Same epoch should not come to process_different_epoch");
             }
         }
     }
 
-    async fn start_new_epoch(&mut self, proof: EpochChangeProof) {
-        let ledger_info = match proof.verify(self.epoch_state()) {
-            Ok(ledger_info) => ledger_info,
-            Err(e) => {
-                error!("Invalid EpochChangeProof: {:?}", e);
-                return;
-            }
-        };
+    async fn start_new_epoch(&mut self, proof: EpochChangeProof) -> anyhow::Result<()> {
+        let ledger_info = proof
+            .verify(self.epoch_state())
+            .context("[EpochManager] Invalid EpochChangeProof")?;
         debug!(
             "Received epoch change to {}",
             ledger_info.ledger_info().epoch() + 1
         );
 
         // make sure storage is on this ledger_info too, it should be no-op if it's already committed
-        if let Err(e) = self.state_computer.sync_to(ledger_info.clone()).await {
-            error!("State sync to new epoch {} failed with {:?}, we'll try to start from current libradb", ledger_info, e);
-        }
+        self.state_computer
+            .sync_to(ledger_info.clone())
+            .await
+            .context(format!(
+                "[EpochManager] State sync to new epoch {}",
+                ledger_info
+            ))
         // state_computer notifies reconfiguration in another channel
     }
 
@@ -389,67 +383,68 @@ impl<T: Payload> EpochManager<T> {
         &mut self,
         peer_id: AccountAddress,
         consensus_msg: ConsensusMsg<T>,
-    ) {
-        if let Some(event) = self.process_epoch(peer_id, consensus_msg).await {
-            match event.verify(&self.epoch_state().verifier) {
-                Ok(event) => self.process_event(peer_id, event).await,
-                Err(err) => warn!("Message failed verification: {:?}", err),
-            }
+    ) -> anyhow::Result<()> {
+        if let Some(event) = self.process_epoch(peer_id, consensus_msg).await? {
+            let verified_event = event
+                .verify(&self.epoch_state().verifier)
+                .context("[EpochManager] Verify event")?;
+            self.process_event(peer_id, verified_event).await?;
         }
+        Ok(())
     }
 
     async fn process_epoch(
         &mut self,
         peer_id: AccountAddress,
         msg: ConsensusMsg<T>,
-    ) -> Option<UnverifiedEvent<T>> {
+    ) -> anyhow::Result<Option<UnverifiedEvent<T>>> {
         match msg {
             ConsensusMsg::ProposalMsg(_) | ConsensusMsg::SyncInfo(_) | ConsensusMsg::VoteMsg(_) => {
                 let event: UnverifiedEvent<T> = msg.into();
                 if event.epoch() == self.epoch() {
-                    return Some(event);
+                    return Ok(Some(event));
                 } else {
-                    self.process_different_epoch(event.epoch(), peer_id).await;
+                    self.process_different_epoch(event.epoch(), peer_id).await?;
                 }
             }
             ConsensusMsg::EpochChangeProof(proof) => {
-                let msg_epoch = proof.epoch().map_err(|e| warn!("{:?}", e)).ok()?;
+                let msg_epoch = proof.epoch()?;
                 if msg_epoch == self.epoch() {
-                    self.start_new_epoch(*proof).await
+                    self.start_new_epoch(*proof).await?;
                 } else {
-                    self.process_different_epoch(msg_epoch, peer_id).await
+                    self.process_different_epoch(msg_epoch, peer_id).await?;
                 }
             }
             ConsensusMsg::EpochRetrievalRequest(request) => {
-                if request.end_epoch <= self.epoch() {
-                    self.process_epoch_retrieval(*request, peer_id).await
-                } else {
-                    warn!("Received EpochRetrievalRequest beyond what we have locally");
-                }
+                ensure!(
+                    request.end_epoch <= self.epoch(),
+                    "[EpochManager] Received EpochRetrievalRequest beyond what we have locally"
+                );
+                self.process_epoch_retrieval(*request, peer_id).await?;
             }
             _ => {
-                warn!("Unexpected messages: {:?}", msg);
+                bail!("[EpochManager] Unexpected messages: {:?}", msg);
             }
         }
-        None
+        Ok(None)
     }
 
-    async fn process_event(&mut self, peer_id: AccountAddress, event: VerifiedEvent<T>) {
+    async fn process_event(
+        &mut self,
+        peer_id: AccountAddress,
+        event: VerifiedEvent<T>,
+    ) -> anyhow::Result<()> {
         match self.processor_mut() {
             RoundProcessor::Recovery(p) => {
-                let result = match event {
+                let recovery_data = match event {
                     VerifiedEvent::ProposalMsg(proposal) => p.process_proposal_msg(*proposal).await,
                     VerifiedEvent::VoteMsg(vote) => p.process_vote(*vote).await,
                     _ => Err(anyhow!("Unexpected VerifiedEvent during startup")),
-                };
+                }?;
                 let epoch_state = p.epoch_state().clone();
-                match result {
-                    Ok(data) => {
-                        info!("Recovered from SyncProcessor");
-                        self.start_round_manager(data, epoch_state).await
-                    }
-                    Err(e) => error!("{:?}", e),
-                }
+                info!("Recovered from SyncProcessor");
+                self.start_round_manager(recovery_data, epoch_state).await;
+                Ok(())
             }
             RoundProcessor::Normal(p) => match event {
                 VerifiedEvent::ProposalMsg(proposal) => p.process_proposal_msg(*proposal).await,
@@ -464,17 +459,20 @@ impl<T: Payload> EpochManager<T> {
     fn processor_mut(&mut self) -> &mut RoundProcessor<T> {
         self.processor
             .as_mut()
-            .expect("EpochManager not started yet")
+            .expect("[EpochManager] not started yet")
     }
 
-    pub async fn process_block_retrieval(&mut self, request: IncomingBlockRetrievalRequest) {
+    pub async fn process_block_retrieval(
+        &mut self,
+        request: IncomingBlockRetrievalRequest,
+    ) -> anyhow::Result<()> {
         match self.processor_mut() {
             RoundProcessor::Normal(p) => p.process_block_retrieval(request).await,
-            _ => warn!("RoundManager not started yet"),
+            _ => bail!("[EpochManager] RoundManager not started yet"),
         }
     }
 
-    pub async fn process_local_timeout(&mut self, round: u64) {
+    pub async fn process_local_timeout(&mut self, round: u64) -> anyhow::Result<()> {
         match self.processor_mut() {
             RoundProcessor::Normal(p) => p.process_local_timeout(round).await,
             _ => unreachable!("RoundManager not started yet"),
@@ -494,10 +492,11 @@ impl<T: Payload> EpochManager<T> {
         loop {
             let pre_select_instant = Instant::now();
             let idle_duration;
-            select! {
+            let result = select! {
                 payload = reconfig_events.select_next_some() => {
                     idle_duration = pre_select_instant.elapsed();
-                    self.start_processor(payload).await
+                    self.start_processor(payload).await;
+                    Ok(())
                 }
                 msg = network_receivers.consensus_messages.select_next_some() => {
                     idle_duration = pre_select_instant.elapsed();
@@ -511,6 +510,9 @@ impl<T: Payload> EpochManager<T> {
                     idle_duration = pre_select_instant.elapsed();
                     self.process_local_timeout(round).await
                 }
+            };
+            if let Err(e) = result {
+                error!("{:?}", e);
             }
             counters::EVENT_PROCESSING_LOOP_BUSY_DURATION_S
                 .observe_duration(pre_select_instant.elapsed() - idle_duration);
