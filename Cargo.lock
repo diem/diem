@@ -2666,6 +2666,7 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "libradb 0.1.0",
  "network 0.1.0",
+ "network-simple-onchain-discovery 0.1.0",
  "onchain-discovery 0.1.0",
  "rayon 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "state-synchronizer 0.1.0",
