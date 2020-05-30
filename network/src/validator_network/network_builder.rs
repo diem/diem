@@ -408,13 +408,13 @@ impl NetworkBuilder {
     /// (gossip) [`Discovery`] discovers other eligible peers' network addresses
     /// by exchanging the full set of known peer network addresses with connected
     /// peers as a network protocol.
+    ///
+    /// This is for testing purposes only and should not be used in production networks.
     pub fn add_gossip_discovery(&mut self) -> &mut Self {
         let peer_id = self.peer_id;
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
             .expect("ConnectivityManager not enabled");
-        let (signing_private_key, _signing_public_key) =
-            self.signing_keypair.take().expect("Signing keys not set");
         // Get handles for network events and sender.
         let (discovery_network_tx, discovery_network_rx) = discovery::add_to_network(self);
 
@@ -440,7 +440,6 @@ impl NetworkBuilder {
         let advertised_address = append_libranet_protocols(advertised_address, authentication_mode);
 
         let addrs = vec![advertised_address];
-        let trusted_peers = self.trusted_peers.clone();
         let role = self.role;
         let discovery_interval_ms = self.discovery_interval_ms;
         let discovery = self.executor.enter(|| {
@@ -448,8 +447,6 @@ impl NetworkBuilder {
                 peer_id,
                 role,
                 addrs,
-                signing_private_key,
-                trusted_peers,
                 interval(Duration::from_millis(discovery_interval_ms)).fuse(),
                 discovery_network_tx,
                 discovery_network_rx,
