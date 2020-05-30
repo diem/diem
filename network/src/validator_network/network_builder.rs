@@ -29,10 +29,7 @@ use crate::{
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use futures::stream::StreamExt;
 use libra_config::config::{RoleType, HANDSHAKE_VERSION};
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    x25519,
-};
+use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
@@ -137,7 +134,6 @@ pub struct NetworkBuilder {
     max_concurrent_network_reqs: usize,
     max_concurrent_network_notifs: usize,
     max_connection_delay_ms: u64,
-    signing_keypair: Option<(Ed25519PrivateKey, Ed25519PublicKey)>,
 }
 
 impl NetworkBuilder {
@@ -190,7 +186,6 @@ impl NetworkBuilder {
             max_concurrent_network_reqs: MAX_CONCURRENT_NETWORK_REQS,
             max_concurrent_network_notifs: MAX_CONCURRENT_NETWORK_NOTIFS,
             max_connection_delay_ms: MAX_CONNECTION_DELAY_MS,
-            signing_keypair: None,
         }
     }
 
@@ -212,12 +207,6 @@ impl NetworkBuilder {
         trusted_peers: HashMap<PeerId, NetworkPublicKeys>,
     ) -> &mut Self {
         *self.trusted_peers.write().unwrap() = trusted_peers;
-        self
-    }
-
-    /// Set signing keys of local node.
-    pub fn signing_keypair(&mut self, keypair: (Ed25519PrivateKey, Ed25519PublicKey)) -> &mut Self {
-        self.signing_keypair = Some(keypair);
         self
     }
 

@@ -116,7 +116,6 @@ struct SynchronizerEnv {
     clients: Vec<Arc<StateSyncClient>>,
     storage_proxies: Vec<Arc<RwLock<MockStorage>>>, // to directly modify peers storage
     signers: Vec<ValidatorSigner>,
-    network_signers: Vec<Ed25519PrivateKey>,
     public_keys: Vec<ValidatorInfo>,
     peer_ids: Vec<PeerId>,
     peer_addresses: Vec<NetworkAddress>,
@@ -125,13 +124,7 @@ struct SynchronizerEnv {
 
 impl SynchronizerEnv {
     // Returns the initial peers with their signatures
-    fn initial_setup(
-        count: usize,
-    ) -> (
-        Vec<ValidatorSigner>,
-        Vec<Ed25519PrivateKey>,
-        Vec<ValidatorInfo>,
-    ) {
+    fn initial_setup(count: usize) -> (Vec<ValidatorSigner>, Vec<ValidatorInfo>) {
         let (signers, _verifier) = random_validator_verifier(count, None, true);
 
         // Setup signing public keys.
@@ -162,7 +155,7 @@ impl SynchronizerEnv {
                 ValidatorInfo::new(signer.author(), voting_power, validator_config);
             validators_keys.push(validator_info);
         }
-        (signers, signing_private_keys, validators_keys)
+        (signers, validators_keys)
     }
 
     // Moves peer 0 to the next epoch. Note that other peers are not going to be able to discover
@@ -200,7 +193,7 @@ impl SynchronizerEnv {
     fn new(num_peers: usize) -> Self {
         ::libra_logger::Logger::new().environment_only(true).init();
         let runtime = Runtime::new().unwrap();
-        let (signers, network_signers, public_keys) = Self::initial_setup(num_peers);
+        let (signers, public_keys) = Self::initial_setup(num_peers);
         let peer_ids = signers.iter().map(|s| s.author()).collect::<Vec<PeerId>>();
 
         Self {
@@ -209,7 +202,6 @@ impl SynchronizerEnv {
             clients: vec![],
             storage_proxies: vec![],
             signers,
-            network_signers,
             public_keys,
             peer_ids,
             peer_addresses: vec![],
@@ -267,12 +259,6 @@ impl SynchronizerEnv {
             .authentication_mode(AuthenticationMode::Unauthenticated)
             .trusted_peers(trusted_peers)
             .seed_peers(seed_peers)
-            .signing_keypair((
-                self.network_signers[new_peer_idx].clone(),
-                self.public_keys[new_peer_idx]
-                    .network_signing_public_key()
-                    .clone(),
-            ))
             .add_connectivity_manager()
             .add_gossip_discovery();
 
