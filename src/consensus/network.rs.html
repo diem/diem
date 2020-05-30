@@ -290,10 +290,6 @@
 <span id="290">290</span>
 <span id="291">291</span>
 <span id="292">292</span>
-<span id="293">293</span>
-<span id="294">294</span>
-<span id="295">295</span>
-<span id="296">296</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -481,10 +477,6 @@
     <span class="doccomment">/// The future is fulfilled as soon as the message is added to the internal network channel</span>
     <span class="doccomment">/// (does not indicate whether the message is delivered or sent out).</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">send_sync_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">sync_info</span>: <span class="ident">SyncInfo</span>, <span class="ident">recipient</span>: <span class="ident">Author</span>) {
-        <span class="kw">if</span> <span class="ident">recipient</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">author</span> {
-            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;An attempt to deliver sync info msg to itself: ignore.&quot;</span>);
-            <span class="kw">return</span>;
-        }
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">ConsensusMsg</span>::<span class="ident">SyncInfo</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">sync_info</span>));
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">network_sender</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">network_sender</span>.<span class="ident">clone</span>();
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">network_sender</span>.<span class="ident">send_to</span>(<span class="ident">recipient</span>, <span class="ident">msg</span>) {
