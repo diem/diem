@@ -150,13 +150,10 @@ pub fn setup_network(
         let network_peers = config.network_peers.peers.clone();
         let seed_peers = config.seed_peers.seed_peers.clone();
 
-        let network_keypairs = config
-            .network_keypairs
-            .as_mut()
-            .expect("Network keypairs are not defined");
-
-        let identity_key = network_keypairs
+        let identity_key = config
             .identity_keypair
+            .as_mut()
+            .expect("identity keypair should be present")
             .take_private()
             .expect("identity key should be present");
 
@@ -181,10 +178,9 @@ pub fn setup_network(
             .add_connectivity_manager();
     } else if config.enable_noise {
         let identity_key = config
-            .network_keypairs
-            .as_mut()
-            .expect("Network keypairs are not defined")
             .identity_keypair
+            .as_mut()
+            .expect("identity keypairs should be present")
             .take_private()
             .expect("identity key should be present");
 

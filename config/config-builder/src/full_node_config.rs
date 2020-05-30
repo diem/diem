@@ -4,7 +4,9 @@
 use crate::{BuildSwarm, Error, ValidatorConfig};
 use anyhow::{ensure, Result};
 use libra_config::{
-    config::{NetworkPeersConfig, NodeConfig, PeerNetworkId, RoleType, UpstreamConfig},
+    config::{
+        NetworkPeerInfo, NetworkPeersConfig, NodeConfig, PeerNetworkId, RoleType, UpstreamConfig,
+    },
     generator, utils,
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
@@ -222,11 +224,13 @@ impl FullNodeConfig {
 
             network_peers.peers.insert(
                 network.peer_id,
-                network
-                    .network_keypairs
-                    .as_ref()
-                    .ok_or(Error::MissingNetworkKeyPairs)?
-                    .as_peer_info(),
+                NetworkPeerInfo {
+                    identity_public_key: network
+                        .identity_keypair
+                        .as_ref()
+                        .ok_or(Error::MissingNetworkKeyPairs)?
+                        .public_key(),
+                },
             );
 
             configs.push(config);

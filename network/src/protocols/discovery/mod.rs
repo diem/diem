@@ -327,11 +327,7 @@ where
                         );
                         if note.epoch() == std::u64::MAX {
                             security_log(SecurityEvent::InvalidDiscoveryMsg)
-                                .data(
-                                    "Older note received for self has u64::MAX epoch. \
-                                     This likely means that the node's network signing key has \
-                                     been compromised.",
-                                )
+                                .data("Older note received for self has u64::MAX epoch.")
                                 .log();
                             continue;
                         }
