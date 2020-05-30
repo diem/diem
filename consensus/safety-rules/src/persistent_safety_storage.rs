@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use consensus_types::common::Round;
-use libra_crypto::ed25519::Ed25519PrivateKey;
+use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use libra_global_constants::{CONSENSUS_KEY, EPOCH, LAST_VOTED_ROUND, PREFERRED_ROUND, WAYPOINT};
 use libra_secure_storage::{BoxedStorage, CryptoStorage, InMemoryStorage, KVStorage, Value};
 use libra_types::waypoint::Waypoint;
@@ -61,6 +61,15 @@ impl PersistentSafetyStorage {
             .map_err(|e| e.into())
     }
 
+    pub fn consensus_key_for_version(
+        &self,
+        version: Ed25519PublicKey,
+    ) -> Result<Ed25519PrivateKey> {
+        self.internal_store
+            .export_private_key_for_version(CONSENSUS_KEY, version)
+            .map_err(|e| e.into())
+    }
+
     pub fn epoch(&self) -> Result<u64> {
         Ok(self.internal_store.get(EPOCH).and_then(|r| r.value.u64())?)
     }
@@ -109,6 +118,12 @@ impl PersistentSafetyStorage {
         self.internal_store
             .set(WAYPOINT, Value::String(waypoint.to_string()))?;
         Ok(())
+    }
+
+    pub fn rotate_consensus_key(&mut self) -> Result<Ed25519PublicKey> {
+        self.internal_store
+            .rotate_key(CONSENSUS_KEY)
+            .map_err(|e| e.into())
     }
 }
 

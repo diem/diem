@@ -12,8 +12,9 @@ use consensus_types::{
 use libra_crypto::{ed25519::Ed25519Signature, hash::HashValue};
 use libra_logger::debug;
 use libra_types::{
-    block_info::BlockInfo, epoch_change::EpochChangeProof, ledger_info::LedgerInfo,
-    validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier, waypoint::Waypoint,
+    block_info::BlockInfo, epoch_change::EpochChangeProof, epoch_state::EpochState,
+    ledger_info::LedgerInfo, validator_signer::ValidatorSigner,
+    validator_verifier::ValidatorVerifier, waypoint::Waypoint,
 };
 
 /// SafetyRules is responsible for the safety of the consensus:
@@ -27,7 +28,7 @@ use libra_types::{
 /// set)
 pub struct SafetyRules {
     persistent_storage: PersistentSafetyStorage,
-    validator_signer: ValidatorSigner,
+    validator_signer: Option<ValidatorSigner>,
     validator_verifier: Option<ValidatorVerifier>,
 }
 
@@ -39,12 +40,22 @@ impl SafetyRules {
         let consensus_key = persistent_storage
             .consensus_key()
             .expect("Unable to retrieve consensus private key");
-        let validator_signer = ValidatorSigner::new(author, consensus_key);
+        let validator_signer = Some(ValidatorSigner::new(author, consensus_key));
         Self {
             persistent_storage,
             validator_signer,
             validator_verifier: None,
         }
+    }
+
+    fn signer(&self) -> Result<&ValidatorSigner, Error> {
+        self.validator_signer.as_ref().ok_or(Error::NotInitialized)
+    }
+
+    fn verifier(&self) -> Result<&ValidatorVerifier, Error> {
+        self.validator_verifier
+            .as_ref()
+            .ok_or(Error::NotInitialized)
     }
 
     /// Produces a LedgerInfo that either commits a block based upon the 3-chain commit rule
@@ -72,10 +83,7 @@ impl SafetyRules {
     /// This verifies a QC makes sense in the current context, specifically that this is for the
     /// current epoch and extends from the preffered round.
     fn verify_qc(&self, qc: &QuorumCert) -> Result<(), Error> {
-        let validator_verifier = self
-            .validator_verifier
-            .as_ref()
-            .ok_or(Error::NotInitialized)?;
+        let validator_verifier = self.verifier()?;
 
         qc.verify(validator_verifier)
             .map_err(|e| Error::InvalidQuorumCertificate(e.to_string()))?;
@@ -89,17 +97,52 @@ impl SafetyRules {
         }
     }
 
+    /// This reconciles the key pair of a validator signer with a given validator set
+    /// during epoch changes.
+    /// @TODO Given we cannot panic, we must handle the following two error cases:
+    ///     1. Validator not in the set
+    ///     2. Validator in the set, but no matching key found in storage
+    fn reconcile_key(&mut self, epoch_state: &EpochState) -> Result<(), Error> {
+        let signer = self.signer()?;
+        if let Some(expected_key) = epoch_state.verifier.get_public_key(&signer.author()) {
+            let curr_key = signer.public_key();
+            if curr_key != expected_key {
+                let consensus_key = self
+                    .persistent_storage
+                    .consensus_key_for_version(expected_key.clone())
+                    .expect("Unable to retrieve consensus private key");
+                debug!(
+                    "Reconcile pub key for signer {} [{} -> {}]",
+                    signer.author(),
+                    curr_key,
+                    expected_key
+                );
+                self.validator_signer = Some(ValidatorSigner::new(signer.author(), consensus_key));
+            } else {
+                debug!("Validator key matches the key in validator set.");
+            }
+        } else {
+            debug!("The validator is not in the validator set!");
+        }
+        Ok(())
+    }
+
     /// This sets the current validator verifier and updates the epoch and round information
     /// if this is a new epoch ending ledger info. It also sets the current waypoint to this
     /// LedgerInfo.
     /// @TODO if public key does not match private key in validator set, access persistent storage
     /// to identify new key
     fn start_new_epoch(&mut self, ledger_info: &LedgerInfo) -> Result<(), Error> {
+        debug!("Starting new epoch.");
         let epoch_state = ledger_info
             .next_epoch_state()
             .cloned()
             .ok_or(Error::InvalidLedgerInfo)?;
+
+        self.reconcile_key(&epoch_state)?;
+
         self.validator_verifier = Some(epoch_state.verifier);
+
         let current_epoch = self.persistent_storage.epoch()?;
 
         if current_epoch < epoch_state.epoch {
@@ -130,7 +173,7 @@ impl SafetyRules {
 
     /// This checkes whether the author of one proposal is the validator signer
     fn verify_author(&self, author: Option<Author>) -> Result<(), Error> {
-        let validator_signer_author = &self.validator_signer.author();
+        let validator_signer_author = &self.signer()?.author();
         let author = author
             .ok_or_else(|| Error::InvalidProposal("No author found in the proposal".into()))?;
         if validator_signer_author != &author {
@@ -219,6 +262,7 @@ impl TSafetyRules for SafetyRules {
         self.persistent_storage
             .set_last_voted_round(proposed_block.round())?;
 
+        let validator_signer = self.signer()?;
         Ok(Vote::new(
             VoteData::new(
                 proposed_block.gen_block_info(
@@ -228,9 +272,9 @@ impl TSafetyRules for SafetyRules {
                 ),
                 proposed_block.quorum_cert().certified_block().clone(),
             ),
-            self.validator_signer.author(),
+            validator_signer.author(),
             self.construct_ledger_info(proposed_block),
-            &self.validator_signer,
+            validator_signer,
         ))
     }
 
@@ -265,10 +309,11 @@ impl TSafetyRules for SafetyRules {
             ));
         }
 
+        let validator_signer = self.signer()?;
         COUNTERS.sign_proposal.inc();
         Ok(Block::new_proposal_from_block_data(
             block_data,
-            &self.validator_signer,
+            validator_signer,
         ))
     }
 
@@ -303,7 +348,8 @@ impl TSafetyRules for SafetyRules {
                 .set_last_voted_round(timeout.round())?;
         }
 
-        let signature = timeout.sign(&self.validator_signer);
+        let validator_signer = self.signer()?;
+        let signature = timeout.sign(validator_signer);
         COUNTERS.sign_timeout.inc();
         debug!("Successfully signed timeout message.");
         Ok(signature)

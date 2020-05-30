@@ -15,6 +15,7 @@ use libra_crypto::hash::{CryptoHash, TransactionAccumulatorHasher};
 use libra_secure_storage::{BoxedStorage, InMemoryStorage};
 use libra_types::{
     block_info::BlockInfo,
+    epoch_state::EpochState,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::ValidatorSet,
     proof::AccumulatorExtensionProof,
@@ -71,6 +72,7 @@ pub fn make_proposal_with_parent_and_overrides(
     committed: Option<&VoteProposal>,
     validator_signer: &ValidatorSigner,
     epoch: Option<u64>,
+    next_epoch_state: Option<EpochState>,
 ) -> VoteProposal {
     let block_epoch = match epoch {
         Some(e) => e,
@@ -128,7 +130,7 @@ pub fn make_proposal_with_parent_and_overrides(
                 tree.root_hash(),
                 tree.version(),
                 committed.block().timestamp_usecs(),
-                None,
+                next_epoch_state,
             );
             LedgerInfo::new(commit_block_info, vote_data.hash())
         }
@@ -165,6 +167,7 @@ pub fn make_proposal_with_parent(
         parent,
         committed,
         validator_signer,
+        None,
         None,
     )
 }
