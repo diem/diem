@@ -24,6 +24,12 @@ module TestUnusedSchema {
         ensures result == i + 3;
     }
 
+    spec schema UNUSED_AddsFour {
+        i: num;
+        result: num;
+        ensures result == i + 4;
+    }
+
     fun foo(i: u64): u64 {
         if (i > 10) { i + 2 } else { i + 1 }
     }

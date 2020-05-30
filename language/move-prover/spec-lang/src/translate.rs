@@ -68,7 +68,7 @@ pub struct Translator<'env> {
     spec_schema_table: BTreeMap<QualifiedSymbol, SpecSchemaEntry>,
     /// A symbol table storing unused schemas, used later to generate warnings. All schemas
     /// are initially in the table and are removed when they are used in expressions.
-    unused_schema_table: BTreeMap<QualifiedSymbol, Loc>,
+    unused_schema_set: BTreeSet<QualifiedSymbol>,
     // A symbol table for structs.
     struct_table: BTreeMap<QualifiedSymbol, StructEntry>,
     /// A reverse mapping from ModuleId/StructId pairs to QualifiedSymbol. This
@@ -148,7 +148,7 @@ impl<'env> Translator<'env> {
             spec_fun_table: BTreeMap::new(),
             spec_var_table: BTreeMap::new(),
             spec_schema_table: BTreeMap::new(),
-            unused_schema_table: BTreeMap::new(),
+            unused_schema_set: BTreeSet::new(),
             struct_table: BTreeMap::new(),
             reverse_struct_table: BTreeMap::new(),
             fun_table: BTreeMap::new(),
@@ -246,7 +246,7 @@ impl<'env> Translator<'env> {
                 &format!("previous declaration of `{}`", schema_display),
             );
         }
-        self.unused_schema_table.insert(name, loc.clone());
+        self.unused_schema_set.insert(name);
     }
 
     /// Defines a struct type.
@@ -1186,14 +1186,6 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 
         // Perform post reduction of module invariants.
         self.reduce_module_invariants();
-
-        // Warn about unused schemas.
-        for (schema_name, loc) in &self.parent.unused_schema_table {
-            self.parent.env.warn(
-                loc,
-                &format!("unused schema {}", schema_name.display(self.symbol_pool())),
-            );
-        }
     }
 }
 
@@ -2051,7 +2043,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         let schema_name = self.module_access_to_qualified(maccess);
 
         // Remove schema from unused table since it is used in an expression
-        self.parent.unused_schema_table.remove(&schema_name);
+        self.parent.unused_schema_set.remove(&schema_name);
 
         // We need to temporarily detach the schema entry from the parent table because of
         // borrowing problems, as we need to traverse it while at the same time mutate self.
@@ -2686,6 +2678,24 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             std::mem::take(&mut self.instantiation_map),
             std::mem::take(&mut self.spec_block_infos),
         );
+        // Warn about unused schemas.
+        for name in &self.parent.unused_schema_set {
+            let entry = self
+                .parent
+                .spec_schema_table
+                .get(&name)
+                .expect("schema defined");
+            let schema_name = name.display_simple(self.symbol_pool()).to_string();
+            let module_env = self.parent.env.get_module(entry.module_id);
+            // Warn about unused schema only if the module is a target and schema name
+            // does not start with 'UNUSED'
+            if !module_env.is_dependency() && !schema_name.starts_with("UNUSED") {
+                self.parent.env.warn(
+                    &entry.loc,
+                    &format!("unused schema {}", name.display(self.symbol_pool())),
+                );
+            }
+        }
     }
 }
 
