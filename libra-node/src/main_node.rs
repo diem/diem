@@ -154,11 +154,6 @@ pub fn setup_network(
             .network_keypairs
             .as_mut()
             .expect("Network keypairs are not defined");
-        let signing_keypair = &mut network_keypairs.signing_keypair;
-        let signing_private = signing_keypair
-            .take_private()
-            .expect("Failed to take Network signing private key, key absent or already read");
-        let signing_public = signing_keypair.public_key();
 
         let identity_key = network_keypairs
             .identity_keypair
@@ -182,7 +177,6 @@ pub fn setup_network(
             .authentication_mode(AuthenticationMode::Mutual(identity_key))
             .trusted_peers(trusted_peers)
             .seed_peers(seed_peers)
-            .signing_keypair((signing_private, signing_public))
             .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
             .add_connectivity_manager();
     } else if config.enable_noise {
