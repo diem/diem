@@ -9,10 +9,7 @@ use anyhow::{bail, Result};
 use executor_types::ExecutedTrees;
 use futures::executor::block_on;
 use libra_config::config::{PeerNetworkId, RoleType};
-use libra_crypto::{
-    ed25519::Ed25519PrivateKey, hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519,
-    PrivateKey, Uniform,
-};
+use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
 use libra_mempool::mocks::MockSharedMempool;
 use libra_network_address::{NetworkAddress, RawNetworkAddress};
 use libra_types::{
@@ -127,12 +124,8 @@ impl SynchronizerEnv {
     fn initial_setup(count: usize) -> (Vec<ValidatorSigner>, Vec<ValidatorInfo>) {
         let (signers, _verifier) = random_validator_verifier(count, None, true);
 
-        // Setup signing public keys.
-        let mut rng = StdRng::from_seed(TEST_SEED);
-        let signing_private_keys: Vec<_> = (0..count)
-            .map(|_| Ed25519PrivateKey::generate(&mut rng))
-            .collect();
         // Setup identity public keys.
+        let mut rng = StdRng::from_seed(TEST_SEED);
         let identity_private_keys: Vec<_> = (0..count)
             .map(|_| x25519::PrivateKey::generate(&mut rng))
             .collect();
@@ -144,7 +137,6 @@ impl SynchronizerEnv {
             let addr: NetworkAddress = "/memory/0".parse().unwrap();
             let validator_config = ValidatorConfig::new(
                 signer.public_key(),
-                signing_private_keys[idx].public_key(),
                 identity_private_keys[idx].public_key(),
                 RawNetworkAddress::try_from(&addr).unwrap(),
                 identity_private_keys[idx].public_key(),

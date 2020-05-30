@@ -38,7 +38,7 @@ main() {
 //! sender: alice
 import 0x0.ValidatorConfig;
 main(account: &signer) {
-    ValidatorConfig.register_candidate_validator(move(account), h"10", h"20", h"30", h"40", h"50", h"60");
+    ValidatorConfig.register_candidate_validator(move(account), h"10", h"20", h"30", h"40", h"50");
 
     return;
 }

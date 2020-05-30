@@ -46,22 +46,22 @@ main(account: &signer) {
 
     // Alice registers as a validator candidate
     assert(!ValidatorConfig.has(get_txn_sender()), 9);
-    ValidatorConfig.register_candidate_validator(move(account), h"10", h"20", h"30", h"40", h"50", h"60");
+    ValidatorConfig.register_candidate_validator(move(account), h"10", h"20", h"30", h"40", h"50");
     assert(ValidatorConfig.has(get_txn_sender()), 10);
 
     // Rotating the consensus_pubkey should work
     config = ValidatorConfig.get_config(get_txn_sender());
     assert(ValidatorConfig.get_consensus_pubkey(&config) == h"10", 11);
-    ValidatorConfig.rotate_consensus_pubkey_of_sender(h"70");
+    ValidatorConfig.rotate_consensus_pubkey_of_sender(h"60");
     assert(ValidatorConfig.get_consensus_pubkey(&config) == h"10", 12);
     config = ValidatorConfig.get_config(get_txn_sender());
-    assert(ValidatorConfig.get_consensus_pubkey(&config) == h"70", 15);
+    assert(ValidatorConfig.get_consensus_pubkey(&config) == h"60", 15);
 
     // Rotating the validator_network_pubkey should work
-    assert(ValidatorConfig.get_validator_network_identity_pubkey(&config) == h"30", 13);
-    ValidatorConfig.rotate_validator_network_identity_pubkey({{alice}}, h"80");
+    assert(ValidatorConfig.get_validator_network_identity_pubkey(&config) == h"20", 13);
+    ValidatorConfig.rotate_validator_network_identity_pubkey({{alice}}, h"70");
     config = ValidatorConfig.get_config(get_txn_sender());
-    assert(ValidatorConfig.get_validator_network_identity_pubkey(&config) == h"80", 14);
+    assert(ValidatorConfig.get_validator_network_identity_pubkey(&config) == h"70", 14);
 
     return;
 }

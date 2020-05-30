@@ -252,7 +252,6 @@ encode_txn_script! {
     name: encode_register_validator_script,
     args: [
         consensus_pubkey: Bytes,
-        validator_network_signing_pubkey: Bytes,
         validator_network_identity_pubkey: Bytes,
         validator_network_address: Bytes,
         fullnodes_network_identity_pubkey: Bytes,
@@ -260,7 +259,6 @@ encode_txn_script! {
     ],
     script: RegisterValidator,
     doc: "Encode a program registering the sender as a candidate validator with the given key information.\
-         `network_signing_pubkey` should be a Ed25519 public key\
          `network_identity_pubkey` should be a X25519 public key\
          `consensus_pubkey` should be a Ed25519 public c=key."
 }

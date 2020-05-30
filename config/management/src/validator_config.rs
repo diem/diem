@@ -64,13 +64,10 @@ impl ValidatorConfig {
 
         // Step 2) Generate transaction
 
-        // TODO(davidiw): The signing key, parameter 2, will be deleted soon, so this is a
-        // temporary hack to reduce over-engineering.
         // TODO(philiphayes): remove network identity pubkey field from struct when
         // transition complete
         let script = transaction_builder::encode_register_validator_script(
             consensus_key.to_bytes().to_vec(),
-            operator_key.to_bytes().to_vec(),
             validator_network_key.to_bytes(),
             raw_validator_address.into(),
             fullnode_network_key.to_bytes(),

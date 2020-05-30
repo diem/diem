@@ -7,7 +7,6 @@ module ValidatorConfig {
 
     struct Config {
         consensus_pubkey: vector<u8>,
-        validator_network_signing_pubkey: vector<u8>,
         validator_network_identity_pubkey: vector<u8>,
         validator_network_address: vector<u8>,
         fullnodes_network_identity_pubkey: vector<u8>,
@@ -36,11 +35,6 @@ module ValidatorConfig {
         *&config_ref.consensus_pubkey
     }
 
-    // Public accessor for validator_network_signing_pubkey
-    public fun validator_network_signing_pubkey(config_ref: &Config): vector<u8> {
-        *&config_ref.validator_network_signing_pubkey
-    }
-
     // Public accessor for validator_network_identity_pubkey
     public fun validator_network_identity_pubkey(config_ref: &Config): vector<u8> {
         *&config_ref.validator_network_identity_pubkey
@@ -67,7 +61,6 @@ module ValidatorConfig {
     // resource under their account
     public fun register_candidate_validator(
         consensus_pubkey: vector<u8>,
-        validator_network_signing_pubkey: vector<u8>,
         validator_network_identity_pubkey: vector<u8>,
         validator_network_address: vector<u8>,
         fullnodes_network_identity_pubkey: vector<u8>,
@@ -77,7 +70,6 @@ module ValidatorConfig {
             T {
                 config: Config {
                      consensus_pubkey,
-                     validator_network_signing_pubkey,
                      validator_network_identity_pubkey,
                      validator_network_address,
                      fullnodes_network_identity_pubkey,

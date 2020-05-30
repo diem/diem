@@ -15,7 +15,6 @@ module LibraSystem {
         addr: address,
         consensus_pubkey: vector<u8>,
         consensus_voting_power: u64,
-        network_signing_pubkey: vector<u8>,
         network_identity_pubkey: vector<u8>,
     }
 
@@ -98,10 +97,6 @@ module LibraSystem {
 
     public fun get_consensus_voting_power(v: &ValidatorInfo): &u64 {
       &v.consensus_voting_power
-    }
-
-    public fun get_network_signing_pubkey(v: &ValidatorInfo): &vector<u8> {
-      &v.network_signing_pubkey
     }
 
     public fun get_network_identity_pubkey(v: &ValidatorInfo): &vector<u8> {
@@ -393,16 +388,11 @@ module LibraSystem {
 
        let config = ValidatorConfig::config(validator_info.addr);
        let consensus_pubkey = ValidatorConfig::consensus_pubkey(&config);
-       let network_signing_pubkey = ValidatorConfig::validator_network_signing_pubkey(&config);
        let network_identity_pubkey = ValidatorConfig::validator_network_identity_pubkey(&config);
 
        let changed = false;
        if (&consensus_pubkey != &validator_info.consensus_pubkey) {
            *&mut validator_info.consensus_pubkey = consensus_pubkey;
-           changed = true;
-       };
-       if (&network_signing_pubkey != &validator_info.network_signing_pubkey) {
-           *&mut validator_info.network_signing_pubkey = network_signing_pubkey;
            changed = true;
        };
        if (&network_identity_pubkey != &validator_info.network_identity_pubkey) {
@@ -421,7 +411,6 @@ module LibraSystem {
           addr: addr,
           consensus_pubkey: ValidatorConfig::consensus_pubkey(&config),
           consensus_voting_power: 1,
-          network_signing_pubkey: ValidatorConfig::validator_network_signing_pubkey(&config),
           network_identity_pubkey: ValidatorConfig::validator_network_identity_pubkey(&config),
       }
    }

@@ -9,7 +9,7 @@ import 0x0.ValidatorConfig;
 main(account: &signer) {
     let config: ValidatorConfig.Config;
 
-    ValidatorConfig.register_candidate_validator(move(account), h"10", h"20", h"30", h"40", h"50", h"60");
+    ValidatorConfig.register_candidate_validator(move(account), h"10", h"20", h"30", h"40", h"50");
     return;
 }
 // check: events: []
@@ -21,7 +21,7 @@ import 0x0.LibraSystem;
 import 0x0.ValidatorConfig;
 // rotate alice's network address
 main() {
-    ValidatorConfig.rotate_validator_network_address({{alice}}, h"40");
+    ValidatorConfig.rotate_validator_network_address({{alice}}, h"30");
     return;
 }
 // check: events: []
@@ -43,11 +43,11 @@ import 0x0.ValidatorConfig;
 // rotate vivian's network address
 main() {
     let info: ValidatorConfig.Config;
-    ValidatorConfig.rotate_validator_network_address({{vivian}}, h"40");
+    ValidatorConfig.rotate_validator_network_address({{vivian}}, h"60");
     LibraSystem.update_and_reconfigure();
     // check that the discovery set contains Vivian new address with reconfiguration
     info = LibraSystem.get_validator_config({{vivian}});
-    assert(ValidatorConfig.get_validator_network_address(&info) == h"40", 98);
+    assert(ValidatorConfig.get_validator_network_address(&info) == h"60", 98);
     return;
 }
 // check: NewEpochEvent
@@ -65,7 +65,7 @@ main() {
     let info: ValidatorConfig.Config;
     // check that the discovery set contains Vivian's new address after reconfiguration
     info = LibraSystem.get_validator_config({{vivian}});
-    assert(ValidatorConfig.get_validator_network_address(&info) == h"40", 99);
+    assert(ValidatorConfig.get_validator_network_address(&info) == h"60", 99);
     return;
 }
 // check: events: []
@@ -77,7 +77,7 @@ import 0x0.LibraSystem;
 import 0x0.ValidatorConfig;
 // rotate vivian's network address to the same value
 main() {
-    ValidatorConfig.rotate_validator_network_address({{vivian}}, h"40");
+    ValidatorConfig.rotate_validator_network_address({{vivian}}, h"60");
     LibraSystem.update_and_reconfigure();
     return;
 }
@@ -96,7 +96,7 @@ import 0x0.LibraSystem;
 import 0x0.ValidatorConfig;
 // rotate viola's network address to a new value
 main() {
-    ValidatorConfig.rotate_validator_network_address({{viola}}, h"80");
+    ValidatorConfig.rotate_validator_network_address({{viola}}, h"70");
     LibraSystem.update_and_reconfigure();
     return;
 }
@@ -109,7 +109,7 @@ import 0x0.LibraSystem;
 import 0x0.ValidatorConfig;
 // rotate vivian's network address to a new value
 main() {
-    ValidatorConfig.rotate_validator_network_address({{vivian}}, h"90");
+    ValidatorConfig.rotate_validator_network_address({{vivian}}, h"80");
     LibraSystem.update_and_reconfigure();
     return;
 }
@@ -131,11 +131,11 @@ main() {
 
     // check that the discovery set contains Viola's new address
     info = LibraSystem.get_validator_config({{viola}});
-    assert(ValidatorConfig.get_validator_network_address(&info) == h"80", 15);
+    assert(ValidatorConfig.get_validator_network_address(&info) == h"70", 15);
 
     // check that the discovery set contains Vivian's new address
     info = LibraSystem.get_validator_config({{vivian}});
-    assert(ValidatorConfig.get_validator_network_address(&info) == h"40", 17);
+    assert(ValidatorConfig.get_validator_network_address(&info) == h"60", 17);
 
     return;
 }

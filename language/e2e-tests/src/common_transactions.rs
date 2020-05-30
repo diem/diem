@@ -83,7 +83,6 @@ pub fn peer_to_peer_txn(
 pub fn register_validator_txn(
     sender: &Account,
     consensus_pubkey: Vec<u8>,
-    validator_network_signing_pubkey: Vec<u8>,
     validator_network_identity_pubkey: Vec<u8>,
     validator_network_address: Vec<u8>,
     fullnodes_network_identity_pubkey: Vec<u8>,
@@ -92,7 +91,6 @@ pub fn register_validator_txn(
 ) -> SignedTransaction {
     let args = vec![
         TransactionArgument::U8Vector(consensus_pubkey),
-        TransactionArgument::U8Vector(validator_network_signing_pubkey),
         TransactionArgument::U8Vector(validator_network_identity_pubkey),
         TransactionArgument::U8Vector(validator_network_address),
         TransactionArgument::U8Vector(fullnodes_network_identity_pubkey),
