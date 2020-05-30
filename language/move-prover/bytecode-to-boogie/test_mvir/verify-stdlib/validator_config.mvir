@@ -4,7 +4,6 @@ module ValidatorConfig {
 
     struct Config {
         consensus_pubkey: vector<u8>,
-        validator_network_signing_pubkey: vector<u8>,
         validator_network_identity_pubkey: vector<u8>,
         validator_network_address: vector<u8>,
         fullnodes_network_identity_pubkey: vector<u8>,
@@ -43,13 +42,6 @@ module ValidatorConfig {
         return *&move(config_ref).consensus_pubkey;
     }
 
-    // Public accessor for validator_network_signing_pubkey
-    public validator_network_signing_pubkey(config_ref: &Self.Config): vector<u8>
-      ensures RET == config_ref.validator_network_signing_pubkey
-    {
-        return *&move(config_ref).validator_network_signing_pubkey;
-    }
-
     // Public accessor for validator_network_identity_pubkey
     public validator_network_identity_pubkey(config_ref: &Self.Config): vector<u8>
       ensures RET == config_ref.validator_network_identity_pubkey
@@ -84,7 +76,6 @@ module ValidatorConfig {
     // resource under their account
     public register_candidate_validator(
         consensus_pubkey: vector<u8>,
-        validator_network_signing_pubkey: vector<u8>,
         validator_network_identity_pubkey: vector<u8>,
         validator_network_address: vector<u8>,
         fullnodes_network_identity_pubkey: vector<u8>,
@@ -96,7 +87,6 @@ module ValidatorConfig {
             T {
                 config: Config {
                     consensus_pubkey: move(consensus_pubkey),
-                    validator_network_signing_pubkey: move(validator_network_signing_pubkey),
                     validator_network_identity_pubkey: move(validator_network_identity_pubkey),
                     validator_network_address: move(validator_network_address),
                     fullnodes_network_identity_pubkey: move(fullnodes_network_identity_pubkey),

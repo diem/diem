@@ -18,8 +18,6 @@ impl TryFrom<crate::proto::types::ValidatorInfo> for ValidatorInfo {
         let consensus_public_key = Ed25519PublicKey::try_from(&proto.consensus_public_key[..])?;
         let consensus_voting_power = proto.consensus_voting_power;
 
-        let validator_network_signing_public_key =
-            Ed25519PublicKey::try_from(&proto.validator_network_signing_public_key[..])?;
         let validator_network_identity_public_key =
             x25519::PublicKey::try_from(&proto.validator_network_identity_public_key[..])?;
         let validator_network_address = RawNetworkAddress::new(proto.validator_network_address);
@@ -29,7 +27,6 @@ impl TryFrom<crate::proto::types::ValidatorInfo> for ValidatorInfo {
 
         let config = ValidatorConfig::new(
             consensus_public_key,
-            validator_network_signing_public_key,
             validator_network_identity_public_key,
             validator_network_address,
             full_node_network_identity_public_key,
@@ -46,10 +43,6 @@ impl From<ValidatorInfo> for crate::proto::types::ValidatorInfo {
             account_address: keys.account_address().to_vec(),
             consensus_voting_power: keys.consensus_voting_power(),
             consensus_public_key: keys.consensus_public_key().to_bytes().to_vec(),
-            validator_network_signing_public_key: config
-                .validator_network_signing_public_key
-                .to_bytes()
-                .to_vec(),
             validator_network_identity_public_key: config
                 .validator_network_identity_public_key
                 .to_bytes(),

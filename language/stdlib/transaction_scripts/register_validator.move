@@ -12,7 +12,6 @@ use 0x0::Signer;
 fun main(
     account: &signer,
     consensus_pubkey: vector<u8>,
-    validator_network_signing_pubkey: vector<u8>,
     validator_network_identity_pubkey: vector<u8>,
     validator_network_address: vector<u8>,
     fullnodes_network_identity_pubkey: vector<u8>,
@@ -21,7 +20,6 @@ fun main(
   ValidatorConfig::register_candidate_validator(
       account,
       consensus_pubkey,
-      validator_network_signing_pubkey,
       validator_network_identity_pubkey,
       validator_network_address,
       fullnodes_network_identity_pubkey,

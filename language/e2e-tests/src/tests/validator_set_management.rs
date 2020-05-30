@@ -26,9 +26,8 @@ fn validator_add() {
         new_validator.account(),
         vec![255; 32],
         vec![254; 32],
-        vec![253; 32],
         vec![],
-        vec![252; 32],
+        vec![253; 32],
         vec![],
         0,
     );
@@ -60,9 +59,8 @@ fn validator_rotate_key() {
         new_validator.account(),
         vec![255; 32],
         vec![254; 32],
-        vec![253; 32],
         vec![],
-        vec![252; 32],
+        vec![253; 32],
         vec![],
         0,
     );
