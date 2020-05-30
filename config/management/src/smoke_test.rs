@@ -3,11 +3,13 @@
 
 use crate::{layout::Layout, storage_helper::StorageHelper};
 use config_builder::{BuildSwarm, SwarmConfig};
-use libra_config::config::{
-    DiscoveryMethod, NetworkConfig, NetworkKeyPairs, NodeConfig, OnDiskStorageConfig, RoleType,
-    SecureBackend,
+use libra_config::{
+    config::{
+        DiscoveryMethod, NetworkConfig, NodeConfig, OnDiskStorageConfig, RoleType, SecureBackend,
+    },
+    keys::KeyPair,
 };
-use libra_crypto::{ed25519::Ed25519PrivateKey, x25519, Uniform};
+use libra_crypto::{ed25519::Ed25519PrivateKey, x25519};
 use libra_secure_storage::Value;
 use libra_swarm::swarm::{LibraNode, LibraSwarm, LibraSwarmDir};
 use libra_temppath::TempPath;
@@ -83,9 +85,7 @@ fn smoke_test() {
             .unwrap();
         let identity_key =
             x25519::PrivateKey::from_ed25519_private_bytes(&identity_key.to_bytes()).unwrap();
-        // This is a deprecated field
-        let signing_key = Ed25519PrivateKey::generate_for_testing();
-        validator_network.network_keypairs = Some(NetworkKeyPairs::load(identity_key, signing_key));
+        validator_network.identity_keypair = Some(KeyPair::load(identity_key));
 
         let fullnode_network = &mut config.full_node_networks[0];
         let identity_key = storage
@@ -93,9 +93,7 @@ fn smoke_test() {
             .unwrap();
         let identity_key =
             x25519::PrivateKey::from_ed25519_private_bytes(&identity_key.to_bytes()).unwrap();
-        // This is a deprecated field
-        let signing_key = Ed25519PrivateKey::generate_for_testing();
-        fullnode_network.network_keypairs = Some(NetworkKeyPairs::load(identity_key, signing_key));
+        fullnode_network.identity_keypair = Some(KeyPair::load(identity_key));
         let fullnode_network_address = fullnode_network.listen_address.clone();
 
         configs.push(config);

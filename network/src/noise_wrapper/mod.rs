@@ -34,9 +34,7 @@
 //! // create list of trusted peers
 //! let mut trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 //! {
-//!     let dummy_signing_key = ed25519::Ed25519PrivateKey::generate(&mut rng);
 //!     trusted_peers.write().unwrap().insert(PeerId::random(), NetworkPublicKeys {
-//!        signing_public_key: dummy_signing_key.public_key(),
 //!        identity_public_key: client_public,
 //!     });
 //! }

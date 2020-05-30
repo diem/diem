@@ -382,9 +382,10 @@ mod test {
 
         expected_network.advertised_address = actual_network.advertised_address.clone();
         expected_network.listen_address = actual_network.listen_address.clone();
-        expected_network.network_keypairs = actual_network.network_keypairs.clone();
+        expected_network.identity_keypair = actual_network.identity_keypair.clone();
         expected_network.network_peers = actual_network.network_peers.clone();
         expected_network.seed_peers = actual_network.seed_peers.clone();
+        expected_network.seed_peers_file = actual_network.seed_peers_file.clone();
 
         expected.set_data_dir(actual.data_dir().clone());
         compare_configs(&actual, &expected);

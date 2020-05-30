@@ -59,10 +59,9 @@ pub fn build_seed_peers(
     seed_base_addr: NetworkAddress,
 ) -> SeedPeersConfig {
     let seed_pubkey = seed_config
-        .network_keypairs
-        .as_ref()
-        .expect("Expect network keypairs")
         .identity_keypair
+        .as_ref()
+        .expect("Missing identity keypair")
         .public_key();
     let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, HANDSHAKE_VERSION);
 
