@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{test_utils, Error, TSafetyRules};
+use crate::{test_utils, Error, SafetyRules, TSafetyRules};
 use consensus_types::{
     block::{block_test_utils::random_payload, Block},
     common::Round,
@@ -12,10 +12,12 @@ use consensus_types::{
 use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_types::{
     epoch_change::EpochChangeProof,
+    epoch_state::EpochState,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::ValidatorSet,
     validator_info::ValidatorInfo,
     validator_signer::ValidatorSigner,
+    validator_verifier::ValidatorVerifier,
 };
 use std::collections::BTreeMap;
 
@@ -67,6 +69,10 @@ pub fn run_test_suite(func: Callback) {
     test_sign_proposal_with_bad_signer(func);
     test_sign_proposal_with_invalid_qc(func);
     test_sign_proposal_with_early_preferred_round(func);
+    test_uninitialized_signer(func);
+    test_reconcile_key(func);
+    test_missing_validator(func);
+    // test_missing_validator_key(func);
 }
 
 fn test_bad_execution_output(func: Callback) {
@@ -426,6 +432,7 @@ fn test_voting_bad_epoch(func: Callback) {
         None,
         &signer,
         Some(21),
+        None,
     );
     safety_rules.initialize(&proof).unwrap();
     safety_rules.update(a1.block().quorum_cert()).unwrap();
@@ -598,5 +605,146 @@ fn test_sign_proposal_with_early_preferred_round(func: Callback) {
     assert_eq!(
         err,
         Error::InvalidQuorumCertificate("Preferred round too early".into())
+    );
+}
+
+fn test_uninitialized_signer(func: Callback) {
+    // Testing for an uninitialized Option<ValidatorSigner>
+
+    let (mut safety_rules, signer) = func();
+
+    let (proof, genesis_qc) = make_genesis(&signer);
+    let round = genesis_qc.certified_block().round();
+
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
+    let err = safety_rules.update(a1.block().quorum_cert()).unwrap_err();
+    assert_eq!(err, Error::NotInitialized);
+
+    safety_rules.initialize(&proof).unwrap();
+    assert!(safety_rules.update(a1.block().quorum_cert()).is_ok());
+}
+
+#[allow(dead_code)]
+fn test_missing_validator_key(func: Callback) {
+    // Tests for fetching a missing validator key from persistent storage.
+    // Ideally safety rules should panic
+
+    let (mut safety_rules, signer) = func();
+    let (proof, genesis_qc) = make_genesis(&signer);
+    let round = genesis_qc.certified_block().round();
+
+    safety_rules.initialize(&proof).unwrap();
+
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
+
+    let mut next_epoch_state = EpochState::empty();
+    next_epoch_state.epoch = 1;
+    let rand_signer = ValidatorSigner::random([0xfu8; 32]);
+    next_epoch_state.verifier =
+        ValidatorVerifier::new_single(signer.author(), rand_signer.public_key());
+    let a2 = test_utils::make_proposal_with_parent_and_overrides(
+        vec![],
+        round + 2,
+        &a1,
+        Some(&a1),
+        &signer,
+        Some(1),
+        Some(next_epoch_state),
+    );
+    assert!(safety_rules.update(a2.block().quorum_cert()).is_err());
+}
+
+fn test_missing_validator(func: Callback) {
+    // Testing for an validator missing from the validator set
+    // It does so by updating the safey rule to an epoch state, which does not contain the
+    // current validator. The validator later fails to verify QC with its signer key.
+
+    let (mut safety_rules, signer) = func();
+
+    let (proof, genesis_qc) = make_genesis(&signer);
+    let round = genesis_qc.certified_block().round();
+
+    safety_rules.initialize(&proof).unwrap();
+
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
+
+    let mut next_epoch_state = EpochState::empty();
+    next_epoch_state.epoch = 1;
+    let rand_signer = ValidatorSigner::random([0xfu8; 32]);
+    next_epoch_state.verifier =
+        ValidatorVerifier::new_single(rand_signer.author(), rand_signer.public_key());
+    let a2 = test_utils::make_proposal_with_parent_and_overrides(
+        vec![],
+        round + 2,
+        &a1,
+        Some(&a1),
+        &signer,
+        Some(1),
+        Some(next_epoch_state),
+    );
+    assert!(safety_rules.update(a2.block().quorum_cert()).is_ok());
+
+    let a3 = test_utils::make_proposal_with_parent_and_overrides(
+        vec![],
+        round + 3,
+        &a2,
+        Some(&a2),
+        &signer,
+        Some(1),
+        None,
+    );
+    let err = safety_rules.update(a3.block().quorum_cert()).unwrap_err();
+    assert_eq!(
+        err,
+        Error::InvalidQuorumCertificate("Fail to verify QuorumCert".into())
+    );
+}
+
+fn test_reconcile_key(_func: Callback) {
+    // Test to verify desired consensus key can be retrived according to validator set.
+    // It does so by updating the safey rule to a desired epoch state, which later fails
+    // to verify QC with its outdated signer key.
+
+    let signer = ValidatorSigner::from_int(0);
+    let mut storage = test_utils::test_storage(&signer);
+    let new_pub_key = storage.rotate_consensus_key().unwrap();
+    let mut safety_rules = Box::new(SafetyRules::new(signer.author(), storage));
+
+    let (proof, genesis_qc) = make_genesis(&signer);
+    let round = genesis_qc.certified_block().round();
+
+    safety_rules.initialize(&proof).unwrap();
+
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
+    safety_rules.update(a1.block().quorum_cert()).unwrap();
+
+    let mut next_epoch_state = EpochState::empty();
+    next_epoch_state.epoch = 1;
+    next_epoch_state.verifier = ValidatorVerifier::new_single(signer.author(), new_pub_key);
+    let a2 = test_utils::make_proposal_with_parent_and_overrides(
+        vec![],
+        round + 2,
+        &a1,
+        Some(&a1),
+        &signer,
+        Some(1),
+        Some(next_epoch_state),
+    );
+    safety_rules.update(a2.block().quorum_cert()).unwrap();
+
+    let outdated_signer = &signer;
+    let a3 = test_utils::make_proposal_with_parent_and_overrides(
+        vec![],
+        round + 3,
+        &a2,
+        Some(&a2),
+        outdated_signer,
+        Some(1),
+        None,
+    );
+    let err = safety_rules.update(a3.block().quorum_cert()).unwrap_err();
+    assert_eq!(
+        err,
+        Error::InvalidQuorumCertificate("Fail to verify QuorumCert".into())
     );
 }
