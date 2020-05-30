@@ -7,10 +7,7 @@ use crate::{
     utils,
 };
 use anyhow::{anyhow, ensure, Result};
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    x25519, Uniform,
-};
+use libra_crypto::{x25519, Uniform};
 use libra_network_address::NetworkAddress;
 use libra_types::{transaction::authenticator::AuthenticationKey, PeerId};
 use rand::rngs::StdRng;
@@ -56,7 +53,8 @@ pub struct NetworkConfig {
     #[serde(skip)]
     pub seed_peers: SeedPeersConfig,
     pub seed_peers_file: PathBuf,
-    pub network_keypairs: Option<NetworkKeyPairs>,
+    #[serde(rename = "identity_private_key")]
+    pub identity_keypair: Option<KeyPair<x25519::PrivateKey>>,
 }
 
 impl Default for NetworkConfig {
@@ -70,7 +68,7 @@ impl Default for NetworkConfig {
             enable_noise: true,
             enable_remote_authentication: true,
             discovery_method: DiscoveryMethod::Gossip,
-            network_keypairs: None,
+            identity_keypair: None,
             network_peers_file: PathBuf::new(),
             network_peers: NetworkPeersConfig::default(),
             seed_peers_file: PathBuf::new(),
@@ -92,7 +90,7 @@ impl NetworkConfig {
             enable_noise: self.enable_noise,
             enable_remote_authentication: self.enable_remote_authentication,
             discovery_method: self.discovery_method,
-            network_keypairs: None,
+            identity_keypair: None,
             network_peers_file: self.network_peers_file.clone(),
             network_peers: self.network_peers.clone(),
             seed_peers_file: self.seed_peers_file.clone(),
@@ -137,8 +135,8 @@ impl NetworkConfig {
         }
 
         // TODO(joshlind): investigate the implications of removing these checks.
-        if let Some(network_keypairs) = &self.network_keypairs {
-            let identity_public_key = network_keypairs.identity_keypair.public_key();
+        if let Some(identity_keypair) = &self.identity_keypair {
+            let identity_public_key = identity_keypair.public_key();
             let peer_id = AuthenticationKey::try_from(identity_public_key.as_slice())
                 .unwrap()
                 .derived_address();
@@ -151,7 +149,8 @@ impl NetworkConfig {
             if !network_role.is_validator() && self.enable_remote_authentication {
                 ensure!(
                     self.peer_id == peer_id,
-                    "For full-nodes that use remote authentication, the peer_id must be derived from the identity key.",
+                    "For full-nodes that use remote authentication, \
+                    the peer_id must be derived from the identity key.",
                 );
             }
         }
@@ -186,18 +185,15 @@ impl NetworkConfig {
     }
 
     pub fn random_with_peer_id(&mut self, rng: &mut StdRng, peer_id: Option<PeerId>) {
-        let signing_key = Ed25519PrivateKey::generate(rng);
         let identity_key = x25519::PrivateKey::generate(rng);
-        let network_keypairs = NetworkKeyPairs::load(identity_key, signing_key);
         self.peer_id = if let Some(peer_id) = peer_id {
             peer_id
         } else {
-            let identity_public_key = network_keypairs.identity_keypair.public_key();
-            AuthenticationKey::try_from(identity_public_key.as_slice())
+            AuthenticationKey::try_from(identity_key.public_key().as_slice())
                 .unwrap()
                 .derived_address()
         };
-        self.network_keypairs = Some(network_keypairs);
+        self.identity_keypair = Some(KeyPair::load(identity_key));
     }
 }
 
@@ -225,44 +221,6 @@ impl SeedPeersConfig {
     }
 }
 
-// Leveraged to store the network keypairs together on disk separate from this config
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
-#[derive(Debug, Deserialize, Serialize)]
-pub struct NetworkKeyPairs {
-    #[serde(rename = "identity_private_key")]
-    pub identity_keypair: KeyPair<x25519::PrivateKey>,
-    #[serde(rename = "signing_private_key")]
-    pub signing_keypair: KeyPair<Ed25519PrivateKey>,
-}
-
-#[cfg(any(test, feature = "fuzzing"))]
-impl PartialEq for NetworkKeyPairs {
-    fn eq(&self, other: &Self) -> bool {
-        self.identity_keypair == other.identity_keypair
-            && self.signing_keypair == other.signing_keypair
-    }
-}
-
-impl NetworkKeyPairs {
-    // used in testing to fill the structure with test keypairs
-    pub fn load(
-        identity_private_key: x25519::PrivateKey,
-        signing_private_key: Ed25519PrivateKey,
-    ) -> Self {
-        Self {
-            identity_keypair: KeyPair::load(identity_private_key),
-            signing_keypair: KeyPair::load(signing_private_key),
-        }
-    }
-
-    pub fn as_peer_info(&self) -> NetworkPeerInfo {
-        NetworkPeerInfo {
-            identity_public_key: self.identity_keypair.public_key(),
-            signing_public_key: self.signing_keypair.public_key(),
-        }
-    }
-}
-
 #[derive(Clone, Default, Deserialize, PartialEq, Serialize)]
 pub struct NetworkPeersConfig {
     #[serde(flatten)]
@@ -278,8 +236,6 @@ impl std::fmt::Debug for NetworkPeersConfig {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct NetworkPeerInfo {
-    #[serde(rename = "ns")]
-    pub signing_public_key: Ed25519PublicKey,
     #[serde(rename = "ni")]
     pub identity_public_key: x25519::PublicKey,
 }
@@ -306,7 +262,7 @@ mod test {
         let (mut config, path) = generate_config();
         assert_eq!(config.network_peers, NetworkPeersConfig::default());
         assert_eq!(config.network_peers_file, PathBuf::new());
-        assert_eq!(config.network_keypairs, None);
+        assert_eq!(config.identity_keypair, None);
         assert_eq!(config.peer_id, PeerId::default());
         assert_eq!(config.seed_peers, SeedPeersConfig::default());
         assert_eq!(config.seed_peers_file, PathBuf::new());
@@ -316,7 +272,7 @@ mod test {
         config.load(&root_dir, RoleType::FullNode).unwrap();
         assert_eq!(config.network_peers, NetworkPeersConfig::default());
         assert_eq!(config.network_peers_file, PathBuf::new());
-        assert_eq!(config.network_keypairs, None);
+        assert_eq!(config.identity_keypair, None);
         assert_eq!(config.peer_id, PeerId::default());
         assert_eq!(config.seed_peers_file, PathBuf::new());
         assert_eq!(config.seed_peers, SeedPeersConfig::default());
@@ -330,7 +286,7 @@ mod test {
         );
 
         // Assert paths and values are not set (i.e., no defaults apply)
-        assert_eq!(config.network_keypairs, None);
+        assert_eq!(config.identity_keypair, None);
         assert_eq!(config.network_peers, NetworkPeersConfig::default());
         assert_eq!(config.network_peers_file, PathBuf::new());
     }
@@ -344,7 +300,7 @@ mod test {
         // This is default (empty) otherwise
         config.seed_peers.seed_peers.insert(config.peer_id, vec![]);
 
-        let keypairs = config.network_keypairs.clone();
+        let keypair = config.identity_keypair.clone();
         let peers = config.network_peers.clone();
         let seed_peers = config.seed_peers.clone();
 
@@ -355,7 +311,7 @@ mod test {
         // Assert saving updates paths
         let root_dir = RootPath::new_path(path.path());
         config.save(&root_dir).unwrap();
-        assert_eq!(config.network_keypairs, keypairs);
+        assert_eq!(config.identity_keypair, keypair);
         assert_eq!(config.network_peers, peers);
         assert_eq!(config.network_peers_file, PathBuf::new(),);
         assert_eq!(config.seed_peers, seed_peers);
@@ -373,7 +329,7 @@ mod test {
         // Loading populates things correctly
         let result = new_config.load(&root_dir, RoleType::Validator);
         result.unwrap();
-        assert_eq!(config.network_keypairs, keypairs);
+        assert_eq!(config.identity_keypair, keypair);
         assert_eq!(config.network_peers, peers);
         assert_eq!(config.network_peers_file, PathBuf::new(),);
         assert_eq!(config.seed_peers, seed_peers);

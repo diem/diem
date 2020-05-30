@@ -340,9 +340,9 @@ pub fn validator_registrations(node_configs: &[NodeConfig]) -> Vec<ValidatorRegi
             let account_key = test.operator_keypair.as_ref().unwrap().public_key();
             let consensus_key = test.consensus_keypair.as_ref().unwrap().public_key();
             let network = n.validator_network.as_ref().unwrap();
-            let network_keypairs = network.network_keypairs.as_ref().unwrap();
-            let signing_key = network_keypairs.signing_keypair.public_key();
-            let identity_key = network_keypairs.identity_keypair.public_key();
+            let identity_key = network.identity_keypair.as_ref().unwrap().public_key();
+            // This is a deprecated field...
+            let signing_key = Ed25519PrivateKey::generate_for_testing().public_key();
 
             let advertised_address = network
                 .advertised_address
