@@ -356,27 +356,24 @@ impl<T: Payload> RoundManager<T> {
     /// of the given sync info and update the round_state with the certificates if succeed.
     /// Returns Error in case sync mgr failed to bring the missing dependencies.
     /// We'll try to help the remote if the SyncInfo lags behind and the flag is set.
-    async fn sync_up(
+    pub async fn sync_up(
         &mut self,
         sync_info: &SyncInfo,
         author: Author,
         help_remote: bool,
     ) -> anyhow::Result<()> {
         let local_sync_info = self.block_store.sync_info();
-        if sync_info.is_stale(&local_sync_info) {
-            if help_remote {
-                counters::SYNC_INFO_MSGS_SENT_COUNT.inc();
-                debug!(
-                    "Peer {} has stale state {}, send it back {}",
-                    author.short_str(),
-                    sync_info,
-                    local_sync_info,
-                );
-                self.network.send_sync_info(local_sync_info, author);
-            }
-            return Ok(());
+        if help_remote && local_sync_info.has_newer_certificates(&sync_info) {
+            counters::SYNC_INFO_MSGS_SENT_COUNT.inc();
+            debug!(
+                "Peer {} has stale state {}, send it back {}",
+                author.short_str(),
+                sync_info,
+                local_sync_info,
+            );
+            self.network.send_sync_info(local_sync_info.clone(), author);
         }
-        if local_sync_info.is_stale(&sync_info) {
+        if sync_info.has_newer_certificates(&local_sync_info) {
             debug!(
                 "Local state {} is stale than peer {} remote state {}",
                 local_sync_info,

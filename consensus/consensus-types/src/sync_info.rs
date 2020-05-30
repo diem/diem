@@ -21,15 +21,14 @@ pub struct SyncInfo {
 impl Display for SyncInfo {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         let htc_repr = match self.highest_timeout_certificate() {
-            Some(tc) => format!("TC for round {}", tc.round()),
+            Some(tc) => format!("{}", tc.round()),
             None => "None".to_string(),
         };
         write!(
             f,
-            "SyncInfo[round: {}, HQC: {}, HCC: {}, HTC: {}]",
-            self.highest_round(),
-            self.highest_quorum_cert,
-            self.highest_commit_cert,
+            "SyncInfo[HQC: {}, HCC: {}, HTC: {}]",
+            self.highest_certified_round(),
+            self.highest_commit_round(),
             htc_repr,
         )
     }
@@ -120,8 +119,9 @@ impl SyncInfo {
         self.highest_quorum_cert.certified_block().epoch()
     }
 
-    pub fn is_stale(&self, other: &SyncInfo) -> bool {
-        self.highest_round() < other.highest_round()
-            || self.highest_commit_round() < other.highest_commit_round()
+    pub fn has_newer_certificates(&self, other: &SyncInfo) -> bool {
+        self.highest_certified_round() > other.highest_certified_round()
+            || self.highest_timeout_round() > other.highest_timeout_round()
+            || self.highest_commit_round() > other.highest_commit_round()
     }
 }
