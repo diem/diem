@@ -568,12 +568,11 @@ impl ClientProxy {
         let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let private_key = Ed25519PrivateKey::from_encoded_string(space_delim_strings[2])?;
         let consensus_public_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[3])?;
-        let network_signing_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[4])?;
-        let network_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[5])?;
-        let network_address = NetworkAddress::from_str(space_delim_strings[6])?;
+        let network_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[4])?;
+        let network_address = NetworkAddress::from_str(space_delim_strings[5])?;
         let network_address = RawNetworkAddress::try_from(&network_address)?;
-        let fullnode_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[7])?;
-        let fullnode_network_address = NetworkAddress::from_str(space_delim_strings[8])?;
+        let fullnode_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[6])?;
+        let fullnode_network_address = NetworkAddress::from_str(space_delim_strings[7])?;
         let fullnode_network_address = RawNetworkAddress::try_from(&fullnode_network_address)?;
         let mut sender = Self::get_account_data_from_address(
             &mut self.client,
@@ -584,7 +583,6 @@ impl ClientProxy {
         )?;
         let program = encode_register_validator_script(
             consensus_public_key.to_bytes().to_vec(),
-            network_signing_key.to_bytes().to_vec(),
             network_identity_key.to_bytes(),
             network_address.into(),
             fullnode_identity_key.to_bytes(),

@@ -3,7 +3,7 @@
 
 use crate::{account_address::AccountAddress, validator_config::ValidatorConfig};
 #[cfg(any(test, feature = "fuzzing"))]
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use libra_crypto::Uniform;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_network_address::NetworkAddress;
@@ -18,7 +18,7 @@ use std::{convert::TryFrom, str::FromStr};
 
 /// After executing a special transaction indicates a change to the next epoch, consensus
 /// and networking get the new list of validators, their keys, and their voting power.  Consensus
-/// has a public key to validate signed messages and networking will has public signing and identity
+/// has a public key to validate signed messages and networking will has public identity
 /// keys for creating secure channels of communication between validators.  The validators and
 /// their public keys and voting power may or may not change between epochs.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -59,8 +59,6 @@ impl ValidatorInfo {
         consensus_public_key: Ed25519PublicKey,
         consensus_voting_power: u64,
     ) -> Self {
-        let validator_network_signing_public_key =
-            Ed25519PrivateKey::generate_for_testing().public_key();
         let private_key = x25519::PrivateKey::generate_for_testing();
         let validator_network_identity_public_key = private_key.public_key();
         let network_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
@@ -71,7 +69,6 @@ impl ValidatorInfo {
         let full_node_network_address = RawNetworkAddress::try_from(&network_address).unwrap();
         let config = ValidatorConfig::new(
             consensus_public_key,
-            validator_network_signing_public_key,
             validator_network_identity_public_key,
             validator_network_address,
             full_node_network_identity_public_key,
@@ -99,11 +96,6 @@ impl ValidatorInfo {
     /// Returns the voting power for this validator
     pub fn consensus_voting_power(&self) -> u64 {
         self.consensus_voting_power
-    }
-
-    /// Returns the key for validating signed messages at the network layers
-    pub fn network_signing_public_key(&self) -> &Ed25519PublicKey {
-        &self.config.validator_network_signing_public_key
     }
 
     /// Returns the key that establishes a validator's identity in the p2p network

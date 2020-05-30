@@ -42,24 +42,22 @@ use 0x0::ValidatorConfig;
 fun main(account: &signer) {
     // Alice registers as a validator candidate
     0x0::Transaction::assert(!ValidatorConfig::has(0x0::Transaction::sender()), 9);
-    ValidatorConfig::register_candidate_validator(
-        account, x"10", x"20", x"30", x"40", x"50", x"60"
-    );
+    ValidatorConfig::register_candidate_validator(account, x"10", x"20", x"30", x"40", x"50");
     0x0::Transaction::assert(ValidatorConfig::has(0x0::Transaction::sender()), 10);
 
     // Rotating the consensus_pubkey should work
     let config = ValidatorConfig::get_config(0x0::Transaction::sender());
     0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(&config) == x"10", 11);
-    ValidatorConfig::rotate_consensus_pubkey_of_sender(x"70");
+    ValidatorConfig::rotate_consensus_pubkey_of_sender(x"60");
     0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(&config) == x"10", 12);
     config = ValidatorConfig::get_config(0x0::Transaction::sender());
-    0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(&config) == x"70", 15);
+    0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(&config) == x"60", 15);
 
     // Rotating the validator_network_pubkey should work
-    0x0::Transaction::assert(ValidatorConfig::get_validator_network_identity_pubkey(&config) == x"30", 13);
-    ValidatorConfig::rotate_validator_network_identity_pubkey({{alice}}, x"80");
+    0x0::Transaction::assert(ValidatorConfig::get_validator_network_identity_pubkey(&config) == x"20", 13);
+    ValidatorConfig::rotate_validator_network_identity_pubkey({{alice}}, x"70");
     config = ValidatorConfig::get_config(0x0::Transaction::sender());
-    0x0::Transaction::assert(ValidatorConfig::get_validator_network_identity_pubkey(&config) == x"80", 14);
+    0x0::Transaction::assert(ValidatorConfig::get_validator_network_identity_pubkey(&config) == x"70", 14);
 }
 }
 

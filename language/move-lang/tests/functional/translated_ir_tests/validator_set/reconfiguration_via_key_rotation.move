@@ -9,7 +9,7 @@ use 0x0::ValidatorConfig;
 
 // register Alice as a validator candidate
 fun main(account: &signer) {
-    ValidatorConfig::register_candidate_validator(account, x"10", x"20", x"30", x"40", x"50", x"60");
+    ValidatorConfig::register_candidate_validator(account, x"10", x"20", x"30", x"40", x"50");
 }
 }
 
@@ -21,7 +21,7 @@ script{
 use 0x0::ValidatorConfig;
 // rotate alice's pubkey
 fun main() {
-    ValidatorConfig::rotate_consensus_pubkey_of_sender(x"40");
+    ValidatorConfig::rotate_consensus_pubkey_of_sender(x"60");
 }
 }
 
@@ -45,10 +45,10 @@ use 0x0::ValidatorConfig;
 
 // rotate vivian's pubkey and then run the block prologue. Now, reconfiguration should be triggered.
 fun main() {
-    ValidatorConfig::rotate_consensus_pubkey_of_sender(x"40");
+    ValidatorConfig::rotate_consensus_pubkey_of_sender(x"70");
     LibraSystem::update_and_reconfigure();
     // check that the validator set contains Vivian's new key after reconfiguration
-    0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(&LibraSystem::get_validator_config({{vivian}})) == x"40", 98);
+    0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(&LibraSystem::get_validator_config({{vivian}})) == x"70", 98);
 }
 }
 
@@ -64,7 +64,7 @@ use 0x0::ValidatorConfig;
 // triggered. the not "NewEpochEvent" check part tests this because reconfiguration always emits a
 // NewEpoch event.
 fun main() {
-    ValidatorConfig::rotate_consensus_pubkey_of_sender(x"40");
+    ValidatorConfig::rotate_consensus_pubkey_of_sender(x"70");
     LibraSystem::update_and_reconfigure();
 }
 }

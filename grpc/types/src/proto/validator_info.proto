@@ -13,14 +13,12 @@ message ValidatorInfo {
   bytes consensus_public_key = 2;
   // Validator voting power for consensus
   uint64 consensus_voting_power = 3;
-  // Network signing publick key
-  bytes validator_network_signing_public_key = 4;
   /// Network identity publick key
-  bytes validator_network_identity_public_key = 5;
+  bytes validator_network_identity_public_key = 4;
   /// Network address
-  bytes validator_network_address = 6;
+  bytes validator_network_address = 5;
   /// Full node's network identity publick key
-  bytes full_node_network_identity_public_key = 7;
+  bytes full_node_network_identity_public_key = 6;
   /// Full node's network address
-  bytes full_node_network_address = 8;
+  bytes full_node_network_address = 7;
 }

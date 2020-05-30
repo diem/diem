@@ -8,7 +8,6 @@ module ValidatorConfig {
     struct Config {
         consensus_pubkey: vector<u8>,
         // TODO(philiphayes): restructure
-        validator_network_signing_pubkey: vector<u8>,
         validator_network_identity_pubkey: vector<u8>,
         validator_network_address: vector<u8>,
         full_node_network_identity_pubkey: vector<u8>,
@@ -54,7 +53,6 @@ module ValidatorConfig {
     public fun register_candidate_validator(
         candidate: &signer,
         consensus_pubkey: vector<u8>,
-        validator_network_signing_pubkey: vector<u8>,
         validator_network_identity_pubkey: vector<u8>,
         validator_network_address: vector<u8>,
         full_node_network_identity_pubkey: vector<u8>,
@@ -65,7 +63,6 @@ module ValidatorConfig {
             T {
                 config: Config {
                     consensus_pubkey: consensus_pubkey,
-                    validator_network_signing_pubkey,
                     validator_network_identity_pubkey,
                     validator_network_address,
                     full_node_network_identity_pubkey,
