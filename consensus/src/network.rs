@@ -184,10 +184,6 @@ impl<T: Payload> NetworkSender<T> {
     /// The future is fulfilled as soon as the message is added to the internal network channel
     /// (does not indicate whether the message is delivered or sent out).
     pub fn send_sync_info(&self, sync_info: SyncInfo, recipient: Author) {
-        if recipient == self.author {
-            error!("An attempt to deliver sync info msg to itself: ignore.");
-            return;
-        }
         let msg = ConsensusMsg::SyncInfo::<T>(Box::new(sync_info));
         let mut network_sender = self.network_sender.clone();
         if let Err(e) = network_sender.send_to(recipient, msg) {

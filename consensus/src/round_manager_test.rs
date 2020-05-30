@@ -67,6 +67,8 @@ pub struct NodeSetup {
     safety_rules_manager: SafetyRulesManager<TestPayload>,
     all_events:
         Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg<TestPayload>>>> + Send + Unpin>,
+    commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
+    state_sync_receiver: mpsc::UnboundedReceiver<TestPayload>,
 }
 
 impl NodeSetup {
@@ -158,8 +160,8 @@ impl NodeSetup {
         let all_events = Box::new(select(network_events, self_receiver));
 
         let last_vote_sent = initial_data.last_vote();
-        let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
-        let (state_sync_client, _state_sync) = mpsc::unbounded();
+        let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
+        let (state_sync_client, state_sync_receiver) = mpsc::unbounded();
         let state_computer = Arc::new(MockStateComputer::new(
             state_sync_client,
             commit_cb_sender,
@@ -211,6 +213,8 @@ impl NodeSetup {
             validators,
             safety_rules_manager,
             all_events,
+            commit_cb_receiver,
+            state_sync_receiver,
         }
     }
 
@@ -751,5 +755,51 @@ fn sync_info_sent_on_stale_sync_info() {
         let sync_info = behind_node.next_sync_info().await;
 
         assert_eq!(*sync_info.highest_quorum_cert(), block_0_quorum_cert);
+    });
+}
+
+#[test]
+fn sync_on_partial_newer_sync_info() {
+    let mut runtime = consensus_runtime();
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
+    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1);
+    let mut node = nodes.pop().unwrap();
+    runtime.spawn(playground.start::<TestPayload>());
+    timed_block_on(&mut runtime, async {
+        // commit block 1 after 4 rounds
+        for _ in 1..=4 {
+            let proposal_msg = node.next_proposal().await;
+
+            node.round_manager.process_proposal_msg(proposal_msg).await;
+            let vote_msg = node.next_vote().await;
+            // Adding vote to form a QC
+            node.round_manager.process_vote(vote_msg).await;
+        }
+        let block_4 = node.next_proposal().await;
+        node.round_manager
+            .process_proposal_msg(block_4.clone())
+            .await;
+        // commit genesis and block 1
+        for _ in 0..2 {
+            let _ = node.commit_cb_receiver.next().await;
+        }
+        let vote_msg = node.next_vote().await;
+        let vote_data = vote_msg.vote().vote_data();
+        let block_4_qc = gen_test_certificate(
+            vec![&node.signer],
+            vote_data.proposed().clone(),
+            vote_data.parent().clone(),
+            None,
+        );
+        // Create a sync info with newer quorum cert but older commit cert
+        let sync_info = SyncInfo::new(block_4_qc.clone(), certificate_for_genesis(), None);
+        node.round_manager
+            .sync_up(&sync_info, node.signer.author(), true)
+            .await
+            .unwrap();
+        // QuorumCert added
+        assert_eq!(*node.block_store.highest_quorum_cert(), block_4_qc);
+        // Help remote message sent
+        let _ = node.next_sync_info().await;
     });
 }
