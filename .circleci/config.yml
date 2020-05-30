@@ -1,5 +1,8 @@
 version: 2.1
 
+orbs:
+  slack: circleci/slack@3.3.0
+
 executors:
   build-executor:
     docker:
@@ -91,6 +94,7 @@ commands:
     description: Save cargo package cache for subsequent jobs
     steps:
       - save_cache:
+          name: Save cargo package cache
           key: cargo-package-cache-{{ checksum "Cargo.lock" }}
           # paths are relative to /home/circleci/project/
           paths:
@@ -101,12 +105,29 @@ commands:
     description: Restore Cargo package cache from prev job
     steps:
       - restore_cache:
+          name: Restore cargo package cache
           key: cargo-package-cache-{{ checksum "Cargo.lock" }}
       - run:
           name: Check cargo package cache
           command: |
             ls -all /usr/local/cargo
             du -ssh /usr/local/cargo
+  save_breaking_change_rev:
+    description: Save the breaking change rev since last testnet update.
+    steps:
+      - save_cache:
+          name: Save breaking change rev
+          key: testnet-{{ checksum "testnet_rev" }}
+          # paths are relative to /home/circleci/project/
+          paths:
+            - breaking_change_rev
+          when: on_fail
+  restore_breaking_change_rev:
+    description: Restore the breaking change rev since last testnet update
+    steps:
+      - restore_cache:
+          name: Restore breaking change rev
+          key: testnet-{{ checksum "testnet_rev" }}
   send_message:
     description: Send message to the specified webhook, if no webhook is set simply return.
     parameters:
@@ -430,7 +451,71 @@ jobs:
                 echo "$docker_file is renamed or removed in pull request."
               fi
             done
-
+  check-breaking-change:
+    executor: audit-executor
+    description: Detect breaking change in CLI
+    environment:
+      # NOTE The  built-in save_cache and restore_cache cmds dont accept cache
+      # path or cache key defined via env var on the fly. As a result, if you
+      # change BREAKING_CHANGE_REV_FILE or TESTNET_REV_FILE, make sure to change
+      # save_breaking_change_rev and restore_breaking_change_rev accordingly.
+      BREAKING_CHANGE_REV_FILE: "breaking_change_rev"
+      TESTNET_REV_FILE: "testnet_rev"
+    steps:
+      - build_setup
+      - run:
+          name: Prepare cache key for breaking change rev lookup
+          # NOTE save_cache and restore_cache dont take cache key defined via
+          # env var on the fly. So we are going to store the testnet rev in a
+          # file and use its checksum as cache key.
+          command: |
+            echo 'export GIT_REV=$(git rev-parse HEAD)' >> $BASH_ENV
+            git rev-parse origin/testnet > ${TESTNET_REV_FILE}
+      - restore_breaking_change_rev
+      - run:
+          name: Check exiting breaking change rev
+          command: |
+            pwd
+            if [ -f "${BREAKING_CHANGE_REV_FILE}" ]; then
+              echo "master already has breaking change $(cat ${BREAKING_CHANGE_REV_FILE})"
+              echo "Nothing to do. Halting CI..."
+              circleci step halt
+            else
+              echo "No existing breacking change rev. Will continue CI."
+            fi
+      - restore_cargo_package_cache
+      - run:
+          name: Construct CLI cmds
+          command: |
+            echo "
+              a c
+              a m 0 10 LBR false
+              q b 0
+              a c
+              a m 1 11 LBR false
+              q b 1
+              t 0 1 1 LBR
+              q b 0
+              q b 1
+              quit
+            " > /tmp/cli
+      - run:
+          name: Connect to testnet
+          # NOTE +e to disable exit immediately on failure
+          command: |
+            set +e
+            ./scripts/cli/start_cli_testnet.sh < /tmp/cli
+            status=$?
+            if [[ $status != 0 ]] ; then
+              git rev-parse HEAD > ${BREAKING_CHANGE_REV_FILE}
+              echo "Will save breaking change rev $(cat ${BREAKING_CHANGE_REV_FILE})"
+            fi
+            exit $status
+      - save_breaking_change_rev
+      - slack/status:
+          fail_only: true
+          webhook: "${WEBHOOK_BREAKING_CHANGE}"
+          failure_message: ":red_circle: <@channel> breaking change in *${GIT_REV}*"
   # build-docs and deploy-docs are adapted from
   # https://circleci.com/blog/deploying-documentation-to-github-pages-with-continuous-integration/.
   build-docs:
@@ -517,6 +602,12 @@ workflows:
           filters:
             branches:
               only: master
+      - check-breaking-change:
+          requires:
+            - prefetch-crates
+          filters:
+           branches:
+             only: master
 
   scheduled-workflow:
     triggers:
