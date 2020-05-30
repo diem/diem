@@ -3,6 +3,7 @@
 
 use super::*;
 use crate::{
+    error::NetworkErrorKind,
     peer_manager::{
         self, conn_notifs_channel, ConnectionRequestSender, PeerManagerNotification,
         PeerManagerRequest,
@@ -14,11 +15,7 @@ use anyhow::anyhow;
 use channel::{libra_channel, message_queues::QueueStyle};
 use futures::channel::oneshot;
 use libra_config::config::RoleType;
-use libra_crypto::{
-    ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, x25519, PrivateKey, Uniform,
-};
 use libra_network_address::NetworkAddress;
-use rand::prelude::*;
 use std::{num::NonZeroUsize, str::FromStr};
 use tokio::runtime::Runtime;
 
@@ -47,8 +44,6 @@ fn setup_discovery(
     rt: &mut Runtime,
     peer_id: PeerId,
     addrs: Vec<NetworkAddress>,
-    signer: Ed25519PrivateKey,
-    trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
 ) -> (
     libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     channel::Receiver<ConnectivityRequest>,
@@ -71,8 +66,6 @@ fn setup_discovery(
             peer_id,
             role,
             addrs,
-            signer,
-            trusted_peers,
             ticker_rx,
             DiscoveryNetworkSender::new(
                 PeerManagerRequestSender::new(peer_mgr_reqs_tx),
@@ -107,20 +100,6 @@ async fn expect_address_update(
     }
 }
 
-fn generate_network_pub_keys_and_signer(
-    rng: &mut (impl rand::RngCore + rand::CryptoRng),
-) -> (NetworkPublicKeys, Ed25519PrivateKey) {
-    let signing_priv_key = Ed25519PrivateKey::generate(rng);
-    let identity_pub_key = x25519::PrivateKey::generate(rng).public_key();
-    (
-        NetworkPublicKeys {
-            signing_public_key: signing_priv_key.public_key(),
-            identity_public_key: identity_pub_key,
-        },
-        signing_priv_key,
-    )
-}
-
 #[test]
 // Test behavior on receipt of an inbound DiscoveryMsg.
 fn inbound() {
@@ -130,41 +109,23 @@ fn inbound() {
     // Setup self.
     let self_peer_id = PeerId::random();
     let self_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(&mut rng);
 
     // Setup other peer.
     let other_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/8080").unwrap()];
     let other_peer_id = PeerId::random();
-    let (other_pub_keys, other_signer) = generate_network_pub_keys_and_signer(&mut rng);
-    let trusted_peers = Arc::new(RwLock::new(
-        vec![
-            (other_peer_id, other_pub_keys),
-            (self_peer_id, self_pub_keys),
-        ]
-        .into_iter()
-        .collect(),
-    ));
 
     // Setup new peer to be added later.
     let new_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/7070").unwrap()];
     let new_peer_id = PeerId::random();
-    let (new_pub_keys, new_signer) = generate_network_pub_keys_and_signer(&mut rng);
 
     // Setup discovery.
-    let (_, mut conn_mgr_reqs_rx, mut network_notifs_tx, _, _) = setup_discovery(
-        &mut rt,
-        self_peer_id,
-        self_addrs.clone(),
-        self_signer,
-        trusted_peers.clone(),
-    );
+    let (_, mut conn_mgr_reqs_rx, mut network_notifs_tx, _, _) =
+        setup_discovery(&mut rt, self_peer_id, self_addrs.clone());
 
     // Fake connectivity manager and dialer.
     let f_network = async move {
         // Send a message from other peer containing their discovery note.
         let other_note = Note::new(
-            &other_signer,
             other_peer_id,
             other_addrs.clone(),
             b"example.com",
@@ -199,15 +160,7 @@ fn inbound() {
 
         // Send a message from other peer containing their updated discovery note
         // and another peer's new note.
-
-        // Add the new peer's pubkey to the trusted peers set.
-        trusted_peers
-            .write()
-            .unwrap()
-            .insert(new_peer_id, new_pub_keys);
-
         let new_note = Note::new(
-            &new_signer,
             new_peer_id,
             new_addrs.clone(),
             b"example.com",
@@ -217,7 +170,6 @@ fn inbound() {
         // Update other peer's note.
         let other_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/1234").unwrap()];
         let other_note = Note::new(
-            &other_signer,
             other_peer_id,
             other_addrs.clone(),
             b"example.com",
@@ -263,18 +215,10 @@ fn outbound() {
     // Setup self peer.
     let peer_id = PeerId::random();
     let addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(&mut rng);
 
     // Setup other peer.
     let other_peer_id = PeerId::random();
     let other_peer_info = gen_peer_info();
-    let (other_pub_keys, _) = generate_network_pub_keys_and_signer(&mut rng);
-    let trusted_peers = Arc::new(RwLock::new(
-        vec![(other_peer_id, other_pub_keys), (peer_id, self_pub_keys)]
-            .into_iter()
-            .collect(),
-    ));
 
     // Setup discovery.
     let (
@@ -283,7 +227,7 @@ fn outbound() {
         _network_notifs_tx,
         mut connection_notifs_tx,
         mut ticker_tx,
-    ) = setup_discovery(&mut rt, peer_id, addrs.clone(), self_signer, trusted_peers);
+    ) = setup_discovery(&mut rt, peer_id, addrs.clone());
 
     // Fake connectivity manager and dialer.
     let f_network = async move {
@@ -332,22 +276,14 @@ fn old_note_higher_epoch() {
     // Setup self peer.
     let peer_id = PeerId::random();
     let addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(&mut rng);
 
     // Setup other peer.
     let other_peer_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/8080").unwrap()];
     let other_peer_id = PeerId::random();
-    let (other_pub_keys, _) = generate_network_pub_keys_and_signer(&mut rng);
-    let trusted_peers = Arc::new(RwLock::new(
-        vec![(other_peer_id, other_pub_keys), (peer_id, self_pub_keys)]
-            .into_iter()
-            .collect(),
-    ));
 
     // Setup discovery.
     let (mut network_reqs_rx, _, mut network_notifs_tx, mut connection_notifs_tx, mut ticker_tx) =
-        setup_discovery(&mut rt, peer_id, addrs, self_signer.clone(), trusted_peers);
+        setup_discovery(&mut rt, peer_id, addrs);
 
     // Fake connectivity manager and dialer.
     let f_network = async move {
@@ -369,13 +305,7 @@ fn old_note_higher_epoch() {
         // current note.
         let old_self_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9091").unwrap()];
         let old_epoch = get_unix_epoch() + 100;
-        let old_note = Note::new(
-            &self_signer,
-            peer_id,
-            old_self_addrs.clone(),
-            b"example.com",
-            old_epoch,
-        );
+        let old_note = Note::new(peer_id, old_self_addrs.clone(), b"example.com", old_epoch);
         let msg = DiscoveryMsg {
             notes: vec![old_note],
         };
@@ -420,22 +350,14 @@ fn old_note_max_epoch() {
     // Setup self.
     let peer_id = PeerId::random();
     let addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(&mut rng);
 
     // Setup other.
     let other_peer_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/8080").unwrap()];
     let other_peer_id = PeerId::random();
-    let (other_pub_keys, _) = generate_network_pub_keys_and_signer(&mut rng);
-    let trusted_peers = Arc::new(RwLock::new(
-        vec![(other_peer_id, other_pub_keys), (peer_id, self_pub_keys)]
-            .into_iter()
-            .collect(),
-    ));
 
     // Setup discovery.
     let (mut network_reqs_rx, _, mut network_notifs_tx, mut connection_notifs_tx, mut ticker_tx) =
-        setup_discovery(&mut rt, peer_id, addrs, self_signer.clone(), trusted_peers);
+        setup_discovery(&mut rt, peer_id, addrs);
 
     // Fake connectivity manager and dialer.
     let f_network = async move {
@@ -456,13 +378,7 @@ fn old_note_max_epoch() {
         // Send DiscoveryMsg consisting of the this node's older note which has u64::MAX epoch.
         let old_self_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9091").unwrap()];
         let old_epoch = std::u64::MAX;
-        let old_note = Note::new(
-            &self_signer,
-            peer_id,
-            old_self_addrs.clone(),
-            b"example.com",
-            old_epoch,
-        );
+        let old_note = Note::new(peer_id, old_self_addrs.clone(), b"example.com", old_epoch);
         let msg = DiscoveryMsg {
             notes: vec![old_note],
         };

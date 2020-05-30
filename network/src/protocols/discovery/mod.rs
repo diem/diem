@@ -3,6 +3,8 @@
 
 //! Protocol to discover network addresses of other peers on the Libra network
 //!
+//! This is for testing purposes only and should not be used in production networks.
+//!
 //! ## Implementation
 //!
 //! The discovery module is implemented as a stand-alone actor in the Network sub-system of the
@@ -34,11 +36,11 @@
 use crate::{
     connectivity_manager::{ConnectivityRequest, DiscoverySource},
     counters,
-    error::{NetworkError, NetworkErrorKind},
+    error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{Event, NetworkEvents, NetworkSender},
     validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
-    NetworkPublicKeys, ProtocolId,
+    ProtocolId,
 };
 use bytes::Bytes;
 use channel::message_queues::QueueStyle;
@@ -47,11 +49,6 @@ use futures::{
     stream::{FusedStream, Stream, StreamExt},
 };
 use libra_config::config::RoleType;
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    hash::CryptoHash,
-    Signature, SigningKey,
-};
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
@@ -63,7 +60,6 @@ use std::{
     cmp::max,
     collections::{HashMap, HashSet},
     convert::TryInto,
-    sync::{Arc, RwLock},
     time::SystemTime,
 };
 
@@ -132,7 +128,7 @@ impl DiscoveryNetworkSender {
 pub struct Discovery<TTicker> {
     /// Note for self, which is prefixed with an underscore as this is not used but is in
     /// preparation for logic that changes the advertised Note while the validator is running.
-    note: VerifiedNote,
+    note: Note,
     /// PeerId for self.
     peer_id: PeerId,
     /// Our node type.
@@ -140,12 +136,8 @@ pub struct Discovery<TTicker> {
     /// The DNS domain name other public full nodes should query to get this
     /// validator's list of full nodes.
     dns_seed_addr: Bytes,
-    /// Validator for verifying signatures on messages.
-    trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
-    /// Ed25519PrivateKey for signing notes.
-    signer: Ed25519PrivateKey,
     /// Current state, maintaining the most recent Note for each peer, alongside parsed PeerInfo.
-    known_peers: HashMap<PeerId, VerifiedNote>,
+    known_peers: HashMap<PeerId, Note>,
     /// Currently connected peers.
     connected_peers: HashSet<PeerId>,
     /// Ticker to trigger state send to a random peer. In production, the ticker is likely to be
@@ -169,8 +161,6 @@ where
         self_peer_id: PeerId,
         role: RoleType,
         self_addrs: Vec<NetworkAddress>,
-        signer: Ed25519PrivateKey,
-        trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
         ticker: TTicker,
         network_reqs_tx: DiscoveryNetworkSender,
         network_notifs_rx: DiscoveryNetworkEvents,
@@ -180,20 +170,17 @@ where
         let dns_seed_addr = b"example.com";
 
         let epoch = get_unix_epoch();
-        let self_note = Note::new(&signer, self_peer_id, self_addrs, dns_seed_addr, epoch);
-        let self_verified_note = VerifiedNote(self_note);
+        let self_note = Note::new(self_peer_id, self_addrs, dns_seed_addr, epoch);
 
-        let known_peers = vec![(self_peer_id, self_verified_note.clone())]
+        let known_peers = vec![(self_peer_id, self_note.clone())]
             .into_iter()
             .collect();
 
         Self {
-            note: self_verified_note,
+            note: self_note,
             peer_id: self_peer_id,
             role,
             dns_seed_addr: Bytes::from_static(dns_seed_addr),
-            trusted_peers,
-            signer,
             known_peers,
             connected_peers: HashSet::new(),
             ticker,
@@ -268,19 +255,8 @@ where
                         self.connected_peers.remove(&peer_id);
                     }
                     Event::Message((peer_id, msg)) => {
-                        match handle_discovery_msg(msg, self.trusted_peers.clone(), peer_id) {
-                            Ok(verified_notes) => {
-                                self.reconcile(peer_id, verified_notes).await;
-                                self.record_num_discovery_notes();
-                            }
-                            Err(e) => {
-                                warn!(
-                                    "Failure in processing stream from peer: {}. Error: {:?}",
-                                    peer_id.short_str(),
-                                    e
-                                );
-                            }
-                        }
+                        self.reconcile(peer_id, msg.notes).await;
+                        self.record_num_discovery_notes();
                     }
                     Event::RpcRequest(req) => {
                         warn!("Unexpected notification from network: {:?}", req);
@@ -307,30 +283,24 @@ where
 
     // Creates DiscoveryMsg to be sent to some remote peer.
     fn compose_discovery_msg(&self) -> DiscoveryMsg {
-        let notes = self
-            .known_peers
-            .values()
-            .map(|note| note.as_note())
-            .cloned()
-            .collect::<Vec<_>>();
+        let notes = self.known_peers.values().cloned().collect::<Vec<_>>();
         DiscoveryMsg { notes }
     }
 
     // Updates local state by reconciling with notes received from some remote peer.
-    // Assumption: `remote_notes` have already been verified for signature validity and content.
-    async fn reconcile(&mut self, remote_peer: PeerId, remote_notes: Vec<VerifiedNote>) {
+    async fn reconcile(&mut self, remote_peer: PeerId, remote_notes: Vec<Note>) {
         let mut change_detected = false;
         // If a peer is previously unknown, or has a newer epoch number, we update its
         // corresponding entry in the map.
-        for mut note in remote_notes.into_iter() {
-            match self.known_peers.get_mut(&note.as_note().peer_id) {
+        for mut note in remote_notes {
+            match self.known_peers.get_mut(&note.peer_id) {
                 // If we know about this peer, and receive the same or an older epoch, we do
                 // nothing.
-                Some(ref curr_note) if note.as_note().epoch() <= curr_note.as_note().epoch() => {
-                    if note.as_note().epoch() < curr_note.as_note().epoch() {
+                Some(ref curr_note) if note.epoch() <= curr_note.epoch() => {
+                    if note.epoch() < curr_note.epoch() {
                         debug!(
                             "Received stale note for peer: {} from peer: {}",
-                            note.as_note().peer_id.short_str(),
+                            note.peer_id.short_str(),
                             remote_peer
                         );
                     }
@@ -339,7 +309,7 @@ where
                 _ => {
                     info!(
                         "Received updated note for peer: {} from peer: {}",
-                        note.as_note().peer_id.short_str(),
+                        note.peer_id.short_str(),
                         remote_peer.short_str()
                     );
                     // It is unlikely that we receive a note with a higher epoch number on us than
@@ -348,14 +318,14 @@ where
                     // with clock behind the previous node. In such scenarios, it's best to issue a
                     // newer note with an epoch number higher than what we observed (unless the
                     // issued epoch number is u64::MAX).
-                    if note.as_note().peer_id == self.peer_id {
+                    if note.peer_id == self.peer_id {
                         info!(
                             "Received an older note for self, but with higher epoch. \
                              Previous epoch: {}, current epoch: {}",
-                            note.as_note().epoch(),
-                            self.note.as_note().epoch()
+                            note.epoch(),
+                            self.note.epoch()
                         );
-                        if note.as_note().epoch() == std::u64::MAX {
+                        if note.epoch() == std::u64::MAX {
                             security_log(SecurityEvent::InvalidDiscoveryMsg)
                                 .data(
                                     "Older note received for self has u64::MAX epoch. \
@@ -365,20 +335,18 @@ where
                                 .log();
                             continue;
                         }
-                        let unverified_note = Note::new(
-                            &self.signer,
+                        note = Note::new(
                             self.peer_id,
-                            self.note.as_note().addrs().clone(),
+                            self.note.addrs().clone(),
                             &self.dns_seed_addr,
-                            max(note.as_note().epoch() + 1, get_unix_epoch()),
+                            max(note.epoch() + 1, get_unix_epoch()),
                         );
-                        self.note = VerifiedNote(unverified_note);
-                        note = self.note.clone();
+                        self.note = note.clone();
                     } else {
                         change_detected = true;
                     }
                     // Update internal state of the peer with new Note.
-                    self.known_peers.insert(note.as_note().peer_id, note);
+                    self.known_peers.insert(note.peer_id, note);
                 }
             }
         }
@@ -390,9 +358,7 @@ where
                     self.known_peers
                         .clone()
                         .iter()
-                        .map(|(peer_id, verified_note)| {
-                            (*peer_id, verified_note.as_note().addrs().clone())
-                        })
+                        .map(|(peer_id, note)| (*peer_id, note.addrs().clone()))
                         .collect(),
                 ))
                 .await
@@ -400,7 +366,7 @@ where
         }
     }
 
-    // Record the number of verified discovery notes we have for _other_ peers
+    // Record the number of discovery notes we have for _other_ peers
     // (not including our own note). We exclude counting our own note to be
     // consistent with the "connected_peers" metric.
     fn record_num_discovery_notes(&self) {
@@ -423,16 +389,6 @@ pub struct DiscoveryMsg {
     notes: Vec<Note>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct VerifiedNote(Note);
-
-impl VerifiedNote {
-    /// Give access to the internal note
-    fn as_note(&self) -> &Note {
-        &self.0
-    }
-}
-
 /// A `Note` contains a validator's signed `PeerInfo` as well as a signed
 /// `FullNodePayload`, which provides relevant discovery info for public full
 /// nodes and clients.
@@ -441,70 +397,31 @@ pub struct Note {
     /// Id of the peer.
     peer_id: PeerId,
     /// The validator node's signed `PeerInfo`.
-    signed_peer_info: SignedPeerInfo,
+    peer_info: PeerInfo,
     /// The validator node's signed `FullNodePayload`.
-    signed_full_node_info: SignedFullNodeInfo,
+    full_node_info: FullNodeInfo,
 }
 
 impl Note {
-    fn new(
-        signer: &Ed25519PrivateKey,
-        peer_id: PeerId,
-        addrs: Vec<NetworkAddress>,
-        dns_seed_addr: &[u8],
-        epoch: u64,
-    ) -> Self {
-        let peer_info = PeerInfo { addrs, epoch };
-        let signed_peer_info = peer_info.sign(&signer);
-
-        let full_node_info = FullNodeInfo {
-            dns_seed_addr: dns_seed_addr.to_vec(),
-            epoch,
-        };
-        let signed_full_node_info = full_node_info.sign(&signer);
-
-        Note {
+    fn new(peer_id: PeerId, addrs: Vec<NetworkAddress>, dns_seed_addr: &[u8], epoch: u64) -> Self {
+        Self {
             peer_id,
-            signed_peer_info,
-            signed_full_node_info,
+            peer_info: PeerInfo { addrs, epoch },
+            full_node_info: FullNodeInfo {
+                dns_seed_addr: dns_seed_addr.to_vec(),
+                epoch,
+            },
         }
-    }
-
-    /// Verifies validity of notes. Most fields have already been verified during initial
-    /// deserialization, so this only verifies that the note contains properly signed infos.
-    fn verify(self, pub_key: &Ed25519PublicKey) -> Result<VerifiedNote, NetworkError> {
-        self.signed_peer_info.verify(&pub_key)?;
-        self.signed_full_node_info.verify(&pub_key)?;
-        Ok(VerifiedNote(self))
     }
 
     /// Shortcut to the addrs embedded within the Note
     fn addrs(&self) -> &Vec<NetworkAddress> {
-        &self.signed_peer_info.peer_info.addrs
+        &self.peer_info.addrs
     }
 
     /// The current implementation derives epoch from the PeerInfo.
     fn epoch(&self) -> u64 {
-        self.signed_peer_info.peer_info.epoch
-    }
-}
-
-/// A `PeerInfo` authenticated by the peer's root `network_signing_key` stored on-chain.
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct SignedPeerInfo {
-    /// A `PeerInfo` represents the network address(es) of a Peer.
-    peer_info: PeerInfo,
-    /// A signature over the above serialzed `PeerInfo`, signed by the validator's
-    /// `network_signing_key` referred to by the `peer_id` account address.
-    signature: Ed25519Signature,
-}
-
-impl SignedPeerInfo {
-    fn verify(&self, pub_key: &Ed25519PublicKey) -> Result<(), NetworkError> {
-        self.signature
-            .verify(&self.peer_info.hash(), &pub_key)
-            .map_err(|_| NetworkErrorKind::SignatureError)?;
-        Ok(())
+        self.peer_info.epoch
     }
 }
 
@@ -519,34 +436,6 @@ pub struct PeerInfo {
     epoch: u64,
 }
 
-impl PeerInfo {
-    fn sign(self, signer: &Ed25519PrivateKey) -> SignedPeerInfo {
-        let signature = signer.sign_message(&self.hash());
-        SignedPeerInfo {
-            peer_info: self,
-            signature,
-        }
-    }
-}
-
-/// A `FullNodeInfo` authenticated by the peer's root `network_signing_key` stored on-chain.
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct SignedFullNodeInfo {
-    full_node_info: FullNodeInfo,
-    /// A signature over the above serialzed `FullNodeInfo`, signed by the validator's
-    /// `network_signing_key` referred to by the `peer_id` account address.
-    signature: Ed25519Signature,
-}
-
-impl SignedFullNodeInfo {
-    fn verify(&self, pub_key: &Ed25519PublicKey) -> Result<(), NetworkError> {
-        self.signature
-            .verify(&self.full_node_info.hash(), &pub_key)
-            .map_err(|_| NetworkErrorKind::SignatureError)?;
-        Ok(())
-    }
-}
-
 /// Discovery information relevant to public full nodes and clients.
 #[derive(Clone, Debug, Deserialize, Serialize, CryptoHasher, LCSCryptoHash)]
 pub struct FullNodeInfo {
@@ -559,16 +448,6 @@ pub struct FullNodeInfo {
     epoch: u64,
 }
 
-impl FullNodeInfo {
-    fn sign(self, signer: &Ed25519PrivateKey) -> SignedFullNodeInfo {
-        let signature = signer.sign_message(&self.hash());
-        SignedFullNodeInfo {
-            full_node_info: self,
-            signature,
-        }
-    }
-}
-
 fn get_unix_epoch() -> u64 {
     // TODO: Currently, SystemTime::now() in Rust is not guaranteed to use a monotonic clock.
     // At the moment, it's unclear how to do this in a platform-agnostic way. For Linux, we
@@ -577,33 +456,4 @@ fn get_unix_epoch() -> u64 {
         .duration_since(SystemTime::UNIX_EPOCH)
         .expect("System clock reset to before unix epoch")
         .as_millis() as u64
-}
-
-// Handles an inbound message from a remote peer as follows:
-// Verifies signatures on all notes contained in the message.
-fn handle_discovery_msg(
-    msg: DiscoveryMsg,
-    trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
-    peer_id: PeerId,
-) -> Result<Vec<VerifiedNote>, NetworkError> {
-    // Check that all received `Note`s are valid -- reject the whole message
-    // if any `Note` is invalid.
-    let mut verified_notes = vec![];
-    for note in msg.notes.into_iter() {
-        let rlock = trusted_peers.read().unwrap();
-        let pub_key = rlock
-            .get(&note.peer_id)
-            .ok_or_else(|| NetworkErrorKind::SignatureError)?;
-        let pub_key = &pub_key.signing_public_key;
-        let verified_note = note.verify(&pub_key).map_err(|err| {
-            security_log(SecurityEvent::InvalidDiscoveryMsg)
-                .error(&err)
-                .data(&peer_id)
-                .data(&trusted_peers)
-                .log();
-            err
-        })?;
-        verified_notes.push(verified_note);
-    }
-    Ok(verified_notes)
 }
