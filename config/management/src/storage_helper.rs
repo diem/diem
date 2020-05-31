@@ -30,6 +30,10 @@ impl StorageHelper {
         Box::new(NamespacedStorage::new(storage, namespace))
     }
 
+    pub fn path(&self) -> &Path {
+        self.temppath.path()
+    }
+
     pub fn path_string(&self) -> &str {
         self.temppath.path().to_str().unwrap()
     }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    config::{PersistableConfig, RoleType, RootPath},
+    config::{PersistableConfig, RoleType, RootPath, SecureBackend},
     keys::KeyPair,
     utils,
 };
@@ -263,12 +263,8 @@ impl IdentityKey {
         IdentityKey::FromConfig(KeyFromConfig { keypair })
     }
 
-    pub fn private_key_from_config(&mut self) -> Option<x25519::PrivateKey> {
-        if let IdentityKey::FromConfig(config) = self {
-            config.keypair.take_private()
-        } else {
-            None
-        }
+    pub fn from_storage(key_name: String, backend: SecureBackend) -> Self {
+        IdentityKey::FromStorage(KeyFromStorage { key_name, backend })
     }
 
     pub fn public_key_from_config(&self) -> Option<x25519::PublicKey> {
@@ -294,6 +290,7 @@ pub struct KeyFromConfig {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct KeyFromStorage {
     pub key_name: String,
+    pub backend: SecureBackend,
 }
 
 #[cfg(test)]

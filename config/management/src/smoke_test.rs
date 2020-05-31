@@ -7,12 +7,12 @@ use libra_config::config::{
     DiscoveryMethod, IdentityKey, NetworkConfig, NodeConfig, OnDiskStorageConfig, RoleType,
     SecureBackend,
 };
-use libra_crypto::{ed25519::Ed25519PrivateKey, x25519};
+use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_secure_storage::Value;
 use libra_swarm::swarm::{LibraNode, LibraSwarm, LibraSwarmDir};
 use libra_temppath::TempPath;
 use libra_types::account_address;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 struct ManagementBuilder {
     configs: Vec<NodeConfig>,
@@ -54,9 +54,12 @@ fn smoke_test() {
         .unwrap();
 
     // Step 3) Prepare validators
+    let temppath = TempPath::new();
+    temppath.create_as_dir().unwrap();
+    let swarm_path = temppath.path().to_path_buf();
+
     let mut configs = Vec::new();
     for i in 0..num_validators {
-        let storage = helper.storage(i.to_string());
         let ns = i.to_string();
         let ns_shared = ns.clone() + shared;
         helper.initialize(ns.clone());
@@ -78,21 +81,17 @@ fn smoke_test() {
 
         let validator_network = config.validator_network.as_mut().unwrap();
         let validator_network_address = validator_network.listen_address.clone();
-        let identity_key = storage
-            .export_private_key(libra_global_constants::VALIDATOR_NETWORK_KEY)
-            .unwrap();
-        let identity_key =
-            x25519::PrivateKey::from_ed25519_private_bytes(&identity_key.to_bytes()).unwrap();
-        validator_network.identity_key = IdentityKey::from_config(identity_key);
+        validator_network.identity_key = IdentityKey::from_storage(
+            libra_global_constants::VALIDATOR_NETWORK_KEY.into(),
+            secure_backend(helper.path(), &swarm_path, &ns, "full_node"),
+        );
 
         let fullnode_network = &mut config.full_node_networks[0];
-        let identity_key = storage
-            .export_private_key(libra_global_constants::FULLNODE_NETWORK_KEY)
-            .unwrap();
-        let identity_key =
-            x25519::PrivateKey::from_ed25519_private_bytes(&identity_key.to_bytes()).unwrap();
-        fullnode_network.identity_key = IdentityKey::from_config(identity_key);
         let fullnode_network_address = fullnode_network.listen_address.clone();
+        fullnode_network.identity_key = IdentityKey::from_storage(
+            libra_global_constants::FULLNODE_NETWORK_KEY.into(),
+            secure_backend(helper.path(), &swarm_path, &ns, "full_node"),
+        );
 
         configs.push(config);
 
@@ -114,26 +113,19 @@ fn smoke_test() {
     let genesis = helper.genesis(genesis_path.path()).unwrap();
 
     // Step 5) Introduce waypoint and genesis into the configs and verify along the way
-    let temppath = TempPath::new();
-    temppath.create_as_dir().unwrap();
-    let swarm_path = temppath.path().to_path_buf();
-
     for (i, mut config) in configs.iter_mut().enumerate() {
         let ns = i.to_string();
         let waypoint = helper.create_waypoint(&ns).unwrap();
         let output = helper.verify_genesis(&ns, genesis_path.path()).unwrap();
-        // 4 matches = 6 splits
+        // 4 matches = 5 splits
         assert_eq!(output.split("match").count(), 5);
 
-        let mut to = swarm_path.clone();
-        to.push("secure_store_for_".to_string() + &ns);
-        std::fs::copy(helper.path_string(), &to).unwrap();
-
-        let mut storage_config = OnDiskStorageConfig::default();
-        storage_config.path = to;
-        storage_config.set_data_dir(PathBuf::from(""));
-        storage_config.namespace = Some(ns);
-        config.consensus.safety_rules.backend = SecureBackend::OnDiskStorage(storage_config);
+        config.consensus.safety_rules.backend = secure_backend(
+            helper.path(),
+            &swarm_path,
+            &ns,
+            "safety-rules",
+        );
 
         // TODO: this should be exclusively acquired via secure storage
         config.base.waypoint = Some(waypoint);
@@ -158,4 +150,16 @@ fn smoke_test() {
 
     // Step 7) Launch and exit!
     swarm.launch_attempt(RoleType::Validator, false).unwrap();
+}
+
+fn secure_backend(original: &Path, dst_base: &Path, ns: &str, usage: &str) -> SecureBackend {
+    let mut dst = dst_base.to_path_buf();
+    dst.push(format!("{}_{}", usage, ns));
+    std::fs::copy(original, &dst).unwrap();
+
+    let mut storage_config = OnDiskStorageConfig::default();
+    storage_config.path = dst;
+    storage_config.set_data_dir(PathBuf::from(""));
+    storage_config.namespace = Some(ns.into());
+    SecureBackend::OnDiskStorage(storage_config)
 }
