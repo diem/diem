@@ -8,7 +8,7 @@ use libra_state_view::StateView;
 use libra_types::{access_path::AccessPath, account_address::AccountAddress};
 use libra_vm::data_cache::StateViewCache;
 use move_core_types::{
-    gas_schedule::{AbstractMemorySize, GasAlgebra, GasUnits},
+    gas_schedule::{GasAlgebra, GasUnits},
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
 };
@@ -48,7 +48,7 @@ fn execute(c: &mut Criterion, move_vm: &MoveVM, module: VerifiedModule, fun: &st
     let gas_schedule = zero_cost_schedule();
     let data_cache = StateViewCache::new(&state);
     let mut data_store = TransactionDataCache::new(&data_cache);
-    let mut cost_strategy = CostStrategy::transaction(&gas_schedule, GasUnits::new(100_000_000));
+    let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(100_000_000));
 
     move_vm
         .cache_module(module, &mut data_store)
@@ -68,7 +68,6 @@ fn execute(c: &mut Criterion, move_vm: &MoveVM, module: VerifiedModule, fun: &st
                     vec![],
                     vec![],
                     AccountAddress::default(),
-                    AbstractMemorySize::new(0),
                     &mut data_store,
                     &mut cost_strategy,
                 )

@@ -26,7 +26,7 @@ use libra_state_view::StateView;
 use libra_types::{account_address::AccountAddress, vm_error::StatusCode};
 use libra_vm::LibraVM;
 use move_core_types::{
-    gas_schedule::{AbstractMemorySize, GasAlgebra, GasUnits},
+    gas_schedule::{GasAlgebra, GasUnits},
     language_storage::TypeTag,
 };
 use move_vm_types::{gas_schedule::CostStrategy, values::Value};
@@ -108,8 +108,7 @@ fn execute_function_in_module(
 
         let gas_schedule = internals.gas_schedule()?;
         internals.with_txn_data_cache(state_view, |mut txn_context| {
-            let mut cost_strategy =
-                CostStrategy::transaction(gas_schedule, GasUnits::new(100_000_000));
+            let mut cost_strategy = CostStrategy::system(gas_schedule, GasUnits::new(0));
             move_vm.cache_module(module.clone(), &mut txn_context)?;
             move_vm.execute_function(
                 &module_id,
@@ -117,7 +116,6 @@ fn execute_function_in_module(
                 ty_args,
                 args,
                 AccountAddress::default(),
-                AbstractMemorySize::new(0),
                 &mut txn_context,
                 &mut cost_strategy,
             )
