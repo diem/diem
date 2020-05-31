@@ -576,6 +576,7 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
             ));
         }
 
+        let og_li_version = verified_target_li.ledger_info().version();
         let ledger_info_to_commit =
             Self::find_chunk_li(verified_target_li, epoch_change_li, &output)?;
         if ledger_info_to_commit.is_none() && txns_to_commit.is_empty() {
@@ -586,9 +587,12 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
             None => None,
         };
         debug!(
-            "[state sync] saving chunk {} with li version {:?}",
-            txns_list_log, ledger_info_version
+            "[state sync x] saving chunk {} with li version {:?} og li version: {:?} total txns {:?} num txns skipped {:?} first txn's version: {:?}",
+            txns_list_log, ledger_info_version, og_li_version, txns_to_commit.len(), num_txns_to_skip, first_version,
         );
+        // number of txns in chunk
+        // first version
+        // version of original LI, in case it was none
         self.db.writer.save_transactions(
             &txns_to_commit,
             first_version,

@@ -504,6 +504,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     request_epoch: request.current_epoch,
                     limit,
                 };
+                debug!("[state sync] subscription add");
                 self.subscriptions.insert(peer, request_info);
             }
             return Ok(());
@@ -618,7 +619,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         counters::RESPONSES_RECEIVED
             .with_label_values(&[&*peer.peer_id().to_string()])
             .inc();
-        debug!("[state sync] Processing chunk response {}", response);
+        debug!("[state sync x] Processing chunk response {} highest local li {:?} highest version {:?}", response, self.local_state.highest_local_li.ledger_info().version(), self.local_state.highest_version_in_local_storage());
         let txn_list_with_proof = response.txn_list_with_proof.clone();
         let known_version = self.local_state.highest_version_in_local_storage();
         let chunk_start_version =
@@ -914,6 +915,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         });
 
         ready.into_iter().for_each(|(peer, request_info)| {
+            debug!("[state sync] subscription deliver");
             if let Err(err) = self.deliver_subscription(peer, request_info) {
                 error!("[state sync] failed to notify subscriber {}", err);
             }
