@@ -291,8 +291,7 @@ fn dual_attestation_payment() {
     executor.execute_and_apply(payment_sender.signed_script_txn(
         encode_transfer_with_metadata_script(
             account_config::lbr_type_tag(),
-            payment_receiver.address(),
-            vec![],
+            *payment_receiver.address(),
             payment_amount,
             ref_id,
             signature.to_bytes().to_vec(),

@@ -17,7 +17,6 @@ use libra_crypto::{
 use libra_types::{
     account_config::{association_address, lbr_type_tag},
     on_chain_config::{OnChainConfig, VMConfig, VMPublishingOption},
-    transaction::authenticator::AuthenticationKey,
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
@@ -87,8 +86,6 @@ fn test_on_chain_config_pub_sub() {
 
     let validator_privkey = keys.take_private().unwrap();
     let validator_pubkey = keys.public_key();
-    let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
-    let validator_auth_key_prefix = auth_key.prefix().to_vec();
 
     // Create a dummy block prologue transaction that will bump the timer.
     let txn1 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
@@ -154,8 +151,7 @@ fn test_on_chain_config_pub_sub() {
         genesis_key.public_key(),
         Some(encode_transfer_with_metadata_script(
             lbr_type_tag(),
-            &validator_account,
-            validator_auth_key_prefix,
+            validator_account,
             1_000_000,
             vec![],
             vec![],

@@ -2,13 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account::{lbr_currency_code, Account, AccountData, AccountTypeSpecifier},
-    account_universe::{
-        txn_one_account_result, AUTransactionGen, AccountPair, AccountPairGen, AccountUniverse,
-    },
+    account_universe::{AUTransactionGen, AccountPair, AccountPairGen, AccountUniverse},
     common_transactions::peer_to_peer_txn,
 };
-use libra_proptest_helpers::Index;
 use libra_types::{
     transaction::{SignedTransaction, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
@@ -23,18 +19,6 @@ use proptest_derive::Arbitrary;
 #[proptest(params = "(u64, u64)")]
 pub struct P2PTransferGen {
     sender_receiver: AccountPairGen,
-    #[proptest(strategy = "params.0 ..= params.1")]
-    amount: u64,
-}
-
-/// Represents a peer-to-peer transaction performed in the account universe to a new receiver.
-///
-/// The parameters are the minimum and maximum balances to transfer.
-#[derive(Arbitrary, Clone, Debug)]
-#[proptest(params = "(u64, u64)")]
-pub struct P2PNewReceiverGen {
-    sender: Index,
-    receiver: Account,
     #[proptest(strategy = "params.0 ..= params.1")]
     amount: u64,
 }
@@ -113,49 +97,6 @@ impl AUTransactionGen for P2PTransferGen {
                     StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
                 ));
             }
-        }
-
-        (txn, (status, gas_used))
-    }
-}
-
-impl AUTransactionGen for P2PNewReceiverGen {
-    fn apply(
-        &self,
-        universe: &mut AccountUniverse,
-    ) -> (SignedTransaction, (TransactionStatus, u64)) {
-        let sender = universe.pick(self.sender).1;
-
-        // Create a new, nonexistent account for the receiver.
-        let txn = peer_to_peer_txn(
-            sender.account(),
-            &self.receiver,
-            sender.sequence_number,
-            self.amount,
-        );
-
-        let mut gas_used = sender.peer_to_peer_new_receiver_gas_cost();
-        let low_balance_gas_used = sender.peer_to_peer_new_receiver_too_low_gas_cost();
-        let gas_price = txn.gas_unit_price();
-
-        let (status, is_success) = txn_one_account_result(
-            sender,
-            self.amount,
-            gas_price,
-            gas_used,
-            low_balance_gas_used,
-        );
-        if is_success {
-            sender.event_counter_created = true;
-            universe.add_account(AccountData::with_account(
-                self.receiver.clone(),
-                self.amount,
-                lbr_currency_code(),
-                0,
-                AccountTypeSpecifier::default(),
-            ));
-        } else {
-            gas_used = 0;
         }
 
         (txn, (status, gas_used))

@@ -349,7 +349,6 @@ pub enum ScriptView {
     #[serde(rename = "peer_to_peer_transaction")]
     PeerToPeer {
         receiver: String,
-        auth_key_prefix: BytesView,
         amount: u64,
         currency: String,
         metadata: BytesView,
@@ -460,12 +459,11 @@ impl From<TransactionPayload> for ScriptView {
 
         let res = match code.as_str() {
             "peer_to_peer_with_metadata_transaction" => {
-                if let [TransactionArgument::Address(receiver), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata), TransactionArgument::U8Vector(metadata_signature)] =
+                if let [TransactionArgument::Address(receiver), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata), TransactionArgument::U8Vector(metadata_signature)] =
                     &args[..]
                 {
                     Ok(ScriptView::PeerToPeer {
                         receiver: receiver.to_string(),
-                        auth_key_prefix: BytesView::from(auth_key_prefix),
                         amount: *amount,
                         currency: ty_args.get(0).unwrap_or(&unknown_currency).to_string(),
                         metadata: BytesView::from(metadata),

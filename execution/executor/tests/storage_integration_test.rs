@@ -92,7 +92,6 @@ fn test_reconfiguration() {
     let validator_privkey = keys.take_private().unwrap();
     let validator_pubkey = keys.public_key();
     let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
-    let validator_auth_key_prefix = auth_key.prefix().to_vec();
     assert!(
         auth_key.derived_address() == validator_account,
         "Address derived from validator auth key does not match validator account address"
@@ -106,8 +105,7 @@ fn test_reconfiguration() {
         genesis_key.public_key(),
         Some(encode_transfer_with_metadata_script(
             lbr_type_tag(),
-            &validator_account,
-            validator_auth_key_prefix,
+            validator_account,
             1_000_000,
             vec![],
             vec![],
@@ -187,14 +185,6 @@ fn test_change_publishing_option_to_custom() {
 
     let signer = extract_signer(&mut config);
 
-    let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
-    let validator_auth_key_prefix = auth_key.prefix().to_vec();
-    assert_eq!(
-        auth_key.derived_address(),
-        validator_account,
-        "Address derived from validator auth key does not match validator account address"
-    );
-
     // give the validator some money so they can send a tx
     let txn1 = get_test_signed_transaction(
         genesis_account,
@@ -203,8 +193,7 @@ fn test_change_publishing_option_to_custom() {
         genesis_key.public_key(),
         Some(encode_transfer_with_metadata_script(
             lbr_type_tag(),
-            &validator_account,
-            validator_auth_key_prefix,
+            validator_account,
             1_000_000,
             vec![],
             vec![],
@@ -362,7 +351,6 @@ fn test_extend_whitelist() {
     let validator_pubkey = keys.public_key();
     let signer = extract_signer(&mut config);
     let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
-    let validator_auth_key_prefix = auth_key.prefix().to_vec();
     assert!(
         auth_key.derived_address() == validator_account,
         "Address derived from validator auth key does not match validator account address"
@@ -376,8 +364,7 @@ fn test_extend_whitelist() {
         genesis_key.public_key(),
         Some(encode_transfer_with_metadata_script(
             lbr_type_tag(),
-            &validator_account,
-            validator_auth_key_prefix,
+            validator_account,
             1_000_000,
             vec![],
             vec![],
@@ -605,8 +592,7 @@ fn test_execution_with_storage() {
         pubkey1.clone(),
         Some(encode_transfer_with_metadata_script(
             lbr_type_tag(),
-            &account2,
-            account2_auth_key.prefix().to_vec(),
+            account2,
             20_000,
             vec![],
             vec![],
@@ -622,8 +608,7 @@ fn test_execution_with_storage() {
         pubkey2,
         Some(encode_transfer_with_metadata_script(
             lbr_type_tag(),
-            &account3,
-            account3_auth_key.prefix().to_vec(),
+            account3,
             10_000,
             vec![],
             vec![],
@@ -639,8 +624,7 @@ fn test_execution_with_storage() {
         pubkey1.clone(),
         Some(encode_transfer_with_metadata_script(
             lbr_type_tag(),
-            &account3,
-            account3_auth_key.prefix().to_vec(),
+            account3,
             70_000,
             vec![],
             vec![],
@@ -662,8 +646,7 @@ fn test_execution_with_storage() {
             pubkey1.clone(),
             Some(encode_transfer_with_metadata_script(
                 lbr_type_tag(),
-                &account3,
-                account3_auth_key.prefix().to_vec(),
+                account3,
                 10_000,
                 vec![],
                 vec![],

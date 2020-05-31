@@ -138,18 +138,17 @@ pub unsafe extern "C" fn libra_TransactionP2PScript_from(
         update_last_error("receiver parameter must not be null.".to_string());
         return LibraStatus::InvalidArgument;
     }
-    let receiver_buf = slice::from_raw_parts(receiver, AuthenticationKey::LENGTH);
-    let receiver_auth_key = match AuthenticationKey::try_from(receiver_buf) {
+    let receiver_buf = slice::from_raw_parts(receiver, AccountAddress::LENGTH);
+    let receiver_address = match AccountAddress::try_from(receiver_buf) {
         Ok(result) => result,
         Err(e) => {
             update_last_error(format!(
-                "Invalid receiver authentication key: {}",
+                "Invalid receiver account address: {}",
                 e.to_string()
             ));
             return LibraStatus::InvalidArgument;
         }
     };
-    let receiver_address = receiver_auth_key.derived_address();
 
     let metadata = if metadata_bytes.is_null() {
         vec![]
@@ -177,8 +176,7 @@ pub unsafe extern "C" fn libra_TransactionP2PScript_from(
 
     let script = encode_transfer_with_metadata_script(
         coin_type_tag,
-        &receiver_address,
-        receiver_auth_key.prefix().to_vec(),
+        receiver_address,
         num_coins,
         metadata,
         metadata_signature,
@@ -285,18 +283,14 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
         update_last_error("receiver parameter must not be null.".to_string());
         return LibraStatus::InvalidArgument;
     }
-    let receiver_buf = slice::from_raw_parts(receiver, AuthenticationKey::LENGTH);
-    let receiver_auth_key = match AuthenticationKey::try_from(receiver_buf) {
+    let receiver_buf = slice::from_raw_parts(receiver, AccountAddress::LENGTH);
+    let receiver_address = match AccountAddress::try_from(receiver_buf) {
         Ok(result) => result,
         Err(e) => {
-            update_last_error(format!(
-                "Invalid receiver authentication key: {}",
-                e.to_string()
-            ));
+            update_last_error(format!("Invalid receiver address: {}", e.to_string()));
             return LibraStatus::InvalidArgument;
         }
     };
-    let receiver_address = receiver_auth_key.derived_address();
     let expiration_time = Duration::from_secs(expiration_time_secs);
 
     let metadata = if metadata_bytes.is_null() {
@@ -312,8 +306,7 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
 
     let program = encode_transfer_with_metadata_script(
         lbr_type_tag(),
-        &receiver_address,
-        receiver_auth_key.prefix().to_vec(),
+        receiver_address,
         num_coins,
         metadata,
         metadata_signature,
@@ -482,7 +475,6 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
                         args: LibraP2PTransferTransactionArgument {
                             value: *amount,
                             address: addr.into(),
-                            auth_key_prefix: auth_key_prefix_buffer,
                             metadata_bytes: vec![].as_ptr(),
                             metadata_len: 0,
                             metadata_signature_bytes: vec![].as_ptr(),
@@ -496,19 +488,14 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
             }
             "peer_to_peer_with_metadata_transaction" => {
                 let args = script.args();
-                if let [TransactionArgument::Address(addr), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata), TransactionArgument::U8Vector(metadata_signature)] =
+                if let [TransactionArgument::Address(addr), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata), TransactionArgument::U8Vector(metadata_signature)] =
                     &args[..]
                 {
-                    let mut auth_key_prefix_buffer =
-                        [0u8; AuthenticationKey::LENGTH - AccountAddress::LENGTH];
-                    auth_key_prefix_buffer.copy_from_slice(auth_key_prefix.as_slice());
-
                     txn_payload = Some(LibraTransactionPayload {
                         txn_type: TransactionType::PeerToPeer,
                         args: LibraP2PTransferTransactionArgument {
                             value: *amount,
                             address: addr.into(),
-                            auth_key_prefix: auth_key_prefix_buffer,
                             metadata_bytes: (*Box::into_raw(metadata.clone().into_boxed_slice()))
                                 .as_ptr(),
                             metadata_len: metadata.len(),
@@ -592,7 +579,7 @@ mod test {
 
         // create transfer parameters
         let sender_address = account_address::from_public_key(&public_key);
-        let receiver_auth_key = AuthenticationKey::random();
+        let receiver_address = AccountAddress::random();
         let sequence = 0;
         let amount = 100_000_000;
         let gas_unit_price = 123;
@@ -608,7 +595,7 @@ mod test {
 
         let script_result = unsafe {
             libra_TransactionP2PScript_from(
-                receiver_auth_key.as_ref().as_ptr(),
+                receiver_address.as_ref().as_ptr(),
                 coin_ident.as_ptr(),
                 amount,
                 metadata.as_ptr(),
@@ -651,15 +638,15 @@ mod test {
             from_bytes(signed_txn_bytes_buf).expect("LCS deserialization failed");
 
         if let TransactionPayload::Script(program) = deserialized_signed_txn.payload() {
-            match program.args()[2] {
+            match program.args()[1] {
                 TransactionArgument::U64(val) => assert_eq!(val, amount),
                 _ => unreachable!(),
             }
-            match &program.args()[3] {
+            match &program.args()[2] {
                 TransactionArgument::U8Vector(val) => assert_eq!(val, &metadata),
                 _ => unreachable!(),
             }
-            match &program.args()[4] {
+            match &program.args()[3] {
                 TransactionArgument::U8Vector(val) => assert_eq!(val, &metadata_signature),
                 _ => unreachable!(),
             }
@@ -782,7 +769,7 @@ mod test {
     #[test]
     fn test_lcs_p2p_transaction_script() {
         // create transfer parameters
-        let receiver_auth_key = AuthenticationKey::random();
+        let receiver_address = AccountAddress::random();
         let amount = 100_000_000;
         let metadata = vec![1, 2, 3];
         let metadata_signature = [0x1; 64].to_vec();
@@ -794,7 +781,7 @@ mod test {
 
         let script_result = unsafe {
             libra_TransactionP2PScript_from(
-                receiver_auth_key.as_ref().as_ptr(),
+                receiver_address.as_ref().as_ptr(),
                 coin_ident.as_ptr(),
                 amount,
                 metadata.as_ptr(),
@@ -812,17 +799,22 @@ mod test {
         let deserialized_script: Script =
             from_bytes(script_bytes).expect("LCS deserialization failed for Script");
 
-        if let TransactionArgument::U64(val) = deserialized_script.args()[2] {
+        if let TransactionArgument::Address(val) = deserialized_script.args()[0] {
+            assert_eq!(val, receiver_address);
+        } else {
+            unreachable!()
+        }
+        if let TransactionArgument::U64(val) = deserialized_script.args()[1] {
             assert_eq!(val, amount);
         } else {
             unreachable!()
         }
-        if let TransactionArgument::U8Vector(val) = deserialized_script.args()[3].clone() {
+        if let TransactionArgument::U8Vector(val) = deserialized_script.args()[2].clone() {
             assert_eq!(val, metadata)
         } else {
             unreachable!()
         }
-        if let TransactionArgument::U8Vector(val) = deserialized_script.args()[4].clone() {
+        if let TransactionArgument::U8Vector(val) = deserialized_script.args()[3].clone() {
             assert_eq!(val, metadata_signature)
         } else {
             unreachable!()
@@ -883,7 +875,7 @@ mod test {
 
         // create transfer parameters
         let sender_address = account_address::from_public_key(&public_key);
-        let receiver_auth_key = AuthenticationKey::random();
+        let receiver_address = AccountAddress::random();
         let sequence = 0;
         let amount = 100_000_000;
         let gas_unit_price = 123;
@@ -897,7 +889,7 @@ mod test {
         unsafe {
             libra_RawTransactionBytes_from(
                 sender_address.as_ref().as_ptr(),
-                receiver_auth_key.as_ref().as_ptr(),
+                receiver_address.as_ref().as_ptr(),
                 sequence,
                 amount,
                 max_gas_amount,
@@ -967,7 +959,7 @@ mod test {
     fn test_libra_signed_transaction_deserialize() {
         let public_key = Ed25519PrivateKey::generate_for_testing().public_key();
         let sender = AccountAddress::random();
-        let receiver_auth_key = AuthenticationKey::random();
+        let receiver = AccountAddress::random();
         let sequence_number = 1;
         let amount = 10_000_000;
         let max_gas_amount = 10;
@@ -979,8 +971,7 @@ mod test {
 
         let program = encode_transfer_with_metadata_script(
             lbr_type_tag(),
-            &receiver_auth_key.derived_address(),
-            receiver_auth_key.prefix().to_vec(),
+            receiver,
             amount,
             metadata.clone(),
             metadata_signature.clone(),
@@ -1037,10 +1028,6 @@ mod test {
             assert_eq!(
                 TransactionType::PeerToPeer,
                 libra_signed_txn.raw_txn.payload.txn_type
-            );
-            assert_eq!(
-                receiver_auth_key.derived_address(),
-                AccountAddress::new(libra_signed_txn.raw_txn.payload.args.address)
             );
             assert_eq!(amount, libra_signed_txn.raw_txn.payload.args.value);
             let txn_metadata = unsafe {
