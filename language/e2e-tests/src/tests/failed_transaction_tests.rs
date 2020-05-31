@@ -24,7 +24,7 @@ fn failed_transaction_cleanup_test() {
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = *sender.address();
     txn_data.max_gas_amount = GasUnits::new(100_000);
-    txn_data.gas_unit_price = GasPrice::new(2);
+    txn_data.gas_unit_price = GasPrice::new(0);
 
     let gas_schedule = zero_cost_schedule();
     let gas_left = GasUnits::new(10_000);

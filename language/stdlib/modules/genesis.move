@@ -26,9 +26,12 @@ module Genesis {
     fun initialize(
         association: &signer,
         config_account: &signer,
+        fee_account: &signer,
+        tc_account: &signer,
         tc_addr: address,
         tc_auth_key_prefix: vector<u8>,
-        genesis_auth_key: vector<u8>
+        genesis_auth_key: vector<u8>,
+        _fee_auth_key: vector<u8>,
     ) {
         let dummy_auth_key_prefix = x"00000000000000000000000000000000";
 
@@ -63,7 +66,9 @@ module Genesis {
 
         // Register transaction fee accounts
         LibraAccount::create_testnet_account<LBR::T>(0xFEE, copy dummy_auth_key_prefix);
-
+        TransactionFee::add_txn_fee_currency(fee_account, &coin1_burn_cap);
+        TransactionFee::add_txn_fee_currency(fee_account, &coin2_burn_cap);
+        TransactionFee::initialize(tc_account, fee_account);
 
         // Create the treasury compliance account
         LibraAccount::create_treasury_compliance_account<LBR::T>(
@@ -92,15 +97,10 @@ module Genesis {
         LibraAccount::rotate_authentication_key(copy genesis_auth_key);
     }
 
-    // TODO: use signer for this and combine with the above once add_currency and
-    // initialize_transaction accept a signer parameter
-    fun initialize_txn_fee_account(fee_account: &signer, auth_key: vector<u8>) {
-        // Create the transaction fee account
-        LibraAccount::add_currency<Coin1::T>(fee_account);
-        LibraAccount::add_currency<Coin2::T>(fee_account);
-        TransactionFee::initialize_transaction_fees(fee_account);
+    // TODO: combine with the above once `rotate_authentication_key` and
+    // `publish_preburn` take a `signer` parameter.
+    fun initialize_txn_fee_account(_fee_account: &signer, auth_key: vector<u8>) {
         LibraAccount::rotate_authentication_key(auth_key);
     }
-
 }
 }

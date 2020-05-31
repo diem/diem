@@ -141,8 +141,11 @@ fn create_and_initialize_main_accounts(
         vec![
             Value::transaction_argument_signer_reference(root_association_address),
             Value::transaction_argument_signer_reference(config_address()),
+            Value::transaction_argument_signer_reference(fee_account_address),
+            Value::transaction_argument_signer_reference(tc_account_address),
             Value::address(tc_account_address),
             Value::vector_u8(AuthenticationKey::prefix(&genesis_auth_key).to_vec()), // TODO: different key here?
+            Value::vector_u8(genesis_auth_key.to_vec()),
             Value::vector_u8(genesis_auth_key.to_vec()),
         ],
     );

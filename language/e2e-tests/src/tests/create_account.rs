@@ -31,8 +31,7 @@ fn create_account() {
     executor.apply_write_set(output.write_set());
 
     // check that numbers in stored DB are correct
-    let gas = output.gas_used();
-    let sender_balance = 1_000_000 - initial_amount - gas;
+    let sender_balance = 1_000_000 - initial_amount;
     let updated_sender = executor
         .read_account_resource(sender.account())
         .expect("sender must exist");
@@ -68,8 +67,7 @@ fn create_account_zero_balance() {
     executor.apply_write_set(output.write_set());
 
     // check that numbers in stored DB are correct
-    let gas = output.gas_used();
-    let sender_balance = 1_000_000 - initial_amount - gas;
+    let sender_balance = 1_000_000 - initial_amount;
     let updated_sender = executor
         .read_account_resource(sender.account())
         .expect("sender must exist");

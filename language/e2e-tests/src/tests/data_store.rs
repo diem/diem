@@ -241,7 +241,7 @@ fn add_module_txn(sender: &AccountData, seq_num: u64) -> (VerifiedModule, Signed
             TransactionPayload::Module(Module::new(module_blob)),
             seq_num,
             100_000,
-            1,
+            0,
             LBR_NAME.to_owned(),
         ),
     )
@@ -270,7 +270,7 @@ fn add_resource_txn(
         module,
         seq_num,
         100_000,
-        1,
+        0,
         LBR_NAME.to_owned(),
     )
 }
@@ -298,7 +298,7 @@ fn remove_resource_txn(
         module,
         seq_num,
         100_000,
-        1,
+        0,
         LBR_NAME.to_owned(),
     )
 }
@@ -326,7 +326,7 @@ fn borrow_resource_txn(
         module,
         seq_num,
         100_000,
-        1,
+        0,
         LBR_NAME.to_owned(),
     )
 }
@@ -354,7 +354,7 @@ fn change_resource_txn(
         module,
         seq_num,
         100_000,
-        1,
+        0,
         LBR_NAME.to_owned(),
     )
 }

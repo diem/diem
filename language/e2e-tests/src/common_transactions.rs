@@ -79,7 +79,7 @@ pub fn create_account_txn(
         args,
         seq_num,
         gas_costs::TXN_RESERVED,
-        1,
+        0,
         LBR_NAME.to_owned(),
     )
 }
@@ -131,7 +131,7 @@ pub fn peer_to_peer_txn(
         args,
         seq_num,
         gas_costs::TXN_RESERVED, // this is a default for gas
-        1,                       // this is a default for gas
+        0,                       // this is a default for gas
         LBR_NAME.to_owned(),
     )
 }
@@ -175,7 +175,7 @@ pub fn rotate_key_txn(sender: &Account, new_key_hash: Vec<u8>, seq_num: u64) -> 
         args,
         seq_num,
         gas_costs::TXN_RESERVED,
-        1,
+        0,
         LBR_NAME.to_owned(),
     )
 }
@@ -196,7 +196,7 @@ pub fn raw_rotate_key_txn(
         args,
         seq_num,
         gas_costs::TXN_RESERVED,
-        1,
+        0,
         LBR_NAME.to_owned(),
     )
 }
@@ -216,7 +216,7 @@ pub fn rotate_consensus_pubkey_txn(
         args,
         seq_num,
         gas_costs::TXN_RESERVED * 4,
-        1,
+        0,
         LBR_NAME.to_owned(),
     )
 }

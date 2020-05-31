@@ -10,12 +10,12 @@ use 0x0::Transaction;
 // Make sure we can mint and burn
 fun main(account: &signer) {
     let sender = Signer::address_of(account);
-    let coin1_coins = Libra::mint<Coin1::T>(account, 10);
-    let coin2_coins = Libra::mint<Coin2::T>(account, 10);
     let pre_coin1 = Libra::new_preburn<Coin1::T>();
     let pre_coin2 = Libra::new_preburn<Coin2::T>();
     Libra::publish_preburn(account, pre_coin1);
     Libra::publish_preburn(account, pre_coin2);
+    let coin1_coins = Libra::mint<Coin1::T>(account, 10);
+    let coin2_coins = Libra::mint<Coin2::T>(account, 10);
     Transaction::assert(Libra::market_cap<Coin1::T>() == 10, 7);
     Transaction::assert(Libra::market_cap<Coin2::T>() == 10, 8);
     Libra::preburn_to(account, coin1_coins);

@@ -1,10 +1,5 @@
 script {
-    use 0x0::Coin1;
-    use 0x0::Coin2;
-    use 0x0::LBR;
-    use 0x0::LibraAccount;
     use 0x0::LibraSystem;
-    use 0x0::Signer;
     use 0x0::Transaction;
     use 0x0::ValidatorConfig;
 
@@ -28,18 +23,5 @@ script {
             fullnodes_network_address
         );
         LibraSystem::add_validator(Transaction::sender());
-
-
-        let sender = Signer::address_of(account);
-        // Validating nodes need to accept all currencies in order to receive txn fees
-        if (!LibraAccount::accepts_currency<Coin1::T>(sender)) {
-            LibraAccount::add_currency<Coin1::T>(account)
-        };
-        if (!LibraAccount::accepts_currency<Coin2::T>(sender)) {
-            LibraAccount::add_currency<Coin2::T>(account)
-        };
-        if (!LibraAccount::accepts_currency<LBR::T>(sender)) {
-            LibraAccount::add_currency<LBR::T>(account)
-        };
-    }
+}
 }

@@ -1,5 +1,16 @@
-//! account: default, 10000, 0
+//! account: default, 0, 0
 
+//! new-transaction
+//! sender: association
+import 0x0.LBR;
+import 0x0.LibraAccount;
+import 0x0.Libra;
+main(blessed: &signer) {
+    LibraAccount.deposit<LBR.T>({{default}}, LBR.mint(move(blessed), 10000));
+    return;
+}
+
+//! new-transaction
 //! gas-price: 1
 //! max-gas: 5000
 main() {

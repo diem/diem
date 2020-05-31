@@ -21,6 +21,7 @@ mod peer_to_peer;
 mod rotate_key;
 mod scripts;
 mod transaction_builder;
+mod transaction_fees;
 mod validator_set_management;
 mod verify_txn;
 mod write_set;

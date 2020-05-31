@@ -25,7 +25,6 @@ fun main(account: &signer) {
     let pre_coin2 = Libra::new_preburn<Coin2::T>();
     Libra::publish_preburn(account, pre_coin1);
     Libra::publish_preburn(account, pre_coin2);
-
     let coin1 = Libra::mint<Coin1::T>(account, 10000);
     let coin2 = Libra::mint<Coin2::T>(account, 10000);
     Transaction::assert(Libra::value<Coin1::T>(&coin1) == 10000, 0);

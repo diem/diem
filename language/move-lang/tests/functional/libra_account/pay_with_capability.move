@@ -11,9 +11,9 @@ module AlicePays {
         cap: LibraAccount::WithdrawalCapability,
     }
 
-    public fun create() {
-        move_to_sender(T {
-            cap: LibraAccount::extract_sender_withdrawal_capability(),
+    public fun create(sender: &signer) {
+        move_to(sender, T {
+            cap: LibraAccount::extract_sender_withdrawal_capability(sender),
         })
     }
 
@@ -35,8 +35,8 @@ module AlicePays {
 //! sender: alice
 script {
 use {{alice}}::AlicePays;
-fun main() {
-    AlicePays::create()
+fun main(sender: &signer) {
+    AlicePays::create(sender)
 }
 }
 
