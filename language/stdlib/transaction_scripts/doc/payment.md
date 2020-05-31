@@ -1,7 +1,7 @@
 
 <a name="SCRIPT"></a>
 
-# Script `peer_to_peer_with_metadata.move`
+# Script `payment.move`
 
 ### Table of Contents
 

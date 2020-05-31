@@ -402,6 +402,9 @@ fn test_concurrent_transfers_single_node() {
         .mint_coins(&["mintb", "0", "100", "LBR"], true)
         .unwrap();
     client_proxy.create_next_account(false).unwrap();
+    client_proxy
+        .mint_coins(&["mintb", "1", "10", "LBR"], true)
+        .unwrap();
     for _ in 0..20 {
         client_proxy
             .transfer_coins(&["t", "0", "1", "1", "LBR"], false)
@@ -415,7 +418,7 @@ fn test_concurrent_transfers_single_node() {
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(21.0, "LBR".to_string())],
+        vec![(31.0, "LBR".to_string())],
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
 }
@@ -429,6 +432,9 @@ fn test_trace() {
         .mint_coins(&["mintb", "0", "100", "LBR"], true)
         .unwrap();
     client_proxy.create_next_account(false).unwrap();
+    client_proxy
+        .mint_coins(&["mintb", "1", "10", "LBR"], true)
+        .unwrap();
     client_proxy
         .transfer_coins(&["t", "0", "1", "1", "LBR"], false)
         .unwrap();
@@ -457,6 +463,9 @@ fn test_basic_restartability() {
         .mint_coins(&["mb", "0", "100", "LBR"], true)
         .unwrap();
     client_proxy
+        .mint_coins(&["mb", "1", "10", "LBR"], true)
+        .unwrap();
+    client_proxy
         .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
@@ -464,7 +473,7 @@ fn test_basic_restartability() {
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(20.0, "LBR".to_string())],
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
     let peer_to_restart = 0;
@@ -479,7 +488,7 @@ fn test_basic_restartability() {
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(20.0, "LBR".to_string())],
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
     client_proxy
@@ -490,7 +499,7 @@ fn test_basic_restartability() {
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(20.0, "LBR".to_string())],
+        vec![(30.0, "LBR".to_string())],
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
 }
@@ -504,6 +513,9 @@ fn test_startup_sync_state() {
         .mint_coins(&["mb", "0", "100", "LBR"], true)
         .unwrap();
     client_proxy_1
+        .mint_coins(&["mb", "1", "10", "LBR"], true)
+        .unwrap();
+    client_proxy_1
         .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
@@ -511,7 +523,7 @@ fn test_startup_sync_state() {
         client_proxy_1.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(20.0, "LBR".to_string())],
         client_proxy_1.get_balances(&["b", "1"]).unwrap()
     ));
     let peer_to_stop = 0;
@@ -550,7 +562,7 @@ fn test_startup_sync_state() {
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(20.0, "LBR".to_string())],
         client_proxy_0.get_balances(&["b", "1"]).unwrap()
     ));
     client_proxy_1
@@ -564,7 +576,7 @@ fn test_startup_sync_state() {
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(20.0, "LBR".to_string())],
+        vec![(30.0, "LBR".to_string())],
         client_proxy_0.get_balances(&["b", "1"]).unwrap()
     ));
 }
@@ -578,6 +590,9 @@ fn test_startup_sync_state_with_empty_consensus_db() {
         .mint_coins(&["mb", "0", "100", "LBR"], true)
         .unwrap();
     client_proxy_1
+        .mint_coins(&["mb", "1", "10", "LBR"], true)
+        .unwrap();
+    client_proxy_1
         .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
@@ -585,7 +600,7 @@ fn test_startup_sync_state_with_empty_consensus_db() {
         client_proxy_1.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(20.0, "LBR".to_string())],
         client_proxy_1.get_balances(&["b", "1"]).unwrap()
     ));
     let peer_to_stop = 0;
@@ -621,7 +636,7 @@ fn test_startup_sync_state_with_empty_consensus_db() {
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(20.0, "LBR".to_string())],
         client_proxy_0.get_balances(&["b", "1"]).unwrap()
     ));
     client_proxy_1
@@ -635,7 +650,7 @@ fn test_startup_sync_state_with_empty_consensus_db() {
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(20.0, "LBR".to_string())],
+        vec![(30.0, "LBR".to_string())],
         client_proxy_0.get_balances(&["b", "1"]).unwrap()
     ));
 }
@@ -654,6 +669,9 @@ fn test_basic_state_synchronization() {
         .mint_coins(&["mb", "0", "100", "LBR"], true)
         .unwrap();
     client_proxy
+        .mint_coins(&["mb", "1", "10", "LBR"], true)
+        .unwrap();
+    client_proxy
         .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
         .unwrap();
     assert!(compare_balances(
@@ -661,7 +679,7 @@ fn test_basic_state_synchronization() {
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(20.0, "LBR".to_string())],
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
 
@@ -674,7 +692,7 @@ fn test_basic_state_synchronization() {
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(20.0, "LBR".to_string())],
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
     client_proxy
@@ -698,7 +716,7 @@ fn test_basic_state_synchronization() {
         client_proxy2.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(11.0, "LBR".to_string())],
+        vec![(21.0, "LBR".to_string())],
         client_proxy2.get_balances(&["b", "1"]).unwrap()
     ));
 
@@ -710,7 +728,7 @@ fn test_basic_state_synchronization() {
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(11.0, "LBR".to_string())],
+        vec![(21.0, "LBR".to_string())],
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
     for _ in 0..10 {
@@ -736,7 +754,7 @@ fn test_basic_state_synchronization() {
         client_proxy2.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(21.0, "LBR".to_string())],
+        vec![(31.0, "LBR".to_string())],
         client_proxy2.get_balances(&["b", "1"]).unwrap()
     ));
 }
@@ -752,16 +770,11 @@ fn test_external_transaction_signer() {
     // create transfer parameters
     let sender_auth_key = AuthenticationKey::ed25519(&public_key);
     let sender_address = sender_auth_key.derived_address();
-    let (receiver_address, receiver_auth_key_opt) = client_proxy
+    let (receiver_address, receiver_auth_key) = client_proxy
         .get_account_address_from_parameter(
             "1bfb3b36384dabd29e38b4a0eafd9797b75141bb007cea7943f8a4714d3d784a",
         )
         .unwrap();
-    assert!(
-        receiver_auth_key_opt.is_some(),
-        "Failed to look up receiver auth key from parameter"
-    );
-    let receiver_auth_key = receiver_auth_key_opt.unwrap();
     let amount = 1_000_000;
     let gas_unit_price = 1;
     let max_gas_amount = 1_000_000;
@@ -770,6 +783,18 @@ fn test_external_transaction_signer() {
     client_proxy
         .mint_coins(
             &["mintb", &format!("{}", sender_auth_key), "10", "LBR"],
+            true,
+        )
+        .unwrap();
+    // mint to the recipient address
+    client_proxy
+        .mint_coins(
+            &[
+                "mintb",
+                &format!("{}", receiver_auth_key.unwrap()),
+                "1",
+                "LBR",
+            ],
             true,
         )
         .unwrap();
@@ -786,7 +811,6 @@ fn test_external_transaction_signer() {
             sender_address,
             sequence_number,
             receiver_address,
-            receiver_auth_key.prefix().to_vec(),
             amount,
             currency_code.to_owned(),
             Some(gas_unit_price),
@@ -837,19 +861,12 @@ fn test_external_transaction_signer() {
                     receiver: p_receiver,
                     amount: p_amount,
                     currency: p_currency,
-                    auth_key_prefix,
                     metadata,
                     metadata_signature,
                 } => {
                     assert_eq!(p_receiver, receiver_address.to_string());
                     assert_eq!(p_amount, amount);
                     assert_eq!(p_currency, currency_code.to_string());
-                    assert_eq!(
-                        auth_key_prefix
-                            .into_bytes()
-                            .expect("failed to turn key to bytes"),
-                        receiver_auth_key.prefix()
-                    );
                     assert_eq!(
                         metadata
                             .into_bytes()

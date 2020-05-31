@@ -149,8 +149,7 @@ impl TransactionGenerator {
                     sender.public_key.clone(),
                     encode_transfer_with_metadata_script(
                         lbr_type_tag(),
-                        &receiver.address,
-                        receiver.auth_key_prefix(),
+                        receiver.address,
                         1, /* amount */
                         vec![],
                         vec![],

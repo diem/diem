@@ -67,7 +67,7 @@ fn test_validate_transaction() {
 
     let address = account_config::association_address();
     let program =
-        encode_transfer_with_metadata_script(lbr_type_tag(), &address, vec![], 100, vec![], vec![]);
+        encode_transfer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
@@ -90,7 +90,7 @@ fn test_validate_invalid_signature() {
 
     let address = account_config::association_address();
     let program =
-        encode_transfer_with_metadata_script(lbr_type_tag(), &address, vec![], 100, vec![], vec![]);
+        encode_transfer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_unchecked_txn(
         address,
         1,
@@ -218,7 +218,7 @@ fn test_validate_max_gas_price_below_bounds() {
 
     let address = account_config::association_address();
     let program =
-        encode_transfer_with_metadata_script(lbr_type_tag(), &address, vec![], 100, vec![], vec![]);
+        encode_transfer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
@@ -294,7 +294,7 @@ fn test_validate_invalid_auth_key() {
 
     let address = account_config::association_address();
     let program =
-        encode_transfer_with_metadata_script(lbr_type_tag(), &address, vec![], 100, vec![], vec![]);
+        encode_transfer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
@@ -317,7 +317,7 @@ fn test_validate_account_doesnt_exist() {
     let address = account_config::association_address();
     let random_account_addr = account_address::AccountAddress::random();
     let program =
-        encode_transfer_with_metadata_script(lbr_type_tag(), &address, vec![], 100, vec![], vec![]);
+        encode_transfer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         random_account_addr,
         1,
@@ -343,7 +343,7 @@ fn test_validate_sequence_number_too_new() {
 
     let address = account_config::association_address();
     let program =
-        encode_transfer_with_metadata_script(lbr_type_tag(), &address, vec![], 100, vec![], vec![]);
+        encode_transfer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
@@ -362,7 +362,7 @@ fn test_validate_invalid_arguments() {
 
     let address = account_config::association_address();
     let (program_script, _) =
-        encode_transfer_with_metadata_script(lbr_type_tag(), &address, vec![], 100, vec![], vec![])
+        encode_transfer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![])
             .into_inner();
     let program = Script::new(program_script, vec![], vec![TransactionArgument::U64(42)]);
     let transaction = transaction_test_helpers::get_test_signed_txn(

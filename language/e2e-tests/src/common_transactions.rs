@@ -117,7 +117,6 @@ pub fn peer_to_peer_txn(
 ) -> SignedTransaction {
     let mut args: Vec<TransactionArgument> = Vec::new();
     args.push(TransactionArgument::Address(*receiver.address()));
-    args.push(TransactionArgument::U8Vector(receiver.auth_key_prefix()));
     args.push(TransactionArgument::U64(transfer_amount));
     args.push(TransactionArgument::U8Vector(vec![]));
     args.push(TransactionArgument::U8Vector(vec![]));

@@ -113,7 +113,6 @@ fn single_peer_to_peer_with_padding() {
             vec![account_config::lbr_type_tag()],
             vec![
                 TransactionArgument::Address(*receiver.address()),
-                TransactionArgument::U8Vector(vec![]),
                 TransactionArgument::U64(transfer_amount),
                 TransactionArgument::U8Vector(vec![]),
                 TransactionArgument::U8Vector(vec![]),
@@ -253,44 +252,6 @@ fn zero_amount_peer_to_peer() {
         &output.status(),
         &TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(7))
     ));
-}
-
-#[test]
-fn peer_to_peer_create_account() {
-    // create a FakeExecutor with a genesis from file
-    let mut executor = FakeExecutor::from_genesis_file();
-    // create and publish a sender with 1_000_000 coins
-    let sender = AccountData::new(1_000_000, 10);
-    executor.add_account_data(&sender);
-    let new_account = Account::new();
-
-    // define the arguments to the peer to peer transaction
-    let transfer_amount = 1_000;
-    let txn = peer_to_peer_txn(sender.account(), &new_account, 10, transfer_amount);
-
-    // execute transaction
-    let output = executor.execute_transaction(txn);
-    assert_eq!(
-        output.status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
-    );
-    executor.apply_write_set(output.write_set());
-
-    // check that numbers in stored DB are correct
-    let sender_balance = 1_000_000 - transfer_amount;
-    let receiver_balance = transfer_amount;
-    let updated_sender = executor
-        .read_account_resource(sender.account())
-        .expect("sender must exist");
-    let updated_sender_balance = executor
-        .read_balance_resource(sender.account(), account::lbr_currency_code())
-        .expect("sender balance must exist");
-    let updated_receiver_balance = executor
-        .read_balance_resource(&new_account, account::lbr_currency_code())
-        .expect("receiver balance must exist");
-    assert_eq!(receiver_balance, updated_receiver_balance.coin());
-    assert_eq!(sender_balance, updated_sender_balance.coin());
-    assert_eq!(11, updated_sender.sequence_number());
 }
 
 // Holder for transaction data; arguments to transactions.

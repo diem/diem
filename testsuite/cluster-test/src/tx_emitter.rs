@@ -446,7 +446,7 @@ impl SubmissionWorker {
                 .all_addresses
                 .choose(&mut rng)
                 .expect("all_addresses can't be empty");
-            let request = gen_transfer_txn_request(sender, receiver, Vec::new(), 1);
+            let request = gen_transfer_txn_request(sender, receiver, 1);
             requests.push(request);
         }
         requests
@@ -559,17 +559,34 @@ fn gen_mint_request(faucet_account: &mut AccountData, num_coins: u64) -> SignedT
 fn gen_transfer_txn_request(
     sender: &mut AccountData,
     receiver: &AccountAddress,
-    receiver_auth_key_prefix: Vec<u8>,
     num_coins: u64,
 ) -> SignedTransaction {
     gen_submit_transaction_request(
         transaction_builder::encode_transfer_with_metadata_script(
             lbr_type_tag(),
-            receiver,
-            receiver_auth_key_prefix,
+            *receiver,
             num_coins,
             vec![],
             vec![],
+        ),
+        sender,
+    )
+}
+
+fn gen_create_child_txn_request(
+    sender: &mut AccountData,
+    receiver: &AccountAddress,
+    receiver_auth_key_prefix: Vec<u8>,
+    num_coins: u64,
+) -> SignedTransaction {
+    let add_all_currencies = false;
+    gen_submit_transaction_request(
+        transaction_builder::encode_create_child_vasp_account(
+            lbr_type_tag(),
+            *receiver,
+            receiver_auth_key_prefix,
+            add_all_currencies,
+            num_coins,
         ),
         sender,
     )
@@ -608,7 +625,7 @@ fn gen_random_accounts(num_accounts: usize) -> Vec<AccountData> {
         .collect()
 }
 
-fn gen_transfer_txn_requests(
+fn gen_create_child_txn_requests(
     source_account: &mut AccountData,
     accounts: &[AccountData],
     amount: u64,
@@ -616,7 +633,7 @@ fn gen_transfer_txn_requests(
     accounts
         .iter()
         .map(|account| {
-            gen_transfer_txn_request(
+            gen_create_child_txn_request(
                 source_account,
                 &account.address,
                 account.auth_key_prefix(),
@@ -699,7 +716,7 @@ async fn create_new_accounts(
             min(MAX_TXN_BATCH_SIZE, num_new_accounts - i),
         ));
         let requests =
-            gen_transfer_txn_requests(&mut source_account, &batch, libra_per_new_account);
+            gen_create_child_txn_requests(&mut source_account, &batch, libra_per_new_account);
         execute_and_wait_transactions(&mut client, &mut source_account, requests).await?;
         i += batch.len();
         accounts.append(&mut batch);
