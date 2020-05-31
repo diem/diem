@@ -683,7 +683,6 @@ impl ClientProxy {
         &mut self,
         sender_account_ref_id: usize,
         receiver_address: &AccountAddress,
-        receiver_auth_key_prefix: Vec<u8>,
         num_coins: u64,
         coin_currency: String,
         gas_unit_price: Option<u64>,
@@ -702,8 +701,7 @@ impl ClientProxy {
             })?;
             let program = transaction_builder::encode_transfer_with_metadata_script(
                 type_tag_for_currency_code(currency_code),
-                &receiver_address,
-                receiver_auth_key_prefix,
+                *receiver_address,
                 num_coins,
                 vec![],
                 vec![],
@@ -742,7 +740,6 @@ impl ClientProxy {
         sender_address: AccountAddress,
         sender_sequence_number: u64,
         receiver_address: AccountAddress,
-        receiver_auth_key_prefix: Vec<u8>,
         num_coins: u64,
         coin_currency: String,
         gas_unit_price: Option<u64>,
@@ -753,8 +750,7 @@ impl ClientProxy {
             .map_err(|_| format_err!("Invalid currency code {} specified", coin_currency))?;
         let program = transaction_builder::encode_transfer_with_metadata_script(
             type_tag_for_currency_code(currency_code),
-            &receiver_address,
-            receiver_auth_key_prefix,
+            receiver_address,
             num_coins,
             vec![],
             vec![],
@@ -784,7 +780,7 @@ impl ClientProxy {
 
         let (sender_account_address, _) =
             self.get_account_address_from_parameter(space_delim_strings[1])?;
-        let (receiver_address, receiver_auth_key_opt) =
+        let (receiver_address, _) =
             self.get_account_address_from_parameter(space_delim_strings[2])?;
 
         let transfer_currency = space_delim_strings[4];
@@ -824,14 +820,10 @@ impl ClientProxy {
         };
 
         let sender_account_ref_id = self.get_account_ref_id(&sender_account_address)?;
-        let receiver_auth_key_prefix = receiver_auth_key_opt.map_or(Vec::new(), |auth_key| {
-            AuthenticationKey::prefix(&auth_key).to_vec()
-        });
 
         self.transfer_coins_int(
             sender_account_ref_id,
             &receiver_address,
-            receiver_auth_key_prefix,
             num_coins,
             transfer_currency.to_owned(),
             gas_unit_price,

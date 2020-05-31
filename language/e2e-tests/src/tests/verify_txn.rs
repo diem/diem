@@ -31,8 +31,7 @@ fn verify_signature() {
     let private_key = Ed25519PrivateKey::generate_for_testing();
     let program = encode_transfer_with_metadata_script(
         lbr_type_tag(),
-        sender.address(),
-        vec![],
+        *sender.address(),
         100,
         vec![],
         vec![],
@@ -61,8 +60,7 @@ fn verify_reserved_sender() {
     let private_key = Ed25519PrivateKey::generate_for_testing();
     let program = encode_transfer_with_metadata_script(
         lbr_type_tag(),
-        sender.address(),
-        vec![],
+        *sender.address(),
         100,
         vec![],
         vec![],
@@ -96,7 +94,6 @@ fn verify_simple_payment() {
     let transfer_amount = 1_000;
     let mut args: Vec<TransactionArgument> = Vec::new();
     args.push(TransactionArgument::Address(*receiver.address()));
-    args.push(TransactionArgument::U8Vector(vec![]));
     args.push(TransactionArgument::U64(transfer_amount));
     args.push(TransactionArgument::U8Vector(vec![]));
     args.push(TransactionArgument::U8Vector(vec![]));
@@ -324,7 +321,7 @@ fn verify_simple_payment() {
         executor.execute_transaction(txn).status(),
         &TransactionStatus::Keep(
             VMStatus::new(StatusCode::TYPE_MISMATCH)
-                .with_message("argument length mismatch: expected 5 got 2".to_string())
+                .with_message("argument length mismatch: expected 4 got 2".to_string())
         )
     );
 
@@ -343,7 +340,7 @@ fn verify_simple_payment() {
         executor.execute_transaction(txn).status(),
         &TransactionStatus::Keep(
             VMStatus::new(StatusCode::TYPE_MISMATCH)
-                .with_message("argument length mismatch: expected 5 got 0".to_string())
+                .with_message("argument length mismatch: expected 4 got 0".to_string())
         )
     );
 }

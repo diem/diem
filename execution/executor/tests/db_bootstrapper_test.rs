@@ -152,10 +152,8 @@ fn get_transfer_transaction(
     sender_seq_number: u64,
     sender_key: &Ed25519PrivateKey,
     recipient: AccountAddress,
-    recipient_key: &Ed25519PrivateKey,
     amount: u64,
 ) -> Transaction {
-    let recipient_auth_key = AuthenticationKey::ed25519(&recipient_key.public_key());
     get_test_signed_transaction(
         sender,
         sender_seq_number,
@@ -163,8 +161,7 @@ fn get_transfer_transaction(
         sender_key.public_key(),
         Some(encode_transfer_with_metadata_script(
             lbr_type_tag(),
-            &recipient,
-            recipient_auth_key.prefix().to_vec(),
+            recipient,
             amount,
             vec![],
             vec![],
@@ -380,8 +377,7 @@ fn test_new_genesis() {
     assert_eq!(get_balance(&account2, &db), 2_000_000);
 
     // Transfer some money.
-    let txn =
-        get_transfer_transaction(account1, 0, &account1_key, account2, &account2_key, 500_000);
+    let txn = get_transfer_transaction(account1, 0, &account1_key, account2, 500_000);
     execute_and_commit(vec![txn], &db, &signer);
 
     // And verify.

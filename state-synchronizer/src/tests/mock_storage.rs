@@ -160,8 +160,7 @@ impl MockStorage {
         let receiver = AuthenticationKey::random();
         let program = encode_transfer_with_metadata_script(
             lbr_type_tag(),
-            &receiver.derived_address(),
-            receiver.prefix().to_vec(),
+            receiver.derived_address(),
             1,
             vec![],
             vec![],
