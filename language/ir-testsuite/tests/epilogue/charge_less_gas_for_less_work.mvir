@@ -1,6 +1,18 @@
-//! account: alice, 10000
-//! account: bob, 10000
+//! account: alice, 0
+//! account: bob, 0
 
+//! new-transaction
+//! sender: association
+import 0x0.LBR;
+import 0x0.LibraAccount;
+import 0x0.Libra;
+main(blessed: &signer) {
+    LibraAccount.deposit<LBR.T>({{alice}}, LBR.mint(copy(blessed), 10000));
+    LibraAccount.deposit<LBR.T>({{bob}}, LBR.mint(move(blessed), 10000));
+    return;
+}
+
+//! new-transaction
 //! sender: alice
 //! gas-price: 1
 main() {

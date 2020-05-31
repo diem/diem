@@ -66,14 +66,6 @@ pub static GAS_SCHEDULE_MODULE: Lazy<ModuleId> = Lazy::new(|| {
         Identifier::new("GasSchedule").unwrap(),
     )
 });
-/// The ModuleId for the transaction fee module
-pub static TRANSACTION_FEE_MODULE: Lazy<ModuleId> = Lazy::new(|| {
-    ModuleId::new(
-        account_config::CORE_CODE_ADDRESS,
-        Identifier::new("TransactionFee").unwrap(),
-    )
-});
-
 pub static ASSOCIATION_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         account_config::CORE_CODE_ADDRESS,

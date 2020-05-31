@@ -44,8 +44,7 @@ fn single_peer_to_peer_with_event() {
     executor.apply_write_set(output.write_set());
 
     // check that numbers in stored DB are correct
-    let gas = output.gas_used();
-    let sender_balance = 1_000_000 - transfer_amount - gas;
+    let sender_balance = 1_000_000 - transfer_amount;
     let receiver_balance = 100_000 + transfer_amount;
     let updated_sender = executor
         .read_account_resource(sender.account())
@@ -127,7 +126,7 @@ fn single_peer_to_peer_with_padding() {
         TransactionPayload::Script(padded_script),
         10,
         gas_costs::TXN_RESERVED, // this is a default for gas
-        1,
+        0,
         LBR_NAME.to_owned(),
     );
     let unpadded_txn = peer_to_peer_txn(sender.account(), receiver.account(), 10, transfer_amount);
@@ -142,8 +141,7 @@ fn single_peer_to_peer_with_padding() {
     executor.apply_write_set(output.write_set());
 
     // check that numbers in stored DB are correct
-    let gas = output.gas_used();
-    let sender_balance = 1_000_000 - transfer_amount - gas;
+    let sender_balance = 1_000_000 - transfer_amount;
     let receiver_balance = 100_000 + transfer_amount;
     let updated_sender = executor
         .read_account_resource(sender.account())
@@ -207,8 +205,7 @@ fn few_peer_to_peer_with_event() {
         executor.apply_write_set(txn_output.write_set());
 
         // check that numbers in stored DB are correct
-        let gas = txn_output.gas_used();
-        let sender_balance = original_sender_balance.coin() - transfer_amount - gas;
+        let sender_balance = original_sender_balance.coin() - transfer_amount;
         let receiver_balance = original_receiver_balance.coin() + transfer_amount;
         let updated_sender = executor
             .read_account_resource(sender.account())
@@ -280,8 +277,7 @@ fn peer_to_peer_create_account() {
     executor.apply_write_set(output.write_set());
 
     // check that numbers in stored DB are correct
-    let gas = output.gas_used();
-    let sender_balance = 1_000_000 - transfer_amount - gas;
+    let sender_balance = 1_000_000 - transfer_amount;
     let receiver_balance = transfer_amount;
     let updated_sender = executor
         .read_account_resource(sender.account())
@@ -428,8 +424,7 @@ fn check_and_apply_transfer_output(
         executor.apply_write_set(txn_output.write_set());
 
         // check that numbers stored in DB are correct
-        let gas = txn_output.gas_used();
-        let sender_balance = sender_initial_balance - transfer_amount - gas;
+        let sender_balance = sender_initial_balance - transfer_amount;
         let receiver_balance = receiver_initial_balance + transfer_amount;
         let updated_sender = executor
             .read_account_resource(&sender)

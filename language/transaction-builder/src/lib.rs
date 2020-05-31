@@ -113,6 +113,15 @@ encode_txn_script! {
 }
 
 encode_txn_script! {
+    name: encode_burn_txn_fees_script,
+    type_arg: currency,
+    args: [],
+    script: BurnTxnFees,
+    doc: "Burn transaction fees that have been collected in the given `currency`,\
+          and relinquish to the association. The currency must be non-synthetic."
+}
+
+encode_txn_script! {
     name: encode_cancel_burn_script,
     type_arg: type_,
     args: [preburn_address: Address],

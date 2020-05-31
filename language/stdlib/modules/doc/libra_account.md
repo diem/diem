@@ -1362,7 +1362,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_extract_sender_withdrawal_capability">extract_sender_withdrawal_capability</a>(): <a href="#0x0_LibraAccount_WithdrawalCapability">LibraAccount::WithdrawalCapability</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_extract_sender_withdrawal_capability">extract_sender_withdrawal_capability</a>(sender: &signer): <a href="#0x0_LibraAccount_WithdrawalCapability">LibraAccount::WithdrawalCapability</a>
 </code></pre>
 
 
@@ -1371,16 +1371,16 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_extract_sender_withdrawal_capability">extract_sender_withdrawal_capability</a>(): <a href="#0x0_LibraAccount_WithdrawalCapability">WithdrawalCapability</a> <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
-    <b>let</b> sender = Transaction::sender();
-    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(sender);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_extract_sender_withdrawal_capability">extract_sender_withdrawal_capability</a>(sender: &signer): <a href="#0x0_LibraAccount_WithdrawalCapability">WithdrawalCapability</a> <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
+    <b>let</b> sender_addr = <a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(sender);
+    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(sender_addr);
 
     // Abort <b>if</b> we already extracted the unique withdrawal capability for this account.
     Transaction::assert(!sender_account.delegated_withdrawal_capability, 11);
 
     // Ensure the uniqueness of the capability
     sender_account.delegated_withdrawal_capability = <b>true</b>;
-    <a href="#0x0_LibraAccount_WithdrawalCapability">WithdrawalCapability</a> { account_address: sender }
+    <a href="#0x0_LibraAccount_WithdrawalCapability">WithdrawalCapability</a> { account_address: sender_addr }
 }
 </code></pre>
 
@@ -2683,11 +2683,7 @@ also be added. This account will be a child of
                 sender_balance,
                 transaction_fee_amount
         );
-        // Pay the transaction fee into the transaction fee balance.
-        // Don't <b>use</b> the account deposit in order <b>to</b> not emit a
-        // sent/received payment event.
-        <b>let</b> transaction_fee_balance = borrow_global_mut&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(0xFEE);
-        <a href="libra.md#0x0_Libra_deposit">Libra::deposit</a>(&<b>mut</b> transaction_fee_balance.coin, transaction_fee);
+        <a href="libra.md#0x0_Libra_deposit">Libra::deposit</a>(&<b>mut</b> borrow_global_mut&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(0xFEE).coin, transaction_fee);
     }
 }
 </code></pre>

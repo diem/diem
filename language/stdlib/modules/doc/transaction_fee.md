@@ -5,21 +5,32 @@
 
 ### Table of Contents
 
--  [Struct `TransactionFees`](#0x0_TransactionFee_TransactionFees)
--  [Function `initialize_transaction_fees`](#0x0_TransactionFee_initialize_transaction_fees)
--  [Function `distribute_transaction_fees`](#0x0_TransactionFee_distribute_transaction_fees)
--  [Function `distribute_transaction_fees_internal`](#0x0_TransactionFee_distribute_transaction_fees_internal)
--  [Function `per_validator_distribution_amount`](#0x0_TransactionFee_per_validator_distribution_amount)
+-  [Struct `TransactionFeeCollection`](#0x0_TransactionFee_TransactionFeeCollection)
+-  [Struct `TransactionFeePreburn`](#0x0_TransactionFee_TransactionFeePreburn)
+-  [Struct `LBRIdent`](#0x0_TransactionFee_LBRIdent)
+-  [Function `initialize`](#0x0_TransactionFee_initialize)
+-  [Function `add_txn_fee_currency`](#0x0_TransactionFee_add_txn_fee_currency)
+-  [Function `is_lbr`](#0x0_TransactionFee_is_lbr)
+-  [Function `preburn_fees`](#0x0_TransactionFee_preburn_fees)
+-  [Function `burn_fees`](#0x0_TransactionFee_burn_fees)
+-  [Function `preburn_coin`](#0x0_TransactionFee_preburn_coin)
 
 
 
-<a name="0x0_TransactionFee_TransactionFees"></a>
+<a name="0x0_TransactionFee_TransactionFeeCollection"></a>
 
-## Struct `TransactionFees`
+## Struct `TransactionFeeCollection`
+
+The
+<code><a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a></code> resource holds the
+<code><a href="libra_account.md#0x0_LibraAccount_withdraw_with_capability">LibraAccount::withdraw_with_capability</a></code> for the
+<code>0xFEE</code> account.
+This is used for the collection of the transaction fees since it
+must be sent from the account at the
+<code>0xB1E55ED</code> address.
 
 
-
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_TransactionFee_TransactionFees">TransactionFees</a>
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a>
 </code></pre>
 
 
@@ -31,7 +42,7 @@
 <dl>
 <dt>
 
-<code>fee_withdrawal_capability: <a href="libra_account.md#0x0_LibraAccount_WithdrawalCapability">LibraAccount::WithdrawalCapability</a></code>
+<code>cap: <a href="libra_account.md#0x0_LibraAccount_WithdrawalCapability">LibraAccount::WithdrawalCapability</a></code>
 </dt>
 <dd>
 
@@ -41,13 +52,85 @@
 
 </details>
 
-<a name="0x0_TransactionFee_initialize_transaction_fees"></a>
+<a name="0x0_TransactionFee_TransactionFeePreburn"></a>
 
-## Function `initialize_transaction_fees`
+## Struct `TransactionFeePreburn`
+
+The
+<code><a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a></code> holds a preburn resource for each
+fiat
+<code>CoinType</code> that can be collected as a transaction fee.
+
+
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a>&lt;CoinType&gt;
+</code></pre>
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_initialize_transaction_fees">initialize_transaction_fees</a>(fee_account: &signer)
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>preburn: <a href="libra.md#0x0_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
+
+<a name="0x0_TransactionFee_LBRIdent"></a>
+
+## Struct `LBRIdent`
+
+We need to be able to determine if
+<code>CoinType</code> is LBR or not in
+order to unpack it properly before burning it. This resource is
+instantiated with
+<code><a href="lbr.md#0x0_LBR">LBR</a></code> and published in
+<code><a href="#0x0_TransactionFee_initialize">TransactionFee::initialize</a></code>.
+We then use this to determine if the /
+<code>CoinType</code> is LBR in
+<code><a href="#0x0_TransactionFee_is_lbr">TransactionFee::is_lbr</a></code>.
+
+
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_TransactionFee_LBRIdent">LBRIdent</a>&lt;CoinType&gt;
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>dummy_field: bool</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
+
+<a name="0x0_TransactionFee_initialize"></a>
+
+## Function `initialize`
+
+Called in genesis. Sets up the needed resources to collect
+transaction fees by the
+<code>0xB1E55ED</code> account.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_initialize">initialize</a>(blessed_account: &signer, fee_account: &signer)
 </code></pre>
 
 
@@ -56,14 +139,42 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_initialize_transaction_fees">initialize_transaction_fees</a>(fee_account: &signer) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_initialize">initialize</a>(blessed_account: &signer, fee_account: &signer) {
+    Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(blessed_account) == 0xB1E55ED, 0);
+    <b>let</b> cap = <a href="libra_account.md#0x0_LibraAccount_extract_sender_withdrawal_capability">LibraAccount::extract_sender_withdrawal_capability</a>(fee_account);
+    move_to(blessed_account, <a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a> { cap });
+    move_to(blessed_account, <a href="#0x0_TransactionFee_LBRIdent">LBRIdent</a>&lt;<a href="lbr.md#0x0_LBR">LBR</a>&gt;{})
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_TransactionFee_add_txn_fee_currency"></a>
+
+## Function `add_txn_fee_currency`
+
+Sets ups the needed transaction fee state for a given
+<code>CoinType</code>
+currency.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(fee_account: &signer, burn_cap: &<a href="libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(fee_account: &signer, burn_cap: &BurnCapability&lt;CoinType&gt;) {
     Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(fee_account) == 0xFEE, 0);
-    move_to(
-        fee_account,
-        <a href="#0x0_TransactionFee_TransactionFees">TransactionFees</a> {
-            fee_withdrawal_capability: <a href="libra_account.md#0x0_LibraAccount_extract_sender_withdrawal_capability">LibraAccount::extract_sender_withdrawal_capability</a>(),
-        }
-    );
+    <a href="libra_account.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;CoinType&gt;(fee_account);
+    move_to(fee_account, <a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a>&lt;CoinType&gt;{
+        preburn: <a href="libra.md#0x0_Libra_new_preburn_with_capability">Libra::new_preburn_with_capability</a>(burn_cap)
+    })
 }
 </code></pre>
 
@@ -71,13 +182,17 @@
 
 </details>
 
-<a name="0x0_TransactionFee_distribute_transaction_fees"></a>
+<a name="0x0_TransactionFee_is_lbr"></a>
 
-## Function `distribute_transaction_fees`
+## Function `is_lbr`
+
+Returns whether
+<code>CoinType</code> is LBR or not. This is needed since we
+will need to unpack LBR before burning it when collecting the
+transaction fees.
 
 
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_distribute_transaction_fees">distribute_transaction_fees</a>&lt;Token&gt;()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_is_lbr">is_lbr</a>&lt;CoinType&gt;(): bool
 </code></pre>
 
 
@@ -86,27 +201,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_distribute_transaction_fees">distribute_transaction_fees</a>&lt;Token&gt;() <b>acquires</b> <a href="#0x0_TransactionFee_TransactionFees">TransactionFees</a> {
-  // Can only be invoked by LibraVM privilege.
-  Transaction::assert(Transaction::sender() == 0x0, 33);
-
-  <b>let</b> num_validators = <a href="libra_system.md#0x0_LibraSystem_validator_set_size">LibraSystem::validator_set_size</a>();
-  <b>let</b> amount_collected = <a href="libra_account.md#0x0_LibraAccount_balance">LibraAccount::balance</a>&lt;Token&gt;(0xFEE);
-
-  // If amount_collected == 0, this will also <b>return</b> early
-  <b>if</b> (amount_collected &lt; num_validators) <b>return</b> ();
-
-  // Calculate the amount of money <b>to</b> be dispursed, along with the remainder.
-  <b>let</b> amount_to_distribute_per_validator = <a href="#0x0_TransactionFee_per_validator_distribution_amount">per_validator_distribution_amount</a>(
-      amount_collected,
-      num_validators
-  );
-
-  // Iterate through the validators distributing fees equally
-  <a href="#0x0_TransactionFee_distribute_transaction_fees_internal">distribute_transaction_fees_internal</a>&lt;Token&gt;(
-      amount_to_distribute_per_validator,
-      num_validators,
-  );
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_is_lbr">is_lbr</a>&lt;CoinType&gt;(): bool {
+    exists&lt;<a href="#0x0_TransactionFee_LBRIdent">LBRIdent</a>&lt;CoinType&gt;&gt;(0xB1E55ED)
 }
 </code></pre>
 
@@ -114,13 +210,18 @@
 
 </details>
 
-<a name="0x0_TransactionFee_distribute_transaction_fees_internal"></a>
+<a name="0x0_TransactionFee_preburn_fees"></a>
 
-## Function `distribute_transaction_fees_internal`
+## Function `preburn_fees`
+
+Preburns the transaction fees collected in the
+<code>CoinType</code> currency.
+If the
+<code>CoinType</code> is LBR, it unpacks the coin and preburns the
+underlying fiat.
 
 
-
-<pre><code><b>fun</b> <a href="#0x0_TransactionFee_distribute_transaction_fees_internal">distribute_transaction_fees_internal</a>&lt;Token&gt;(amount_to_distribute_per_validator: u64, num_validators: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_preburn_fees">preburn_fees</a>&lt;CoinType&gt;(blessed_sender: &signer)
 </code></pre>
 
 
@@ -129,27 +230,25 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_TransactionFee_distribute_transaction_fees_internal">distribute_transaction_fees_internal</a>&lt;Token&gt;(
-    amount_to_distribute_per_validator: u64,
-    num_validators: u64,
-) <b>acquires</b> <a href="#0x0_TransactionFee_TransactionFees">TransactionFees</a> {
-    <b>let</b> distribution_resource = borrow_global&lt;<a href="#0x0_TransactionFee_TransactionFees">TransactionFees</a>&gt;(0xFEE);
-    <b>let</b> index = 0;
-
-    <b>while</b> (index &lt; num_validators) {
-
-        <b>let</b> addr = <a href="libra_system.md#0x0_LibraSystem_get_ith_validator_address">LibraSystem::get_ith_validator_address</a>(index);
-        // Increment the index into the validator set.
-        index = index + 1;
-
-        <a href="libra_account.md#0x0_LibraAccount_pay_from_capability">LibraAccount::pay_from_capability</a>&lt;Token&gt;(
-            addr,
-            &distribution_resource.fee_withdrawal_capability,
-            amount_to_distribute_per_validator,
-            x"",
-            x""
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_preburn_fees">preburn_fees</a>&lt;CoinType&gt;(blessed_sender: &signer)
+<b>acquires</b> <a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a>, <a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a> {
+    <b>if</b> (<a href="#0x0_TransactionFee_is_lbr">is_lbr</a>&lt;CoinType&gt;()) {
+        <b>let</b> amount = <a href="libra_account.md#0x0_LibraAccount_balance">LibraAccount::balance</a>&lt;<a href="lbr.md#0x0_LBR">LBR</a>&gt;(0xFEE);
+        <b>let</b> coins = <a href="libra_account.md#0x0_LibraAccount_withdraw_with_capability">LibraAccount::withdraw_with_capability</a>&lt;<a href="lbr.md#0x0_LBR">LBR</a>&gt;(
+            &borrow_global&lt;<a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a>&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(blessed_sender)).cap,
+            amount
         );
-       }
+        <b>let</b> (coin1, coin2) = <a href="lbr.md#0x0_LBR_unpack">LBR::unpack</a>(coins);
+        <a href="#0x0_TransactionFee_preburn_coin">preburn_coin</a>&lt;<a href="coin1.md#0x0_Coin1">Coin1</a>&gt;(coin1);
+        <a href="#0x0_TransactionFee_preburn_coin">preburn_coin</a>&lt;<a href="coin2.md#0x0_Coin2">Coin2</a>&gt;(coin2)
+    } <b>else</b> {
+        <b>let</b> amount = <a href="libra_account.md#0x0_LibraAccount_balance">LibraAccount::balance</a>&lt;CoinType&gt;(0xFEE);
+        <b>let</b> coins = <a href="libra_account.md#0x0_LibraAccount_withdraw_with_capability">LibraAccount::withdraw_with_capability</a>&lt;CoinType&gt;(
+            &borrow_global&lt;<a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a>&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(blessed_sender)).cap,
+            amount
+        );
+        <a href="#0x0_TransactionFee_preburn_coin">preburn_coin</a>(coins)
+    }
 }
 </code></pre>
 
@@ -157,13 +256,15 @@
 
 </details>
 
-<a name="0x0_TransactionFee_per_validator_distribution_amount"></a>
+<a name="0x0_TransactionFee_burn_fees"></a>
 
-## Function `per_validator_distribution_amount`
+## Function `burn_fees`
+
+Burns the already preburned fees from a previous call to
+<code>preburn_fees</code>.
 
 
-
-<pre><code><b>fun</b> <a href="#0x0_TransactionFee_per_validator_distribution_amount">per_validator_distribution_amount</a>(amount_collected: u64, num_validators: u64): u64
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_burn_fees">burn_fees</a>&lt;CoinType&gt;(blessed_account: &signer, burn_cap: &<a href="libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -172,10 +273,45 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_TransactionFee_per_validator_distribution_amount">per_validator_distribution_amount</a>(amount_collected: u64, num_validators: u64): u64 {
-    Transaction::assert(num_validators != 0, 0);
-    <b>let</b> validator_payout = amount_collected / num_validators;
-    validator_payout
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_burn_fees">burn_fees</a>&lt;CoinType&gt;(blessed_account: &signer, burn_cap: &BurnCapability&lt;CoinType&gt;)
+<b>acquires</b> <a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a> {
+    Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(blessed_account) == 0xB1E55ED, 0);
+    <b>let</b> preburn = &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a>&lt;CoinType&gt;&gt;(0xFEE).preburn;
+    <a href="libra.md#0x0_Libra_burn_with_resource_cap">Libra::burn_with_resource_cap</a>(
+        preburn,
+        0xFEE,
+        burn_cap
+    )
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_TransactionFee_preburn_coin"></a>
+
+## Function `preburn_coin`
+
+
+
+<pre><code><b>fun</b> <a href="#0x0_TransactionFee_preburn_coin">preburn_coin</a>&lt;CoinType&gt;(coin: <a href="libra.md#0x0_Libra_T">Libra::T</a>&lt;CoinType&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="#0x0_TransactionFee_preburn_coin">preburn_coin</a>&lt;CoinType&gt;(coin: <a href="libra.md#0x0_Libra">Libra</a>&lt;CoinType&gt;)
+<b>acquires</b> <a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a> {
+    <b>let</b> preburn = &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a>&lt;CoinType&gt;&gt;(0xFEE).preburn;
+    <a href="libra.md#0x0_Libra_preburn_with_resource">Libra::preburn_with_resource</a>(
+        coin,
+        preburn,
+        0xFEE
+    );
 }
 </code></pre>
 

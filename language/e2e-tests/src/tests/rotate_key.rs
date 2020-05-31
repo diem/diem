@@ -20,9 +20,10 @@ use libra_types::{
 
 #[test]
 fn rotate_ed25519_key() {
+    let balance = 1_000_000;
     let mut executor = FakeExecutor::from_genesis_file();
     // create and publish sender
-    let mut sender = AccountData::new(1_000_000, 10);
+    let mut sender = AccountData::new(balance, 10);
     executor.add_account_data(&sender);
 
     let privkey = Ed25519PrivateKey::generate_for_testing();
@@ -39,8 +40,6 @@ fn rotate_ed25519_key() {
     executor.apply_write_set(output.write_set());
 
     // Check that numbers in store are correct.
-    let gas = output.gas_used();
-    let balance = 1_000_000 - gas;
     let updated_sender = executor
         .read_account_resource(sender.account())
         .expect("sender must exist");

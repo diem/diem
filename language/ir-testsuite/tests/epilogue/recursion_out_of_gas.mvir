@@ -1,4 +1,4 @@
-//! account: default, 50000
+//! account: default, 0LBR
 
 module M {
     public rec(x: u64) {
@@ -7,10 +7,20 @@ module M {
     }
 }
 
+//! new-transaction
+//! sender: association
+import 0x0.LBR;
+import 0x0.LibraAccount;
+import 0x0.Libra;
+main(blessed: &signer) {
+    LibraAccount.deposit<LBR.T>({{default}}, LBR.mint(move(blessed), 50000));
+    return;
+}
 
 //! new-transaction
 //! gas-price: 1
 //! max-gas: 5000
+//! sender: default
 import {{default}}.M;
 
 main() {
@@ -24,6 +34,7 @@ main() {
 
 
 //! new-transaction
+//! sender: default
 import 0x0.LibraAccount;
 import 0x0.LBR;
 

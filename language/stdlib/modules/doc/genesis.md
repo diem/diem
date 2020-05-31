@@ -16,7 +16,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_Genesis_initialize">initialize</a>(association: &signer, config_account: &signer, tc_addr: address, tc_auth_key_prefix: vector&lt;u8&gt;, genesis_auth_key: vector&lt;u8&gt;)
+<pre><code><b>fun</b> <a href="#0x0_Genesis_initialize">initialize</a>(association: &signer, config_account: &signer, fee_account: &signer, tc_account: &signer, tc_addr: address, tc_auth_key_prefix: vector&lt;u8&gt;, genesis_auth_key: vector&lt;u8&gt;, _fee_auth_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -28,9 +28,12 @@
 <pre><code><b>fun</b> <a href="#0x0_Genesis_initialize">initialize</a>(
     association: &signer,
     config_account: &signer,
+    fee_account: &signer,
+    tc_account: &signer,
     tc_addr: address,
     tc_auth_key_prefix: vector&lt;u8&gt;,
-    genesis_auth_key: vector&lt;u8&gt;
+    genesis_auth_key: vector&lt;u8&gt;,
+    _fee_auth_key: vector&lt;u8&gt;,
 ) {
     <b>let</b> dummy_auth_key_prefix = x"00000000000000000000000000000000";
 
@@ -65,7 +68,9 @@
 
     // Register transaction fee accounts
     <a href="libra_account.md#0x0_LibraAccount_create_testnet_account">LibraAccount::create_testnet_account</a>&lt;<a href="lbr.md#0x0_LBR_T">LBR::T</a>&gt;(0xFEE, <b>copy</b> dummy_auth_key_prefix);
-
+    <a href="transaction_fee.md#0x0_TransactionFee_add_txn_fee_currency">TransactionFee::add_txn_fee_currency</a>(fee_account, &coin1_burn_cap);
+    <a href="transaction_fee.md#0x0_TransactionFee_add_txn_fee_currency">TransactionFee::add_txn_fee_currency</a>(fee_account, &coin2_burn_cap);
+    <a href="transaction_fee.md#0x0_TransactionFee_initialize">TransactionFee::initialize</a>(tc_account, fee_account);
 
     // Create the treasury compliance account
     <a href="libra_account.md#0x0_LibraAccount_create_treasury_compliance_account">LibraAccount::create_treasury_compliance_account</a>&lt;<a href="lbr.md#0x0_LBR_T">LBR::T</a>&gt;(
@@ -105,7 +110,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_Genesis_initialize_txn_fee_account">initialize_txn_fee_account</a>(fee_account: &signer, auth_key: vector&lt;u8&gt;)
+<pre><code><b>fun</b> <a href="#0x0_Genesis_initialize_txn_fee_account">initialize_txn_fee_account</a>(_fee_account: &signer, auth_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -114,11 +119,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_Genesis_initialize_txn_fee_account">initialize_txn_fee_account</a>(fee_account: &signer, auth_key: vector&lt;u8&gt;) {
-    // Create the transaction fee account
-    <a href="libra_account.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(fee_account);
-    <a href="libra_account.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(fee_account);
-    <a href="transaction_fee.md#0x0_TransactionFee_initialize_transaction_fees">TransactionFee::initialize_transaction_fees</a>(fee_account);
+<pre><code><b>fun</b> <a href="#0x0_Genesis_initialize_txn_fee_account">initialize_txn_fee_account</a>(_fee_account: &signer, auth_key: vector&lt;u8&gt;) {
     <a href="libra_account.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(auth_key);
 }
 </code></pre>

@@ -1,12 +1,13 @@
-//! account: bob, 100000000, 0, unhosted
-//! account: alice, 0, 0, unhosted
+//! account: bob, 100000000Coin1, 0, unhosted
+//! account: alice, 0Coin1, 0, unhosted
 
 //! new-transaction
 //! sender: blessed
 script {
+    use 0x0::Coin1;
     use 0x0::LibraAccount;
     fun main(account: &signer) {
-        LibraAccount::mint_lbr_to_address(account, {{bob}}, 10001);
+        LibraAccount::mint_to_address<Coin1::T>(account, {{bob}}, 10001);
     }
 }
 // TODO: fix account limits
@@ -15,13 +16,14 @@ script {
 
 //! new-transaction
 //! sender: bob
+//! gas-currency: Coin1
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
+    use 0x0::Coin1;
     fun main() {
         LibraAccount::deposit(
             {{bob}},
-            LibraAccount::withdraw_from_sender<LBR::T>(10001)
+            LibraAccount::withdraw_from_sender<Coin1::T>(10001)
         );
     }
 }
@@ -32,6 +34,7 @@ script {
 //! new-transaction
 //! sender: bob
 //! gas-price: 1000
+//! gas-currency: Coin1
 script {
     fun main() { }
 }

@@ -39,10 +39,10 @@ import {{alice}}.SillyColdWallet;
 import 0x0.LibraAccount;
 
 // create a cold wallet for Bob that withdraws from Alice's account
-main() {
+main(sender: &signer) {
     let cap: LibraAccount.WithdrawalCapability;
 
-    cap = LibraAccount.extract_sender_withdrawal_capability();
+    cap = LibraAccount.extract_sender_withdrawal_capability(move(sender));
     SillyColdWallet.publish(move(cap), {{bob}});
 
     return;

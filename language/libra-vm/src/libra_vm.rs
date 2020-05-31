@@ -17,7 +17,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_config,
     block_metadata::BlockMetadata,
-    on_chain_config::{LibraVersion, OnChainConfig, RegisteredCurrencies, VMConfig},
+    on_chain_config::{LibraVersion, OnChainConfig, VMConfig},
     transaction::{
         ChangeSet, Module, Script, SignatureCheckedTransaction, SignedTransaction, Transaction,
         TransactionArgument, TransactionOutput, TransactionPayload, TransactionStatus,
@@ -504,10 +504,6 @@ impl LibraVM {
         txn_data.sender = account_config::CORE_CODE_ADDRESS;
         txn_data.max_gas_amount = GasUnits::new(std::u64::MAX);
 
-        let registered_currencies =
-            RegisteredCurrencies::fetch_config(remote_cache as &dyn RemoteCache)
-                .ok_or_else(|| VMStatus::new(StatusCode::MALFORMED))?;
-
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::transaction(&gas_schedule, txn_data.max_gas_amount());
         cost_strategy.charge_intrinsic_gas(txn_data.transaction_size())?;
@@ -533,20 +529,6 @@ impl LibraVM {
         } else {
             return Err(VMStatus::new(StatusCode::MALFORMED));
         };
-
-        // Now distribute the txn fees for each currency
-        for currency_code in registered_currencies.currency_codes().iter() {
-            let currency_ty = account_config::type_tag_for_currency_code(currency_code.to_owned());
-            self.move_vm.execute_function(
-                &TRANSACTION_FEE_MODULE,
-                &DISTRIBUTE_TXN_FEES,
-                vec![currency_ty],
-                vec![],
-                txn_data.sender(),
-                &mut data_store,
-                &mut cost_strategy,
-            )?
-        }
 
         get_transaction_output(
             &mut data_store,

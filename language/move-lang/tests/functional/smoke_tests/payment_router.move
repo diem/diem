@@ -14,6 +14,7 @@ module PaymentRouter {
     use 0x0::Transaction;
     use 0x0::Libra;
     use 0x0::Vector;
+    use 0x0::Signer;
 
     // A resource that specifies the addresses that are allowed to be added
     // to this multi-currency holding.
@@ -79,21 +80,21 @@ module PaymentRouter {
     // Add the sending account of currency type `Token` to the router at
     // `router_account_addr`.  The sending address must be in the
     // `allowed_addresses` held under the router account.
-    public fun add_account_to<Token>(router_account_addr: address)
+    public fun add_account_to<Token>(sender: &signer, router_account_addr: address)
     acquires PaymentRouterInfo, AccountInfo {
-        let sender = Transaction::sender();
+        let sender_addr = Signer::address_of(sender);
         let router_info = borrow_global_mut<PaymentRouterInfo>(router_account_addr);
-        let (has, index) = Vector::index_of(&router_info.allowed_addresses, &sender);
+        let (has, index) = Vector::index_of(&router_info.allowed_addresses, &sender_addr);
         Transaction::assert(has, 0);
         let account_info = borrow_global_mut<AccountInfo<Token>>(router_account_addr);
         Vector::swap_remove(&mut router_info.allowed_addresses, index);
         Vector::push_back(
             &mut account_info.child_accounts,
-            Transaction::sender(),
+            sender_addr,
         );
-        move_to_sender(RoutedAccount<Token> {
+        move_to(sender, RoutedAccount<Token> {
             router_account_addr,
-            withdrawal_cap: LibraAccount::extract_sender_withdrawal_capability()
+            withdrawal_cap: LibraAccount::extract_sender_withdrawal_capability(sender)
         })
     }
 
@@ -198,8 +199,8 @@ fun main() {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::Coin1;
-fun main() {
-    PaymentRouter::add_account_to<Coin1::T>({{bob}});
+fun main(sender: &signer) {
+    PaymentRouter::add_account_to<Coin1::T>(sender, {{bob}});
 }
 }
 
@@ -209,8 +210,8 @@ fun main() {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::Coin1;
-fun main() {
-    PaymentRouter::add_account_to<Coin1::T>({{bob}});
+fun main(sender: &signer) {
+    PaymentRouter::add_account_to<Coin1::T>(sender, {{bob}});
 }
 }
 
@@ -220,8 +221,8 @@ fun main() {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::Coin2;
-fun main() {
-    PaymentRouter::add_account_to<Coin2::T>({{bob}});
+fun main(sender: &signer) {
+    PaymentRouter::add_account_to<Coin2::T>(sender, {{bob}});
 }
 }
 
@@ -230,8 +231,8 @@ fun main() {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::LBR;
-fun main() {
-    PaymentRouter::add_account_to<LBR::T>({{bob}});
+fun main(sender: &signer) {
+    PaymentRouter::add_account_to<LBR::T>(sender, {{bob}});
 }
 }
 
@@ -241,8 +242,8 @@ fun main() {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::Coin2;
-fun main() {
-    PaymentRouter::add_account_to<Coin2::T>({{bob}});
+fun main(sender: &signer) {
+    PaymentRouter::add_account_to<Coin2::T>(sender, {{bob}});
 }
 }
 // check: ABORTED
@@ -393,8 +394,8 @@ fun main() {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::Coin1;
-fun main() {
-    PaymentRouter::add_account_to<Coin1::T>({{bob1}});
+fun main(sender: &signer) {
+    PaymentRouter::add_account_to<Coin1::T>(sender, {{bob1}});
 }
 }
 
@@ -404,8 +405,8 @@ fun main() {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::Coin1;
-fun main() {
-    PaymentRouter::add_account_to<Coin1::T>({{bob1}});
+fun main(sender: &signer) {
+    PaymentRouter::add_account_to<Coin1::T>(sender, {{bob1}});
 }
 }
 
@@ -415,8 +416,8 @@ fun main() {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::Coin1;
-fun main() {
-    PaymentRouter::add_account_to<Coin1::T>({{alice1}});
+fun main(sender: &signer) {
+    PaymentRouter::add_account_to<Coin1::T>(sender, {{alice1}});
 }
 }
 
@@ -426,8 +427,8 @@ fun main() {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::Coin1;
-fun main() {
-    PaymentRouter::add_account_to<Coin1::T>({{alice1}});
+fun main(sender: &signer) {
+    PaymentRouter::add_account_to<Coin1::T>(sender, {{alice1}});
 }
 }
 
@@ -488,8 +489,8 @@ fun main() {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::Coin1;
-fun main() {
-    PaymentRouter::add_account_to<Coin1::T>({{alice1}});
+fun main(sender: &signer) {
+    PaymentRouter::add_account_to<Coin1::T>(sender, {{alice1}});
 }
 }
 
@@ -501,8 +502,8 @@ use {{default}}::PaymentRouter;
 use 0x0::Coin1;
 // an account can't belong to multiple routers. This fails since nope1 is
 // already routed by the payment router at alice1.
-fun main() {
-    PaymentRouter::add_account_to<Coin1::T>({{bob1}});
+fun main(sender: &signer) {
+    PaymentRouter::add_account_to<Coin1::T>(sender, {{bob1}});
 }
 }
 // check: ABORTED
@@ -555,8 +556,8 @@ fun main() {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::Coin1;
-fun main() {
-    PaymentRouter::add_account_to<Coin1::T>({{bob2}});
+fun main(sender: &signer) {
+    PaymentRouter::add_account_to<Coin1::T>(sender, {{bob2}});
 }
 }
 
@@ -565,8 +566,8 @@ fun main() {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::LBR;
-fun main() {
-    PaymentRouter::add_account_to<LBR::T>({{bob2}});
+fun main(sender: &signer) {
+    PaymentRouter::add_account_to<LBR::T>(sender, {{bob2}});
 }
 }
 
