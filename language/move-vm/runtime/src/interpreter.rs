@@ -11,7 +11,6 @@ use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
     vm_error::{StatusCode, StatusType, VMStatus},
 };
 use move_core_types::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier};
@@ -70,20 +69,13 @@ impl Interpreter {
         ty_args: Vec<Type>,
         args: Vec<Value>,
         sender: AccountAddress,
-        txn_size: AbstractMemorySize<GasCarrier>,
         data_store: &mut dyn DataStore,
         cost_strategy: &mut CostStrategy,
         loader: &Loader,
     ) -> VMResult<()> {
-        // The callers of this function verify the transaction before executing it. Transaction
-        // verification ensures the following condition.
-        // TODO: This is enforced by Libra but needs to be enforced by other callers of the Move VM
-        // as well.
-        assume!(txn_size.get() <= (MAX_TRANSACTION_SIZE_IN_BYTES as u64));
         // We count the intrinsic cost of the transaction here, since that needs to also cover the
         // setup of the function.
         let mut interp = Self::new(sender);
-        cost_strategy.charge_intrinsic_gas(txn_size)?;
         interp.execute(loader, data_store, cost_strategy, function, ty_args, args)
     }
 

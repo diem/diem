@@ -5,7 +5,6 @@ use crate::runtime::VMRuntime;
 use bytecode_verifier::VerifiedModule;
 use move_core_types::{
     account_address::AccountAddress,
-    gas_schedule::{AbstractMemorySize, GasCarrier},
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
 };
@@ -30,7 +29,6 @@ impl MoveVM {
         ty_args: Vec<TypeTag>,
         args: Vec<Value>,
         sender: AccountAddress,
-        txn_size: AbstractMemorySize<GasCarrier>,
         data_store: &mut dyn DataStore,
         cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
@@ -40,7 +38,6 @@ impl MoveVM {
             ty_args,
             args,
             sender,
-            txn_size,
             data_store,
             cost_strategy,
         )
@@ -52,19 +49,11 @@ impl MoveVM {
         ty_args: Vec<TypeTag>,
         args: Vec<Value>,
         sender: AccountAddress,
-        txn_size: AbstractMemorySize<GasCarrier>,
         data_store: &mut dyn DataStore,
         cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
-        self.runtime.execute_script(
-            script,
-            ty_args,
-            args,
-            sender,
-            txn_size,
-            data_store,
-            cost_strategy,
-        )
+        self.runtime
+            .execute_script(script, ty_args, args, sender, data_store, cost_strategy)
     }
 
     pub fn publish_module(

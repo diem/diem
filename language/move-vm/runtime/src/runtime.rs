@@ -7,7 +7,6 @@ use libra_logger::prelude::*;
 use libra_types::vm_error::{StatusCode, VMStatus};
 use move_core_types::{
     account_address::AccountAddress,
-    gas_schedule::{AbstractMemorySize, GasCarrier},
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
 };
@@ -77,7 +76,6 @@ impl VMRuntime {
         ty_args: Vec<TypeTag>,
         mut args: Vec<Value>,
         sender: AccountAddress,
-        txn_size: AbstractMemorySize<GasCarrier>,
         data_store: &mut dyn DataStore,
         cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
@@ -108,7 +106,6 @@ impl VMRuntime {
             type_params,
             args,
             sender,
-            txn_size,
             data_store,
             cost_strategy,
             &self.loader,
@@ -122,7 +119,6 @@ impl VMRuntime {
         ty_args: Vec<TypeTag>,
         args: Vec<Value>,
         sender: AccountAddress,
-        txn_size: AbstractMemorySize<GasCarrier>,
         data_store: &mut dyn DataStore,
         cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
@@ -144,7 +140,6 @@ impl VMRuntime {
             type_params,
             args,
             sender,
-            txn_size,
             data_store,
             cost_strategy,
             &self.loader,
