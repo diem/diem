@@ -159,7 +159,7 @@ impl NodeConfig {
         self.storage.set_data_dir(data_dir);
     }
 
-    /// This clones the underlying data except for the keypair so that this config can be used as a
+    /// This clones the underlying data except for the keys so that this config can be used as a
     /// template for another config.
     pub fn clone_for_template(&self) -> Self {
         Self {
@@ -380,7 +380,7 @@ mod test {
 
         expected_network.advertised_address = actual_network.advertised_address.clone();
         expected_network.listen_address = actual_network.listen_address.clone();
-        expected_network.identity_keypair = actual_network.identity_keypair.clone();
+        expected_network.identity_key = actual_network.identity_key.clone();
         expected_network.network_peers = actual_network.network_peers.clone();
         expected_network.seed_peers = actual_network.seed_peers.clone();
         expected_network.seed_peers_file = actual_network.seed_peers_file.clone();

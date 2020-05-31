@@ -3,11 +3,9 @@
 
 use crate::{layout::Layout, storage_helper::StorageHelper};
 use config_builder::{BuildSwarm, SwarmConfig};
-use libra_config::{
-    config::{
-        DiscoveryMethod, NetworkConfig, NodeConfig, OnDiskStorageConfig, RoleType, SecureBackend,
-    },
-    keys::KeyPair,
+use libra_config::config::{
+    DiscoveryMethod, IdentityKey, NetworkConfig, NodeConfig, OnDiskStorageConfig, RoleType,
+    SecureBackend,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, x25519};
 use libra_secure_storage::Value;
@@ -85,7 +83,7 @@ fn smoke_test() {
             .unwrap();
         let identity_key =
             x25519::PrivateKey::from_ed25519_private_bytes(&identity_key.to_bytes()).unwrap();
-        validator_network.identity_keypair = Some(KeyPair::load(identity_key));
+        validator_network.identity_key = IdentityKey::from_config(identity_key);
 
         let fullnode_network = &mut config.full_node_networks[0];
         let identity_key = storage
@@ -93,7 +91,7 @@ fn smoke_test() {
             .unwrap();
         let identity_key =
             x25519::PrivateKey::from_ed25519_private_bytes(&identity_key.to_bytes()).unwrap();
-        fullnode_network.identity_keypair = Some(KeyPair::load(identity_key));
+        fullnode_network.identity_key = IdentityKey::from_config(identity_key);
         let fullnode_network_address = fullnode_network.listen_address.clone();
 
         configs.push(config);

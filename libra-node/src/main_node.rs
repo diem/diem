@@ -153,10 +153,8 @@ pub fn setup_network(
         let seed_peers = config.seed_peers.seed_peers.clone();
 
         let identity_key = config
-            .identity_keypair
-            .as_mut()
-            .expect("identity keypair should be present")
-            .take_private()
+            .identity_key
+            .private_key_from_config()
             .expect("identity key should be present");
 
         let trusted_peers = if role == RoleType::Validator {
@@ -181,10 +179,8 @@ pub fn setup_network(
             .add_connectivity_manager();
     } else if config.enable_noise {
         let identity_key = config
-            .identity_keypair
-            .as_mut()
-            .expect("identity keypairs should be present")
-            .take_private()
+            .identity_key
+            .private_key_from_config()
             .expect("identity key should be present");
 
         // Even if a network end-point operates without remote authentication, it might want to prove
