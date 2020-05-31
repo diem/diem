@@ -7,7 +7,6 @@ use crate::{
         txn_one_account_result, AUTransactionGen, AccountPair, AccountPairGen, AccountUniverse,
     },
     common_transactions::peer_to_peer_txn,
-    gas_costs,
 };
 use libra_proptest_helpers::Index;
 use libra_types::{
@@ -58,13 +57,13 @@ impl AUTransactionGen for P2PTransferGen {
             self.amount,
         );
 
-        // Now figure out whether the transaction will actually work. (The transactions set the
-        // gas cost to 1 microlibra.)
-        let enough_max_gas = sender.balance >= gas_costs::TXN_RESERVED;
+        // Now figure out whether the transaction will actually work.
         // This means that we'll get through the main part of the transaction.
         let enough_to_transfer = sender.balance >= self.amount;
-        let to_deduct = self.amount + sender.peer_to_peer_gas_cost();
-        let mut gas_cost = 0;
+        let gas_amount = sender.peer_to_peer_gas_cost() * txn.gas_unit_price();
+        let to_deduct = self.amount + gas_amount;
+        let enough_max_gas = sender.balance >= gas_amount;
+        let mut gas_used = 0;
         // This means that we'll get through the entire transaction, including the epilogue
         // (where gas costs are deducted).
         let enough_to_succeed = sender.balance >= to_deduct;
@@ -83,15 +82,15 @@ impl AUTransactionGen for P2PTransferGen {
                 receiver.received_events_count += 1;
 
                 status = TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED));
-                gas_cost = sender.peer_to_peer_gas_cost();
+                gas_used = sender.peer_to_peer_gas_cost();
             }
             (true, true, false) => {
                 // Enough gas to pass validation and to do the transfer, but not enough to succeed
                 // in the epilogue. The transaction will be run and gas will be deducted from the
                 // sender, but no other changes will happen.
                 sender.sequence_number += 1;
-                gas_cost = sender.peer_to_peer_gas_cost();
-                sender.balance -= gas_cost;
+                gas_used = sender.peer_to_peer_gas_cost();
+                sender.balance -= gas_used * txn.gas_unit_price();
                 // 6 means the balance was insufficient while trying to deduct gas costs in the
                 // epilogue.
                 // TODO: define these values in a central location
@@ -102,8 +101,8 @@ impl AUTransactionGen for P2PTransferGen {
                 // Enough to pass validation but not to do the transfer. The transaction will be run
                 // and gas will be deducted from the sender, but no other changes will happen.
                 sender.sequence_number += 1;
-                gas_cost = sender.peer_to_peer_too_low_gas_cost();
-                sender.balance -= gas_cost;
+                gas_used = sender.peer_to_peer_too_low_gas_cost();
+                sender.balance -= gas_used * txn.gas_unit_price();
                 // 10 means the balance was insufficient while trying to transfer.
                 status =
                     TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(10));
@@ -116,7 +115,7 @@ impl AUTransactionGen for P2PTransferGen {
             }
         }
 
-        (txn, (status, gas_cost))
+        (txn, (status, gas_used))
     }
 }
 
@@ -135,11 +134,17 @@ impl AUTransactionGen for P2PNewReceiverGen {
             self.amount,
         );
 
-        let mut gas_cost = sender.peer_to_peer_new_receiver_gas_cost();
-        let low_balance_gas_cost = sender.peer_to_peer_new_receiver_too_low_gas_cost();
+        let mut gas_used = sender.peer_to_peer_new_receiver_gas_cost();
+        let low_balance_gas_used = sender.peer_to_peer_new_receiver_too_low_gas_cost();
+        let gas_price = txn.gas_unit_price();
 
-        let (status, is_success) =
-            txn_one_account_result(sender, self.amount, gas_cost, low_balance_gas_cost);
+        let (status, is_success) = txn_one_account_result(
+            sender,
+            self.amount,
+            gas_price,
+            gas_used,
+            low_balance_gas_used,
+        );
         if is_success {
             sender.event_counter_created = true;
             universe.add_account(AccountData::with_account(
@@ -150,9 +155,9 @@ impl AUTransactionGen for P2PNewReceiverGen {
                 AccountTypeSpecifier::default(),
             ));
         } else {
-            gas_cost = 0;
+            gas_used = 0;
         }
 
-        (txn, (status, gas_cost))
+        (txn, (status, gas_used))
     }
 }

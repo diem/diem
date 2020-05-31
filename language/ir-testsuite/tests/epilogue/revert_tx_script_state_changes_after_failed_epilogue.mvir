@@ -1,12 +1,24 @@
-//! account: alice, 1000000
-//! account: bob, 1000000
+//! account: alice, 0
+//! account: bob, 0
 //! account: carol, 0
+
+//! new-transaction
+//! sender: association
+import 0x0.LBR;
+import 0x0.LibraAccount;
+import 0x0.Libra;
+main(blessed: &signer) {
+    LibraAccount.deposit<LBR.T>({{alice}}, LBR.mint(copy(blessed), 1000000));
+    LibraAccount.deposit<LBR.T>({{bob}}, LBR.mint(move(blessed), 1000000));
+    return;
+}
 
 
 // Transfer all of the Alice's funds to Carol. this script will execute successfully, but
 // the epilogue will fail because Alice spent her gas deposit. The VM should revert the state
 // changes and re-execute the epilogue. Alice will still be charged for the gas she used.
 
+//! new-transaction
 //! sender: alice
 //! gas-price: 1
 //! args: 1000000

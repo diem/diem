@@ -237,14 +237,15 @@ impl AccountCurrent {
 pub fn txn_one_account_result(
     sender: &mut AccountCurrent,
     amount: u64,
-    gas_cost: u64,
-    low_gas_cost: u64,
+    gas_price: u64,
+    gas_used: u64,
+    low_gas_used: u64,
 ) -> (TransactionStatus, bool) {
     // The transactions set the gas cost to 1 microlibra.
-    let enough_max_gas = sender.balance >= gas_costs::TXN_RESERVED;
+    let enough_max_gas = sender.balance >= gas_costs::TXN_RESERVED * gas_price;
     // This means that we'll get through the main part of the transaction.
     let enough_to_transfer = sender.balance >= amount;
-    let to_deduct = amount + gas_cost;
+    let to_deduct = amount + gas_used * gas_price;
     // This means that we'll get through the entire transaction, including the epilogue
     // (where gas costs are deducted).
     let enough_to_succeed = sender.balance >= to_deduct;
@@ -265,7 +266,7 @@ pub fn txn_one_account_result(
             // in the epilogue. The transaction will be run and gas will be deducted from the
             // sender, but no other changes will happen.
             sender.sequence_number += 1;
-            sender.balance -= gas_cost;
+            sender.balance -= gas_used * gas_price;
             (
                 TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(6)),
                 false,
@@ -276,7 +277,7 @@ pub fn txn_one_account_result(
             // be run and gas will be deducted from the sender, but no other changes will
             // happen.
             sender.sequence_number += 1;
-            sender.balance -= low_gas_cost;
+            sender.balance -= low_gas_used * gas_price;
             (
                 TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(10)),
                 false,

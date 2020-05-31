@@ -38,12 +38,12 @@ impl AUTransactionGen for RotateKeyGen {
         let txn = rotate_key_txn(sender.account(), key_hash, sender.sequence_number);
 
         // This should work all the time except for if the balance is too low for gas.
-        let mut gas_cost = 0;
-        let enough_max_gas = sender.balance >= gas_costs::TXN_RESERVED;
+        let mut gas_used = 0;
+        let enough_max_gas = sender.balance >= gas_costs::TXN_RESERVED * txn.gas_unit_price();
         let status = if enough_max_gas {
             sender.sequence_number += 1;
-            gas_cost = sender.rotate_key_gas_cost();
-            sender.balance -= gas_cost;
+            gas_used = sender.rotate_key_gas_cost();
+            sender.balance -= gas_used * txn.gas_unit_price();
             sender.rotate_key(
                 self.new_keypair.private_key.clone(),
                 self.new_keypair.public_key.clone(),
@@ -56,6 +56,6 @@ impl AUTransactionGen for RotateKeyGen {
             ))
         };
 
-        (txn, (status, gas_cost))
+        (txn, (status, gas_used))
     }
 }

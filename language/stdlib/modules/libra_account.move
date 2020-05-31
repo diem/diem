@@ -25,7 +25,6 @@ module LibraAccount {
     use 0x0::Vector;
     use 0x0::DesignatedDealer;
 
-
     // Every Libra account has a LibraAccount::T resource
     resource struct T {
         // The current authentication key.
@@ -410,16 +409,16 @@ module LibraAccount {
     }
 
     // Return a unique capability granting permission to withdraw from the sender's account balance.
-    public fun extract_sender_withdrawal_capability(): WithdrawalCapability acquires T {
-        let sender = Transaction::sender();
-        let sender_account = borrow_global_mut<T>(sender);
+    public fun extract_sender_withdrawal_capability(sender: &signer): WithdrawalCapability acquires T {
+        let sender_addr = Signer::address_of(sender);
+        let sender_account = borrow_global_mut<T>(sender_addr);
 
         // Abort if we already extracted the unique withdrawal capability for this account.
         Transaction::assert(!sender_account.delegated_withdrawal_capability, 11);
 
         // Ensure the uniqueness of the capability
         sender_account.delegated_withdrawal_capability = true;
-        WithdrawalCapability { account_address: sender }
+        WithdrawalCapability { account_address: sender_addr }
     }
 
     // Return the withdrawal capability to the account it originally came from
@@ -934,11 +933,7 @@ module LibraAccount {
                     sender_balance,
                     transaction_fee_amount
             );
-            // Pay the transaction fee into the transaction fee balance.
-            // Don't use the account deposit in order to not emit a
-            // sent/received payment event.
-            let transaction_fee_balance = borrow_global_mut<Balance<Token>>(0xFEE);
-            Libra::deposit(&mut transaction_fee_balance.coin, transaction_fee);
+            Libra::deposit(&mut borrow_global_mut<Balance<Token>>(0xFEE).coin, transaction_fee);
         }
     }
 
