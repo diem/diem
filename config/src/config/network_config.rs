@@ -53,8 +53,7 @@ pub struct NetworkConfig {
     #[serde(skip)]
     pub seed_peers: SeedPeersConfig,
     pub seed_peers_file: PathBuf,
-    #[serde(rename = "identity_private_key")]
-    pub identity_keypair: Option<KeyPair<x25519::PrivateKey>>,
+    pub identity_key: IdentityKey,
 }
 
 impl Default for NetworkConfig {
@@ -68,7 +67,7 @@ impl Default for NetworkConfig {
             enable_noise: true,
             enable_remote_authentication: true,
             discovery_method: DiscoveryMethod::Gossip,
-            identity_keypair: None,
+            identity_key: IdentityKey::None,
             network_peers_file: PathBuf::new(),
             network_peers: NetworkPeersConfig::default(),
             seed_peers_file: PathBuf::new(),
@@ -78,7 +77,7 @@ impl Default for NetworkConfig {
 }
 
 impl NetworkConfig {
-    /// This clones the underlying data except for the keypair so that this config can be used as a
+    /// This clones the underlying data except for the key so that this config can be used as a
     /// template for another config.
     pub fn clone_for_template(&self) -> Self {
         Self {
@@ -90,7 +89,7 @@ impl NetworkConfig {
             enable_noise: self.enable_noise,
             enable_remote_authentication: self.enable_remote_authentication,
             discovery_method: self.discovery_method,
-            identity_keypair: None,
+            identity_key: IdentityKey::None,
             network_peers_file: self.network_peers_file.clone(),
             network_peers: self.network_peers.clone(),
             seed_peers_file: self.seed_peers_file.clone(),
@@ -134,9 +133,7 @@ impl NetworkConfig {
             );
         }
 
-        // TODO(joshlind): investigate the implications of removing these checks.
-        if let Some(identity_keypair) = &self.identity_keypair {
-            let identity_public_key = identity_keypair.public_key();
+        if let Some(identity_public_key) = self.identity_key.public_key_from_config() {
             let peer_id = AuthenticationKey::try_from(identity_public_key.as_slice())
                 .unwrap()
                 .derived_address();
@@ -154,6 +151,7 @@ impl NetworkConfig {
                 );
             }
         }
+
         Ok(())
     }
 
@@ -193,7 +191,7 @@ impl NetworkConfig {
                 .unwrap()
                 .derived_address()
         };
-        self.identity_keypair = Some(KeyPair::load(identity_key));
+        self.identity_key = IdentityKey::from_config(identity_key);
     }
 }
 
@@ -249,6 +247,55 @@ pub enum DiscoveryMethod {
     None,
 }
 
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(tag = "type")]
+#[serde(rename_all = "snake_case")]
+pub enum IdentityKey {
+    FromConfig(KeyFromConfig),
+    FromStorage(KeyFromStorage),
+    None,
+}
+
+impl IdentityKey {
+    pub fn from_config(key: x25519::PrivateKey) -> Self {
+        let keypair = KeyPair::load(key);
+        IdentityKey::FromConfig(KeyFromConfig { keypair })
+    }
+
+    pub fn private_key_from_config(&mut self) -> Option<x25519::PrivateKey> {
+        if let IdentityKey::FromConfig(config) = self {
+            config.keypair.take_private()
+        } else {
+            None
+        }
+    }
+
+    pub fn public_key_from_config(&self) -> Option<x25519::PublicKey> {
+        if let IdentityKey::FromConfig(config) = self {
+            Some(config.keypair.public_key())
+        } else {
+            None
+        }
+    }
+}
+
+/// The key is stored within the config.
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
+#[derive(Debug, Deserialize, Serialize)]
+pub struct KeyFromConfig {
+    #[serde(rename = "key")]
+    pub keypair: KeyPair<x25519::PrivateKey>,
+}
+
+/// This represents a key in a secure-storage as defined in NodeConfig::secure.
+/// This is not implemented yet.
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
+#[derive(Debug, Deserialize, Serialize)]
+pub struct KeyFromStorage {
+    pub key_name: String,
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -262,7 +309,7 @@ mod test {
         let (mut config, path) = generate_config();
         assert_eq!(config.network_peers, NetworkPeersConfig::default());
         assert_eq!(config.network_peers_file, PathBuf::new());
-        assert_eq!(config.identity_keypair, None);
+        assert_eq!(config.identity_key, IdentityKey::None);
         assert_eq!(config.peer_id, PeerId::default());
         assert_eq!(config.seed_peers, SeedPeersConfig::default());
         assert_eq!(config.seed_peers_file, PathBuf::new());
@@ -272,7 +319,7 @@ mod test {
         config.load(&root_dir, RoleType::FullNode).unwrap();
         assert_eq!(config.network_peers, NetworkPeersConfig::default());
         assert_eq!(config.network_peers_file, PathBuf::new());
-        assert_eq!(config.identity_keypair, None);
+        assert_eq!(config.identity_key, IdentityKey::None);
         assert_eq!(config.peer_id, PeerId::default());
         assert_eq!(config.seed_peers_file, PathBuf::new());
         assert_eq!(config.seed_peers, SeedPeersConfig::default());
@@ -286,7 +333,7 @@ mod test {
         );
 
         // Assert paths and values are not set (i.e., no defaults apply)
-        assert_eq!(config.identity_keypair, None);
+        assert_eq!(config.identity_key, IdentityKey::None);
         assert_eq!(config.network_peers, NetworkPeersConfig::default());
         assert_eq!(config.network_peers_file, PathBuf::new());
     }
@@ -300,7 +347,7 @@ mod test {
         // This is default (empty) otherwise
         config.seed_peers.seed_peers.insert(config.peer_id, vec![]);
 
-        let keypair = config.identity_keypair.clone();
+        let key = config.identity_key.clone();
         let peers = config.network_peers.clone();
         let seed_peers = config.seed_peers.clone();
 
@@ -311,7 +358,7 @@ mod test {
         // Assert saving updates paths
         let root_dir = RootPath::new_path(path.path());
         config.save(&root_dir).unwrap();
-        assert_eq!(config.identity_keypair, keypair);
+        assert_eq!(config.identity_key, key);
         assert_eq!(config.network_peers, peers);
         assert_eq!(config.network_peers_file, PathBuf::new(),);
         assert_eq!(config.seed_peers, seed_peers);
@@ -329,7 +376,7 @@ mod test {
         // Loading populates things correctly
         let result = new_config.load(&root_dir, RoleType::Validator);
         result.unwrap();
-        assert_eq!(config.identity_keypair, keypair);
+        assert_eq!(config.identity_key, key);
         assert_eq!(config.network_peers, peers);
         assert_eq!(config.network_peers_file, PathBuf::new(),);
         assert_eq!(config.seed_peers, seed_peers);

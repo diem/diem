@@ -226,10 +226,9 @@ impl FullNodeConfig {
                 network.peer_id,
                 NetworkPeerInfo {
                     identity_public_key: network
-                        .identity_keypair
-                        .as_ref()
-                        .ok_or(Error::MissingNetworkKeyPairs)?
-                        .public_key(),
+                        .identity_key
+                        .public_key_from_config()
+                        .ok_or(Error::MissingNetworkKeyPairs)?,
                 },
             );
 
