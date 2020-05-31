@@ -9,9 +9,10 @@ use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on, stream::StreamExt};
 use libra_config::{
-    config::{DiscoveryMethod, NetworkConfig, NodeConfig, RoleType},
+    config::{DiscoveryMethod, IdentityKey, NetworkConfig, NodeConfig, RoleType},
     utils::get_genesis_txn,
 };
+use libra_crypto::x25519;
 use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_mempool::gen_mempool_reconfig_subscription;
@@ -152,10 +153,7 @@ pub fn setup_network(
         let network_peers = config.network_peers.peers.clone();
         let seed_peers = config.seed_peers.seed_peers.clone();
 
-        let identity_key = config
-            .identity_key
-            .private_key_from_config()
-            .expect("identity key should be present");
+        let identity_key = retrieve_network_identity_key(config);
 
         let trusted_peers = if role == RoleType::Validator {
             // for validators, trusted_peers is empty will be populated from consensus
@@ -178,10 +176,7 @@ pub fn setup_network(
             // TODO:  Why is the connectivity manager related to remote_authentication?
             .add_connectivity_manager();
     } else if config.enable_noise {
-        let identity_key = config
-            .identity_key
-            .private_key_from_config()
-            .expect("identity key should be present");
+        let identity_key = retrieve_network_identity_key(config);
 
         // Even if a network end-point operates without remote authentication, it might want to prove
         // its identity to another peer it connects to. For this, we use TCP + Noise but without
@@ -215,6 +210,23 @@ pub fn setup_network(
     }
 
     (runtime, network_builder)
+}
+
+fn retrieve_network_identity_key(config: &mut NetworkConfig) -> x25519::PrivateKey {
+    let key = match &mut config.identity_key {
+        IdentityKey::FromConfig(config) => config.keypair.take_private(),
+        IdentityKey::FromStorage(config) => {
+            let storage: Box<dyn libra_secure_storage::Storage> = (&config.backend).into();
+            let key = storage
+                .export_private_key(&config.key_name)
+                .expect("Unable to read key");
+            let key = x25519::PrivateKey::from_ed25519_private_bytes(&key.to_bytes())
+                .expect("Unable to convert key");
+            Some(key)
+        }
+        IdentityKey::None => None,
+    };
+    key.expect("identity key should be present")
 }
 
 pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
