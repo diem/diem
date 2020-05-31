@@ -81,4 +81,6 @@ enable_noise = true
 enable_remote_authentication = true
 network_peers_file = ""
 seed_peers_file = "31893204fa402143c11b26ce8a89ea1d.seed_peers.toml"
-identity_private_key = "60dd107034b4582a2ef42c5e1ea475f2fea477a10a9f1d75b3635243b2506b72"
+[validator_network.identity_key]
+type = "from_config"
+key = "60dd107034b4582a2ef42c5e1ea475f2fea477a10a9f1d75b3635243b2506b72"
