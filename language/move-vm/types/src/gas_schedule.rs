@@ -111,8 +111,11 @@ impl<'a> CostStrategy<'a> {
 
     /// Charge gas related to the overall size of a transaction and fail if not enough
     /// gas units are left.
-    pub fn charge_intrinsic_gas(&mut self, size: AbstractMemorySize<GasCarrier>) -> VMResult<()> {
-        let cost = calculate_intrinsic_gas(size, &self.cost_table.gas_constants);
+    pub fn charge_intrinsic_gas(
+        &mut self,
+        instrinsic_cost: AbstractMemorySize<GasCarrier>,
+    ) -> VMResult<()> {
+        let cost = calculate_intrinsic_gas(instrinsic_cost, &self.cost_table.gas_constants);
         self.deduct_gas(cost)
     }
 }

@@ -335,20 +335,25 @@ impl LibraVM {
         // TODO: The logic for handling falied transaction fee is pretty ugly right now. Fix it later.
         let mut failed_gas_left = GasUnits::new(0);
         match payload {
-            VerifiedTransactionPayload::Module(m) => {
-                self.move_vm
-                    .publish_module(m, txn_data.sender(), &mut data_store)
-            }
+            VerifiedTransactionPayload::Module(m) => cost_strategy
+                .charge_intrinsic_gas(txn_data.transaction_size())
+                .and_then(|_| {
+                    self.move_vm
+                        .publish_module(m, txn_data.sender(), &mut data_store)
+                }),
             VerifiedTransactionPayload::Script(s, ty_args, args) => {
-                let ret = self.move_vm.execute_script(
-                    s,
-                    ty_args,
-                    args,
-                    txn_data.sender(),
-                    txn_data.transaction_size(),
-                    &mut data_store,
-                    &mut cost_strategy,
-                );
+                let ret = cost_strategy
+                    .charge_intrinsic_gas(txn_data.transaction_size())
+                    .and_then(|_| {
+                        self.move_vm.execute_script(
+                            s,
+                            ty_args,
+                            args,
+                            txn_data.sender(),
+                            &mut data_store,
+                            &mut cost_strategy,
+                        )
+                    });
                 let gas_usage = txn_data
                     .max_gas_amount()
                     .sub(cost_strategy.remaining_gas())
@@ -505,6 +510,7 @@ impl LibraVM {
 
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::transaction(&gas_schedule, txn_data.max_gas_amount());
+        cost_strategy.charge_intrinsic_gas(txn_data.transaction_size())?;
         let mut data_store = TransactionDataCache::new(remote_cache);
 
         if let Ok((round, timestamp, previous_vote, proposer)) = block_metadata.into_inner() {
@@ -520,7 +526,6 @@ impl LibraVM {
                 vec![],
                 args,
                 txn_data.sender(),
-                txn_data.transaction_size(),
                 &mut data_store,
                 &mut cost_strategy,
             )?
@@ -537,7 +542,6 @@ impl LibraVM {
                 vec![currency_ty],
                 vec![],
                 txn_data.sender(),
-                txn_data.transaction_size(),
                 &mut data_store,
                 &mut cost_strategy,
             )?
@@ -596,7 +600,6 @@ impl LibraVM {
                 txn_data.sender,
             )],
             txn_data.sender,
-            txn_data.transaction_size,
             &mut data_store,
             &mut cost_strategy,
         )?;
@@ -699,7 +702,6 @@ impl LibraVM {
                     Value::u64(txn_expiration_time),
                 ],
                 txn_data.sender(),
-                txn_data.transaction_size(),
                 data_store,
                 cost_strategy,
             )
@@ -733,7 +735,6 @@ impl LibraVM {
                 Value::u64(gas_remaining),
             ],
             txn_data.sender(),
-            txn_data.transaction_size(),
             data_store,
             cost_strategy,
         )
@@ -761,7 +762,6 @@ impl LibraVM {
                     Value::vector_u8(txn_public_key),
                 ],
                 txn_data.sender(),
-                txn_data.transaction_size(),
                 data_store,
                 &mut cost_strategy,
             )
@@ -788,7 +788,6 @@ impl LibraVM {
             vec![],
             vec![Value::vector_u8(change_set_bytes)],
             txn_data.sender(),
-            txn_data.transaction_size(),
             data_store,
             &mut cost_strategy,
         )

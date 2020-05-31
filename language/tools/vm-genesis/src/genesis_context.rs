@@ -16,7 +16,7 @@ use libra_types::{
 };
 use libra_vm::data_cache::StateViewCache;
 use move_core_types::{
-    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasUnits},
+    gas_schedule::{CostTable, GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
 };
@@ -101,7 +101,6 @@ impl<'a> GenesisContext<'a> {
                 type_params,
                 args,
                 self.sender,
-                AbstractMemorySize::new(0),
                 &mut self.data_store,
                 &mut cost_strategy,
             )
@@ -117,7 +116,6 @@ impl<'a> GenesisContext<'a> {
                 script.ty_args().to_vec(),
                 Self::convert_txn_args(script.args()),
                 self.sender,
-                AbstractMemorySize::new(0),
                 &mut self.data_store,
                 &mut cost_strategy,
             )
