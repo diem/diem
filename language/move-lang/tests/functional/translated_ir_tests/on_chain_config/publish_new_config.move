@@ -9,14 +9,14 @@ module FooConfig {
         version: u64,
     }
 
-    public fun new(version: u64, account: &signer) {
-        LibraConfig::publish_new_config<T>(T { version: version }, account);
+    public fun new(account: &signer, version: u64) {
+        LibraConfig::publish_new_config<T>(account, T { version: version });
     }
 
-    public fun set(version: u64, account: &signer) {
+    public fun set(account: &signer, version: u64) {
         LibraConfig::set(
-            T { version },
-            account
+            account,
+            T { version }
         )
     }
 }
@@ -31,7 +31,7 @@ module FooConfig {
 script {
 use {{alice}}::FooConfig;
 fun main(account: &signer) {
-    FooConfig::new(0, account);
+    FooConfig::new(account, 0);
 }
 }
 // check: EXECUTED
@@ -46,7 +46,7 @@ fun main(account: &signer) {
 script {
 use {{alice}}::FooConfig;
 fun main(account: &signer) {
-    FooConfig::set(0, account);
+    FooConfig::set(account, 0);
 }
 }
 // Should trigger a reconfiguration
@@ -62,7 +62,7 @@ fun main(account: &signer) {
 script {
 use {{alice}}::FooConfig;
 fun main(account: &signer) {
-    FooConfig::set(0, account);
+    FooConfig::set(account, 0);
 }
 }
 // check: ABORT

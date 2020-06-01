@@ -3,8 +3,9 @@
 import 0x0.Offer;
 
 // Create a self offer containing a u64
-main() {
+main(account: &signer) {
     Offer.create<u64>(
+        move(account),
         7,
         {{default}}
     );
@@ -17,7 +18,7 @@ main() {
 import 0x0.Offer;
 
 // Claim the self offer
-main() {
-    assert(Offer.redeem<u64>({{default}}) == 7, 101);
+main(account: &signer) {
+    assert(Offer.redeem<u64>(move(account), {{default}}) == 7, 101);
     return;
 }

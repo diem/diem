@@ -39,7 +39,7 @@ script {
 script {
     use 0x0::LibraConfig;
     fun main(account: &signer) {
-        LibraConfig::set(0, account);
+        LibraConfig::set(account, 0);
     }
 }
 // check: ABORTED
@@ -52,7 +52,7 @@ script {
     fun main(account: &signer) {
         ConfigHolder::hold(
             account,
-            LibraConfig::publish_new_config_with_capability(0, account)
+            LibraConfig::publish_new_config_with_capability(account, 0)
         );
     }
 }
@@ -67,7 +67,7 @@ script {
     fun main(account: &signer) {
         ConfigHolder::hold(
             account,
-            LibraConfig::publish_new_config_with_capability<u64>(0, account)
+            LibraConfig::publish_new_config_with_capability<u64>(account, 0)
         );
     }
 }
@@ -89,7 +89,7 @@ script {
 script {
     use 0x0::LibraConfig;
     fun main(account: &signer) {
-        LibraConfig::publish_new_config(0, account)
+        LibraConfig::publish_new_config(account, 0)
     }
 }
 // check: ABORTED
@@ -99,7 +99,7 @@ script {
 script {
     use 0x0::LibraConfig;
     fun main(account: &signer) {
-        LibraConfig::publish_new_config_with_delegate(0, {{config}}, account)
+        LibraConfig::publish_new_config_with_delegate(account, 0, {{config}})
     }
 }
 // check: ABORTED

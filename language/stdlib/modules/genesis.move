@@ -44,7 +44,7 @@ module Genesis {
         Libra::initialize(config_account);
 
         // Set that this is testnet
-        Testnet::initialize();
+        Testnet::initialize(association);
 
         // Event and currency setup
         Event::publish_generator(association);

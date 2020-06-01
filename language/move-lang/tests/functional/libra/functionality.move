@@ -21,8 +21,8 @@ use 0x0::Transaction;
 fun main(account: &signer) {
     let pre_coin1 = Libra::new_preburn<Coin1::T>();
     let pre_coin2 = Libra::new_preburn<Coin2::T>();
-    Libra::publish_preburn(pre_coin1);
-    Libra::publish_preburn(pre_coin2);
+    Libra::publish_preburn(account, pre_coin1);
+    Libra::publish_preburn(account, pre_coin2);
 
     let coin1 = Libra::mint<Coin1::T>(account, 10000);
     let coin2 = Libra::mint<Coin2::T>(account, 10000);

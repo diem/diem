@@ -247,7 +247,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_set">set</a>&lt;Config: <b>copyable</b>&gt;(payload: Config, account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_set">set</a>&lt;Config: <b>copyable</b>&gt;(account: &signer, payload: Config)
 </code></pre>
 
 
@@ -256,7 +256,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_set">set</a>&lt;Config: <b>copyable</b>&gt;(payload: Config, account: &signer) <b>acquires</b> <a href="#0x0_LibraConfig_T">T</a>, <a href="#0x0_LibraConfig_Configuration">Configuration</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_set">set</a>&lt;Config: <b>copyable</b>&gt;(account: &signer, payload: Config) <b>acquires</b> <a href="#0x0_LibraConfig_T">T</a>, <a href="#0x0_LibraConfig_Configuration">Configuration</a> {
     <b>let</b> addr = <a href="#0x0_LibraConfig_default_config_address">default_config_address</a>();
     Transaction::assert(::exists&lt;<a href="#0x0_LibraConfig_T">T</a>&lt;Config&gt;&gt;(addr), 24);
     <b>let</b> signer_address = <a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
@@ -315,7 +315,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_publish_new_config_with_capability">publish_new_config_with_capability</a>&lt;Config: <b>copyable</b>&gt;(payload: Config, config_account: &signer): <a href="#0x0_LibraConfig_ModifyConfigCapability">LibraConfig::ModifyConfigCapability</a>&lt;Config&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_publish_new_config_with_capability">publish_new_config_with_capability</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config): <a href="#0x0_LibraConfig_ModifyConfigCapability">LibraConfig::ModifyConfigCapability</a>&lt;Config&gt;
 </code></pre>
 
 
@@ -325,8 +325,8 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_publish_new_config_with_capability">publish_new_config_with_capability</a>&lt;Config: <b>copyable</b>&gt;(
-    payload: Config,
     config_account: &signer,
+    payload: Config,
 ): <a href="#0x0_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {
     Transaction::assert(
         <a href="association.md#0x0_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account)),
@@ -352,7 +352,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(payload: Config, config_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config)
 </code></pre>
 
 
@@ -361,10 +361,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(
-    payload: Config,
-    config_account: &signer,
-) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config) {
     Transaction::assert(
         <a href="association.md#0x0_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account)),
         1
@@ -388,7 +385,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_publish_new_config_with_delegate">publish_new_config_with_delegate</a>&lt;Config: <b>copyable</b>&gt;(payload: Config, delegate: address, config_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_publish_new_config_with_delegate">publish_new_config_with_delegate</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config, delegate: address)
 </code></pre>
 
 
@@ -398,20 +395,20 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_publish_new_config_with_delegate">publish_new_config_with_delegate</a>&lt;Config: <b>copyable</b>&gt;(
+    config_account: &signer,
     payload: Config,
     delegate: address,
-    config_account: &signer
 ) {
     Transaction::assert(
         <a href="association.md#0x0_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account)),
         1
     );
 
-    <a href="offer.md#0x0_Offer_create">Offer::create</a>(<a href="#0x0_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {}, delegate);
-    move_to_sender(<a href="#0x0_LibraConfig_T">T</a>{ payload });
-    // We don't trigger reconfiguration here, instead we'll wait for all validators <b>update</b> the binary
-    // <b>to</b> register this config into ON_CHAIN_CONFIG_REGISTRY then send another transaction <b>to</b> change
-    // the value which triggers the reconfiguration.
+    <a href="offer.md#0x0_Offer_create">Offer::create</a>(config_account, <a href="#0x0_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;{}, delegate);
+    move_to(config_account, <a href="#0x0_LibraConfig_T">T</a> { payload });
+    // We don't trigger reconfiguration here, instead we'll wait for all validators <b>update</b> the
+    // binary <b>to</b> register this config into ON_CHAIN_CONFIG_REGISTRY then send another
+    // transaction <b>to</b> change the value which triggers the reconfiguration.
 }
 </code></pre>
 
@@ -425,7 +422,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_claim_delegated_modify_config">claim_delegated_modify_config</a>&lt;Config&gt;(offer_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_claim_delegated_modify_config">claim_delegated_modify_config</a>&lt;Config&gt;(account: &signer, offer_address: address)
 </code></pre>
 
 
@@ -434,8 +431,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_claim_delegated_modify_config">claim_delegated_modify_config</a>&lt;Config&gt;(offer_address: address) {
-    move_to_sender(<a href="offer.md#0x0_Offer_redeem">Offer::redeem</a>&lt;<a href="#0x0_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(offer_address))
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_claim_delegated_modify_config">claim_delegated_modify_config</a>&lt;Config&gt;(account: &signer, offer_address: address) {
+    move_to(account, <a href="offer.md#0x0_Offer_redeem">Offer::redeem</a>&lt;<a href="#0x0_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(account, offer_address))
 }
 </code></pre>
 

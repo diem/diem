@@ -223,7 +223,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_register_candidate_validator">register_candidate_validator</a>(consensus_pubkey: vector&lt;u8&gt;, validator_network_signing_pubkey: vector&lt;u8&gt;, validator_network_identity_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, full_node_network_identity_pubkey: vector&lt;u8&gt;, full_node_network_address: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_register_candidate_validator">register_candidate_validator</a>(candidate: &signer, consensus_pubkey: vector&lt;u8&gt;, validator_network_signing_pubkey: vector&lt;u8&gt;, validator_network_identity_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, full_node_network_identity_pubkey: vector&lt;u8&gt;, full_node_network_address: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -233,14 +233,16 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_register_candidate_validator">register_candidate_validator</a>(
+    candidate: &signer,
     consensus_pubkey: vector&lt;u8&gt;,
     validator_network_signing_pubkey: vector&lt;u8&gt;,
     validator_network_identity_pubkey: vector&lt;u8&gt;,
     validator_network_address: vector&lt;u8&gt;,
     full_node_network_identity_pubkey: vector&lt;u8&gt;,
-    full_node_network_address: vector&lt;u8&gt;) {
-
-    move_to_sender&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(
+    full_node_network_address: vector&lt;u8&gt;
+) {
+    move_to&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(
+        candidate,
         <a href="#0x0_ValidatorConfig_T">T</a> {
             config: <a href="#0x0_ValidatorConfig_Config">Config</a> {
                 consensus_pubkey: consensus_pubkey,

@@ -7,8 +7,8 @@
 // register Alice as a validator candidate
 script{
 use 0x0::ValidatorConfig;
-fun main() {
-    ValidatorConfig::register_candidate_validator(x"10", x"20", x"30", x"40", x"50", x"60");
+fun main(account: &signer) {
+    ValidatorConfig::register_candidate_validator(account, x"10", x"20", x"30", x"40", x"50", x"60");
 }
 }
 

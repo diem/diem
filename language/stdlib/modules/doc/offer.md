@@ -54,7 +54,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Offer_create">create</a>&lt;Offered&gt;(offered: Offered, for: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Offer_create">create</a>&lt;Offered&gt;(account: &signer, offered: Offered, for: address)
 </code></pre>
 
 
@@ -63,8 +63,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Offer_create">create</a>&lt;Offered&gt;(offered: Offered, for: address) {
-  move_to_sender&lt;<a href="#0x0_Offer_T">T</a>&lt;Offered&gt;&gt;(<a href="#0x0_Offer_T">T</a>&lt;Offered&gt; { offered: offered, for: for });
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Offer_create">create</a>&lt;Offered&gt;(account: &signer, offered: Offered, for: address) {
+  move_to(account, <a href="#0x0_Offer_T">T</a>&lt;Offered&gt; { offered, for });
 }
 </code></pre>
 
@@ -78,7 +78,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Offer_redeem">redeem</a>&lt;Offered&gt;(offer_address: address): Offered
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Offer_redeem">redeem</a>&lt;Offered&gt;(account: &signer, offer_address: address): Offered
 </code></pre>
 
 
@@ -87,9 +87,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Offer_redeem">redeem</a>&lt;Offered&gt;(offer_address: address): Offered <b>acquires</b> <a href="#0x0_Offer_T">T</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Offer_redeem">redeem</a>&lt;Offered&gt;(account: &signer, offer_address: address): Offered <b>acquires</b> <a href="#0x0_Offer_T">T</a> {
   <b>let</b> <a href="#0x0_Offer_T">T</a>&lt;Offered&gt; { offered, for } = move_from&lt;<a href="#0x0_Offer_T">T</a>&lt;Offered&gt;&gt;(offer_address);
-  <b>let</b> sender = Transaction::sender();
+  <b>let</b> sender = <a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
   // fail with INSUFFICIENT_PRIVILEGES
   Transaction::assert(sender == for || sender == offer_address, 11);
   offered

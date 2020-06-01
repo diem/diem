@@ -6,7 +6,7 @@ use 0x0::SharedEd25519PublicKey;
 //     of the sender under the sender's address.
 // Aborts if the sender already has a `SharedEd25519PublicKey` resource.
 // Aborts if the length of `new_public_key` is not 32.
-fun main(public_key: vector<u8>) {
-    SharedEd25519PublicKey::publish(public_key)
+fun main(account: &signer, public_key: vector<u8>) {
+    SharedEd25519PublicKey::publish(account, public_key)
 }
 }

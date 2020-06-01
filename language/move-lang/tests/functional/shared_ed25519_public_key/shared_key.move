@@ -8,11 +8,11 @@ script {
 use 0x0::LibraAccount;
 use 0x0::SharedEd25519PublicKey;
 use 0x0::Transaction;
-fun main() {
+fun main(account: &signer) {
     let old_auth_key = LibraAccount::authentication_key({{default}});
     // from RFC 8032
     let pubkey1 = x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
-    SharedEd25519PublicKey::publish(copy pubkey1);
+    SharedEd25519PublicKey::publish(account, copy pubkey1);
     let new_auth_key = LibraAccount::authentication_key({{default}});
 
     // check that publishing worked
@@ -40,9 +40,9 @@ fun main() {
 //! sender: alice
 script {
 use 0x0::SharedEd25519PublicKey;
-fun main() {
+fun main(account: &signer) {
     let invalid_pubkey = x"000";
-    SharedEd25519PublicKey::publish(invalid_pubkey)
+    SharedEd25519PublicKey::publish(account, invalid_pubkey)
 }
 }
 // check: ABORTED
@@ -53,9 +53,9 @@ fun main() {
 //! sender: alice
 script {
 use 0x0::SharedEd25519PublicKey;
-fun main() {
+fun main(account: &signer) {
     let invalid_pubkey = x"10003d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
-    SharedEd25519PublicKey::publish(invalid_pubkey)
+    SharedEd25519PublicKey::publish(account, invalid_pubkey)
 }
 }
 // check: ABORTED
@@ -67,10 +67,10 @@ fun main() {
 //! sender: alice
 script {
 use 0x0::SharedEd25519PublicKey;
-fun main() {
+fun main(account: &signer) {
     // from RFC 8032
     let valid_pubkey =  x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
-    SharedEd25519PublicKey::publish(valid_pubkey);
+    SharedEd25519PublicKey::publish(account, valid_pubkey);
     // now rotate to an invalid key
     let invalid_pubkey = x"10000";
     SharedEd25519PublicKey::rotate_sender_key(invalid_pubkey)
@@ -84,9 +84,9 @@ fun main() {
 //! sender: alice
 script {
 use 0x0::SharedEd25519PublicKey;
-fun main() {
+fun main(account: &signer) {
     let valid_pubkey =  x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
-    SharedEd25519PublicKey::publish(valid_pubkey);
+    SharedEd25519PublicKey::publish(account, valid_pubkey);
     // now rotate to an invalid key
     let invalid_pubkey = x"0000000000000000000000000000000000000000000000000000000000000000";
     SharedEd25519PublicKey::rotate_sender_key(invalid_pubkey)

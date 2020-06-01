@@ -349,8 +349,8 @@ module Libra {
     }
 
     // Publish `preburn` under the sender's account
-    public fun publish_preburn<Token>(preburn: Preburn<Token>) {
-        move_to_sender(preburn)
+    public fun publish_preburn<Token>(account: &signer, preburn: Preburn<Token>) {
+        move_to(account, preburn)
     }
 
     // Remove and return the `Preburn` resource under the sender's account

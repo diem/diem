@@ -46,7 +46,7 @@
     <a href="libra.md#0x0_Libra_initialize">Libra::initialize</a>(config_account);
 
     // Set that this is testnet
-    <a href="testnet.md#0x0_Testnet_initialize">Testnet::initialize</a>();
+    <a href="testnet.md#0x0_Testnet_initialize">Testnet::initialize</a>(association);
 
     // <a href="event.md#0x0_Event">Event</a> and currency setup
     <a href="event.md#0x0_Event_publish_generator">Event::publish_generator</a>(association);

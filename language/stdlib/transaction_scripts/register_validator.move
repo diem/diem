@@ -19,6 +19,7 @@ fun main(
     fullnodes_network_address: vector<u8>,
 ) {
   ValidatorConfig::register_candidate_validator(
+      account,
       consensus_pubkey,
       validator_network_signing_pubkey,
       validator_network_identity_pubkey,
