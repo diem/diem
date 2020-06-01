@@ -17,13 +17,15 @@ use libra_network_address::NetworkAddress;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
 use netcore::transport::{boxed, memory, tcp, ConnectionOrigin, TransportExt};
-use once_cell::sync::Lazy;
 use std::{
     collections::HashMap,
     convert::TryFrom,
     fmt::Debug,
     io,
-    sync::{Arc, Mutex, RwLock},
+    sync::{
+        atomic::{AtomicU32, Ordering},
+        Arc, RwLock,
+    },
     time::Duration,
 };
 
@@ -33,8 +35,7 @@ pub const TRANSPORT_TIMEOUT: Duration = Duration::from_secs(30);
 /// TODO: Add ability to support more than one messaging protocol.
 pub const SUPPORTED_MESSAGING_PROTOCOL: MessagingProtocolVersion = MessagingProtocolVersion::V1;
 /// Global connection-id generator.
-static CONNECTION_ID_GENERATOR: Lazy<Arc<Mutex<ConnectionIdGenerator>>> =
-    Lazy::new(|| Arc::new(Mutex::new(ConnectionIdGenerator::new())));
+static CONNECTION_ID_GENERATOR: ConnectionIdGenerator = ConnectionIdGenerator::new();
 
 const LIBRA_TCP_TRANSPORT: tcp::TcpTransport = tcp::TcpTransport {
     // Use default options.
@@ -62,20 +63,19 @@ impl From<u32> for ConnectionId {
 
 /// Generator of unique ConnectionIds.
 struct ConnectionIdGenerator {
-    next: ConnectionId,
+    ctr: AtomicU32,
 }
 
 impl ConnectionIdGenerator {
-    fn new() -> ConnectionIdGenerator {
+    const fn new() -> ConnectionIdGenerator {
         Self {
-            next: ConnectionId(0),
+            ctr: AtomicU32::new(0),
         }
     }
 
-    fn next(&mut self) -> ConnectionId {
-        let ret = self.next;
-        self.next = ConnectionId(ret.0.wrapping_add(1));
-        ret
+    fn next(&self) -> ConnectionId {
+        let next = self.ctr.fetch_add(1, Ordering::Relaxed);
+        ConnectionId::from(next)
     }
 }
 
@@ -209,7 +209,7 @@ pub async fn perform_handshake<T: TSocket>(
             socket,
             metadata: ConnectionMetadata::new(
                 peer_id,
-                CONNECTION_ID_GENERATOR.lock().unwrap().next(),
+                CONNECTION_ID_GENERATOR.next(),
                 addr,
                 origin,
                 messaging_protocol,
