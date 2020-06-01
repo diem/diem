@@ -1,8 +1,6 @@
 [workspace]
 
 members = [
-    "admission-control/admission-control-proto",
-    "admission-control/admission-control-service",
     "client/json-rpc",
     "client/libra-dev",
     "common/bitvec",
