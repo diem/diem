@@ -3304,7 +3304,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 let id = self.new_node_id_with_type_loc(&ty, &loc);
                 Exp::Call(id, Operation::Tuple, exps)
             }
-            EA::Exp_::Unit => {
+            EA::Exp_::Unit { .. } => {
                 let ty = self.check_type(
                     &loc,
                     &Type::Tuple(vec![]),

@@ -229,7 +229,9 @@ pub enum Exp_ {
 
     Pack(ModuleIdent, StructName, Option<Vec<Type>>, Fields<Exp>),
     ExpList(Vec<Exp>),
-    Unit,
+    Unit {
+        trailing: bool,
+    },
 
     DerefBorrow(ExpDotted),
     Borrow(bool, ExpDotted),
@@ -744,7 +746,10 @@ impl AstDebug for Exp_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         use Exp_ as E;
         match self {
-            E::Unit => w.write("()"),
+            E::Unit { trailing } if !trailing => w.write("()"),
+            E::Unit {
+                trailing: _trailing,
+            } => w.write("/*()*/"),
             E::Value(v) => v.ast_debug(w),
             E::InferredNum(u) => w.write(&format!("{}", u)),
             E::Move(v) => w.write(&format!("move {}", v)),

@@ -613,7 +613,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
     use N::Exp_ as NE;
     let sp!(eloc, e_) = e;
     let ne_ = match e_ {
-        EE::Unit => NE::Unit,
+        EE::Unit { trailing } => NE::Unit { trailing },
         EE::InferredNum(u) => NE::InferredNum(u),
         EE::Value(val) => NE::Value(val),
         EE::Move(v) => NE::Move(v),
@@ -722,14 +722,15 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
             let ty_args = tys_opt.map(|tys| types(context, tys));
             let nes = call_args(context, rhs);
             match ma_ {
-                EA::Name(n) if N::BuiltinFunction_::all_names().contains(&n.value.as_str()) =>
-                        match resolve_builtin_function(context, eloc, &n, ty_args) {
-                            None => {
-                                assert!(context.has_errors());
-                                NE::UnresolvedError
-                            }
-                            Some(f) => NE::Builtin(sp(mloc, f), nes),
-                        },
+                EA::Name(n) if N::BuiltinFunction_::all_names().contains(&n.value.as_str()) => {
+                    match resolve_builtin_function(context, eloc, &n, ty_args) {
+                        None => {
+                            assert!(context.has_errors());
+                            NE::UnresolvedError
+                        }
+                        Some(f) => NE::Builtin(sp(mloc, f), nes),
+                    }
+                }
 
                 EA::Name(n) => {
                     context.error(vec![(

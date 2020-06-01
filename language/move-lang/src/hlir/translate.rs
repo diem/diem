@@ -283,6 +283,7 @@ fn function_body(
             }
             let (mut locals, used) = context.extract_function_locals();
             let unused = check_unused_locals(context, &mut locals, used);
+            check_trailing_unit(context, &mut body);
             remove_unused_bindings(&unused, &mut body);
             context.signature = None;
             context.has_return_abort = false;
@@ -422,7 +423,12 @@ fn block(
 ) -> H::Exp {
     use T::SequenceItem_ as S;
     let last = match seq.pop_back() {
-        None => return H::exp(sp(loc, H::Type_::Unit), sp(loc, H::UnannotatedExp_::Unit)),
+        None => {
+            return H::exp(
+                sp(loc, H::Type_::Unit),
+                sp(loc, H::UnannotatedExp_::Unit { trailing: false }),
+            )
+        }
         Some(sp!(_, S::Seq(last))) => last,
         Some(_) => panic!("ICE last sequence item should be exp"),
     };
@@ -745,7 +751,7 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
                 block: loop_block,
             };
             result.push_back(sp(eloc, s_));
-            HE::Unit
+            HE::Unit { trailing: false }
         }
         TE::Loop {
             has_break,
@@ -762,7 +768,7 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
             if !has_break {
                 HE::Unreachable
             } else {
-                HE::Unit
+                HE::Unit { trailing: false }
             }
         }
         TE::Block(seq) => return block(context, result, eloc, None, seq),
@@ -797,17 +803,17 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
             let expected_type = expected_types(context, eloc, lvalue_ty);
             let e = exp_(context, result, Some(&expected_type), *te);
             assign_command(context, result, eloc, assigns, e);
-            HE::Unit
+            HE::Unit { trailing: false }
         }
         TE::Mutate(tl, tr) => {
             let er = exp(context, result, None, *tr);
             let el = exp(context, result, None, *tl);
             let c = sp(eloc, C::Mutate(el, er));
             result.push_back(sp(eloc, S::Command(c)));
-            HE::Unit
+            HE::Unit { trailing: false }
         }
         // All other expressiosn
-        TE::Unit => HE::Unit,
+        TE::Unit { trailing } => HE::Unit { trailing },
         TE::Value(v) => HE::Value(v),
         TE::InferredNum(_) => panic!("ICE unexpanded inferred num"),
         TE::Move { from_user, var } => HE::Move {
@@ -865,7 +871,7 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
                 let econd = mvar(vcond, tu64);
                 let ecode = mvar(vcode, tbool);
                 let eabort = T::exp(tunit.clone(), sp(eloc, TE::Abort(Box::new(ecode))));
-                let eunit = T::exp(tunit.clone(), sp(eloc, TE::Unit));
+                let eunit = T::exp(tunit.clone(), sp(eloc, TE::Unit { trailing: false }));
                 let inlined_ = TE::IfElse(Box::new(econd), Box::new(eunit), Box::new(eabort));
                 let inlined = T::exp(tunit.clone(), sp(eloc, inlined_));
                 stmts.push_back(sp(eloc, T::SequenceItem_::Seq(Box::new(inlined))));
@@ -1150,7 +1156,7 @@ fn bind_exp_(
     if tmps.is_empty() {
         let cmd = sp(loc, C::IgnoreAndPop { pop_num: 0, exp: e });
         result.push_back(sp(loc, S::Command(cmd)));
-        return E::Unit;
+        return E::Unit { trailing: false };
     }
     let lvalues = tmps
         .iter()
@@ -1393,7 +1399,7 @@ fn bind_for_short_circuit(e: &T::Exp) -> bool {
         | TE::TempBorrow(_, _)
         | TE::BinopExp(_, _, _, _) => true,
 
-        TE::Unit
+        TE::Unit { .. }
         | TE::Spec(_, _)
         | TE::Assign(_, _, _)
         | TE::Mutate(_, _)
@@ -1413,6 +1419,122 @@ fn bind_for_short_circuit_sequence(seq: &T::Sequence) -> bool {
                 panic!("ICE unexpected item in short circuit check: {:?}", item)
             }
         }
+}
+
+//**************************************************************************************************
+// Trailing semicolon
+//**************************************************************************************************
+
+fn check_trailing_unit(context: &mut Context, block: &mut Block) {
+    use H::{Command_ as C, Statement_ as S, UnannotatedExp_ as E};
+    macro_rules! hcmd {
+        ($loc:pat, $cmd:pat) => {
+            sp!(_, S::Command(sp!($loc, $cmd)))
+        };
+    }
+    macro_rules! hignored {
+        ($loc:pat, $e:pat) => {
+            hcmd!(_, C::IgnoreAndPop { exp: H::Exp { exp: sp!($loc, $e), .. }, .. })
+        };
+    }
+    macro_rules! trailing {
+        ($uloc: pat) => {
+           hcmd!(_, C::IgnoreAndPop { exp: H::Exp { exp: sp!($uloc, E::Unit { trailing: true }), .. }, .. })
+        }
+    }
+    macro_rules! trailing_returned {
+        ($uloc: pat) => {
+            hcmd!(
+                _,
+                C::Return(H::Exp {
+                    exp: sp!($uloc, E::Unit { trailing: true }),
+                    ..
+                })
+            )
+        };
+    }
+    fn divergent_block(block: &Block) -> bool {
+        matches!(
+            block.back(),
+            Some(hcmd!(_, C::Break))
+                | Some(hcmd!(_, C::Continue))
+                | Some(hcmd!(_, C::Abort(_)))
+                | Some(hcmd!(_, C::Return(_)))
+                | Some(hignored!(_, E::Unreachable))
+        )
+    }
+    macro_rules! invalid_trailing_unit {
+        ($context:ident, $loc:expr, $uloc:expr) => {{
+            let semi_msg = "Invalid trailing ';'";
+            let unreachable_msg = "Any code after this expression will not be reached";
+            let info_msg = "A trailing ';' in an expression block implicitly adds a '()' value \
+            after the semicolon. That '()' value will not be reachable";
+            $context.error(vec![
+                ($uloc, semi_msg),
+                ($loc, unreachable_msg),
+                ($uloc, info_msg),
+            ]);
+            block.pop_back();
+        }};
+    }
+
+    block
+        .iter_mut()
+        .for_each(|s| check_trailing_unit_statement(context, s));
+    let len = block.len();
+    if len < 2 {
+        return;
+    }
+    match (&block[len - 2], &block[len - 1]) {
+        (sp!(loc, S::IfElse { if_block, else_block, ..}), trailing!(uloc))
+        | (sp!(loc, S::IfElse { if_block, else_block, ..}), trailing_returned!(uloc))
+            if divergent_block(if_block) && divergent_block(else_block) =>
+        {
+            invalid_trailing_unit!(context, *loc, *uloc)
+        }
+        (sp!(loc, S::Loop { has_break, ..}), trailing!(uloc))
+        | (sp!(loc, S::Loop { has_break, ..}), trailing_returned!(uloc))
+            if !has_break =>
+        {
+            invalid_trailing_unit!(context, *loc, *uloc)
+        }
+        (hcmd!(loc, C::Break), trailing!(uloc))
+        | (hcmd!(loc, C::Break), trailing_returned!(uloc))
+        | (hcmd!(loc, C::Continue), trailing!(uloc))
+        | (hcmd!(loc, C::Continue), trailing_returned!(uloc))
+        | (hcmd!(loc, C::Abort(_)), trailing!(uloc))
+        | (hcmd!(loc, C::Abort(_)), trailing_returned!(uloc))
+        | (hcmd!(loc, C::Return(_)), trailing!(uloc))
+        | (hcmd!(loc, C::Return(_)), trailing_returned!(uloc))
+        | (hignored!(loc, E::Unreachable), trailing!(uloc))
+        | (hignored!(loc, E::Unreachable), trailing_returned!(uloc)) => {
+            invalid_trailing_unit!(context, *loc, *uloc)
+        }
+        _ => (),
+    };
+}
+
+fn check_trailing_unit_statement(context: &mut Context, sp!(_, s_): &mut H::Statement) {
+    use H::Statement_ as S;
+    match s_ {
+        S::Command(_) => (),
+        S::IfElse {
+            if_block,
+            else_block,
+            ..
+        } => {
+            check_trailing_unit(context, if_block);
+            check_trailing_unit(context, else_block)
+        }
+        S::While {
+            cond: (cond_block, _),
+            block,
+        } => {
+            check_trailing_unit(context, cond_block);
+            check_trailing_unit(context, block)
+        }
+        S::Loop { block, .. } => check_trailing_unit(context, block),
+    }
 }
 
 //**************************************************************************************************

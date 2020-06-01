@@ -175,7 +175,7 @@ fn unreachable_loc_exp(parent_e: &Exp) -> Option<Loc> {
     use UnannotatedExp_ as E;
     match &parent_e.exp.value {
         E::Unreachable => Some(parent_e.exp.loc),
-        E::Unit
+        E::Unit { .. }
         | E::Value(_)
         | E::Spec(_, _)
         | E::UnresolvedError

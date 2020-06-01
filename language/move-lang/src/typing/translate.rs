@@ -509,7 +509,7 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
     use N::Exp_ as NE;
     use T::UnannotatedExp_ as TE;
     let (ty, e_) = match ne_ {
-        NE::Unit => (sp(eloc, Type_::Unit), TE::Unit),
+        NE::Unit { trailing } => (sp(eloc, Type_::Unit), TE::Unit { trailing }),
         NE::Value(sp!(vloc, v)) => (v.type_(vloc), TE::Value(sp(vloc, v))),
         NE::InferredNum(v) => (core::make_num_tvar(context, eloc), TE::InferredNum(v)),
 
@@ -1503,7 +1503,10 @@ fn call_args<S: std::fmt::Display, F: Fn() -> S>(
     let tys = args.iter().map(|e| e.ty.clone()).collect();
     let tys = make_arg_types(context, loc, msg, arity, argloc, tys);
     let arg = match args.len() {
-        0 => T::exp(sp(argloc, Type_::Unit), sp(argloc, TE::Unit)),
+        0 => T::exp(
+            sp(argloc, Type_::Unit),
+            sp(argloc, TE::Unit { trailing: false }),
+        ),
         1 => args.pop().unwrap(),
         _ => {
             let ty = Type_::multiple(argloc, tys.clone());
