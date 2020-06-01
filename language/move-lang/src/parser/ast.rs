@@ -361,7 +361,10 @@ pub enum Value_ {
     // true
     // false
     Bool(bool),
-    Bytearray(Vec<u8>),
+    // x"[0..9A..F]+"
+    HexString(String),
+    // b"(<ascii> | \n | \r | \t | \\ | \0 | \" | \x[0..9A..F][0..9A..F])+"
+    ByteString(String),
 }
 pub type Value = Spanned<Value_>;
 
@@ -1339,7 +1342,8 @@ impl AstDebug for Value_ {
             V::U64(u) => format!("{}u64", u),
             V::U128(u) => format!("{}u128", u),
             V::Bool(b) => format!("{}", b),
-            V::Bytearray(v) => format!("{:?}", v),
+            V::HexString(s) => format!("x\"{}\"", s),
+            V::ByteString(s) => format!("b\"{}\"", s),
         })
     }
 }

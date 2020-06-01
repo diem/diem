@@ -3,9 +3,8 @@
 
 use crate::{
     parser::ast::{
-        BinOp, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, PragmaProperty,
-        ResourceLoc, SpecApplyPattern, SpecBlockTarget, SpecConditionKind, StructName, UnaryOp,
-        Value, Var,
+        BinOp, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, ResourceLoc,
+        SpecApplyPattern, SpecBlockTarget, SpecConditionKind, StructName, UnaryOp, Var,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
@@ -111,7 +110,6 @@ pub struct SpecBlock_ {
     pub target: SpecBlockTarget,
     pub members: Vec<SpecBlockMember>,
 }
-
 pub type SpecBlock = Spanned<SpecBlock_>;
 
 #[derive(Debug, PartialEq)]
@@ -144,8 +142,14 @@ pub enum SpecBlockMember_ {
         properties: Vec<PragmaProperty>,
     },
 }
-
 pub type SpecBlockMember = Spanned<SpecBlockMember_>;
+
+#[derive(Debug, PartialEq)]
+pub struct PragmaProperty_ {
+    pub name: Name,
+    pub value: Option<Value>,
+}
+pub type PragmaProperty = Spanned<PragmaProperty_>;
 
 //**************************************************************************************************
 // Types
@@ -190,6 +194,23 @@ pub enum ExpDotted_ {
     Dot(Box<ExpDotted>, Name),
 }
 pub type ExpDotted = Spanned<ExpDotted_>;
+
+#[derive(Debug, PartialEq)]
+pub enum Value_ {
+    // 0x<hex representation up to 64 digits with padding 0s>
+    Address(Address),
+    // <num>u8
+    U8(u8),
+    // <num>u64
+    U64(u64),
+    // <num>u128
+    U128(u128),
+    // true
+    // false
+    Bool(bool),
+    Bytearray(Vec<u8>),
+}
+pub type Value = Spanned<Value_>;
 
 #[derive(Debug, PartialEq)]
 #[allow(clippy::large_enum_variant)]
@@ -490,6 +511,16 @@ impl AstDebug for SpecBlockMember_ {
     }
 }
 
+impl AstDebug for PragmaProperty_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.write(&self.name.value);
+        if let Some(value) = &self.value {
+            w.write(" = ");
+            value.ast_debug(w);
+        }
+    }
+}
+
 impl AstDebug for (FunctionName, &Function) {
     fn ast_debug(&self, w: &mut AstWriter) {
         let (
@@ -614,6 +645,20 @@ impl AstDebug for SequenceItem_ {
                 e.ast_debug(w);
             }
         }
+    }
+}
+
+impl AstDebug for Value_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        use Value_ as V;
+        w.write(&match self {
+            V::Address(addr) => format!("{}", addr),
+            V::U8(u) => format!("{}u8", u),
+            V::U64(u) => format!("{}u64", u),
+            V::U128(u) => format!("{}u128", u),
+            V::Bool(b) => format!("{}", b),
+            V::Bytearray(v) => format!("{:?}", v),
+        })
     }
 }
 

@@ -3,8 +3,9 @@
 
 use super::core::{self, Context};
 use crate::{
+    expansion::ast::Value_,
     naming::ast::{BuiltinTypeName_, FunctionSignature, TParam, Type, Type_},
-    parser::ast::{Kind, Kind_, Value_},
+    parser::ast::{Kind, Kind_},
     typing::ast as T,
 };
 use move_ir_types::location::*;

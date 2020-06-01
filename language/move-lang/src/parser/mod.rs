@@ -5,4 +5,3 @@ mod lexer;
 pub(crate) mod syntax;
 
 pub mod ast;
-mod byte_string;

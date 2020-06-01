@@ -1265,7 +1265,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         &mut self,
         _loc: &Loc,
         context: &SpecBlockContext,
-        properties: &[PA::PragmaProperty],
+        properties: &[EA::PragmaProperty],
     ) {
         // For now we pass properties just on. We may want to check against a set of known
         // property names and types.
@@ -3325,10 +3325,10 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         }
     }
 
-    fn translate_value(&mut self, v: &PA::Value) -> Option<(Value, Type)> {
+    fn translate_value(&mut self, v: &EA::Value) -> Option<(Value, Type)> {
         let loc = self.to_loc(&v.loc);
         match &v.value {
-            PA::Value_::Address(addr) => {
+            EA::Value_::Address(addr) => {
                 let addr_str = &format!("{}", addr);
                 if &addr_str[..2] == "0x" {
                     let digits_only = &addr_str[2..];
@@ -3343,20 +3343,20 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     None
                 }
             }
-            PA::Value_::U8(x) => Some((
+            EA::Value_::U8(x) => Some((
                 Value::Number(BigUint::from_u8(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U8),
             )),
-            PA::Value_::U64(x) => Some((
+            EA::Value_::U64(x) => Some((
                 Value::Number(BigUint::from_u64(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U64),
             )),
-            PA::Value_::U128(x) => Some((
+            EA::Value_::U128(x) => Some((
                 Value::Number(BigUint::from_u128(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U128),
             )),
-            PA::Value_::Bool(x) => Some((Value::Bool(*x), Type::new_prim(PrimitiveType::Bool))),
-            PA::Value_::Bytearray(x) => {
+            EA::Value_::Bool(x) => Some((Value::Bool(*x), Type::new_prim(PrimitiveType::Bool))),
+            EA::Value_::Bytearray(x) => {
                 let ty = Type::Vector(Box::new(Type::new_prim(PrimitiveType::U8)));
                 Some((Value::ByteArray(x.clone()), ty))
             }
