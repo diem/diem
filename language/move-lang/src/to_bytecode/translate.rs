@@ -6,7 +6,7 @@ use crate::{
     cfgir::ast as G,
     compiled_unit::*,
     errors::*,
-    expansion::ast::SpecId,
+    expansion::ast::{SpecId, Value_},
     hlir::{
         ast::{self as H},
         translate::{display_var, DisplayVar},
@@ -14,7 +14,7 @@ use crate::{
     naming::ast::{BuiltinTypeName_, TParam},
     parser::ast::{
         BinOp, BinOp_, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent,
-        StructName, UnaryOp, UnaryOp_, Value_, Var,
+        StructName, UnaryOp, UnaryOp_, Var,
     },
     shared::{unique_map::UniqueMap, *},
 };

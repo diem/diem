@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    expansion::ast::{Fields, SpecId},
+    expansion::ast::{Fields, SpecId, Value},
     naming::ast::{FunctionSignature, StructDefinition, Type, TypeName_, Type_},
     parser::ast::{
-        BinOp, Field, FunctionName, FunctionVisibility, ModuleIdent, StructName, UnaryOp, Value,
-        Var,
+        BinOp, Field, FunctionName, FunctionVisibility, ModuleIdent, StructName, UnaryOp, Var,
     },
     shared::{ast_debug::*, unique_map::UniqueMap},
 };
