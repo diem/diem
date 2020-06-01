@@ -286,6 +286,37 @@
 <span id="286">286</span>
 <span id="287">287</span>
 <span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -295,7 +326,7 @@
 <span class="doccomment">//! For examples on how to use these traits, see the implementations of the [`ed25519`] or</span>
 <span class="doccomment">//! [`bls12381`] modules.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">HashValue</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">hash</span>::<span class="ident">CryptoHash</span>, <span class="ident">HashValue</span>};
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">convert</span>::{<span class="ident">From</span>, <span class="ident">TryFrom</span>};
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">rngs</span>::<span class="ident">StdRng</span>, <span class="ident">CryptoRng</span>, <span class="ident">RngCore</span>, <span class="ident">SeedableRng</span>};
@@ -313,6 +344,8 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Error</span>)]</span>
 <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">CryptoMaterialError</span> {
+    <span class="doccomment">/// Struct to be signed does not serialize correctly.</span>
+    <span class="ident">SerializationError</span>,
     <span class="doccomment">/// Key or signature material does not deserialize correctly.</span>
     <span class="ident">DeserializationError</span>,
     <span class="doccomment">/// Key or signature material deserializes, but is otherwise not valid.</span>
@@ -408,8 +441,20 @@
     <span class="doccomment">/// The associated signature type for this signing key.</span>
     <span class="kw">type</span> <span class="ident">SignatureMaterial</span>: <span class="ident">Signature</span><span class="op">&lt;</span><span class="ident">SigningKeyMaterial</span> <span class="op">=</span> <span class="self">Self</span><span class="op">&gt;</span>;
 
-    <span class="doccomment">/// Signs an input message.</span>
+    <span class="doccomment">/// Signs an input message, represented by its `HashValue`</span>
     <span class="kw">fn</span> <span class="ident">sign_message</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">SignatureMaterial</span>;
+
+    <span class="doccomment">/// Signs an object that has an distinct domain-separation hasher and</span>
+    <span class="doccomment">/// that we know how to serialize. There is no pre-hashing into a</span>
+    <span class="doccomment">/// `HashValue` to be done by the caller.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// For the moment, this signature is incompatible with the conversion into</span>
+    <span class="doccomment">/// a `HashValue` above. We intend to deprecate `sign message` in favor of</span>
+    <span class="doccomment">/// the present function soon.</span>
+    <span class="kw">fn</span> <span class="ident">sign</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">CryptoHash</span> <span class="op">+</span> <span class="ident">Serialize</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">SignatureMaterial</span>, <span class="ident">CryptoMaterialError</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Signs a non-hash input message. For testing only.</span>
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
@@ -469,6 +514,15 @@
         <span class="ident">signature</span>.<span class="ident">verify</span>(<span class="ident">message</span>, <span class="self">self</span>)
     }
 
+    <span class="doccomment">/// We provide the striaghtfoward implementation which dispatches to the signature.</span>
+    <span class="kw">fn</span> <span class="ident">verify_struct_signature</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">CryptoHash</span> <span class="op">+</span> <span class="ident">Serialize</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>,
+        <span class="ident">signature</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>::<span class="ident">SignatureMaterial</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="ident">signature</span>.<span class="ident">verify_struct_msg</span>(<span class="ident">message</span>, <span class="self">self</span>)
+    }
+
     <span class="doccomment">/// We provide the implementation which dispatches to the signature.</span>
     <span class="kw">fn</span> <span class="ident">batch_verify_signatures</span>(
         <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">HashValue</span>,
@@ -509,6 +563,14 @@
 
     <span class="doccomment">/// The verification function.</span>
     <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">HashValue</span>, <span class="ident">public_key</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>::<span class="ident">VerifyingKeyMaterial</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Verification for a struct we unabmiguously know how to serialize and</span>
+    <span class="doccomment">/// that we have a domain separation prefix for..</span>
+    <span class="kw">fn</span> <span class="ident">verify_struct_msg</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">CryptoHash</span> <span class="op">+</span> <span class="ident">Serialize</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>,
+        <span class="ident">public_key</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>::<span class="ident">VerifyingKeyMaterial</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
 
     <span class="doccomment">/// Native verification function.</span>
     <span class="kw">fn</span> <span class="ident">verify_arbitrary_msg</span>(

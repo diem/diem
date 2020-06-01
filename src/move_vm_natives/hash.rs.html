@@ -105,7 +105,7 @@
         <span class="ident">hash_arg</span>.<span class="ident">len</span>(),
     );
 
-    <span class="kw">let</span> <span class="ident">hash_vec</span> <span class="op">=</span> <span class="ident">HashValue</span>::<span class="ident">from_sha3_256</span>(<span class="ident">hash_arg</span>.<span class="ident">as_slice</span>()).<span class="ident">to_vec</span>();
+    <span class="kw">let</span> <span class="ident">hash_vec</span> <span class="op">=</span> <span class="ident">HashValue</span>::<span class="ident">sha3_256_of</span>(<span class="ident">hash_arg</span>.<span class="ident">as_slice</span>()).<span class="ident">to_vec</span>();
     <span class="kw">let</span> <span class="ident">return_values</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">hash_vec</span>)];
     <span class="prelude-val">Ok</span>(<span class="ident">NativeResult</span>::<span class="ident">ok</span>(<span class="ident">cost</span>, <span class="ident">return_values</span>))
 }

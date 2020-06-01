@@ -130,7 +130,7 @@
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">VMPublishingOption</span>::<span class="ident">Open</span> <span class="op">|</span> <span class="ident">VMPublishingOption</span>::<span class="ident">CustomScripts</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
             <span class="ident">VMPublishingOption</span>::<span class="ident">Locked</span>(<span class="ident">whitelist</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">hash_value</span> <span class="op">=</span> <span class="ident">HashValue</span>::<span class="ident">from_sha3_256</span>(<span class="ident">program</span>);
+                <span class="kw">let</span> <span class="ident">hash_value</span> <span class="op">=</span> <span class="ident">HashValue</span>::<span class="ident">sha3_256_of</span>(<span class="ident">program</span>);
                 <span class="ident">whitelist</span>.<span class="ident">contains</span>(<span class="ident">hash_value</span>.<span class="ident">as_ref</span>())
             }
         }

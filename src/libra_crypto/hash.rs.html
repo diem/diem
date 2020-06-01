@@ -611,6 +611,37 @@
 <span id="611">611</span>
 <span id="612">612</span>
 <span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
+<span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
+<span id="620">620</span>
+<span id="621">621</span>
+<span id="622">622</span>
+<span id="623">623</span>
+<span id="624">624</span>
+<span id="625">625</span>
+<span id="626">626</span>
+<span id="627">627</span>
+<span id="628">628</span>
+<span id="629">629</span>
+<span id="630">630</span>
+<span id="631">631</span>
+<span id="632">632</span>
+<span id="633">633</span>
+<span id="634">634</span>
+<span id="635">635</span>
+<span id="636">636</span>
+<span id="637">637</span>
+<span id="638">638</span>
+<span id="639">639</span>
+<span id="640">640</span>
+<span id="641">641</span>
+<span id="642">642</span>
+<span id="643">643</span>
+<span id="644">644</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -698,7 +729,7 @@
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//! # // To get around that there&#39;s no way to doc-test a non-exported macro:</span>
 <span class="doccomment">//! # macro_rules! define_hasher { ($e:expr) =&gt; () }</span>
-<span class="doccomment">//! define_hasher! { (MyNewDataHasher, MY_NEW_DATA_HASHER, b&quot;MyUniqueSaltString&quot;) }</span>
+<span class="doccomment">//! define_hasher! { (MyNewDataHasher, MY_NEW_DATA_HASHER, MY_NEW_DATA_SEED, b&quot;MyUniqueSaltString&quot;) }</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Using a hasher directly</span>
@@ -717,7 +748,7 @@
 <span class="kw">use</span> <span class="ident">bytes</span>::<span class="ident">Bytes</span>;
 <span class="kw">use</span> <span class="ident">libra_nibble</span>::<span class="ident">Nibble</span>;
 <span class="kw">use</span> <span class="ident">mirai_annotations</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
+<span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::{<span class="ident">Lazy</span>, <span class="ident">OnceCell</span>};
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
 <span class="kw">use</span> <span class="ident">proptest_derive</span>::<span class="ident">Arbitrary</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">rngs</span>::<span class="ident">OsRng</span>, <span class="ident">Rng</span>};
@@ -725,6 +756,9 @@
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="self">self</span>, <span class="ident">convert</span>::<span class="ident">AsRef</span>, <span class="ident">fmt</span>, <span class="ident">str</span>::<span class="ident">FromStr</span>};
 <span class="kw">use</span> <span class="ident">tiny_keccak</span>::{<span class="ident">Hasher</span>, <span class="ident">Sha3</span>};
 
+<span class="doccomment">/// A prefix used to begin the salt of every libra hashable structure. The salt</span>
+<span class="doccomment">/// consists in this global prefix, concatenated with the specified</span>
+<span class="doccomment">/// serialization name of the struct.</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">LIBRA_HASH_PREFIX</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] <span class="op">=</span> <span class="string">b&quot;LIBRA::&quot;</span>;
 <span class="kw">const</span> <span class="ident">SHORT_STRING_LENGTH</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4</span>;
 
@@ -768,7 +802,7 @@
     }
 
     <span class="doccomment">/// Creates a zero-initialized instance.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">zero</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">zero</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">HashValue</span> {
             <span class="ident">hash</span>: [<span class="number">0</span>; <span class="ident">HashValue</span>::<span class="ident">LENGTH</span>],
         }
@@ -792,9 +826,13 @@
         <span class="ident">HashValue</span> { <span class="ident">hash</span> }
     }
 
-    <span class="doccomment">/// Convenience function to compute a sha3-256 HashValue of the buffer. It will handle hasher</span>
-    <span class="doccomment">/// creation, data feeding and finalization.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_sha3_256</span>(<span class="ident">buffer</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="doccomment">/// Convenience function that computes a `HashValue` internally equal to</span>
+    <span class="doccomment">/// the sha3_256 of a byte buffer. It will handle hasher creation, data</span>
+    <span class="doccomment">/// feeding and finalization.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Note this will not result in the `&lt;T as CryptoHash&gt;::hash()` for any</span>
+    <span class="doccomment">/// reasonable struct T, as this computes a sha3 without any ornaments.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">sha3_256_of</span>(<span class="ident">buffer</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sha3</span> <span class="op">=</span> <span class="ident">Sha3</span>::<span class="ident">v256</span>();
         <span class="ident">sha3</span>.<span class="ident">update</span>(<span class="ident">buffer</span>);
         <span class="ident">HashValue</span>::<span class="ident">from_keccak</span>(<span class="ident">sha3</span>)
@@ -1056,6 +1094,9 @@
 
 <span class="doccomment">/// A trait for representing the state of a cryptographic hasher.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">CryptoHasher</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Write</span> {
+    <span class="doccomment">/// the seed used to initialize hashing `Self` before the serialization bytes of the actual value</span>
+    <span class="kw">fn</span> <span class="ident">seed</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [<span class="ident">u8</span>; <span class="number">32</span>];
+
     <span class="doccomment">/// Write bytes into the hasher.</span>
     <span class="kw">fn</span> <span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]);
 
@@ -1072,12 +1113,23 @@
 
 <span class="kw">impl</span> <span class="ident">DefaultHasher</span> {
     <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
+    <span class="doccomment">/// This function does not return a HashValue in the sense of our usual</span>
+    <span class="doccomment">/// hashes, but a construction of initial bytes that are fed into any hash</span>
+    <span class="doccomment">/// provided we&#39;re passed  a (lcs) serialization name as argument.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">prefixed_hash</span>(<span class="ident">buffer</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> [<span class="ident">u8</span>; <span class="ident">HashValue</span>::<span class="ident">LENGTH</span>] {
+        <span class="comment">// The salt is initial material we prefix to actual value bytes for</span>
+        <span class="comment">// domain separation. Its length is variable.</span>
+        <span class="kw">let</span> <span class="ident">salt</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> [<span class="ident">LIBRA_HASH_PREFIX</span>, <span class="ident">buffer</span>].<span class="ident">concat</span>();
+        <span class="comment">// The seed is a fixed-length hash of the salt, thereby preventing</span>
+        <span class="comment">// suffix attacks on the domain separation bytes.</span>
+        <span class="ident">HashValue</span>::<span class="ident">sha3_256_of</span>(<span class="kw-2">&amp;</span><span class="ident">salt</span>[..]).<span class="ident">hash</span>
+    }
+
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">typename</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">Sha3</span>::<span class="ident">v256</span>();
         <span class="kw">if</span> <span class="op">!</span><span class="ident">typename</span>.<span class="ident">is_empty</span>() {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">salt</span> <span class="op">=</span> <span class="ident">LIBRA_HASH_PREFIX</span>.<span class="ident">to_vec</span>();
-            <span class="ident">salt</span>.<span class="ident">extend_from_slice</span>(<span class="ident">typename</span>);
-            <span class="ident">state</span>.<span class="ident">update</span>(<span class="ident">HashValue</span>::<span class="ident">from_sha3_256</span>(<span class="kw-2">&amp;</span><span class="ident">salt</span>[..]).<span class="ident">as_ref</span>());
+            <span class="ident">state</span>.<span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="self">Self</span>::<span class="ident">prefixed_hash</span>(<span class="ident">typename</span>));
         }
         <span class="ident">DefaultHasher</span> { <span class="ident">state</span> }
     }
@@ -1098,7 +1150,7 @@
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">define_hasher</span> {
     (
         $(<span class="attribute">#[<span class="macro-nonterminal">$</span><span class="macro-nonterminal">attr</span>:<span class="ident">meta</span>]</span>)<span class="op">*</span>
-        (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_type</span>: <span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_name</span>: <span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">salt</span>: <span class="ident">expr</span>)
+        (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_type</span>: <span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_name</span>: <span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">seed_name</span>: <span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">salt</span>: <span class="ident">expr</span>)
     ) <span class="op">=</span><span class="op">&gt;</span> {
 
         <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
@@ -1112,6 +1164,7 @@
         }
 
         <span class="kw">static</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_name</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_type</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> { <span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_type</span>::<span class="ident">new</span>() });
+        <span class="kw">static</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">seed_name</span>: <span class="ident">OnceCell</span><span class="op">&lt;</span>[<span class="ident">u8</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">OnceCell</span>::<span class="ident">new</span>();
 
         <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_type</span> {
             <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
@@ -1120,6 +1173,12 @@
         }
 
         <span class="kw">impl</span> <span class="ident">CryptoHasher</span> <span class="kw">for</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher_type</span> {
+            <span class="kw">fn</span> <span class="ident">seed</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [<span class="ident">u8</span>;<span class="number">32</span>] {
+                <span class="macro-nonterminal">$</span><span class="macro-nonterminal">seed_name</span>.<span class="ident">get_or_init</span>(<span class="op">|</span><span class="op">|</span> {
+                    <span class="ident">DefaultHasher</span>::<span class="ident">prefixed_hash</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">salt</span>)
+                })
+            }
+
             <span class="kw">fn</span> <span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) {
                 <span class="self">self</span>.<span class="number">0</span>.<span class="ident">update</span>(<span class="ident">bytes</span>);
             }
@@ -1146,6 +1205,7 @@
     (
         <span class="ident">TransactionAccumulatorHasher</span>,
         <span class="ident">TRANSACTION_ACCUMULATOR_HASHER</span>,
+        <span class="ident">TRANSACTION_ACCUMULATOR_SEED</span>,
         <span class="string">b&quot;TransactionAccumulator&quot;</span>
     )
 }
@@ -1155,6 +1215,7 @@
     (
         <span class="ident">EventAccumulatorHasher</span>,
         <span class="ident">EVENT_ACCUMULATOR_HASHER</span>,
+        <span class="ident">EVENT_ACCUMULATOR_SEED</span>,
         <span class="string">b&quot;EventAccumulator&quot;</span>
     )
 }
@@ -1164,13 +1225,14 @@
     (
         <span class="ident">SparseMerkleInternalHasher</span>,
         <span class="ident">SPARSE_MERKLE_INTERNAL_HASHER</span>,
+        <span class="ident">SPARSE_MERKLE_INTERNAL_SEED</span>,
         <span class="string">b&quot;SparseMerkleInternal&quot;</span>
     )
 }
 
 <span class="macro">define_hasher</span><span class="macro">!</span> {
     <span class="doccomment">/// The hasher used only for testing. It doesn&#39;t have a salt.</span>
-    (<span class="ident">TestOnlyHasher</span>, <span class="ident">TEST_ONLY_HASHER</span>, <span class="string">b&quot;&quot;</span>)
+    (<span class="ident">TestOnlyHasher</span>, <span class="ident">TEST_ONLY_HASHER</span>, <span class="ident">TEST_ONLY_SEED</span>, <span class="string">b&quot;&quot;</span>)
 }
 
 <span class="kw">fn</span> <span class="ident">create_literal_hash</span>(<span class="ident">word</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {

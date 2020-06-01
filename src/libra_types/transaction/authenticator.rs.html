@@ -469,7 +469,7 @@
 
     <span class="doccomment">/// Create an authentication key from a preimage by taking its sha3 hash</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_preimage</span>(<span class="ident">preimage</span>: <span class="kw-2">&amp;</span><span class="ident">AuthenticationKeyPreimage</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AuthenticationKey</span> {
-        <span class="ident">AuthenticationKey</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">HashValue</span>::<span class="ident">from_sha3_256</span>(<span class="kw-2">&amp;</span><span class="ident">preimage</span>.<span class="number">0</span>).<span class="ident">as_ref</span>())
+        <span class="ident">AuthenticationKey</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">HashValue</span>::<span class="ident">sha3_256_of</span>(<span class="kw-2">&amp;</span><span class="ident">preimage</span>.<span class="number">0</span>).<span class="ident">as_ref</span>())
     }
 
     <span class="doccomment">/// Create an authentication key from an Ed25519 public key</span>

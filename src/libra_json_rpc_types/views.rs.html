@@ -881,7 +881,7 @@
             <span class="ident">Transaction</span>::<span class="ident">WaypointWriteSet</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">TransactionDataView</span>::<span class="ident">WriteSet</span> {}),
             <span class="ident">Transaction</span>::<span class="ident">UserTransaction</span>(<span class="ident">t</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">script_hash</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">t</span>.<span class="ident">payload</span>() {
-                    <span class="ident">TransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">HashValue</span>::<span class="ident">from_sha3_256</span>(<span class="ident">s</span>.<span class="ident">code</span>()),
+                    <span class="ident">TransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">HashValue</span>::<span class="ident">sha3_256_of</span>(<span class="ident">s</span>.<span class="ident">code</span>()),
                     <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">HashValue</span>::<span class="ident">zero</span>(),
                 }
                 .<span class="ident">to_hex</span>();

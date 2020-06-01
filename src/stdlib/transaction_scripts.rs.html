@@ -407,7 +407,7 @@
 
     <span class="doccomment">/// Return the sha3-256 hash of the script bytes</span>
     <span class="kw">fn</span> <span class="ident">hash_bytes</span>(<span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
-        <span class="ident">HashValue</span>::<span class="ident">from_sha3_256</span>(<span class="ident">bytes</span>)
+        <span class="ident">HashValue</span>::<span class="ident">sha3_256_of</span>(<span class="ident">bytes</span>)
     }
 
     <span class="doccomment">/// Convert this newtype wrapper into a vector of bytes</span>
