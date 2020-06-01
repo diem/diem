@@ -14,7 +14,9 @@ futures = { version = "0.3.5"  }
 once_cell = { version = "1.4.0"}
 
 channel = {path = "../../common/channel", version = "0.1.0"}
+libra-canonical-serialization = {path = "../../common/lcs", version = "0.1.0"}
 libra-config = { path = "../../config", version = "0.1.0"}
+libra-crypto = {path = "../../crypto/crypto", version = "0.1.0"}
 libra-logger = {path = "../../common/logger", version = "0.1.0"}
 libra-metrics = {path = "../../common/metrics", version = "0.1.0"}
 libra-network-address = {path = "../../network/network-address", version = "0.1.0"}
