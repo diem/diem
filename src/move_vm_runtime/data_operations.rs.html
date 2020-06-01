@@ -107,6 +107,9 @@
 <span id="107">107</span>
 <span id="108">108</span>
 <span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -153,7 +156,10 @@
         <span class="ident">new_root</span>.<span class="ident">mark_dirty</span>()<span class="question-mark">?</span>;
         <span class="ident">data_store</span>.<span class="ident">publish_resource</span>(<span class="ident">ap</span>, (<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">new_root</span>))
     } <span class="kw">else</span> {
-        <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;[VM] Cannot write over existing resource {}&quot;</span>, <span class="ident">ap</span>);
+        <span class="macro">warn</span><span class="macro">!</span>(
+            <span class="string">&quot;[VM] Cannot write over existing resource type {:?} access path {}&quot;</span>,
+            <span class="ident">ty</span>, <span class="ident">ap</span>
+        );
         <span class="prelude-val">Err</span>(<span class="ident">vm_error</span>(
             <span class="ident">Location</span>::<span class="ident">new</span>(),
             <span class="ident">StatusCode</span>::<span class="ident">CANNOT_WRITE_EXISTING_RESOURCE</span>,
