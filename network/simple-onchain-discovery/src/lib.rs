@@ -3,11 +3,16 @@
 
 use channel::libra_channel;
 use futures::{sink::SinkExt, StreamExt};
+use libra_canonical_serialization as lcs;
 use libra_config::config::RoleType;
+use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_metrics::{register_histogram, DurationHistogram};
 use libra_network_address::NetworkAddress;
-use libra_types::on_chain_config::{OnChainConfigPayload, ValidatorSet};
+use libra_types::{
+    on_chain_config::{OnChainConfigPayload, ValidatorSet},
+    validator_config::ValidatorConfig,
+};
 use network::{
     common::NetworkPublicKeys,
     connectivity_manager::{ConnectivityRequest, DiscoverySource},
@@ -44,23 +49,37 @@ pub struct ConfigurationChangeListener {
     role: RoleType,
 }
 
-/// Extracts a set of ConnectivityRequests from a ValidatorSet which are appropriate for a Validator Network.
-fn extract_validator_updates(validator_set: ValidatorSet) -> Vec<ConnectivityRequest> {
-    let validator_keys = validator_set.payload().to_vec();
+/// Extract the network_address from the provided config, depending on role.
+fn network_address(role: RoleType, config: &ValidatorConfig) -> Result<NetworkAddress, lcs::Error> {
+    match role {
+        RoleType::Validator => NetworkAddress::try_from(&config.validator_network_address),
+        RoleType::FullNode => NetworkAddress::try_from(&config.full_node_network_address),
+    }
+}
+
+/// Extracts the public key from the provided config, depending on role.
+fn public_key(role: RoleType, config: &ValidatorConfig) -> x25519::PublicKey {
+    match role {
+        RoleType::Validator => config.validator_network_identity_public_key,
+        RoleType::FullNode => config.full_node_network_identity_public_key,
+    }
+}
+
+/// Extracts a set of ConnectivityRequests from a ValidatorSet which are appropriate for a network with type role.
+fn extract_updates(role: RoleType, node_set: ValidatorSet) -> Vec<ConnectivityRequest> {
+    let node_list = node_set.payload().to_vec();
 
     let mut updates = Vec::new();
 
     // Collect the set of address updates.
-    let address_map = validator_keys
+    let address_map = node_list
         .iter()
-        .map(|validator| {
-            (
-                validator.account_address().clone(),
-                vec![
-                    NetworkAddress::try_from(&validator.config().validator_network_address)
-                        .expect("WTF"),
-                ],
-            )
+        .flat_map(|node| match network_address(role, node.config()) {
+            Ok(addr) => Some((*node.account_address(), vec![addr])),
+            Err(e) => {
+                warn!("Cannot parse network address {}", e);
+                None
+            }
         })
         .collect();
 
@@ -71,65 +90,13 @@ fn extract_validator_updates(validator_set: ValidatorSet) -> Vec<ConnectivityReq
 
     // Collect the set of EligibleNodes
     updates.push(ConnectivityRequest::UpdateEligibleNodes(
-        validator_keys
+        node_list
             .into_iter()
-            .map(|validator| {
+            .map(|node| {
                 (
-                    *validator.account_address(),
+                    *node.account_address(),
                     NetworkPublicKeys {
-                        identity_public_key: validator.network_identity_public_key(),
-                        signing_public_key: validator.network_signing_public_key().clone(),
-                    },
-                )
-            })
-            .collect(),
-    ));
-
-    updates
-}
-
-/// Extracts a set of ConnectivityRequests from a ValidatorSet which are appropriate for a FullNode Network.
-fn extract_full_node_updates(full_node_set: ValidatorSet) -> Vec<ConnectivityRequest> {
-    let full_node_infos = full_node_set.payload().to_vec();
-
-    let mut updates = Vec::new();
-
-    // Collect the set of updated addresses.
-    let address_map = full_node_infos
-        .iter()
-        .map(|full_node| {
-            (
-                full_node.account_address().clone(),
-                vec![NetworkAddress::try_from(
-                    &full_node.config().full_node_network_address.clone(),
-                )
-                .expect("WTF")],
-            )
-        })
-        .collect();
-
-    let update_address_req =
-        ConnectivityRequest::UpdateAddresses(DiscoverySource::OnChain, address_map);
-    updates.push(update_address_req);
-
-    // Collect the EligibleNodes
-    updates.push(ConnectivityRequest::UpdateEligibleNodes(
-        full_node_infos
-            .into_iter()
-            .map(|full_node| {
-                (
-                    full_node.account_address().clone(),
-                    NetworkPublicKeys {
-                        identity_public_key: full_node
-                            .config()
-                            .full_node_network_identity_public_key
-                            .clone(),
-                        // TODO: this overload of the validator key onto the full_node network is
-                        // confusing at best and misleading at worst.
-                        signing_public_key: full_node
-                            .config()
-                            .validator_network_signing_public_key
-                            .clone(),
+                        identity_public_key: public_key(role, node.config()),
                     },
                 )
             })
@@ -156,8 +123,8 @@ impl ConfigurationChangeListener {
             .expect("failed to get ValidatorSet from payload");
 
         let updates = match self.role {
-            RoleType::Validator => extract_validator_updates(node_set),
-            RoleType::FullNode => extract_full_node_updates(node_set),
+            RoleType::Validator => extract_updates(self.role, node_set),
+            RoleType::FullNode => extract_updates(self.role, node_set),
         };
 
         info!(

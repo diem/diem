@@ -36,12 +36,6 @@ pub struct NetworkConfig {
     pub advertised_address: NetworkAddress,
     pub discovery_interval_ms: u64,
     pub connectivity_check_interval_ms: u64,
-    // Flag to toggle if Noise is used for encryption and authentication.
-    pub enable_noise: bool,
-    // If the network uses remote authentication, only trusted peers are allowed to connect.
-    // Otherwise, any node can connect. If this flag is set to true, `enable_noise` must
-    // also be set to true.
-    pub enable_remote_authentication: bool,
     // Enable this network to use either gossip discovery or onchain discovery.
     pub discovery_method: DiscoveryMethod,
     // network peers are the nodes allowed to connect when the network is started in authenticated
@@ -65,8 +59,6 @@ impl Default for NetworkConfig {
             advertised_address: "/ip4/127.0.0.1/tcp/6180".parse().unwrap(),
             discovery_interval_ms: 1000,
             connectivity_check_interval_ms: 5000,
-            enable_noise: true,
-            enable_remote_authentication: true,
             discovery_method: DiscoveryMethod::Gossip,
             identity_keypair: None,
             network_peers_file: PathBuf::new(),
@@ -87,8 +79,6 @@ impl NetworkConfig {
             advertised_address: self.advertised_address.clone(),
             discovery_interval_ms: self.discovery_interval_ms,
             connectivity_check_interval_ms: self.connectivity_check_interval_ms,
-            enable_noise: self.enable_noise,
-            enable_remote_authentication: self.enable_remote_authentication,
             discovery_method: self.discovery_method,
             identity_keypair: None,
             network_peers_file: self.network_peers_file.clone(),
@@ -116,13 +106,6 @@ impl NetworkConfig {
             self.listen_address = utils::get_local_ip().ok_or_else(|| anyhow!("No local IP"))?;
         }
 
-        if self.enable_remote_authentication {
-            ensure!(
-                self.enable_noise,
-                "For a node to enforce remote authentication, noise must be enabled.",
-            );
-        }
-
         if network_role.is_validator() {
             ensure!(
                 self.network_peers_file.as_os_str().is_empty(),
@@ -146,7 +129,7 @@ impl NetworkConfig {
                 self.peer_id = peer_id;
             }
             // Full nodes with remote authentication must derive PeerId from identity_key.
-            if !network_role.is_validator() && self.enable_remote_authentication {
+            if !network_role.is_validator() {
                 ensure!(
                     self.peer_id == peer_id,
                     "For full-nodes that use remote authentication, \

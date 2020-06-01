@@ -16,11 +16,11 @@ use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_mempool::MEMPOOL_SUBSCRIBED_CONFIGS;
 use libra_metrics::metric_server;
-use network_simple_onchain_discovery::ConfigurationChangeListener;
 use libra_types::{on_chain_config::ON_CHAIN_CONFIG_REGISTRY, waypoint::Waypoint, PeerId};
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use network::validator_network::network_builder::{AuthenticationMode, NetworkBuilder};
+use network_simple_onchain_discovery::ConfigurationChangeListener;
 use onchain_discovery::{client::OnchainDiscovery, service::OnchainDiscoveryService};
 use state_synchronizer::StateSynchronizer;
 use std::{
@@ -132,71 +132,48 @@ pub fn setup_network(
     );
     network_builder.add_connection_monitoring();
 
-    // TODO(philiphayes): it might make more sense to refactor this so we have a
-    // config per "archetype"?
+    // Sanity check seed peer addresses.
+    config
+        .seed_peers
+        .verify_libranet_addrs()
+        .expect("Seed peer addresses must be well-formed");
 
-    if config.enable_remote_authentication {
-        // If the node wants to run in permissioned mode, it should also have authentication and
-        // encryption.
-        assert!(
-            config.enable_noise,
-            "Permissioned network end-points must use authentication"
-        );
-        // Sanity check seed peer addresses.
-        config
-            .seed_peers
-            .verify_libranet_addrs()
-            .expect("Seed peer addresses must be well-formed");
+    let network_peers = config.network_peers.peers.clone();
+    let seed_peers = config.seed_peers.seed_peers.clone();
 
-        let network_peers = config.network_peers.peers.clone();
-        let seed_peers = config.seed_peers.seed_peers.clone();
+    let identity_key = config
+        .identity_keypair
+        .as_mut()
+        .expect("identity keypair should be present")
+        .take_private()
+        .expect("identity key should be present");
 
-        let identity_key = config
-            .identity_keypair
-            .as_mut()
-            .expect("identity keypair should be present")
-            .take_private()
-            .expect("identity key should be present");
-
-        let trusted_peers = if role == RoleType::Validator {
-            // for validators, trusted_peers is empty will be populated from consensus
-            HashMap::new()
-        } else {
-            network_peers
-        };
-
-        info!(
-            "network setup: role: {}, seed_peers: {:?}, trusted_peers: {:?}",
-            role, seed_peers, trusted_peers,
-        );
-
-        network_builder
-            .advertised_address(config.advertised_address.clone())
-            .authentication_mode(AuthenticationMode::Mutual(identity_key))
-            .trusted_peers(trusted_peers)
-            .seed_peers(seed_peers)
-            .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
-            // TODO:  Why is the connectivity manager related to remote_authentication?
-            .add_connectivity_manager();
-    } else if config.enable_noise {
-        let identity_key = config
-            .identity_keypair
-            .as_mut()
-            .expect("identity keypairs should be present")
-            .take_private()
-            .expect("identity key should be present");
-
-        // Even if a network end-point operates without remote authentication, it might want to prove
-        // its identity to another peer it connects to. For this, we use TCP + Noise but without
-        // enforcing a trusted peers set.
-        network_builder
-            .authentication_mode(AuthenticationMode::ServerOnly(identity_key))
-            .advertised_address(config.advertised_address.clone());
+    let trusted_peers = if role == RoleType::Validator {
+        // for validators, trusted_peers is empty will be populated from consensus
+        HashMap::new()
     } else {
-        // TODO(philiphayes): probably remove this branch since there are no
-        // current no noise or no client auth use cases.
-        network_builder.authentication_mode(AuthenticationMode::Unauthenticated);
-    }
+        network_peers
+    };
+
+    info!(
+        "network setup: role: {}, seed_peers: {:?}, trusted_peers: {:?}",
+        role,
+        seed_peers.clone(),
+        trusted_peers.clone(),
+    );
+
+    info!(
+        "network setup: role: {}, seed_peers: {:?}, trusted_peers: {:?}",
+        role, seed_peers, trusted_peers,
+    );
+
+    network_builder
+        .advertised_address(config.advertised_address.clone())
+        .authentication_mode(AuthenticationMode::Mutual(identity_key))
+        .trusted_peers(trusted_peers)
+        .seed_peers(seed_peers)
+        .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
+        .add_connectivity_manager();
 
     match config.discovery_method {
         DiscoveryMethod::Gossip => {
@@ -283,19 +260,16 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         );
 
         // Set up to listen for network configuration changes from StateSync.
-        match network_builder.conn_mgr_reqs_tx() {
-            Some(conn_mgr_reqs_tx) => {
-                let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
-                    ReconfigSubscription::subscribe(ON_CHAIN_CONFIG_REGISTRY);
-                reconfig_subscriptions.push(simple_discovery_reconfig_subscription);
-                let  network_config_listener = ConfigurationChangeListener::new(
-                    conn_mgr_reqs_tx,
-                    RoleType::Validator,
-                );
-                runtime.handle().spawn(network_config_listener.start(simple_discovery_reconfig_rx));
-            },
-            None => ()
-        }
+        if let Some(conn_mgr_reqs_tx) = network_builder.conn_mgr_reqs_tx() {
+            let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
+                ReconfigSubscription::subscribe(ON_CHAIN_CONFIG_REGISTRY);
+            reconfig_subscriptions.push(simple_discovery_reconfig_subscription);
+            let network_config_listener =
+                ConfigurationChangeListener::new(conn_mgr_reqs_tx, RoleType::Validator);
+            runtime
+                .handle()
+                .spawn(network_config_listener.start(simple_discovery_reconfig_rx));
+        };
 
         let (state_sync_sender, state_sync_events) =
             state_synchronizer::network::add_to_network(&mut network_builder);
