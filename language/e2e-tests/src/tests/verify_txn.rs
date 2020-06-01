@@ -96,9 +96,14 @@ fn verify_simple_payment() {
     let transfer_amount = 1_000;
     let mut args: Vec<TransactionArgument> = Vec::new();
     args.push(TransactionArgument::Address(*receiver.address()));
+    args.push(TransactionArgument::U8Vector(vec![]));
     args.push(TransactionArgument::U64(transfer_amount));
+    args.push(TransactionArgument::U8Vector(vec![]));
+    args.push(TransactionArgument::U8Vector(vec![]));
 
-    let p2p_script = StdlibScript::PeerToPeer.compiled_bytes().into_vec();
+    let p2p_script = StdlibScript::PeerToPeerWithMetadata
+        .compiled_bytes()
+        .into_vec();
 
     // Create a new transaction that has the exact right sequence number.
     let txn = sender.account().create_signed_txn_with_args(
@@ -319,7 +324,7 @@ fn verify_simple_payment() {
         executor.execute_transaction(txn).status(),
         &TransactionStatus::Keep(
             VMStatus::new(StatusCode::TYPE_MISMATCH)
-                .with_message("argument length mismatch: expected 3 got 2".to_string())
+                .with_message("argument length mismatch: expected 5 got 2".to_string())
         )
     );
 
@@ -338,7 +343,7 @@ fn verify_simple_payment() {
         executor.execute_transaction(txn).status(),
         &TransactionStatus::Keep(
             VMStatus::new(StatusCode::TYPE_MISMATCH)
-                .with_message("argument length mismatch: expected 3 got 0".to_string())
+                .with_message("argument length mismatch: expected 5 got 0".to_string())
         )
     );
 }

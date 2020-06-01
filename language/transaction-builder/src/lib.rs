@@ -3,8 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-#[cfg(any(test, feature = "fuzzing"))]
-use libra_types::account_config;
 use libra_types::{
     account_address::AccountAddress,
     block_metadata::BlockMetadata,
@@ -15,8 +13,6 @@ use mirai_annotations::*;
 use move_core_types::language_storage::TypeTag;
 use std::convert::TryFrom;
 use stdlib::transaction_scripts::StdlibScript;
-#[cfg(any(test, feature = "fuzzing"))]
-use vm::file_format::{Bytecode, CompiledScript};
 
 fn validate_auth_key_prefix(auth_key_prefix: &[u8]) {
     let auth_key_prefix_length = auth_key_prefix.len();
@@ -151,40 +147,6 @@ pub fn encode_transfer_with_metadata_script(
             TransactionArgument::U64(amount),
             TransactionArgument::U8Vector(metadata),
             TransactionArgument::U8Vector(signature),
-        ],
-    )
-}
-
-/// Encode a program transferring `amount` coins from `sender` to `recipient` but pad the output
-/// bytecode with unreachable instructions.
-#[cfg(any(test, feature = "fuzzing"))]
-pub fn encode_transfer_script_with_padding(
-    recipient: &AccountAddress,
-    amount: u64,
-    padding_size: u64,
-) -> Script {
-    let mut script_mut =
-        CompiledScript::deserialize(&StdlibScript::PeerToPeer.compiled_bytes().into_vec())
-            .unwrap()
-            .into_inner();
-    script_mut
-        .code
-        .code
-        .extend(std::iter::repeat(Bytecode::Ret).take(padding_size as usize));
-    let mut script_bytes = vec![];
-    script_mut
-        .freeze()
-        .unwrap()
-        .serialize(&mut script_bytes)
-        .unwrap();
-
-    Script::new(
-        script_bytes,
-        vec![account_config::lbr_type_tag()],
-        vec![
-            TransactionArgument::Address(*recipient),
-            TransactionArgument::U8Vector(vec![]), // use empty auth key prefix
-            TransactionArgument::U64(amount),
         ],
     )
 }
