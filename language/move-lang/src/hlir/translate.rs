@@ -3,10 +3,10 @@
 
 use crate::{
     errors::Errors,
-    expansion::ast::Fields,
+    expansion::ast::{Fields, Value_},
     hlir::ast::{self as H, Block},
     naming::ast as N,
-    parser::ast::{BinOp_, Field, FunctionName, Kind_, ModuleIdent, StructName, Value_, Var},
+    parser::ast::{BinOp_, Field, FunctionName, Kind_, ModuleIdent, StructName, Var},
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
 };

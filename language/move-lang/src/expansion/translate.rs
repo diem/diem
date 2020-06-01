@@ -6,6 +6,7 @@ use crate::{
     expansion::{
         aliases::{AliasMap, AliasSet},
         ast::{self as E, Fields, SpecId},
+        byte_string, hex_string,
     },
     parser::ast::{
         self as P, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, ModuleIdent_,
@@ -871,9 +872,26 @@ fn spec_member(
             patterns,
             exclusion_patterns,
         },
-        PM::Pragma { properties } => EM::Pragma { properties },
+        PM::Pragma {
+            properties: pproperties,
+        } => {
+            let properties = pproperties
+                .into_iter()
+                .map(|p| pragma_property(context, p))
+                .collect();
+            EM::Pragma { properties }
+        }
     };
     Some(sp(loc, em))
+}
+
+fn pragma_property(context: &mut Context, sp!(loc, pp_): P::PragmaProperty) -> E::PragmaProperty {
+    let P::PragmaProperty_ {
+        name,
+        value: pv_opt,
+    } = pp_;
+    let value = pv_opt.and_then(|pv| value(context, pv));
+    sp(loc, E::PragmaProperty_ { name, value })
 }
 
 //**************************************************************************************************
@@ -1064,7 +1082,13 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
     use P::Exp_ as PE;
     let e_ = match pe_ {
         PE::Unit => EE::Unit,
-        PE::Value(v) => EE::Value(v),
+        PE::Value(pv) => match value(context, pv) {
+            Some(v) => EE::Value(v),
+            None => {
+                assert!(context.has_errors());
+                EE::UnresolvedError
+            }
+        },
         PE::InferredNum(u) => EE::InferredNum(u),
         PE::Move(v) => EE::Move(v),
         PE::Copy(v) => EE::Copy(v),
@@ -1240,6 +1264,33 @@ fn exp_dotted(context: &mut Context, sp!(loc, pdotted_): P::Exp) -> Option<E::Ex
         pe_ => EE::Exp(exp_(context, sp(loc, pe_))),
     };
     Some(sp(loc, edotted_))
+}
+
+fn value(context: &mut Context, sp!(loc, pvalue_): P::Value) -> Option<E::Value> {
+    use E::Value_ as EV;
+    use P::Value_ as PV;
+    let value_ = match pvalue_ {
+        PV::Address(addr) => EV::Address(addr),
+        PV::U8(u) => EV::U8(u),
+        PV::U64(u) => EV::U64(u),
+        PV::U128(u) => EV::U128(u),
+        PV::Bool(b) => EV::Bool(b),
+        PV::HexString(s) => match hex_string::decode(loc, &s) {
+            Ok(v) => EV::Bytearray(v),
+            Err(e) => {
+                context.errors.extend(e);
+                return None;
+            }
+        },
+        PV::ByteString(s) => match byte_string::decode(loc, &s) {
+            Ok(v) => EV::Bytearray(v),
+            Err(e) => {
+                context.errors.extend(e);
+                return None;
+            }
+        },
+    };
+    Some(sp(loc, value_))
 }
 
 //**************************************************************************************************

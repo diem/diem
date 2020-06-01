@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use crate::{
     errors::*,
-    parser::{ast::*, byte_string::decode_byte_string, lexer::*},
+    parser::{ast::*, lexer::*},
     shared::*,
 };
 use std::collections::BTreeMap;
@@ -426,38 +426,20 @@ fn parse_lambda_bind_list<'input>(tokens: &mut Lexer<'input>) -> Result<BindList
 
 // Parse a byte string:
 //      ByteString = <ByteStringValue>
-fn parse_byte_string<'input>(tokens: &mut Lexer<'input>) -> Result<Vec<u8>, Error> {
+fn parse_byte_string<'input>(tokens: &mut Lexer<'input>) -> Result<Value_, Error> {
     if tokens.peek() != Tok::ByteStringValue {
         return Err(unexpected_token_error(tokens, "a byte string value"));
     }
-    let start_loc = tokens.start_loc();
     let s = tokens.content();
-    if s.starts_with("x\"") {
-        let mut hex_string = String::from(&s[2..s.len() - 1]);
-        let adjust = if hex_string.len() % 2 != 0 {
-            hex_string.insert(0, '0');
-            1
-        } else {
-            0
-        };
-        tokens.advance()?;
-        match hex::decode(hex_string.as_str()) {
-            Ok(vec) => Ok(vec),
-            Err(hex::FromHexError::InvalidHexCharacter { c, index }) => {
-                let offset = start_loc + 2 - adjust + index;
-                let loc = make_loc(tokens.file_name(), offset, offset);
-                Err(vec![(
-                    loc,
-                    format!("Invalid hexadecimal character: '{}'", c),
-                )])
-            }
-            Err(_) => unreachable!("unexpected error parsing hex byte string value"),
-        }
+    let text = s[2..s.len() - 1].to_owned();
+    let value_ = if s.starts_with("x\"") {
+        Value_::HexString(text)
     } else {
-        let result = decode_byte_string(tokens.file_name(), start_loc + 2, &s[2..s.len() - 1]);
-        tokens.advance()?;
-        result
-    }
+        assert!(s.starts_with("b\""));
+        Value_::ByteString(text)
+    };
+    tokens.advance()?;
+    Ok(value_)
 }
 
 // Parse a value:
@@ -511,10 +493,7 @@ fn parse_value<'input>(tokens: &mut Lexer<'input>) -> Result<Value, Error> {
             tokens.advance()?;
             Value_::U128(i)
         }
-        Tok::ByteStringValue => {
-            let byte_string = parse_byte_string(tokens)?;
-            Value_::Bytearray(byte_string)
-        }
+        Tok::ByteStringValue => parse_byte_string(tokens)?,
         _ => unreachable!("parse_value called with invalid token"),
     };
     let end_loc = tokens.previous_end_loc();
