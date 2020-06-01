@@ -45,21 +45,23 @@ module LibraBlock {
     //       2. Should the previous block votes be provided from BlockMetadata or should it come from the ValidatorSet
     //          Resource?
     public fun block_prologue(
+        vm: &signer,
         round: u64,
         timestamp: u64,
         previous_block_votes: vector<address>,
         proposer: address
     ) acquires BlockMetadata {
         // Can only be invoked by LibraVM privilege.
-        Transaction::assert(Transaction::sender() == 0x0, 33);
+        Transaction::assert(Signer::address_of(vm) == 0x0, 33);
 
-        process_block_prologue(round, timestamp, previous_block_votes, proposer);
+        process_block_prologue(vm,  round, timestamp, previous_block_votes, proposer);
 
         // TODO(valerini): call regular reconfiguration here LibraSystem2::update_all_validator_info()
     }
 
     // Update the BlockMetadata resource with the new blockmetada coming from the consensus.
     fun process_block_prologue(
+        vm: &signer,
         round: u64,
         timestamp: u64,
         previous_block_votes: vector<address>,
@@ -69,7 +71,7 @@ module LibraBlock {
 
         // TODO: Figure out a story for errors in the system transactions.
         if(proposer != 0x0) Transaction::assert(LibraSystem::is_validator(proposer), 5002);
-        LibraTimestamp::update_global_time(proposer, timestamp);
+        LibraTimestamp::update_global_time(vm, proposer, timestamp);
         block_metadata_ref.height = block_metadata_ref.height + 1;
         Event::emit_event<NewBlockEvent>(
           &mut block_metadata_ref.new_block_events,

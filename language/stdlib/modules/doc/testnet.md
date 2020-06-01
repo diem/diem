@@ -95,7 +95,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Testnet_remove_testnet">remove_testnet</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Testnet_remove_testnet">remove_testnet</a>(account: &signer)
 </code></pre>
 
 
@@ -104,9 +104,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Testnet_remove_testnet">remove_testnet</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Testnet_remove_testnet">remove_testnet</a>(account: &signer)
 <b>acquires</b> <a href="#0x0_Testnet_IsTestnet">IsTestnet</a> {
-    Transaction::assert(Transaction::sender() == 0xA550C18, 0);
+    Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == 0xA550C18, 0);
     <a href="#0x0_Testnet_IsTestnet">IsTestnet</a>{} = move_from&lt;<a href="#0x0_Testnet_IsTestnet">IsTestnet</a>&gt;(0xA550C18);
 }
 </code></pre>

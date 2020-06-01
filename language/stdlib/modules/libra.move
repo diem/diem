@@ -167,11 +167,12 @@ module Libra {
     // Burn the coins currently held in the preburn holding area under `preburn_address`.
     // Fails if the sender does not have a published `BurnCapability`.
     public fun burn<Token>(
+        account: &signer,
         preburn_address: address
     ) acquires BurnCapability, CurrencyInfo, Preburn {
         burn_with_capability(
             preburn_address,
-            borrow_global<BurnCapability<Token>>(Transaction::sender())
+            borrow_global<BurnCapability<Token>>(Signer::address_of(account))
         )
     }
 
@@ -261,10 +262,11 @@ module Libra {
         };
     }
 
-    // Send coin to the preburn holding area, where it will wait to be burned.
-    // Fails if the sender does not have a published Preburn resource
-    public fun preburn_to_sender<Token>(coin: T<Token>) acquires CurrencyInfo, Preburn {
-        let sender = Transaction::sender();
+    /// Send coin to the preburn holding area for `account`, where it will wait to either be burned
+    /// or returned to the balance of `account`.
+    /// Fails if `account` does not have a published Preburn resource
+    public fun preburn_to<Token>(account: &signer, coin: T<Token>) acquires CurrencyInfo, Preburn {
+        let sender = Signer::address_of(account);
         preburn_with_resource(coin, borrow_global_mut<Preburn<Token>>(sender), sender);
     }
 
@@ -354,8 +356,8 @@ module Libra {
     }
 
     // Remove and return the `Preburn` resource under the sender's account
-    public fun remove_preburn<Token>(): Preburn<Token> acquires Preburn {
-        move_from<Preburn<Token>>(Transaction::sender())
+    public fun remove_preburn<Token>(account: &signer): Preburn<Token> acquires Preburn {
+        move_from<Preburn<Token>>(Signer::address_of(account))
     }
 
     // Destroys the given preburn resource.
@@ -367,14 +369,16 @@ module Libra {
 
     // Remove and return the MintCapability from the sender's account. Fails if the sender does
     // not have a published MintCapability
-    public fun remove_mint_capability<Token>(): MintCapability<Token> acquires MintCapability {
-        move_from<MintCapability<Token>>(Transaction::sender())
+    public fun remove_mint_capability<Token>(account: &signer): MintCapability<Token>
+    acquires MintCapability {
+        move_from<MintCapability<Token>>(Signer::address_of(account))
     }
 
     // Remove and return the BurnCapability from the sender's account. Fails if the sender does
     // not have a published BurnCapability
-    public fun remove_burn_capability<Token>(): BurnCapability<Token> acquires BurnCapability {
-        move_from<BurnCapability<Token>>(Transaction::sender())
+    public fun remove_burn_capability<Token>(account: &signer): BurnCapability<Token>
+    acquires BurnCapability {
+        move_from<BurnCapability<Token>>(Signer::address_of(account))
     }
 
     // Return the total value of Libra to be burned
@@ -451,7 +455,10 @@ module Libra {
     ): (MintCapability<CoinType>, BurnCapability<CoinType>)
     acquires CurrencyRegistrationCapability {
         // And only callable by the designated currency address.
-        Transaction::assert(Association::has_privilege<AddCurrency>(Transaction::sender()), 8);
+        Transaction::assert(
+            Association::has_privilege<AddCurrency>(Signer::address_of(account)),
+            8
+        );
 
         move_to(account, CurrencyInfo<CoinType> {
             total_value: 0,

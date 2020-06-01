@@ -20,9 +20,13 @@ module LibraTimestamp {
     }
 
     // Update the wall clock time by consensus. Requires VM privilege and will be invoked during block prologue.
-    public fun update_global_time(proposer: address, timestamp: u64) acquires CurrentTimeMicroseconds {
+    public fun update_global_time(
+        account: &signer,
+        proposer: address,
+        timestamp: u64
+    ) acquires CurrentTimeMicroseconds {
         // Can only be invoked by LibraVM privilege.
-        Transaction::assert(Transaction::sender() == 0x0, 33);
+        Transaction::assert(Signer::address_of(account) == 0x0, 33);
 
         let global_timer = borrow_global_mut<CurrentTimeMicroseconds>(0xA550C18);
         if (proposer == 0x0) {

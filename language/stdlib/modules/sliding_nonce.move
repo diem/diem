@@ -1,7 +1,8 @@
 address 0x0 {
 module SlidingNonce {
-    use 0x0::Transaction;
     use 0x0::Association;
+    use 0x0::Signer;
+    use 0x0::Transaction;
 
     // This struct keep last 128 nonce values in a bit map nonce_mask
     // We assume that nonce are generated incrementally, but certain permutation is allowed when nonce are recorded
@@ -15,8 +16,8 @@ module SlidingNonce {
     }
 
     // Calls try_record_nonce and aborts transaction if returned code is non-0
-    public fun record_nonce_or_abort(seq_nonce: u64) acquires T {
-        let code = try_record_nonce(seq_nonce);
+    public fun record_nonce_or_abort(account: &signer, seq_nonce: u64) acquires T {
+        let code = try_record_nonce(account, seq_nonce);
         Transaction::assert(code == 0, code);
     }
 
@@ -26,11 +27,11 @@ module SlidingNonce {
     // * code 10001: This nonce is too old and impossible to ensure whether it's duplicated or not
     // * code 10002: This nonce is too far in the future - this is not allowed to protect against nonce exhaustion
     // * code 10003: This nonce was already recorded previously
-    public fun try_record_nonce(seq_nonce: u64): u64 acquires T {
+    public fun try_record_nonce(account: &signer, seq_nonce: u64): u64 acquires T {
         if (seq_nonce == 0) {
             return 0
         };
-        let t = borrow_global_mut<T>(Transaction::sender());
+        let t = borrow_global_mut<T>(Signer::address_of(account));
         if (t.min_nonce > seq_nonce) {
             return 10001
         };

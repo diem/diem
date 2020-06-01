@@ -27,7 +27,7 @@ fun main(account: &signer) {
     // now rotate to another pubkey and redo the key-related checks
     // from RFC 8032
     let pubkey2 = x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a";
-    SharedEd25519PublicKey::rotate_sender_key(copy pubkey2);
+    SharedEd25519PublicKey::rotate_key(account, copy pubkey2);
     Transaction::assert(SharedEd25519PublicKey::key({{default}}) == pubkey2, 3004);
     // make sure the auth key changed again
     Transaction::assert(new_auth_key != LibraAccount::authentication_key({{default}}), 3005);
@@ -73,7 +73,7 @@ fun main(account: &signer) {
     SharedEd25519PublicKey::publish(account, valid_pubkey);
     // now rotate to an invalid key
     let invalid_pubkey = x"10000";
-    SharedEd25519PublicKey::rotate_sender_key(invalid_pubkey)
+    SharedEd25519PublicKey::rotate_key(account, invalid_pubkey)
 }
 }
 // check: ABORTED
@@ -89,7 +89,7 @@ fun main(account: &signer) {
     SharedEd25519PublicKey::publish(account, valid_pubkey);
     // now rotate to an invalid key
     let invalid_pubkey = x"0000000000000000000000000000000000000000000000000000000000000000";
-    SharedEd25519PublicKey::rotate_sender_key(invalid_pubkey)
+    SharedEd25519PublicKey::rotate_key(account, invalid_pubkey)
 }
 }
 // check: ABORTED

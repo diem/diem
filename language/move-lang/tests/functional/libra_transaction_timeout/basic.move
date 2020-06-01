@@ -11,8 +11,8 @@ script {
 //! new-transaction
 script {
     use 0x0::LibraTransactionTimeout;
-    fun main() {
-        LibraTransactionTimeout::set_timeout(0);
+    fun main(account: &signer) {
+        LibraTransactionTimeout::set_timeout(account, 0);
     }
 }
 // check: ABORTED
@@ -21,8 +21,8 @@ script {
 //! new-transaction
 script {
     use 0x0::LibraTransactionTimeout;
-    fun main() {
-        LibraTransactionTimeout::set_timeout(0);
+    fun main(account: &signer) {
+        LibraTransactionTimeout::set_timeout(account, 0);
     }
 }
 // check: ABORTED
@@ -32,7 +32,7 @@ script {
 //! sender: association
 script {
     use 0x0::LibraTransactionTimeout;
-    fun main() {
-        LibraTransactionTimeout::set_timeout(86400000000);
+    fun main(account: &signer) {
+        LibraTransactionTimeout::set_timeout(account, 86400000000);
     }
 }
