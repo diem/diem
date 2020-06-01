@@ -16,11 +16,11 @@ use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_mempool::MEMPOOL_SUBSCRIBED_CONFIGS;
 use libra_metrics::metric_server;
-use network_simple_onchain_discovery::ConfigurationChangeListener;
 use libra_types::{on_chain_config::ON_CHAIN_CONFIG_REGISTRY, waypoint::Waypoint, PeerId};
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use network::validator_network::network_builder::{AuthenticationMode, NetworkBuilder};
+use network_simple_onchain_discovery::ConfigurationChangeListener;
 use onchain_discovery::{client::OnchainDiscovery, service::OnchainDiscoveryService};
 use state_synchronizer::StateSynchronizer;
 use std::{
@@ -283,19 +283,16 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         );
 
         // Set up to listen for network configuration changes from StateSync.
-        match network_builder.conn_mgr_reqs_tx() {
-            Some(conn_mgr_reqs_tx) => {
-                let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
-                    ReconfigSubscription::subscribe(ON_CHAIN_CONFIG_REGISTRY);
-                reconfig_subscriptions.push(simple_discovery_reconfig_subscription);
-                let  network_config_listener = ConfigurationChangeListener::new(
-                    conn_mgr_reqs_tx,
-                    RoleType::Validator,
-                );
-                runtime.handle().spawn(network_config_listener.start(simple_discovery_reconfig_rx));
-            },
-            None => ()
-        }
+        if let Some(conn_mgr_reqs_tx) = network_builder.conn_mgr_reqs_tx() {
+            let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
+                ReconfigSubscription::subscribe(ON_CHAIN_CONFIG_REGISTRY);
+            reconfig_subscriptions.push(simple_discovery_reconfig_subscription);
+            let network_config_listener =
+                ConfigurationChangeListener::new(conn_mgr_reqs_tx, RoleType::Validator);
+            runtime
+                .handle()
+                .spawn(network_config_listener.start(simple_discovery_reconfig_rx));
+        };
 
         let (state_sync_sender, state_sync_events) =
             state_synchronizer::network::add_to_network(&mut network_builder);
