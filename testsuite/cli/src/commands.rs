@@ -12,23 +12,8 @@ use std::{collections::HashMap, sync::Arc};
 
 /// Print the error and bump up error counter.
 pub fn report_error(msg: &str, e: Error) {
-    println!("[ERROR] {}: {}", msg, pretty_format_error(e));
+    println!("[ERROR] {}: {}", msg, e);
     COUNTER_CLIENT_ERRORS.inc();
-}
-
-fn pretty_format_error(e: Error) -> String {
-    if let Some(grpc_error) = e.downcast_ref::<tonic::Status>() {
-        match grpc_error.code() {
-            tonic::Code::DeadlineExceeded | tonic::Code::Unavailable => {
-                return "Server unavailable, please retry and/or check \
-                        if host passed to the client is running"
-                    .to_string();
-            }
-            _ => {}
-        }
-    }
-
-    return format!("{}", e);
 }
 
 /// Check whether a command is blocking.

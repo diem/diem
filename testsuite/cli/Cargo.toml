@@ -12,7 +12,6 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 chrono = "0.4.11"
-tonic = "0.2"
 hex = "0.4.2"
 proptest = { version = "0.10.0", optional = true }
 rustyline = "6.1.2"
@@ -23,7 +22,6 @@ serde = { version = "1.0.111", features = ["derive"] }
 structopt = "0.3.14"
 walkdir = "2.3.1"
 
-admission-control-proto = { path = "../../admission-control/admission-control-proto", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
 generate-key = { path = "../../config/generate-key", version = "0.1.0" }
 crash-handler = { path = "../../common/crash-handler", version = "0.1.0" }
