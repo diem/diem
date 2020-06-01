@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use crate::{cluster::Cluster, instance::Instance};
+use crate::{atomic_histogram::*, cluster::Cluster, instance::Instance};
 use std::{
     fmt, slice,
     sync::Arc,
@@ -64,6 +64,7 @@ struct StatsAccumulator {
     committed: AtomicU64,
     expired: AtomicU64,
     latency: AtomicU64,
+    latencies: Arc<AtomicHistogramAccumulator>,
 }
 
 #[derive(Debug, Default)]
@@ -72,6 +73,7 @@ pub struct TxStats {
     pub committed: u64,
     pub expired: u64,
     pub latency: u64,
+    pub latency_buckets: AtomicHistogramSnapshot,
 }
 
 #[derive(Debug, Default)]
@@ -80,6 +82,7 @@ pub struct TxStatsRate {
     pub committed: u64,
     pub expired: u64,
     pub latency: u64,
+    pub p90_latency: u64,
 }
 
 #[derive(Clone)]
@@ -389,6 +392,7 @@ impl SubmissionWorker {
                 {
                     let end_time = (Instant::now() - start_time).as_millis() as u64;
                     let num_committed = (num_requests - uncommitted.len()) as u64;
+                    let latency = end_time - tx_offset_time / num_requests as u64;
                     self.stats
                         .committed
                         .fetch_add(num_committed, Ordering::Relaxed);
@@ -399,22 +403,30 @@ impl SubmissionWorker {
                         // To avoid negative result caused by uncommitted tx occur
                         // Simplified from:
                         // end_time * num_committed - (tx_offset_time/num_requests) * num_committed
-                        (end_time - tx_offset_time / num_requests as u64) * num_committed as u64,
+                        // to
+                        // (end_time - tx_offset_time / num_requests) * num_committed
+                        latency * num_committed as u64,
                         Ordering::Relaxed,
                     );
+                    self.stats
+                        .latencies
+                        .record_data_point(latency, num_committed);
                     info!(
                         "[{:?}] Transactions were not committed before expiration: {:?}",
                         self.client, uncommitted
                     );
                 } else {
                     let end_time = (Instant::now() - start_time).as_millis() as u64;
+                    let latency = end_time - tx_offset_time / num_requests as u64;
                     self.stats
                         .committed
                         .fetch_add(num_requests as u64, Ordering::Relaxed);
-                    self.stats.latency.fetch_add(
-                        end_time * num_requests as u64 - tx_offset_time,
-                        Ordering::Relaxed,
-                    );
+                    self.stats
+                        .latency
+                        .fetch_add(latency * num_requests as u64, Ordering::Relaxed);
+                    self.stats
+                        .latencies
+                        .record_data_point(latency, num_requests as u64);
                 }
             }
         }
@@ -740,6 +752,7 @@ impl StatsAccumulator {
             committed: self.committed.load(Ordering::Relaxed),
             expired: self.expired.load(Ordering::Relaxed),
             latency: self.latency.load(Ordering::Relaxed),
+            latency_buckets: self.latencies.snapshot(),
         }
     }
 }
@@ -751,6 +764,7 @@ impl TxStats {
             committed: self.committed / window.as_secs(),
             expired: self.expired / window.as_secs(),
             latency: self.latency / self.committed,
+            p90_latency: self.latency_buckets.percentile(9, 10),
         }
     }
 }
@@ -764,6 +778,7 @@ impl Sub for &TxStats {
             committed: self.committed - other.committed,
             expired: self.expired - other.expired,
             latency: self.latency - other.latency,
+            latency_buckets: &self.latency_buckets - &other.latency_buckets,
         }
     }
 }
@@ -773,7 +788,7 @@ impl fmt::Display for TxStats {
         write!(
             f,
             "submitted: {}, committed: {}, expired: {}",
-            self.submitted, self.committed, self.expired
+            self.submitted, self.committed, self.expired,
         )
     }
 }
@@ -782,8 +797,8 @@ impl fmt::Display for TxStatsRate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "submitted: {} txn/s, committed: {} txn/s, expired: {} txn/s, latency: {} ms",
-            self.submitted, self.committed, self.expired, self.latency
+            "submitted: {} txn/s, committed: {} txn/s, expired: {} txn/s, latency: {} ms, p90 latency: {} ms",
+            self.submitted, self.committed, self.expired, self.latency, self.p90_latency,
         )
     }
 }
