@@ -32,15 +32,6 @@ pub fn received_event_name() -> &'static IdentStr {
     &*RECEIVED_EVENT_NAME
 }
 
-pub fn sent_payment_tag() -> StructTag {
-    StructTag {
-        address: CORE_CODE_ADDRESS,
-        module: ACCOUNT_MODULE_IDENTIFIER.clone(),
-        name: sent_event_name().to_owned(),
-        type_params: vec![],
-    }
-}
-
 pub fn received_payment_tag() -> StructTag {
     StructTag {
         address: CORE_CODE_ADDRESS,
