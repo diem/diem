@@ -137,7 +137,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraBlock_block_prologue">block_prologue</a>(round: u64, timestamp: u64, previous_block_votes: vector&lt;address&gt;, proposer: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraBlock_block_prologue">block_prologue</a>(vm: &signer, round: u64, timestamp: u64, previous_block_votes: vector&lt;address&gt;, proposer: address)
 </code></pre>
 
 
@@ -147,15 +147,16 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraBlock_block_prologue">block_prologue</a>(
+    vm: &signer,
     round: u64,
     timestamp: u64,
     previous_block_votes: vector&lt;address&gt;,
     proposer: address
 ) <b>acquires</b> <a href="#0x0_LibraBlock_BlockMetadata">BlockMetadata</a> {
     // Can only be invoked by LibraVM privilege.
-    Transaction::assert(Transaction::sender() == 0x0, 33);
+    Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(vm) == 0x0, 33);
 
-    <a href="#0x0_LibraBlock_process_block_prologue">process_block_prologue</a>(round, timestamp, previous_block_votes, proposer);
+    <a href="#0x0_LibraBlock_process_block_prologue">process_block_prologue</a>(vm,  round, timestamp, previous_block_votes, proposer);
 
     // TODO(valerini): call regular reconfiguration here LibraSystem2::update_all_validator_info()
 }
@@ -171,7 +172,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraBlock_process_block_prologue">process_block_prologue</a>(round: u64, timestamp: u64, previous_block_votes: vector&lt;address&gt;, proposer: address)
+<pre><code><b>fun</b> <a href="#0x0_LibraBlock_process_block_prologue">process_block_prologue</a>(vm: &signer, round: u64, timestamp: u64, previous_block_votes: vector&lt;address&gt;, proposer: address)
 </code></pre>
 
 
@@ -181,6 +182,7 @@
 
 
 <pre><code><b>fun</b> <a href="#0x0_LibraBlock_process_block_prologue">process_block_prologue</a>(
+    vm: &signer,
     round: u64,
     timestamp: u64,
     previous_block_votes: vector&lt;address&gt;,
@@ -190,7 +192,7 @@
 
     // TODO: Figure out a story for errors in the system transactions.
     <b>if</b>(proposer != 0x0) Transaction::assert(<a href="libra_system.md#0x0_LibraSystem_is_validator">LibraSystem::is_validator</a>(proposer), 5002);
-    <a href="libra_time.md#0x0_LibraTimestamp_update_global_time">LibraTimestamp::update_global_time</a>(proposer, timestamp);
+    <a href="libra_time.md#0x0_LibraTimestamp_update_global_time">LibraTimestamp::update_global_time</a>(vm, proposer, timestamp);
     block_metadata_ref.height = block_metadata_ref.height + 1;
     <a href="event.md#0x0_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x0_LibraBlock_NewBlockEvent">NewBlockEvent</a>&gt;(
       &<b>mut</b> block_metadata_ref.new_block_events,

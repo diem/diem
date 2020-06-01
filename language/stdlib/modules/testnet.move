@@ -16,9 +16,9 @@ module Testnet {
     }
 
     // only used for testing purposes
-    public fun remove_testnet()
+    public fun remove_testnet(account: &signer)
     acquires IsTestnet {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 0);
+        Transaction::assert(Signer::address_of(account) == 0xA550C18, 0);
         IsTestnet{} = move_from<IsTestnet>(0xA550C18);
     }
 }

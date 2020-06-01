@@ -28,10 +28,11 @@ module LibraWriteSetManager {
     }
 
     fun prologue(
+        account: &signer,
         writeset_sequence_number: u64,
         writeset_public_key: vector<u8>,
     ) {
-        let sender = Transaction::sender();
+        let sender = Signer::address_of(account);
         Transaction::assert(sender == 0xA550C18, 33);
 
         let association_auth_key = LibraAccount::authentication_key(sender);

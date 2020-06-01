@@ -33,8 +33,8 @@ import 0x0.LibraBlock;
 import 0x0.LibraTimestamp;
 import 0x0.Vector;
 
-main() {
-    LibraBlock.block_prologue(1, 10, Vector.empty<address>(), {{vivian}});
+main(account: &signer) {
+    LibraBlock.block_prologue(move(account), 1, 10, Vector.empty<address>(), {{vivian}});
 
     return;
 }
@@ -45,8 +45,8 @@ main() {
 //! sender: vivian
 import 0x0.LibraTimestamp;
 
-main() {
-    LibraTimestamp.update_global_time({{vivian}}, 20);
+main(account: &signer) {
+    LibraTimestamp.update_global_time(move(account), {{vivian}}, 20);
 
     return;
 }

@@ -24,7 +24,7 @@ script {
     use 0x0::Unhosted;
     use 0x0::Testnet;
     fun main(account: &signer) {
-        Testnet::remove_testnet();
+        Testnet::remove_testnet(account);
         let _t = Unhosted::create();
         Testnet::initialize(account);
     }

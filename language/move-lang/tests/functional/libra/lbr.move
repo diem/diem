@@ -52,7 +52,7 @@ use 0x0::LBR;
 use 0x0::Libra;
 use 0x0::Offer;
 fun main(account: &signer) {
-   Offer::create(account, Libra::remove_burn_capability<LBR::T>(), {{alice}});
+   Offer::create(account, Libra::remove_burn_capability<LBR::T>(account), {{alice}});
 }
 }
 // check: MISSING_DATA

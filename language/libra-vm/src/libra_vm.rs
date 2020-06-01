@@ -515,6 +515,7 @@ impl LibraVM {
 
         if let Ok((round, timestamp, previous_vote, proposer)) = block_metadata.into_inner() {
             let args = vec![
+                Value::transaction_argument_signer_reference(txn_data.sender),
                 Value::u64(round),
                 Value::u64(timestamp),
                 Value::vector_address(previous_vote),
@@ -758,6 +759,7 @@ impl LibraVM {
                 &PROLOGUE_NAME,
                 vec![],
                 vec![
+                    Value::transaction_argument_signer_reference(txn_data.sender),
                     Value::u64(txn_sequence_number),
                     Value::vector_u8(txn_public_key),
                 ],

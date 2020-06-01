@@ -7,8 +7,8 @@
 
 -  [Struct `T`](#0x0_SharedEd25519PublicKey_T)
 -  [Function `publish`](#0x0_SharedEd25519PublicKey_publish)
+-  [Function `rotate_key_`](#0x0_SharedEd25519PublicKey_rotate_key_)
 -  [Function `rotate_key`](#0x0_SharedEd25519PublicKey_rotate_key)
--  [Function `rotate_sender_key`](#0x0_SharedEd25519PublicKey_rotate_sender_key)
 -  [Function `key`](#0x0_SharedEd25519PublicKey_key)
 -  [Function `exists`](#0x0_SharedEd25519PublicKey_exists)
 
@@ -69,7 +69,7 @@
         key: x"",
         rotation_cap: <a href="libra_account.md#0x0_LibraAccount_extract_sender_key_rotation_capability">LibraAccount::extract_sender_key_rotation_capability</a>()
     };
-    <a href="#0x0_SharedEd25519PublicKey_rotate_key">rotate_key</a>(&<b>mut</b> t, key);
+    <a href="#0x0_SharedEd25519PublicKey_rotate_key_">rotate_key_</a>(&<b>mut</b> t, key);
     move_to(account, t);
 }
 </code></pre>
@@ -78,13 +78,13 @@
 
 </details>
 
-<a name="0x0_SharedEd25519PublicKey_rotate_key"></a>
+<a name="0x0_SharedEd25519PublicKey_rotate_key_"></a>
 
-## Function `rotate_key`
+## Function `rotate_key_`
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_SharedEd25519PublicKey_rotate_key">rotate_key</a>(shared_key: &<b>mut</b> <a href="#0x0_SharedEd25519PublicKey_T">SharedEd25519PublicKey::T</a>, new_public_key: vector&lt;u8&gt;)
+<pre><code><b>fun</b> <a href="#0x0_SharedEd25519PublicKey_rotate_key_">rotate_key_</a>(shared_key: &<b>mut</b> <a href="#0x0_SharedEd25519PublicKey_T">SharedEd25519PublicKey::T</a>, new_public_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -93,7 +93,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_SharedEd25519PublicKey_rotate_key">rotate_key</a>(shared_key: &<b>mut</b> <a href="#0x0_SharedEd25519PublicKey_T">T</a>, new_public_key: vector&lt;u8&gt;) {
+<pre><code><b>fun</b> <a href="#0x0_SharedEd25519PublicKey_rotate_key_">rotate_key_</a>(shared_key: &<b>mut</b> <a href="#0x0_SharedEd25519PublicKey_T">T</a>, new_public_key: vector&lt;u8&gt;) {
     // Cryptographic check of <b>public</b> key validity
     Transaction::assert(
         <a href="signature.md#0x0_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> new_public_key),
@@ -111,13 +111,13 @@
 
 </details>
 
-<a name="0x0_SharedEd25519PublicKey_rotate_sender_key"></a>
+<a name="0x0_SharedEd25519PublicKey_rotate_key"></a>
 
-## Function `rotate_sender_key`
+## Function `rotate_key`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_rotate_sender_key">rotate_sender_key</a>(new_public_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_rotate_key">rotate_key</a>(account: &signer, new_public_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -126,8 +126,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_rotate_sender_key">rotate_sender_key</a>(new_public_key: vector&lt;u8&gt;) <b>acquires</b> <a href="#0x0_SharedEd25519PublicKey_T">T</a> {
-    <a href="#0x0_SharedEd25519PublicKey_rotate_key">rotate_key</a>(borrow_global_mut&lt;<a href="#0x0_SharedEd25519PublicKey_T">T</a>&gt;(Transaction::sender()), new_public_key);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_rotate_key">rotate_key</a>(account: &signer, new_public_key: vector&lt;u8&gt;) <b>acquires</b> <a href="#0x0_SharedEd25519PublicKey_T">T</a> {
+    <a href="#0x0_SharedEd25519PublicKey_rotate_key_">rotate_key_</a>(borrow_global_mut&lt;<a href="#0x0_SharedEd25519PublicKey_T">T</a>&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)), new_public_key);
 }
 </code></pre>
 

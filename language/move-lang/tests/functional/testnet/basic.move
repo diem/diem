@@ -12,16 +12,16 @@ script {
 //! sender: association
 script {
     use 0x0::Testnet;
-    fun main() {
-        Testnet::remove_testnet();
+    fun main(account: &signer) {
+        Testnet::remove_testnet(account);
     }
 }
 
 //! new-transaction
 script {
     use 0x0::Testnet;
-    fun main() {
-        Testnet::remove_testnet();
+    fun main(account: &signer) {
+        Testnet::remove_testnet(account);
     }
 }
 // check: ABORTED

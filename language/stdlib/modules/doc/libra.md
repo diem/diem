@@ -27,7 +27,7 @@
 -  [Function `mint_with_capability`](#0x0_Libra_mint_with_capability)
 -  [Function `new_preburn_with_capability`](#0x0_Libra_new_preburn_with_capability)
 -  [Function `preburn_with_resource`](#0x0_Libra_preburn_with_resource)
--  [Function `preburn_to_sender`](#0x0_Libra_preburn_to_sender)
+-  [Function `preburn_to`](#0x0_Libra_preburn_to)
 -  [Function `burn_with_capability`](#0x0_Libra_burn_with_capability)
 -  [Function `burn_with_resource_cap`](#0x0_Libra_burn_with_resource_cap)
 -  [Function `cancel_burn_with_capability`](#0x0_Libra_cancel_burn_with_capability)
@@ -646,7 +646,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_burn">burn</a>&lt;Token&gt;(preburn_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_burn">burn</a>&lt;Token&gt;(account: &signer, preburn_address: address)
 </code></pre>
 
 
@@ -656,11 +656,12 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_burn">burn</a>&lt;Token&gt;(
+    account: &signer,
     preburn_address: address
 ) <b>acquires</b> <a href="#0x0_Libra_BurnCapability">BurnCapability</a>, <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x0_Libra_Preburn">Preburn</a> {
     <a href="#0x0_Libra_burn_with_capability">burn_with_capability</a>(
         preburn_address,
-        borrow_global&lt;<a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;Token&gt;&gt;(Transaction::sender())
+        borrow_global&lt;<a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;Token&gt;&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account))
     )
 }
 </code></pre>
@@ -847,13 +848,19 @@
 
 </details>
 
-<a name="0x0_Libra_preburn_to_sender"></a>
+<a name="0x0_Libra_preburn_to"></a>
 
-## Function `preburn_to_sender`
+## Function `preburn_to`
+
+Send coin to the preburn holding area for
+<code>account</code>, where it will wait to either be burned
+or returned to the balance of
+<code>account</code>.
+Fails if
+<code>account</code> does not have a published Preburn resource
 
 
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_preburn_to_sender">preburn_to_sender</a>&lt;Token&gt;(coin: <a href="#0x0_Libra_T">Libra::T</a>&lt;Token&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_preburn_to">preburn_to</a>&lt;Token&gt;(account: &signer, coin: <a href="#0x0_Libra_T">Libra::T</a>&lt;Token&gt;)
 </code></pre>
 
 
@@ -862,8 +869,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_preburn_to_sender">preburn_to_sender</a>&lt;Token&gt;(coin: <a href="#0x0_Libra_T">T</a>&lt;Token&gt;) <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x0_Libra_Preburn">Preburn</a> {
-    <b>let</b> sender = Transaction::sender();
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_preburn_to">preburn_to</a>&lt;Token&gt;(account: &signer, coin: <a href="#0x0_Libra_T">T</a>&lt;Token&gt;) <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x0_Libra_Preburn">Preburn</a> {
+    <b>let</b> sender = <a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     <a href="#0x0_Libra_preburn_with_resource">preburn_with_resource</a>(coin, borrow_global_mut&lt;<a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt;&gt;(sender), sender);
 }
 </code></pre>
@@ -1027,7 +1034,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_remove_preburn">remove_preburn</a>&lt;Token&gt;(): <a href="#0x0_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_remove_preburn">remove_preburn</a>&lt;Token&gt;(account: &signer): <a href="#0x0_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;
 </code></pre>
 
 
@@ -1036,8 +1043,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_remove_preburn">remove_preburn</a>&lt;Token&gt;(): <a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_Libra_Preburn">Preburn</a> {
-    move_from&lt;<a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt;&gt;(Transaction::sender())
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_remove_preburn">remove_preburn</a>&lt;Token&gt;(account: &signer): <a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_Libra_Preburn">Preburn</a> {
+    move_from&lt;<a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt;&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account))
 }
 </code></pre>
 
@@ -1076,7 +1083,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_remove_mint_capability">remove_mint_capability</a>&lt;Token&gt;(): <a href="#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;Token&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_remove_mint_capability">remove_mint_capability</a>&lt;Token&gt;(account: &signer): <a href="#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;Token&gt;
 </code></pre>
 
 
@@ -1085,8 +1092,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_remove_mint_capability">remove_mint_capability</a>&lt;Token&gt;(): <a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_Libra_MintCapability">MintCapability</a> {
-    move_from&lt;<a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;Token&gt;&gt;(Transaction::sender())
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_remove_mint_capability">remove_mint_capability</a>&lt;Token&gt;(account: &signer): <a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;Token&gt;
+<b>acquires</b> <a href="#0x0_Libra_MintCapability">MintCapability</a> {
+    move_from&lt;<a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;Token&gt;&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account))
 }
 </code></pre>
 
@@ -1100,7 +1108,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_remove_burn_capability">remove_burn_capability</a>&lt;Token&gt;(): <a href="#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;Token&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_remove_burn_capability">remove_burn_capability</a>&lt;Token&gt;(account: &signer): <a href="#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;Token&gt;
 </code></pre>
 
 
@@ -1109,8 +1117,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_remove_burn_capability">remove_burn_capability</a>&lt;Token&gt;(): <a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_Libra_BurnCapability">BurnCapability</a> {
-    move_from&lt;<a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;Token&gt;&gt;(Transaction::sender())
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_remove_burn_capability">remove_burn_capability</a>&lt;Token&gt;(account: &signer): <a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;Token&gt;
+<b>acquires</b> <a href="#0x0_Libra_BurnCapability">BurnCapability</a> {
+    move_from&lt;<a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;Token&gt;&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account))
 }
 </code></pre>
 
@@ -1343,7 +1352,10 @@
 ): (<a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;, <a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;)
 <b>acquires</b> <a href="#0x0_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a> {
     // And only callable by the designated currency address.
-    Transaction::assert(<a href="association.md#0x0_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x0_Libra_AddCurrency">AddCurrency</a>&gt;(Transaction::sender()), 8);
+    Transaction::assert(
+        <a href="association.md#0x0_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x0_Libra_AddCurrency">AddCurrency</a>&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)),
+        8
+    );
 
     move_to(account, <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt; {
         total_value: 0,

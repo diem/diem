@@ -17,8 +17,10 @@ script {
 use 0x0::Libra;
 use 0x0::Coin1;
 use 0x0::Coin2;
+use 0x0::Signer;
 use 0x0::Transaction;
 fun main(account: &signer) {
+    let sender = Signer::address_of(account);
     let pre_coin1 = Libra::new_preburn<Coin1::T>();
     let pre_coin2 = Libra::new_preburn<Coin2::T>();
     Libra::publish_preburn(account, pre_coin1);
@@ -46,10 +48,10 @@ fun main(account: &signer) {
     Transaction::assert(Libra::value<Coin1::T>(&coin1) == 10000, 7);
     Transaction::assert(Libra::value<Coin2::T>(&coin2) == 10000, 8);
 
-    Libra::preburn_to_sender(coin1);
-    Libra::preburn_to_sender(coin2);
-    Libra::burn<Coin1::T>(Transaction::sender());
-    Libra::burn<Coin2::T>(Transaction::sender());
+    Libra::preburn_to(account, coin1);
+    Libra::preburn_to(account, coin2);
+    Libra::burn<Coin1::T>(account, sender);
+    Libra::burn<Coin2::T>(account, sender);
     Libra::destroy_zero(Libra::zero<Coin1::T>());
     Libra::destroy_zero(Libra::zero<Coin2::T>());
 }
@@ -139,7 +141,7 @@ script {
     fun main(account: &signer)  {
         Libra::publish_mint_capability(
             account,
-            Libra::remove_mint_capability<Coin1::T>()
+            Libra::remove_mint_capability<Coin1::T>(account)
         );
     }
 }
@@ -154,7 +156,7 @@ script {
     fun main(account: &signer)  {
         BurnCapabilityHolder::hold(
             account,
-            Libra::remove_burn_capability<Coin1::T>()
+            Libra::remove_burn_capability<Coin1::T>(account)
         );
     }
 }

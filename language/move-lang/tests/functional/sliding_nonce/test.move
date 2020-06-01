@@ -15,25 +15,25 @@ script {
         SlidingNonce::publish(account);
 
         // 0-nonce is always allowed
-        SlidingNonce::record_nonce_or_abort(0);
-        SlidingNonce::record_nonce_or_abort(0);
+        SlidingNonce::record_nonce_or_abort(account, 0);
+        SlidingNonce::record_nonce_or_abort(account, 0);
 
         // Repeating nonce is not allowed
-        SlidingNonce::record_nonce_or_abort(1);
-        Transaction::assert(SlidingNonce::try_record_nonce(1) == 10003, 1);
-        SlidingNonce::record_nonce_or_abort(2);
+        SlidingNonce::record_nonce_or_abort(account, 1);
+        Transaction::assert(SlidingNonce::try_record_nonce(account, 1) == 10003, 1);
+        SlidingNonce::record_nonce_or_abort(account, 2);
 
         // Can execute 1000 + 127 once(but not second time) and then 1000, because distance between them is <128
-        SlidingNonce::record_nonce_or_abort(1000 + 127);
-        Transaction::assert(SlidingNonce::try_record_nonce(1000 + 127) == 10003, 1);
-        SlidingNonce::record_nonce_or_abort(1000);
+        SlidingNonce::record_nonce_or_abort(account, 1000 + 127);
+        Transaction::assert(SlidingNonce::try_record_nonce(account, 1000 + 127) == 10003, 1);
+        SlidingNonce::record_nonce_or_abort(account, 1000);
 
         // Can execute 2000 + 128 but not 2000, because distance between them is <128
-        SlidingNonce::record_nonce_or_abort(2000 + 128);
-        Transaction::assert(SlidingNonce::try_record_nonce(2000) == 10001, 1);
+        SlidingNonce::record_nonce_or_abort(account, 2000 + 128);
+        Transaction::assert(SlidingNonce::try_record_nonce(account, 2000) == 10001, 1);
 
         // Big jump is nonce is not allowed
-        Transaction::assert(SlidingNonce::try_record_nonce(20000) == 10002, 1);
+        Transaction::assert(SlidingNonce::try_record_nonce(account, 20000) == 10002, 1);
     }
 }
 // check: EXECUTED
@@ -43,9 +43,9 @@ script {
 script {
     use 0x0::SlidingNonce;
 
-    fun main() {
-        SlidingNonce::record_nonce_or_abort(0);
-        SlidingNonce::record_nonce_or_abort(0);
+    fun main(account: &signer) {
+        SlidingNonce::record_nonce_or_abort(account, 0);
+        SlidingNonce::record_nonce_or_abort(account, 0);
     }
 }
 // check: EXECUTED

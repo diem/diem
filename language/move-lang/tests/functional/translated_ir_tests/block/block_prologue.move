@@ -33,8 +33,8 @@ script{
 use 0x0::LibraBlock;
 use 0x0::Vector;
 
-fun main() {
-    LibraBlock::block_prologue(1, 10, Vector::empty<address>(), {{vivian}});
+fun main(account: &signer) {
+    LibraBlock::block_prologue(account, 1, 10, Vector::empty<address>(), {{vivian}});
 }
 }
 // check: ABORTED
@@ -45,8 +45,8 @@ fun main() {
 script{
 use 0x0::LibraTimestamp;
 
-fun main() {
-    LibraTimestamp::update_global_time({{vivian}}, 20);
+fun main(account: &signer) {
+    LibraTimestamp::update_global_time(account, {{vivian}}, 20);
 }
 }
 // check: ABORTED
