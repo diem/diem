@@ -989,13 +989,13 @@ mod test {
             public_key.clone(),
             signature.clone(),
         );
-        let proto_txn: grpc_types::proto::types::SignedTransaction = signed_txn.clone().into();
+        let txn_bytes = lcs::to_bytes(&signed_txn).expect("Unable to serialize SignedTransaction");
 
         let mut libra_signed_txn = LibraSignedTransaction::default();
         let result = unsafe {
             libra_LibraSignedTransaction_from(
-                proto_txn.txn_bytes.as_ptr(),
-                proto_txn.txn_bytes.len() - 1, // pass in wrong length so that SignedTransaction cannot deserialize
+                txn_bytes.as_ptr(),
+                txn_bytes.len() - 1, // pass in wrong length so that SignedTransaction cannot deserialize
                 &mut libra_signed_txn,
             )
         };
@@ -1009,8 +1009,8 @@ mod test {
 
         let result = unsafe {
             libra_LibraSignedTransaction_from(
-                proto_txn.txn_bytes.as_ptr(),
-                proto_txn.txn_bytes.len(),
+                txn_bytes.as_ptr(),
+                txn_bytes.len(),
                 &mut libra_signed_txn,
             )
         };

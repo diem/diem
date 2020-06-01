@@ -13,7 +13,6 @@ edition = "2018"
 libc = "0.2.71"
 static_assertions = "1.1.0"
 
-grpc-types = {path = "../../grpc/types", version = "0.1.0"}
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
