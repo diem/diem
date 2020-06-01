@@ -76,7 +76,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTimestamp_update_global_time">update_global_time</a>(proposer: address, timestamp: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTimestamp_update_global_time">update_global_time</a>(account: &signer, proposer: address, timestamp: u64)
 </code></pre>
 
 
@@ -85,9 +85,13 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTimestamp_update_global_time">update_global_time</a>(proposer: address, timestamp: u64) <b>acquires</b> <a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTimestamp_update_global_time">update_global_time</a>(
+    account: &signer,
+    proposer: address,
+    timestamp: u64
+) <b>acquires</b> <a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
     // Can only be invoked by LibraVM privilege.
-    Transaction::assert(Transaction::sender() == 0x0, 33);
+    Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == 0x0, 33);
 
     <b>let</b> global_timer = borrow_global_mut&lt;<a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(0xA550C18);
     <b>if</b> (proposer == 0x0) {

@@ -54,7 +54,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(seq_nonce: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64)
 </code></pre>
 
 
@@ -63,8 +63,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(seq_nonce: u64) <b>acquires</b> <a href="#0x0_SlidingNonce_T">T</a> {
-    <b>let</b> code = <a href="#0x0_SlidingNonce_try_record_nonce">try_record_nonce</a>(seq_nonce);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64) <b>acquires</b> <a href="#0x0_SlidingNonce_T">T</a> {
+    <b>let</b> code = <a href="#0x0_SlidingNonce_try_record_nonce">try_record_nonce</a>(account, seq_nonce);
     Transaction::assert(code == 0, code);
 }
 </code></pre>
@@ -79,7 +79,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_try_record_nonce">try_record_nonce</a>(seq_nonce: u64): u64
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_try_record_nonce">try_record_nonce</a>(account: &signer, seq_nonce: u64): u64
 </code></pre>
 
 
@@ -88,11 +88,11 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_try_record_nonce">try_record_nonce</a>(seq_nonce: u64): u64 <b>acquires</b> <a href="#0x0_SlidingNonce_T">T</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_try_record_nonce">try_record_nonce</a>(account: &signer, seq_nonce: u64): u64 <b>acquires</b> <a href="#0x0_SlidingNonce_T">T</a> {
     <b>if</b> (seq_nonce == 0) {
         <b>return</b> 0
     };
-    <b>let</b> t = borrow_global_mut&lt;<a href="#0x0_SlidingNonce_T">T</a>&gt;(Transaction::sender());
+    <b>let</b> t = borrow_global_mut&lt;<a href="#0x0_SlidingNonce_T">T</a>&gt;(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account));
     <b>if</b> (t.min_nonce &gt; seq_nonce) {
         <b>return</b> 10001
     };

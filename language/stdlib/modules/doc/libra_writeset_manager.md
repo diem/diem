@@ -106,7 +106,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraWriteSetManager_prologue">prologue</a>(writeset_sequence_number: u64, writeset_public_key: vector&lt;u8&gt;)
+<pre><code><b>fun</b> <a href="#0x0_LibraWriteSetManager_prologue">prologue</a>(account: &signer, writeset_sequence_number: u64, writeset_public_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -116,10 +116,11 @@
 
 
 <pre><code><b>fun</b> <a href="#0x0_LibraWriteSetManager_prologue">prologue</a>(
+    account: &signer,
     writeset_sequence_number: u64,
     writeset_public_key: vector&lt;u8&gt;,
 ) {
-    <b>let</b> sender = Transaction::sender();
+    <b>let</b> sender = <a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     Transaction::assert(sender == 0xA550C18, 33);
 
     <b>let</b> association_auth_key = <a href="libra_account.md#0x0_LibraAccount_authentication_key">LibraAccount::authentication_key</a>(sender);

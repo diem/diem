@@ -73,7 +73,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTransactionTimeout_set_timeout">set_timeout</a>(new_duration: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTransactionTimeout_set_timeout">set_timeout</a>(association: &signer, new_duration: u64)
 </code></pre>
 
 
@@ -82,9 +82,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTransactionTimeout_set_timeout">set_timeout</a>(new_duration: u64) <b>acquires</b> <a href="#0x0_LibraTransactionTimeout_TTL">TTL</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTransactionTimeout_set_timeout">set_timeout</a>(association: &signer, new_duration: u64) <b>acquires</b> <a href="#0x0_LibraTransactionTimeout_TTL">TTL</a> {
   // Only callable by the <a href="association.md#0x0_Association">Association</a> address
-  Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+  Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == 0xA550C18, 1);
 
   <b>let</b> timeout = borrow_global_mut&lt;<a href="#0x0_LibraTransactionTimeout_TTL">TTL</a>&gt;(0xA550C18);
   timeout.duration_microseconds = new_duration;
