@@ -15,7 +15,6 @@ byteorder = { version = "1.3.4", default-features = false }
 hex = "0.4.2"
 once_cell = "1.4.0"
 proptest = { version = "0.10.0", default-features = false }
-prost = "0.6.1"
 rusty-fork = { version = "0.3.0", default-features = false }
 sha-1 = { version = "0.8.2", default-features = false }
 structopt = "0.3.14"
@@ -23,7 +22,6 @@ rand = "0.7.3"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
-libra-prost-test-helpers = { path = "../../common/prost-test-helpers", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 # List out modules with data structures being fuzzed here.
