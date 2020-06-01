@@ -212,8 +212,6 @@
 <span id="212">212</span>
 <span id="213">213</span>
 <span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -230,7 +228,6 @@
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">async_trait</span>::<span class="ident">async_trait</span>;
-<span class="kw">use</span> <span class="ident">debug_interface</span>::<span class="ident">node_debug_service</span>::<span class="ident">parse_event</span>;
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">future</span>::<span class="ident">try_join_all</span>, <span class="ident">join</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">info</span>;
 <span class="kw">use</span> <span class="ident">serde_json</span>::<span class="ident">Value</span>;
@@ -351,8 +348,7 @@
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">trace</span>) <span class="op">=</span> <span class="ident">trace</span> {
             <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Traced {} events&quot;</span>, <span class="ident">trace</span>.<span class="ident">len</span>());
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">events</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-            <span class="kw">for</span> (<span class="ident">node</span>, <span class="ident">event</span>) <span class="kw">in</span> <span class="ident">trace</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">event</span> <span class="op">=</span> <span class="ident">parse_event</span>(<span class="ident">event</span>);
+            <span class="kw">for</span> (<span class="ident">node</span>, <span class="kw-2">mut</span> <span class="ident">event</span>) <span class="kw">in</span> <span class="ident">trace</span> {
                 <span class="comment">// This could be done more elegantly, but for now this will do</span>
                 <span class="ident">event</span>
                     .<span class="ident">json</span>
