@@ -702,6 +702,10 @@
 <span id="702">702</span>
 <span id="703">703</span>
 <span id="704">704</span>
+<span id="705">705</span>
+<span id="706">706</span>
+<span id="707">707</span>
+<span id="708">708</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -713,7 +717,7 @@
 <span class="doccomment">//! This means that only the parts that we care about (the IK handshake) are implemented.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Note that to benefit from hardware support for AES, you must build this crate with the following</span>
-<span class="doccomment">//! flags: `RUSTFLAGS=&quot;-Ctarget-cpu=sandybridge -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3&quot;`.</span>
+<span class="doccomment">//! flags: `RUSTFLAGS=&quot;-Ctarget-cpu=skylake -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3&quot;`.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Usage example:</span>
 <span class="doccomment">//!</span>
@@ -793,8 +797,13 @@
 <span class="kw">const</span> <span class="ident">AES_NONCE_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">12</span>;
 
 <span class="doccomment">/// A handy const fn to get the expanded size of a plaintext after encryption</span>
-<span class="kw">const</span> <span class="kw">fn</span> <span class="ident">encrypted_len</span>(<span class="ident">plaintext_len</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
+<span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">encrypted_len</span>(<span class="ident">plaintext_len</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
     <span class="ident">plaintext_len</span> <span class="op">+</span> <span class="ident">AES_GCM_TAGLEN</span>
+}
+
+<span class="doccomment">/// A handy const fn to get the size of a plaintext from a ciphertext size</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">decrypted_len</span>(<span class="ident">ciphertext_len</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
+    <span class="ident">ciphertext_len</span> <span class="op">-</span> <span class="ident">AES_GCM_TAGLEN</span>
 }
 
 <span class="doccomment">/// A handy const fn to get the size of the first handshake message</span>
@@ -1332,13 +1341,13 @@
     <span class="doccomment">/// the function encrypts in place, and returns the authentication tag as result</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_message_in_place</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">plaintext</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> [<span class="ident">u8</span>],
+        <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> [<span class="ident">u8</span>],
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">NoiseError</span><span class="op">&gt;</span> {
         <span class="comment">// checks</span>
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">valid</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">NoiseError</span>::<span class="ident">SessionClosed</span>);
         }
-        <span class="kw">if</span> <span class="ident">plaintext</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">MAX_SIZE_NOISE_MSG</span> <span class="op">-</span> <span class="ident">AES_GCM_TAGLEN</span> {
+        <span class="kw">if</span> <span class="ident">message</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">MAX_SIZE_NOISE_MSG</span> <span class="op">-</span> <span class="ident">AES_GCM_TAGLEN</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">NoiseError</span>::<span class="ident">PayloadTooLarge</span>);
         }
 
@@ -1349,7 +1358,7 @@
         <span class="kw">let</span> <span class="ident">nonce</span> <span class="op">=</span> <span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">nonce</span>);
 
         <span class="kw">let</span> <span class="ident">authentication_tag</span> <span class="op">=</span> <span class="ident">aead</span>
-            .<span class="ident">encrypt_in_place_detached</span>(<span class="ident">nonce</span>, <span class="string">b&quot;&quot;</span>, <span class="ident">plaintext</span>)
+            .<span class="ident">encrypt_in_place_detached</span>(<span class="ident">nonce</span>, <span class="string">b&quot;&quot;</span>, <span class="ident">message</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">NoiseError</span>::<span class="ident">Encrypt</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// increment nonce</span>
@@ -1363,17 +1372,17 @@
     <span class="doccomment">/// the function decrypts in place, and returns a subslice without the auth tag</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_message_in_place</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">ciphertext</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> [<span class="ident">u8</span>],
+        <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> [<span class="ident">u8</span>],
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">u8</span>], <span class="ident">NoiseError</span><span class="op">&gt;</span> {
         <span class="comment">// checks</span>
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">valid</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">NoiseError</span>::<span class="ident">SessionClosed</span>);
         }
-        <span class="kw">if</span> <span class="ident">ciphertext</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">MAX_SIZE_NOISE_MSG</span> {
+        <span class="kw">if</span> <span class="ident">message</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">MAX_SIZE_NOISE_MSG</span> {
             <span class="self">self</span>.<span class="ident">valid</span> <span class="op">=</span> <span class="bool-val">false</span>;
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">NoiseError</span>::<span class="ident">ReceivedMsgTooLarge</span>);
         }
-        <span class="kw">if</span> <span class="ident">ciphertext</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">AES_GCM_TAGLEN</span> {
+        <span class="kw">if</span> <span class="ident">message</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">AES_GCM_TAGLEN</span> {
             <span class="self">self</span>.<span class="ident">valid</span> <span class="op">=</span> <span class="bool-val">false</span>;
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">NoiseError</span>::<span class="ident">ResponseBufferTooSmall</span>);
         }
@@ -1385,8 +1394,7 @@
         <span class="ident">nonce</span>.<span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">read_nonce</span>.<span class="ident">to_be_bytes</span>());
         <span class="kw">let</span> <span class="ident">nonce</span> <span class="op">=</span> <span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">nonce</span>);
 
-        <span class="kw">let</span> (<span class="ident">buffer</span>, <span class="ident">authentication_tag</span>) <span class="op">=</span>
-            <span class="ident">ciphertext</span>.<span class="ident">split_at_mut</span>(<span class="ident">ciphertext</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="ident">AES_GCM_TAGLEN</span>);
+        <span class="kw">let</span> (<span class="ident">buffer</span>, <span class="ident">authentication_tag</span>) <span class="op">=</span> <span class="ident">message</span>.<span class="ident">split_at_mut</span>(<span class="ident">message</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="ident">AES_GCM_TAGLEN</span>);
         <span class="kw">let</span> <span class="ident">authentication_tag</span> <span class="op">=</span> <span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="ident">authentication_tag</span>);
         <span class="ident">aead</span>.<span class="ident">decrypt_in_place_detached</span>(<span class="ident">nonce</span>, <span class="string">b&quot;&quot;</span>, <span class="ident">buffer</span>, <span class="ident">authentication_tag</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {

@@ -375,12 +375,35 @@
 <span id="375">375</span>
 <span id="376">376</span>
 <span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">common</span>::<span class="ident">NetworkPublicKeys</span>,
+    <span class="ident">noise_wrapper</span>::{<span class="ident">AntiReplayTimestamps</span>, <span class="ident">NoiseWrapper</span>},
     <span class="ident">protocols</span>::{
         <span class="ident">identity</span>::{<span class="ident">exchange_handshake</span>, <span class="ident">exchange_peerid</span>},
         <span class="ident">wire</span>::<span class="ident">handshake</span>::<span class="ident">v1</span>::{<span class="ident">HandshakeMsg</span>, <span class="ident">MessagingProtocolVersion</span>, <span class="ident">SupportedProtocols</span>},
@@ -393,7 +416,6 @@
 <span class="kw">use</span> <span class="ident">libra_security_logger</span>::{<span class="ident">security_log</span>, <span class="ident">SecurityEvent</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
 <span class="kw">use</span> <span class="ident">netcore</span>::<span class="ident">transport</span>::{<span class="ident">boxed</span>, <span class="ident">memory</span>, <span class="ident">tcp</span>, <span class="ident">ConnectionOrigin</span>, <span class="ident">TransportExt</span>};
-<span class="kw">use</span> <span class="ident">noise</span>::<span class="ident">NoiseConfig</span>;
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">HashMap</span>,
@@ -591,17 +613,27 @@
     <span class="ident">application_protocols</span>: <span class="ident">SupportedProtocols</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">boxed</span>::<span class="ident">BoxedTransport</span><span class="op">&lt;</span><span class="ident">Connection</span><span class="op">&lt;</span><span class="kw">impl</span> <span class="ident">TSocket</span><span class="op">&gt;</span>, <span class="kw">impl</span> ::<span class="ident">std</span>::<span class="ident">error</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">memory_transport</span> <span class="op">=</span> <span class="ident">memory</span>::<span class="ident">MemoryTransport</span>::<span class="ident">default</span>();
-    <span class="kw">let</span> <span class="ident">noise_config</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">NoiseConfig</span>::<span class="ident">new</span>(<span class="ident">identity_key</span>));
+    <span class="kw">let</span> <span class="ident">noise_config</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">NoiseWrapper</span>::<span class="ident">new</span>(<span class="ident">identity_key</span>));
+    <span class="kw">let</span> <span class="ident">noise_timestamps</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">RwLock</span>::<span class="ident">new</span>(<span class="ident">AntiReplayTimestamps</span>::<span class="ident">default</span>()));
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">own_handshake</span> <span class="op">=</span> <span class="ident">HandshakeMsg</span>::<span class="ident">new</span>();
     <span class="ident">own_handshake</span>.<span class="ident">add</span>(<span class="ident">SUPPORTED_MESSAGING_PROTOCOL</span>, <span class="ident">application_protocols</span>);
 
     <span class="ident">memory_transport</span>
         .<span class="ident">and_then</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">socket</span>, <span class="ident">addr</span>, <span class="ident">origin</span><span class="op">|</span> <span class="kw">async</span> <span class="kw">move</span> {
-            <span class="kw">let</span> (<span class="ident">remote_static_key</span>, <span class="ident">socket</span>) <span class="op">=</span>
-                <span class="ident">noise_config</span>.<span class="ident">upgrade_connection</span>(<span class="ident">socket</span>, <span class="ident">origin</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="ident">verify_noise_pubkey</span>(<span class="kw-2">&amp;</span><span class="ident">addr</span>, <span class="ident">remote_static_key</span>.<span class="ident">as_slice</span>(), <span class="ident">origin</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">remote_public_key</span> <span class="op">=</span> <span class="ident">addr</span>.<span class="ident">find_noise_proto</span>();
+            <span class="kw">let</span> (<span class="ident">remote_static_key</span>, <span class="ident">socket</span>) <span class="op">=</span> <span class="ident">noise_config</span>
+                .<span class="ident">upgrade_connection</span>(
+                    <span class="ident">socket</span>,
+                    <span class="ident">origin</span>,
+                    <span class="prelude-val">Some</span>(<span class="ident">noise_timestamps</span>),
+                    <span class="ident">remote_public_key</span>,
+                    <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">trusted_peers</span>),
+                )
+                .<span class="kw">await</span><span class="question-mark">?</span>;
 
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">peer_id</span>) <span class="op">=</span> <span class="ident">identity_key_to_peer_id</span>(<span class="kw-2">&amp;</span><span class="ident">trusted_peers</span>, <span class="kw-2">&amp;</span><span class="ident">remote_static_key</span>) {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">peer_id</span>) <span class="op">=</span>
+                <span class="ident">identity_key_to_peer_id</span>(<span class="kw-2">&amp;</span><span class="ident">trusted_peers</span>, <span class="ident">remote_static_key</span>.<span class="ident">as_slice</span>())
+            {
                 <span class="prelude-val">Ok</span>((<span class="ident">peer_id</span>, <span class="ident">socket</span>))
             } <span class="kw">else</span> {
                 <span class="prelude-val">Err</span>(<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="string">&quot;Not a trusted peer&quot;</span>))
@@ -619,16 +651,17 @@
     <span class="ident">application_protocols</span>: <span class="ident">SupportedProtocols</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">boxed</span>::<span class="ident">BoxedTransport</span><span class="op">&lt;</span><span class="ident">Connection</span><span class="op">&lt;</span><span class="kw">impl</span> <span class="ident">TSocket</span><span class="op">&gt;</span>, <span class="kw">impl</span> ::<span class="ident">std</span>::<span class="ident">error</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">memory_transport</span> <span class="op">=</span> <span class="ident">memory</span>::<span class="ident">MemoryTransport</span>::<span class="ident">default</span>();
-    <span class="kw">let</span> <span class="ident">noise_config</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">NoiseConfig</span>::<span class="ident">new</span>(<span class="ident">identity_key</span>));
+    <span class="kw">let</span> <span class="ident">noise_config</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">NoiseWrapper</span>::<span class="ident">new</span>(<span class="ident">identity_key</span>));
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">own_handshake</span> <span class="op">=</span> <span class="ident">HandshakeMsg</span>::<span class="ident">new</span>();
     <span class="ident">own_handshake</span>.<span class="ident">add</span>(<span class="ident">SUPPORTED_MESSAGING_PROTOCOL</span>, <span class="ident">application_protocols</span>);
 
     <span class="ident">memory_transport</span>
         .<span class="ident">and_then</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">socket</span>, <span class="ident">addr</span>, <span class="ident">origin</span><span class="op">|</span> {
             <span class="kw">async</span> <span class="kw">move</span> {
-                <span class="kw">let</span> (<span class="ident">remote_static_key</span>, <span class="ident">socket</span>) <span class="op">=</span>
-                    <span class="ident">noise_config</span>.<span class="ident">upgrade_connection</span>(<span class="ident">socket</span>, <span class="ident">origin</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-                <span class="ident">verify_noise_pubkey</span>(<span class="kw-2">&amp;</span><span class="ident">addr</span>, <span class="ident">remote_static_key</span>.<span class="ident">as_slice</span>(), <span class="ident">origin</span>)<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">remote_public_key</span> <span class="op">=</span> <span class="ident">addr</span>.<span class="ident">find_noise_proto</span>();
+                <span class="kw">let</span> (<span class="ident">remote_static_key</span>, <span class="ident">socket</span>) <span class="op">=</span> <span class="ident">noise_config</span>
+                    .<span class="ident">upgrade_connection</span>(<span class="ident">socket</span>, <span class="ident">origin</span>, <span class="prelude-val">None</span>, <span class="ident">remote_public_key</span>, <span class="prelude-val">None</span>)
+                    .<span class="kw">await</span><span class="question-mark">?</span>;
 
                 <span class="comment">// Generate PeerId from x25519::PublicKey.</span>
                 <span class="comment">// Note: This is inconsistent with current types because AccountAddress is derived</span>
@@ -637,7 +670,7 @@
                 <span class="comment">// public key to generate a peer_id for the peer. The only reason this works is</span>
                 <span class="comment">// that both are 32 bytes in size. If/when this condition no longer holds, we will</span>
                 <span class="comment">// receive an error.</span>
-                <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">PeerId</span>::<span class="ident">try_from</span>(<span class="ident">remote_static_key</span>).<span class="ident">unwrap</span>();
+                <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">PeerId</span>::<span class="ident">try_from</span>(<span class="ident">remote_static_key</span>.<span class="ident">as_slice</span>()).<span class="ident">unwrap</span>();
                 <span class="prelude-val">Ok</span>((<span class="ident">peer_id</span>, <span class="ident">socket</span>))
             }
         })
@@ -673,17 +706,27 @@
     <span class="ident">trusted_peers</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">NetworkPublicKeys</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">application_protocols</span>: <span class="ident">SupportedProtocols</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">boxed</span>::<span class="ident">BoxedTransport</span><span class="op">&lt;</span><span class="ident">Connection</span><span class="op">&lt;</span><span class="kw">impl</span> <span class="ident">TSocket</span><span class="op">&gt;</span>, <span class="kw">impl</span> ::<span class="ident">std</span>::<span class="ident">error</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">noise_config</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">NoiseConfig</span>::<span class="ident">new</span>(<span class="ident">identity_key</span>));
+    <span class="kw">let</span> <span class="ident">noise_config</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">NoiseWrapper</span>::<span class="ident">new</span>(<span class="ident">identity_key</span>));
+    <span class="kw">let</span> <span class="ident">noise_timestamps</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">RwLock</span>::<span class="ident">new</span>(<span class="ident">AntiReplayTimestamps</span>::<span class="ident">default</span>()));
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">own_handshake</span> <span class="op">=</span> <span class="ident">HandshakeMsg</span>::<span class="ident">new</span>();
     <span class="ident">own_handshake</span>.<span class="ident">add</span>(<span class="ident">SUPPORTED_MESSAGING_PROTOCOL</span>, <span class="ident">application_protocols</span>);
 
     <span class="ident">LIBRA_TCP_TRANSPORT</span>
         .<span class="ident">and_then</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">socket</span>, <span class="ident">addr</span>, <span class="ident">origin</span><span class="op">|</span> <span class="kw">async</span> <span class="kw">move</span> {
-            <span class="kw">let</span> (<span class="ident">remote_static_key</span>, <span class="ident">socket</span>) <span class="op">=</span>
-                <span class="ident">noise_config</span>.<span class="ident">upgrade_connection</span>(<span class="ident">socket</span>, <span class="ident">origin</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="ident">verify_noise_pubkey</span>(<span class="kw-2">&amp;</span><span class="ident">addr</span>, <span class="ident">remote_static_key</span>.<span class="ident">as_slice</span>(), <span class="ident">origin</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">remote_public_key</span> <span class="op">=</span> <span class="ident">addr</span>.<span class="ident">find_noise_proto</span>();
+            <span class="kw">let</span> (<span class="ident">remote_static_key</span>, <span class="ident">socket</span>) <span class="op">=</span> <span class="ident">noise_config</span>
+                .<span class="ident">upgrade_connection</span>(
+                    <span class="ident">socket</span>,
+                    <span class="ident">origin</span>,
+                    <span class="prelude-val">Some</span>(<span class="ident">noise_timestamps</span>),
+                    <span class="ident">remote_public_key</span>,
+                    <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">trusted_peers</span>),
+                )
+                .<span class="kw">await</span><span class="question-mark">?</span>;
 
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">peer_id</span>) <span class="op">=</span> <span class="ident">identity_key_to_peer_id</span>(<span class="kw-2">&amp;</span><span class="ident">trusted_peers</span>, <span class="kw-2">&amp;</span><span class="ident">remote_static_key</span>) {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">peer_id</span>) <span class="op">=</span>
+                <span class="ident">identity_key_to_peer_id</span>(<span class="kw-2">&amp;</span><span class="ident">trusted_peers</span>, <span class="kw-2">&amp;</span><span class="ident">remote_static_key</span>.<span class="ident">as_slice</span>())
+            {
                 <span class="prelude-val">Ok</span>((<span class="ident">peer_id</span>, <span class="ident">socket</span>))
             } <span class="kw">else</span> {
                 <span class="ident">security_log</span>(<span class="ident">SecurityEvent</span>::<span class="ident">InvalidNetworkPeer</span>)
@@ -707,16 +750,17 @@
     <span class="ident">identity_key</span>: <span class="ident">x25519</span>::<span class="ident">PrivateKey</span>,
     <span class="ident">application_protocols</span>: <span class="ident">SupportedProtocols</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">boxed</span>::<span class="ident">BoxedTransport</span><span class="op">&lt;</span><span class="ident">Connection</span><span class="op">&lt;</span><span class="kw">impl</span> <span class="ident">TSocket</span><span class="op">&gt;</span>, <span class="kw">impl</span> ::<span class="ident">std</span>::<span class="ident">error</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">noise_config</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">NoiseConfig</span>::<span class="ident">new</span>(<span class="ident">identity_key</span>));
+    <span class="kw">let</span> <span class="ident">noise_config</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">NoiseWrapper</span>::<span class="ident">new</span>(<span class="ident">identity_key</span>));
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">own_handshake</span> <span class="op">=</span> <span class="ident">HandshakeMsg</span>::<span class="ident">new</span>();
     <span class="ident">own_handshake</span>.<span class="ident">add</span>(<span class="ident">SUPPORTED_MESSAGING_PROTOCOL</span>, <span class="ident">application_protocols</span>);
 
     <span class="ident">LIBRA_TCP_TRANSPORT</span>
         .<span class="ident">and_then</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">socket</span>, <span class="ident">addr</span>, <span class="ident">origin</span><span class="op">|</span> {
             <span class="kw">async</span> <span class="kw">move</span> {
-                <span class="kw">let</span> (<span class="ident">remote_static_key</span>, <span class="ident">socket</span>) <span class="op">=</span>
-                    <span class="ident">noise_config</span>.<span class="ident">upgrade_connection</span>(<span class="ident">socket</span>, <span class="ident">origin</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-                <span class="ident">verify_noise_pubkey</span>(<span class="kw-2">&amp;</span><span class="ident">addr</span>, <span class="ident">remote_static_key</span>.<span class="ident">as_slice</span>(), <span class="ident">origin</span>)<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">remote_public_key</span> <span class="op">=</span> <span class="ident">addr</span>.<span class="ident">find_noise_proto</span>();
+                <span class="kw">let</span> (<span class="ident">remote_static_key</span>, <span class="ident">socket</span>) <span class="op">=</span> <span class="ident">noise_config</span>
+                    .<span class="ident">upgrade_connection</span>(<span class="ident">socket</span>, <span class="ident">origin</span>, <span class="prelude-val">None</span>, <span class="ident">remote_public_key</span>, <span class="prelude-val">None</span>)
+                    .<span class="kw">await</span><span class="question-mark">?</span>;
 
                 <span class="comment">// Generate PeerId from x25519::PublicKey.</span>
                 <span class="comment">// Note: This is inconsistent with current types because AccountAddress is derived</span>
@@ -725,7 +769,7 @@
                 <span class="comment">// public key to generate a peer_id for the peer. The only reason this works is that</span>
                 <span class="comment">// both are 32 bytes in size. If/when this condition no longer holds, we will receive</span>
                 <span class="comment">// an error.</span>
-                <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">PeerId</span>::<span class="ident">try_from</span>(<span class="ident">remote_static_key</span>).<span class="ident">unwrap</span>();
+                <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">PeerId</span>::<span class="ident">try_from</span>(<span class="ident">remote_static_key</span>.<span class="ident">as_slice</span>()).<span class="ident">unwrap</span>();
                 <span class="prelude-val">Ok</span>((<span class="ident">peer_id</span>, <span class="ident">socket</span>))
             }
         })

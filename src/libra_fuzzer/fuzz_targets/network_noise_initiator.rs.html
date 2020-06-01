@@ -31,7 +31,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">FuzzTargetImpl</span>;
 <span class="kw">use</span> <span class="ident">libra_proptest_helpers</span>::<span class="ident">ValueGenerator</span>;
-<span class="kw">use</span> <span class="ident">noise</span>::<span class="ident">noise_fuzzing</span>::{<span class="ident">fuzz_initiator</span>, <span class="ident">generate_corpus</span>};
+<span class="kw">use</span> <span class="ident">network</span>::<span class="ident">noise_wrapper</span>::<span class="ident">fuzzing</span>::{<span class="ident">fuzz_initiator</span>, <span class="ident">generate_corpus</span>};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NetworkNoiseInitiator</span>;

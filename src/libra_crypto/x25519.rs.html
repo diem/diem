@@ -269,7 +269,6 @@
 <span id="269">269</span>
 <span id="270">270</span>
 <span id="271">271</span>
-<span id="272">272</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -283,12 +282,11 @@
 <span class="doccomment">//! # Examples</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```</span>
-<span class="doccomment">//! use libra_crypto::{x25519, Uniform};</span>
+<span class="doccomment">//! use libra_crypto::{x25519, Uniform, test_utils::TEST_SEED};</span>
 <span class="doccomment">//! use rand::{rngs::StdRng, SeedableRng};</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! // Derive an X25519 private key for testing.</span>
-<span class="doccomment">//! let seed = [1u8; 32];</span>
-<span class="doccomment">//! let mut rng: StdRng = SeedableRng::from_seed(seed);</span>
+<span class="doccomment">//! let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);</span>
 <span class="doccomment">//! let private_key = x25519::PrivateKey::generate(&amp;mut rng);</span>
 <span class="doccomment">//! let public_key = private_key.public_key();</span>
 <span class="doccomment">//!</span>

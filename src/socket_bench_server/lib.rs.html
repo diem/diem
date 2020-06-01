@@ -146,6 +146,14 @@
 <span id="146">146</span>
 <span id="147">147</span>
 <span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -158,7 +166,7 @@
     <span class="ident">sink</span>::<span class="ident">SinkExt</span>,
     <span class="ident">stream</span>::{<span class="ident">Stream</span>, <span class="ident">StreamExt</span>},
 };
-<span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">test_utils</span>::<span class="ident">TEST_SEED</span>;
+<span class="kw">use</span> <span class="ident">libra_crypto</span>::{<span class="ident">test_utils</span>::<span class="ident">TEST_SEED</span>, <span class="ident">x25519</span>, <span class="ident">Uniform</span> <span class="kw">as</span> <span class="kw">_</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
 <span class="kw">use</span> <span class="ident">memsocket</span>::<span class="ident">MemorySocket</span>;
@@ -170,7 +178,7 @@
         <span class="ident">Transport</span>, <span class="ident">TransportExt</span>,
     },
 };
-<span class="kw">use</span> <span class="ident">noise</span>::{<span class="ident">NoiseConfig</span>, <span class="ident">NoiseSocket</span>};
+<span class="kw">use</span> <span class="ident">network</span>::<span class="ident">noise_wrapper</span>::{<span class="ident">stream</span>::<span class="ident">NoiseStream</span>, <span class="ident">NoiseWrapper</span>};
 <span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">env</span>, <span class="ident">ffi</span>::<span class="ident">OsString</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Handle</span>;
@@ -225,21 +233,29 @@
 }
 
 <span class="doccomment">/// Build a MemorySocket + Noise transport</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_memsocket_noise_transport</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Transport</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">NoiseSocket</span><span class="op">&lt;</span><span class="ident">MemorySocket</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="ident">MemoryTransport</span>::<span class="ident">default</span>().<span class="ident">and_then</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">socket</span>, <span class="ident">_addr</span>, <span class="ident">origin</span><span class="op">|</span> <span class="kw">async</span> <span class="kw">move</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_memsocket_noise_transport</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Transport</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">NoiseStream</span><span class="op">&lt;</span><span class="ident">MemorySocket</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="ident">MemoryTransport</span>::<span class="ident">default</span>().<span class="ident">and_then</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">socket</span>, <span class="ident">addr</span>, <span class="ident">origin</span><span class="op">|</span> <span class="kw">async</span> <span class="kw">move</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span>: <span class="ident">StdRng</span> <span class="op">=</span> <span class="ident">SeedableRng</span>::<span class="ident">from_seed</span>(<span class="ident">TEST_SEED</span>);
-        <span class="kw">let</span> <span class="ident">noise_config</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">NoiseConfig</span>::<span class="ident">new_random</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">rng</span>));
-        <span class="kw">let</span> (<span class="ident">_remote_static_key</span>, <span class="ident">socket</span>) <span class="op">=</span> <span class="ident">noise_config</span>.<span class="ident">upgrade_connection</span>(<span class="ident">socket</span>, <span class="ident">origin</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">private</span> <span class="op">=</span> <span class="ident">x25519</span>::<span class="ident">PrivateKey</span>::<span class="ident">generate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">rng</span>);
+        <span class="kw">let</span> <span class="ident">noise_config</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">NoiseWrapper</span>::<span class="ident">new</span>(<span class="ident">private</span>));
+        <span class="kw">let</span> <span class="ident">remote_public_key</span> <span class="op">=</span> <span class="ident">addr</span>.<span class="ident">find_noise_proto</span>();
+        <span class="kw">let</span> (<span class="ident">_remote_static_key</span>, <span class="ident">socket</span>) <span class="op">=</span> <span class="ident">noise_config</span>
+            .<span class="ident">upgrade_connection</span>(<span class="ident">socket</span>, <span class="ident">origin</span>, <span class="prelude-val">None</span>, <span class="ident">remote_public_key</span>, <span class="prelude-val">None</span>)
+            .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">socket</span>)
     })
 }
 
 <span class="doccomment">/// Build a Tcp + Noise transport</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_tcp_noise_transport</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Transport</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">NoiseSocket</span><span class="op">&lt;</span><span class="ident">TcpSocket</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="ident">TcpTransport</span>::<span class="ident">default</span>().<span class="ident">and_then</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">socket</span>, <span class="ident">_addr</span>, <span class="ident">origin</span><span class="op">|</span> <span class="kw">async</span> <span class="kw">move</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_tcp_noise_transport</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Transport</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">NoiseStream</span><span class="op">&lt;</span><span class="ident">TcpSocket</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="ident">TcpTransport</span>::<span class="ident">default</span>().<span class="ident">and_then</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">socket</span>, <span class="ident">addr</span>, <span class="ident">origin</span><span class="op">|</span> <span class="kw">async</span> <span class="kw">move</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span>: <span class="ident">StdRng</span> <span class="op">=</span> <span class="ident">SeedableRng</span>::<span class="ident">from_seed</span>(<span class="ident">TEST_SEED</span>);
-        <span class="kw">let</span> <span class="ident">noise_config</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">NoiseConfig</span>::<span class="ident">new_random</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">rng</span>));
-        <span class="kw">let</span> (<span class="ident">_remote_static_key</span>, <span class="ident">socket</span>) <span class="op">=</span> <span class="ident">noise_config</span>.<span class="ident">upgrade_connection</span>(<span class="ident">socket</span>, <span class="ident">origin</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">private</span> <span class="op">=</span> <span class="ident">x25519</span>::<span class="ident">PrivateKey</span>::<span class="ident">generate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">rng</span>);
+        <span class="kw">let</span> <span class="ident">noise_config</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">NoiseWrapper</span>::<span class="ident">new</span>(<span class="ident">private</span>));
+        <span class="kw">let</span> <span class="ident">remote_public_key</span> <span class="op">=</span> <span class="ident">addr</span>.<span class="ident">find_noise_proto</span>();
+        <span class="kw">let</span> (<span class="ident">_remote_static_key</span>, <span class="ident">socket</span>) <span class="op">=</span> <span class="ident">noise_config</span>
+            .<span class="ident">upgrade_connection</span>(<span class="ident">socket</span>, <span class="ident">origin</span>, <span class="prelude-val">None</span>, <span class="ident">remote_public_key</span>, <span class="prelude-val">None</span>)
+            .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">socket</span>)
     })
 }
