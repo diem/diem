@@ -16,7 +16,7 @@ futures = "0.3.5"
 once_cell = "1.4.0"
 pin-project = "0.4.17"
 rand = "0.7.3"
-serde = { version = "1.0.110", default-features = false }
+serde = { version = "1.0.111", default-features = false }
 serde_bytes = "0.11.4"
 thiserror = "1.0"
 tokio = { version = "0.2.21", features = ["full"] }

@@ -23,7 +23,7 @@ proptest = { version = "0.10.0", optional = true }
 proptest-derive = { version = "0.2.0", optional = true }
 rand = "0.7.3"
 rand_core = { version = "0.5.1", default-features = false }
-serde = { version = "1.0.110", features = ["derive"] }
+serde = { version = "1.0.111", features = ["derive"] }
 serde_bytes = "0.11"
 serde-name = "0.1"
 sha2 = "0.8.2"
