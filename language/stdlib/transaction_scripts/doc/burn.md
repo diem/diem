@@ -15,7 +15,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;(preburn_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;(sliding_nonce: u64, preburn_address: address)
 </code></pre>
 
 
@@ -24,7 +24,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Token&gt;(preburn_address: address) {
+<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Token&gt;(sliding_nonce: u64, preburn_address: address) {
+    <a href="../../modules/doc/sliding_nonce.md#0x0_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(sliding_nonce);
     <a href="../../modules/doc/libra.md#0x0_Libra_burn">Libra::burn</a>&lt;Token&gt;(preburn_address)
 }
 </code></pre>

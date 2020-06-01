@@ -109,7 +109,7 @@ encode_txn_script! {
 encode_txn_script! {
     name: encode_burn_script,
     type_arg: type_,
-    args: [preburn_address: Address],
+    args: [nonce: U64, preburn_address: Address],
     script: Burn,
     doc: "Permanently destroy the coins stored in the oldest burn request under the `Preburn`\
           resource stored at `preburn_address`. This will only succeed if the sender has a\
@@ -458,7 +458,7 @@ encode_txn_script! {
 encode_txn_script! {
     name: encode_tiered_mint,
     type_arg: coin_type,
-    args: [designated_dealer_address: Address, mint_amount: U64, tier_index: U64],
+    args: [nonce: U64, designated_dealer_address: Address, mint_amount: U64, tier_index: U64],
     script: TieredMint,
     doc: "Mints 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.\
           Max valid tier index is 3 since there are max 4 tiers per DD.
@@ -475,14 +475,22 @@ encode_txn_script! {
 
 encode_txn_script! {
     name: encode_freeze_account,
-    args: [addr: Address],
+    args: [nonce: U64, addr: Address],
     script: FreezeAccount,
     doc: "Freezes account with address addr."
 }
 
 encode_txn_script! {
     name: encode_unfreeze_account,
-    args: [addr: Address],
+    args: [nonce: U64, addr: Address],
     script: UnfreezeAccount,
     doc: "Unfreezes account with address addr."
+}
+
+encode_txn_script! {
+    name: encode_rotate_authentication_key_script_with_nonce,
+    args: [nonce: U64, new_hashed_key: Bytes],
+    script: RotateAuthenticationKeyWithNonce,
+    doc: "Encode a program that rotates the sender's authentication key to `new_key`. `new_key`\
+          should be a 256 bit sha3 hash of an ed25519 public key. This script also takes nonce"
 }
