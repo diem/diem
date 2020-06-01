@@ -33,6 +33,7 @@ fn tiered_mint_designated_dealer() {
     executor.execute_and_apply(blessed.signed_script_txn(
         encode_tiered_mint(
             account_config::coin1_tag(),
+            1,
             *dd.address(),
             mint_amount,
             tier_index,

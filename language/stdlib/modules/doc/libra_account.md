@@ -1755,7 +1755,7 @@ Create a treasury/compliance account at
     <a href="libra.md#0x0_Libra_publish_burn_capability">Libra::publish_burn_capability</a>&lt;<a href="coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(&new_account, coin1_burn_cap);
     <a href="libra.md#0x0_Libra_publish_mint_capability">Libra::publish_mint_capability</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(&new_account, coin2_mint_cap);
     <a href="libra.md#0x0_Libra_publish_burn_capability">Libra::publish_burn_capability</a>&lt;<a href="coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(&new_account, coin2_burn_cap);
-
+    <a href="sliding_nonce.md#0x0_SlidingNonce_publish_nonce_resource">SlidingNonce::publish_nonce_resource</a>(association, &new_account);
     // TODO: add <a href="association.md#0x0_Association">Association</a> or TreasuryCompliance role instead of using <a href="empty.md#0x0_Empty">Empty</a>?
     <a href="event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
     <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="empty.md#0x0_Empty_T">Empty::T</a>&gt;(new_account, auth_key_prefix, <a href="empty.md#0x0_Empty_create">Empty::create</a>(), <b>false</b>)
