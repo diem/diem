@@ -44,7 +44,6 @@ members = [
     "execution/executor-benchmark",
     "execution/executor-test-helpers",
     "execution/executor-types",
-    "grpc/types",
     "json-rpc",
     "json-rpc/types",
     "language/benchmarks",
