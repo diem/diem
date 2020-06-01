@@ -225,7 +225,7 @@ pub type BuiltinFunction = Spanned<BuiltinFunction_>;
 
 #[derive(Debug, PartialEq)]
 pub enum UnannotatedExp_ {
-    Unit,
+    Unit { trailing: bool },
     Value(Value),
     Move { from_user: bool, var: Var },
     Copy { from_user: bool, var: Var },
@@ -343,7 +343,9 @@ impl Exp {
 impl UnannotatedExp_ {
     pub fn is_unit(&self) -> bool {
         match self {
-            UnannotatedExp_::Unit => true,
+            UnannotatedExp_::Unit {
+                trailing: _trailing,
+            } => true,
             _ => false,
         }
     }
@@ -815,7 +817,10 @@ impl AstDebug for UnannotatedExp_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         use UnannotatedExp_ as E;
         match self {
-            E::Unit => w.write("()"),
+            E::Unit { trailing } if !trailing => w.write("()"),
+            E::Unit {
+                trailing: _trailing,
+            } => w.write("/*()*/"),
             E::Value(v) => v.ast_debug(w),
             E::Move {
                 from_user: false,

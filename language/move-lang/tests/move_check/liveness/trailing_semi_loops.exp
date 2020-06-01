@@ -1,0 +1,229 @@
+error: 
+
+   ┌── tests/move_check/liveness/trailing_semi_loops.move:3:16 ───
+   │
+ 3 │         loop ();
+   │                ^ Invalid trailing ';'
+   ·
+ 3 │         loop ();
+   │         ------- Any code after this expression will not be reached
+   ·
+ 3 │         loop ();
+   │                - A trailing ';' in an expression block implicitly adds a '()' value after the semicolon. That '()' value will not be reachable
+   │
+
+error: 
+
+   ┌── tests/move_check/liveness/trailing_semi_loops.move:9:26 ───
+   │
+ 9 │         { (loop (): ()) };
+   │                          ^ Invalid trailing ';'
+   ·
+ 9 │         { (loop (): ()) };
+   │            ------- Any code after this expression will not be reached
+   ·
+ 9 │         { (loop (): ()) };
+   │                          - A trailing ';' in an expression block implicitly adds a '()' value after the semicolon. That '()' value will not be reachable
+   │
+
+error: 
+
+    ┌── tests/move_check/liveness/trailing_semi_loops.move:18:10 ───
+    │
+ 18 │         };
+    │          ^ Invalid trailing ';'
+    ·
+ 15 │ ╭         loop {
+ 16 │ │             let x = 0;
+ 17 │ │             0 + x + 0;
+ 18 │ │         };
+    │ ╰─────────' Any code after this expression will not be reached
+    ·
+ 18 │         };
+    │          - A trailing ';' in an expression block implicitly adds a '()' value after the semicolon. That '()' value will not be reachable
+    │
+
+error: 
+
+    ┌── tests/move_check/liveness/trailing_semi_loops.move:27:26 ───
+    │
+ 27 │             let x: u64 = if (true) break else break;
+    │                          ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid use of a divergent expression. The code following the evaluation of this expression will be dead and should be removed. In some cases, this is necessary to prevent unused resource values.
+    │
+
+error: 
+
+    ┌── tests/move_check/liveness/trailing_semi_loops.move:35:18 ───
+    │
+ 35 │             break;
+    │                  ^ Invalid trailing ';'
+    ·
+ 35 │             break;
+    │             ----- Any code after this expression will not be reached
+    ·
+ 35 │             break;
+    │                  - A trailing ';' in an expression block implicitly adds a '()' value after the semicolon. That '()' value will not be reachable
+    │
+
+error: 
+
+    ┌── tests/move_check/liveness/trailing_semi_loops.move:44:22 ───
+    │
+ 44 │                 break;
+    │                      ^ Invalid trailing ';'
+    ·
+ 44 │                 break;
+    │                 ----- Any code after this expression will not be reached
+    ·
+ 44 │                 break;
+    │                      - A trailing ';' in an expression block implicitly adds a '()' value after the semicolon. That '()' value will not be reachable
+    │
+
+error: 
+
+    ┌── tests/move_check/liveness/trailing_semi_loops.move:55:42 ───
+    │
+ 55 │             if (cond) continue else break;
+    │                                          ^ Invalid trailing ';'
+    ·
+ 55 │             if (cond) continue else break;
+    │             ----------------------------- Any code after this expression will not be reached
+    ·
+ 55 │             if (cond) continue else break;
+    │                                          - A trailing ';' in an expression block implicitly adds a '()' value after the semicolon. That '()' value will not be reachable
+    │
+
+error: 
+
+    ┌── tests/move_check/liveness/trailing_semi_loops.move:63:42 ───
+    │
+ 63 │             if (cond) abort 0 else return;
+    │                                          ^ Invalid trailing ';'
+    ·
+ 63 │             if (cond) abort 0 else return;
+    │             ----------------------------- Any code after this expression will not be reached
+    ·
+ 63 │             if (cond) abort 0 else return;
+    │                                          - A trailing ';' in an expression block implicitly adds a '()' value after the semicolon. That '()' value will not be reachable
+    │
+
+error: 
+
+    ┌── tests/move_check/liveness/trailing_semi_loops.move:76:17 ───
+    │
+ 76 │                 x = 2;
+    │                 ^ Unused assignment or binding for local 'x'. Consider removing or replacing it with '_'
+    │
+
+error: 
+
+    ┌── tests/move_check/liveness/trailing_semi_loops.move:78:14 ───
+    │
+ 78 │             };
+    │              ^ Invalid trailing ';'
+    ·
+ 72 │ ╭             if (cond) {
+ 73 │ │                 x = 1;
+ 74 │ │                 break
+ 75 │ │             } else {
+ 76 │ │                 x = 2;
+ 77 │ │                 continue
+ 78 │ │             };
+    │ ╰─────────────' Any code after this expression will not be reached
+    ·
+ 78 │             };
+    │              - A trailing ';' in an expression block implicitly adds a '()' value after the semicolon. That '()' value will not be reachable
+    │
+
+error: 
+
+    ┌── tests/move_check/liveness/trailing_semi_loops.move:88:22 ───
+    │
+ 88 │                 break;
+    │                      ^ Invalid trailing ';'
+    ·
+ 88 │                 break;
+    │                 ----- Any code after this expression will not be reached
+    ·
+ 88 │                 break;
+    │                      - A trailing ';' in an expression block implicitly adds a '()' value after the semicolon. That '()' value will not be reachable
+    │
+
+error: 
+
+    ┌── tests/move_check/liveness/trailing_semi_loops.move:90:25 ───
+    │
+ 90 │                 continue;
+    │                         ^ Invalid trailing ';'
+    ·
+ 90 │                 continue;
+    │                 -------- Any code after this expression will not be reached
+    ·
+ 90 │                 continue;
+    │                         - A trailing ';' in an expression block implicitly adds a '()' value after the semicolon. That '()' value will not be reachable
+    │
+
+error: 
+
+    ┌── tests/move_check/liveness/trailing_semi_loops.move:91:14 ───
+    │
+ 91 │             };
+    │              ^ Invalid trailing ';'
+    ·
+ 87 │ ╭             if (cond) {
+ 88 │ │                 break;
+ 89 │ │             } else {
+ 90 │ │                 continue;
+ 91 │ │             };
+    │ ╰─────────────' Any code after this expression will not be reached
+    ·
+ 91 │             };
+    │              - A trailing ';' in an expression block implicitly adds a '()' value after the semicolon. That '()' value will not be reachable
+    │
+
+error: 
+
+     ┌── tests/move_check/liveness/trailing_semi_loops.move:100:23 ───
+     │
+ 100 │                 return;
+     │                       ^ Invalid trailing ';'
+     ·
+ 100 │                 return;
+     │                 ------ Any code after this expression will not be reached
+     ·
+ 100 │                 return;
+     │                       - A trailing ';' in an expression block implicitly adds a '()' value after the semicolon. That '()' value will not be reachable
+     │
+
+error: 
+
+     ┌── tests/move_check/liveness/trailing_semi_loops.move:102:24 ───
+     │
+ 102 │                 abort 0;
+     │                        ^ Invalid trailing ';'
+     ·
+ 102 │                 abort 0;
+     │                 ------- Any code after this expression will not be reached
+     ·
+ 102 │                 abort 0;
+     │                        - A trailing ';' in an expression block implicitly adds a '()' value after the semicolon. That '()' value will not be reachable
+     │
+
+error: 
+
+     ┌── tests/move_check/liveness/trailing_semi_loops.move:103:14 ───
+     │
+ 103 │             };
+     │              ^ Invalid trailing ';'
+     ·
+  99 │ ╭             if (cond) {
+ 100 │ │                 return;
+ 101 │ │             } else {
+ 102 │ │                 abort 0;
+ 103 │ │             };
+     │ ╰─────────────' Any code after this expression will not be reached
+     ·
+ 103 │             };
+     │              - A trailing ';' in an expression block implicitly adds a '()' value after the semicolon. That '()' value will not be reachable
+     │
+

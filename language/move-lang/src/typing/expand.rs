@@ -210,7 +210,7 @@ fn exp(context: &mut Context, e: &mut T::Exp) {
 
         E::Spec(_, used_locals) => used_locals.values_mut().for_each(|ty| type_(context, ty)),
 
-        E::Unit
+        E::Unit { .. }
         | E::Value(_)
         | E::Move { .. }
         | E::Copy { .. }

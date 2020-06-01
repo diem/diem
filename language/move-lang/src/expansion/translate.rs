@@ -1024,7 +1024,7 @@ fn sequence(context: &mut Context, loc: Loc, seq: P::Sequence) -> E::Sequence {
                 Some(l) => l,
                 None => loc,
             };
-            sp(last_semicolon_loc, E::Exp_::Unit)
+            sp(last_semicolon_loc, E::Exp_::Unit { trailing: true })
         }
         Some(e) => e,
     };
@@ -1081,7 +1081,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
     use E::Exp_ as EE;
     use P::Exp_ as PE;
     let e_ = match pe_ {
-        PE::Unit => EE::Unit,
+        PE::Unit => EE::Unit { trailing: false },
         PE::Value(pv) => match value(context, pv) {
             Some(v) => EE::Value(v),
             None => {
@@ -1152,7 +1152,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
             let eb = exp(context, *pb);
             let et = exp(context, *pt);
             let ef = match pf_opt {
-                None => Box::new(sp(loc, EE::Unit)),
+                None => Box::new(sp(loc, EE::Unit { trailing: false })),
                 Some(pf) => exp(context, *pf),
             };
             EE::IfElse(eb, et, ef)
@@ -1199,7 +1199,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         }
         PE::Return(pe_opt) => {
             let ev = match pe_opt {
-                None => Box::new(sp(loc, EE::Unit)),
+                None => Box::new(sp(loc, EE::Unit { trailing: false })),
                 Some(pe) => exp(context, *pe),
             };
             EE::Return(ev)
@@ -1469,7 +1469,7 @@ fn unbound_names_exp(unbound: &mut BTreeSet<Name>, sp!(_, e_): &E::Exp) {
         | EE::Continue
         | EE::UnresolvedError
         | EE::Name(sp!(_, E::ModuleAccess_::ModuleAccess(..)), _)
-        | EE::Unit => (),
+        | EE::Unit { .. } => (),
         EE::Copy(v) | EE::Move(v) => {
             unbound.insert(v.0.clone());
         }

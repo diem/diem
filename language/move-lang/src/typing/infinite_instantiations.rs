@@ -207,7 +207,7 @@ fn exp(context: &mut Context, e: &T::Exp) {
     match &e.exp.value {
         E::InferredNum(_) | E::Use(_) => panic!("ICE should have been expanded"),
 
-        E::Unit
+        E::Unit { .. }
         | E::Value(_)
         | E::Move { .. }
         | E::Copy { .. }

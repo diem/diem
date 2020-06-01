@@ -1,7 +1,7 @@
 module M {
     fun tmove1() {
         let x = 0;
-        loop { _ = move x };
+        loop { _ = move x }
     }
 
     fun tmove2(cond: bool) {

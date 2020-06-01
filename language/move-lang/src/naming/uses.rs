@@ -222,7 +222,7 @@ fn lvalue(context: &mut Context, sp!(loc, a_): &N::LValue) {
 fn exp(context: &mut Context, sp!(loc, e_): &N::Exp) {
     use N::Exp_ as E;
     match e_ {
-        E::Unit
+        E::Unit { .. }
         | E::UnresolvedError
         | E::Break
         | E::Continue
