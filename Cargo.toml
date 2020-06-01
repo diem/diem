@@ -17,7 +17,6 @@ members = [
     "common/num-variants",
     "common/option-future",
     "common/proptest-helpers",
-    "common/prost-test-helpers",
     "common/retrier",
     "common/security-logger",
     "common/stream-ratelimiter",

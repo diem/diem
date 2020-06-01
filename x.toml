@@ -41,7 +41,6 @@ features = ["fuzzing"]
 [workspace.test-only]
 members = [
     "common/proptest-helpers",
-    "common/prost-test-helpers",
     "common/retrier",
     "common/workspace-builder",
     "devtools/x",
