@@ -468,6 +468,9 @@ pub struct DefaultHasher {
 
 impl DefaultHasher {
     #[doc(hidden)]
+    /// This function does not return a HashValue in the sense of our usual
+    /// hashes, but a construction of initial bytes that are fed into any hash
+    /// provided we're passed  a (lcs) serialization name as argument.
     pub fn prefixed_hash(buffer: &[u8]) -> [u8; HashValue::LENGTH] {
         // The salt is initial material we prefix to actual value bytes for
         // domain separation. Its length is variable.

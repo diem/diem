@@ -121,11 +121,16 @@ pub trait SigningKey:
     /// The associated signature type for this signing key.
     type SignatureMaterial: Signature<SigningKeyMaterial = Self>;
 
-    /// Signs an input message.
+    /// Signs an input message, represented by its `HashValue`
     fn sign_message(&self, message: &HashValue) -> Self::SignatureMaterial;
 
     /// Signs an object that has an distinct domain-separation hasher and
-    /// that we know how to serialize.
+    /// that we know how to serialize. There is no pre-hashing into a
+    /// `HashValue` to be done by the caller.
+    ///
+    /// For the moment, this signature is incompatible with the conversion into
+    /// a `HashValue` above. We intend to deprecate `sign message` in favor of
+    /// the present function soon.
     fn sign<T: CryptoHash + Serialize>(
         &self,
         message: &T,
