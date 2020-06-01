@@ -6517,9 +6517,9 @@ dependencies = [
 [[package]]
 name = "x25519-dalek"
 version = "0.6.0"
-source = "git+https://github.com/calibra/x25519-dalek.git?branch=fiat2#9681f92239d781be9d931afbdee6ed1f11ce16a8"
+source = "git+https://github.com/calibra/x25519-dalek.git?branch=fiat2#2cd269742922403a588af0872e3b06fe4ef89d0e"
 dependencies = [
- "curve25519-dalek 2.0.0 (git+https://github.com/calibra/curve25519-dalek.git?branch=fiat2)",
+ "curve25519-dalek 2.0.0 (git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat2)",
  "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "zeroize 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
