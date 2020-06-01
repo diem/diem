@@ -575,6 +575,86 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
 
 
 
+
+---
+
+
+
+## **get_currencies** - method
+
+**Description**
+
+Get information about various currencies supported by the Libra blockchain
+
+
+### Parameters
+
+None
+
+
+### Returns
+
+
+<table>
+  <tr>
+   <td><strong>Name</strong>
+   </td>
+   <td><strong>Type</strong>
+   </td>
+   <td><strong>Description</strong>
+   </td>
+  </tr>
+  <tr>
+   <td><strong>code</strong>
+   </td>
+   <td>string
+   </td>
+   <td>Currency Code
+   </td>
+  </tr>
+  <tr>
+   <td><strong>fractional_part</strong>
+   </td>
+   <td>u64
+   </td>
+   <td>Max fractional part of single unit of currency allowed in a transaction
+   </td>
+  </tr>
+  <tr>
+   <td><strong>scaling_factor</strong>
+   </td>
+   <td>u64
+   </td>
+   <td>Factor by which the amount is scaled before it is stored in the blockchain
+   </td>
+  </tr>
+</table>
+
+
+
+### Example
+
+
+```
+// Request: fetches currencies supported by the system
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_currencies","params":[],"id":1}'
+
+// Response
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": [
+        {
+            "code": "LBR",
+            "fractional_part": 1000,
+            "scaling_factor": 1000000
+        }
+        ...
+    ]
+}
+```
+
+
 ##
 
 ---
