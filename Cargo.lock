@@ -2295,7 +2295,6 @@ name = "libra-dev"
 version = "0.1.0"
 dependencies = [
  "bindgen 0.54.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpc-types 0.1.0",
  "libc 0.2.71 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",
