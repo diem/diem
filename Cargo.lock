@@ -712,7 +712,6 @@ dependencies = [
 name = "cluster-test"
 version = "0.1.0"
 dependencies = [
- "admission-control-proto 0.1.0",
  "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
  "config-builder 0.1.0",
