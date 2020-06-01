@@ -14,8 +14,6 @@ pub const ACCOUNT_MODULE_NAME: &str = "LibraAccount";
 static ACCOUNT_MODULE_IDENTIFIER: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("LibraAccount").unwrap());
 static ACCOUNT_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
-static ACCOUNT_BALANCE_STRUCT_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("Balance").unwrap());
 
 /// The ModuleId for the Account module.
 pub static ACCOUNT_MODULE: Lazy<ModuleId> =
@@ -26,10 +24,6 @@ static SENT_EVENT_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("SentPaymentEvent").unwrap());
 static RECEIVED_EVENT_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("ReceivedPaymentEvent").unwrap());
-
-pub fn account_balance_struct_name() -> &'static IdentStr {
-    &*ACCOUNT_BALANCE_STRUCT_NAME
-}
 
 pub fn sent_event_name() -> &'static IdentStr {
     &*SENT_EVENT_NAME
