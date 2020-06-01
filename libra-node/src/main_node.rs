@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use admission_control_service::admission_control_service::AdmissionControlService;
 use backup_service::start_backup_service;
 use consensus::{consensus_provider::start_consensus, gen_consensus_reconfig_subscription};
 use debug_interface::node_debug_service::NodeDebugService;
@@ -45,7 +44,6 @@ const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 const INTRA_NODE_CHANNEL_BUFFER_SIZE: usize = 1;
 
 pub struct LibraHandle {
-    _ac: Runtime,
     _rpc: Runtime,
     _mempool: Runtime,
     _state_synchronizer: StateSynchronizer,
@@ -329,11 +327,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     );
     let (mp_client_sender, mp_client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
 
-    let admission_control_runtime = AdmissionControlService::bootstrap(
-        &node_config,
-        Arc::clone(&db_rw.reader),
-        mp_client_sender.clone(),
-    );
     let rpc_runtime = bootstrap_rpc(&node_config, libra_db.clone(), mp_client_sender);
 
     let mut consensus_runtime = None;
@@ -403,7 +396,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
     LibraHandle {
         _network_runtimes: network_runtimes,
-        _ac: admission_control_runtime,
         _rpc: rpc_runtime,
         _mempool: mempool,
         _state_synchronizer: state_synchronizer,

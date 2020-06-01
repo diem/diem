@@ -2646,8 +2646,6 @@ dependencies = [
 name = "libra-node"
 version = "0.1.0"
 dependencies = [
- "admission-control-proto 0.1.0",
- "admission-control-service 0.1.0",
  "backup-service 0.1.0",
  "consensus 0.1.0",
  "crash-handler 0.1.0",
@@ -2678,7 +2676,6 @@ dependencies = [
  "structopt 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "subscription-service 0.1.0",
  "tokio 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
- "tonic 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

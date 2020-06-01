@@ -15,10 +15,7 @@ jemallocator = { version = "0.3.2", features = ["profiling", "unprefixed_malloc_
 rayon = "1.3.0"
 structopt = "0.3.14"
 tokio = { version = "0.2.21", features = ["full"] }
-tonic = "0.2.1"
 
-admission-control-proto = { path = "../admission-control/admission-control-proto", version = "0.1.0" }
-admission-control-service = { path = "../admission-control/admission-control-service", version = "0.1.0" }
 backup-service = { path = "../storage/backup/backup-service", version = "0.1.0" }
 consensus = { path = "../consensus", version = "0.1.0" }
 crash-handler = { path = "../common/crash-handler", version = "0.1.0" }
