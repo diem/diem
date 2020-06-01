@@ -8,12 +8,17 @@ use crate::{
     gas_costs, transaction_status_eq,
 };
 use libra_types::{
-    account_config::{ReceivedPaymentEvent, SentPaymentEvent, LBR_NAME},
+    account_config::{self, ReceivedPaymentEvent, SentPaymentEvent, LBR_NAME},
     on_chain_config::VMPublishingOption,
-    transaction::{SignedTransaction, TransactionOutput, TransactionPayload, TransactionStatus},
+    transaction::{
+        Script, SignedTransaction, TransactionArgument, TransactionOutput, TransactionPayload,
+        TransactionStatus,
+    },
     vm_error::{StatusCode, VMStatus},
 };
 use std::{convert::TryFrom, time::Instant};
+use stdlib::transaction_scripts::StdlibScript;
+use vm::file_format::{Bytecode, CompiledScript};
 
 #[test]
 fn single_peer_to_peer_with_event() {
@@ -85,13 +90,41 @@ fn single_peer_to_peer_with_padding() {
     executor.add_account_data(&receiver);
 
     let transfer_amount = 1_000;
+    let padded_script = {
+        let mut script_mut = CompiledScript::deserialize(
+            &StdlibScript::PeerToPeerWithMetadata
+                .compiled_bytes()
+                .into_vec(),
+        )
+        .unwrap()
+        .into_inner();
+        script_mut
+            .code
+            .code
+            .extend(std::iter::repeat(Bytecode::Ret).take(1000));
+        let mut script_bytes = vec![];
+        script_mut
+            .freeze()
+            .unwrap()
+            .serialize(&mut script_bytes)
+            .unwrap();
+
+        Script::new(
+            script_bytes,
+            vec![account_config::lbr_type_tag()],
+            vec![
+                TransactionArgument::Address(*receiver.address()),
+                TransactionArgument::U8Vector(vec![]),
+                TransactionArgument::U64(transfer_amount),
+                TransactionArgument::U8Vector(vec![]),
+                TransactionArgument::U8Vector(vec![]),
+            ],
+        )
+    };
+
     let txn = sender.account().create_signed_txn_impl(
         *sender.address(),
-        TransactionPayload::Script(transaction_builder::encode_transfer_script_with_padding(
-            receiver.address(),
-            transfer_amount,
-            1000,
-        )),
+        TransactionPayload::Script(padded_script),
         10,
         gas_costs::TXN_RESERVED, // this is a default for gas
         1,
