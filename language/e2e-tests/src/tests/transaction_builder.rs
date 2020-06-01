@@ -94,8 +94,9 @@ fn freeze_unfreeze_account() {
     });
     let blessed = Account::new_blessed_tc();
     // Execute freeze on account
-    executor
-        .execute_and_apply(blessed.signed_script_txn(encode_freeze_account(*account.address()), 0));
+    executor.execute_and_apply(
+        blessed.signed_script_txn(encode_freeze_account(1, *account.address()), 0),
+    );
 
     // Attempt rotate key txn from frozen account
     let privkey = Ed25519PrivateKey::generate_for_testing();
@@ -111,7 +112,7 @@ fn freeze_unfreeze_account() {
 
     // Execute unfreeze on account
     executor.execute_and_apply(
-        blessed.signed_script_txn(encode_unfreeze_account(*account.address()), 1),
+        blessed.signed_script_txn(encode_unfreeze_account(2, *account.address()), 1),
     );
     // execute rotate key transaction from unfrozen account now succeeds
     let output = &executor.execute_transaction(txn);

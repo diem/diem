@@ -1,6 +1,7 @@
 address 0x0 {
 module SlidingNonce {
     use 0x0::Transaction;
+    use 0x0::Association;
 
     // This struct keep last 128 nonce values in a bit map nonce_mask
     // We assume that nonce are generated incrementally, but certain permutation is allowed when nonce are recorded
@@ -62,6 +63,18 @@ module SlidingNonce {
     // This is required before other functions in this module can be called for `account
     public fun publish(account: &signer) {
         move_to(account, T {  min_nonce: 0, nonce_mask: 0 });
+    }
+
+    // Publishes nonce resource into specific account
+    // Only association can create this resource for different account
+    // Alternative is publish_nonce_resource_for_user that publishes resource into current account
+    public fun publish_nonce_resource(association: &signer, account: &signer) {
+        Association::assert_is_root(association);
+        let new_resource = T {
+            min_nonce: 0,
+            nonce_mask: 0,
+        };
+        move_to(account, new_resource)
     }
 }
 }

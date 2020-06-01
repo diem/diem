@@ -9,6 +9,7 @@
 -  [Function `record_nonce_or_abort`](#0x0_SlidingNonce_record_nonce_or_abort)
 -  [Function `try_record_nonce`](#0x0_SlidingNonce_try_record_nonce)
 -  [Function `publish`](#0x0_SlidingNonce_publish)
+-  [Function `publish_nonce_resource`](#0x0_SlidingNonce_publish_nonce_resource)
 
 
 
@@ -142,6 +143,35 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_publish">publish</a>(account: &signer) {
     move_to(account, <a href="#0x0_SlidingNonce_T">T</a> {  min_nonce: 0, nonce_mask: 0 });
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_SlidingNonce_publish_nonce_resource"></a>
+
+## Function `publish_nonce_resource`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_publish_nonce_resource">publish_nonce_resource</a>(association: &signer, account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_publish_nonce_resource">publish_nonce_resource</a>(association: &signer, account: &signer) {
+    <a href="association.md#0x0_Association_assert_is_root">Association::assert_is_root</a>(association);
+    <b>let</b> new_resource = <a href="#0x0_SlidingNonce_T">T</a> {
+        min_nonce: 0,
+        nonce_mask: 0,
+    };
+    move_to(account, new_resource)
 }
 </code></pre>
 

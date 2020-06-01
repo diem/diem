@@ -16,6 +16,7 @@ module LibraAccount {
     use 0x0::LibraTransactionTimeout;
     use 0x0::Signature;
     use 0x0::Signer;
+    use 0x0::SlidingNonce;
     use 0x0::Testnet;
     use 0x0::Transaction;
     use 0x0::Unhosted;
@@ -640,7 +641,7 @@ module LibraAccount {
         Libra::publish_burn_capability<Coin1::T>(&new_account, coin1_burn_cap);
         Libra::publish_mint_capability<Coin2::T>(&new_account, coin2_mint_cap);
         Libra::publish_burn_capability<Coin2::T>(&new_account, coin2_burn_cap);
-
+        SlidingNonce::publish_nonce_resource(association, &new_account);
         // TODO: add Association or TreasuryCompliance role instead of using Empty?
         Event::publish_generator(&new_account);
         make_account<Token, Empty::T>(new_account, auth_key_prefix, Empty::create(), false)
