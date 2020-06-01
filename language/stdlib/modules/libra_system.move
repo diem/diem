@@ -39,11 +39,11 @@ module LibraSystem {
         Transaction::assert(Signer::address_of(config_account) == LibraConfig::default_config_address(), 1);
 
         let cap = LibraConfig::publish_new_config_with_capability<T>(
+            config_account,
             T {
                 scheme: 0,
                 validators: Vector::empty(),
             },
-            config_account
         );
         move_to(config_account, CapabilityHolder { cap })
     }

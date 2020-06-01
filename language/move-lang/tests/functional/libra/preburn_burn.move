@@ -25,8 +25,8 @@ fun main(account: &signer) {
 script {
 use 0x0::Coin1;
 use 0x0::Libra;
-fun main() {
-    Libra::publish_preburn(Libra::new_preburn<Coin1::T>())
+fun main(account: &signer) {
+    Libra::publish_preburn(account, Libra::new_preburn<Coin1::T>())
 }
 }
 

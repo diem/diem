@@ -14,8 +14,8 @@
 script {
 use 0x0::ValidatorConfig;
 // initialize bob as validator
-fun main() {
-    ValidatorConfig::register_candidate_validator(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
+fun main(account: &signer) {
+    ValidatorConfig::register_candidate_validator(account, x"beefbeef", x"10", x"20", x"30", x"40", x"50");
     // set alice to change bob's key
     ValidatorConfig::set_delegated_account({{alice}});
 }
@@ -28,8 +28,8 @@ fun main() {
 script {
 use 0x0::ValidatorConfig;
 // initialize alice as validator
-fun main() {
-    ValidatorConfig::register_candidate_validator(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
+fun main(account: &signer) {
+    ValidatorConfig::register_candidate_validator(account, x"beefbeef", x"10", x"20", x"30", x"40", x"50");
 }
 }
 

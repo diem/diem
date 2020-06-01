@@ -52,14 +52,16 @@ module ValidatorConfig {
     // resource under their account. Note that only one such resource can be
     // instantiated under an account.
     public fun register_candidate_validator(
+        candidate: &signer,
         consensus_pubkey: vector<u8>,
         validator_network_signing_pubkey: vector<u8>,
         validator_network_identity_pubkey: vector<u8>,
         validator_network_address: vector<u8>,
         full_node_network_identity_pubkey: vector<u8>,
-        full_node_network_address: vector<u8>) {
-
-        move_to_sender<T>(
+        full_node_network_address: vector<u8>
+    ) {
+        move_to<T>(
+            candidate,
             T {
                 config: Config {
                     consensus_pubkey: consensus_pubkey,

@@ -39,10 +39,12 @@ script{
 use 0x0::ValidatorConfig;
 
 // register Alice as a validator candidate, then rotate a key + check that it worked.
-fun main() {
+fun main(account: &signer) {
     // Alice registers as a validator candidate
     0x0::Transaction::assert(!ValidatorConfig::has(0x0::Transaction::sender()), 9);
-    ValidatorConfig::register_candidate_validator(x"10", x"20", x"30", x"40", x"50", x"60");
+    ValidatorConfig::register_candidate_validator(
+        account, x"10", x"20", x"30", x"40", x"50", x"60"
+    );
     0x0::Transaction::assert(ValidatorConfig::has(0x0::Transaction::sender()), 10);
 
     // Rotating the consensus_pubkey should work

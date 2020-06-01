@@ -242,10 +242,10 @@ fn setup_vm_config(context: &mut GenesisContext, publishing_option: VMPublishing
         "initialize",
         vec![],
         vec![
+            Value::transaction_argument_signer_reference(config_address()),
             Value::vector_u8(option_bytes),
             Value::vector_u8(INITIAL_GAS_SCHEDULE.0.clone()),
             Value::vector_u8(INITIAL_GAS_SCHEDULE.1.clone()),
-            Value::transaction_argument_signer_reference(config_address()),
         ],
     );
 }

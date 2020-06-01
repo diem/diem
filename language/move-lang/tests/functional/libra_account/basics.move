@@ -103,10 +103,10 @@ script {
     use 0x0::LibraAccount;
     use 0x0::LBR;
     use 0x0::Testnet;
-    fun main() {
+    fun main(account: &signer) {
         Testnet::remove_testnet();
         LibraAccount::create_testnet_account<LBR::T>(0xDEADBEEF, x"");
-        Testnet::initialize();
+        Testnet::initialize(account);
     }
 }
 // check: ABORTED
@@ -139,8 +139,8 @@ script {
 //! sender: association
 script {
     use 0x0::Testnet;
-    fun main() {
-        Testnet::initialize();
+    fun main(account: &signer) {
+        Testnet::initialize(account);
     }
 }
 // check: EXECUTED

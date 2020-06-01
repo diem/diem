@@ -1592,6 +1592,7 @@
             // An empty compliance key
             x"00000000000000000000000000000000"
         );
+    // TODO: refactor so that every attempt <b>to</b> create an existing account hits this check
     // cannot create an account at an address that already has one
     Transaction::assert(!<a href="#0x0_LibraAccount_exists">exists</a>(new_account_address), 777777);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);

@@ -1,8 +1,8 @@
 //! new-transaction
 script {
     use 0x0::Testnet;
-    fun main() {
-        Testnet::initialize();
+    fun main(account: &signer) {
+        Testnet::initialize(account);
     }
 }
 // check: ABORTED

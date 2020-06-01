@@ -23,7 +23,7 @@ module RegisteredCurrencies {
             Signer::address_of(config_account) == LibraConfig::default_config_address(),
             0
         );
-        let cap = LibraConfig::publish_new_config_with_capability(empty(), config_account);
+        let cap = LibraConfig::publish_new_config_with_capability(config_account, empty());
 
         RegistrationCapability { cap }
     }

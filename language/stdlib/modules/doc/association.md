@@ -605,6 +605,11 @@ Afterwards, only
 
 
 
+<pre><code><b>ensures</b> <a href="signer.md#0x0_Signer_get_address">Signer::get_address</a>(association) == <a href="#0x0_Association_spec_root_address">spec_root_address</a>();
+</code></pre>
+
+
+
 <a name="0x0_Association_Specification_assert_is_association"></a>
 
 ### Function `assert_is_association`
@@ -616,8 +621,8 @@ Afterwards, only
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x0_Association_spec_addr_is_association">spec_addr_is_association</a>(sender());
-<b>ensures</b> <a href="#0x0_Association_spec_addr_is_association">spec_addr_is_association</a>(sender());
+<pre><code><b>aborts_if</b> !<a href="#0x0_Association_spec_addr_is_association">spec_addr_is_association</a>(<a href="signer.md#0x0_Signer_get_address">Signer::get_address</a>(account));
+<b>ensures</b> <a href="#0x0_Association_spec_addr_is_association">spec_addr_is_association</a>(<a href="signer.md#0x0_Signer_get_address">Signer::get_address</a>(account));
 </code></pre>
 
 

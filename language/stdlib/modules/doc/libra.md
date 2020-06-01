@@ -1003,7 +1003,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_preburn">publish_preburn</a>&lt;Token&gt;(preburn: <a href="#0x0_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_preburn">publish_preburn</a>&lt;Token&gt;(account: &signer, preburn: <a href="#0x0_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;)
 </code></pre>
 
 
@@ -1012,8 +1012,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_preburn">publish_preburn</a>&lt;Token&gt;(preburn: <a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt;) {
-    move_to_sender(preburn)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_preburn">publish_preburn</a>&lt;Token&gt;(account: &signer, preburn: <a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt;) {
+    move_to(account, preburn)
 }
 </code></pre>
 

@@ -18,8 +18,10 @@ fun main() {
 //! sender: alice
 script {
 use 0x0::ValidatorConfig;
-fun main() {
-    ValidatorConfig::register_candidate_validator(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
+fun main(account: &signer) {
+    ValidatorConfig::register_candidate_validator(
+        account, x"beefbeef", x"10", x"20", x"30", x"40", x"50"
+    );
     let config = ValidatorConfig::get_config({{alice}});
     let consensus_pk = ValidatorConfig::get_consensus_pubkey(&config);
     let expected_pk = x"beefbeef";

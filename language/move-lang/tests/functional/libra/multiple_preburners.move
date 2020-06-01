@@ -33,8 +33,8 @@ fun main(account: &signer) {
 script {
 use 0x0::Coin1;
 use 0x0::Libra;
-fun main() {
-    Libra::publish_preburn(Libra::new_preburn<Coin1::T>())
+fun main(account: &signer) {
+    Libra::publish_preburn(account, Libra::new_preburn<Coin1::T>())
 }
 }
 
@@ -70,8 +70,8 @@ fun main() {
 script {
 use 0x0::Coin1;
 use 0x0::Libra;
-fun main() {
-    Libra::publish_preburn(Libra::new_preburn<Coin1::T>())
+fun main(account: &signer) {
+    Libra::publish_preburn(account, Libra::new_preburn<Coin1::T>())
 }
 }
 
@@ -235,8 +235,8 @@ script {
 use 0x0::Coin2;
 use 0x0::Libra;
 use 0x0::LibraAccount;
-fun main() {
-    Libra::publish_preburn(Libra::new_preburn<Coin2::T>());
+fun main(account: &signer) {
+    Libra::publish_preburn(account, Libra::new_preburn<Coin2::T>());
     let coin = LibraAccount::withdraw_from_sender<Coin2::T>(100);
     Libra::preburn_to_sender<Coin2::T>(coin);
 }

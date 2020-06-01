@@ -55,7 +55,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_publish">publish</a>(key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_publish">publish</a>(account: &signer, key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -64,13 +64,13 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_publish">publish</a>(key: vector&lt;u8&gt;) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_publish">publish</a>(account: &signer, key: vector&lt;u8&gt;) {
     <b>let</b> t = <a href="#0x0_SharedEd25519PublicKey_T">T</a> {
         key: x"",
         rotation_cap: <a href="libra_account.md#0x0_LibraAccount_extract_sender_key_rotation_capability">LibraAccount::extract_sender_key_rotation_capability</a>()
     };
     <a href="#0x0_SharedEd25519PublicKey_rotate_key">rotate_key</a>(&<b>mut</b> t, key);
-    move_to_sender(t);
+    move_to(account, t);
 }
 </code></pre>
 

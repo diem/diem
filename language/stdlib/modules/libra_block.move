@@ -30,10 +30,13 @@ module LibraBlock {
       // Only callable by the Association address
       Transaction::assert(Signer::address_of(account) == 0xA550C18, 1);
 
-      move_to_sender<BlockMetadata>(BlockMetadata {
-        height: 0,
-        new_block_events: Event::new_event_handle<Self::NewBlockEvent>(account),
-      });
+      move_to<BlockMetadata>(
+          account,
+          BlockMetadata {
+              height: 0,
+              new_block_events: Event::new_event_handle<Self::NewBlockEvent>(account),
+          }
+      );
     }
 
     // Set the metadata for the current block.

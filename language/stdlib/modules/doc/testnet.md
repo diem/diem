@@ -46,7 +46,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Testnet_initialize">initialize</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Testnet_initialize">initialize</a>(account: &signer)
 </code></pre>
 
 
@@ -55,9 +55,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Testnet_initialize">initialize</a>() {
-    Transaction::assert(Transaction::sender() == 0xA550C18, 0);
-    move_to_sender(<a href="#0x0_Testnet_IsTestnet">IsTestnet</a>{})
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Testnet_initialize">initialize</a>(account: &signer) {
+    Transaction::assert(<a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == 0xA550C18, 0);
+    move_to(account, <a href="#0x0_Testnet_IsTestnet">IsTestnet</a>{})
 }
 </code></pre>
 

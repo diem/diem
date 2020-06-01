@@ -50,8 +50,8 @@ fun main(account: &signer) {
 script {
     use 0x0::Testnet;
     // Reset testnet
-    fun main() {
-        Testnet::initialize()
+    fun main(account: &signer) {
+        Testnet::initialize(account)
     }
 }
 // check: EXECUTED

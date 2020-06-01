@@ -90,7 +90,7 @@
         <a href="signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="libra_configs.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>(),
         0
     );
-    <b>let</b> cap = <a href="libra_configs.md#0x0_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>(<a href="#0x0_RegisteredCurrencies_empty">empty</a>(), config_account);
+    <b>let</b> cap = <a href="libra_configs.md#0x0_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>(config_account, <a href="#0x0_RegisteredCurrencies_empty">empty</a>());
 
     <a href="#0x0_RegisteredCurrencies_RegistrationCapability">RegistrationCapability</a> { cap }
 }

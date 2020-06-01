@@ -61,10 +61,10 @@ module LibraVMConfig {
 
     // Initialize the table under the association account
     public fun initialize(
+        config_account: &signer,
         publishing_option: vector<u8>,
         instruction_schedule: vector<u8>,
         native_schedule: vector<u8>,
-        config_account: &signer
     ) {
         let gas_constants = GasConstants {
             global_memory_per_byte_cost: 8,
@@ -80,6 +80,7 @@ module LibraVMConfig {
 
 
         LibraConfig::publish_new_config<Self::T>(
+            config_account,
             T {
                 publishing_option,
                 gas_schedule: GasSchedule {
@@ -88,14 +89,13 @@ module LibraVMConfig {
                     gas_constants,
                 }
             },
-            config_account
         );
     }
 
-    public fun set_publishing_option(publishing_option: vector<u8>, account: &signer) {
+    public fun set_publishing_option(account: &signer, publishing_option: vector<u8>) {
         let current_config = LibraConfig::get<Self::T>();
         current_config.publishing_option = publishing_option;
-        LibraConfig::set<Self::T>(current_config, account);
+        LibraConfig::set<Self::T>(account, current_config);
     }
 }
 

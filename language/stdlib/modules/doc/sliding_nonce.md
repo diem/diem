@@ -8,7 +8,7 @@
 -  [Struct `T`](#0x0_SlidingNonce_T)
 -  [Function `record_nonce_or_abort`](#0x0_SlidingNonce_record_nonce_or_abort)
 -  [Function `try_record_nonce`](#0x0_SlidingNonce_try_record_nonce)
--  [Function `publish_nonce_resource_for_user`](#0x0_SlidingNonce_publish_nonce_resource_for_user)
+-  [Function `publish`](#0x0_SlidingNonce_publish)
 
 
 
@@ -125,13 +125,13 @@
 
 </details>
 
-<a name="0x0_SlidingNonce_publish_nonce_resource_for_user"></a>
+<a name="0x0_SlidingNonce_publish"></a>
 
-## Function `publish_nonce_resource_for_user`
+## Function `publish`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_publish_nonce_resource_for_user">publish_nonce_resource_for_user</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_publish">publish</a>(account: &signer)
 </code></pre>
 
 
@@ -140,12 +140,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_publish_nonce_resource_for_user">publish_nonce_resource_for_user</a>() {
-    <b>let</b> new_resource = <a href="#0x0_SlidingNonce_T">T</a> {
-        min_nonce: 0,
-        nonce_mask: 0,
-    };
-    move_to_sender(new_resource)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_publish">publish</a>(account: &signer) {
+    move_to(account, <a href="#0x0_SlidingNonce_T">T</a> {  min_nonce: 0, nonce_mask: 0 });
 }
 </code></pre>
 

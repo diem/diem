@@ -12,7 +12,7 @@ fun main(account: &signer) {
 script{
 use 0x0::LibraVersion;
 fun main(account: &signer) {
-    LibraVersion::set(0, account);
+    LibraVersion::set(account, 0);
 }
 }
 // check: ABORTED

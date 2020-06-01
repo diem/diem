@@ -53,7 +53,7 @@ module LibraConfig {
 
     // Set a config item to a new value with the default capability stored under config address and trigger a
     // reconfiguration.
-    public fun set<Config: copyable>(payload: Config, account: &signer) acquires T, Configuration {
+    public fun set<Config: copyable>(account: &signer, payload: Config) acquires T, Configuration {
         let addr = default_config_address();
         Transaction::assert(::exists<T<Config>>(addr), 24);
         let signer_address = Signer::address_of(account);
@@ -85,8 +85,8 @@ module LibraConfig {
     // Publish a new config item. The caller will use the returned ModifyConfigCapability to specify the access control
     // policy for who can modify the config.
     public fun publish_new_config_with_capability<Config: copyable>(
-        payload: Config,
         config_account: &signer,
+        payload: Config,
     ): ModifyConfigCapability<Config> {
         Transaction::assert(
             Association::has_privilege<CreateConfigCapability>(Signer::address_of(config_account)),
@@ -102,10 +102,7 @@ module LibraConfig {
     }
 
     // Publish a new config item. Only the config address can modify such config.
-    public fun publish_new_config<Config: copyable>(
-        payload: Config,
-        config_account: &signer,
-    ) {
+    public fun publish_new_config<Config: copyable>(config_account: &signer, payload: Config) {
         Transaction::assert(
             Association::has_privilege<CreateConfigCapability>(Signer::address_of(config_account)),
             1
@@ -120,25 +117,25 @@ module LibraConfig {
 
     // Publish a new config item. Only the delegated address can modify such config after redeeming the capability.
     public fun publish_new_config_with_delegate<Config: copyable>(
+        config_account: &signer,
         payload: Config,
         delegate: address,
-        config_account: &signer
     ) {
         Transaction::assert(
             Association::has_privilege<CreateConfigCapability>(Signer::address_of(config_account)),
             1
         );
 
-        Offer::create(ModifyConfigCapability<Config> {}, delegate);
-        move_to_sender(T{ payload });
-        // We don't trigger reconfiguration here, instead we'll wait for all validators update the binary
-        // to register this config into ON_CHAIN_CONFIG_REGISTRY then send another transaction to change
-        // the value which triggers the reconfiguration.
+        Offer::create(config_account, ModifyConfigCapability<Config>{}, delegate);
+        move_to(config_account, T { payload });
+        // We don't trigger reconfiguration here, instead we'll wait for all validators update the
+        // binary to register this config into ON_CHAIN_CONFIG_REGISTRY then send another
+        // transaction to change the value which triggers the reconfiguration.
     }
 
     // Claim a delegated modify config capability granted by publish_new_config_with_delegate.
-    public fun claim_delegated_modify_config<Config>(offer_address: address) {
-        move_to_sender(Offer::redeem<ModifyConfigCapability<Config>>(offer_address))
+    public fun claim_delegated_modify_config<Config>(account: &signer, offer_address: address) {
+        move_to(account, Offer::redeem<ModifyConfigCapability<Config>>(account, offer_address))
     }
 
     public fun reconfigure() acquires Configuration {

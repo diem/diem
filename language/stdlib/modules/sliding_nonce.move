@@ -58,14 +58,10 @@ module SlidingNonce {
         0
     }
 
-    // Publishes nonce resource for user
-    // This is required before other functions in this module can be called for user
-    public fun publish_nonce_resource_for_user() {
-        let new_resource = T {
-            min_nonce: 0,
-            nonce_mask: 0,
-        };
-        move_to_sender(new_resource)
+    // Publishes nonce resource for `account`
+    // This is required before other functions in this module can be called for `account
+    public fun publish(account: &signer) {
+        move_to(account, T {  min_nonce: 0, nonce_mask: 0 });
     }
 }
 }

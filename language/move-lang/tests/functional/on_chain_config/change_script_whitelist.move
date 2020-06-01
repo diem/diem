@@ -27,7 +27,7 @@ script {
 use 0x0::LibraVMConfig;
 
 fun main(config: &signer, args: vector<u8>) {
-    LibraVMConfig::set_publishing_option(args, config)
+    LibraVMConfig::set_publishing_option(config, args)
 }
 }
 

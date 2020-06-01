@@ -11,8 +11,8 @@ script {
     use 0x0::SlidingNonce;
     use 0x0::Transaction;
 
-    fun main() {
-        SlidingNonce::publish_nonce_resource_for_user();
+    fun main(account: &signer) {
+        SlidingNonce::publish(account);
 
         // 0-nonce is always allowed
         SlidingNonce::record_nonce_or_abort(0);
