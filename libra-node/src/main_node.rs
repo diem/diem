@@ -4,10 +4,7 @@
 use admission_control_service::admission_control_service::AdmissionControlService;
 use backup_service::start_backup_service;
 use consensus::consensus_provider::start_consensus;
-use debug_interface::{
-    node_debug_service::NodeDebugService,
-    proto::node_debug_interface_server::NodeDebugInterfaceServer,
-};
+use debug_interface::node_debug_service::NodeDebugService;
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on, stream::StreamExt};
@@ -51,7 +48,7 @@ pub struct LibraHandle {
     _state_synchronizer: StateSynchronizer,
     _network_runtimes: Vec<Runtime>,
     _consensus_runtime: Option<Runtime>,
-    _debug: Runtime,
+    _debug: NodeDebugService,
     _backup: Runtime,
 }
 
@@ -59,8 +56,7 @@ fn setup_chunk_executor(db: DbReaderWriter) -> Box<dyn ChunkExecutor> {
     Box::new(Executor::<LibraVM>::new(db))
 }
 
-fn setup_debug_interface(config: &NodeConfig) -> Runtime {
-    let rt = tokio::runtime::Runtime::new().unwrap();
+fn setup_debug_interface(config: &NodeConfig) -> NodeDebugService {
     let addr = format!(
         "{}:{}",
         config.debug_interface.address, config.debug_interface.admission_control_node_debug_port,
@@ -69,12 +65,8 @@ fn setup_debug_interface(config: &NodeConfig) -> Runtime {
     .unwrap()
     .next()
     .unwrap();
-    rt.spawn(
-        tonic::transport::Server::builder()
-            .add_service(NodeDebugInterfaceServer::new(NodeDebugService::new()))
-            .serve(addr),
-    );
-    rt
+
+    NodeDebugService::new(addr)
 }
 
 pub fn setup_onchain_discovery(

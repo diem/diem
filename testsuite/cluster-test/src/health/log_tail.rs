@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use crate::{health::ValidatorEvent, util::unix_timestamp_now};
-use debug_interface::proto::Event as DebugInterfaceEvent;
+use debug_interface::json_log::JsonLogEntry as DebugInterfaceEvent;
 use libra_logger::*;
 use std::{
     sync::{

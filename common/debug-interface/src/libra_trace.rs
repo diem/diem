@@ -207,7 +207,7 @@ pub fn trace_node(entries: &[JsonLogEntry], node_name: &str) {
             .expect("::path is not a string");
         let duration = entry.json.get("duration").and_then(|v| v.as_str());
         let crate_name = crate_name(path);
-        match entry.name {
+        match entry.name.as_ref() {
             TRACE_EVENT => {
                 let node = entry
                     .json
