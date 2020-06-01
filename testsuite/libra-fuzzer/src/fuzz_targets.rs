@@ -16,46 +16,7 @@ macro_rules! module_name {
     };
 }
 
-/// A fuzz target implementation for protobuf-compiled targets.
-macro_rules! proto_fuzz_target {
-    ($target:ident => $ty:ty, $prototy:ty) => {
-        #[derive(Clone, Debug, Default)]
-        pub struct $target;
-
-        impl $crate::FuzzTargetImpl for $target {
-            fn name(&self) -> &'static str {
-                module_name!()
-            }
-
-            fn description(&self) -> &'static str {
-                concat!(stringify!($ty), " (protobuf)")
-            }
-
-            fn generate(
-                &self,
-                _idx: usize,
-                gen: &mut ::libra_proptest_helpers::ValueGenerator,
-            ) -> Option<Vec<u8>> {
-                use libra_prost_test_helpers::MessageExt;
-
-                let value: $prototy = gen.generate(::proptest::arbitrary::any::<$ty>()).into();
-
-                Some(value.to_vec().expect("failed to convert to bytes"))
-            }
-
-            fn fuzz(&self, data: &[u8]) {
-                use prost::Message;
-                use std::convert::TryFrom;
-
-                // Errors are OK -- the fuzzer cares about panics and OOMs.
-                let _ = <$prototy>::decode(data).map(<$ty>::try_from);
-            }
-        }
-    };
-}
-
 // List fuzz target modules here.
-mod accumulator_merkle_proof;
 mod compiled_module;
 mod consensus_proposal;
 mod inbound_rpc_protocol;
@@ -63,8 +24,6 @@ mod inner_signed_transaction;
 mod json_rpc_service;
 mod network_noise_initiator;
 mod network_noise_responder;
-mod signed_transaction;
-mod sparse_merkle_proof;
 //mod storage_save_blocks;
 mod storage_schema_decode;
 mod vm_value;
@@ -79,8 +38,6 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(json_rpc_service::JsonRpcSubmitTransactionRequest::default()),
         Box::new(network_noise_initiator::NetworkNoiseInitiator::default()),
         Box::new(network_noise_responder::NetworkNoiseResponder::default()),
-        Box::new(signed_transaction::SignedTransactionTarget::default()),
-        Box::new(sparse_merkle_proof::SparseMerkleProofTarget::default()),
         //        Box::new(storage_save_blocks::StorageSaveBlocks::default()),
         Box::new(storage_schema_decode::StorageSchemaDecode::default()),
         Box::new(vm_value::ValueTarget::default()),

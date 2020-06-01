@@ -29,7 +29,6 @@ libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0"
 # List out modules with data structures being fuzzed here.
 consensus = { path = "../../consensus", version = "0.1.0", features = ["fuzzing"] }
 consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0", features = ["fuzzing"] }
-grpc-types = { path = "../../grpc/types", version = "0.1.0"}
 libra-json-rpc = { path = "../../json-rpc", version = "0.1.0", features = ["fuzzing"] }
 libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 move-vm-types = { path = "../../language/move-vm/types", version = "0.1.0", features = ["fuzzing"] }
