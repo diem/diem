@@ -13,7 +13,6 @@ pub const ACCOUNT_MODULE_NAME: &str = "LibraAccount";
 // Account
 static ACCOUNT_MODULE_IDENTIFIER: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("LibraAccount").unwrap());
-static ACCOUNT_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
 
 /// The ModuleId for the Account module.
 pub static ACCOUNT_MODULE: Lazy<ModuleId> =
@@ -31,15 +30,6 @@ pub fn sent_event_name() -> &'static IdentStr {
 
 pub fn received_event_name() -> &'static IdentStr {
     &*RECEIVED_EVENT_NAME
-}
-
-pub fn account_struct_tag() -> StructTag {
-    StructTag {
-        address: CORE_CODE_ADDRESS,
-        module: ACCOUNT_MODULE_IDENTIFIER.clone(),
-        name: ACCOUNT_STRUCT_NAME.to_owned(),
-        type_params: vec![],
-    }
 }
 
 pub fn sent_payment_tag() -> StructTag {
