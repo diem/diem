@@ -75,8 +75,7 @@ impl<TMessage: PartialEq> PartialEq for Event<TMessage> {
 
 /// A `Stream` of `Event<TMessage>` from the lower network layer to an upper
 /// network application that deserializes inbound network direct-send and rpc
-/// messages into `TMessage`, which is some protobuf format implementing
-/// the `prost::Message` trait.
+/// messages into `TMessage`.
 ///
 /// `NetworkEvents` is really just a thin wrapper around a
 /// `channel::Receiver<NetworkNotification>` that deserializes inbound messages.
@@ -172,7 +171,6 @@ impl<TMessage> FusedStream for NetworkEvents<TMessage> {
 /// `MempoolNetworkSender` only exposes a `send_to` function.
 ///
 /// Provide Protobuf wrapper over `[peer_manager::PeerManagerRequestSender]`
-/// The `TMessage` generic is a protobuf message type (`prost::Message`).
 #[derive(Clone)]
 pub struct NetworkSender<TMessage> {
     peer_mgr_reqs_tx: PeerManagerRequestSender,

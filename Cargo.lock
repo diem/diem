@@ -2781,7 +2781,6 @@ dependencies = [
  "libra-crypto-derive 0.1.0",
  "libra-network-address 0.1.0",
  "libra-proptest-helpers 0.1.0",
- "libra-prost-test-helpers 0.1.0",
  "libra-workspace-hack 0.1.0",
  "mirai-annotations 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "move-core-types 0.1.0",
