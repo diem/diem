@@ -1294,9 +1294,6 @@
 <span id="1294">1294</span>
 <span id="1295">1295</span>
 <span id="1296">1296</span>
-<span id="1297">1297</span>
-<span id="1298">1298</span>
-<span id="1299">1299</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1407,10 +1404,7 @@
         <span class="kw">for</span> <span class="ident">count</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">bench_repeat</span> {
             <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">Command</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>[<span class="number">0</span>]).<span class="ident">args</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>[<span class="number">1</span>..]).<span class="ident">output</span>()<span class="question-mark">?</span>;
             <span class="kw">if</span> <span class="op">!</span><span class="ident">output</span>.<span class="ident">status</span>.<span class="ident">success</span>() {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(
-                    <span class="string">&quot;boogie exited with status {:?}&quot;</span>,
-                    <span class="ident">output</span>.<span class="ident">status</span>.<span class="ident">code</span>()
-                ));
+                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;boogie exited with: {:?}&quot;</span>, <span class="ident">output</span>));
             } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">count</span> <span class="op">=</span><span class="op">=</span> <span class="ident">bench_repeat</span> <span class="op">-</span> <span class="number">1</span> {
                 <span class="kw">if</span> <span class="ident">count</span> <span class="op">&gt;</span> <span class="number">0</span> {
                     <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;run #{} done&quot;</span>, <span class="ident">count</span> <span class="op">+</span> <span class="number">1</span>);
@@ -2182,7 +2176,7 @@
     <span class="doccomment">/// Extracts a vector from `(Vector value_array)`. This follows indirections in the model</span>
     <span class="doccomment">/// to extract the actual values.</span>
     <span class="kw">fn</span> <span class="ident">extract_vector</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">model</span>: <span class="kw-2">&amp;</span><span class="ident">Model</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ModelValueVector</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extract_list</span>(<span class="string">&quot;Vector&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extract_list</span>(<span class="string">&quot;$Vector&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">if</span> <span class="ident">args</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">1</span> {
             <span class="kw">return</span> <span class="prelude-val">None</span>;
         }
@@ -2190,17 +2184,17 @@
     }
 
     <span class="doccomment">/// Extracts a value array from `(ValueArray map_key size)`. This follows indirections in the</span>
-    <span class="doccomment">/// model. We find the value array map at `Select_[$int]Value`. This has e.g. the form</span>
+    <span class="doccomment">/// model. We find the value array map at `Select_[$int]$Value`. This has e.g. the form</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```model</span>
-    <span class="doccomment">///   Select_[$int]Value -&gt; {</span>
+    <span class="doccomment">///   Select_[$int]$Value -&gt; {</span>
     <span class="comment">//      |T@[Int]Value!val!1| 0 -&gt; (Integer 2)</span>
     <span class="comment">//      |T@[Int]Value!val!1| 22 -&gt; (Integer 2)</span>
     <span class="comment">//      else -&gt; (Integer 0)</span>
     <span class="comment">//    }</span>
     <span class="comment">// ```</span>
     <span class="kw">fn</span> <span class="ident">extract_value_array</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">model</span>: <span class="kw-2">&amp;</span><span class="ident">Model</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ModelValueVector</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extract_list</span>(<span class="string">&quot;ValueArray&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extract_list</span>(<span class="string">&quot;$ValueArray&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">if</span> <span class="ident">args</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">2</span> {
             <span class="kw">return</span> <span class="prelude-val">None</span>;
         }
@@ -2208,7 +2202,7 @@
         <span class="kw">let</span> <span class="ident">map_key</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">args</span>[<span class="number">0</span>];
         <span class="kw">let</span> <span class="ident">value_array_map</span> <span class="op">=</span> <span class="ident">model</span>
             .<span class="ident">vars</span>
-            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">ModelValue</span>::<span class="ident">literal</span>(<span class="string">&quot;Select_[$int]Value&quot;</span>))<span class="question-mark">?</span>
+            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">ModelValue</span>::<span class="ident">literal</span>(<span class="string">&quot;Select_[$int]$Value&quot;</span>))<span class="question-mark">?</span>
             .<span class="ident">extract_map</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">values</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">default</span> <span class="op">=</span> <span class="ident">ModelValue</span>::<span class="ident">error</span>();
@@ -2296,25 +2290,25 @@
         <span class="kw">match</span> <span class="ident">ty</span> {
             <span class="ident">Type</span>::<span class="ident">Primitive</span>(<span class="ident">PrimitiveType</span>::<span class="ident">U8</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">PrettyDoc</span>::<span class="ident">text</span>(<span class="macro">format</span><span class="macro">!</span>(
                 <span class="string">&quot;{}u8&quot;</span>,
-                <span class="self">self</span>.<span class="ident">extract_primitive</span>(<span class="string">&quot;Integer&quot;</span>)<span class="question-mark">?</span>
+                <span class="self">self</span>.<span class="ident">extract_primitive</span>(<span class="string">&quot;$Integer&quot;</span>)<span class="question-mark">?</span>
             ))),
             <span class="ident">Type</span>::<span class="ident">Primitive</span>(<span class="ident">PrimitiveType</span>::<span class="ident">U64</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">PrettyDoc</span>::<span class="ident">text</span>(
-                <span class="self">self</span>.<span class="ident">extract_primitive</span>(<span class="string">&quot;Integer&quot;</span>)<span class="question-mark">?</span>.<span class="ident">to_string</span>(),
+                <span class="self">self</span>.<span class="ident">extract_primitive</span>(<span class="string">&quot;$Integer&quot;</span>)<span class="question-mark">?</span>.<span class="ident">to_string</span>(),
             )),
             <span class="ident">Type</span>::<span class="ident">Primitive</span>(<span class="ident">PrimitiveType</span>::<span class="ident">U128</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">PrettyDoc</span>::<span class="ident">text</span>(<span class="macro">format</span><span class="macro">!</span>(
                 <span class="string">&quot;{}u128&quot;</span>,
-                <span class="self">self</span>.<span class="ident">extract_primitive</span>(<span class="string">&quot;Integer&quot;</span>)<span class="question-mark">?</span>.<span class="ident">to_string</span>()
+                <span class="self">self</span>.<span class="ident">extract_primitive</span>(<span class="string">&quot;$Integer&quot;</span>)<span class="question-mark">?</span>.<span class="ident">to_string</span>()
             ))),
             <span class="ident">Type</span>::<span class="ident">Primitive</span>(<span class="ident">PrimitiveType</span>::<span class="ident">Num</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">PrettyDoc</span>::<span class="ident">text</span>(<span class="macro">format</span><span class="macro">!</span>(
                 <span class="string">&quot;{}u128&quot;</span>,
-                <span class="self">self</span>.<span class="ident">extract_primitive</span>(<span class="string">&quot;Integer&quot;</span>)<span class="question-mark">?</span>.<span class="ident">to_string</span>()
+                <span class="self">self</span>.<span class="ident">extract_primitive</span>(<span class="string">&quot;$Integer&quot;</span>)<span class="question-mark">?</span>.<span class="ident">to_string</span>()
             ))),
             <span class="ident">Type</span>::<span class="ident">Primitive</span>(<span class="ident">PrimitiveType</span>::<span class="ident">Bool</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">PrettyDoc</span>::<span class="ident">text</span>(
-                <span class="self">self</span>.<span class="ident">extract_primitive</span>(<span class="string">&quot;Boolean&quot;</span>)<span class="question-mark">?</span>.<span class="ident">to_string</span>(),
+                <span class="self">self</span>.<span class="ident">extract_primitive</span>(<span class="string">&quot;$Boolean&quot;</span>)<span class="question-mark">?</span>.<span class="ident">to_string</span>(),
             )),
             <span class="ident">Type</span>::<span class="ident">Primitive</span>(<span class="ident">PrimitiveType</span>::<span class="ident">Address</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">BigInt</span>::<span class="ident">parse_bytes</span>(
-                    <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">extract_primitive</span>(<span class="string">&quot;Address&quot;</span>)<span class="question-mark">?</span>.<span class="ident">clone</span>().<span class="ident">into_bytes</span>(),
+                    <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">extract_primitive</span>(<span class="string">&quot;$Address&quot;</span>)<span class="question-mark">?</span>.<span class="ident">clone</span>().<span class="ident">into_bytes</span>(),
                     <span class="number">10</span>,
                 )<span class="question-mark">?</span>;
                 <span class="prelude-val">Some</span>(<span class="ident">PrettyDoc</span>::<span class="ident">text</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;0x{}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">addr</span>.<span class="ident">to_str_radix</span>(<span class="number">16</span>))))
