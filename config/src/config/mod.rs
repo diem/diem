@@ -23,6 +23,8 @@ mod debug_interface_config;
 pub use debug_interface_config::*;
 mod execution_config;
 pub use execution_config::*;
+mod key_manager_config;
+pub use key_manager_config::*;
 mod logger_config;
 pub use logger_config::*;
 mod metrics_config;
@@ -31,8 +33,8 @@ mod mempool_config;
 pub use mempool_config::*;
 mod network_config;
 pub use network_config::*;
-mod secure_config;
-pub use secure_config::*;
+mod secure_backend_config;
+pub use secure_backend_config::*;
 mod state_sync_config;
 pub use state_sync_config::*;
 mod storage_config;
@@ -73,8 +75,6 @@ pub struct NodeConfig {
     pub metrics: MetricsConfig,
     #[serde(default)]
     pub mempool: MempoolConfig,
-    #[serde(default)]
-    pub secure: SecureConfig,
     #[serde(default)]
     pub state_sync: StateSyncConfig,
     #[serde(default)]
@@ -156,7 +156,6 @@ impl NodeConfig {
         self.base.data_dir = data_dir.clone();
         self.consensus.set_data_dir(data_dir.clone());
         self.metrics.set_data_dir(data_dir.clone());
-        self.secure.set_data_dir(data_dir.clone());
         self.storage.set_data_dir(data_dir);
     }
 
@@ -179,7 +178,6 @@ impl NodeConfig {
             metrics: self.metrics.clone(),
             mempool: self.mempool.clone(),
             state_sync: self.state_sync.clone(),
-            secure: self.secure.clone(),
             storage: self.storage.clone(),
             test: None,
             upstream: self.upstream.clone(),
