@@ -4,7 +4,7 @@
 use crate::account_config::constants::CORE_CODE_ADDRESS;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
-    language_storage::{ModuleId, StructTag},
+    language_storage::ModuleId,
 };
 use once_cell::sync::Lazy;
 
@@ -30,13 +30,4 @@ pub fn sent_event_name() -> &'static IdentStr {
 
 pub fn received_event_name() -> &'static IdentStr {
     &*RECEIVED_EVENT_NAME
-}
-
-pub fn received_payment_tag() -> StructTag {
-    StructTag {
-        address: CORE_CODE_ADDRESS,
-        module: ACCOUNT_MODULE_IDENTIFIER.clone(),
-        name: received_event_name().to_owned(),
-        type_params: vec![],
-    }
 }
