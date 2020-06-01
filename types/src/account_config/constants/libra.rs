@@ -15,10 +15,6 @@ static COIN_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").un
 pub static COIN_MODULE: Lazy<ModuleId> =
     Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, COIN_MODULE_NAME.clone()));
 
-pub fn coin_module_name() -> &'static IdentStr {
-    &*COIN_MODULE_NAME
-}
-
 pub fn coin_struct_name() -> &'static IdentStr {
     &*COIN_STRUCT_NAME
 }
