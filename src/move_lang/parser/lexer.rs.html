@@ -483,6 +483,15 @@
 <span id="483">483</span>
 <span id="484">484</span>
 <span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -791,18 +800,27 @@
             }
         }
         <span class="string">&#39;A&#39;</span>..<span class="op">=</span><span class="string">&#39;Z&#39;</span> <span class="op">|</span> <span class="string">&#39;a&#39;</span>..<span class="op">=</span><span class="string">&#39;z&#39;</span> <span class="op">|</span> <span class="string">&#39;_&#39;</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">if</span> <span class="ident">text</span>.<span class="ident">starts_with</span>(<span class="string">&quot;x\&quot;&quot;</span>) {
-                <span class="comment">// Search the current source line for a closing quote.</span>
-                <span class="kw">let</span> <span class="ident">line</span> <span class="op">=</span> <span class="ident">text</span>.<span class="ident">lines</span>().<span class="ident">next</span>().<span class="ident">unwrap</span>();
-                <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">line</span>[<span class="number">2</span>..].<span class="ident">find</span>(<span class="string">&#39;&quot;&#39;</span>).<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">line</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">2</span>);
-                <span class="kw">if</span> <span class="ident">line</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">2</span> <span class="op">|</span><span class="op">|</span> <span class="op">!</span><span class="kw-2">&amp;</span><span class="ident">text</span>[(<span class="number">2</span> <span class="op">+</span> <span class="ident">len</span>)..].<span class="ident">starts_with</span>(<span class="string">&#39;&quot;&#39;</span>) {
-                    <span class="kw">let</span> <span class="ident">loc</span> <span class="op">=</span> <span class="ident">make_loc</span>(<span class="ident">file</span>, <span class="ident">start_offset</span>, <span class="ident">start_offset</span> <span class="op">+</span> <span class="number">2</span> <span class="op">+</span> <span class="ident">len</span>);
-                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">vec</span><span class="macro">!</span>[(
-                        <span class="ident">loc</span>,
-                        <span class="string">&quot;Missing closing quote (\&quot;) after byte string&quot;</span>.<span class="ident">to_string</span>(),
-                    )]);
+            <span class="kw">if</span> <span class="ident">text</span>.<span class="ident">starts_with</span>(<span class="string">&quot;x\&quot;&quot;</span>) <span class="op">|</span><span class="op">|</span> <span class="ident">text</span>.<span class="ident">starts_with</span>(<span class="string">&quot;b\&quot;&quot;</span>) {
+                <span class="kw">let</span> <span class="ident">line</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">text</span>.<span class="ident">lines</span>().<span class="ident">next</span>().<span class="ident">unwrap</span>()[<span class="number">2</span>..];
+
+                <span class="kw">let</span> <span class="ident">last_quote</span> <span class="op">=</span> <span class="ident">line</span>
+                    .<span class="ident">chars</span>()
+                    .<span class="ident">enumerate</span>()
+                    .<span class="ident">filter</span>(<span class="op">|</span>(<span class="ident">idx</span>, <span class="ident">c</span>)<span class="op">|</span> {
+                        <span class="kw-2">*</span><span class="ident">c</span> <span class="op">=</span><span class="op">=</span> <span class="string">&#39;&quot;&#39;</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> (<span class="kw-2">*</span><span class="ident">idx</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> <span class="op">|</span><span class="op">|</span> <span class="op">!</span><span class="ident">line</span>[<span class="ident">idx</span> <span class="op">-</span> <span class="number">1</span>..].<span class="ident">starts_with</span>(<span class="string">&#39;\\&#39;</span>))
+                    })
+                    .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">idx</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">idx</span>)
+                    .<span class="ident">next</span>();
+
+                <span class="kw">match</span> <span class="ident">last_quote</span> {
+                    <span class="prelude-val">Some</span>(<span class="ident">last_quote</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">Tok</span>::<span class="ident">ByteStringValue</span>, <span class="number">2</span> <span class="op">+</span> <span class="ident">last_quote</span> <span class="op">+</span> <span class="number">1</span>),
+                    <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">vec</span><span class="macro">!</span>[(
+                            <span class="ident">make_loc</span>(<span class="ident">file</span>, <span class="ident">start_offset</span>, <span class="ident">start_offset</span> <span class="op">+</span> <span class="ident">line</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="number">2</span>),
+                            <span class="string">&quot;Missing closing quote (\&quot;) after byte string&quot;</span>.<span class="ident">to_string</span>(),
+                        )])
+                    }
                 }
-                (<span class="ident">Tok</span>::<span class="ident">ByteStringValue</span>, <span class="number">2</span> <span class="op">+</span> <span class="ident">len</span> <span class="op">+</span> <span class="number">1</span>)
             } <span class="kw">else</span> {
                 <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">get_name_len</span>(<span class="kw-2">&amp;</span><span class="ident">text</span>);
                 (<span class="ident">get_name_token</span>(<span class="kw-2">&amp;</span><span class="ident">text</span>[..<span class="ident">len</span>]), <span class="ident">len</span>)
