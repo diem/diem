@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use cli::client_proxy::ClientProxy;
-use debug_interface::{libra_trace, node_debug_service::parse_events, NodeDebugClient};
+use debug_interface::{libra_trace, NodeDebugClient};
 use libra_config::config::{NodeConfig, OnDiskStorageConfig, RoleType, SecureBackend, TestConfig};
 use libra_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, PrivateKey, SigningKey, Uniform};
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_KEY};
@@ -427,12 +427,7 @@ fn test_trace() {
     client_proxy
         .transfer_coins(&["t", "0", "1", "1", "LBR"], false)
         .unwrap();
-    let events = parse_events(
-        debug_client
-            .get_events()
-            .expect("Failed to get events")
-            .events,
-    );
+    let events = debug_client.get_events().expect("Failed to get events");
     let txn_node = format!("txn::{}::{}", association_address(), 1);
     println!("Tracing {}", txn_node);
     libra_trace::trace_node(&events[..], &txn_node);

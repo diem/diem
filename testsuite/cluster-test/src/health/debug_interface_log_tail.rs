@@ -9,7 +9,7 @@ use crate::{
     instance::Instance,
     util::unix_timestamp_now,
 };
-use debug_interface::{proto::Event as DebugInterfaceEvent, NodeDebugClient};
+use debug_interface::{json_log::JsonLogEntry as DebugInterfaceEvent, NodeDebugClient};
 use libra_logger::*;
 use serde_json::{self, value as json};
 use std::{
@@ -88,7 +88,7 @@ impl DebugPortLogThread {
                 }
                 Ok(resp) => {
                     let mut sent_events = 0i64;
-                    for event in resp.events.into_iter() {
+                    for event in resp {
                         if let Some(e) = self.parse_event(event) {
                             let _ignore = self.event_sender.send(e);
                             sent_events += 1;
@@ -108,11 +108,8 @@ impl DebugPortLogThread {
     }
 
     fn parse_event(&self, event: DebugInterfaceEvent) -> Option<ValidatorEvent> {
-        let json: json::Value =
-            serde_json::from_str(&event.json).expect("Failed to parse json from debug interface");
-
         let e = if event.name == "committed" {
-            Self::parse_commit(json)
+            Self::parse_commit(&event.json)
         } else {
             if self.trace_enabled.load(Ordering::Relaxed) {
                 let peer = self.instance.peer_name().clone();
@@ -128,7 +125,7 @@ impl DebugPortLogThread {
         })
     }
 
-    fn parse_commit(json: json::Value) -> Event {
+    fn parse_commit(json: &json::Value) -> Event {
         Event::Commit(Commit {
             commit: json
                 .get("block_id")

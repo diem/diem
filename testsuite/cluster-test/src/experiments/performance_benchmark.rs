@@ -13,7 +13,6 @@ use crate::{
 };
 use anyhow::Result;
 use async_trait::async_trait;
-use debug_interface::node_debug_service::parse_event;
 use futures::{future::try_join_all, join};
 use libra_logger::info;
 use serde_json::Value;
@@ -134,8 +133,7 @@ impl Experiment for PerformanceBenchmark {
         if let Some(trace) = trace {
             info!("Traced {} events", trace.len());
             let mut events = vec![];
-            for (node, event) in trace {
-                let mut event = parse_event(event);
+            for (node, mut event) in trace {
                 // This could be done more elegantly, but for now this will do
                 event
                     .json
