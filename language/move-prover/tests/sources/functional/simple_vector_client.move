@@ -437,7 +437,7 @@ module TestVector {
         x
     }
     spec fun test_borrow_mut {
-        aborts_if len(old(v)) == 0;
+        aborts_if len(v) == 0;
     }
 
 

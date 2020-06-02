@@ -77,7 +77,7 @@ impl ConditionKind {
     /// Returns true of this condition allows the `old(..)` expression.
     pub fn allows_old(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Ensures | AbortsIf | InvariantUpdate | VarUpdate(..))
+        matches!(self, Ensures | InvariantUpdate | VarUpdate(..))
     }
 
     /// Returns true if this condition is allowed on a public function declaration.
