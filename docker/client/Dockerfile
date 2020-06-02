@@ -27,7 +27,7 @@ RUN mkdir -p /opt/libra/bin /opt/libra/etc
 COPY --from=builder /libra/target/release/cli /opt/libra/bin/libra_client
 
 ENTRYPOINT ["/opt/libra/bin/libra_client"]
-CMD ["--url", "http://client.testnet.libra.org"]
+CMD ["--url", "https://client.testnet.libra.org", "--waypoint_url",  "https://developers.libra.org/testnet_waypoint.txt"]
 
 ARG BUILD_DATE
 ARG GIT_REV
