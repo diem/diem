@@ -212,10 +212,6 @@ impl RawNetworkAddress {
         Self(bytes)
     }
 
-    pub fn empty() -> Self {
-        Self(Vec::new())
-    }
-
     pub fn len(&self) -> usize {
         self.0.len()
     }
