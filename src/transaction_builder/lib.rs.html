@@ -486,6 +486,14 @@
 <span id="486">486</span>
 <span id="487">487</span>
 <span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -598,7 +606,7 @@
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {
     <span class="ident">name</span>: <span class="ident">encode_burn_script</span>,
     <span class="ident">type_arg</span>: <span class="ident">type_</span>,
-    <span class="ident">args</span>: [<span class="ident">preburn_address</span>: <span class="ident">Address</span>],
+    <span class="ident">args</span>: [<span class="ident">nonce</span>: <span class="ident">U64</span>, <span class="ident">preburn_address</span>: <span class="ident">Address</span>],
     <span class="ident">script</span>: <span class="ident">Burn</span>,
     <span class="ident">doc</span>: <span class="string">&quot;Permanently destroy the coins stored in the oldest burn request under the `Preburn`\
           resource stored at `preburn_address`. This will only succeed if the sender has a\
@@ -947,7 +955,7 @@
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {
     <span class="ident">name</span>: <span class="ident">encode_tiered_mint</span>,
     <span class="ident">type_arg</span>: <span class="ident">coin_type</span>,
-    <span class="ident">args</span>: [<span class="ident">designated_dealer_address</span>: <span class="ident">Address</span>, <span class="ident">mint_amount</span>: <span class="ident">U64</span>, <span class="ident">tier_index</span>: <span class="ident">U64</span>],
+    <span class="ident">args</span>: [<span class="ident">nonce</span>: <span class="ident">U64</span>, <span class="ident">designated_dealer_address</span>: <span class="ident">Address</span>, <span class="ident">mint_amount</span>: <span class="ident">U64</span>, <span class="ident">tier_index</span>: <span class="ident">U64</span>],
     <span class="ident">script</span>: <span class="ident">TieredMint</span>,
     <span class="ident">doc</span>: <span class="string">&quot;Mints &#39;mint_amount&#39; to &#39;designated_dealer_address&#39; for &#39;tier_index&#39; tier.\
           Max valid tier index is 3 since there are max 4 tiers per DD.
@@ -964,16 +972,24 @@
 
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {
     <span class="ident">name</span>: <span class="ident">encode_freeze_account</span>,
-    <span class="ident">args</span>: [<span class="ident">addr</span>: <span class="ident">Address</span>],
+    <span class="ident">args</span>: [<span class="ident">nonce</span>: <span class="ident">U64</span>, <span class="ident">addr</span>: <span class="ident">Address</span>],
     <span class="ident">script</span>: <span class="ident">FreezeAccount</span>,
     <span class="ident">doc</span>: <span class="string">&quot;Freezes account with address addr.&quot;</span>
 }
 
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {
     <span class="ident">name</span>: <span class="ident">encode_unfreeze_account</span>,
-    <span class="ident">args</span>: [<span class="ident">addr</span>: <span class="ident">Address</span>],
+    <span class="ident">args</span>: [<span class="ident">nonce</span>: <span class="ident">U64</span>, <span class="ident">addr</span>: <span class="ident">Address</span>],
     <span class="ident">script</span>: <span class="ident">UnfreezeAccount</span>,
     <span class="ident">doc</span>: <span class="string">&quot;Unfreezes account with address addr.&quot;</span>
+}
+
+<span class="macro">encode_txn_script</span><span class="macro">!</span> {
+    <span class="ident">name</span>: <span class="ident">encode_rotate_authentication_key_script_with_nonce</span>,
+    <span class="ident">args</span>: [<span class="ident">nonce</span>: <span class="ident">U64</span>, <span class="ident">new_hashed_key</span>: <span class="ident">Bytes</span>],
+    <span class="ident">script</span>: <span class="ident">RotateAuthenticationKeyWithNonce</span>,
+    <span class="ident">doc</span>: <span class="string">&quot;Encode a program that rotates the sender&#39;s authentication key to `new_key`. `new_key`\
+          should be a 256 bit sha3 hash of an ed25519 public key. This script also takes nonce&quot;</span>
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "transaction_builder";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
