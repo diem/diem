@@ -39,8 +39,6 @@ use vm::{
 /// Runtime representation of a Move value.
 #[derive(Debug)]
 enum ValueImpl {
-    Invalid,
-
     U8(u8),
     U64(u64),
     U128(u128),
@@ -64,6 +62,7 @@ enum ValueImpl {
 /// making it possible to be shared by references.
 #[derive(Debug)]
 enum Container {
+    Locals(Vec<Option<ValueImpl>>),
     Resource(Vec<ValueImpl>),
     General(Vec<ValueImpl>),
     U8(Vec<u8>),
@@ -204,6 +203,7 @@ impl Container {
         use Container::*;
 
         match self {
+            Locals(_) => unreachable!(),
             Resource(v) | General(v) => v.len(),
             U8(v) => v.len(),
             U64(v) => v.len(),
@@ -217,6 +217,7 @@ impl Container {
         use Container::*;
 
         match self {
+            Locals(_) => unreachable!(),
             Resource(_) => true,
             General(_) | U8(_) | U64(_) | U128(_) | Address(_) | Bool(_) => false,
         }
@@ -236,8 +237,9 @@ impl ValueImpl {
         use ValueImpl::*;
 
         match self {
-            Invalid | U8(_) | U64(_) | U128(_) | Address(_) | Bool(_) | ContainerRef(_)
-            | IndexedRef(_) => false,
+            U8(_) | U64(_) | U128(_) | Address(_) | Bool(_) | ContainerRef(_) | IndexedRef(_) => {
+                false
+            }
 
             Container(c) => c.borrow().is_resource(),
         }
@@ -365,8 +367,6 @@ impl ValueImpl {
         use ValueImpl::*;
 
         Ok(match self {
-            Invalid => Invalid,
-
             U8(x) => U8(*x),
             U64(x) => U64(*x),
             U128(x) => U128(*x),
@@ -388,6 +388,10 @@ impl Container {
         use Container::*;
 
         Ok(match self {
+            Locals(_) => {
+                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("locals cannot be copied as a container".to_string()))
+            }
             General(v) => General(v.iter().map(|x| x.copy_value()).collect::<VMResult<_>>()?),
             Resource(_) => {
                 return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
@@ -524,6 +528,22 @@ impl IndexedRef {
             | (Resource(v1), General(v2))
             | (General(v1), General(v2)) => v1[self.idx].equals(&v2[other.idx])?,
 
+            (Locals(l), General(other))
+            | (General(other), Locals(l))
+            | (Locals(l), Resource(other))
+            | (Resource(other), Locals(l)) => {
+
+                //
+            }
+
+            (Locals(v1), Locals(v2)) => match (&v1[self.idx], &v2[self.idx]) {
+                (Some(x), Some(y)) => x.equals(y)?,
+                _ => {
+                    return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                        .with_message("cannot compare unassigned/moved local".to_string()))
+                }
+            },
+
             (U8(v1), U8(v2)) => v1[self.idx] == v2[other.idx],
             (U64(v1), U64(v2)) => v1[self.idx] == v2[other.idx],
             (U128(v1), U128(v2)) => v1[self.idx] == v2[other.idx],
@@ -601,6 +621,15 @@ impl IndexedRef {
         use Container::*;
 
         let res = match &*self.container_ref.borrow() {
+            Locals(v) => match v[self.idx].as_ref() {
+                Some(v) => v.copy_value()?,
+                None => {
+                    return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(
+                            "cannot read from reference to unassigned/moved local".to_string(),
+                        ))
+                }
+            },
             Resource(v) | General(v) => v[self.idx].copy_value()?,
             U8(v) => ValueImpl::U8(v[self.idx]),
             U64(v) => ValueImpl::U64(v[self.idx]),
@@ -672,10 +701,7 @@ impl ContainerRef {
 impl IndexedRef {
     fn write_ref(self, x: Value) -> VMResult<()> {
         match &x.0 {
-            ValueImpl::IndexedRef(_)
-            | ValueImpl::ContainerRef(_)
-            | ValueImpl::Invalid
-            | ValueImpl::Container(_) => {
+            ValueImpl::IndexedRef(_) | ValueImpl::ContainerRef(_) | ValueImpl::Container(_) => {
                 return Err(
                     VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
                         "cannot write value {:?} to indexed ref {:?}",
@@ -753,6 +779,12 @@ impl ContainerRef {
         }
 
         let res = match &*r {
+            Container::Locals(_) => {
+                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(
+                        "cannot borrow from a container ref pointing to Locals".to_string(),
+                    ))
+            }
             Container::Resource(v) | Container::General(v) => match &v[idx] {
                 // TODO: check for the impossible combinations.
                 ValueImpl::Container(container) => {
@@ -809,26 +841,30 @@ impl Locals {
         }
 
         match &*r {
-            Container::General(v) => match &v[idx] {
-                ValueImpl::Container(r) => Ok(Value(ValueImpl::ContainerRef(ContainerRef::Local(
-                    Rc::clone(r),
-                )))),
+            Container::Locals(v) => match &v[idx] {
+                Some(ValueImpl::Container(r)) => Ok(Value(ValueImpl::ContainerRef(
+                    ContainerRef::Local(Rc::clone(r)),
+                ))),
 
-                ValueImpl::U8(_)
-                | ValueImpl::U64(_)
-                | ValueImpl::U128(_)
-                | ValueImpl::Bool(_)
-                | ValueImpl::Address(_) => Ok(Value(ValueImpl::IndexedRef(IndexedRef {
+                Some(ValueImpl::U8(_))
+                | Some(ValueImpl::U64(_))
+                | Some(ValueImpl::U128(_))
+                | Some(ValueImpl::Bool(_))
+                | Some(ValueImpl::Address(_)) => Ok(Value(ValueImpl::IndexedRef(IndexedRef {
                     container_ref: ContainerRef::Local(Rc::clone(&self.0)),
                     idx,
                 }))),
 
-                ValueImpl::ContainerRef(_) | ValueImpl::Invalid | ValueImpl::IndexedRef(_) => {
+                Some(ValueImpl::ContainerRef(_)) | Some(ValueImpl::IndexedRef(_)) => {
                     Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message(format!("cannot borrow local {:?}", &v[idx])))
                 }
+
+                None => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("cannot borrow from uninitialized or moved local".to_string())),
             },
             Container::Resource(_)
+            | Container::General(_)
             | Container::U8(_)
             | Container::U64(_)
             | Container::U128(_)
@@ -856,26 +892,31 @@ impl SignerRef {
  **************************************************************************************/
 impl Locals {
     pub fn new(n: usize) -> Self {
-        Self(Rc::new(RefCell::new(Container::General(
-            iter::repeat_with(|| ValueImpl::Invalid).take(n).collect(),
+        Self(Rc::new(RefCell::new(Container::Locals(
+            iter::repeat_with(|| None).take(n).collect(),
         ))))
     }
 
     pub fn check_resources_for_return(&self) -> VMResult<()> {
         match &*self.0.borrow() {
-            Container::General(vals) => {
-                for v in vals {
-                    if v.is_resource() {
-                        return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+            Container::Locals(vals) => {
+                for v_opt in vals {
+                    if let Some(v) = v_opt {
+                        if v.is_resource() {
+                            return Err(VMStatus::new(
+                                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+                            )
                             .with_message(
                                 "resource implicitly destroyed when returnining".to_string(),
                             ));
+                        }
                     }
                 }
                 Ok(())
             }
 
             Container::Resource(_)
+            | Container::General(_)
             | Container::U8(_)
             | Container::U64(_)
             | Container::U128(_)
@@ -887,9 +928,10 @@ impl Locals {
     pub fn copy_loc(&self, idx: usize) -> VMResult<Value> {
         let r = self.0.borrow();
         let v = match &*r {
-            Container::General(v) => v,
+            Container::Locals(v) => v,
 
             Container::Resource(_)
+            | Container::General(_)
             | Container::U8(_)
             | Container::U64(_)
             | Container::U128(_)
@@ -898,11 +940,9 @@ impl Locals {
         };
 
         match v.get(idx) {
-            Some(ValueImpl::Invalid) => {
-                Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message(format!("cannot copy invalid value at index {}", idx)))
-            }
-            Some(v) => Ok(Value(v.copy_value()?)),
+            Some(None) => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                .with_message(format!("cannot copy invalid value at index {}", idx))),
+            Some(Some(v)) => Ok(Value(v.copy_value()?)),
             None => Err(
                 VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(format!(
                     "local index out of bounds: got {}, len: {}",
@@ -913,12 +953,25 @@ impl Locals {
         }
     }
 
-    fn swap_loc(&mut self, idx: usize, x: Value) -> VMResult<Value> {
+    fn check_value_safe_to_move_or_destroy(v: &ValueImpl) -> VMResult<()> {
+        if let ValueImpl::Container(r) = &v {
+            if Rc::strong_count(r) > 1 {
+                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(
+                        "moving/destroying container with dangling references".to_string(),
+                    ));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn move_loc(&mut self, idx: usize) -> VMResult<Value> {
         let mut r = self.0.borrow_mut();
         let v = match &mut *r {
-            Container::General(v) => v,
+            Container::Locals(v) => v,
 
             Container::Resource(_)
+            | Container::General(_)
             | Container::U8(_)
             | Container::U64(_)
             | Container::U128(_)
@@ -927,17 +980,14 @@ impl Locals {
         };
 
         match v.get_mut(idx) {
-            Some(v) => {
-                if let ValueImpl::Container(r) = v {
-                    if Rc::strong_count(r) > 1 {
-                        return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                            .with_message(
-                                "moving container with dangling references".to_string(),
-                            ));
-                    }
+            Some(v_opt) => match v_opt.take() {
+                Some(v) => {
+                    Self::check_value_safe_to_move_or_destroy(&v)?;
+                    Ok(Value(v))
                 }
-                Ok(Value(std::mem::replace(v, x.0)))
-            }
+                None => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("cannot move loc: uninitialized or already moved".to_string())),
+            },
             None => Err(
                 VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(format!(
                     "local index out of bounds: got {}, len: {}",
@@ -948,21 +998,44 @@ impl Locals {
         }
     }
 
-    pub fn move_loc(&mut self, idx: usize) -> VMResult<Value> {
-        match self.swap_loc(idx, Value(ValueImpl::Invalid))? {
-            Value(ValueImpl::Invalid) => {
-                Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message(format!("cannot move invalid value at index {}", idx)))
-            }
-            v => Ok(v),
-        }
-    }
-
     pub fn store_loc(&mut self, idx: usize, x: Value) -> VMResult<()> {
-        if self.swap_loc(idx, x)?.0.is_resource() {
-            return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                .with_message("resource implicitly destroyed via store_loc".to_string()));
+        let mut r = self.0.borrow_mut();
+        let v = match &mut *r {
+            Container::Locals(v) => v,
+
+            Container::Resource(_)
+            | Container::General(_)
+            | Container::U8(_)
+            | Container::U64(_)
+            | Container::U128(_)
+            | Container::Address(_)
+            | Container::Bool(_) => unreachable!(),
+        };
+
+        match v.get_mut(idx) {
+            Some(v_opt) => {
+                if let Some(v) = v_opt {
+                    if v.is_resource() {
+                        return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message(
+                                "cannot store loc: resource implicitly destroyed".to_string(),
+                            ));
+                    }
+                    Self::check_value_safe_to_move_or_destroy(v)?;
+                }
+                *v_opt = Some(x.0);
+            }
+            None => {
+                return Err(
+                    VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(format!(
+                        "local index out of bounds: got {}, len: {}",
+                        idx,
+                        v.len()
+                    )),
+                )
+            }
         }
+
         Ok(())
     }
 }
@@ -1130,6 +1203,10 @@ impl VMValueCast<Vec<Value>> for Value {
     fn cast(self) -> VMResult<Vec<Value>> {
         match self.0 {
             ValueImpl::Container(r) => Ok(match take_unique_ownership(r)? {
+                Container::Locals(_) => {
+                    return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                        .with_message(format!("cannot cast locals to vector of values")))
+                }
                 Container::Resource(vs) | Container::General(vs) => {
                     vs.into_iter().map(Value).collect()
                 }
@@ -1625,6 +1702,7 @@ impl VectorRef {
         check_elem_layout(context, type_param, &*v)?;
 
         let len = match &*v {
+            Container::Locals(_) => unreachable!(),
             Container::U8(v) => v.len(),
             Container::U64(v) => v.len(),
             Container::U128(v) => v.len(),
@@ -1645,6 +1723,7 @@ impl VectorRef {
         check_elem_layout(context, type_param, &*v)?;
 
         match &mut *v {
+            Container::Locals(_) => unreachable!(),
             Container::U8(v) => v.push(e.value_as()?),
             Container::U64(v) => v.push(e.value_as()?),
             Container::U128(v) => v.push(e.value_as()?),
@@ -1696,6 +1775,7 @@ impl VectorRef {
         }
 
         let res = match &mut *v {
+            Container::Locals(_) => unreachable!(),
             Container::U8(v) => match v.pop() {
                 Some(x) => Value::u8(x),
                 None => err_pop_empty_vec!(),
@@ -1751,6 +1831,7 @@ impl VectorRef {
         }
 
         match &mut *v {
+            Container::Locals(_) => unreachable!(),
             Container::U8(v) => swap!(v),
             Container::U64(v) => swap!(v),
             Container::U128(v) => swap!(v),
@@ -1837,6 +1918,7 @@ impl Vector {
 impl Container {
     fn size(&self) -> AbstractMemorySize<GasCarrier> {
         match self {
+            Self::Locals(_) => unreachable!(),
             Self::Resource(v) | Self::General(v) => v
                 .iter()
                 .fold(STRUCT_SIZE, |acc, v| acc.map2(v.size(), Add::add)),
@@ -1868,7 +1950,7 @@ impl ValueImpl {
         use ValueImpl::*;
 
         match self {
-            Invalid | U8(_) | U64(_) | U128(_) | Bool(_) => CONST_SIZE,
+            U8(_) | U64(_) | U128(_) | Bool(_) => CONST_SIZE,
             Address(_) => AbstractMemorySize::new(AccountAddress::LENGTH as u64),
             ContainerRef(r) => r.size(),
             IndexedRef(r) => r.size(),
@@ -1932,7 +2014,8 @@ impl Struct {
     pub fn unpack(self) -> VMResult<impl Iterator<Item = Value>> {
         match self.0 {
             Container::Resource(v) | Container::General(v) => Ok(v.into_iter().map(Value)),
-            Container::U8(_)
+            Container::Locals(_)
+            | Container::U8(_)
             | Container::U64(_)
             | Container::U128(_)
             | Container::Bool(_)
@@ -2011,8 +2094,6 @@ impl GlobalValue {
 impl Display for ValueImpl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Invalid => write!(f, "Invalid"),
-
             Self::U8(x) => write!(f, "U8({})", x),
             Self::U64(x) => write!(f, "U64({})", x),
             Self::U128(x) => write!(f, "U128({})", x),
@@ -2068,6 +2149,7 @@ impl Display for IndexedRef {
 impl Display for Container {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::Locals(_) => unreachable!(),
             Self::Resource(v) | Self::General(v) => display_list_of_items(v, f),
             Self::U8(v) => display_list_of_items(v, f),
             Self::U64(v) => display_list_of_items(v, f),
@@ -2088,17 +2170,25 @@ impl Display for Locals {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // TODO: this could panic.
         match &*self.0.borrow() {
-            Container::General(v) => write!(
+            Container::Locals(v) => write!(
                 f,
                 "{}",
                 v.iter()
                     .enumerate()
-                    .map(|(idx, val)| format!("[{}] {}", idx, val))
+                    .map(|(idx, val_opt)| format!(
+                        "[{}] {}",
+                        idx,
+                        match val_opt {
+                            None => "(none)".to_string(),
+                            Some(v) => format!("{}", v),
+                        }
+                    ))
                     .collect::<Vec<_>>()
                     .join("\n")
             ),
 
             Container::Resource(_)
+            | Container::General(_)
             | Container::U8(_)
             | Container::U64(_)
             | Container::U128(_)
@@ -2146,8 +2236,6 @@ pub mod debug {
                 debug_write!(buf, "(&) ")?;
                 print_indexed_ref(buf, val_ty, r)
             }
-
-            (_, ValueImpl::Invalid) => debug_write!(buf, "(invalid)"),
 
             _ => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot print value {:?} as type {:?}", val, ty))),
@@ -2305,15 +2393,22 @@ pub mod debug {
 
     pub fn print_locals<B: Write>(buf: &mut B, tys: &[FatType], locals: &Locals) -> VMResult<()> {
         match &*locals.0.borrow() {
-            Container::General(v) => {
+            Container::Locals(v) => {
                 // TODO: The number of spaces in the indent is currently hard coded.
                 // Plan is to switch to the pretty crate for pretty printing.
                 if tys.is_empty() {
                     debug_writeln!(buf, "            (none) ")?;
                 } else {
-                    for (idx, (ty, val)) in tys.iter().zip(v.iter()).enumerate() {
+                    for (idx, (ty, val_opt)) in tys.iter().zip(v.iter()).enumerate() {
                         debug_write!(buf, "            [{}] ", idx)?;
-                        print_value_impl(buf, ty, val)?;
+                        match val_opt {
+                            Some(val) => {
+                                print_value_impl(buf, ty, val)?;
+                            }
+                            None => {
+                                debug_write!(buf, "(none)")?;
+                            }
+                        }
                         debug_writeln!(buf)?;
                     }
                 }
@@ -2321,6 +2416,7 @@ pub mod debug {
             }
 
             Container::Resource(_)
+            | Container::General(_)
             | Container::U8(_)
             | Container::U64(_)
             | Container::U128(_)
@@ -2457,7 +2553,8 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, FatStructType, Containe
         let values = match &self.val {
             Container::Resource(v) | Container::General(v) => v,
 
-            Container::U8(_)
+            Container::Locals(_)
+            | Container::U8(_)
             | Container::U64(_)
             | Container::U128(_)
             | Container::Bool(_)
@@ -2733,6 +2830,9 @@ pub mod prop {
 
                 (FatType::Vector(inner_ty), ValueImpl::Container(r)) => {
                     MoveValue::Vector(match &*r.borrow() {
+                        Container::Locals(_) => {
+                            panic!("Unexpected container when converting vector: ty")
+                        }
                         Container::U8(v) => v.iter().map(|u| MoveValue::U8(*u)).collect(),
                         Container::U64(v) => v.iter().map(|u| MoveValue::U64(*u)).collect(),
                         Container::U128(v) => v.iter().map(|u| MoveValue::U128(*u)).collect(),
