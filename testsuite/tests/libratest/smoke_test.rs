@@ -3,7 +3,9 @@
 
 use cli::client_proxy::ClientProxy;
 use debug_interface::{libra_trace, NodeDebugClient};
-use libra_config::config::{NodeConfig, OnDiskStorageConfig, RoleType, SecureBackend, TestConfig};
+use libra_config::config::{
+    KeyManagerConfig, NodeConfig, OnDiskStorageConfig, RoleType, SecureBackend, TestConfig,
+};
 use libra_crypto::{
     ed25519::Ed25519PrivateKey, hash::CryptoHash, traits::ValidCryptoMaterialStringExt, PrivateKey,
     SigningKey, Uniform,
@@ -1257,23 +1259,31 @@ fn test_key_manager_consensus_rotation() {
     let mut swarm = TestEnvironment::new(2);
     swarm.launch_swarm(RoleType::Validator);
 
-    // Create a node config for the key manager by modifying the first node config in the swarm.
+    // Create a node config for the key manager by extracting the first node config in the swarm.
     // TODO(joshlind): see if we can refactor TestEnvironment to clean this up.
-    let config_path = swarm.validator_swarm.config.config_files.get(0).unwrap();
-    let mut config = NodeConfig::load(&config_path).unwrap();
-    let backend = config.consensus.safety_rules.backend.clone();
-    let json_rpc_endpoint = format!("http://127.0.0.1:{}", config.rpc.address.port());
-    config.secure.key_manager.secure_backend = backend.clone();
-    config.secure.key_manager.json_rpc_endpoint = json_rpc_endpoint.clone();
-    config.secure.key_manager.rotation_period_secs = 10;
-    config.secure.key_manager.sleep_period_secs = 10;
-    config.save(config_path).unwrap();
+    let node_config_path = swarm.validator_swarm.config.config_files.get(0).unwrap();
+    let node_config = NodeConfig::load(&node_config_path).unwrap();
+    let json_rpc_endpoint = format!("http://127.0.0.1:{}", node_config.rpc.address.port());
+
+    let mut key_manager_config = KeyManagerConfig::default();
+    key_manager_config.json_rpc_endpoint = json_rpc_endpoint.clone();
+    key_manager_config.rotation_period_secs = 10;
+    key_manager_config.sleep_period_secs = 10;
+    key_manager_config.validator_account = node_config.validator_network.clone().unwrap().peer_id;
+    let mut on_disk_storage_config = OnDiskStorageConfig::default();
+    on_disk_storage_config.path =
+        node_config_path.with_file_name(on_disk_storage_config.path.clone());
+    key_manager_config.secure_backend = SecureBackend::OnDiskStorage(on_disk_storage_config);
+
+    // Save the key manager config to disk
+    let key_manager_config_path = node_config_path.with_file_name("key_manager.config.toml");
+    key_manager_config.save(&key_manager_config_path).unwrap();
 
     // Bootstrap secure storage by initializing the keys required by the key manager.
     // TODO(joshlind): set these keys using config manager when initialization is supported.
-    let mut storage: Box<dyn Storage> = (&backend).try_into().unwrap();
+    let mut storage: Box<dyn Storage> = (&key_manager_config.secure_backend).try_into().unwrap();
     storage.create_key("consensus_previous").unwrap();
-    let operator_private = config
+    let operator_private = node_config
         .test
         .unwrap()
         .operator_keypair
@@ -1286,7 +1296,7 @@ fn test_key_manager_consensus_rotation() {
 
     // Create a json-rpc connection to the blockchain and verify storage matches the on-chain state.
     let libra_interface = JsonRpcLibraInterface::new(json_rpc_endpoint);
-    let account = config.validator_network.clone().unwrap().peer_id;
+    let account = node_config.validator_network.clone().unwrap().peer_id;
     let current_consensus = storage.get_public_key(CONSENSUS_KEY).unwrap().public_key;
     let validator_info = libra_interface.retrieve_validator_info(account).unwrap();
     assert_eq!(&current_consensus, validator_info.consensus_public_key());
@@ -1296,7 +1306,7 @@ fn test_key_manager_consensus_rotation() {
     let mut command = Command::new(workspace_builder::get_bin(KEY_MANAGER_BIN));
     command
         .current_dir(workspace_builder::workspace_root())
-        .arg(config_path)
+        .arg(key_manager_config_path)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
