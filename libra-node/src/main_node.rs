@@ -132,71 +132,42 @@ pub fn setup_network(
     );
     network_builder.add_connection_monitoring();
 
-    // TODO(philiphayes): it might make more sense to refactor this so we have a
-    // config per "archetype"?
+    // Sanity check seed peer addresses.
+    config
+        .seed_peers
+        .verify_libranet_addrs()
+        .expect("Seed peer addresses must be well-formed");
 
-    if config.enable_remote_authentication {
-        // If the node wants to run in permissioned mode, it should also have authentication and
-        // encryption.
-        assert!(
-            config.enable_noise,
-            "Permissioned network end-points must use authentication"
-        );
-        // Sanity check seed peer addresses.
-        config
-            .seed_peers
-            .verify_libranet_addrs()
-            .expect("Seed peer addresses must be well-formed");
+    let network_peers = config.network_peers.peers.clone();
+    let seed_peers = config.seed_peers.seed_peers.clone();
 
-        let network_peers = config.network_peers.peers.clone();
-        let seed_peers = config.seed_peers.seed_peers.clone();
+    let identity_key = config
+        .identity_keypair
+        .as_mut()
+        .expect("identity keypair should be present")
+        .take_private()
+        .expect("identity key should be present");
 
-        let identity_key = config
-            .identity_keypair
-            .as_mut()
-            .expect("identity keypair should be present")
-            .take_private()
-            .expect("identity key should be present");
-
-        let trusted_peers = if role == RoleType::Validator {
-            // for validators, trusted_peers is empty will be populated from consensus
-            HashMap::new()
-        } else {
-            network_peers
-        };
-
-        info!(
-            "network setup: role: {}, seed_peers: {:?}, trusted_peers: {:?}",
-            role, seed_peers, trusted_peers,
-        );
-
-        network_builder
-            .advertised_address(config.advertised_address.clone())
-            .authentication_mode(AuthenticationMode::Mutual(identity_key))
-            .trusted_peers(trusted_peers)
-            .seed_peers(seed_peers)
-            .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
-            // TODO:  Why is the connectivity manager related to remote_authentication?
-            .add_connectivity_manager();
-    } else if config.enable_noise {
-        let identity_key = config
-            .identity_keypair
-            .as_mut()
-            .expect("identity keypairs should be present")
-            .take_private()
-            .expect("identity key should be present");
-
-        // Even if a network end-point operates without remote authentication, it might want to prove
-        // its identity to another peer it connects to. For this, we use TCP + Noise but without
-        // enforcing a trusted peers set.
-        network_builder
-            .authentication_mode(AuthenticationMode::ServerOnly(identity_key))
-            .advertised_address(config.advertised_address.clone());
+    let trusted_peers = if role == RoleType::Validator {
+        // for validators, trusted_peers is empty will be populated from consensus
+        HashMap::new()
     } else {
-        // TODO(philiphayes): probably remove this branch since there are no
-        // current no noise or no client auth use cases.
-        network_builder.authentication_mode(AuthenticationMode::Unauthenticated);
-    }
+        network_peers
+    };
+
+    info!(
+        "network setup: role: {}, seed_peers: {:?}, trusted_peers: {:?}",
+        role, seed_peers, trusted_peers,
+    );
+
+    network_builder
+        .advertised_address(config.advertised_address.clone())
+        .authentication_mode(AuthenticationMode::Mutual(identity_key))
+        .trusted_peers(trusted_peers)
+        .seed_peers(seed_peers)
+        .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
+        // TODO:  Why is the connectivity manager related to remote_authentication?
+        .add_connectivity_manager();
 
     match config.discovery_method {
         DiscoveryMethod::Gossip => {

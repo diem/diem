@@ -82,9 +82,6 @@ struct FullNodeArgs {
     /// The output directory. Note if a NodeConfig exists already here, 'create' will fail while
     /// 'extend' will update the NodeConfig to include a new FullNode network configuration.
     output_dir: PathBuf,
-    #[structopt(short = "p", long)]
-    /// Public network, doesn't use any authentication or encryption
-    public: bool,
     #[structopt(short = "t", long, parse(from_os_str))]
     /// Path to a template NodeConfig.
     template: Option<PathBuf>,
@@ -247,10 +244,6 @@ fn build_full_node_config_builder(args: &FullNodeArgs) -> FullNodeConfig {
 
     if let Some(fn_seed) = args.full_node_seed.as_ref() {
         config_builder.full_node_seed(parse_seed(fn_seed));
-    }
-
-    if args.public {
-        config_builder.public();
     }
 
     if let Some(seed) = args.seed.as_ref() {

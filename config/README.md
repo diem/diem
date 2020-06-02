@@ -102,7 +102,7 @@ networks.
         -n $TOTAL_NUMBER_OF_VALIDATORS \
         -o /opt/libra/etc \
         -s $VALIDATOR_SHARED_SECRET \
-        [ -i $I -f $TOTAL_NUMBER_OF_FULL_NODES -c $FULL_NODE_SHARED_SECRET | -p ]
+        [ -i $I -f $TOTAL_NUMBER_OF_FULL_NODES -c $FULL_NODE_SHARED_SECRET ]
 
 Here an example of extending the Validator configuration above with a FullNode
 configuration.
@@ -143,8 +143,7 @@ Similarly a public network could be added via:
         -l "/ip4/0.0.0.0/tcp/7100" \
         -n 4 \
         -o /opt/libra/etc \
-        -s 0123456789abcdef101112131415161718191a1b1c1d1e1f2021222324252627 \
-        -p
+        -s 0123456789abcdef101112131415161718191a1b1c1d1e1f2021222324252627
 
 ## Internals
 
