@@ -9,7 +9,7 @@
 #![forbid(unsafe_code)]
 
 use crate::{
-    account::{Account, AccountData},
+    account::{self, Account, AccountData},
     common_transactions::rotate_key_txn,
     executor::FakeExecutor,
     keygen::KeyGen,
@@ -147,16 +147,25 @@ fn create_parent_and_child_vasp() {
         1,
     ));
 
-    // create a child VASP
+    // create a child VASP with a zero balance
     executor.execute_and_apply(parent.signed_script_txn(
         encode_create_child_vasp_account(
             account_config::lbr_type_tag(),
             *child.address(),
             child.auth_key_prefix(),
             add_all_currencies,
+            0,
         ),
         0,
     ));
+    // check for zero balance
+    assert_eq!(
+        executor
+            .read_balance_resource(&child, account::lbr_currency_code())
+            .unwrap()
+            .coin(),
+        0
+    );
 
     let (_, new_compliance_public_key) = keygen.generate_keypair();
     // rotate parent's compliance public key
@@ -168,6 +177,73 @@ fn create_parent_and_child_vasp() {
     // rotate parent's base URL
     executor.execute_and_apply(
         parent.signed_script_txn(encode_rotate_base_url_script(b"new_name".to_vec()), 2),
+    );
+}
+
+#[test]
+fn create_child_vasp_with_balance() {
+    let mut executor = FakeExecutor::from_genesis_file();
+    let association = Account::new_association();
+    let parent = Account::new();
+    let child = Account::new();
+
+    let mut keygen = KeyGen::from_seed([9u8; 32]);
+    let (_vasp_compliance_private_key, vasp_compliance_public_key) = keygen.generate_keypair();
+
+    // create a parent VASP
+    let add_all_currencies = true;
+    executor.execute_and_apply(association.signed_script_txn(
+        encode_create_parent_vasp_account(
+            account_config::coin1_tag(),
+            *parent.address(),
+            parent.auth_key_prefix(),
+            vec![],
+            vec![],
+            vasp_compliance_public_key.to_bytes().to_vec(),
+            add_all_currencies,
+        ),
+        1,
+    ));
+
+    let amount = 100;
+    // mint to the parent VASP
+    executor.execute_and_apply(association.signed_script_txn(
+        encode_mint_script(
+            account_config::coin1_tag(),
+            parent.address(),
+            vec![],
+            amount,
+        ),
+        2,
+    ));
+
+    assert_eq!(
+        executor
+            .read_balance_resource(&parent, account::coin1_currency_code())
+            .unwrap()
+            .coin(),
+        amount
+    );
+
+    // create a child VASP with a balance of amount
+    executor.execute_and_apply(parent.signed_script_txn(
+        encode_create_child_vasp_account(
+            account_config::coin1_tag(),
+            *child.address(),
+            child.auth_key_prefix(),
+            add_all_currencies,
+            amount,
+        ),
+        0,
+    ));
+
+    // check balance
+    assert_eq!(
+        executor
+            .read_balance_resource(&child, account::coin1_currency_code())
+            .unwrap()
+            .coin(),
+        amount
     );
 }
 
