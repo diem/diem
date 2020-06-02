@@ -7,19 +7,19 @@ use std::collections::HashSet;
 
 /// In general, a network ID is a PeerId that this node uses to uniquely identify a network it belongs to.
 /// This is equivalent to the `peer_id` field in the NetworkConfig of this NodeConfig
-pub type NetworkId = PeerId;
+pub type UpstreamNetworkId = PeerId;
 
 #[derive(Clone, Default, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct UpstreamConfig {
     // primary upstream network ids. All peers in such network are used as upstream for this node
-    pub primary_networks: Vec<NetworkId>,
+    pub primary_networks: Vec<UpstreamNetworkId>,
     // All upstream peers of this node, across all the networks that are statically defined in this node's config
     // this is mostly meaningful in VFN networks, where there is a strict hierarchy in a network
     pub upstream_peers: HashSet<PeerNetworkId>,
     // optional fallback network id. Used to as a failover if preferred upstream peers are not available
     // TODO replace PeerId with `NetworkConfig` to contain actual info needed to build fallback_network
-    pub fallback_networks: Vec<NetworkId>,
+    pub fallback_networks: Vec<UpstreamNetworkId>,
 }
 
 impl UpstreamConfig {
@@ -35,10 +35,10 @@ impl UpstreamConfig {
 
 #[derive(Copy, Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 /// Identifier of a node, represented as (network_id, peer_id)
-pub struct PeerNetworkId(pub NetworkId, pub PeerId);
+pub struct PeerNetworkId(pub UpstreamNetworkId, pub PeerId);
 
 impl PeerNetworkId {
-    pub fn network_id(&self) -> NetworkId {
+    pub fn network_id(&self) -> UpstreamNetworkId {
         self.0
     }
 
@@ -47,6 +47,6 @@ impl PeerNetworkId {
     }
 
     pub fn random() -> Self {
-        Self(NetworkId::random(), PeerId::random())
+        Self(UpstreamNetworkId::random(), PeerId::random())
     }
 }
