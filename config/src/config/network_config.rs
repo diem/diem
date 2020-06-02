@@ -10,7 +10,10 @@ use anyhow::{anyhow, ensure, Result};
 use libra_crypto::{x25519, Uniform};
 use libra_network_address::NetworkAddress;
 use libra_types::{transaction::authenticator::AuthenticationKey, PeerId};
-use rand::rngs::StdRng;
+use rand::{
+    rngs::{OsRng, StdRng},
+    Rng, SeedableRng,
+};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, convert::TryFrom, path::PathBuf, string::ToString};
 
@@ -36,11 +39,8 @@ pub struct NetworkConfig {
     pub advertised_address: NetworkAddress,
     pub discovery_interval_ms: u64,
     pub connectivity_check_interval_ms: u64,
-    // Flag to toggle if Noise is used for encryption and authentication.
-    pub enable_noise: bool,
     // If the network uses remote authentication, only trusted peers are allowed to connect.
-    // Otherwise, any node can connect. If this flag is set to true, `enable_noise` must
-    // also be set to true.
+    // Otherwise, any node can connect.
     pub enable_remote_authentication: bool,
     // Enable this network to use either gossip discovery or onchain discovery.
     pub discovery_method: DiscoveryMethod,
@@ -58,13 +58,12 @@ pub struct NetworkConfig {
 
 impl Default for NetworkConfig {
     fn default() -> Self {
-        Self {
+        let mut config = Self {
             peer_id: PeerId::default(),
             listen_address: "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
             advertised_address: "/ip4/127.0.0.1/tcp/6180".parse().unwrap(),
             discovery_interval_ms: 1000,
             connectivity_check_interval_ms: 5000,
-            enable_noise: true,
             enable_remote_authentication: true,
             discovery_method: DiscoveryMethod::Gossip,
             identity_key: IdentityKey::None,
@@ -72,7 +71,9 @@ impl Default for NetworkConfig {
             network_peers: NetworkPeersConfig::default(),
             seed_peers_file: PathBuf::new(),
             seed_peers: SeedPeersConfig::default(),
-        }
+        };
+        config.prepare_identity().unwrap();
+        config
     }
 }
 
@@ -81,12 +82,11 @@ impl NetworkConfig {
     /// template for another config.
     pub fn clone_for_template(&self) -> Self {
         Self {
-            peer_id: self.peer_id,
+            peer_id: PeerId::default(),
             listen_address: self.listen_address.clone(),
             advertised_address: self.advertised_address.clone(),
             discovery_interval_ms: self.discovery_interval_ms,
             connectivity_check_interval_ms: self.connectivity_check_interval_ms,
-            enable_noise: self.enable_noise,
             enable_remote_authentication: self.enable_remote_authentication,
             discovery_method: self.discovery_method,
             identity_key: IdentityKey::None,
@@ -115,13 +115,6 @@ impl NetworkConfig {
             self.listen_address = utils::get_local_ip().ok_or_else(|| anyhow!("No local IP"))?;
         }
 
-        if self.enable_remote_authentication {
-            ensure!(
-                self.enable_noise,
-                "For a node to enforce remote authentication, noise must be enabled.",
-            );
-        }
-
         if network_role.is_validator() {
             ensure!(
                 self.network_peers_file.as_os_str().is_empty(),
@@ -133,23 +126,34 @@ impl NetworkConfig {
             );
         }
 
-        if let Some(identity_public_key) = self.identity_key.public_key_from_config() {
-            let peer_id = AuthenticationKey::try_from(identity_public_key.as_slice())
-                .unwrap()
-                .derived_address();
+        self.prepare_identity()
+    }
 
-            // If PeerId is not set, derive the PeerId from identity_key.
-            if self.peer_id == PeerId::default() {
-                self.peer_id = peer_id;
-            }
-            // Full nodes with remote authentication must derive PeerId from identity_key.
-            if !network_role.is_validator() && self.enable_remote_authentication {
-                ensure!(
-                    self.peer_id == peer_id,
-                    "For full-nodes that use remote authentication, \
-                    the peer_id must be derived from the identity key.",
-                );
-            }
+    fn prepare_identity(&mut self) -> Result<()> {
+        if let IdentityKey::FromStorage(_) = self.identity_key {
+            return Ok(());
+        }
+
+        if let IdentityKey::None = self.identity_key {
+            let mut rng = StdRng::from_seed(OsRng.gen());
+            let key = x25519::PrivateKey::generate(&mut rng);
+            self.identity_key = IdentityKey::from_config(key);
+        }
+
+        let pubkey = if let IdentityKey::FromConfig(config) = &self.identity_key {
+            Some(config.keypair.public_key())
+        } else {
+            None
+        };
+
+        let pubkey = pubkey.ok_or_else(|| anyhow!("Invalid network identity_key"))?;
+        let peer_id = AuthenticationKey::try_from(pubkey.as_slice())
+            .unwrap()
+            .derived_address();
+
+        // If PeerId is not set, derive the PeerId from identity_key.
+        if self.peer_id == PeerId::default() {
+            self.peer_id = peer_id;
         }
 
         Ok(())
@@ -306,18 +310,20 @@ mod test {
         let (mut config, path) = generate_config();
         assert_eq!(config.network_peers, NetworkPeersConfig::default());
         assert_eq!(config.network_peers_file, PathBuf::new());
-        assert_eq!(config.identity_key, IdentityKey::None);
-        assert_eq!(config.peer_id, PeerId::default());
+        assert_ne!(config.identity_key, IdentityKey::None);
+        assert_ne!(config.peer_id, PeerId::default());
         assert_eq!(config.seed_peers, SeedPeersConfig::default());
         assert_eq!(config.seed_peers_file, PathBuf::new());
+        let identity_key = config.identity_key.clone();
+        let peer_id = config.peer_id;
 
         // Assert default loading doesn't affect paths and defaults remain in place
         let root_dir = RootPath::new_path(path.path());
         config.load(&root_dir, RoleType::FullNode).unwrap();
         assert_eq!(config.network_peers, NetworkPeersConfig::default());
         assert_eq!(config.network_peers_file, PathBuf::new());
-        assert_eq!(config.identity_key, IdentityKey::None);
-        assert_eq!(config.peer_id, PeerId::default());
+        assert_eq!(config.identity_key, identity_key);
+        assert_eq!(config.peer_id, peer_id);
         assert_eq!(config.seed_peers_file, PathBuf::new());
         assert_eq!(config.seed_peers, SeedPeersConfig::default());
 
@@ -330,7 +336,7 @@ mod test {
         );
 
         // Assert paths and values are not set (i.e., no defaults apply)
-        assert_eq!(config.identity_key, IdentityKey::None);
+        assert_eq!(config.identity_key, identity_key);
         assert_eq!(config.network_peers, NetworkPeersConfig::default());
         assert_eq!(config.network_peers_file, PathBuf::new());
     }
