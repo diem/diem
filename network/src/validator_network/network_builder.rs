@@ -128,7 +128,6 @@ pub struct NetworkBuilder {
     connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
     conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
     connectivity_check_interval_ms: u64,
-    inbound_rpc_timeout_ms: u64,
     max_concurrent_outbound_rpcs: u32,
     max_concurrent_inbound_rpcs: u32,
     max_concurrent_network_reqs: usize,
@@ -180,7 +179,6 @@ impl NetworkBuilder {
             ping_timeout_ms: PING_TIMEOUT_MS,
             ping_failures_tolerated: PING_FAILURES_TOLERATED,
             connectivity_check_interval_ms: CONNECTIVITY_CHECK_INTERNAL_MS,
-            inbound_rpc_timeout_ms: INBOUND_RPC_TIMEOUT_MS,
             max_concurrent_outbound_rpcs: MAX_CONCURRENT_OUTBOUND_RPCS,
             max_concurrent_inbound_rpcs: MAX_CONCURRENT_INBOUND_RPCS,
             max_concurrent_network_reqs: MAX_CONCURRENT_NETWORK_REQS,
@@ -228,12 +226,6 @@ impl NetworkBuilder {
         connectivity_check_interval_ms: u64,
     ) -> &mut Self {
         self.connectivity_check_interval_ms = connectivity_check_interval_ms;
-        self
-    }
-
-    /// Set inbound rpc timeout.
-    pub fn inbound_rpc_timeout_ms(&mut self, inbound_rpc_timeout_ms: u64) -> &mut Self {
-        self.inbound_rpc_timeout_ms = inbound_rpc_timeout_ms;
         self
     }
 
