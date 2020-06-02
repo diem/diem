@@ -131,13 +131,6 @@
 <span id="131">131</span>
 <span id="132">132</span>
 <span id="133">133</span>
-<span id="134">134</span>
-<span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -182,7 +175,7 @@
         <span class="ident">private_key</span>: <span class="ident">Ed25519PrivateKey</span>,
         <span class="ident">waypoint</span>: <span class="ident">Waypoint</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="ident">internal_store</span>.<span class="ident">set</span>(<span class="ident">CONSENSUS_KEY</span>, <span class="ident">Value</span>::<span class="ident">Ed25519PrivateKey</span>(<span class="ident">private_key</span>))<span class="question-mark">?</span>;
+        <span class="ident">internal_store</span>.<span class="ident">import_private_key</span>(<span class="ident">CONSENSUS_KEY</span>, <span class="ident">private_key</span>)<span class="question-mark">?</span>;
         <span class="ident">internal_store</span>.<span class="ident">set</span>(<span class="ident">EPOCH</span>, <span class="ident">Value</span>::<span class="ident">U64</span>(<span class="number">1</span>))<span class="question-mark">?</span>;
         <span class="ident">internal_store</span>.<span class="ident">set</span>(<span class="ident">LAST_VOTED_ROUND</span>, <span class="ident">Value</span>::<span class="ident">U64</span>(<span class="number">0</span>))<span class="question-mark">?</span>;
         <span class="ident">internal_store</span>.<span class="ident">set</span>(<span class="ident">PREFERRED_ROUND</span>, <span class="ident">Value</span>::<span class="ident">U64</span>(<span class="number">0</span>))<span class="question-mark">?</span>;
@@ -197,16 +190,9 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">consensus_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ed25519PrivateKey</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="self">self</span>
-            .<span class="ident">internal_store</span>
-            .<span class="ident">get</span>(<span class="ident">CONSENSUS_KEY</span>)
-            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>.<span class="ident">value</span>.<span class="ident">ed25519_private_key</span>())<span class="question-mark">?</span>)
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_consensus_key</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">consensus_key</span>: <span class="ident">Ed25519PrivateKey</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">internal_store</span>
-            .<span class="ident">set</span>(<span class="ident">CONSENSUS_KEY</span>, <span class="ident">Value</span>::<span class="ident">Ed25519PrivateKey</span>(<span class="ident">consensus_key</span>))<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(())
+            .<span class="ident">export_private_key</span>(<span class="ident">CONSENSUS_KEY</span>)
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">into</span>())
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">epoch</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> {
