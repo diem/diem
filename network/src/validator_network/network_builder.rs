@@ -225,12 +225,6 @@ impl NetworkBuilder {
         self
     }
 
-    /// Set the size of the channels between different network actors.
-    pub fn channel_size(&mut self, channel_size: usize) -> &mut Self {
-        self.channel_size = channel_size;
-        self
-    }
-
     pub fn conn_mgr_reqs_tx(&self) -> Option<channel::Sender<ConnectivityRequest>> {
         self.conn_mgr_reqs_tx.clone()
     }
