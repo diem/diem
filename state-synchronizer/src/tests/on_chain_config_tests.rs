@@ -16,14 +16,15 @@ use libra_crypto::{
 };
 use libra_types::{
     account_config::{association_address, lbr_type_tag},
-    on_chain_config::{OnChainConfig, VMConfig, VMPublishingOption},
+    on_chain_config::{
+        OnChainConfig, ReconfigSubscription, SubscriptionBundle, VMConfig, VMPublishingOption,
+    },
     transaction::authenticator::AuthenticationKey,
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use stdlib::transaction_scripts::StdlibScript;
 use storage_interface::DbReaderWriter;
-use subscription_service::ReconfigSubscription;
 use transaction_builder::{
     encode_block_prologue_script, encode_publishing_option_script,
     encode_rotate_consensus_pubkey_script, encode_transfer_with_metadata_script,
@@ -34,8 +35,9 @@ use transaction_builder::{
 fn test_on_chain_config_pub_sub() {
     let mut rt = tokio::runtime::Runtime::new().unwrap();
     // set up reconfig subscription
-    let subscribed_configs = &[VMConfig::CONFIG_ID];
-    let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe(subscribed_configs);
+    let subscribed_configs = vec![VMConfig::CONFIG_ID];
+    let bundle = SubscriptionBundle::new(subscribed_configs, vec![]);
+    let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe(bundle);
 
     let (mut config, genesis_key) = config_builder::test_config();
     let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));

@@ -3,7 +3,7 @@
 
 use admission_control_service::admission_control_service::AdmissionControlService;
 use backup_service::start_backup_service;
-use consensus::consensus_provider::start_consensus;
+use consensus::{consensus_provider::start_consensus, gen_consensus_reconfig_subscription};
 use debug_interface::node_debug_service::NodeDebugService;
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_types::ChunkExecutor;
@@ -14,13 +14,15 @@ use libra_config::{
 };
 use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
-use libra_mempool::MEMPOOL_SUBSCRIBED_CONFIGS;
+use libra_mempool::gen_mempool_reconfig_subscription;
 use libra_metrics::metric_server;
-use libra_types::{on_chain_config::ON_CHAIN_CONFIG_REGISTRY, waypoint::Waypoint, PeerId};
+use libra_types::{waypoint::Waypoint, PeerId};
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use network::validator_network::network_builder::{AuthenticationMode, NetworkBuilder};
-use network_simple_onchain_discovery::ConfigurationChangeListener;
+use network_simple_onchain_discovery::{
+    gen_simple_discovery_reconfig_subscription, ConfigurationChangeListener,
+};
 use onchain_discovery::{client::OnchainDiscovery, service::OnchainDiscoveryService};
 use state_synchronizer::StateSynchronizer;
 use std::{
@@ -33,7 +35,6 @@ use std::{
 };
 use storage_interface::{DbReader, DbReaderWriter};
 use storage_service::start_storage_service_with_db;
-use subscription_service::ReconfigSubscription;
 use tokio::{
     runtime::{Builder, Handle, Runtime},
     time::interval,
@@ -267,11 +268,11 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let mut reconfig_subscriptions = vec![];
 
     let (mempool_reconfig_subscription, mempool_reconfig_events) =
-        ReconfigSubscription::subscribe(MEMPOOL_SUBSCRIBED_CONFIGS);
+        gen_mempool_reconfig_subscription();
     reconfig_subscriptions.push(mempool_reconfig_subscription);
     // consensus has to subscribe to ALL on-chain configs
     let (consensus_reconfig_subscription, consensus_reconfig_events) =
-        ReconfigSubscription::subscribe(ON_CHAIN_CONFIG_REGISTRY);
+        gen_consensus_reconfig_subscription();
     reconfig_subscriptions.push(consensus_reconfig_subscription);
 
     if let Some(network) = node_config.validator_network.as_mut() {
@@ -285,7 +286,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         // Set up to listen for network configuration changes from StateSync.
         if let Some(conn_mgr_reqs_tx) = network_builder.conn_mgr_reqs_tx() {
             let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
-                ReconfigSubscription::subscribe(ON_CHAIN_CONFIG_REGISTRY);
+                gen_simple_discovery_reconfig_subscription();
             reconfig_subscriptions.push(simple_discovery_reconfig_subscription);
             let network_config_listener =
                 ConfigurationChangeListener::new(conn_mgr_reqs_tx, RoleType::Validator);
