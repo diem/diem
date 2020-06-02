@@ -160,27 +160,6 @@ encode_txn_script! {
           already has a published `Preburn` resource."
 }
 
-/// Encode a program creating a fresh account at `account_address` with `initial_balance` coins
-/// transferred from the sender's account balance. Fails if there is already an account at
-/// `account_address` or if the sender's balance is lower than `initial_balance`.
-pub fn encode_create_account_script(
-    token: TypeTag,
-    account_address: &AccountAddress,
-    auth_key_prefix: Vec<u8>,
-    initial_balance: u64,
-) -> Script {
-    validate_auth_key_prefix(&auth_key_prefix);
-    Script::new(
-        StdlibScript::CreateAccount.compiled_bytes().into_vec(),
-        vec![token],
-        vec![
-            TransactionArgument::Address(*account_address),
-            TransactionArgument::U8Vector(auth_key_prefix),
-            TransactionArgument::U64(initial_balance),
-        ],
-    )
-}
-
 encode_txn_script! {
     name: encode_publish_shared_ed25519_public_key_script,
     args: [public_key: Bytes],

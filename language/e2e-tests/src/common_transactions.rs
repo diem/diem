@@ -4,12 +4,42 @@
 //! Support for encoding transactions for common situations.
 
 use crate::{account::Account, gas_costs};
+use compiler::Compiler;
 use libra_types::{
     account_address::AccountAddress,
+    account_config,
     account_config::{lbr_type_tag, LBR_NAME},
     transaction::{RawTransaction, SignedTransaction, TransactionArgument},
 };
+use once_cell::sync::Lazy;
 use stdlib::transaction_scripts::StdlibScript;
+
+pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
+    let code = "
+    import 0x0.Libra;
+    import 0x0.LibraAccount;
+
+    main<Token>(fresh_address: address, auth_key_prefix: vector<u8>, initial_amount: u64) {
+      LibraAccount.create_testnet_account<Token>(copy(fresh_address), move(auth_key_prefix));
+      if (copy(initial_amount) > 0) {
+         LibraAccount.deposit<Token>(
+           move(fresh_address),
+           LibraAccount.withdraw_from_sender<Token>(move(initial_amount))
+         );
+      }
+      return;
+    }
+";
+
+    let compiler = Compiler {
+        address: account_config::CORE_CODE_ADDRESS,
+        extra_deps: vec![],
+        ..Compiler::default()
+    };
+    compiler
+        .into_script_blob("file_name", code)
+        .expect("Failed to compile")
+});
 
 /// Returns a transaction to add a new validator
 pub fn add_validator_txn(
@@ -44,7 +74,7 @@ pub fn create_account_txn(
     args.push(TransactionArgument::U64(initial_amount));
 
     sender.create_signed_txn_with_args(
-        StdlibScript::CreateAccount.compiled_bytes().into_vec(),
+        CREATE_ACCOUNT_SCRIPT.to_vec(),
         vec![lbr_type_tag()],
         args,
         seq_num,
