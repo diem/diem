@@ -127,6 +127,19 @@ impl SafetyRules {
             Ok(())
         }
     }
+
+    /// This checkes whether the author of one proposal is the validator signer
+    fn verify_author(&self, author: Option<Author>) -> Result<(), Error> {
+        let validator_signer_author = &self.validator_signer.author();
+        let author = author
+            .ok_or_else(|| Error::InvalidProposal("No author found in the proposal".into()))?;
+        if (*validator_signer_author) != author {
+            return Err(Error::InvalidProposal(
+                "Proposal author is not validator signer!".into(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 impl TSafetyRules for SafetyRules {
@@ -221,19 +234,16 @@ impl TSafetyRules for SafetyRules {
         ))
     }
 
-    /// @TODO only sign blocks that are later than last_voted_round and match the current epoch
-    /// @TODO verify QC correctness
-    /// @TODO verify QC matches preferred round
-    fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
+    fn sign_proposal(&mut self, block_data: BlockData<T>) -> Result<Block<T>, Error> {
         debug!("Incoming proposal to sign.");
         let proposal_epoch = block_data.epoch();
         let proposal_round = block_data.round();
         let last_voted_round = self.persistent_storage.last_voted_round()?;
 
-        // proposed epoch must match the current epoch
+        self.verify_author(block_data.author())?;
+
         self.verify_epoch(proposal_epoch)?;
 
-        // proposed round must be increasing
         if proposal_round <= last_voted_round {
             debug!(
                 "Block round is older than last_voted_round ({} <= {})",
@@ -245,7 +255,6 @@ impl TSafetyRules for SafetyRules {
             });
         }
 
-        // Done checking the block epochs, now checking and verifying QC correctness
         let qc = block_data.quorum_cert();
         let qc_round = qc.certified_block().round();
         let preferred_round = self.persistent_storage.preferred_round()?;
