@@ -8,7 +8,7 @@ use thiserror::Error;
 /// Defines all errors in this crate.
 #[derive(Clone, Debug, Error)]
 pub enum ErrorKind {
-    #[error("an error occurred when executing the transaction")]
+    #[error("an error occurred when executing the transaction, txn status {:?}", .0.status())]
     VMExecutionFailure(TransactionOutput),
     #[error("the transaction was discarded")]
     DiscardedTransaction(TransactionOutput),
