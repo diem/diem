@@ -10,12 +10,13 @@ use libra_types::{
     contract_event::ContractEvent,
     ledger_info::LedgerInfoWithSignatures,
     move_resource::MoveStorage,
-    on_chain_config::{config_address, OnChainConfigPayload, ON_CHAIN_CONFIG_REGISTRY},
+    on_chain_config::{
+        config_address, OnChainConfigPayload, ReconfigSubscription, ON_CHAIN_CONFIG_REGISTRY,
+    },
     transaction::TransactionListWithProof,
 };
 use std::{collections::HashSet, convert::TryFrom, sync::Arc};
 use storage_interface::DbReader;
-use subscription_service::ReconfigSubscription;
 
 /// Proxies interactions with execution and storage for state synchronization
 pub trait ExecutorProxyTrait: Send {
@@ -194,6 +195,10 @@ impl ExecutorProxyTrait for ExecutorProxy {
         if events.is_empty() {
             return Ok(());
         }
+        let event_keys = events
+            .into_iter()
+            .map(|event| *event.key())
+            .collect::<HashSet<_>>();
 
         // calculate deltas
         let new_configs = Self::fetch_all_configs(&*self.storage)?;
@@ -214,7 +219,11 @@ impl ExecutorProxyTrait for ExecutorProxy {
         // notify subscribers
         for subscription in self.reconfig_subscriptions.iter_mut() {
             // publish updates if *any* of the subscribed configs changed
-            if !changed_configs.is_disjoint(&subscription.subscribed_configs()) {
+            // or any of the subscribed events were emitted
+            let subscribed_items = subscription.subscribed_items();
+            if !changed_configs.is_disjoint(&subscribed_items.configs)
+                || !event_keys.is_disjoint(&subscribed_items.events)
+            {
                 subscription.publish(new_configs.clone())?;
             }
         }

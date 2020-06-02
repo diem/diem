@@ -38,3 +38,4 @@ pub mod network_interface;
 
 #[cfg(feature = "fuzzing")]
 pub use round_manager::round_manager_fuzzing;
+pub use util::config_subscription::gen_consensus_reconfig_subscription;
