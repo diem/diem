@@ -25,7 +25,7 @@ serde = { version = "1.0.111", features = ["derive"] }
 structopt = "0.3.14"
 rusoto_core = "0.43.0"
 rusoto_autoscaling = "0.43.0"
-rusoto_sts =  "0.43.0"
+rusoto_sts =  "0.44.0"
 
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0"}
 libra-json-rpc-client = { path = "../../client/json-rpc", version = "0.1.0"}
