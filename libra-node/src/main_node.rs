@@ -138,12 +138,6 @@ pub fn setup_network(
     // config per "archetype"?
 
     if config.enable_remote_authentication {
-        // If the node wants to run in permissioned mode, it should also have authentication and
-        // encryption.
-        assert!(
-            config.enable_noise,
-            "Permissioned network end-points must use authentication"
-        );
         // Sanity check seed peer addresses.
         config
             .seed_peers
@@ -175,7 +169,7 @@ pub fn setup_network(
             .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
             // TODO:  Why is the connectivity manager related to remote_authentication?
             .add_connectivity_manager();
-    } else if config.enable_noise {
+    } else {
         let identity_key = retrieve_network_identity_key(config);
 
         // Even if a network end-point operates without remote authentication, it might want to prove
@@ -184,10 +178,6 @@ pub fn setup_network(
         network_builder
             .authentication_mode(AuthenticationMode::ServerOnly(identity_key))
             .advertised_address(config.advertised_address.clone());
-    } else {
-        // TODO(philiphayes): probably remove this branch since there are no
-        // current no noise or no client auth use cases.
-        network_builder.authentication_mode(AuthenticationMode::Unauthenticated);
     }
 
     match config.discovery_method {
