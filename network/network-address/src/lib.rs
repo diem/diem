@@ -631,10 +631,6 @@ impl DnsName {
             Ok(())
         }
     }
-
-    pub fn as_str(&self) -> &str {
-        self.0.as_str()
-    }
 }
 
 impl Into<String> for DnsName {
