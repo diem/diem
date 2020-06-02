@@ -383,13 +383,13 @@ encode_txn_script! {
 encode_txn_script! {
     name: encode_create_child_vasp_account,
     type_arg: currency,
-    args: [address: Address, auth_key_prefix: Bytes, add_all_currencies: Bool],
+    args: [address: Address, auth_key_prefix: Bytes, add_all_currencies: Bool, initial_balance: U64],
     script: CreateChildVaspAccount,
     doc: "Create an account with the ChildVASP role at `address` with authentication key\
-          `auth_key_prefix` | `new_account_address` and a 0 balance of type `currency`. If\
-          `add_all_currencies` is true, 0 balances for all available currencies in the system will\
-          also be added to the account. This account will be a child of the transaction sender\
-          which must be a ParentVASP."
+          `auth_key_prefix` | `new_account_address` and `initial_balance` of type `currency`\
+          transferred from the sender. If `add_all_currencies` is true, 0 balances for all\
+          available currencies in the system will also be added to the account. This account will\
+          be a child of the transaction sender, which must be a ParentVASP."
 }
 
 //...........................................................................
