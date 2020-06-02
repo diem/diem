@@ -16,6 +16,10 @@ executors:
     docker:
       - image: circleci/rust:buster
     resource_class: xlarge
+  premainnet-cluster-test-executor:
+    docker:
+      - image: circleci/rust:buster
+    resource_class: xlarge
   audit-executor:
     docker:
       - image: circleci/rust:buster
@@ -553,26 +557,72 @@ jobs:
           name: Deploy to gh-pages branch
           command: |
             gh-pages --dotfiles --message "[skip ci] documentation update" --dist target/doc
-
+  premainnet-cluster-test:
+    executor: premainnet-cluster-test-executor
+    description: Run cluster test against Premainnet
+    steps:
+      - run:
+          name: Set Premainnet Clustetest Environment
+          command: |
+            # git revision in premainnet can be found on this site https://fburl.com/cynwp2sv:
+            echo 'export GIT_REV_PREMIAN=163e20a' >> $BASH_ENV
+            # ip address to connect to can be found here (login required)
+            # https://docs.google.com/spreadsheets/d/1_6FUtGU1zdNcpl8-rRHgTH4dhrxGMdmfPfiC1KQHKaI?usp=sharing
+            echo 'export NODES=a11d2e31854e811eaa1f702474484dd1-21dcb00bef9f6cc0.elb.us-west-2.amazonaws.com:80,\
+            a1981c0ab68b011eab1bb02f729e0dd7-3c9f20567ceb2efd.elb.us-west-2.amazonaws.com:80,\
+            a569b48655cbc40d092379f55e630966-e1f284c7eb8add73.elb.eu-west-1.amazonaws.com:80,\
+            aa4d66f81665240019022d50326c1654-cf61b8e99df12293.elb.eu-west-1.amazonaws.com:80,\
+            a5b46d6b8b23e42538ec0de5f0680350-46d80c995764cdd9.elb.us-west-2.amazonaws.com:80,\
+            a88662827a2d341bbb7beb883d6e32b9-2e166f46672c7f2b.elb.us-east-1.amazonaws.com:80,\
+            libra-fullnode-pre-mainnet.shopifyapps.com:80,\
+            20.50.43.42:80,\
+            34.68.134.0:80,\
+            35.193.177.28:80,\
+            3.230.173.177:32251' >> $BASH_ENV
+            echo 'export CARGO_INCREMENTAL=0' >> $BASH_ENV
+            echo 'export CI_TIMEOUT="timeout 40m"' >> $BASH_ENV
+      - checkout
+      - run:
+          name: Get premain git revision
+          command: git checkout $GIT_REV_PREMIAN
+      - rust_setup
+      - print_versions
+      - env_setup
+      - install_deps
+      - run:
+          name: Build config-builder
+          command: |
+            cargo build -p config-builder
+      - run:
+          name: Build cluster-test
+          command: |
+            cargo build -p cluster-test
+      - run:
+          name: Generate premaintnet config key
+          command: |
+            # premainnet seed found here (login required)
+            # https://github.com/libra/partners/blob/master/terraform/validator/package.sh#L13
+            # premainnet number of nodes found here (login required)
+            # https://github.com/libra/partners/blob/master/helm/libra-validator/values.yaml#L2
+            cargo run -p config-builder -- faucet \
+            --output-dir "/tmp/config" \
+            --validators-in-genesis $PREMAINNET_NUM_VAL \
+            --seed $PREMAINNET_CONFIG_SEED
+      - run:
+          name: Premainnet cluster test
+          command: |
+            cargo run -p cluster-test -- --swarm --emit-tx --mint-file /tmp/config/mint.key --peers $NODES
+      - slack/status:
+          fail_only: true
+          webhook: "${WEBHOOK_PREMAINNET}"
+          failure_message: "<@channel> Cluster test failed on premainnet :ferris-detective:"
 workflows:
   commit-workflow:
     jobs:
-      - build-docker:
-        filters:
-          branches:
-            ignore: gh-pages
-      - validate-cluster-test-dockerfile:
-        filters:
-          branches:
-            ignore: gh-pages
-      - terraform:
-        filters:
-          branches:
-            ignore: gh-pages
-      - prefetch-crates:
-        filters:
-          branches:
-            ignore: gh-pages
+      - build-docker
+      - validate-cluster-test-dockerfile
+      - terraform
+      - prefetch-crates
       - lint:
           requires:
             - prefetch-crates
@@ -617,3 +667,13 @@ workflows:
     jobs:
       - audit
       - code-coverage
+
+  premainnet-clustertest:
+    triggers:
+      - schedule:
+          cron: "0 * * * *"
+          filters:
+            branches:
+              only: master
+    jobs:
+      - premainnet-cluster-test
