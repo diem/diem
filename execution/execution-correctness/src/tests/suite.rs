@@ -11,7 +11,7 @@ use libra_types::{
     transaction::authenticator::AuthenticationKey,
 };
 use rand::SeedableRng;
-use transaction_builder::encode_create_account_script;
+use transaction_builder::encode_mint_script;
 
 pub fn run_test_suite(func: fn() -> Box<dyn BlockExecutor>) {
     let (mut config, genesis_key) = config_builder::test_config();
@@ -39,7 +39,7 @@ pub fn run_test_suite(func: fn() -> Box<dyn BlockExecutor>) {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_create_account_script(
+        Some(encode_mint_script(
             lbr_type_tag(),
             &account1,
             account1_auth_key.prefix().to_vec(),

@@ -27,8 +27,6 @@ pub static ADD_VALIDATOR_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("add_validator
 pub static PEER_TO_PEER_WITH_METADATA_TXN: Lazy<Vec<u8>> =
     Lazy::new(|| script("peer_to_peer_with_metadata"));
 
-pub static CREATE_ACCOUNT_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("create_account"));
-
 pub static REGISTER_VALIDATOR_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("register_validator"));
 
 pub static REMOVE_VALIDATOR_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("remove_validator"));
@@ -52,7 +50,6 @@ mod test {
         let txn_scripts = &[
             &ADD_VALIDATOR_TXN,
             &PEER_TO_PEER_WITH_METADATA_TXN,
-            &CREATE_ACCOUNT_TXN,
             &REGISTER_VALIDATOR_TXN,
             &REMOVE_VALIDATOR_TXN,
             &ROTATE_CONSENSUS_PUBKEY_TXN,
