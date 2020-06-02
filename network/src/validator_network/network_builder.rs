@@ -22,8 +22,7 @@ use crate::{
         health_checker::{self, HealthChecker},
         wire::handshake::v1::SupportedProtocols,
     },
-    transport,
-    transport::*,
+    transport::{self, Connection, LibraNetTransport, LIBRA_TCP_TRANSPORT},
     ProtocolId,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
@@ -37,7 +36,7 @@ use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
-use netcore::transport::Transport;
+use netcore::transport::{memory, Transport};
 use std::{
     clone::Clone,
     collections::HashMap,
@@ -409,41 +408,42 @@ impl NetworkBuilder {
 
         let network_id = self.network_id.clone();
         let protos = self.supported_protocols();
-        let trusted_peers = self.trusted_peers.clone();
 
         let authentication_mode = self
             .authentication_mode
             .take()
             .expect("Authentication Mode not set");
-        let pubkey = authentication_mode.public_key();
 
-        let bound_listen_addr = match self.listen_address.as_slice() {
-            [Ip4(_), Tcp(_)] | [Ip6(_), Tcp(_)] => match authentication_mode {
-                AuthenticationMode::ServerOnly(key) => self.build_with_transport(
-                    build_unauthenticated_tcp_noise_transport(network_id, key, protos),
-                ),
-                AuthenticationMode::Mutual(key) => self.build_with_transport(
-                    build_tcp_noise_transport(network_id, key, trusted_peers, protos),
-                ),
-            },
-            [Memory(_)] => match authentication_mode {
-                AuthenticationMode::ServerOnly(key) => self.build_with_transport(
-                    build_unauthenticated_memory_noise_transport(network_id, key, protos),
-                ),
-                AuthenticationMode::Mutual(key) => self.build_with_transport(
-                    build_memory_noise_transport(network_id, key, trusted_peers, protos),
-                ),
-            },
+        let (key, maybe_trusted_peers) = match authentication_mode {
+            AuthenticationMode::ServerOnly(key) => (key, None),
+            AuthenticationMode::Mutual(key) => (key, Some(self.trusted_peers.clone())),
+        };
+
+        match self.listen_address.as_slice() {
+            [Ip4(_), Tcp(_)] | [Ip6(_), Tcp(_)] => {
+                self.build_with_transport(LibraNetTransport::new(
+                    LIBRA_TCP_TRANSPORT.clone(),
+                    key,
+                    maybe_trusted_peers,
+                    HANDSHAKE_VERSION,
+                    network_id,
+                    protos,
+                ))
+            }
+            [Memory(_)] => self.build_with_transport(LibraNetTransport::new(
+                memory::MemoryTransport,
+                key,
+                maybe_trusted_peers,
+                HANDSHAKE_VERSION,
+                network_id,
+                protos,
+            )),
             _ => panic!(
                 "Unsupported listen_address: '{}', expected '/memory/<port>', \
                  '/ip4/<addr>/tcp/<port>', or '/ip6/<addr>/tcp/<port>'.",
                 self.listen_address
             ),
-        };
-
-        // TODO(philiphayes): monolithic transport should return the complete
-        // address; shouldn't need to format anything here.
-        bound_listen_addr.append_prod_protos(pubkey, HANDSHAKE_VERSION)
+        }
     }
 
     /// Given a transport build and launch PeerManager.

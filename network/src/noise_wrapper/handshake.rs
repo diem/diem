@@ -83,11 +83,12 @@ impl NoiseWrapper {
     /// handshake to establish a noise stream and exchange static public keys. Upon success,
     /// returns the static public key of the remote as well as a NoiseStream.
     // TODO(mimoo, philp9): this code could be inlined in transport.rs once the monolithic network is done
+    #[allow(dead_code)]
     pub async fn upgrade_connection<TSocket>(
         &self,
         socket: TSocket,
         origin: ConnectionOrigin,
-        anti_replay_timestamps: Option<Arc<RwLock<AntiReplayTimestamps>>>,
+        anti_replay_timestamps: Option<&Arc<RwLock<AntiReplayTimestamps>>>,
         remote_public_key: Option<x25519::PublicKey>,
         trusted_peers: Option<&Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>>,
     ) -> io::Result<(x25519::PublicKey, NoiseStream<TSocket>)>
@@ -181,7 +182,7 @@ impl NoiseWrapper {
     pub async fn accept<TSocket>(
         &self,
         mut socket: TSocket,
-        anti_replay_timestamps: Option<Arc<RwLock<AntiReplayTimestamps>>>,
+        anti_replay_timestamps: Option<&Arc<RwLock<AntiReplayTimestamps>>>,
         trusted_peers: Option<&Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>>,
     ) -> io::Result<NoiseStream<TSocket>>
     where
@@ -222,7 +223,7 @@ impl NoiseWrapper {
         }
 
         // if on a mutually authenticated network
-        if let Some(anti_replay_timestamps) = &anti_replay_timestamps {
+        if let Some(anti_replay_timestamps) = anti_replay_timestamps {
             // check that the payload received as the client timestamp (in seconds)
             if payload.len() != PAYLOAD_SIZE {
                 // TODO: security logging (mimoo)
@@ -327,7 +328,11 @@ mod test {
         // perform the handshake
         let (client_session, server_session) = block_on(join(
             client.dial(dialer_socket, true, server_public_key),
-            server.accept(listener_socket, Some(anti_replay_timestamps), trusted_peers),
+            server.accept(
+                listener_socket,
+                Some(&anti_replay_timestamps),
+                trusted_peers,
+            ),
         ));
 
         //

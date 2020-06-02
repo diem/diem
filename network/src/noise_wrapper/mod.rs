@@ -48,7 +48,7 @@
 //! // perform the handshake
 //! let (client_session, server_session) = executor::block_on(future::join(
 //!    client.dial(dialer_socket, true, server_public),
-//!    server.accept(listener_socket, Some(anti_replay_timestamps), Some(&trusted_peers)),
+//!    server.accept(listener_socket, Some(&anti_replay_timestamps), Some(&trusted_peers)),
 //! ));
 //!
 //! let mut client_session = client_session?;
