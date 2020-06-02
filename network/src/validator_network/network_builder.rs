@@ -225,12 +225,6 @@ impl NetworkBuilder {
         self
     }
 
-    /// The maximum number of concurrent NetworkRequests we will service in NetworkProvider.
-    pub fn max_concurrent_network_reqs(&mut self, max_concurrent_network_reqs: usize) -> &mut Self {
-        self.max_concurrent_network_reqs = max_concurrent_network_reqs;
-        self
-    }
-
     /// The maximum number of concurrent Notifications from each actor we will service in
     /// NetworkProvider.
     pub fn max_concurrent_network_notifs(
