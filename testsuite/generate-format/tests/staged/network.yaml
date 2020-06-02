@@ -118,8 +118,6 @@ Protocol:
     8:
       Handshake:
         NEWTYPE: U8
-    9:
-      PeerIdExchange: UNIT
 ProtocolId:
   ENUM:
     0:
