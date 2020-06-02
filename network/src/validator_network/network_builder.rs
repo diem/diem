@@ -222,12 +222,6 @@ impl NetworkBuilder {
         self
     }
 
-    /// Set number of ping failures tolerated.
-    pub fn ping_failures_tolerated(&mut self, ping_failures_tolerated: u64) -> &mut Self {
-        self.ping_failures_tolerated = ping_failures_tolerated;
-        self
-    }
-
     /// Set ping timeout.
     pub fn ping_timeout_ms(&mut self, ping_timeout_ms: u64) -> &mut Self {
         self.ping_timeout_ms = ping_timeout_ms;
