@@ -241,7 +241,7 @@ module VerifyVector {
         Vector::pop_back(v)
     }
     spec fun verify_remove { // TODO: cannot verify loop
-        //aborts_if i >= len(old(v)); //! A postcondition might not hold on this return path.
+        //aborts_if i >= len(v); //! A postcondition might not hold on this return path.
         //ensures len(v) == len(old(v)) - 1; //! A postcondition might not hold on this return path.
         //ensures v[0..i] == old(v[0..i]); //! A postcondition might not hold on this return path.
         //ensures v[i..len(v)] == old(v[i+1..len(v)]); //! A postcondition might not hold on this return path.
@@ -254,7 +254,7 @@ module VerifyVector {
         Vector::remove(v, i) // inlining the built-in Boogie procedure.
     }
     spec fun verify_model_remove {
-        aborts_if i >= len(old(v));
+        aborts_if i >= len(v);
         ensures len(v) == len(old(v)) - 1;
         ensures v[0..i] == old(v[0..i]);
         ensures v[i..len(v)] == old(v[i+1..len(v)]);
@@ -270,7 +270,7 @@ module VerifyVector {
         Vector::pop_back(v)
     }
     spec fun verify_swap_remove {
-        aborts_if i >= len(old(v));
+        aborts_if i >= len(v);
         ensures len(v) == len(old(v)) - 1;
         ensures v == old(update(v,i,v[len(v)-1])[0..len(v)-1]);
         ensures old(v[i]) == result;
@@ -283,7 +283,7 @@ module VerifyVector {
         Vector::swap_remove(v, i) // inlining the built-in Boogie procedure.
     }
     spec fun verify_model_swap_remove {
-        aborts_if i >= len(old(v));
+        aborts_if i >= len(v);
         ensures len(v) == len(old(v)) - 1;
         ensures v == old(update(v,i,v[len(v)-1])[0..len(v)-1]);
         ensures old(v[i]) == result;
