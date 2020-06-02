@@ -456,52 +456,12 @@
 <span id="456">456</span>
 <span id="457">457</span>
 <span id="458">458</span>
-<span id="459">459</span>
-<span id="460">460</span>
-<span id="461">461</span>
-<span id="462">462</span>
-<span id="463">463</span>
-<span id="464">464</span>
-<span id="465">465</span>
-<span id="466">466</span>
-<span id="467">467</span>
-<span id="468">468</span>
-<span id="469">469</span>
-<span id="470">470</span>
-<span id="471">471</span>
-<span id="472">472</span>
-<span id="473">473</span>
-<span id="474">474</span>
-<span id="475">475</span>
-<span id="476">476</span>
-<span id="477">477</span>
-<span id="478">478</span>
-<span id="479">479</span>
-<span id="480">480</span>
-<span id="481">481</span>
-<span id="482">482</span>
-<span id="483">483</span>
-<span id="484">484</span>
-<span id="485">485</span>
-<span id="486">486</span>
-<span id="487">487</span>
-<span id="488">488</span>
-<span id="489">489</span>
-<span id="490">490</span>
-<span id="491">491</span>
-<span id="492">492</span>
-<span id="493">493</span>
-<span id="494">494</span>
-<span id="495">495</span>
-<span id="496">496</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="attribute">#![<span class="ident">forbid</span>(<span class="ident">unsafe_code</span>)]</span>
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
-<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">account_config</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">block_metadata</span>::<span class="ident">BlockMetadata</span>,
@@ -512,8 +472,6 @@
 <span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">language_storage</span>::<span class="ident">TypeTag</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">convert</span>::<span class="ident">TryFrom</span>;
 <span class="kw">use</span> <span class="ident">stdlib</span>::<span class="ident">transaction_scripts</span>::<span class="ident">StdlibScript</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
-<span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">file_format</span>::{<span class="ident">Bytecode</span>, <span class="ident">CompiledScript</span>};
 
 <span class="kw">fn</span> <span class="ident">validate_auth_key_prefix</span>(<span class="ident">auth_key_prefix</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) {
     <span class="kw">let</span> <span class="ident">auth_key_prefix_length</span> <span class="op">=</span> <span class="ident">auth_key_prefix</span>.<span class="ident">len</span>();
@@ -648,40 +606,6 @@
             <span class="ident">TransactionArgument</span>::<span class="ident">U64</span>(<span class="ident">amount</span>),
             <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">metadata</span>),
             <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">signature</span>),
-        ],
-    )
-}
-
-<span class="doccomment">/// Encode a program transferring `amount` coins from `sender` to `recipient` but pad the output</span>
-<span class="doccomment">/// bytecode with unreachable instructions.</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">encode_transfer_script_with_padding</span>(
-    <span class="ident">recipient</span>: <span class="kw-2">&amp;</span><span class="ident">AccountAddress</span>,
-    <span class="ident">amount</span>: <span class="ident">u64</span>,
-    <span class="ident">padding_size</span>: <span class="ident">u64</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Script</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">script_mut</span> <span class="op">=</span>
-        <span class="ident">CompiledScript</span>::<span class="ident">deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">StdlibScript</span>::<span class="ident">PeerToPeer</span>.<span class="ident">compiled_bytes</span>().<span class="ident">into_vec</span>())
-            .<span class="ident">unwrap</span>()
-            .<span class="ident">into_inner</span>();
-    <span class="ident">script_mut</span>
-        .<span class="ident">code</span>
-        .<span class="ident">code</span>
-        .<span class="ident">extend</span>(<span class="ident">std</span>::<span class="ident">iter</span>::<span class="ident">repeat</span>(<span class="ident">Bytecode</span>::<span class="ident">Ret</span>).<span class="ident">take</span>(<span class="ident">padding_size</span> <span class="kw">as</span> <span class="ident">usize</span>));
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">script_bytes</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-    <span class="ident">script_mut</span>
-        .<span class="ident">freeze</span>()
-        .<span class="ident">unwrap</span>()
-        .<span class="ident">serialize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">script_bytes</span>)
-        .<span class="ident">unwrap</span>();
-
-    <span class="ident">Script</span>::<span class="ident">new</span>(
-        <span class="ident">script_bytes</span>,
-        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">account_config</span>::<span class="ident">lbr_type_tag</span>()],
-        <span class="macro">vec</span><span class="macro">!</span>[
-            <span class="ident">TransactionArgument</span>::<span class="ident">Address</span>(<span class="kw-2">*</span><span class="ident">recipient</span>),
-            <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="macro">vec</span><span class="macro">!</span>[]), <span class="comment">// use empty auth key prefix</span>
-            <span class="ident">TransactionArgument</span>::<span class="ident">U64</span>(<span class="ident">amount</span>),
         ],
     )
 }

@@ -66,9 +66,6 @@
 <span id="66">66</span>
 <span id="67">67</span>
 <span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -95,8 +92,6 @@
 }
 
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">ADD_VALIDATOR_TXN</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">script</span>(<span class="string">&quot;add_validator&quot;</span>));
-
-<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">PEER_TO_PEER_TXN</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">script</span>(<span class="string">&quot;peer_to_peer&quot;</span>));
 
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">PEER_TO_PEER_WITH_METADATA_TXN</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span>
     <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">script</span>(<span class="string">&quot;peer_to_peer_with_metadata&quot;</span>));
@@ -125,7 +120,6 @@
     <span class="kw">fn</span> <span class="ident">verify_txn_scripts</span>() {
         <span class="kw">let</span> <span class="ident">txn_scripts</span> <span class="op">=</span> <span class="kw-2">&amp;</span>[
             <span class="kw-2">&amp;</span><span class="ident">ADD_VALIDATOR_TXN</span>,
-            <span class="kw-2">&amp;</span><span class="ident">PEER_TO_PEER_TXN</span>,
             <span class="kw-2">&amp;</span><span class="ident">PEER_TO_PEER_WITH_METADATA_TXN</span>,
             <span class="kw-2">&amp;</span><span class="ident">CREATE_ACCOUNT_TXN</span>,
             <span class="kw-2">&amp;</span><span class="ident">REGISTER_VALIDATOR_TXN</span>,
