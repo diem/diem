@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+use libra_logger::error;
 use std::{future::Future, pin::Pin, thread, time::Duration};
 
 /// Given an operation retries it successfully sleeping everytime it fails
@@ -31,6 +32,7 @@ pub async fn retry_async<'a, I, O, T, E>(iterable: I, mut operation: O) -> Resul
 where
     I: IntoIterator<Item = Duration>,
     O: FnMut() -> Pin<Box<dyn Future<Output = Result<T, E>> + Send + 'a>>,
+    E: std::fmt::Display + std::fmt::Debug,
 {
     let mut iterator = iterable.into_iter();
     loop {
@@ -38,6 +40,7 @@ where
             Ok(value) => return Ok(value),
             Err(err) => {
                 if let Some(delay) = iterator.next() {
+                    error!("Error: {}. Retrying in {} seconds..", err, delay.as_secs());
                     tokio::time::delay_for(delay).await;
                 } else {
                     return Err(err);
