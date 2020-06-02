@@ -715,7 +715,7 @@ A Libra account.
   <tr>
    <td>balances
    </td>
-   <td><a href="#amount---type">Amount</a>
+   <td>Array of <a href="#amount---type">Amount</a> objects
    </td>
    <td>Balances of all the currencies associated with an account
    </td>
