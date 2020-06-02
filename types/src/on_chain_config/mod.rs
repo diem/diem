@@ -14,7 +14,11 @@ use move_core_types::{
     move_resource::MoveResource,
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
+use subscription_service::SubscriptionService;
 
 mod libra_version;
 mod registered_currencies;
@@ -55,6 +59,24 @@ pub const ON_CHAIN_CONFIG_REGISTRY: &[ConfigID] = &[
     ValidatorSet::CONFIG_ID,
     RegisteredCurrencies::CONFIG_ID,
 ];
+
+/// A subscription service for on-chain reconfiguration notifications from state sync
+pub type ReconfigSubscription = SubscriptionService<SubscriptionBundle, OnChainConfigPayload>;
+
+#[derive(Clone)]
+pub struct SubscriptionBundle {
+    pub configs: HashSet<ConfigID>,
+    pub events: HashSet<EventKey>,
+}
+
+impl SubscriptionBundle {
+    pub fn new(configs: Vec<ConfigID>, events: Vec<EventKey>) -> Self {
+        let configs = configs.into_iter().collect::<HashSet<_>>();
+        let events = events.into_iter().collect::<HashSet<_>>();
+
+        Self { configs, events }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct OnChainConfigPayload {

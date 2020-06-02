@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use channel::libra_channel;
+use channel::libra_channel::{self, Receiver};
 use futures::{sink::SinkExt, StreamExt};
 use libra_canonical_serialization as lcs;
 use libra_config::config::RoleType;
@@ -10,7 +10,10 @@ use libra_logger::prelude::*;
 use libra_metrics::{register_histogram, DurationHistogram};
 use libra_network_address::NetworkAddress;
 use libra_types::{
-    on_chain_config::{OnChainConfigPayload, ValidatorSet},
+    on_chain_config::{
+        OnChainConfigPayload, ReconfigSubscription, SubscriptionBundle, ValidatorSet,
+        ON_CHAIN_CONFIG_REGISTRY,
+    },
     validator_config::ValidatorConfig,
 };
 use network::{
@@ -47,6 +50,12 @@ pub static EVENT_PROCESSING_LOOP_BUSY_DURATION_S: Lazy<DurationHistogram> = Lazy
 pub struct ConfigurationChangeListener {
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     role: RoleType,
+}
+
+pub fn gen_simple_discovery_reconfig_subscription(
+) -> (ReconfigSubscription, Receiver<(), OnChainConfigPayload>) {
+    let bundle = SubscriptionBundle::new(ON_CHAIN_CONFIG_REGISTRY.to_vec(), vec![]);
+    ReconfigSubscription::subscribe(bundle)
 }
 
 /// Extract the network_address from the provided config, depending on role.

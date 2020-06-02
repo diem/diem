@@ -8,6 +8,7 @@ use crate::{
     shared_mempool::{network::MempoolNetworkSender, peer_manager::PeerManager},
 };
 use anyhow::Result;
+use channel::libra_channel::Receiver;
 use futures::{
     channel::{mpsc, mpsc::UnboundedSender, oneshot},
     future::Future,
@@ -17,7 +18,10 @@ use libra_config::config::{MempoolConfig, PeerNetworkId};
 use libra_types::{
     account_address::AccountAddress,
     mempool_status::MempoolStatus,
-    on_chain_config::{ConfigID, LibraVersion, OnChainConfig, VMConfig},
+    on_chain_config::{
+        ConfigID, LibraVersion, OnChainConfig, OnChainConfigPayload, ReconfigSubscription,
+        SubscriptionBundle, VMConfig,
+    },
     transaction::SignedTransaction,
     vm_error::VMStatus,
     PeerId,
@@ -190,4 +194,11 @@ pub type MempoolClientSender =
     mpsc::Sender<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>;
 
 /// On-chain configs that mempool subscribes to for reconfiguration
-pub const MEMPOOL_SUBSCRIBED_CONFIGS: &[ConfigID] = &[LibraVersion::CONFIG_ID, VMConfig::CONFIG_ID];
+const MEMPOOL_SUBSCRIBED_CONFIGS: &[ConfigID] = &[LibraVersion::CONFIG_ID, VMConfig::CONFIG_ID];
+
+/// Creates mempool's subscription bundle for on-chain reconfiguration
+pub fn gen_mempool_reconfig_subscription(
+) -> (ReconfigSubscription, Receiver<(), OnChainConfigPayload>) {
+    let bundle = SubscriptionBundle::new(MEMPOOL_SUBSCRIBED_CONFIGS.to_vec(), vec![]);
+    ReconfigSubscription::subscribe(bundle)
+}
