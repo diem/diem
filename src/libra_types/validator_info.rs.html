@@ -108,21 +108,13 @@
 <span id="108">108</span>
 <span id="109">109</span>
 <span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">validator_config</span>::<span class="ident">ValidatorConfig</span>};
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
-<span class="kw">use</span> <span class="ident">libra_crypto</span>::{<span class="ident">ed25519</span>::<span class="ident">Ed25519PrivateKey</span>, <span class="ident">PrivateKey</span>, <span class="ident">Uniform</span>};
+<span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">Uniform</span>;
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::{<span class="ident">ed25519</span>::<span class="ident">Ed25519PublicKey</span>, <span class="ident">x25519</span>};
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
@@ -137,7 +129,7 @@
 
 <span class="doccomment">/// After executing a special transaction indicates a change to the next epoch, consensus</span>
 <span class="doccomment">/// and networking get the new list of validators, their keys, and their voting power.  Consensus</span>
-<span class="doccomment">/// has a public key to validate signed messages and networking will has public signing and identity</span>
+<span class="doccomment">/// has a public key to validate signed messages and networking will has public identity</span>
 <span class="doccomment">/// keys for creating secure channels of communication between validators.  The validators and</span>
 <span class="doccomment">/// their public keys and voting power may or may not change between epochs.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
@@ -178,8 +170,6 @@
         <span class="ident">consensus_public_key</span>: <span class="ident">Ed25519PublicKey</span>,
         <span class="ident">consensus_voting_power</span>: <span class="ident">u64</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">validator_network_signing_public_key</span> <span class="op">=</span>
-            <span class="ident">Ed25519PrivateKey</span>::<span class="ident">generate_for_testing</span>().<span class="ident">public_key</span>();
         <span class="kw">let</span> <span class="ident">private_key</span> <span class="op">=</span> <span class="ident">x25519</span>::<span class="ident">PrivateKey</span>::<span class="ident">generate_for_testing</span>();
         <span class="kw">let</span> <span class="ident">validator_network_identity_public_key</span> <span class="op">=</span> <span class="ident">private_key</span>.<span class="ident">public_key</span>();
         <span class="kw">let</span> <span class="ident">network_address</span> <span class="op">=</span> <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="string">&quot;/ip4/127.0.0.1/tcp/1234&quot;</span>).<span class="ident">unwrap</span>();
@@ -190,7 +180,6 @@
         <span class="kw">let</span> <span class="ident">full_node_network_address</span> <span class="op">=</span> <span class="ident">RawNetworkAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span><span class="ident">network_address</span>).<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">ValidatorConfig</span>::<span class="ident">new</span>(
             <span class="ident">consensus_public_key</span>,
-            <span class="ident">validator_network_signing_public_key</span>,
             <span class="ident">validator_network_identity_public_key</span>,
             <span class="ident">validator_network_address</span>,
             <span class="ident">full_node_network_identity_public_key</span>,
@@ -218,11 +207,6 @@
     <span class="doccomment">/// Returns the voting power for this validator</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">consensus_voting_power</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
         <span class="self">self</span>.<span class="ident">consensus_voting_power</span>
-    }
-
-    <span class="doccomment">/// Returns the key for validating signed messages at the network layers</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">network_signing_public_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Ed25519PublicKey</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">config</span>.<span class="ident">validator_network_signing_public_key</span>
     }
 
     <span class="doccomment">/// Returns the key that establishes a validator&#39;s identity in the p2p network</span>

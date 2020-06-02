@@ -88,8 +88,6 @@
 <span id="88">88</span>
 <span id="89">89</span>
 <span id="90">90</span>
-<span id="91">91</span>
-<span id="92">92</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -127,9 +125,7 @@
 <span class="doccomment">//! // create list of trusted peers</span>
 <span class="doccomment">//! let mut trusted_peers = Arc::new(RwLock::new(HashMap::new()));</span>
 <span class="doccomment">//! {</span>
-<span class="doccomment">//!     let dummy_signing_key = ed25519::Ed25519PrivateKey::generate(&amp;mut rng);</span>
 <span class="doccomment">//!     trusted_peers.write().unwrap().insert(PeerId::random(), NetworkPublicKeys {</span>
-<span class="doccomment">//!        signing_public_key: dummy_signing_key.public_key(),</span>
 <span class="doccomment">//!        identity_public_key: client_public,</span>
 <span class="doccomment">//!     });</span>
 <span class="doccomment">//! }</span>

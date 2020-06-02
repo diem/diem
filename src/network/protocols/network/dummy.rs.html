@@ -181,14 +181,6 @@
 <span id="181">181</span>
 <span id="182">182</span>
 <span id="183">183</span>
-<span id="184">184</span>
-<span id="185">185</span>
-<span id="186">186</span>
-<span id="187">187</span>
-<span id="188">188</span>
-<span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -210,9 +202,7 @@
 <span class="kw">use</span> <span class="ident">channel</span>::<span class="ident">message_queues</span>::<span class="ident">QueueStyle</span>;
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">executor</span>::<span class="ident">block_on</span>, <span class="ident">StreamExt</span>};
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">RoleType</span>;
-<span class="kw">use</span> <span class="ident">libra_crypto</span>::{
-    <span class="ident">ed25519</span>::<span class="ident">Ed25519PrivateKey</span>, <span class="ident">test_utils</span>::<span class="ident">TEST_SEED</span>, <span class="ident">x25519</span>, <span class="ident">PrivateKey</span>, <span class="ident">Uniform</span>,
-};
+<span class="kw">use</span> <span class="ident">libra_crypto</span>::{<span class="ident">test_utils</span>::<span class="ident">TEST_SEED</span>, <span class="ident">x25519</span>, <span class="ident">Uniform</span>};
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">rngs</span>::<span class="ident">StdRng</span>, <span class="ident">SeedableRng</span>};
@@ -296,14 +286,10 @@
 
     <span class="comment">// Setup keys for dialer.</span>
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">StdRng</span>::<span class="ident">from_seed</span>(<span class="ident">TEST_SEED</span>);
-    <span class="kw">let</span> <span class="ident">dialer_signing_private_key</span> <span class="op">=</span> <span class="ident">Ed25519PrivateKey</span>::<span class="ident">generate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">rng</span>);
-    <span class="kw">let</span> <span class="ident">dialer_signing_public_key</span> <span class="op">=</span> <span class="ident">dialer_signing_private_key</span>.<span class="ident">public_key</span>();
     <span class="kw">let</span> <span class="ident">dialer_identity_private_key</span> <span class="op">=</span> <span class="ident">x25519</span>::<span class="ident">PrivateKey</span>::<span class="ident">generate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">rng</span>);
     <span class="kw">let</span> <span class="ident">dialer_identity_public_key</span> <span class="op">=</span> <span class="ident">dialer_identity_private_key</span>.<span class="ident">public_key</span>();
 
     <span class="comment">// Setup keys for listener.</span>
-    <span class="kw">let</span> <span class="ident">listener_signing_private_key</span> <span class="op">=</span> <span class="ident">Ed25519PrivateKey</span>::<span class="ident">generate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">rng</span>);
-    <span class="kw">let</span> <span class="ident">listener_signing_public_key</span> <span class="op">=</span> <span class="ident">listener_signing_private_key</span>.<span class="ident">public_key</span>();
     <span class="kw">let</span> <span class="ident">listener_identity_private_key</span> <span class="op">=</span> <span class="ident">x25519</span>::<span class="ident">PrivateKey</span>::<span class="ident">generate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">rng</span>);
     <span class="kw">let</span> <span class="ident">listener_identity_public_key</span> <span class="op">=</span> <span class="ident">listener_identity_private_key</span>.<span class="ident">public_key</span>();
 
@@ -316,14 +302,12 @@
         (
             <span class="ident">dialer_peer_id</span>,
             <span class="ident">NetworkPublicKeys</span> {
-                <span class="ident">signing_public_key</span>: <span class="ident">dialer_signing_public_key</span>,
                 <span class="ident">identity_public_key</span>: <span class="ident">dialer_identity_public_key</span>,
             },
         ),
         (
             <span class="ident">listener_peer_id</span>,
             <span class="ident">NetworkPublicKeys</span> {
-                <span class="ident">signing_public_key</span>: <span class="ident">listener_signing_public_key</span>,
                 <span class="ident">identity_public_key</span>: <span class="ident">listener_identity_public_key</span>,
             },
         ),

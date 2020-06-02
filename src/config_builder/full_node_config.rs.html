@@ -344,6 +344,10 @@
 <span id="344">344</span>
 <span id="345">345</span>
 <span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -351,7 +355,9 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">BuildSwarm</span>, <span class="ident">Error</span>, <span class="ident">ValidatorConfig</span>};
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">ensure</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">libra_config</span>::{
-    <span class="ident">config</span>::{<span class="ident">NetworkPeersConfig</span>, <span class="ident">NodeConfig</span>, <span class="ident">PeerNetworkId</span>, <span class="ident">RoleType</span>, <span class="ident">UpstreamConfig</span>},
+    <span class="ident">config</span>::{
+        <span class="ident">NetworkPeerInfo</span>, <span class="ident">NetworkPeersConfig</span>, <span class="ident">NodeConfig</span>, <span class="ident">PeerNetworkId</span>, <span class="ident">RoleType</span>, <span class="ident">UpstreamConfig</span>,
+    },
     <span class="ident">generator</span>, <span class="ident">utils</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">ed25519</span>::<span class="ident">Ed25519PrivateKey</span>;
@@ -569,11 +575,13 @@
 
             <span class="ident">network_peers</span>.<span class="ident">peers</span>.<span class="ident">insert</span>(
                 <span class="ident">network</span>.<span class="ident">peer_id</span>,
-                <span class="ident">network</span>
-                    .<span class="ident">network_keypairs</span>
-                    .<span class="ident">as_ref</span>()
-                    .<span class="ident">ok_or</span>(<span class="ident">Error</span>::<span class="ident">MissingNetworkKeyPairs</span>)<span class="question-mark">?</span>
-                    .<span class="ident">as_peer_info</span>(),
+                <span class="ident">NetworkPeerInfo</span> {
+                    <span class="ident">identity_public_key</span>: <span class="ident">network</span>
+                        .<span class="ident">identity_keypair</span>
+                        .<span class="ident">as_ref</span>()
+                        .<span class="ident">ok_or</span>(<span class="ident">Error</span>::<span class="ident">MissingNetworkKeyPairs</span>)<span class="question-mark">?</span>
+                        .<span class="ident">public_key</span>(),
+                },
             );
 
             <span class="ident">configs</span>.<span class="ident">push</span>(<span class="ident">config</span>);

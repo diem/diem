@@ -418,16 +418,6 @@
 <span id="418">418</span>
 <span id="419">419</span>
 <span id="420">420</span>
-<span id="421">421</span>
-<span id="422">422</span>
-<span id="423">423</span>
-<span id="424">424</span>
-<span id="425">425</span>
-<span id="426">426</span>
-<span id="427">427</span>
-<span id="428">428</span>
-<span id="429">429</span>
-<span id="430">430</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -581,18 +571,10 @@
         <span class="kw">let</span> <span class="ident">network_peers</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">network_peers</span>.<span class="ident">peers</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">seed_peers</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">seed_peers</span>.<span class="ident">seed_peers</span>.<span class="ident">clone</span>();
 
-        <span class="kw">let</span> <span class="ident">network_keypairs</span> <span class="op">=</span> <span class="ident">config</span>
-            .<span class="ident">network_keypairs</span>
-            .<span class="ident">as_mut</span>()
-            .<span class="ident">expect</span>(<span class="string">&quot;Network keypairs are not defined&quot;</span>);
-        <span class="kw">let</span> <span class="ident">signing_keypair</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">network_keypairs</span>.<span class="ident">signing_keypair</span>;
-        <span class="kw">let</span> <span class="ident">signing_private</span> <span class="op">=</span> <span class="ident">signing_keypair</span>
-            .<span class="ident">take_private</span>()
-            .<span class="ident">expect</span>(<span class="string">&quot;Failed to take Network signing private key, key absent or already read&quot;</span>);
-        <span class="kw">let</span> <span class="ident">signing_public</span> <span class="op">=</span> <span class="ident">signing_keypair</span>.<span class="ident">public_key</span>();
-
-        <span class="kw">let</span> <span class="ident">identity_key</span> <span class="op">=</span> <span class="ident">network_keypairs</span>
+        <span class="kw">let</span> <span class="ident">identity_key</span> <span class="op">=</span> <span class="ident">config</span>
             .<span class="ident">identity_keypair</span>
+            .<span class="ident">as_mut</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;identity keypair should be present&quot;</span>)
             .<span class="ident">take_private</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;identity key should be present&quot;</span>);
 
@@ -613,15 +595,13 @@
             .<span class="ident">authentication_mode</span>(<span class="ident">AuthenticationMode</span>::<span class="ident">Mutual</span>(<span class="ident">identity_key</span>))
             .<span class="ident">trusted_peers</span>(<span class="ident">trusted_peers</span>)
             .<span class="ident">seed_peers</span>(<span class="ident">seed_peers</span>)
-            .<span class="ident">signing_keypair</span>((<span class="ident">signing_private</span>, <span class="ident">signing_public</span>))
             .<span class="ident">connectivity_check_interval_ms</span>(<span class="ident">config</span>.<span class="ident">connectivity_check_interval_ms</span>)
             .<span class="ident">add_connectivity_manager</span>();
     } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">config</span>.<span class="ident">enable_noise</span> {
         <span class="kw">let</span> <span class="ident">identity_key</span> <span class="op">=</span> <span class="ident">config</span>
-            .<span class="ident">network_keypairs</span>
-            .<span class="ident">as_mut</span>()
-            .<span class="ident">expect</span>(<span class="string">&quot;Network keypairs are not defined&quot;</span>)
             .<span class="ident">identity_keypair</span>
+            .<span class="ident">as_mut</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;identity keypairs should be present&quot;</span>)
             .<span class="ident">take_private</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;identity key should be present&quot;</span>);
 

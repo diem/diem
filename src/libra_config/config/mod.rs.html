@@ -483,6 +483,7 @@
 <span id="483">483</span>
 <span id="484">484</span>
 <span id="485">485</span>
+<span id="486">486</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -868,9 +869,10 @@
 
         <span class="ident">expected_network</span>.<span class="ident">advertised_address</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">advertised_address</span>.<span class="ident">clone</span>();
         <span class="ident">expected_network</span>.<span class="ident">listen_address</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>();
-        <span class="ident">expected_network</span>.<span class="ident">network_keypairs</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">network_keypairs</span>.<span class="ident">clone</span>();
+        <span class="ident">expected_network</span>.<span class="ident">identity_keypair</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">identity_keypair</span>.<span class="ident">clone</span>();
         <span class="ident">expected_network</span>.<span class="ident">network_peers</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">network_peers</span>.<span class="ident">clone</span>();
         <span class="ident">expected_network</span>.<span class="ident">seed_peers</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">seed_peers</span>.<span class="ident">clone</span>();
+        <span class="ident">expected_network</span>.<span class="ident">seed_peers_file</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">seed_peers_file</span>.<span class="ident">clone</span>();
 
         <span class="ident">expected</span>.<span class="ident">set_data_dir</span>(<span class="ident">actual</span>.<span class="ident">data_dir</span>().<span class="ident">clone</span>());
         <span class="ident">compare_configs</span>(<span class="kw-2">&amp;</span><span class="ident">actual</span>, <span class="kw-2">&amp;</span><span class="ident">expected</span>);

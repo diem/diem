@@ -133,9 +133,6 @@
 <span id="133">133</span>
 <span id="134">134</span>
 <span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -203,13 +200,10 @@
 
         <span class="comment">// Step 2) Generate transaction</span>
 
-        <span class="comment">// TODO(davidiw): The signing key, parameter 2, will be deleted soon, so this is a</span>
-        <span class="comment">// temporary hack to reduce over-engineering.</span>
         <span class="comment">// TODO(philiphayes): remove network identity pubkey field from struct when</span>
         <span class="comment">// transition complete</span>
         <span class="kw">let</span> <span class="ident">script</span> <span class="op">=</span> <span class="ident">transaction_builder</span>::<span class="ident">encode_register_validator_script</span>(
             <span class="ident">consensus_key</span>.<span class="ident">to_bytes</span>().<span class="ident">to_vec</span>(),
-            <span class="ident">operator_key</span>.<span class="ident">to_bytes</span>().<span class="ident">to_vec</span>(),
             <span class="ident">validator_network_key</span>.<span class="ident">to_bytes</span>(),
             <span class="ident">raw_validator_address</span>.<span class="ident">into</span>(),
             <span class="ident">fullnode_network_key</span>.<span class="ident">to_bytes</span>(),

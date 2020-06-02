@@ -74,7 +74,6 @@
 <span id="74">74</span>
 <span id="75">75</span>
 <span id="76">76</span>
-<span id="77">77</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -137,10 +136,9 @@
     <span class="ident">seed_base_addr</span>: <span class="ident">NetworkAddress</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SeedPeersConfig</span> {
     <span class="kw">let</span> <span class="ident">seed_pubkey</span> <span class="op">=</span> <span class="ident">seed_config</span>
-        .<span class="ident">network_keypairs</span>
-        .<span class="ident">as_ref</span>()
-        .<span class="ident">expect</span>(<span class="string">&quot;Expect network keypairs&quot;</span>)
         .<span class="ident">identity_keypair</span>
+        .<span class="ident">as_ref</span>()
+        .<span class="ident">expect</span>(<span class="string">&quot;Missing identity keypair&quot;</span>)
         .<span class="ident">public_key</span>();
     <span class="kw">let</span> <span class="ident">seed_addr</span> <span class="op">=</span> <span class="ident">seed_base_addr</span>.<span class="ident">append_prod_protos</span>(<span class="ident">seed_pubkey</span>, <span class="ident">HANDSHAKE_VERSION</span>);
 

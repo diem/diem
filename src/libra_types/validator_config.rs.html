@@ -47,9 +47,6 @@
 <span id="47">47</span>
 <span id="48">48</span>
 <span id="49">49</span>
-<span id="50">50</span>
-<span id="51">51</span>
-<span id="52">52</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -77,7 +74,6 @@
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>), <span class="ident">derive</span>(<span class="ident">Arbitrary</span>))]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ValidatorConfig</span> {
     <span class="kw">pub</span> <span class="ident">consensus_public_key</span>: <span class="ident">Ed25519PublicKey</span>,
-    <span class="kw">pub</span> <span class="ident">validator_network_signing_public_key</span>: <span class="ident">Ed25519PublicKey</span>,
     <span class="kw">pub</span> <span class="ident">validator_network_identity_public_key</span>: <span class="ident">x25519</span>::<span class="ident">PublicKey</span>,
     <span class="kw">pub</span> <span class="ident">validator_network_address</span>: <span class="ident">RawNetworkAddress</span>,
     <span class="kw">pub</span> <span class="ident">full_node_network_identity_public_key</span>: <span class="ident">x25519</span>::<span class="ident">PublicKey</span>,
@@ -87,7 +83,6 @@
 <span class="kw">impl</span> <span class="ident">ValidatorConfig</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">consensus_public_key</span>: <span class="ident">Ed25519PublicKey</span>,
-        <span class="ident">validator_network_signing_public_key</span>: <span class="ident">Ed25519PublicKey</span>,
         <span class="ident">validator_network_identity_public_key</span>: <span class="ident">x25519</span>::<span class="ident">PublicKey</span>,
         <span class="ident">validator_network_address</span>: <span class="ident">RawNetworkAddress</span>,
         <span class="ident">full_node_network_identity_public_key</span>: <span class="ident">x25519</span>::<span class="ident">PublicKey</span>,
@@ -95,7 +90,6 @@
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">ValidatorConfig</span> {
             <span class="ident">consensus_public_key</span>,
-            <span class="ident">validator_network_signing_public_key</span>,
             <span class="ident">validator_network_identity_public_key</span>,
             <span class="ident">validator_network_address</span>,
             <span class="ident">full_node_network_identity_public_key</span>,

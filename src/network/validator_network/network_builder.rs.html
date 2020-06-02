@@ -557,20 +557,6 @@
 <span id="557">557</span>
 <span id="558">558</span>
 <span id="559">559</span>
-<span id="560">560</span>
-<span id="561">561</span>
-<span id="562">562</span>
-<span id="563">563</span>
-<span id="564">564</span>
-<span id="565">565</span>
-<span id="566">566</span>
-<span id="567">567</span>
-<span id="568">568</span>
-<span id="569">569</span>
-<span id="570">570</span>
-<span id="571">571</span>
-<span id="572">572</span>
-<span id="573">573</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -603,10 +589,7 @@
 <span class="kw">use</span> <span class="ident">channel</span>::{<span class="self">self</span>, <span class="ident">libra_channel</span>, <span class="ident">message_queues</span>::<span class="ident">QueueStyle</span>};
 <span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">stream</span>::<span class="ident">StreamExt</span>;
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="ident">RoleType</span>, <span class="ident">HANDSHAKE_VERSION</span>};
-<span class="kw">use</span> <span class="ident">libra_crypto</span>::{
-    <span class="ident">ed25519</span>::{<span class="ident">Ed25519PrivateKey</span>, <span class="ident">Ed25519PublicKey</span>},
-    <span class="ident">x25519</span>,
-};
+<span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">x25519</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_metrics</span>::<span class="ident">IntCounterVec</span>;
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
@@ -711,7 +694,6 @@
     <span class="ident">max_concurrent_network_reqs</span>: <span class="ident">usize</span>,
     <span class="ident">max_concurrent_network_notifs</span>: <span class="ident">usize</span>,
     <span class="ident">max_connection_delay_ms</span>: <span class="ident">u64</span>,
-    <span class="ident">signing_keypair</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">Ed25519PrivateKey</span>, <span class="ident">Ed25519PublicKey</span>)<span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">NetworkBuilder</span> {
@@ -764,7 +746,6 @@
             <span class="ident">max_concurrent_network_reqs</span>: <span class="ident">MAX_CONCURRENT_NETWORK_REQS</span>,
             <span class="ident">max_concurrent_network_notifs</span>: <span class="ident">MAX_CONCURRENT_NETWORK_NOTIFS</span>,
             <span class="ident">max_connection_delay_ms</span>: <span class="ident">MAX_CONNECTION_DELAY_MS</span>,
-            <span class="ident">signing_keypair</span>: <span class="prelude-val">None</span>,
         }
     }
 
@@ -786,12 +767,6 @@
         <span class="ident">trusted_peers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">NetworkPublicKeys</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
         <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">trusted_peers</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>() <span class="op">=</span> <span class="ident">trusted_peers</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="doccomment">/// Set signing keys of local node.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">signing_keypair</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">keypair</span>: (<span class="ident">Ed25519PrivateKey</span>, <span class="ident">Ed25519PublicKey</span>)) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">signing_keypair</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">keypair</span>);
         <span class="self">self</span>
     }
 
@@ -982,13 +957,13 @@
     <span class="doccomment">/// (gossip) [`Discovery`] discovers other eligible peers&#39; network addresses</span>
     <span class="doccomment">/// by exchanging the full set of known peer network addresses with connected</span>
     <span class="doccomment">/// peers as a network protocol.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// This is for testing purposes only and should not be used in production networks.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_gossip_discovery</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">peer_id</span>;
         <span class="kw">let</span> <span class="ident">conn_mgr_reqs_tx</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">conn_mgr_reqs_tx</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;ConnectivityManager not enabled&quot;</span>);
-        <span class="kw">let</span> (<span class="ident">signing_private_key</span>, <span class="ident">_signing_public_key</span>) <span class="op">=</span>
-            <span class="self">self</span>.<span class="ident">signing_keypair</span>.<span class="ident">take</span>().<span class="ident">expect</span>(<span class="string">&quot;Signing keys not set&quot;</span>);
         <span class="comment">// Get handles for network events and sender.</span>
         <span class="kw">let</span> (<span class="ident">discovery_network_tx</span>, <span class="ident">discovery_network_rx</span>) <span class="op">=</span> <span class="ident">discovery</span>::<span class="ident">add_to_network</span>(<span class="self">self</span>);
 
@@ -1014,7 +989,6 @@
         <span class="kw">let</span> <span class="ident">advertised_address</span> <span class="op">=</span> <span class="ident">append_libranet_protocols</span>(<span class="ident">advertised_address</span>, <span class="ident">authentication_mode</span>);
 
         <span class="kw">let</span> <span class="ident">addrs</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">advertised_address</span>];
-        <span class="kw">let</span> <span class="ident">trusted_peers</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">trusted_peers</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">role</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">role</span>;
         <span class="kw">let</span> <span class="ident">discovery_interval_ms</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">discovery_interval_ms</span>;
         <span class="kw">let</span> <span class="ident">discovery</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">executor</span>.<span class="ident">enter</span>(<span class="op">|</span><span class="op">|</span> {
@@ -1022,8 +996,6 @@
                 <span class="ident">peer_id</span>,
                 <span class="ident">role</span>,
                 <span class="ident">addrs</span>,
-                <span class="ident">signing_private_key</span>,
-                <span class="ident">trusted_peers</span>,
                 <span class="ident">interval</span>(<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="ident">discovery_interval_ms</span>)).<span class="ident">fuse</span>(),
                 <span class="ident">discovery_network_tx</span>,
                 <span class="ident">discovery_network_rx</span>,
