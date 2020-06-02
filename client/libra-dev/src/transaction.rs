@@ -9,7 +9,7 @@ use crate::{
     },
     error::*,
 };
-use lcs::to_bytes;
+use lcs::{from_bytes, to_bytes};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     test_utils::KeyPair,
@@ -21,28 +21,26 @@ use libra_types::{
         from_currency_code_string, lbr_type_tag, type_tag_for_currency_code, LBR_NAME,
     },
     transaction::{
-        authenticator::AuthenticationKey, helpers::TransactionSigner, RawTransaction,
+        authenticator::AuthenticationKey, helpers::TransactionSigner, RawTransaction, Script,
         SignedTransaction, TransactionArgument, TransactionPayload,
     },
 };
 use std::{convert::TryFrom, ffi::CStr, slice, time::Duration};
-use transaction_builder::{encode_transfer_with_metadata_script, get_transaction_name};
+use transaction_builder::{
+    encode_add_currency_to_account_script, encode_transfer_with_metadata_script,
+    get_transaction_name,
+};
 
 #[no_mangle]
 pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
     sender_private_key_bytes: *const u8,
-    receiver: *const u8,
     sequence: u64,
-    identifier: *const i8,
-    num_coins: u64,
     max_gas_amount: u64,
     gas_unit_price: u64,
     gas_identifier: *const i8,
     expiration_time_secs: u64,
-    metadata_bytes: *const u8,
-    metadata_len: usize,
-    metadata_signature_bytes: *const u8,
-    metadata_signature_len: usize,
+    script_bytes: *const u8,
+    script_len: usize,
     ptr_buf: *mut *mut u8,
     ptr_len: *mut usize,
 ) -> LibraStatus {
@@ -62,60 +60,25 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
         }
     };
 
-    let public_key = private_key.public_key();
-    let sender_address = account_address::from_public_key(&public_key);
-
-    if receiver.is_null() {
-        update_last_error("receiver parameter must not be null.".to_string());
+    if script_bytes.is_null() {
+        update_last_error("script_bytes parameter must not be null.".to_string());
         return LibraStatus::InvalidArgument;
     }
-    let receiver_buf = slice::from_raw_parts(receiver, AuthenticationKey::LENGTH);
-    let receiver_auth_key = match AuthenticationKey::try_from(receiver_buf) {
+    let script_buf: &[u8] = slice::from_raw_parts(script_bytes, script_len);
+
+    let script: Script = match from_bytes(script_buf) {
         Ok(result) => result,
         Err(e) => {
-            update_last_error(format!(
-                "Invalid receiver authentication key: {}",
-                e.to_string()
-            ));
+            update_last_error(format!("Invalid script bytes: {}", e.to_string()));
             return LibraStatus::InvalidArgument;
         }
     };
-    let receiver_address = receiver_auth_key.derived_address();
 
-    let metadata = if metadata_bytes.is_null() {
-        vec![]
-    } else {
-        slice::from_raw_parts(metadata_bytes, metadata_len).to_vec()
-    };
-    let metadata_signature = if metadata_signature_bytes.is_null() {
-        vec![]
-    } else {
-        slice::from_raw_parts(metadata_signature_bytes, metadata_signature_len).to_vec()
-    };
+    let public_key = private_key.public_key();
+    let sender_address = account_address::from_public_key(&public_key);
     let expiration_time = Duration::from_secs(expiration_time_secs);
 
-    let coin_type_tag = match from_currency_code_string(
-        CStr::from_ptr(identifier)
-            .to_string_lossy()
-            .into_owned()
-            .as_str(),
-    ) {
-        Ok(coin_ident) => type_tag_for_currency_code(coin_ident),
-        Err(e) => {
-            update_last_error(format!("Invalid coin identifier: {}", e.to_string()));
-            return LibraStatus::InvalidArgument;
-        }
-    };
-
-    let program = encode_transfer_with_metadata_script(
-        coin_type_tag,
-        &receiver_address,
-        receiver_auth_key.prefix().to_vec(),
-        num_coins,
-        metadata,
-        metadata_signature,
-    );
-    let payload = TransactionPayload::Script(program);
+    let payload = TransactionPayload::Script(script);
     let raw_txn = RawTransaction::new(
         sender_address,
         sequence,
@@ -153,6 +116,130 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
 
     *ptr_buf = txn_buf;
     *ptr_len = signed_txn_bytes.len();
+
+    LibraStatus::Ok
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn libra_TransactionP2PScript_from(
+    receiver: *const u8,
+    identifier: *const i8,
+    num_coins: u64,
+    metadata_bytes: *const u8,
+    metadata_len: usize,
+    metadata_signature_bytes: *const u8,
+    metadata_signature_len: usize,
+    ptr_buf: *mut *mut u8,
+    ptr_len: *mut usize,
+) -> LibraStatus {
+    clear_error();
+
+    if receiver.is_null() {
+        update_last_error("receiver parameter must not be null.".to_string());
+        return LibraStatus::InvalidArgument;
+    }
+    let receiver_buf = slice::from_raw_parts(receiver, AuthenticationKey::LENGTH);
+    let receiver_auth_key = match AuthenticationKey::try_from(receiver_buf) {
+        Ok(result) => result,
+        Err(e) => {
+            update_last_error(format!(
+                "Invalid receiver authentication key: {}",
+                e.to_string()
+            ));
+            return LibraStatus::InvalidArgument;
+        }
+    };
+    let receiver_address = receiver_auth_key.derived_address();
+
+    let metadata = if metadata_bytes.is_null() {
+        vec![]
+    } else {
+        slice::from_raw_parts(metadata_bytes, metadata_len).to_vec()
+    };
+    let metadata_signature = if metadata_signature_bytes.is_null() {
+        vec![]
+    } else {
+        slice::from_raw_parts(metadata_signature_bytes, metadata_signature_len).to_vec()
+    };
+
+    let coin_type_tag = match from_currency_code_string(
+        CStr::from_ptr(identifier)
+            .to_string_lossy()
+            .into_owned()
+            .as_str(),
+    ) {
+        Ok(coin_ident) => type_tag_for_currency_code(coin_ident),
+        Err(e) => {
+            update_last_error(format!("Invalid coin identifier: {}", e.to_string()));
+            return LibraStatus::InvalidArgument;
+        }
+    };
+
+    let script = encode_transfer_with_metadata_script(
+        coin_type_tag,
+        &receiver_address,
+        receiver_auth_key.prefix().to_vec(),
+        num_coins,
+        metadata,
+        metadata_signature,
+    );
+
+    let script_bytes = match to_bytes(&script) {
+        Ok(result) => result,
+        Err(e) => {
+            update_last_error(format!("Error serializing P2P Script: {}", e.to_string()));
+            return LibraStatus::InternalError;
+        }
+    };
+
+    let script_buf: *mut u8 = libc::malloc(script_bytes.len()).cast();
+    script_buf.copy_from(script_bytes.as_ptr(), script_bytes.len());
+
+    *ptr_buf = script_buf;
+    *ptr_len = script_bytes.len();
+
+    LibraStatus::Ok
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn libra_TransactionAddCurrencyScript_from(
+    identifier: *const i8,
+    ptr_buf: *mut *mut u8,
+    ptr_len: *mut usize,
+) -> LibraStatus {
+    clear_error();
+
+    let coin_type_tag = match from_currency_code_string(
+        CStr::from_ptr(identifier)
+            .to_string_lossy()
+            .into_owned()
+            .as_str(),
+    ) {
+        Ok(coin_ident) => type_tag_for_currency_code(coin_ident),
+        Err(e) => {
+            update_last_error(format!("Invalid coin identifier: {}", e.to_string()));
+            return LibraStatus::InvalidArgument;
+        }
+    };
+
+    let script = encode_add_currency_to_account_script(coin_type_tag);
+
+    let script_bytes = match to_bytes(&script) {
+        Ok(result) => result,
+        Err(e) => {
+            update_last_error(format!(
+                "Error serializing add currency to account Script: {}",
+                e.to_string()
+            ));
+            return LibraStatus::InternalError;
+        }
+    };
+
+    let script_buf: *mut u8 = libc::malloc(script_bytes.len()).cast();
+    script_buf.copy_from(script_bytes.as_ptr(), script_bytes.len());
+
+    *ptr_buf = script_buf;
+    *ptr_len = script_bytes.len();
 
     LibraStatus::Ok
 }
@@ -488,7 +575,11 @@ mod test {
     use super::*;
     use lcs::from_bytes;
     use libra_crypto::{hash::CryptoHash, PrivateKey, SigningKey, Uniform};
-    use libra_types::transaction::{SignedTransaction, TransactionArgument};
+    use libra_types::{
+        account_config::COIN1_NAME,
+        transaction::{SignedTransaction, TransactionArgument},
+    };
+    use move_core_types::language_storage::TypeTag;
     use std::ffi::CStr;
 
     /// Generate a Signed Transaction and deserialize
@@ -509,28 +600,45 @@ mod test {
         let expiration_time_secs = 0;
         let metadata = vec![1, 2, 3];
         let metadata_signature = [0x1; 64].to_vec();
+        let coin_ident = std::ffi::CString::new(LBR_NAME).expect("Invalid ident");
+
+        let mut script_buf: *mut u8 = std::ptr::null_mut();
+        let script_buf_ptr = &mut script_buf;
+        let mut script_len: usize = 0;
+
+        let script_result = unsafe {
+            libra_TransactionP2PScript_from(
+                receiver_auth_key.as_ref().as_ptr(),
+                coin_ident.as_ptr(),
+                amount,
+                metadata.as_ptr(),
+                metadata.len(),
+                metadata_signature.as_ptr(),
+                metadata_signature.len(),
+                script_buf_ptr,
+                &mut script_len,
+            )
+        };
+        assert_eq!(script_result, LibraStatus::Ok);
+
+        let script_bytes: &[u8] = unsafe { slice::from_raw_parts(script_buf, script_len) };
+        let _deserialized_script: Script =
+            from_bytes(script_bytes).expect("LCS deserialization failed for Script");
 
         let mut buf: *mut u8 = std::ptr::null_mut();
         let buf_ptr = &mut buf;
         let mut len: usize = 0;
 
-        let coin_ident = std::ffi::CString::new(LBR_NAME).expect("Invalid ident");
-
         let result = unsafe {
             libra_SignedTransactionBytes_from(
                 private_key_bytes.as_ptr(),
-                receiver_auth_key.as_ref().as_ptr(),
                 sequence,
-                coin_ident.as_ptr(),
-                amount,
                 max_gas_amount,
                 gas_unit_price,
                 coin_ident.as_ptr(),
                 expiration_time_secs,
-                metadata.as_ptr(),
-                metadata.len(),
-                metadata_signature.as_ptr(),
-                metadata_signature.len(),
+                script_bytes.as_ptr(),
+                script_len,
                 buf_ptr,
                 &mut len,
             )
@@ -573,18 +681,13 @@ mod test {
         let result2 = unsafe {
             libra_SignedTransactionBytes_from(
                 private_key_bytes.as_ptr(),
-                receiver_auth_key.as_ref().as_ptr(),
                 sequence,
-                coin_idnet.as_ptr(),
-                amount,
                 max_gas_amount,
                 gas_unit_price,
                 coin_idnet.as_ptr(),
                 expiration_time_secs,
-                metadata.as_ptr(),
-                metadata.len(),
-                metadata_signature.as_ptr(),
-                metadata_signature.len(),
+                script_bytes.as_ptr(),
+                script_len,
                 buf_ptr2,
                 &mut len2,
             )
@@ -599,9 +702,176 @@ mod test {
             assert_eq!(signed_txn_bytes_buf, data2);
         }
 
+        // Test creating add currency to account transaction
+        let coin_ident_2 = std::ffi::CString::new(COIN1_NAME).expect("Invalid ident");
+
+        let mut script_buf: *mut u8 = std::ptr::null_mut();
+        let script_buf_ptr = &mut script_buf;
+        let mut script_len: usize = 0;
+
+        let script_result = unsafe {
+            libra_TransactionAddCurrencyScript_from(
+                coin_ident_2.as_ptr(),
+                script_buf_ptr,
+                &mut script_len,
+            )
+        };
+        assert_eq!(script_result, LibraStatus::Ok);
+
+        let script_bytes: &[u8] = unsafe { slice::from_raw_parts(script_buf, script_len) };
+        let _deserialized_script: Script =
+            from_bytes(script_bytes).expect("LCS deserialization failed for Script");
+
+        let mut buf: *mut u8 = std::ptr::null_mut();
+        let buf_ptr = &mut buf;
+        let mut len: usize = 0;
+
+        let result = unsafe {
+            libra_SignedTransactionBytes_from(
+                private_key_bytes.as_ptr(),
+                sequence,
+                max_gas_amount,
+                gas_unit_price,
+                coin_ident_2.as_ptr(),
+                expiration_time_secs,
+                script_bytes.as_ptr(),
+                script_len,
+                buf_ptr,
+                &mut len,
+            )
+        };
+
+        assert_eq!(result, LibraStatus::Ok);
+
+        let signed_txn_bytes_buf: &[u8] = unsafe { slice::from_raw_parts(buf, len) };
+        let deserialized_signed_txn: SignedTransaction =
+            from_bytes(signed_txn_bytes_buf).expect("LCS deserialization failed");
+
+        let identifier = from_currency_code_string(
+            coin_ident_2
+                .as_c_str()
+                .to_string_lossy()
+                .into_owned()
+                .as_str(),
+        )
+        .unwrap();
+
+        if let TransactionPayload::Script(program) = deserialized_signed_txn.payload() {
+            match program.ty_args()[0].clone() {
+                TypeTag::Struct(struct_tag) => assert_eq!(struct_tag.module, identifier),
+                _ => unreachable!(),
+            }
+        }
+        assert_eq!(deserialized_signed_txn.sender(), sender_address);
+        assert_eq!(deserialized_signed_txn.sequence_number(), 0);
+        assert_eq!(deserialized_signed_txn.gas_unit_price(), gas_unit_price);
+        assert_eq!(
+            deserialized_signed_txn.authenticator().public_key_bytes(),
+            public_key.to_bytes()
+        );
+        assert!(deserialized_signed_txn.check_signature().is_ok());
+
         unsafe {
+            libra_free_bytes_buffer(script_buf);
             libra_free_bytes_buffer(buf);
             libra_free_bytes_buffer(buf2);
+        };
+    }
+
+    /// Generate a P2P Transaction Script and deserialize
+    #[test]
+    fn test_lcs_p2p_transaction_script() {
+        // create transfer parameters
+        let receiver_auth_key = AuthenticationKey::random();
+        let amount = 100_000_000;
+        let metadata = vec![1, 2, 3];
+        let metadata_signature = [0x1; 64].to_vec();
+        let coin_ident = std::ffi::CString::new(LBR_NAME).expect("Invalid ident");
+
+        let mut script_buf: *mut u8 = std::ptr::null_mut();
+        let script_buf_ptr = &mut script_buf;
+        let mut script_len: usize = 0;
+
+        let script_result = unsafe {
+            libra_TransactionP2PScript_from(
+                receiver_auth_key.as_ref().as_ptr(),
+                coin_ident.as_ptr(),
+                amount,
+                metadata.as_ptr(),
+                metadata.len(),
+                metadata_signature.as_ptr(),
+                metadata_signature.len(),
+                script_buf_ptr,
+                &mut script_len,
+            )
+        };
+
+        assert_eq!(script_result, LibraStatus::Ok);
+
+        let script_bytes: &[u8] = unsafe { slice::from_raw_parts(script_buf, script_len) };
+        let deserialized_script: Script =
+            from_bytes(script_bytes).expect("LCS deserialization failed for Script");
+
+        if let TransactionArgument::U64(val) = deserialized_script.args()[2] {
+            assert_eq!(val, amount);
+        } else {
+            unreachable!()
+        }
+        if let TransactionArgument::U8Vector(val) = deserialized_script.args()[3].clone() {
+            assert_eq!(val, metadata)
+        } else {
+            unreachable!()
+        }
+        if let TransactionArgument::U8Vector(val) = deserialized_script.args()[4].clone() {
+            assert_eq!(val, metadata_signature)
+        } else {
+            unreachable!()
+        }
+
+        unsafe {
+            libra_free_bytes_buffer(script_buf);
+        };
+    }
+
+    /// Generate a add currency to account script and deserialize
+    #[test]
+    fn test_lcs_add_currency_to_account_transaction_script() {
+        let coin_ident = std::ffi::CString::new(LBR_NAME).expect("Invalid ident");
+
+        let mut script_buf: *mut u8 = std::ptr::null_mut();
+        let script_buf_ptr = &mut script_buf;
+        let mut script_len: usize = 0;
+
+        let script_result = unsafe {
+            libra_TransactionAddCurrencyScript_from(
+                coin_ident.as_ptr(),
+                script_buf_ptr,
+                &mut script_len,
+            )
+        };
+
+        assert_eq!(script_result, LibraStatus::Ok);
+
+        let script_bytes: &[u8] = unsafe { slice::from_raw_parts(script_buf, script_len) };
+        let deserialized_script: Script =
+            from_bytes(script_bytes).expect("LCS deserialization failed for Script");
+        let identifier = from_currency_code_string(
+            coin_ident
+                .as_c_str()
+                .to_string_lossy()
+                .into_owned()
+                .as_str(),
+        )
+        .unwrap();
+
+        if let TypeTag::Struct(struct_tag) = deserialized_script.ty_args()[0].clone() {
+            assert_eq!(identifier, struct_tag.module);
+        } else {
+            unreachable!()
+        }
+
+        unsafe {
+            libra_free_bytes_buffer(script_buf);
         };
     }
 
