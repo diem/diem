@@ -518,12 +518,6 @@
 <span id="518">518</span>
 <span id="519">519</span>
 <span id="520">520</span>
-<span id="521">521</span>
-<span id="522">522</span>
-<span id="523">523</span>
-<span id="524">524</span>
-<span id="525">525</span>
-<span id="526">526</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -900,12 +894,6 @@
             <span class="ident">epoch</span>: <span class="ident">payload</span>.<span class="ident">epoch</span>(),
             <span class="ident">verifier</span>: (<span class="kw-2">&amp;</span><span class="ident">validator_set</span>).<span class="ident">into</span>(),
         };
-        <span class="kw">let</span> <span class="ident">validator_keys</span> <span class="op">=</span> <span class="ident">validator_set</span>.<span class="ident">payload</span>().<span class="ident">to_vec</span>();
-        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Update Network about new validators&quot;</span>);
-        <span class="self">self</span>.<span class="ident">network_sender</span>
-            .<span class="ident">update_eligible_nodes</span>(<span class="ident">validator_keys</span>)
-            .<span class="kw">await</span>
-            .<span class="ident">expect</span>(<span class="string">&quot;Unable to update network&#39;s eligible peers&quot;</span>);
 
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">storage</span>.<span class="ident">start</span>() {
             <span class="ident">LivenessStorageData</span>::<span class="ident">RecoveryData</span>(<span class="ident">initial_data</span>) <span class="op">=</span><span class="op">&gt;</span> {

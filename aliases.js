@@ -87,6 +87,7 @@ ALIASES["move_vm_runtime"] = {};
 ALIASES["move_vm_types"] = {};
 ALIASES["netcore"] = {};
 ALIASES["network"] = {};
+ALIASES["network_simple_onchain_discovery"] = {};
 ALIASES["num_variants"] = {};
 ALIASES["onchain_discovery"] = {};
 ALIASES["option_future"] = {};
