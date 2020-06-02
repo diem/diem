@@ -87,7 +87,7 @@ struct FullNodeArgs {
     /// 'extend' will update the NodeConfig to include a new FullNode network configuration.
     output_dir: PathBuf,
     #[structopt(short = "p", long)]
-    /// Public network, doesn't use any authentication or encryption
+    /// Public network, doesn't require remote authentication
     public: bool,
     #[structopt(short = "t", long, parse(from_os_str))]
     /// Path to a template NodeConfig.

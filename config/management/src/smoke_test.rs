@@ -120,12 +120,8 @@ fn smoke_test() {
         // 4 matches = 5 splits
         assert_eq!(output.split("match").count(), 5);
 
-        config.consensus.safety_rules.backend = secure_backend(
-            helper.path(),
-            &swarm_path,
-            &ns,
-            "safety-rules",
-        );
+        config.consensus.safety_rules.backend =
+            secure_backend(helper.path(), &swarm_path, &ns, "safety-rules");
 
         // TODO: this should be exclusively acquired via secure storage
         config.base.waypoint = Some(waypoint);
