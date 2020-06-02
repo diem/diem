@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["native_print",""],["native_print_stack_trace",""],["print_locals",""]]});
+initSidebarItems({"fn":[["print_locals",""],["print_reference",""]]});
