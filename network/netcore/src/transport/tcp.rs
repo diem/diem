@@ -75,27 +75,27 @@ impl Transport for TcpTransport {
     ) -> Result<(Self::Listener, NetworkAddress), Self::Error> {
         let ((ipaddr, port), addr_suffix) =
             parse_ip_tcp(addr.as_slice()).ok_or_else(|| invalid_addr_error(&addr))?;
+        if !addr_suffix.is_empty() {
+            return Err(invalid_addr_error(&addr));
+        }
 
         let listener = ::std::net::TcpListener::bind((ipaddr, port))?;
         let listener = TcpListener::try_from(listener)?;
-
-        // append the addr_suffix so any trailing protocols get included in the
-        // actual listening adddress we return
-        let actual_addr =
-            NetworkAddress::from(listener.local_addr()?).extend_from_slice(addr_suffix);
+        let listen_addr = NetworkAddress::from(listener.local_addr()?);
 
         Ok((
             TcpListenerStream {
                 inner: listener,
                 config: self.clone(),
             },
-            actual_addr,
+            listen_addr,
         ))
     }
 
     fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
         let (addr_string, _addr_suffix) =
             parse_addr_and_port(addr.as_slice()).ok_or_else(|| invalid_addr_error(&addr))?;
+        // TODO(philiphayes): base tcp transport should not allow trailing protocols
         // TODO(philiphayes): use `tokio::net::lookup_host()` then filter the results
         // so e.g. `Protocol::Dns4` only returns `SocketAddrV4`s and `Protocol::Dns6`
         // only returns `SocketAddrV6`.
