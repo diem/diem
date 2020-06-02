@@ -23,7 +23,7 @@ serde_yaml = "0.8.12"
 termion = "1.5.3"
 serde = { version = "1.0.111", features = ["derive"] }
 structopt = "0.3.14"
-rusoto_core = "0.43.0"
+rusoto_core = "0.44.0"
 rusoto_autoscaling = "0.43.0"
 rusoto_sts =  "0.43.0"
 
