@@ -518,6 +518,11 @@
 <span id="518">518</span>
 <span id="519">519</span>
 <span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -540,7 +545,7 @@
     <span class="ident">state_replication</span>::{<span class="ident">StateComputer</span>, <span class="ident">TxnManager</span>},
     <span class="ident">util</span>::<span class="ident">time_service</span>::<span class="ident">TimeService</span>,
 };
-<span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">anyhow</span>;
+<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">bail</span>, <span class="ident">ensure</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">channel</span>::<span class="ident">libra_channel</span>;
 <span class="kw">use</span> <span class="ident">consensus_types</span>::{
     <span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Payload</span>, <span class="ident">Round</span>},
@@ -705,28 +710,24 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">request</span>: <span class="ident">EpochRetrievalRequest</span>,
         <span class="ident">peer_id</span>: <span class="ident">AccountAddress</span>,
-    ) {
-        <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">storage</span>
             .<span class="ident">libra_db</span>()
             .<span class="ident">get_epoch_change_ledger_infos</span>(<span class="ident">request</span>.<span class="ident">start_epoch</span>, <span class="ident">request</span>.<span class="ident">end_epoch</span>)
-        {
-            <span class="prelude-val">Ok</span>(<span class="ident">proof</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">proof</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Failed to get epoch proof from storage: {:?}&quot;</span>, <span class="ident">e</span>);
-                <span class="kw">return</span>;
-            }
-        };
+            .<span class="ident">context</span>(<span class="string">&quot;[EpochManager] Failed to get epoch proof&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">ConsensusMsg</span>::<span class="ident">EpochChangeProof</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">proof</span>));
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">network_sender</span>.<span class="ident">send_to</span>(<span class="ident">peer_id</span>, <span class="ident">msg</span>) {
-            <span class="macro">warn</span><span class="macro">!</span>(
-                <span class="string">&quot;Failed to send a epoch retrieval to peer {}: {:?}&quot;</span>,
-                <span class="ident">peer_id</span>, <span class="ident">e</span>
-            );
-        };
+        <span class="self">self</span>.<span class="ident">network_sender</span>.<span class="ident">send_to</span>(<span class="ident">peer_id</span>, <span class="ident">msg</span>).<span class="ident">context</span>(<span class="macro">format</span><span class="macro">!</span>(
+            <span class="string">&quot;[EpochManager] Failed to send epoch proof to {}&quot;</span>,
+            <span class="ident">peer_id</span>
+        ))
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_different_epoch</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">different_epoch</span>: <span class="ident">u64</span>, <span class="ident">peer_id</span>: <span class="ident">AccountAddress</span>) {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_different_epoch</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">different_epoch</span>: <span class="ident">u64</span>,
+        <span class="ident">peer_id</span>: <span class="ident">AccountAddress</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="ident">different_epoch</span>.<span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">epoch</span>()) {
             <span class="comment">// We try to help nodes that have lower epoch than us</span>
             <span class="ident">Ordering</span>::<span class="ident">Less</span> <span class="op">=</span><span class="op">&gt;</span> {
@@ -746,36 +747,34 @@
                     <span class="ident">end_epoch</span>: <span class="ident">different_epoch</span>,
                 };
                 <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">ConsensusMsg</span>::<span class="ident">EpochRetrievalRequest</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">request</span>));
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">network_sender</span>.<span class="ident">send_to</span>(<span class="ident">peer_id</span>, <span class="ident">msg</span>) {
-                    <span class="macro">warn</span><span class="macro">!</span>(
-                        <span class="string">&quot;Failed to send a epoch retrieval to peer {}: {:?}&quot;</span>,
-                        <span class="ident">peer_id</span>, <span class="ident">e</span>
-                    );
-                }
+                <span class="self">self</span>.<span class="ident">network_sender</span>.<span class="ident">send_to</span>(<span class="ident">peer_id</span>, <span class="ident">msg</span>).<span class="ident">context</span>(<span class="macro">format</span><span class="macro">!</span>(
+                    <span class="string">&quot;[EpochManager] Failed to send epoch retrieval to {}&quot;</span>,
+                    <span class="ident">peer_id</span>
+                ))
             }
             <span class="ident">Ordering</span>::<span class="ident">Equal</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Same epoch should not come to process_different_epoch&quot;</span>);
+                <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;[EpochManager] Same epoch should not come to process_different_epoch&quot;</span>);
             }
         }
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start_new_epoch</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proof</span>: <span class="ident">EpochChangeProof</span>) {
-        <span class="kw">let</span> <span class="ident">ledger_info</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">proof</span>.<span class="ident">verify</span>(<span class="self">self</span>.<span class="ident">epoch_state</span>()) {
-            <span class="prelude-val">Ok</span>(<span class="ident">ledger_info</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ledger_info</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Invalid EpochChangeProof: {:?}&quot;</span>, <span class="ident">e</span>);
-                <span class="kw">return</span>;
-            }
-        };
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start_new_epoch</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proof</span>: <span class="ident">EpochChangeProof</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">ledger_info</span> <span class="op">=</span> <span class="ident">proof</span>
+            .<span class="ident">verify</span>(<span class="self">self</span>.<span class="ident">epoch_state</span>())
+            .<span class="ident">context</span>(<span class="string">&quot;[EpochManager] Invalid EpochChangeProof&quot;</span>)<span class="question-mark">?</span>;
         <span class="macro">debug</span><span class="macro">!</span>(
             <span class="string">&quot;Received epoch change to {}&quot;</span>,
             <span class="ident">ledger_info</span>.<span class="ident">ledger_info</span>().<span class="ident">epoch</span>() <span class="op">+</span> <span class="number">1</span>
         );
 
         <span class="comment">// make sure storage is on this ledger_info too, it should be no-op if it&#39;s already committed</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">state_computer</span>.<span class="ident">sync_to</span>(<span class="ident">ledger_info</span>.<span class="ident">clone</span>()).<span class="kw">await</span> {
-            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;State sync to new epoch {} failed with {:?}, we&#39;ll try to start from current libradb&quot;</span>, <span class="ident">ledger_info</span>, <span class="ident">e</span>);
-        }
+        <span class="self">self</span>.<span class="ident">state_computer</span>
+            .<span class="ident">sync_to</span>(<span class="ident">ledger_info</span>.<span class="ident">clone</span>())
+            .<span class="kw">await</span>
+            .<span class="ident">context</span>(<span class="macro">format</span><span class="macro">!</span>(
+                <span class="string">&quot;[EpochManager] State sync to new epoch {}&quot;</span>,
+                <span class="ident">ledger_info</span>
+            ))
         <span class="comment">// state_computer notifies reconfiguration in another channel</span>
     }
 
@@ -881,7 +880,7 @@
             <span class="ident">network_sender</span>,
             <span class="self">self</span>.<span class="ident">storage</span>.<span class="ident">clone</span>(),
             <span class="self">self</span>.<span class="ident">state_computer</span>.<span class="ident">clone</span>(),
-            <span class="ident">ledger_recovery_data</span>,
+            <span class="ident">ledger_recovery_data</span>.<span class="ident">commit_round</span>(),
         )));
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;SyncProcessor started&quot;</span>);
     }
@@ -910,67 +909,68 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">peer_id</span>: <span class="ident">AccountAddress</span>,
         <span class="ident">consensus_msg</span>: <span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    ) {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">event</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">process_epoch</span>(<span class="ident">peer_id</span>, <span class="ident">consensus_msg</span>).<span class="kw">await</span> {
-            <span class="kw">match</span> <span class="ident">event</span>.<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">epoch_state</span>().<span class="ident">verifier</span>) {
-                <span class="prelude-val">Ok</span>(<span class="ident">event</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">process_event</span>(<span class="ident">peer_id</span>, <span class="ident">event</span>).<span class="kw">await</span>,
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Message failed verification: {:?}&quot;</span>, <span class="ident">err</span>),
-            }
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">event</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">process_epoch</span>(<span class="ident">peer_id</span>, <span class="ident">consensus_msg</span>).<span class="kw">await</span><span class="question-mark">?</span> {
+            <span class="kw">let</span> <span class="ident">verified_event</span> <span class="op">=</span> <span class="ident">event</span>
+                .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">epoch_state</span>().<span class="ident">verifier</span>)
+                .<span class="ident">context</span>(<span class="string">&quot;[EpochManager] Verify event&quot;</span>)<span class="question-mark">?</span>;
+            <span class="self">self</span>.<span class="ident">process_event</span>(<span class="ident">peer_id</span>, <span class="ident">verified_event</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         }
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_epoch</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">peer_id</span>: <span class="ident">AccountAddress</span>,
         <span class="ident">msg</span>: <span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">UnverifiedEvent</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">UnverifiedEvent</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="ident">msg</span> {
             <span class="ident">ConsensusMsg</span>::<span class="ident">ProposalMsg</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">ConsensusMsg</span>::<span class="ident">SyncInfo</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">ConsensusMsg</span>::<span class="ident">VoteMsg</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">event</span>: <span class="ident">UnverifiedEvent</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">msg</span>.<span class="ident">into</span>();
                 <span class="kw">if</span> <span class="ident">event</span>.<span class="ident">epoch</span>() <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">epoch</span>() {
-                    <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">event</span>);
+                    <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">event</span>));
                 } <span class="kw">else</span> {
-                    <span class="self">self</span>.<span class="ident">process_different_epoch</span>(<span class="ident">event</span>.<span class="ident">epoch</span>(), <span class="ident">peer_id</span>).<span class="kw">await</span>;
+                    <span class="self">self</span>.<span class="ident">process_different_epoch</span>(<span class="ident">event</span>.<span class="ident">epoch</span>(), <span class="ident">peer_id</span>).<span class="kw">await</span><span class="question-mark">?</span>;
                 }
             }
             <span class="ident">ConsensusMsg</span>::<span class="ident">EpochChangeProof</span>(<span class="ident">proof</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">msg_epoch</span> <span class="op">=</span> <span class="ident">proof</span>.<span class="ident">epoch</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">e</span>)).<span class="ident">ok</span>()<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">msg_epoch</span> <span class="op">=</span> <span class="ident">proof</span>.<span class="ident">epoch</span>()<span class="question-mark">?</span>;
                 <span class="kw">if</span> <span class="ident">msg_epoch</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">epoch</span>() {
-                    <span class="self">self</span>.<span class="ident">start_new_epoch</span>(<span class="kw-2">*</span><span class="ident">proof</span>).<span class="kw">await</span>
+                    <span class="self">self</span>.<span class="ident">start_new_epoch</span>(<span class="kw-2">*</span><span class="ident">proof</span>).<span class="kw">await</span><span class="question-mark">?</span>;
                 } <span class="kw">else</span> {
-                    <span class="self">self</span>.<span class="ident">process_different_epoch</span>(<span class="ident">msg_epoch</span>, <span class="ident">peer_id</span>).<span class="kw">await</span>
+                    <span class="self">self</span>.<span class="ident">process_different_epoch</span>(<span class="ident">msg_epoch</span>, <span class="ident">peer_id</span>).<span class="kw">await</span><span class="question-mark">?</span>;
                 }
             }
             <span class="ident">ConsensusMsg</span>::<span class="ident">EpochRetrievalRequest</span>(<span class="ident">request</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">if</span> <span class="ident">request</span>.<span class="ident">end_epoch</span> <span class="op">&lt;</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">epoch</span>() {
-                    <span class="self">self</span>.<span class="ident">process_epoch_retrieval</span>(<span class="kw-2">*</span><span class="ident">request</span>, <span class="ident">peer_id</span>).<span class="kw">await</span>
-                } <span class="kw">else</span> {
-                    <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Received EpochRetrievalRequest beyond what we have locally&quot;</span>);
-                }
+                <span class="macro">ensure</span><span class="macro">!</span>(
+                    <span class="ident">request</span>.<span class="ident">end_epoch</span> <span class="op">&lt;</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">epoch</span>(),
+                    <span class="string">&quot;[EpochManager] Received EpochRetrievalRequest beyond what we have locally&quot;</span>
+                );
+                <span class="self">self</span>.<span class="ident">process_epoch_retrieval</span>(<span class="kw-2">*</span><span class="ident">request</span>, <span class="ident">peer_id</span>).<span class="kw">await</span><span class="question-mark">?</span>;
             }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Unexpected messages: {:?}&quot;</span>, <span class="ident">msg</span>);
+                <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;[EpochManager] Unexpected messages: {:?}&quot;</span>, <span class="ident">msg</span>);
             }
         }
-        <span class="prelude-val">None</span>
+        <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_event</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">peer_id</span>: <span class="ident">AccountAddress</span>, <span class="ident">event</span>: <span class="ident">VerifiedEvent</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_event</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">peer_id</span>: <span class="ident">AccountAddress</span>,
+        <span class="ident">event</span>: <span class="ident">VerifiedEvent</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">processor_mut</span>() {
             <span class="ident">RoundProcessor</span>::<span class="ident">Recovery</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">event</span> {
+                <span class="kw">let</span> <span class="ident">recovery_data</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">event</span> {
                     <span class="ident">VerifiedEvent</span>::<span class="ident">ProposalMsg</span>(<span class="ident">proposal</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">process_proposal_msg</span>(<span class="kw-2">*</span><span class="ident">proposal</span>).<span class="kw">await</span>,
                     <span class="ident">VerifiedEvent</span>::<span class="ident">VoteMsg</span>(<span class="ident">vote</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">process_vote</span>(<span class="kw-2">*</span><span class="ident">vote</span>).<span class="kw">await</span>,
                     <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;Unexpected VerifiedEvent during startup&quot;</span>)),
-                };
+                }<span class="question-mark">?</span>;
                 <span class="kw">let</span> <span class="ident">epoch_state</span> <span class="op">=</span> <span class="ident">p</span>.<span class="ident">epoch_state</span>().<span class="ident">clone</span>();
-                <span class="kw">match</span> <span class="ident">result</span> {
-                    <span class="prelude-val">Ok</span>(<span class="ident">data</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Recovered from SyncProcessor&quot;</span>);
-                        <span class="self">self</span>.<span class="ident">start_round_manager</span>(<span class="ident">data</span>, <span class="ident">epoch_state</span>).<span class="kw">await</span>
-                    }
-                    <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">e</span>),
-                }
+                <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Recovered from SyncProcessor&quot;</span>);
+                <span class="self">self</span>.<span class="ident">start_round_manager</span>(<span class="ident">recovery_data</span>, <span class="ident">epoch_state</span>).<span class="kw">await</span>;
+                <span class="prelude-val">Ok</span>(())
             }
             <span class="ident">RoundProcessor</span>::<span class="ident">Normal</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">event</span> {
                 <span class="ident">VerifiedEvent</span>::<span class="ident">ProposalMsg</span>(<span class="ident">proposal</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">process_proposal_msg</span>(<span class="kw-2">*</span><span class="ident">proposal</span>).<span class="kw">await</span>,
@@ -985,17 +985,20 @@
     <span class="kw">fn</span> <span class="ident">processor_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">RoundProcessor</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">processor</span>
             .<span class="ident">as_mut</span>()
-            .<span class="ident">expect</span>(<span class="string">&quot;EpochManager not started yet&quot;</span>)
+            .<span class="ident">expect</span>(<span class="string">&quot;[EpochManager] not started yet&quot;</span>)
     }
 
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_block_retrieval</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">IncomingBlockRetrievalRequest</span>) {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_block_retrieval</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">request</span>: <span class="ident">IncomingBlockRetrievalRequest</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">processor_mut</span>() {
             <span class="ident">RoundProcessor</span>::<span class="ident">Normal</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">process_block_retrieval</span>(<span class="ident">request</span>).<span class="kw">await</span>,
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;RoundManager not started yet&quot;</span>),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;[EpochManager] RoundManager not started yet&quot;</span>),
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_local_timeout</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">round</span>: <span class="ident">u64</span>) {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_local_timeout</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">round</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">processor_mut</span>() {
             <span class="ident">RoundProcessor</span>::<span class="ident">Normal</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p</span>.<span class="ident">process_local_timeout</span>(<span class="ident">round</span>).<span class="kw">await</span>,
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;RoundManager not started yet&quot;</span>),
@@ -1015,10 +1018,11 @@
         <span class="kw">loop</span> {
             <span class="kw">let</span> <span class="ident">pre_select_instant</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
             <span class="kw">let</span> <span class="ident">idle_duration</span>;
-            <span class="macro">select</span><span class="macro">!</span> {
+            <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="macro">select</span><span class="macro">!</span> {
                 <span class="ident">payload</span> <span class="op">=</span> <span class="ident">reconfig_events</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="ident">idle_duration</span> <span class="op">=</span> <span class="ident">pre_select_instant</span>.<span class="ident">elapsed</span>();
-                    <span class="self">self</span>.<span class="ident">start_processor</span>(<span class="ident">payload</span>).<span class="kw">await</span>
+                    <span class="self">self</span>.<span class="ident">start_processor</span>(<span class="ident">payload</span>).<span class="kw">await</span>;
+                    <span class="prelude-val">Ok</span>(())
                 }
                 <span class="ident">msg</span> <span class="op">=</span> <span class="ident">network_receivers</span>.<span class="ident">consensus_messages</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="ident">idle_duration</span> <span class="op">=</span> <span class="ident">pre_select_instant</span>.<span class="ident">elapsed</span>();
@@ -1032,6 +1036,12 @@
                     <span class="ident">idle_duration</span> <span class="op">=</span> <span class="ident">pre_select_instant</span>.<span class="ident">elapsed</span>();
                     <span class="self">self</span>.<span class="ident">process_local_timeout</span>(<span class="ident">round</span>).<span class="kw">await</span>
                 }
+            };
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">result</span> {
+                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">e</span>);
+            }
+            <span class="kw">if</span> <span class="kw">let</span> <span class="ident">RoundProcessor</span>::<span class="ident">Normal</span>(<span class="ident">p</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">processor_mut</span>() {
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">p</span>.<span class="ident">round_state</span>());
             }
             <span class="ident">counters</span>::<span class="ident">EVENT_PROCESSING_LOOP_BUSY_DURATION_S</span>
                 .<span class="ident">observe_duration</span>(<span class="ident">pre_select_instant</span>.<span class="ident">elapsed</span>() <span class="op">-</span> <span class="ident">idle_duration</span>);

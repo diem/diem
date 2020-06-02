@@ -43,7 +43,6 @@
 <span id="43">43</span>
 <span id="44">44</span>
 <span id="45">45</span>
-<span id="46">46</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -66,9 +65,8 @@
     <span class="doccomment">/// used by e.g., voters for choosing the destinations for sending their votes to).</span>
     <span class="kw">fn</span> <span class="ident">get_valid_proposers</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Author</span><span class="op">&gt;</span>;
 
-    <span class="doccomment">/// Notify proposer election about a new proposal. The function doesn&#39;t return any information:</span>
-    <span class="doccomment">/// proposer election is going to notify the client about the chosen proposal via a dedicated</span>
-    <span class="doccomment">/// channel (to be passed in constructor).</span>
+    <span class="doccomment">/// Notify proposer election about a new proposal. Return the block if it has a valid author</span>
+    <span class="doccomment">/// for the current round.</span>
     <span class="kw">fn</span> <span class="ident">process_proposal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposal</span>: <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Take the highest ranked backup proposal if available for a given round</span>
