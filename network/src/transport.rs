@@ -5,7 +5,7 @@ use crate::{
     common::NetworkPublicKeys,
     noise_wrapper::{AntiReplayTimestamps, NoiseWrapper},
     protocols::{
-        identity::{exchange_handshake, exchange_peerid},
+        identity::exchange_handshake,
         wire::handshake::v1::{HandshakeMsg, MessagingProtocolVersion, SupportedProtocols},
     },
 };
@@ -295,26 +295,6 @@ pub fn build_unauthenticated_memory_noise_transport(
         .boxed()
 }
 
-pub fn build_memory_transport(
-    network_id: NetworkId,
-    own_peer_id: PeerId,
-    application_protocols: SupportedProtocols,
-) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
-    let memory_transport = memory::MemoryTransport::default();
-    let mut own_handshake = HandshakeMsg::new(network_id);
-    own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
-
-    memory_transport
-        .and_then(move |mut socket, _addr, _origin| async move {
-            Ok((exchange_peerid(&own_peer_id, &mut socket).await?, socket))
-        })
-        .and_then(move |(peer_id, socket), addr, origin| async move {
-            perform_handshake(peer_id, socket, addr, origin, &own_handshake).await
-        })
-        .with_timeout(TRANSPORT_TIMEOUT)
-        .boxed()
-}
-
 //TODO(bmwill) Maybe create an Either Transport so we can merge the building of Memory + Tcp
 pub fn build_tcp_noise_transport(
     network_id: NetworkId,
@@ -389,25 +369,6 @@ pub fn build_unauthenticated_tcp_noise_transport(
                 let peer_id = PeerId::try_from(remote_static_key.as_slice()).unwrap();
                 Ok((peer_id, socket))
             }
-        })
-        .and_then(move |(peer_id, socket), addr, origin| async move {
-            perform_handshake(peer_id, socket, addr, origin, &own_handshake).await
-        })
-        .with_timeout(TRANSPORT_TIMEOUT)
-        .boxed()
-}
-
-pub fn build_tcp_transport(
-    network_id: NetworkId,
-    own_peer_id: PeerId,
-    application_protocols: SupportedProtocols,
-) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
-    let mut own_handshake = HandshakeMsg::new(network_id);
-    own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
-
-    LIBRA_TCP_TRANSPORT
-        .and_then(move |mut socket, _addr, _origin| async move {
-            Ok((exchange_peerid(&own_peer_id, &mut socket).await?, socket))
         })
         .and_then(move |(peer_id, socket), addr, origin| async move {
             perform_handshake(peer_id, socket, addr, origin, &own_handshake).await

@@ -116,8 +116,9 @@ struct SynchronizerEnv {
     clients: Vec<Arc<StateSyncClient>>,
     storage_proxies: Vec<Arc<RwLock<MockStorage>>>, // to directly modify peers storage
     signers: Vec<ValidatorSigner>,
-    network_id: NetworkId,
+    network_keys: Vec<x25519::PrivateKey>,
     public_keys: Vec<ValidatorInfo>,
+    network_id: NetworkId,
     peer_ids: Vec<PeerId>,
     peer_addresses: Vec<NetworkAddress>,
     mempools: Vec<MockSharedMempool>,
@@ -125,12 +126,18 @@ struct SynchronizerEnv {
 
 impl SynchronizerEnv {
     // Returns the initial peers with their signatures
-    fn initial_setup(count: usize) -> (Vec<ValidatorSigner>, Vec<ValidatorInfo>) {
+    fn initial_setup(
+        count: usize,
+    ) -> (
+        Vec<ValidatorSigner>,
+        Vec<ValidatorInfo>,
+        Vec<x25519::PrivateKey>,
+    ) {
         let (signers, _verifier) = random_validator_verifier(count, None, true);
 
         // Setup identity public keys.
         let mut rng = StdRng::from_seed(TEST_SEED);
-        let identity_private_keys: Vec<_> = (0..count)
+        let network_keys: Vec<_> = (0..count)
             .map(|_| x25519::PrivateKey::generate(&mut rng))
             .collect();
 
@@ -141,9 +148,9 @@ impl SynchronizerEnv {
             let addr: NetworkAddress = "/memory/0".parse().unwrap();
             let validator_config = ValidatorConfig::new(
                 signer.public_key(),
-                identity_private_keys[idx].public_key(),
+                network_keys[idx].public_key(),
                 RawNetworkAddress::try_from(&addr).unwrap(),
-                identity_private_keys[idx].public_key(),
+                network_keys[idx].public_key(),
                 RawNetworkAddress::try_from(&addr).unwrap(),
                 // Vec::<AccountAddress>::new(),
             );
@@ -151,7 +158,7 @@ impl SynchronizerEnv {
                 ValidatorInfo::new(signer.author(), voting_power, validator_config);
             validators_keys.push(validator_info);
         }
-        (signers, validators_keys)
+        (signers, validators_keys, network_keys)
     }
 
     // Moves peer 0 to the next epoch. Note that other peers are not going to be able to discover
@@ -189,7 +196,7 @@ impl SynchronizerEnv {
     fn new(num_peers: usize) -> Self {
         ::libra_logger::Logger::new().environment_only(true).init();
         let runtime = Runtime::new().unwrap();
-        let (signers, public_keys) = Self::initial_setup(num_peers);
+        let (signers, public_keys, network_keys) = Self::initial_setup(num_peers);
         let peer_ids = signers.iter().map(|s| s.author()).collect::<Vec<PeerId>>();
 
         Self {
@@ -199,6 +206,7 @@ impl SynchronizerEnv {
             storage_proxies: vec![],
             signers,
             network_id: NetworkId::Validator,
+            network_keys,
             public_keys,
             peer_ids,
             peer_addresses: vec![],
@@ -253,7 +261,9 @@ impl SynchronizerEnv {
             addr,
         );
         network_builder
-            .authentication_mode(AuthenticationMode::Unauthenticated)
+            .authentication_mode(AuthenticationMode::Mutual(
+                self.network_keys[new_peer_idx].clone(),
+            ))
             .trusted_peers(trusted_peers)
             .seed_peers(seed_peers)
             .add_connectivity_manager()

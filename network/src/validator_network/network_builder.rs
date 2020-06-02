@@ -68,11 +68,6 @@ pub const MAX_CONNECTION_DELAY_MS: u64 = 10 * 60 * 1000 /* 10 minutes */;
 
 #[derive(Debug)]
 pub enum AuthenticationMode {
-    /// Inbound and outbound connections are unauthenticated and unencrypted, using
-    /// a simple PeerId exchange protocol to share each peer's PeerId in-band.
-    /// This mode is obviously insecure and should never be used in production.
-    // TODO(philiphayes): remove? gate with cfg(test)? should never use this in prod.
-    Unauthenticated,
     /// Inbound and outbound connections are secured with NoiseIK; however, only
     /// clients/dialers will authenticate the servers/listeners. More specifically,
     /// dialers will pin the connection to a specific, expected pubkey while
@@ -84,16 +79,16 @@ pub enum AuthenticationMode {
     Mutual(x25519::PrivateKey),
 }
 
-/// Append the correct libranet protocols to the given base address, depending on
-/// the configured authentication mode.
-fn append_libranet_protocols(
-    addr: NetworkAddress,
-    auth_mode: &AuthenticationMode,
-) -> NetworkAddress {
-    match auth_mode {
-        AuthenticationMode::Unauthenticated => addr.append_test_protos(HANDSHAKE_VERSION),
-        AuthenticationMode::ServerOnly(key) | AuthenticationMode::Mutual(key) => {
-            addr.append_prod_protos(key.public_key(), HANDSHAKE_VERSION)
+impl AuthenticationMode {
+    /// Convenience method to retrieve the public key for the auth mode's inner
+    /// network identity key.
+    ///
+    /// Note: this only works because all auth modes are Noise-based.
+    pub fn public_key(&self) -> x25519::PublicKey {
+        match self {
+            AuthenticationMode::ServerOnly(key) | AuthenticationMode::Mutual(key) => {
+                key.public_key()
+            }
         }
     }
 }
@@ -365,7 +360,8 @@ impl NetworkBuilder {
             .authentication_mode
             .as_ref()
             .expect("Authentication Mode not set");
-        let advertised_address = append_libranet_protocols(advertised_address, authentication_mode);
+        let pubkey = authentication_mode.public_key();
+        let advertised_address = advertised_address.append_prod_protos(pubkey, HANDSHAKE_VERSION);
 
         let addrs = vec![advertised_address];
         let role = self.role;
@@ -412,32 +408,17 @@ impl NetworkBuilder {
         use libra_network_address::Protocol::*;
 
         let network_id = self.network_id.clone();
-        let peer_id = self.peer_id;
         let protos = self.supported_protocols();
-
         let trusted_peers = self.trusted_peers.clone();
+
         let authentication_mode = self
             .authentication_mode
             .take()
             .expect("Authentication Mode not set");
-
-        // formatting the listen address here is a temporary hack until `transport.rs`
-        // gets refactored and returns the fully rendered listen_addr in
-        // `Transport::listen_on()`.
-
-        // would like to do this in `build_with_transport` but ownership is very
-        // tricky here since the private keys aren't cloneable and we don't have
-        // a safe key container yet...
-        let unbound_listen_addr = self.listen_address.clone();
-        let unbound_len = unbound_listen_addr.len();
-        let unbound_listen_addr =
-            append_libranet_protocols(unbound_listen_addr, &authentication_mode);
+        let pubkey = authentication_mode.public_key();
 
         let bound_listen_addr = match self.listen_address.as_slice() {
             [Ip4(_), Tcp(_)] | [Ip6(_), Tcp(_)] => match authentication_mode {
-                AuthenticationMode::Unauthenticated => {
-                    self.build_with_transport(build_tcp_transport(network_id, peer_id, protos))
-                }
                 AuthenticationMode::ServerOnly(key) => self.build_with_transport(
                     build_unauthenticated_tcp_noise_transport(network_id, key, protos),
                 ),
@@ -446,9 +427,6 @@ impl NetworkBuilder {
                 ),
             },
             [Memory(_)] => match authentication_mode {
-                AuthenticationMode::Unauthenticated => {
-                    self.build_with_transport(build_memory_transport(network_id, peer_id, protos))
-                }
                 AuthenticationMode::ServerOnly(key) => self.build_with_transport(
                     build_unauthenticated_memory_noise_transport(network_id, key, protos),
                 ),
@@ -463,9 +441,9 @@ impl NetworkBuilder {
             ),
         };
 
-        // do some surgery here...
-        let libranet_protos = &unbound_listen_addr.as_slice()[unbound_len..];
-        bound_listen_addr.extend_from_slice(libranet_protos)
+        // TODO(philiphayes): monolithic transport should return the complete
+        // address; shouldn't need to format anything here.
+        bound_listen_addr.append_prod_protos(pubkey, HANDSHAKE_VERSION)
     }
 
     /// Given a transport build and launch PeerManager.

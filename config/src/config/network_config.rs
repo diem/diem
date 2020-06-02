@@ -41,6 +41,8 @@ pub struct NetworkConfig {
     pub connectivity_check_interval_ms: u64,
     // If the network uses remote authentication, only trusted peers are allowed to connect.
     // Otherwise, any node can connect.
+    // TODO(philiphayes): rename this flag. should reflect `AuthenticationMode` in
+    // `NetworkBuilder`, i.e., `Mutual` vs `ServerOnly` authentication.
     pub enable_remote_authentication: bool,
     // Enable this network to use either gossip discovery or onchain discovery.
     pub discovery_method: DiscoveryMethod,
