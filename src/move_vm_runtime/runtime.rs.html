@@ -174,11 +174,6 @@
 <span id="174">174</span>
 <span id="175">175</span>
 <span id="176">176</span>
-<span id="177">177</span>
-<span id="178">178</span>
-<span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -189,7 +184,6 @@
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>};
 <span class="kw">use</span> <span class="ident">move_core_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
-    <span class="ident">gas_schedule</span>::{<span class="ident">AbstractMemorySize</span>, <span class="ident">GasCarrier</span>},
     <span class="ident">identifier</span>::<span class="ident">IdentStr</span>,
     <span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">TypeTag</span>},
 };
@@ -259,7 +253,6 @@
         <span class="ident">ty_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TypeTag</span><span class="op">&gt;</span>,
         <span class="kw-2">mut</span> <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&gt;</span>,
         <span class="ident">sender</span>: <span class="ident">AccountAddress</span>,
-        <span class="ident">txn_size</span>: <span class="ident">AbstractMemorySize</span><span class="op">&lt;</span><span class="ident">GasCarrier</span><span class="op">&gt;</span>,
         <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
         <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
@@ -290,7 +283,6 @@
             <span class="ident">type_params</span>,
             <span class="ident">args</span>,
             <span class="ident">sender</span>,
-            <span class="ident">txn_size</span>,
             <span class="ident">data_store</span>,
             <span class="ident">cost_strategy</span>,
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">loader</span>,
@@ -304,7 +296,6 @@
         <span class="ident">ty_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TypeTag</span><span class="op">&gt;</span>,
         <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&gt;</span>,
         <span class="ident">sender</span>: <span class="ident">AccountAddress</span>,
-        <span class="ident">txn_size</span>: <span class="ident">AbstractMemorySize</span><span class="op">&lt;</span><span class="ident">GasCarrier</span><span class="op">&gt;</span>,
         <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
         <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
@@ -326,7 +317,6 @@
             <span class="ident">type_params</span>,
             <span class="ident">args</span>,
             <span class="ident">sender</span>,
-            <span class="ident">txn_size</span>,
             <span class="ident">data_store</span>,
             <span class="ident">cost_strategy</span>,
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">loader</span>,

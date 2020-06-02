@@ -1182,14 +1182,6 @@
 <span id="1182">1182</span>
 <span id="1183">1183</span>
 <span id="1184">1184</span>
-<span id="1185">1185</span>
-<span id="1186">1186</span>
-<span id="1187">1187</span>
-<span id="1188">1188</span>
-<span id="1189">1189</span>
-<span id="1190">1190</span>
-<span id="1191">1191</span>
-<span id="1192">1192</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1204,7 +1196,6 @@
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
-    <span class="ident">transaction</span>::<span class="ident">MAX_TRANSACTION_SIZE_IN_BYTES</span>,
     <span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">StatusType</span>, <span class="ident">VMStatus</span>},
 };
 <span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">gas_schedule</span>::{<span class="ident">AbstractMemorySize</span>, <span class="ident">GasAlgebra</span>, <span class="ident">GasCarrier</span>};
@@ -1263,20 +1254,13 @@
         <span class="ident">ty_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>,
         <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&gt;</span>,
         <span class="ident">sender</span>: <span class="ident">AccountAddress</span>,
-        <span class="ident">txn_size</span>: <span class="ident">AbstractMemorySize</span><span class="op">&lt;</span><span class="ident">GasCarrier</span><span class="op">&gt;</span>,
         <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
         <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
         <span class="ident">loader</span>: <span class="kw-2">&amp;</span><span class="ident">Loader</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="comment">// The callers of this function verify the transaction before executing it. Transaction</span>
-        <span class="comment">// verification ensures the following condition.</span>
-        <span class="comment">// TODO: This is enforced by Libra but needs to be enforced by other callers of the Move VM</span>
-        <span class="comment">// as well.</span>
-        <span class="macro">assume</span><span class="macro">!</span>(<span class="ident">txn_size</span>.<span class="ident">get</span>() <span class="op">&lt;</span><span class="op">=</span> (<span class="ident">MAX_TRANSACTION_SIZE_IN_BYTES</span> <span class="kw">as</span> <span class="ident">u64</span>));
         <span class="comment">// We count the intrinsic cost of the transaction here, since that needs to also cover the</span>
         <span class="comment">// setup of the function.</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">interp</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">new</span>(<span class="ident">sender</span>);
-        <span class="ident">cost_strategy</span>.<span class="ident">charge_intrinsic_gas</span>(<span class="ident">txn_size</span>)<span class="question-mark">?</span>;
         <span class="ident">interp</span>.<span class="ident">execute</span>(<span class="ident">loader</span>, <span class="ident">data_store</span>, <span class="ident">cost_strategy</span>, <span class="ident">function</span>, <span class="ident">ty_args</span>, <span class="ident">args</span>)
     }
 

@@ -310,6 +310,9 @@
 <span id="310">310</span>
 <span id="311">311</span>
 <span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -424,8 +427,11 @@
 
     <span class="doccomment">/// Charge gas related to the overall size of a transaction and fail if not enough</span>
     <span class="doccomment">/// gas units are left.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">charge_intrinsic_gas</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">size</span>: <span class="ident">AbstractMemorySize</span><span class="op">&lt;</span><span class="ident">GasCarrier</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">cost</span> <span class="op">=</span> <span class="ident">calculate_intrinsic_gas</span>(<span class="ident">size</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">cost_table</span>.<span class="ident">gas_constants</span>);
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">charge_intrinsic_gas</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">instrinsic_cost</span>: <span class="ident">AbstractMemorySize</span><span class="op">&lt;</span><span class="ident">GasCarrier</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">cost</span> <span class="op">=</span> <span class="ident">calculate_intrinsic_gas</span>(<span class="ident">instrinsic_cost</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">cost_table</span>.<span class="ident">gas_constants</span>);
         <span class="self">self</span>.<span class="ident">deduct_gas</span>(<span class="ident">cost</span>)
     }
 }
