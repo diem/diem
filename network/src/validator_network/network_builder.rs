@@ -128,7 +128,6 @@ pub struct NetworkBuilder {
     connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
     conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
     connectivity_check_interval_ms: u64,
-    max_concurrent_outbound_rpcs: u32,
     max_concurrent_inbound_rpcs: u32,
     max_concurrent_network_reqs: usize,
     max_concurrent_network_notifs: usize,
@@ -179,7 +178,6 @@ impl NetworkBuilder {
             ping_timeout_ms: PING_TIMEOUT_MS,
             ping_failures_tolerated: PING_FAILURES_TOLERATED,
             connectivity_check_interval_ms: CONNECTIVITY_CHECK_INTERNAL_MS,
-            max_concurrent_outbound_rpcs: MAX_CONCURRENT_OUTBOUND_RPCS,
             max_concurrent_inbound_rpcs: MAX_CONCURRENT_INBOUND_RPCS,
             max_concurrent_network_reqs: MAX_CONCURRENT_NETWORK_REQS,
             max_concurrent_network_notifs: MAX_CONCURRENT_NETWORK_NOTIFS,
@@ -226,12 +224,6 @@ impl NetworkBuilder {
         connectivity_check_interval_ms: u64,
     ) -> &mut Self {
         self.connectivity_check_interval_ms = connectivity_check_interval_ms;
-        self
-    }
-
-    /// The maximum number of concurrent outbound rpc requests we will service.
-    pub fn max_concurrent_outbound_rpcs(&mut self, max_concurrent_outbound_rpcs: u32) -> &mut Self {
-        self.max_concurrent_outbound_rpcs = max_concurrent_outbound_rpcs;
         self
     }
 
