@@ -60,8 +60,8 @@ impl AntiReplayTimestamps {
 /// but as we use it to store a duration since UNIX_EPOCH we will never use more than 8 bytes.
 const PAYLOAD_SIZE: usize = 8;
 
-// Noise Wrapper
-// -------------
+// Noise Upgrader
+// --------------
 // Noise by default is not aware of the above or lower protocol layers,
 // We thus need to build this wrapper around Noise to both:
 //
@@ -71,9 +71,9 @@ const PAYLOAD_SIZE: usize = 8;
 //
 
 /// The Noise configuration to be used to perform a protocol upgrade on an underlying socket.
-pub struct NoiseWrapper(noise::NoiseConfig);
+pub struct NoiseUpgrader(noise::NoiseConfig);
 
-impl NoiseWrapper {
+impl NoiseUpgrader {
     /// Create a new NoiseConfig with the provided keypair
     pub fn new(key: x25519::PrivateKey) -> Self {
         Self(noise::NoiseConfig::new(key))
@@ -82,9 +82,9 @@ impl NoiseWrapper {
     /// Perform a protocol upgrade on an underlying connection. In addition perform the noise IX
     /// handshake to establish a noise stream and exchange static public keys. Upon success,
     /// returns the static public key of the remote as well as a NoiseStream.
-    // TODO(mimoo, philp9): this code could be inlined in transport.rs once the monolithic network is done
+    // TODO(philiphayes): rework socket-bench-server so we can remove this function
     #[allow(dead_code)]
-    pub async fn upgrade_connection<TSocket>(
+    pub async fn upgrade<TSocket>(
         &self,
         socket: TSocket,
         origin: ConnectionOrigin,
@@ -108,11 +108,11 @@ impl NoiseWrapper {
                         ));
                     }
                 };
-                self.dial(socket, anti_replay_timestamps.is_some(), remote_public_key)
+                self.upgrade_outbound(socket, anti_replay_timestamps.is_some(), remote_public_key)
                     .await?
             }
             ConnectionOrigin::Inbound => {
-                self.accept(socket, anti_replay_timestamps, trusted_peers)
+                self.upgrade_inbound(socket, anti_replay_timestamps, trusted_peers)
                     .await?
             }
         };
@@ -122,7 +122,14 @@ impl NoiseWrapper {
         Ok((remote_public_key, socket))
     }
 
-    pub async fn dial<TSocket>(
+    /// Perform an outbound protocol upgrade on this connection.
+    ///
+    /// This runs the "client" side of the Noise IK handshake to establish a
+    /// secure Noise stream and exchange static public keys. In mutual auth
+    /// scenarios, we will also include an anti replay attack counter in the
+    /// Noise handshake payload. Currently this counter is always a millisecond-
+    /// granularity unix epoch timestamp.
+    pub async fn upgrade_outbound<TSocket>(
         &self,
         mut socket: TSocket,
         mutual_authentication: bool,
@@ -179,7 +186,15 @@ impl NoiseWrapper {
         Ok(NoiseStream::new(socket, session))
     }
 
-    pub async fn accept<TSocket>(
+    /// Perform an inbound protocol upgrade on this connection.
+    ///
+    /// This runs the "server" side of the Noise IK handshake to establish a
+    /// secure Noise stream and exchange static public keys. If the configuration
+    /// requires mutual authentication, we will only allow connections from peers
+    /// that successfully authenticate to a public key in our `trusted_peers` set.
+    /// In addition, we will expect the client to include an anti replay attack
+    /// counter in the Noise handshake payload in mutual auth scenarios.
+    pub async fn upgrade_inbound<TSocket>(
         &self,
         mut socket: TSocket,
         anti_replay_timestamps: Option<&Arc<RwLock<AntiReplayTimestamps>>>,
@@ -297,8 +312,8 @@ mod test {
 
     /// helper to setup two testing peers
     fn build_peers() -> (
-        (NoiseWrapper, x25519::PublicKey),
-        (NoiseWrapper, x25519::PublicKey),
+        (NoiseUpgrader, x25519::PublicKey),
+        (NoiseUpgrader, x25519::PublicKey),
     ) {
         let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
 
@@ -308,17 +323,17 @@ mod test {
         let server_private = x25519::PrivateKey::generate(&mut rng);
         let server_public = server_private.public_key();
 
-        let client = NoiseWrapper::new(client_private);
-        let server = NoiseWrapper::new(server_private);
+        let client = NoiseUpgrader::new(client_private);
+        let server = NoiseUpgrader::new(server_private);
 
         ((client, client_public), (server, server_public))
     }
 
     /// helper to perform a noise handshake with two peers
     fn perform_handshake(
-        client: NoiseWrapper,
+        client: NoiseUpgrader,
         server_public_key: x25519::PublicKey,
-        server: NoiseWrapper,
+        server: NoiseUpgrader,
         trusted_peers: Option<&Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>>,
     ) -> io::Result<(NoiseStream<MemorySocket>, NoiseStream<MemorySocket>)> {
         // create an in-memory socket for testing
@@ -327,8 +342,8 @@ mod test {
 
         // perform the handshake
         let (client_session, server_session) = block_on(join(
-            client.dial(dialer_socket, true, server_public_key),
-            server.accept(
+            client.upgrade_outbound(dialer_socket, true, server_public_key),
+            server.upgrade_inbound(
                 listener_socket,
                 Some(&anti_replay_timestamps),
                 trusted_peers,

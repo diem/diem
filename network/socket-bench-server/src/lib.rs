@@ -21,7 +21,7 @@ use netcore::{
         Transport, TransportExt,
     },
 };
-use network::noise_wrapper::{stream::NoiseStream, NoiseWrapper};
+use network::noise_wrapper::{stream::NoiseStream, NoiseUpgrader};
 use rand::prelude::*;
 use std::{env, ffi::OsString, sync::Arc};
 use tokio::runtime::Handle;
@@ -80,10 +80,10 @@ pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseStream<
     MemoryTransport::default().and_then(move |socket, addr, origin| async move {
         let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
         let private = x25519::PrivateKey::generate(&mut rng);
-        let noise_config = Arc::new(NoiseWrapper::new(private));
+        let noise_config = Arc::new(NoiseUpgrader::new(private));
         let remote_public_key = addr.find_noise_proto();
         let (_remote_static_key, socket) = noise_config
-            .upgrade_connection(socket, origin, None, remote_public_key, None)
+            .upgrade(socket, origin, None, remote_public_key, None)
             .await?;
         Ok(socket)
     })
@@ -94,10 +94,10 @@ pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseStream<TcpSoc
     TcpTransport::default().and_then(move |socket, addr, origin| async move {
         let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
         let private = x25519::PrivateKey::generate(&mut rng);
-        let noise_config = Arc::new(NoiseWrapper::new(private));
+        let noise_config = Arc::new(NoiseUpgrader::new(private));
         let remote_public_key = addr.find_noise_proto();
         let (_remote_static_key, socket) = noise_config
-            .upgrade_connection(socket, origin, None, remote_public_key, None)
+            .upgrade(socket, origin, None, remote_public_key, None)
             .await?;
         Ok(socket)
     })

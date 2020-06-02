@@ -551,7 +551,7 @@ where
 mod test {
     use super::*;
 
-    use crate::noise_wrapper::handshake::NoiseWrapper;
+    use crate::noise_wrapper::handshake::NoiseUpgrader;
     use futures::{
         executor::block_on,
         future::join,
@@ -572,8 +572,8 @@ mod test {
 
     /// helper to setup two testing peers
     fn build_peers() -> (
-        (NoiseWrapper, x25519::PublicKey),
-        (NoiseWrapper, x25519::PublicKey),
+        (NoiseUpgrader, x25519::PublicKey),
+        (NoiseUpgrader, x25519::PublicKey),
     ) {
         let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
 
@@ -583,17 +583,17 @@ mod test {
         let server_private = x25519::PrivateKey::generate(&mut rng);
         let server_public = server_private.public_key();
 
-        let client = NoiseWrapper::new(client_private);
-        let server = NoiseWrapper::new(server_private);
+        let client = NoiseUpgrader::new(client_private);
+        let server = NoiseUpgrader::new(server_private);
 
         ((client, client_public), (server, server_public))
     }
 
     /// helper to perform a noise handshake with two peers
     fn perform_handshake(
-        client: NoiseWrapper,
+        client: NoiseUpgrader,
         server_public_key: x25519::PublicKey,
-        server: NoiseWrapper,
+        server: NoiseUpgrader,
         trusted_peers: Option<&Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>>,
     ) -> io::Result<(NoiseStream<MemorySocket>, NoiseStream<MemorySocket>)> {
         // create an in-memory socket for testing
@@ -601,8 +601,8 @@ mod test {
 
         // perform the handshake
         let (client_session, server_session) = block_on(join(
-            client.dial(dialer_socket, false, server_public_key),
-            server.accept(listener_socket, None, trusted_peers),
+            client.upgrade_outbound(dialer_socket, false, server_public_key),
+            server.upgrade_inbound(listener_socket, None, trusted_peers),
         ));
 
         //
