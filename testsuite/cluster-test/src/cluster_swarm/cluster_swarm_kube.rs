@@ -253,12 +253,13 @@ impl ClusterSwarmKube {
     {
         debug!("Deleting {} {}", T::KIND, name);
         let resource_api: Api<T> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
-        resource_api.delete(name, &Default::default()).await?;
         libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 30), || {
-            let pod_api = resource_api.clone();
+            let resource_api = resource_api.clone();
             let name = name.to_string();
             Box::pin(async move {
-                match pod_api.get(&name).await {
+                // Log and ignore error here because we may have already deleted resource
+                resource_api.delete(&name, &Default::default()).await.map_err(|err| error!("delete call failed for {} {}. Maybe it has already been deleted. Error : {}", T::KIND, name, err)).ok();
+                match resource_api.get(&name).await {
                     Ok(_) => {
                         bail!("Waiting for {} {} to be deleted..", T::KIND, name);
                     }
@@ -267,10 +268,10 @@ impl ClusterSwarmKube {
                             debug!("{} {} deleted successfully", T::KIND, name);
                             Ok(())
                         } else {
-                            bail!("Waiting for {} to be deleted..", T::KIND)
+                            bail!("Waiting for {} {} to be deleted..", T::KIND, name)
                         }
                     }
-                    Err(_) => bail!("Waiting for {} {} to be deleted..", T::KIND, name),
+                    Err(err) => bail!("Waiting for {} {} to be deleted... Error: {}", T::KIND, name, err),
                 }
             })
         })
