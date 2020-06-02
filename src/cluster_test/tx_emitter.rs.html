@@ -787,13 +787,28 @@
 <span id="787">787</span>
 <span id="788">788</span>
 <span id="789">789</span>
+<span id="790">790</span>
+<span id="791">791</span>
+<span id="792">792</span>
+<span id="793">793</span>
+<span id="794">794</span>
+<span id="795">795</span>
+<span id="796">796</span>
+<span id="797">797</span>
+<span id="798">798</span>
+<span id="799">799</span>
+<span id="800">800</span>
+<span id="801">801</span>
+<span id="802">802</span>
+<span id="803">803</span>
+<span id="804">804</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="attribute">#![<span class="ident">forbid</span>(<span class="ident">unsafe_code</span>)]</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">cluster</span>::<span class="ident">Cluster</span>, <span class="ident">instance</span>::<span class="ident">Instance</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">atomic_histogram</span>::<span class="kw-2">*</span>, <span class="ident">cluster</span>::<span class="ident">Cluster</span>, <span class="ident">instance</span>::<span class="ident">Instance</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">fmt</span>, <span class="ident">slice</span>,
     <span class="ident">sync</span>::<span class="ident">Arc</span>,
@@ -854,6 +869,7 @@
     <span class="ident">committed</span>: <span class="ident">AtomicU64</span>,
     <span class="ident">expired</span>: <span class="ident">AtomicU64</span>,
     <span class="ident">latency</span>: <span class="ident">AtomicU64</span>,
+    <span class="ident">latencies</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">AtomicHistogramAccumulator</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
@@ -862,6 +878,7 @@
     <span class="kw">pub</span> <span class="ident">committed</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">expired</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">latency</span>: <span class="ident">u64</span>,
+    <span class="kw">pub</span> <span class="ident">latency_buckets</span>: <span class="ident">AtomicHistogramSnapshot</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
@@ -870,6 +887,7 @@
     <span class="kw">pub</span> <span class="ident">committed</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">expired</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">latency</span>: <span class="ident">u64</span>,
+    <span class="kw">pub</span> <span class="ident">p90_latency</span>: <span class="ident">u64</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
@@ -1179,6 +1197,7 @@
                 {
                     <span class="kw">let</span> <span class="ident">end_time</span> <span class="op">=</span> (<span class="ident">Instant</span>::<span class="ident">now</span>() <span class="op">-</span> <span class="ident">start_time</span>).<span class="ident">as_millis</span>() <span class="kw">as</span> <span class="ident">u64</span>;
                     <span class="kw">let</span> <span class="ident">num_committed</span> <span class="op">=</span> (<span class="ident">num_requests</span> <span class="op">-</span> <span class="ident">uncommitted</span>.<span class="ident">len</span>()) <span class="kw">as</span> <span class="ident">u64</span>;
+                    <span class="kw">let</span> <span class="ident">latency</span> <span class="op">=</span> <span class="ident">end_time</span> <span class="op">-</span> <span class="ident">tx_offset_time</span> <span class="op">/</span> <span class="ident">num_requests</span> <span class="kw">as</span> <span class="ident">u64</span>;
                     <span class="self">self</span>.<span class="ident">stats</span>
                         .<span class="ident">committed</span>
                         .<span class="ident">fetch_add</span>(<span class="ident">num_committed</span>, <span class="ident">Ordering</span>::<span class="ident">Relaxed</span>);
@@ -1189,22 +1208,30 @@
                         <span class="comment">// To avoid negative result caused by uncommitted tx occur</span>
                         <span class="comment">// Simplified from:</span>
                         <span class="comment">// end_time * num_committed - (tx_offset_time/num_requests) * num_committed</span>
-                        (<span class="ident">end_time</span> <span class="op">-</span> <span class="ident">tx_offset_time</span> <span class="op">/</span> <span class="ident">num_requests</span> <span class="kw">as</span> <span class="ident">u64</span>) <span class="op">*</span> <span class="ident">num_committed</span> <span class="kw">as</span> <span class="ident">u64</span>,
+                        <span class="comment">// to</span>
+                        <span class="comment">// (end_time - tx_offset_time / num_requests) * num_committed</span>
+                        <span class="ident">latency</span> <span class="op">*</span> <span class="ident">num_committed</span> <span class="kw">as</span> <span class="ident">u64</span>,
                         <span class="ident">Ordering</span>::<span class="ident">Relaxed</span>,
                     );
+                    <span class="self">self</span>.<span class="ident">stats</span>
+                        .<span class="ident">latencies</span>
+                        .<span class="ident">record_data_point</span>(<span class="ident">latency</span>, <span class="ident">num_committed</span>);
                     <span class="macro">info</span><span class="macro">!</span>(
                         <span class="string">&quot;[{:?}] Transactions were not committed before expiration: {:?}&quot;</span>,
                         <span class="self">self</span>.<span class="ident">client</span>, <span class="ident">uncommitted</span>
                     );
                 } <span class="kw">else</span> {
                     <span class="kw">let</span> <span class="ident">end_time</span> <span class="op">=</span> (<span class="ident">Instant</span>::<span class="ident">now</span>() <span class="op">-</span> <span class="ident">start_time</span>).<span class="ident">as_millis</span>() <span class="kw">as</span> <span class="ident">u64</span>;
+                    <span class="kw">let</span> <span class="ident">latency</span> <span class="op">=</span> <span class="ident">end_time</span> <span class="op">-</span> <span class="ident">tx_offset_time</span> <span class="op">/</span> <span class="ident">num_requests</span> <span class="kw">as</span> <span class="ident">u64</span>;
                     <span class="self">self</span>.<span class="ident">stats</span>
                         .<span class="ident">committed</span>
                         .<span class="ident">fetch_add</span>(<span class="ident">num_requests</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="ident">Ordering</span>::<span class="ident">Relaxed</span>);
-                    <span class="self">self</span>.<span class="ident">stats</span>.<span class="ident">latency</span>.<span class="ident">fetch_add</span>(
-                        <span class="ident">end_time</span> <span class="op">*</span> <span class="ident">num_requests</span> <span class="kw">as</span> <span class="ident">u64</span> <span class="op">-</span> <span class="ident">tx_offset_time</span>,
-                        <span class="ident">Ordering</span>::<span class="ident">Relaxed</span>,
-                    );
+                    <span class="self">self</span>.<span class="ident">stats</span>
+                        .<span class="ident">latency</span>
+                        .<span class="ident">fetch_add</span>(<span class="ident">latency</span> <span class="op">*</span> <span class="ident">num_requests</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="ident">Ordering</span>::<span class="ident">Relaxed</span>);
+                    <span class="self">self</span>.<span class="ident">stats</span>
+                        .<span class="ident">latencies</span>
+                        .<span class="ident">record_data_point</span>(<span class="ident">latency</span>, <span class="ident">num_requests</span> <span class="kw">as</span> <span class="ident">u64</span>);
                 }
             }
         }
@@ -1530,6 +1557,7 @@
             <span class="ident">committed</span>: <span class="self">self</span>.<span class="ident">committed</span>.<span class="ident">load</span>(<span class="ident">Ordering</span>::<span class="ident">Relaxed</span>),
             <span class="ident">expired</span>: <span class="self">self</span>.<span class="ident">expired</span>.<span class="ident">load</span>(<span class="ident">Ordering</span>::<span class="ident">Relaxed</span>),
             <span class="ident">latency</span>: <span class="self">self</span>.<span class="ident">latency</span>.<span class="ident">load</span>(<span class="ident">Ordering</span>::<span class="ident">Relaxed</span>),
+            <span class="ident">latency_buckets</span>: <span class="self">self</span>.<span class="ident">latencies</span>.<span class="ident">snapshot</span>(),
         }
     }
 }
@@ -1541,6 +1569,7 @@
             <span class="ident">committed</span>: <span class="self">self</span>.<span class="ident">committed</span> <span class="op">/</span> <span class="ident">window</span>.<span class="ident">as_secs</span>(),
             <span class="ident">expired</span>: <span class="self">self</span>.<span class="ident">expired</span> <span class="op">/</span> <span class="ident">window</span>.<span class="ident">as_secs</span>(),
             <span class="ident">latency</span>: <span class="self">self</span>.<span class="ident">latency</span> <span class="op">/</span> <span class="self">self</span>.<span class="ident">committed</span>,
+            <span class="ident">p90_latency</span>: <span class="self">self</span>.<span class="ident">latency_buckets</span>.<span class="ident">percentile</span>(<span class="number">9</span>, <span class="number">10</span>),
         }
     }
 }
@@ -1554,6 +1583,7 @@
             <span class="ident">committed</span>: <span class="self">self</span>.<span class="ident">committed</span> <span class="op">-</span> <span class="ident">other</span>.<span class="ident">committed</span>,
             <span class="ident">expired</span>: <span class="self">self</span>.<span class="ident">expired</span> <span class="op">-</span> <span class="ident">other</span>.<span class="ident">expired</span>,
             <span class="ident">latency</span>: <span class="self">self</span>.<span class="ident">latency</span> <span class="op">-</span> <span class="ident">other</span>.<span class="ident">latency</span>,
+            <span class="ident">latency_buckets</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">latency_buckets</span> <span class="op">-</span> <span class="kw-2">&amp;</span><span class="ident">other</span>.<span class="ident">latency_buckets</span>,
         }
     }
 }
@@ -1563,7 +1593,7 @@
         <span class="macro">write</span><span class="macro">!</span>(
             <span class="ident">f</span>,
             <span class="string">&quot;submitted: {}, committed: {}, expired: {}&quot;</span>,
-            <span class="self">self</span>.<span class="ident">submitted</span>, <span class="self">self</span>.<span class="ident">committed</span>, <span class="self">self</span>.<span class="ident">expired</span>
+            <span class="self">self</span>.<span class="ident">submitted</span>, <span class="self">self</span>.<span class="ident">committed</span>, <span class="self">self</span>.<span class="ident">expired</span>,
         )
     }
 }
@@ -1572,8 +1602,8 @@
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
         <span class="macro">write</span><span class="macro">!</span>(
             <span class="ident">f</span>,
-            <span class="string">&quot;submitted: {} txn/s, committed: {} txn/s, expired: {} txn/s, latency: {} ms&quot;</span>,
-            <span class="self">self</span>.<span class="ident">submitted</span>, <span class="self">self</span>.<span class="ident">committed</span>, <span class="self">self</span>.<span class="ident">expired</span>, <span class="self">self</span>.<span class="ident">latency</span>
+            <span class="string">&quot;submitted: {} txn/s, committed: {} txn/s, expired: {} txn/s, latency: {} ms, p90 latency: {} ms&quot;</span>,
+            <span class="self">self</span>.<span class="ident">submitted</span>, <span class="self">self</span>.<span class="ident">committed</span>, <span class="self">self</span>.<span class="ident">expired</span>, <span class="self">self</span>.<span class="ident">latency</span>, <span class="self">self</span>.<span class="ident">p90_latency</span>,
         )
     }
 }

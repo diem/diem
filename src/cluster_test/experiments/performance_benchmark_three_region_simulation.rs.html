@@ -190,6 +190,10 @@
 <span id="190">190</span>
 <span id="191">191</span>
 <span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -268,6 +272,7 @@
             .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">avg_tps</span> <span class="op">=</span> <span class="ident">stats</span>.<span class="ident">committed</span> <span class="op">/</span> <span class="ident">window</span>.<span class="ident">as_secs</span>();
         <span class="kw">let</span> <span class="ident">avg_latency_client</span> <span class="op">=</span> <span class="ident">stats</span>.<span class="ident">latency</span> <span class="op">/</span> <span class="ident">stats</span>.<span class="ident">committed</span>;
+        <span class="kw">let</span> <span class="ident">p90_latency</span> <span class="op">=</span> <span class="ident">stats</span>.<span class="ident">latency_buckets</span>.<span class="ident">percentile</span>(<span class="number">9</span>, <span class="number">10</span>);
         <span class="macro">info</span><span class="macro">!</span>(
             <span class="string">&quot;Tx status from client side: txn {}, avg latency {}&quot;</span>,
             <span class="ident">stats</span>.<span class="ident">committed</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="ident">avg_latency_client</span>
@@ -279,9 +284,12 @@
         <span class="ident">context</span>
             .<span class="ident">report</span>
             .<span class="ident">report_metric</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="string">&quot;avg_latency&quot;</span>, <span class="ident">avg_latency_client</span> <span class="kw">as</span> <span class="ident">f64</span>);
+        <span class="ident">context</span>
+            .<span class="ident">report</span>
+            .<span class="ident">report_metric</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="string">&quot;p90_latency&quot;</span>, <span class="ident">p90_latency</span> <span class="kw">as</span> <span class="ident">f64</span>);
         <span class="ident">context</span>.<span class="ident">report</span>.<span class="ident">report_text</span>(<span class="macro">format</span><span class="macro">!</span>(
-            <span class="string">&quot;{} : {:.0} TPS, {:.1} ms latency&quot;</span>,
-            <span class="self">self</span>, <span class="ident">avg_tps</span>, <span class="ident">avg_latency_client</span>
+            <span class="string">&quot;{} : {:.0} TPS, {:.1} ms latency, {:.1} ms p90 latency&quot;</span>,
+            <span class="self">self</span>, <span class="ident">avg_tps</span>, <span class="ident">avg_latency_client</span>, <span class="ident">p90_latency</span>
         ));
         <span class="prelude-val">Ok</span>(())
     }
