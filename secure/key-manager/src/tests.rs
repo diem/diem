@@ -6,7 +6,11 @@ use anyhow::Result;
 use executor::{db_bootstrapper, Executor};
 use executor_types::BlockExecutor;
 use futures::{channel::mpsc::channel, StreamExt};
-use libra_config::{config::NodeConfig, utils, utils::get_genesis_txn};
+use libra_config::{
+    config::{KeyManagerConfig, NodeConfig},
+    utils,
+    utils::get_genesis_txn,
+};
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_global_constants::OPERATOR_KEY;
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Value};
@@ -284,24 +288,41 @@ impl LibraInterface for MockLibraInterface {
     }
 }
 
+// Creates and returns NodeConfig and KeyManagerConfig structs that are consistent for testing.
+fn create_test_configs() -> (NodeConfig, KeyManagerConfig) {
+    let (node_config, _genesis_key) = config_builder::test_config();
+
+    let mut key_manager_config = KeyManagerConfig::default();
+    key_manager_config.validator_account = node_config.validator_network.clone().unwrap().peer_id;
+
+    (node_config, key_manager_config)
+}
+
 // Creates and returns a test node that uses the JsonRpcLibraInterface.
 // This setup is useful for testing nodes as they operate in a production environment.
-fn setup_node_using_json_rpc(config: &NodeConfig) -> (Node<JsonRpcLibraInterface>, Runtime) {
-    let (_storage, db_rw) = setup_libra_db(config);
+fn setup_node_using_json_rpc() -> (Node<JsonRpcLibraInterface>, Runtime) {
+    let (node_config, key_manager_config) = create_test_configs();
+
+    let (_storage, db_rw) = setup_libra_db(&node_config);
     let (libra, server) = setup_libra_interface_and_json_server(db_rw.clone());
     let executor = Executor::new(db_rw);
 
-    (setup_node(config, executor, libra), server)
+    (
+        setup_node(&node_config, &key_manager_config, executor, libra),
+        server,
+    )
 }
 
 // Creates and returns a Node using the MockLibraInterface implementation.
 // This setup is useful for testing and verifying new development features quickly.
-fn setup_node_using_test_mocks(config: &NodeConfig) -> Node<MockLibraInterface> {
-    let (storage, db_rw) = setup_libra_db(config);
+fn setup_node_using_test_mocks() -> Node<MockLibraInterface> {
+    let (node_config, key_manager_config) = create_test_configs();
+
+    let (storage, db_rw) = setup_libra_db(&node_config);
     let libra = MockLibraInterface { storage };
     let executor = Executor::new(db_rw);
 
-    setup_node(config, executor, libra)
+    setup_node(&node_config, &key_manager_config, executor, libra)
 }
 
 // Creates and returns a libra database and database reader/writer pair bootstrapped with genesis.
@@ -316,19 +337,19 @@ fn setup_libra_db(config: &NodeConfig) -> (Arc<LibraDB>, DbReaderWriter) {
 // Creates and returns a node for testing using the given config, executor and libra interface
 // wrapper implementation.
 fn setup_node<T: LibraInterface + Clone>(
-    config: &NodeConfig,
+    node_config: &NodeConfig,
+    key_manager_config: &KeyManagerConfig,
     executor: Executor<LibraVM>,
     libra: T,
 ) -> Node<T> {
-    let account = config.validator_network.as_ref().unwrap().peer_id;
+    let account = key_manager_config.validator_account;
     let time = MockTimeService::new();
     let libra_test_harness = LibraInterfaceTestHarness::new(libra);
-    let key_manager_config = &config.secure.key_manager;
 
     let key_manager = KeyManager::new(
         account,
         libra_test_harness.clone(),
-        setup_secure_storage(&config, time.clone()),
+        setup_secure_storage(&node_config, time.clone()),
         time.clone(),
         key_manager_config.rotation_period_secs,
         key_manager_config.sleep_period_secs,
@@ -402,13 +423,11 @@ fn setup_libra_interface_and_json_server(
 // This simple test just proves that genesis took effect and the values are on-chain (in storage).
 fn test_ability_to_read_move_data() {
     // Test the mock libra interface implementation
-    let (config, _genesis_key) = config_builder::test_config();
-    let node = setup_node_using_test_mocks(&config);
+    let node = setup_node_using_test_mocks();
     verify_ability_to_read_move_data(node);
 
     // Test the json libra interface implementation
-    let (config, _genesis_key) = config_builder::test_config();
-    let (node, _runtime) = setup_node_using_json_rpc(&config);
+    let (node, _runtime) = setup_node_using_json_rpc();
     verify_ability_to_read_move_data(node);
 }
 
@@ -426,18 +445,17 @@ fn verify_ability_to_read_move_data<T: LibraInterface>(node: Node<T>) {
 // transaction manually and executes the transaction on-chain.
 fn test_manual_rotation_on_chain() {
     // Test the mock libra interface implementation
-    let (config, _genesis_key) = config_builder::test_config();
-    let node = setup_node_using_test_mocks(&config);
-    verify_manual_rotation_on_chain(config, node);
+    let node = setup_node_using_test_mocks();
+    verify_manual_rotation_on_chain(node);
 
     // Test the json libra interface implementation
-    let (config, _genesis_key) = config_builder::test_config();
-    let (node, _runtime) = setup_node_using_json_rpc(&config);
-    verify_manual_rotation_on_chain(config, node);
+    let (node, _runtime) = setup_node_using_json_rpc();
+    verify_manual_rotation_on_chain(node);
 }
 
-fn verify_manual_rotation_on_chain<T: LibraInterface>(config: NodeConfig, mut node: Node<T>) {
-    let test_config = config.test.unwrap();
+fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
+    let (node_config, _) = create_test_configs();
+    let test_config = node_config.test.unwrap();
     let account_prikey = test_config
         .operator_keypair
         .unwrap()
@@ -484,13 +502,11 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(config: NodeConfig, mut no
 // This verifies that the key manager is properly setup and that a basic rotation can be performed.
 fn test_key_manager_init_and_basic_rotation() {
     // Test the mock libra interface implementation
-    let (config, _genesis_key) = config_builder::test_config();
-    let node = setup_node_using_test_mocks(&config);
+    let node = setup_node_using_test_mocks();
     verify_init_and_basic_rotation(node);
 
     // Test the json libra interface implementation
-    let (config, _genesis_key) = config_builder::test_config();
-    let (node, _runtime) = setup_node_using_json_rpc(&config);
+    let (node, _runtime) = setup_node_using_json_rpc();
     verify_init_and_basic_rotation(node);
 }
 
@@ -543,24 +559,24 @@ fn verify_init_and_basic_rotation<T: LibraInterface>(mut node: Node<T>) {
 // loop.
 fn test_execute() {
     // Test the mock libra interface implementation
-    let (config, _genesis_key) = config_builder::test_config();
-    let node = setup_node_using_test_mocks(&config);
-    verify_execute(&config, node);
+    let node = setup_node_using_test_mocks();
+    verify_execute(node);
 
     // Test the json libra interface implementation
-    let (config, _genesis_key) = config_builder::test_config();
-    let (node, _runtime) = setup_node_using_json_rpc(&config);
-    verify_execute(&config, node);
+    let (node, _runtime) = setup_node_using_json_rpc();
+    verify_execute(node);
 }
 
-fn verify_execute<T: LibraInterface>(config: &NodeConfig, mut node: Node<T>) {
+fn verify_execute<T: LibraInterface>(mut node: Node<T>) {
+    let (_, key_manager_config) = create_test_configs();
+
     // Verify correct initial state (i.e., nothing to be done by key manager)
     assert_eq!(0, node.time.now());
     assert_eq!(0, node.libra.last_reconfiguration().unwrap());
 
     // Verify rotation required after enough time
     node.time
-        .increment_by(config.secure.key_manager.rotation_period_secs);
+        .increment_by(key_manager_config.rotation_period_secs);
     node.update_libra_timestamp();
     assert_eq!(
         Action::FullKeyRotation,
@@ -580,7 +596,7 @@ fn verify_execute<T: LibraInterface>(config: &NodeConfig, mut node: Node<T>) {
 
     // Verify rotation transaction not executed, now expired
     node.time
-        .increment_by(config.secure.key_manager.txn_expiration_secs);
+        .increment_by(key_manager_config.txn_expiration_secs);
     node.update_libra_timestamp();
     assert_eq!(
         Action::SubmitKeyRotationTransaction,
@@ -611,13 +627,11 @@ fn verify_execute<T: LibraInterface>(config: &NodeConfig, mut node: Node<T>) {
 // wrong.
 fn test_execute_error() {
     // Test the mock libra interface implementation
-    let (config, _genesis_key) = config_builder::test_config();
-    let node = setup_node_using_test_mocks(&config);
+    let node = setup_node_using_test_mocks();
     verify_execute_error(node);
 
     // Test the json libra interface implementation
-    let (config, _genesis_key) = config_builder::test_config();
-    let (node, _runtime) = setup_node_using_json_rpc(&config);
+    let (node, _runtime) = setup_node_using_json_rpc();
     verify_execute_error(node);
 }
 
