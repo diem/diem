@@ -11,7 +11,7 @@
 //! Usage example:
 //!
 //! ```
-//! use network::{noise_wrapper::{NoiseWrapper, AntiReplayTimestamps}, NetworkPublicKeys};
+//! use network::{noise_wrapper::{NoiseUpgrader, AntiReplayTimestamps}, NetworkPublicKeys};
 //! use futures::{executor, future, io::{AsyncReadExt, AsyncWriteExt}};
 //! use memsocket::MemorySocket;
 //! use libra_crypto::{x25519, ed25519, Uniform, PrivateKey, test_utils::TEST_SEED};
@@ -21,15 +21,15 @@
 //! use std::{collections::HashMap, sync::{Arc, RwLock}};
 //!
 //! fn example() -> std::io::Result<()> {
-//! // create client and server NoiseWrapper
+//! // create client and server NoiseUpgrader
 //! let mut rng = StdRng::from_seed(TEST_SEED);
 //! let client_private = x25519::PrivateKey::generate(&mut rng);
 //! let client_public = client_private.public_key();
-//! let client = NoiseWrapper::new(client_private);
+//! let client = NoiseUpgrader::new(client_private);
 //!
 //! let server_private = x25519::PrivateKey::generate(&mut rng);
 //! let server_public = server_private.public_key();
-//! let server = NoiseWrapper::new(server_private);
+//! let server = NoiseUpgrader::new(server_private);
 //!
 //! // create list of trusted peers
 //! let mut trusted_peers = Arc::new(RwLock::new(HashMap::new()));
@@ -47,8 +47,8 @@
 //!
 //! // perform the handshake
 //! let (client_session, server_session) = executor::block_on(future::join(
-//!    client.dial(dialer_socket, true, server_public),
-//!    server.accept(listener_socket, Some(&anti_replay_timestamps), Some(&trusted_peers)),
+//!    client.upgrade_outbound(dialer_socket, true, server_public),
+//!    server.upgrade_inbound(listener_socket, Some(&anti_replay_timestamps), Some(&trusted_peers)),
 //! ));
 //!
 //! let mut client_session = client_session?;
@@ -87,4 +87,4 @@ pub mod stream;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod fuzzing;
 
-pub use handshake::{AntiReplayTimestamps, NoiseWrapper};
+pub use handshake::{AntiReplayTimestamps, NoiseUpgrader};

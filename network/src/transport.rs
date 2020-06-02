@@ -3,7 +3,7 @@
 
 use crate::{
     common::NetworkPublicKeys,
-    noise_wrapper::{stream::NoiseStream, AntiReplayTimestamps, NoiseWrapper},
+    noise_wrapper::{stream::NoiseStream, AntiReplayTimestamps, NoiseUpgrader},
     protocols::{
         identity::exchange_handshake,
         wire::handshake::v1::{HandshakeMsg, MessagingProtocolVersion, SupportedProtocols},
@@ -259,7 +259,7 @@ where
 
 /// Common context for performing both inbound and outbound connection upgrades.
 struct UpgradeContext {
-    noise: NoiseWrapper,
+    noise: NoiseUpgrader,
     trusted_peers: Option<Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>>,
     anti_replay_timestamps: Option<Arc<RwLock<AntiReplayTimestamps>>>,
     handshake_version: u8,
@@ -282,7 +282,7 @@ async fn upgrade_inbound<T: TSocket>(
     // try authenticating via noise handshake
     let socket = ctxt
         .noise
-        .accept(
+        .upgrade_inbound(
             socket,
             ctxt.anti_replay_timestamps.as_ref(),
             ctxt.trusted_peers.as_ref(),
@@ -315,7 +315,7 @@ async fn upgrade_outbound<T: TSocket>(
     let is_mutual_auth = ctxt.trusted_peers.is_some();
     let socket = ctxt
         .noise
-        .dial(socket, is_mutual_auth, remote_pubkey)
+        .upgrade_outbound(socket, is_mutual_auth, remote_pubkey)
         .await?;
 
     // sanity check: Noise IK should always guarantee this is true
@@ -377,7 +377,7 @@ where
 
         Self {
             ctxt: Arc::new(UpgradeContext {
-                noise: NoiseWrapper::new(identity_key),
+                noise: NoiseUpgrader::new(identity_key),
                 trusted_peers,
                 anti_replay_timestamps,
                 handshake_version,
