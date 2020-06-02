@@ -225,13 +225,6 @@ impl NetworkBuilder {
         self
     }
 
-    /// The maximum duration (in milliseconds) we should wait before dialing a peer we should
-    /// connect to.
-    pub fn max_connection_delay_ms(&mut self, max_connection_delay_ms: u64) -> &mut Self {
-        self.max_connection_delay_ms = max_connection_delay_ms;
-        self
-    }
-
     /// Set the size of the channels between different network actors.
     pub fn channel_size(&mut self, channel_size: usize) -> &mut Self {
         self.channel_size = channel_size;
