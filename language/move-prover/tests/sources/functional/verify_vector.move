@@ -44,7 +44,6 @@ module VerifyVector {
         ensures len(v) == len(old(v)) + 1;
         ensures v[len(v)-1] == e;
         ensures old(v) == v[0..len(v)-1];
-        //ensures v[0..len(v)] == v;
     }
 
     // Get mutable reference to the ith element in the vector, abort if out of bound.
@@ -165,16 +164,26 @@ module VerifyVector {
 
     // Return (true, i) if `e` is in the vector `v` at index `i`.
     // Otherwise returns (false, 0).
-    fun verify_index_of<Element>(_v: &vector<Element>, _e: &Element): (bool, u64) {
-        // let i = 0;
-        // let len = length(v);
-        // while (i < len) {
-        //     if (borrow(v, i) == e) return (true, i);
-        //     i = i + 1;
-        // };
+    fun verify_index_of<Element>(v: &vector<Element>, e: &Element): (bool, u64) {
+        let i = 0;
+        let len = Vector::length(v);
+        while ({
+            spec {
+                assert !any(0..i,|j| v[j]==e);
+            };
+            i < len
+        }) {
+            if (Vector::borrow(v, i) == e) return (true, i);
+            i = i + 1;
+        };
         (false, 0)
     }
-    spec fun verify_index_of { // TODO: cannot verify loop
+    spec fun verify_index_of {
+//        aborts_if false; // FIXME: this should be verified.
+        ensures result_1 == any(v,|x| x==e); // whether v contains e or not
+        ensures result_1 ==> v[result_2] == e; // if true, return the index where v contains e
+        ensures result_1 ==> all(0..result_2,|i| v[i]!=e); // ensure the smallest index
+        ensures !result_1 ==> result_2 == 0; // return 0 if v does not contain e
     }
 
     fun verify_model_index_of<Element>(v: &vector<Element>, e: &Element): (bool, u64) {
@@ -194,7 +203,7 @@ module VerifyVector {
         let len = Vector::length(v);
         while ({
             spec {
-                assert !any(0..i,|j| v[j]==e);
+               assert !any(0..i,|j| v[j]==e);
             };
             i < len
         }) {
@@ -202,11 +211,12 @@ module VerifyVector {
             i = i + 1;
         };
         spec {
-            assert !any(v,|x| x==e);
+           assert !any(v,|x| x==e);
         };
         false
     }
     spec fun verify_contains {
+        //aborts_if false; // FIXME: This should be verified
         ensures result == any(v,|x| x==e);
     }
 
