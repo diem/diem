@@ -349,7 +349,7 @@ impl<'env> ModuleTranslator<'env> {
             if !func_env.is_native() {
                 num_fun += 1;
             }
-            if !func_env.get_spec().has_conditions() && !func_env.is_native() {
+            if func_env.get_spec().has_conditions() && !func_env.is_native() {
                 num_fun_specified += 1;
             }
             self.writer.set_location(&func_env.get_loc());
