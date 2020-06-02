@@ -24,10 +24,8 @@ use cluster_test::{
     prometheus::Prometheus,
     report::SuiteReport,
     slack::SlackClient,
-    stats,
     suite::ExperimentSuite,
     tx_emitter::{AccountData, EmitJobRequest, EmitThreadParams, TxEmitter, TxStats},
-    util::unix_timestamp_now,
 };
 use futures::{
     future::{join_all, FutureExt},
@@ -131,7 +129,8 @@ pub fn main() {
         let duration = Duration::from_secs(args.duration);
         if args.swarm {
             let util = BasicSwarmUtil::setup(&args);
-            rt.block_on(util.emit_tx(
+            rt.block_on(emit_tx(
+                &util.cluster,
                 args.accounts_per_client,
                 args.workers_per_ac,
                 thread_params,
@@ -140,7 +139,8 @@ pub fn main() {
             return;
         } else {
             let util = ClusterUtil::setup(&args);
-            rt.block_on(util.emit_tx(
+            rt.block_on(emit_tx(
+                &util.cluster,
                 args.accounts_per_client,
                 args.workers_per_ac,
                 thread_params,
@@ -259,6 +259,38 @@ fn parse_host_port(s: &str) -> Result<(String, u32)> {
     Ok((host, port))
 }
 
+pub async fn emit_tx(
+    cluster: &Cluster,
+    accounts_per_client: usize,
+    workers_per_ac: Option<usize>,
+    thread_params: EmitThreadParams,
+    duration: Duration,
+) {
+    let mut emitter = TxEmitter::new(cluster);
+    let job = emitter
+        .start_job(EmitJobRequest {
+            instances: cluster.validator_instances().to_vec(),
+            accounts_per_client,
+            workers_per_ac,
+            thread_params,
+        })
+        .await
+        .expect("Failed to start emit job");
+    let deadline = Instant::now() + duration;
+    let mut prev_stats: Option<TxStats> = None;
+    while Instant::now() < deadline {
+        let window = Duration::from_secs(10);
+        tokio::time::delay_for(window).await;
+        let stats = emitter.peek_job_stats(&job);
+        let delta = &stats - &prev_stats.unwrap_or_default();
+        prev_stats = Some(stats);
+        println!("{}", delta.rate(window));
+    }
+    let stats = emitter.stop_job(job).await;
+    println!("Total stats: {}", stats);
+    println!("Average rate: {}", stats.rate(duration));
+}
+
 impl BasicSwarmUtil {
     pub fn setup(args: &Args) -> Self {
         if args.peers.is_empty() {
@@ -348,38 +380,6 @@ impl BasicSwarmUtil {
         println!("Looks like all full nodes are healthy!");
         Ok(())
     }
-
-    pub async fn emit_tx(
-        self,
-        accounts_per_client: usize,
-        workers_per_ac: Option<usize>,
-        thread_params: EmitThreadParams,
-        duration: Duration,
-    ) {
-        let mut emitter = TxEmitter::new(&self.cluster);
-        let job = emitter
-            .start_job(EmitJobRequest {
-                instances: self.cluster.validator_instances().to_vec(),
-                accounts_per_client,
-                workers_per_ac,
-                thread_params,
-            })
-            .await
-            .expect("Failed to start emit job");
-        let deadline = Instant::now() + duration;
-        let mut prev_stats: Option<TxStats> = None;
-        while Instant::now() < deadline {
-            let window = Duration::from_secs(10);
-            tokio::time::delay_for(window).await;
-            let stats = emitter.peek_job_stats(&job);
-            let delta = &stats - &prev_stats.unwrap_or_default();
-            prev_stats = Some(stats);
-            println!("{}", delta.rate(window));
-        }
-        let stats = emitter.stop_job(job).await;
-        println!("Total stats: {}", stats);
-        println!("Average rate: {}", stats.rate(duration));
-    }
 }
 
 impl ClusterUtil {
@@ -449,45 +449,6 @@ impl ClusterUtil {
                 cluster_swarm,
             }
         })
-    }
-
-    pub async fn emit_tx(
-        self,
-        accounts_per_client: usize,
-        workers_per_ac: Option<usize>,
-        thread_params: EmitThreadParams,
-        duration: Duration,
-    ) {
-        let mut emitter = TxEmitter::new(&self.cluster);
-        emitter
-            .start_job(EmitJobRequest {
-                instances: self.cluster.validator_instances().to_vec(),
-                accounts_per_client,
-                workers_per_ac,
-                thread_params,
-            })
-            .await
-            .expect("Failed to start emit job");
-        self.run_stat_loop(duration);
-    }
-
-    fn run_stat_loop(&self, duration: Duration) {
-        let deadline = Instant::now() + duration;
-        let window = Duration::from_secs(30);
-        thread::sleep(Duration::from_secs(30)); // warm up
-        loop {
-            if Instant::now() > deadline {
-                return;
-            }
-            thread::sleep(Duration::from_secs(10));
-            let now = unix_timestamp_now();
-            match stats::txn_stats(&self.prometheus, now - window, now) {
-                Ok((avg_tps, avg_latency)) => {
-                    info!("Tps: {:.0}, latency: {:.0} ms", avg_tps, avg_latency)
-                }
-                Err(err) => info!("Stat error: {:?}", err),
-            }
-        }
     }
 }
 
