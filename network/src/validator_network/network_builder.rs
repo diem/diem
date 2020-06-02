@@ -222,12 +222,6 @@ impl NetworkBuilder {
         self
     }
 
-    /// Set ping timeout.
-    pub fn ping_timeout_ms(&mut self, ping_timeout_ms: u64) -> &mut Self {
-        self.ping_timeout_ms = ping_timeout_ms;
-        self
-    }
-
     /// Set connectivity check ticker interval
     pub fn connectivity_check_interval_ms(
         &mut self,
