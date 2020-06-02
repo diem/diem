@@ -225,16 +225,6 @@ impl NetworkBuilder {
         self
     }
 
-    /// The maximum number of concurrent Notifications from each actor we will service in
-    /// NetworkProvider.
-    pub fn max_concurrent_network_notifs(
-        &mut self,
-        max_concurrent_network_notifs: usize,
-    ) -> &mut Self {
-        self.max_concurrent_network_notifs = max_concurrent_network_notifs;
-        self
-    }
-
     /// The maximum duration (in milliseconds) we should wait before dialing a peer we should
     /// connect to.
     pub fn max_connection_delay_ms(&mut self, max_connection_delay_ms: u64) -> &mut Self {
