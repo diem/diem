@@ -11,7 +11,7 @@ use anyhow::{bail, ensure, format_err, Context};
 use consensus_types::{
     block::Block,
     block_data::BlockData,
-    common::{Author, Payload, Round},
+    common::{Author, Round},
     quorum_cert::QuorumCert,
 };
 use libra_logger::prelude::*;
@@ -33,14 +33,14 @@ mod proposal_generator_test;
 ///
 /// TxnManager should be aware of the pending transactions in the branch that it is extending,
 /// such that it will filter them out to avoid transaction duplication.
-pub struct ProposalGenerator<T> {
+pub struct ProposalGenerator {
     // The account address of this validator
     author: Author,
     // Block store is queried both for finding the branch to extend and for generating the
     // proposed block.
-    block_store: Arc<dyn BlockReader<Payload = T> + Send + Sync>,
+    block_store: Arc<dyn BlockReader + Send + Sync>,
     // Transaction manager is delivering the transactions.
-    txn_manager: Box<dyn TxnManager<Payload = T>>,
+    txn_manager: Box<dyn TxnManager>,
     // Time service to generate block timestamps
     time_service: Arc<dyn TimeService>,
     // Max number of transactions to be added to a proposed block.
@@ -49,11 +49,11 @@ pub struct ProposalGenerator<T> {
     last_round_generated: Mutex<Round>,
 }
 
-impl<T: Payload> ProposalGenerator<T> {
+impl ProposalGenerator {
     pub fn new(
         author: Author,
-        block_store: Arc<dyn BlockReader<Payload = T> + Send + Sync>,
-        txn_manager: Box<dyn TxnManager<Payload = T>>,
+        block_store: Arc<dyn BlockReader + Send + Sync>,
+        txn_manager: Box<dyn TxnManager>,
         time_service: Arc<dyn TimeService>,
         max_block_size: u64,
     ) -> Self {
@@ -72,17 +72,17 @@ impl<T: Payload> ProposalGenerator<T> {
     }
 
     /// Creates a NIL block proposal extending the highest certified block from the block store.
-    pub fn generate_nil_block(&self, round: Round) -> anyhow::Result<Block<T>> {
+    pub fn generate_nil_block(&self, round: Round) -> anyhow::Result<Block> {
         let hqc = self.ensure_highest_quorum_cert(round)?;
         Ok(Block::new_nil(round, hqc.as_ref().clone()))
     }
 
     /// Reconfiguration rule - we propose empty blocks with parents' timestamp
     /// after reconfiguration until it's committed
-    pub fn generate_reconfig_empty_suffix(&self, round: Round) -> anyhow::Result<BlockData<T>> {
+    pub fn generate_reconfig_empty_suffix(&self, round: Round) -> anyhow::Result<BlockData> {
         let hqc = self.ensure_highest_quorum_cert(round)?;
         Ok(BlockData::new_proposal(
-            T::default(),
+            vec![],
             self.author,
             round,
             hqc.certified_block().timestamp_usecs(),
@@ -104,7 +104,7 @@ impl<T: Payload> ProposalGenerator<T> {
         &mut self,
         round: Round,
         round_deadline: Instant,
-    ) -> anyhow::Result<BlockData<T>> {
+    ) -> anyhow::Result<BlockData> {
         {
             let mut last_round_generated = self.last_round_generated.lock().unwrap();
             if *last_round_generated < round {
@@ -130,7 +130,7 @@ impl<T: Payload> ProposalGenerator<T> {
 
         // Exclude all the pending transactions: these are all the ancestors of
         // parent (including) up to the root (excluding).
-        let exclude_payload = pending_blocks
+        let exclude_payload: Vec<&Vec<_>> = pending_blocks
             .iter()
             .flat_map(|block| block.payload())
             .collect();

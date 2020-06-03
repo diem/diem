@@ -11,7 +11,7 @@ use crate::consensusdb::schema::{
     single_entry::{SingleEntryKey, SingleEntrySchema},
 };
 use anyhow::{ensure, Result};
-use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert};
+use consensus_types::{block::Block, quorum_cert::QuorumCert};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME};
@@ -45,12 +45,12 @@ impl ConsensusDB {
         Self { db }
     }
 
-    pub fn get_data<T: Payload>(
+    pub fn get_data(
         &self,
     ) -> Result<(
         Option<Vec<u8>>,
         Option<Vec<u8>>,
-        Vec<Block<T>>,
+        Vec<Block>,
         Vec<QuorumCert>,
     )> {
         let last_vote = self.get_last_vote()?;
@@ -91,9 +91,9 @@ impl ConsensusDB {
         self.commit(batch)
     }
 
-    pub fn save_blocks_and_quorum_certificates<T: Payload>(
+    pub fn save_blocks_and_quorum_certificates(
         &self,
-        block_data: Vec<Block<T>>,
+        block_data: Vec<Block>,
         qc_data: Vec<QuorumCert>,
     ) -> Result<()> {
         ensure!(
@@ -104,10 +104,7 @@ impl ConsensusDB {
         block_data
             .iter()
             .map(|block| {
-                batch.put::<BlockSchema<T>>(
-                    &block.id(),
-                    &SchemaBlock::<T>::from_block(block.clone()),
-                )
+                batch.put::<BlockSchema>(&block.id(), &SchemaBlock::from_block(block.clone()))
             })
             .collect::<Result<()>>()?;
         qc_data
@@ -117,16 +114,13 @@ impl ConsensusDB {
         self.commit(batch)
     }
 
-    pub fn delete_blocks_and_quorum_certificates<T: Payload>(
-        &self,
-        block_ids: Vec<HashValue>,
-    ) -> Result<()> {
+    pub fn delete_blocks_and_quorum_certificates(&self, block_ids: Vec<HashValue>) -> Result<()> {
         ensure!(!block_ids.is_empty(), "Consensus block ids is empty!");
         let mut batch = SchemaBatch::new();
         block_ids
             .iter()
             .map(|hash| {
-                batch.delete::<BlockSchema<T>>(hash)?;
+                batch.delete::<BlockSchema>(hash)?;
                 batch.delete::<QCSchema>(hash)
             })
             .collect::<Result<_>>()?;
@@ -165,11 +159,11 @@ impl ConsensusDB {
     }
 
     /// Get all consensus blocks.
-    fn get_blocks<T: Payload>(&self) -> Result<HashMap<HashValue, Block<T>>> {
-        let mut iter = self.db.iter::<BlockSchema<T>>(ReadOptions::default())?;
+    fn get_blocks(&self) -> Result<HashMap<HashValue, Block>> {
+        let mut iter = self.db.iter::<BlockSchema>(ReadOptions::default())?;
         iter.seek_to_first();
         iter.map(|value| value.and_then(|(k, v)| Ok((k, v.borrow_into_block().clone()))))
-            .collect::<Result<HashMap<HashValue, Block<T>>>>()
+            .collect::<Result<HashMap<HashValue, Block>>>()
     }
 
     /// Get all consensus QCs.

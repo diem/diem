@@ -51,12 +51,4 @@ pub enum SafetyRulesService {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct RemoteService {
     pub server_address: SocketAddr,
-    pub consensus_type: ConsensusType,
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
-pub enum ConsensusType {
-    SignedTransactions,
-    Bytes,
-    Rounds,
 }

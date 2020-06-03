@@ -17,7 +17,7 @@ use futures::channel::mpsc;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_mempool::ConsensusRequest;
-use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
+use libra_types::on_chain_config::OnChainConfigPayload;
 use state_synchronizer::StateSyncClient;
 use std::{boxed::Box, sync::Arc};
 use storage_interface::DbReader;
@@ -26,8 +26,8 @@ use tokio::runtime::{self, Runtime};
 /// Helper function to start consensus based on configuration and return the runtime
 pub fn start_consensus(
     node_config: &mut NodeConfig,
-    network_sender: ConsensusNetworkSender<Vec<SignedTransaction>>,
-    network_events: ConsensusNetworkEvents<Vec<SignedTransaction>>,
+    network_sender: ConsensusNetworkSender,
+    network_events: ConsensusNetworkEvents,
     state_sync_client: Arc<StateSyncClient>,
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
     libra_db: Arc<dyn DbReader>,

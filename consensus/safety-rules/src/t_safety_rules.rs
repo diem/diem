@@ -10,7 +10,7 @@ use libra_crypto::ed25519::Ed25519Signature;
 use libra_types::epoch_change::EpochChangeProof;
 
 /// Interface for SafetyRules
-pub trait TSafetyRules<T> {
+pub trait TSafetyRules {
     /// Provides the internal state of SafetyRules for monitoring / debugging purposes. This does
     /// not include sensitive data like private keys.
     fn consensus_state(&mut self) -> Result<ConsensusState, Error>;
@@ -26,11 +26,11 @@ pub trait TSafetyRules<T> {
     fn update(&mut self, qc: &QuorumCert) -> Result<(), Error>;
 
     /// Attempts to vote for a given proposal following the voting rules.
-    fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal<T>) -> Result<Vote, Error>;
+    fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal) -> Result<Vote, Error>;
 
     /// As the holder of the private key, SafetyRules also signs proposals or blocks.
     /// A Block is a signed BlockData along with some additional metadata.
-    fn sign_proposal(&mut self, block_data: BlockData<T>) -> Result<Block<T>, Error>;
+    fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error>;
 
     /// As the holder of the private key, SafetyRules also signs what is effectively a
     /// timeout message. This returns the signature for that timeout message.

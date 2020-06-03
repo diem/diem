@@ -1,12 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use consensus_types::block::{block_test_utils, Block};
+use consensus_types::block::{block_test_utils, block_test_utils::random_payload, Block};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use libra_config::config::{OnDiskStorageConfig, SecureBackend};
 use libra_secure_storage::{InMemoryStorage, OnDiskStorage};
 use libra_types::validator_signer::ValidatorSigner;
-use rand::Rng;
 use safety_rules::{
     process_client_wrapper::ProcessClientWrapper, test_utils, PersistentSafetyStorage,
     SafetyRulesManager, TSafetyRules,
@@ -15,11 +14,10 @@ use tempfile::NamedTempFile;
 
 /// Execute an in order series of blocks (0 <- 1 <- 2 <- 3 and commit 0 and continue to rotate
 /// left, appending new blocks on the right, committing the left most block
-fn lsr(mut safety_rules: Box<dyn TSafetyRules<Vec<u8>>>, signer: ValidatorSigner, n: u64) {
-    let mut rng = rand::thread_rng();
-    let data: Vec<u8> = (0..2048).map(|_| rng.gen::<u8>()).collect();
+fn lsr(mut safety_rules: Box<dyn TSafetyRules>, signer: ValidatorSigner, n: u64) {
+    let data = random_payload(2048);
 
-    let genesis_block = Block::<Vec<u8>>::make_genesis_block();
+    let genesis_block = Block::make_genesis_block();
     let genesis_qc = block_test_utils::certificate_for_genesis();
     let mut round = genesis_block.round();
 

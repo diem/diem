@@ -33,16 +33,16 @@ pub fn empty_proof() -> Proof {
     Proof::new(vec![], 0, vec![])
 }
 
-pub fn make_proposal_with_qc_and_proof<P: Payload>(
-    payload: P,
+pub fn make_proposal_with_qc_and_proof(
+    payload: Payload,
     round: Round,
     proof: Proof,
     qc: QuorumCert,
     validator_signer: &ValidatorSigner,
-) -> VoteProposal<P> {
-    VoteProposal::<P>::new(
+) -> VoteProposal {
+    VoteProposal::new(
         proof,
-        Block::<P>::new_proposal(
+        Block::new_proposal(
             payload,
             round,
             SystemTime::now()
@@ -56,22 +56,22 @@ pub fn make_proposal_with_qc_and_proof<P: Payload>(
     )
 }
 
-pub fn make_proposal_with_qc<P: Payload>(
+pub fn make_proposal_with_qc(
     round: Round,
     qc: QuorumCert,
     validator_signer: &ValidatorSigner,
-) -> VoteProposal<P> {
-    make_proposal_with_qc_and_proof(P::default(), round, empty_proof(), qc, validator_signer)
+) -> VoteProposal {
+    make_proposal_with_qc_and_proof(vec![], round, empty_proof(), qc, validator_signer)
 }
 
-pub fn make_proposal_with_parent_and_overrides<P: Payload>(
-    payload: P,
+pub fn make_proposal_with_parent_and_overrides(
+    payload: Payload,
     round: Round,
-    parent: &VoteProposal<P>,
-    committed: Option<&VoteProposal<P>>,
+    parent: &VoteProposal,
+    committed: Option<&VoteProposal>,
     validator_signer: &ValidatorSigner,
     epoch: Option<u64>,
-) -> VoteProposal<P> {
+) -> VoteProposal {
     let block_epoch = match epoch {
         Some(e) => e,
         _ => parent.block().epoch(),
@@ -152,13 +152,13 @@ pub fn make_proposal_with_parent_and_overrides<P: Payload>(
     make_proposal_with_qc_and_proof(payload, round, proof, qc, validator_signer)
 }
 
-pub fn make_proposal_with_parent<P: Payload>(
-    payload: P,
+pub fn make_proposal_with_parent(
+    payload: Payload,
     round: Round,
-    parent: &VoteProposal<P>,
-    committed: Option<&VoteProposal<P>>,
+    parent: &VoteProposal,
+    committed: Option<&VoteProposal>,
     validator_signer: &ValidatorSigner,
-) -> VoteProposal<P> {
+) -> VoteProposal {
     make_proposal_with_parent_and_overrides(
         payload,
         round,

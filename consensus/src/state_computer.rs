@@ -7,10 +7,7 @@ use consensus_types::block::Block;
 use executor_types::{BlockExecutor, StateComputeResult};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
-use libra_types::{
-    ledger_info::LedgerInfoWithSignatures,
-    transaction::{SignedTransaction, Transaction},
-};
+use libra_types::{ledger_info::LedgerInfoWithSignatures, transaction::Transaction};
 use state_synchronizer::StateSyncClient;
 use std::{
     boxed::Box,
@@ -37,7 +34,7 @@ impl ExecutionProxy {
         }
     }
 
-    fn transactions_from_block(block: &Block<Vec<SignedTransaction>>) -> Vec<Transaction> {
+    fn transactions_from_block(block: &Block) -> Vec<Transaction> {
         let mut transactions = vec![Transaction::BlockMetadata(block.into())];
         transactions.extend(
             block
@@ -52,12 +49,10 @@ impl ExecutionProxy {
 
 #[async_trait::async_trait]
 impl StateComputer for ExecutionProxy {
-    type Payload = Vec<SignedTransaction>;
-
     fn compute(
         &self,
         // The block to be executed.
-        block: &Block<Self::Payload>,
+        block: &Block,
         // The parent block id.
         parent_block_id: HashValue,
     ) -> Result<StateComputeResult> {

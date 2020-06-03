@@ -1,14 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    liveness::{
-        leader_reputation::{
-            ActiveInactiveHeuristic, LeaderReputation, MetadataBackend, ReputationHeuristic,
-        },
-        proposer_election::{next, ProposerElection},
+use crate::liveness::{
+    leader_reputation::{
+        ActiveInactiveHeuristic, LeaderReputation, MetadataBackend, ReputationHeuristic,
     },
-    test_utils::TestPayload,
+    proposer_election::{next, ProposerElection},
 };
 use consensus_types::{
     block::{block_test_utils::certificate_for_genesis, Block},
@@ -94,7 +91,7 @@ fn test_api() {
         create_block(proposers[0], vec![&signers[1], &signers[2]]),
         create_block(proposers[0], vec![&signers[3]]),
     ];
-    let leader_reputation = LeaderReputation::<TestPayload>::new(
+    let leader_reputation = LeaderReputation::new(
         proposers.clone(),
         Box::new(MockHistory::new(1, history)),
         Box::new(ActiveInactiveHeuristic::new(active_weight, inactive_weight)),
@@ -123,13 +120,13 @@ fn test_api() {
         }
     }
     let unexpected_index = (expected_index + 1) % proposers.len();
-    let proposer_election: Box<dyn ProposerElection<TestPayload>> = Box::new(leader_reputation);
+    let proposer_election: Box<dyn ProposerElection> = Box::new(leader_reputation);
     let output = proposer_election.get_valid_proposer(round);
     assert_eq!(output, proposers[expected_index]);
     assert!(proposer_election.is_valid_proposer(proposers[expected_index], 42));
     assert!(!proposer_election.is_valid_proposer(proposers[unexpected_index], 42));
     let good_proposal = Block::new_proposal(
-        vec![1],
+        vec![],
         round,
         1,
         certificate_for_genesis(),
@@ -137,7 +134,7 @@ fn test_api() {
     );
     assert!(proposer_election.is_valid_proposal(&good_proposal));
     let bad_proposal = Block::new_proposal(
-        vec![1],
+        vec![],
         round,
         1,
         certificate_for_genesis(),

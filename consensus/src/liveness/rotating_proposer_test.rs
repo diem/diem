@@ -14,7 +14,7 @@ fn test_rotating_proposer() {
     let another_validator_signer = ValidatorSigner::random([1u8; 32]);
     let another_author = another_validator_signer.author();
     let proposers = vec![chosen_author, another_author];
-    let pe: Box<dyn ProposerElection<u32>> = Box::new(RotatingProposer::new(proposers, 1));
+    let pe: Box<dyn ProposerElection> = Box::new(RotatingProposer::new(proposers, 1));
 
     // Send a proposal from both chosen author and another author, the only winning proposals
     // follow the round-robin rotation.
@@ -23,9 +23,11 @@ fn test_rotating_proposer() {
     let quorum_cert = certificate_for_genesis();
 
     let good_proposal =
-        Block::new_proposal(1, 1, 1, quorum_cert.clone(), &another_validator_signer);
-    let bad_proposal = Block::new_proposal(2, 1, 2, quorum_cert.clone(), &chosen_validator_signer);
-    let next_good_proposal = Block::new_proposal(3, 2, 3, quorum_cert, &chosen_validator_signer);
+        Block::new_proposal(vec![], 1, 1, quorum_cert.clone(), &another_validator_signer);
+    let bad_proposal =
+        Block::new_proposal(vec![], 1, 2, quorum_cert.clone(), &chosen_validator_signer);
+    let next_good_proposal =
+        Block::new_proposal(vec![], 2, 3, quorum_cert, &chosen_validator_signer);
     assert!(pe.is_valid_proposal(&good_proposal));
     assert!(!pe.is_valid_proposal(&bad_proposal));
     assert!(pe.is_valid_proposal(&next_good_proposal),);
@@ -44,7 +46,7 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
     let another_validator_signer = ValidatorSigner::random([1u8; 32]);
     let another_author = another_validator_signer.author();
     let proposers = vec![chosen_author, another_author];
-    let pe: Box<dyn ProposerElection<u32>> = Box::new(RotatingProposer::new(proposers, 3));
+    let pe: Box<dyn ProposerElection> = Box::new(RotatingProposer::new(proposers, 3));
 
     // Send a proposal from both chosen author and another author, the only winning proposals
     // follow the round-robin rotation with 3 contiguous rounds.
@@ -52,9 +54,12 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
     // Test genesis and the next block
     let quorum_cert = certificate_for_genesis();
 
-    let good_proposal = Block::new_proposal(1, 1, 1, quorum_cert.clone(), &chosen_validator_signer);
-    let bad_proposal = Block::new_proposal(2, 1, 2, quorum_cert.clone(), &another_validator_signer);
-    let next_good_proposal = Block::new_proposal(3, 2, 3, quorum_cert, &chosen_validator_signer);
+    let good_proposal =
+        Block::new_proposal(vec![], 1, 1, quorum_cert.clone(), &chosen_validator_signer);
+    let bad_proposal =
+        Block::new_proposal(vec![], 1, 2, quorum_cert.clone(), &another_validator_signer);
+    let next_good_proposal =
+        Block::new_proposal(vec![], 2, 3, quorum_cert, &chosen_validator_signer);
     assert!(pe.is_valid_proposal(&good_proposal),);
     assert!(!pe.is_valid_proposal(&bad_proposal));
     assert!(pe.is_valid_proposal(&next_good_proposal),);
@@ -72,8 +77,7 @@ fn test_fixed_proposer() {
     let chosen_author = chosen_validator_signer.author();
     let another_validator_signer = ValidatorSigner::random([1u8; 32]);
     let another_author = another_validator_signer.author();
-    let pe: Box<dyn ProposerElection<u32>> =
-        Box::new(RotatingProposer::new(vec![chosen_author], 1));
+    let pe: Box<dyn ProposerElection> = Box::new(RotatingProposer::new(vec![chosen_author], 1));
 
     // Send a proposal from both chosen author and another author, the only winning proposal is
     // from the chosen author.
@@ -81,9 +85,12 @@ fn test_fixed_proposer() {
     // Test genesis and the next block
     let quorum_cert = certificate_for_genesis();
 
-    let good_proposal = Block::new_proposal(1, 1, 1, quorum_cert.clone(), &chosen_validator_signer);
-    let bad_proposal = Block::new_proposal(2, 1, 2, quorum_cert.clone(), &another_validator_signer);
-    let next_good_proposal = Block::new_proposal(2, 2, 3, quorum_cert, &chosen_validator_signer);
+    let good_proposal =
+        Block::new_proposal(vec![], 1, 1, quorum_cert.clone(), &chosen_validator_signer);
+    let bad_proposal =
+        Block::new_proposal(vec![], 1, 2, quorum_cert.clone(), &another_validator_signer);
+    let next_good_proposal =
+        Block::new_proposal(vec![], 2, 3, quorum_cert, &chosen_validator_signer);
     assert!(pe.is_valid_proposal(&good_proposal));
     assert!(!pe.is_valid_proposal(&bad_proposal));
     assert!(pe.is_valid_proposal(&next_good_proposal));

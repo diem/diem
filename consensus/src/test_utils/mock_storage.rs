@@ -9,8 +9,7 @@ use crate::{
 };
 use anyhow::Result;
 use consensus_types::{
-    block::Block, common::Payload, quorum_cert::QuorumCert,
-    timeout_certificate::TimeoutCertificate, vote::Vote,
+    block::Block, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use libra_crypto::HashValue;
 use libra_types::{
@@ -20,14 +19,13 @@ use libra_types::{
 };
 use std::{
     collections::{BTreeMap, HashMap},
-    marker::PhantomData,
     sync::{Arc, Mutex},
 };
 use storage_interface::DbReader;
 
-pub struct MockSharedStorage<T> {
+pub struct MockSharedStorage {
     // Safety state
-    pub block: Mutex<HashMap<HashValue, Block<T>>>,
+    pub block: Mutex<HashMap<HashValue, Block>>,
     pub qc: Mutex<HashMap<HashValue, QuorumCert>>,
     pub lis: Mutex<HashMap<u64, LedgerInfoWithSignatures>>,
     pub last_vote: Mutex<Option<Vote>>,
@@ -37,7 +35,7 @@ pub struct MockSharedStorage<T> {
     pub validator_set: ValidatorSet,
 }
 
-impl<T: Payload> MockSharedStorage<T> {
+impl MockSharedStorage {
     pub fn new(validator_set: ValidatorSet) -> Self {
         MockSharedStorage {
             block: Mutex::new(HashMap::new()),
@@ -52,13 +50,13 @@ impl<T: Payload> MockSharedStorage<T> {
 
 /// A storage that simulates the operations in-memory, used in the tests that cares about storage
 /// consistency.
-pub struct MockStorage<T> {
-    pub shared_storage: Arc<MockSharedStorage<T>>,
+pub struct MockStorage {
+    pub shared_storage: Arc<MockSharedStorage>,
     storage_ledger: Mutex<LedgerInfo>,
 }
 
-impl<T: Payload> MockStorage<T> {
-    pub fn new(shared_storage: Arc<MockSharedStorage<T>>) -> Self {
+impl MockStorage {
+    pub fn new(shared_storage: Arc<MockSharedStorage>) -> Self {
         let validator_set = Some(shared_storage.validator_set.clone());
         let li = LedgerInfo::mock_genesis(validator_set);
         let lis = LedgerInfoWithSignatures::new(li.clone(), BTreeMap::new());
@@ -74,7 +72,7 @@ impl<T: Payload> MockStorage<T> {
     }
 
     pub fn new_with_ledger_info(
-        shared_storage: Arc<MockSharedStorage<T>>,
+        shared_storage: Arc<MockSharedStorage>,
         ledger_info: LedgerInfo,
     ) -> Self {
         let li = if ledger_info.next_epoch_state().is_some() {
@@ -115,7 +113,7 @@ impl<T: Payload> MockStorage<T> {
         LedgerRecoveryData::new(self.storage_ledger.lock().unwrap().clone())
     }
 
-    pub fn try_start(&self) -> Result<RecoveryData<T>> {
+    pub fn try_start(&self) -> Result<RecoveryData> {
         let ledger_recovery_data = self.get_ledger_recovery_data();
         let mut blocks: Vec<_> = self
             .shared_storage
@@ -154,7 +152,7 @@ impl<T: Payload> MockStorage<T> {
         self.try_start().map(|_| ())
     }
 
-    pub fn start_for_testing(validator_set: ValidatorSet) -> (RecoveryData<T>, Arc<Self>) {
+    pub fn start_for_testing(validator_set: ValidatorSet) -> (RecoveryData, Arc<Self>) {
         let shared_storage = Arc::new(MockSharedStorage {
             block: Mutex::new(HashMap::new()),
             qc: Mutex::new(HashMap::new()),
@@ -174,8 +172,8 @@ impl<T: Payload> MockStorage<T> {
 }
 
 // A impl that always start from genesis.
-impl<T: Payload> PersistentLivenessStorage<T> for MockStorage<T> {
-    fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
+impl PersistentLivenessStorage for MockStorage {
+    fn save_tree(&self, blocks: Vec<Block>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
         // When the shared storage is empty, we are expected to not able to construct an block tree
         // from it. During test we will intentionally clear shared_storage to simulate the situation
         // of restarting from an empty consensusDB
@@ -227,7 +225,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for MockStorage<T> {
         self.get_ledger_recovery_data()
     }
 
-    fn start(&self) -> LivenessStorageData<T> {
+    fn start(&self) -> LivenessStorageData {
         match self.try_start() {
             Ok(recovery_data) => LivenessStorageData::RecoveryData(recovery_data),
             Err(_) => LivenessStorageData::LedgerRecoveryData(self.recover_from_ledger()),
@@ -264,18 +262,14 @@ impl<T: Payload> PersistentLivenessStorage<T> for MockStorage<T> {
 }
 
 /// A storage that ignores any requests, used in the tests that don't care about the storage.
-pub struct EmptyStorage<T> {
-    _phantom: PhantomData<T>,
-}
+pub struct EmptyStorage;
 
-impl<T: Payload> EmptyStorage<T> {
+impl EmptyStorage {
     pub fn new() -> Self {
-        Self {
-            _phantom: PhantomData,
-        }
+        Self
     }
 
-    pub fn start_for_testing() -> (RecoveryData<T>, Arc<Self>) {
+    pub fn start_for_testing() -> (RecoveryData, Arc<Self>) {
         let storage = Arc::new(EmptyStorage::new());
         let recovery_data = storage
             .start()
@@ -284,8 +278,8 @@ impl<T: Payload> EmptyStorage<T> {
     }
 }
 
-impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage<T> {
-    fn save_tree(&self, _: Vec<Block<T>>, _: Vec<QuorumCert>) -> Result<()> {
+impl PersistentLivenessStorage for EmptyStorage {
+    fn save_tree(&self, _: Vec<Block>, _: Vec<QuorumCert>) -> Result<()> {
         Ok(())
     }
 
@@ -301,7 +295,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage<T> {
         LedgerRecoveryData::new(LedgerInfo::mock_genesis(None))
     }
 
-    fn start(&self) -> LivenessStorageData<T> {
+    fn start(&self) -> LivenessStorageData {
         match RecoveryData::new(
             None,
             self.recover_from_ledger(),

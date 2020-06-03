@@ -16,7 +16,7 @@ use crate::{
     round_manager::RoundManager,
     test_utils::{
         consensus_runtime, timed_block_on, MockStateComputer, MockStorage, MockTransactionManager,
-        TestPayload, TreeInserter,
+        TreeInserter,
     },
     util::time_service::{ClockTimeService, TimeService},
 };
@@ -27,7 +27,7 @@ use consensus_types::{
         Block,
     },
     block_retrieval::{BlockRetrievalRequest, BlockRetrievalStatus},
-    common::Author,
+    common::{Author, Payload},
     proposal_msg::ProposalMsg,
     sync_info::SyncInfo,
     timeout::Timeout,
@@ -58,17 +58,16 @@ use tokio::runtime::Handle;
 
 /// Auxiliary struct that is setting up node environment for the test.
 pub struct NodeSetup {
-    block_store: Arc<BlockStore<TestPayload>>,
-    round_manager: RoundManager<TestPayload>,
-    storage: Arc<MockStorage<TestPayload>>,
+    block_store: Arc<BlockStore>,
+    round_manager: RoundManager,
+    storage: Arc<MockStorage>,
     signer: ValidatorSigner,
     proposer_author: Author,
     validators: ValidatorVerifier,
-    safety_rules_manager: SafetyRulesManager<TestPayload>,
-    all_events:
-        Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg<TestPayload>>>> + Send + Unpin>,
+    safety_rules_manager: SafetyRulesManager,
+    all_events: Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg>>> + Send + Unpin>,
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
-    state_sync_receiver: mpsc::UnboundedReceiver<TestPayload>,
+    state_sync_receiver: mpsc::UnboundedReceiver<Payload>,
 }
 
 impl NodeSetup {
@@ -79,9 +78,7 @@ impl NodeSetup {
         RoundState::new(time_interval, time_service, round_timeout_sender)
     }
 
-    fn create_proposer_election(
-        author: Author,
-    ) -> Box<dyn ProposerElection<TestPayload> + Send + Sync> {
+    fn create_proposer_election(author: Author) -> Box<dyn ProposerElection + Send + Sync> {
         Box::new(RotatingProposer::new(vec![author], 1))
     }
 
@@ -97,8 +94,7 @@ impl NodeSetup {
             Waypoint::new_epoch_boundary(&LedgerInfo::mock_genesis(Some(validator_set))).unwrap();
         let mut nodes = vec![];
         for signer in signers.iter().take(num_nodes) {
-            let (initial_data, storage) =
-                MockStorage::<TestPayload>::start_for_testing((&validators).into());
+            let (initial_data, storage) = MockStorage::start_for_testing((&validators).into());
 
             let author = signer.author();
             let safety_storage = PersistentSafetyStorage::initialize(
@@ -126,9 +122,9 @@ impl NodeSetup {
         executor: Handle,
         signer: ValidatorSigner,
         proposer_author: Author,
-        storage: Arc<MockStorage<TestPayload>>,
-        initial_data: RecoveryData<TestPayload>,
-        safety_rules_manager: SafetyRulesManager<TestPayload>,
+        storage: Arc<MockStorage>,
+        initial_data: RecoveryData,
+        safety_rules_manager: SafetyRulesManager,
     ) -> Self {
         let epoch_state = EpochState {
             epoch: 1,
@@ -234,7 +230,7 @@ impl NodeSetup {
         )
     }
 
-    pub async fn next_proposal(&mut self) -> ProposalMsg<TestPayload> {
+    pub async fn next_proposal(&mut self) -> ProposalMsg {
         match self.all_events.next().await.unwrap().unwrap() {
             Event::Message((_, msg)) => match msg {
                 ConsensusMsg::ProposalMsg(p) => *p,
@@ -314,7 +310,7 @@ fn vote_on_successful_proposal() {
         // Start round 1 and clear the message queue
         node.next_proposal().await;
 
-        let proposal = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
+        let proposal = Block::new_proposal(vec![], 1, 1, genesis_qc.clone(), &node.signer);
         let proposal_id = proposal.id();
         node.round_manager
             .process_proposed_block(proposal)
@@ -340,9 +336,9 @@ fn no_vote_on_old_proposal() {
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1);
     let node = &mut nodes[0];
     let genesis_qc = certificate_for_genesis();
-    let new_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
+    let new_block = Block::new_proposal(vec![], 1, 1, genesis_qc.clone(), &node.signer);
     let new_block_id = new_block.id();
-    let old_block = Block::new_proposal(vec![1], 1, 2, genesis_qc, &node.signer);
+    let old_block = Block::new_proposal(vec![], 1, 2, genesis_qc, &node.signer);
     let old_block_id = old_block.id();
     timed_block_on(&mut runtime, async {
         // clear the message queue
@@ -376,10 +372,10 @@ fn no_vote_on_mismatch_round() {
         .pop()
         .unwrap();
     let genesis_qc = certificate_for_genesis();
-    let correct_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
-    let block_skip_round = Block::new_proposal(vec![1], 2, 2, genesis_qc.clone(), &node.signer);
+    let correct_block = Block::new_proposal(vec![], 1, 1, genesis_qc.clone(), &node.signer);
+    let block_skip_round = Block::new_proposal(vec![], 2, 2, genesis_qc.clone(), &node.signer);
     timed_block_on(&mut runtime, async {
-        let bad_proposal = ProposalMsg::<TestPayload>::new(
+        let bad_proposal = ProposalMsg::new(
             block_skip_round,
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         );
@@ -388,7 +384,7 @@ fn no_vote_on_mismatch_round() {
             .pre_process_proposal(bad_proposal)
             .await
             .is_err());
-        let good_proposal = ProposalMsg::<TestPayload>::new(
+        let good_proposal = ProposalMsg::new(
             correct_block.clone(),
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         );
@@ -457,16 +453,11 @@ fn no_vote_on_invalid_proposer() {
     let incorrect_proposer = nodes.pop().unwrap();
     let mut node = nodes.pop().unwrap();
     let genesis_qc = certificate_for_genesis();
-    let correct_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
-    let block_incorrect_proposer = Block::new_proposal(
-        vec![1],
-        1,
-        1,
-        genesis_qc.clone(),
-        &incorrect_proposer.signer,
-    );
+    let correct_block = Block::new_proposal(vec![], 1, 1, genesis_qc.clone(), &node.signer);
+    let block_incorrect_proposer =
+        Block::new_proposal(vec![], 1, 1, genesis_qc.clone(), &incorrect_proposer.signer);
     timed_block_on(&mut runtime, async {
-        let bad_proposal = ProposalMsg::<TestPayload>::new(
+        let bad_proposal = ProposalMsg::new(
             block_incorrect_proposer,
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         );
@@ -475,7 +466,7 @@ fn no_vote_on_invalid_proposer() {
             .pre_process_proposal(bad_proposal)
             .await
             .is_err());
-        let good_proposal = ProposalMsg::<TestPayload>::new(
+        let good_proposal = ProposalMsg::new(
             correct_block.clone(),
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         );
@@ -501,8 +492,8 @@ fn new_round_on_timeout_certificate() {
         .pop()
         .unwrap();
     let genesis_qc = certificate_for_genesis();
-    let correct_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
-    let block_skip_round = Block::new_proposal(vec![1], 2, 2, genesis_qc.clone(), &node.signer);
+    let correct_block = Block::new_proposal(vec![], 1, 1, genesis_qc.clone(), &node.signer);
+    let block_skip_round = Block::new_proposal(vec![], 2, 2, genesis_qc.clone(), &node.signer);
     let timeout = Timeout::new(1, 1);
     let timeout_signature = timeout.sign(&node.signer);
 
@@ -510,7 +501,7 @@ fn new_round_on_timeout_certificate() {
     tc.add_signature(node.signer.author(), timeout_signature);
 
     timed_block_on(&mut runtime, async {
-        let skip_round_proposal = ProposalMsg::<TestPayload>::new(
+        let skip_round_proposal = ProposalMsg::new(
             block_skip_round,
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), Some(tc)),
         );
@@ -521,7 +512,7 @@ fn new_round_on_timeout_certificate() {
                 .unwrap(),
             skip_round_proposal.take_proposal()
         );
-        let old_good_proposal = ProposalMsg::<TestPayload>::new(
+        let old_good_proposal = ProposalMsg::new(
             correct_block.clone(),
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         );
@@ -542,10 +533,9 @@ fn response_on_block_retrieval() {
         .unwrap();
 
     let genesis_qc = certificate_for_genesis();
-    let block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
+    let block = Block::new_proposal(vec![], 1, 1, genesis_qc.clone(), &node.signer);
     let block_id = block.id();
-    let proposal =
-        ProposalMsg::<TestPayload>::new(block, SyncInfo::new(genesis_qc.clone(), genesis_qc, None));
+    let proposal = ProposalMsg::new(block, SyncInfo::new(genesis_qc.clone(), genesis_qc, None));
 
     timed_block_on(&mut runtime, async {
         node.round_manager
@@ -566,7 +556,7 @@ fn response_on_block_retrieval() {
         match rx1.await {
             Ok(Ok(bytes)) => {
                 let response = match lcs::from_bytes(&bytes) {
-                    Ok(ConsensusMsg::<TestPayload>::BlockRetrievalResponse(resp)) => *resp,
+                    Ok(ConsensusMsg::BlockRetrievalResponse(resp)) => *resp,
                     _ => panic!("block retrieval failure"),
                 };
                 assert_eq!(response.status(), BlockRetrievalStatus::Succeeded);
@@ -589,7 +579,7 @@ fn response_on_block_retrieval() {
         match rx2.await {
             Ok(Ok(bytes)) => {
                 let response = match lcs::from_bytes(&bytes) {
-                    Ok(ConsensusMsg::<TestPayload>::BlockRetrievalResponse(resp)) => *resp,
+                    Ok(ConsensusMsg::BlockRetrievalResponse(resp)) => *resp,
                     _ => panic!("block retrieval failure"),
                 };
                 assert_eq!(response.status(), BlockRetrievalStatus::IdNotFound);
@@ -611,7 +601,7 @@ fn response_on_block_retrieval() {
         match rx3.await {
             Ok(Ok(bytes)) => {
                 let response = match lcs::from_bytes(&bytes) {
-                    Ok(ConsensusMsg::<TestPayload>::BlockRetrievalResponse(resp)) => *resp,
+                    Ok(ConsensusMsg::BlockRetrievalResponse(resp)) => *resp,
                     _ => panic!("block retrieval failure"),
                 };
                 assert_eq!(response.status(), BlockRetrievalStatus::NotEnoughBlocks);
@@ -653,7 +643,7 @@ fn recover_on_restart() {
 
     timed_block_on(&mut runtime, async {
         for (proposal, tc) in &data {
-            let proposal_msg = ProposalMsg::<TestPayload>::new(
+            let proposal_msg = ProposalMsg::new(
                 proposal.clone(),
                 SyncInfo::new(
                     proposal.quorum_cert().clone(),
@@ -743,9 +733,9 @@ fn sync_info_sent_on_stale_sync_info() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
-    runtime.spawn(playground.start::<TestPayload>());
+    runtime.spawn(playground.start());
     let genesis_qc = certificate_for_genesis();
-    let block_0 = Block::new_proposal(vec![1], 1, 1, genesis_qc, &nodes[0].signer);
+    let block_0 = Block::new_proposal(vec![], 1, 1, genesis_qc, &nodes[0].signer);
     let parent_block_info = block_0.quorum_cert().certified_block();
     let block_0_quorum_cert = gen_test_certificate(
         vec![&nodes[0].signer, &nodes[1].signer],
@@ -800,7 +790,7 @@ fn sync_on_partial_newer_sync_info() {
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1);
     let mut node = nodes.pop().unwrap();
-    runtime.spawn(playground.start::<TestPayload>());
+    runtime.spawn(playground.start());
     timed_block_on(&mut runtime, async {
         // commit block 1 after 4 rounds
         for _ in 1..=4 {

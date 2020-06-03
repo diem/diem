@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{tests::suite, PersistentSafetyStorage, SafetyRulesManager, TSafetyRules};
-use consensus_types::common::{Payload, Round};
 use libra_secure_storage::{KVStorage, VaultStorage};
 use libra_types::{validator_signer::ValidatorSigner, waypoint::Waypoint};
 
@@ -12,10 +11,10 @@ use libra_types::{validator_signer::ValidatorSigner, waypoint::Waypoint};
 #[ignore]
 #[test]
 fn test() {
-    suite::run_test_suite(safety_rules::<Round>, safety_rules::<Vec<u8>>);
+    suite::run_test_suite(safety_rules);
 }
 
-fn safety_rules<T: Payload>() -> (Box<dyn TSafetyRules<T>>, ValidatorSigner) {
+fn safety_rules() -> (Box<dyn TSafetyRules>, ValidatorSigner) {
     let signer = ValidatorSigner::from_int(0);
     let host = "http://localhost:8200".to_string();
     let token = "root_token".to_string();
