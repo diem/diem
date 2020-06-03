@@ -39,10 +39,6 @@ impl VaultStorage {
         }
     }
 
-    pub fn namespace(&self) -> Option<String> {
-        self.namespace.clone()
-    }
-
     #[cfg(any(test, feature = "testing"))]
     fn reset_kv(&self, path: &str) -> Result<(), Error> {
         let secrets = self.client.list_secrets(path)?;
