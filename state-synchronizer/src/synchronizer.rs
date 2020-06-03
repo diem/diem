@@ -16,8 +16,8 @@ use futures::{
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig, UpstreamConfig};
 use libra_mempool::{CommitNotification, CommitResponse};
 use libra_types::{
-    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,
-    on_chain_config::ReconfigSubscription, transaction::Transaction, waypoint::Waypoint, PeerId,
+    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
+    waypoint::Waypoint, PeerId,
 };
 use std::{
     boxed::Box,
@@ -26,6 +26,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 use storage_interface::DbReader;
+use subscription_service::ReconfigSubscription;
 use tokio::{
     runtime::{Builder, Runtime},
     time::timeout,
