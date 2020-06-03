@@ -109,16 +109,6 @@ impl OpMetrics {
     }
 
     #[inline]
-    pub fn add(&self, op: &str) {
-        self.gauges.with_label_values(&[op]).inc();
-    }
-
-    #[inline]
-    pub fn sub(&self, op: &str) {
-        self.gauges.with_label_values(&[op]).dec();
-    }
-
-    #[inline]
     pub fn set(&self, op: &str, v: usize) {
         // The underlying method is expecting i64, but most of the types
         // we're going to log are `u64` or `usize`.
