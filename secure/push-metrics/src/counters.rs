@@ -26,10 +26,6 @@ impl BaseMetric {
     pub fn inc(&self) {
         self.inc_by(1);
     }
-
-    pub fn set(&self, i: i64) {
-        self.counter.store(i, Ordering::Relaxed);
-    }
 }
 
 /// PushMetricFormat contains a single function which converts the
@@ -88,11 +84,6 @@ impl Gauge {
             base_counter: BaseMetric::new(counter_name, counter_help),
             has_been_set: AtomicBool::new(false),
         }
-    }
-
-    pub fn set(&self, i: i64) {
-        self.has_been_set.store(true, Ordering::Relaxed);
-        self.base_counter.set(i);
     }
 }
 
