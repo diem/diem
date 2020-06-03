@@ -51,6 +51,7 @@ safety-rules = { path = "safety-rules", version = "0.1.0" }
 state-synchronizer = { path = "../state-synchronizer", version = "0.1.0" }
 schemadb = { path = "../storage/schemadb", version = "0.1.0" }
 storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
+subscription-service = { path = "../common/subscription-service", version = "0.1.0" }
 
 [dev-dependencies]
 cached = "0.13.1"

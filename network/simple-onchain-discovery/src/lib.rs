@@ -10,10 +10,7 @@ use libra_logger::prelude::*;
 use libra_metrics::{register_histogram, DurationHistogram};
 use libra_network_address::NetworkAddress;
 use libra_types::{
-    on_chain_config::{
-        OnChainConfigPayload, ReconfigSubscription, SubscriptionBundle, ValidatorSet,
-        ON_CHAIN_CONFIG_REGISTRY,
-    },
+    on_chain_config::{OnChainConfigPayload, ValidatorSet, ON_CHAIN_CONFIG_REGISTRY},
     validator_config::ValidatorConfig,
 };
 use network::{
@@ -22,6 +19,7 @@ use network::{
 };
 use once_cell::sync::Lazy;
 use std::{convert::TryFrom, time::Instant};
+use subscription_service::ReconfigSubscription;
 
 /// Histogram of idle time of spent in event processing loop
 pub static EVENT_PROCESSING_LOOP_IDLE_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
@@ -54,8 +52,7 @@ pub struct ConfigurationChangeListener {
 
 pub fn gen_simple_discovery_reconfig_subscription(
 ) -> (ReconfigSubscription, Receiver<(), OnChainConfigPayload>) {
-    let bundle = SubscriptionBundle::new(ON_CHAIN_CONFIG_REGISTRY.to_vec(), vec![]);
-    ReconfigSubscription::subscribe(bundle)
+    ReconfigSubscription::subscribe_all(ON_CHAIN_CONFIG_REGISTRY.to_vec(), vec![])
 }
 
 /// Extract the network_address from the provided config, depending on role.

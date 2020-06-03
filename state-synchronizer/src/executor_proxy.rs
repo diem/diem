@@ -10,13 +10,12 @@ use libra_types::{
     contract_event::ContractEvent,
     ledger_info::LedgerInfoWithSignatures,
     move_resource::MoveStorage,
-    on_chain_config::{
-        config_address, OnChainConfigPayload, ReconfigSubscription, ON_CHAIN_CONFIG_REGISTRY,
-    },
+    on_chain_config::{config_address, OnChainConfigPayload, ON_CHAIN_CONFIG_REGISTRY},
     transaction::TransactionListWithProof,
 };
 use std::{collections::HashSet, convert::TryFrom, sync::Arc};
 use storage_interface::DbReader;
+use subscription_service::ReconfigSubscription;
 
 /// Proxies interactions with execution and storage for state synchronization
 pub trait ExecutorProxyTrait: Send {
