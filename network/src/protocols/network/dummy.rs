@@ -102,11 +102,11 @@ pub fn setup_network() -> DummyNetwork {
 
     // Setup keys for dialer.
     let mut rng = StdRng::from_seed(TEST_SEED);
-    let dialer_identity_private_key = x25519::PrivateKey::generate(&mut rng);
+    let dialer_identity_private_key = x25519::X25519PrivateKey::generate(&mut rng);
     let dialer_identity_public_key = dialer_identity_private_key.public_key();
 
     // Setup keys for listener.
-    let listener_identity_private_key = x25519::PrivateKey::generate(&mut rng);
+    let listener_identity_private_key = x25519::X25519PrivateKey::generate(&mut rng);
     let listener_identity_public_key = listener_identity_private_key.public_key();
 
     // Setup listen addresses

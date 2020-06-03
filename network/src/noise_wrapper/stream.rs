@@ -58,7 +58,7 @@ impl<TSocket> NoiseStream<TSocket> {
     }
 
     /// Pull out the static public key of the remote
-    pub fn get_remote_static(&self) -> x25519::PublicKey {
+    pub fn get_remote_static(&self) -> x25519::X25519PublicKey {
         self.session.get_remote_static()
     }
 
@@ -572,15 +572,15 @@ mod test {
 
     /// helper to setup two testing peers
     fn build_peers() -> (
-        (NoiseWrapper, x25519::PublicKey),
-        (NoiseWrapper, x25519::PublicKey),
+        (NoiseWrapper, x25519::X25519PublicKey),
+        (NoiseWrapper, x25519::X25519PublicKey),
     ) {
         let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
 
-        let client_private = x25519::PrivateKey::generate(&mut rng);
+        let client_private = x25519::X25519PrivateKey::generate(&mut rng);
         let client_public = client_private.public_key();
 
-        let server_private = x25519::PrivateKey::generate(&mut rng);
+        let server_private = x25519::X25519PrivateKey::generate(&mut rng);
         let server_public = server_private.public_key();
 
         let client = NoiseWrapper::new(client_private);
@@ -592,7 +592,7 @@ mod test {
     /// helper to perform a noise handshake with two peers
     fn perform_handshake(
         client: NoiseWrapper,
-        server_public_key: x25519::PublicKey,
+        server_public_key: x25519::X25519PublicKey,
         server: NoiseWrapper,
         trusted_peers: Option<&Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>>,
     ) -> io::Result<(NoiseStream<MemorySocket>, NoiseStream<MemorySocket>)> {

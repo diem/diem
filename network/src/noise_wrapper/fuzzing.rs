@@ -94,9 +94,9 @@ impl AsyncRead for ExposingSocket {
 //
 
 // let's cache the deterministic keypair
-pub static KEYPAIR: Lazy<(x25519::PrivateKey, x25519::PublicKey)> = Lazy::new(|| {
+pub static KEYPAIR: Lazy<(x25519::X25519PrivateKey, x25519::X25519PublicKey)> = Lazy::new(|| {
     let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
-    let private_key = x25519::PrivateKey::generate(&mut rng);
+    let private_key = x25519::X25519PrivateKey::generate(&mut rng);
     let public_key = private_key.public_key();
     (private_key, public_key)
 });

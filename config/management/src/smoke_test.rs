@@ -84,7 +84,7 @@ fn smoke_test() {
             .export_private_key(libra_global_constants::VALIDATOR_NETWORK_KEY)
             .unwrap();
         let identity_key =
-            x25519::PrivateKey::from_ed25519_private_bytes(&identity_key.to_bytes()).unwrap();
+            x25519::X25519PrivateKey::from_ed25519_private_bytes(&identity_key.to_bytes()).unwrap();
         validator_network.identity_keypair = Some(KeyPair::load(identity_key));
 
         let fullnode_network = &mut config.full_node_networks[0];
@@ -92,7 +92,7 @@ fn smoke_test() {
             .export_private_key(libra_global_constants::FULLNODE_NETWORK_KEY)
             .unwrap();
         let identity_key =
-            x25519::PrivateKey::from_ed25519_private_bytes(&identity_key.to_bytes()).unwrap();
+            x25519::X25519PrivateKey::from_ed25519_private_bytes(&identity_key.to_bytes()).unwrap();
         fullnode_network.identity_keypair = Some(KeyPair::load(identity_key));
         let fullnode_network_address = fullnode_network.listen_address.clone();
 

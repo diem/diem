@@ -208,7 +208,7 @@ pub async fn perform_handshake<T: TSocket>(
 }
 
 pub fn build_memory_noise_transport(
-    identity_key: x25519::PrivateKey,
+    identity_key: x25519::X25519PrivateKey,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
@@ -247,7 +247,7 @@ pub fn build_memory_noise_transport(
 }
 
 pub fn build_unauthenticated_memory_noise_transport(
-    identity_key: x25519::PrivateKey,
+    identity_key: x25519::X25519PrivateKey,
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
@@ -263,7 +263,7 @@ pub fn build_unauthenticated_memory_noise_transport(
                     .upgrade_connection(socket, origin, None, remote_public_key, None)
                     .await?;
 
-                // Generate PeerId from x25519::PublicKey.
+                // Generate PeerId from x25519::X25519PublicKey.
                 // Note: This is inconsistent with current types because AccountAddress is derived
                 // from consensus key which is of type Ed25519PublicKey. Since AccountAddress does
                 // not mean anything in a setting without remote authentication, we use the network
@@ -302,7 +302,7 @@ pub fn build_memory_transport(
 
 //TODO(bmwill) Maybe create an Either Transport so we can merge the building of Memory + Tcp
 pub fn build_tcp_noise_transport(
-    identity_key: x25519::PrivateKey,
+    identity_key: x25519::X25519PrivateKey,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
@@ -347,7 +347,7 @@ pub fn build_tcp_noise_transport(
 // Transport based on TCP + Noise, but without remote authentication (i.e., any
 // node is allowed to connect).
 pub fn build_unauthenticated_tcp_noise_transport(
-    identity_key: x25519::PrivateKey,
+    identity_key: x25519::X25519PrivateKey,
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let noise_config = Arc::new(NoiseWrapper::new(identity_key));
@@ -362,7 +362,7 @@ pub fn build_unauthenticated_tcp_noise_transport(
                     .upgrade_connection(socket, origin, None, remote_public_key, None)
                     .await?;
 
-                // Generate PeerId from x25519::PublicKey.
+                // Generate PeerId from x25519::X25519PublicKey.
                 // Note: This is inconsistent with current types because AccountAddress is derived
                 // from consensus key which is of type Ed25519PublicKey. Since AccountAddress does
                 // not mean anything in a setting without remote authentication, we use the network

@@ -38,7 +38,7 @@ fn setup_conn_mgr(
     let eligible_peers = eligible_peers
         .into_iter()
         .map(|peer_id| {
-            let identity_public_key = x25519::PrivateKey::generate(&mut rng).public_key();
+            let identity_public_key = x25519::X25519PrivateKey::generate(&mut rng).public_key();
             let pubkeys = NetworkPublicKeys {
                 identity_public_key,
             };
@@ -71,7 +71,7 @@ fn setup_conn_mgr(
 fn gen_peer() -> (PeerId, NetworkPublicKeys) {
     let peer_id = PeerId::random();
     let mut rng = StdRng::from_seed(TEST_SEED);
-    let identity_public_key = x25519::PrivateKey::generate(&mut rng).public_key();
+    let identity_public_key = x25519::X25519PrivateKey::generate(&mut rng).public_key();
     (
         peer_id,
         NetworkPublicKeys {

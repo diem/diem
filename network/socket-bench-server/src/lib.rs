@@ -79,7 +79,7 @@ impl Args {
 pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseStream<MemorySocket>> {
     MemoryTransport::default().and_then(move |socket, addr, origin| async move {
         let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
-        let private = x25519::PrivateKey::generate(&mut rng);
+        let private = x25519::X25519PrivateKey::generate(&mut rng);
         let noise_config = Arc::new(NoiseWrapper::new(private));
         let remote_public_key = addr.find_noise_proto();
         let (_remote_static_key, socket) = noise_config
@@ -93,7 +93,7 @@ pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseStream<
 pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseStream<TcpSocket>> {
     TcpTransport::default().and_then(move |socket, addr, origin| async move {
         let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
-        let private = x25519::PrivateKey::generate(&mut rng);
+        let private = x25519::X25519PrivateKey::generate(&mut rng);
         let noise_config = Arc::new(NoiseWrapper::new(private));
         let remote_public_key = addr.find_noise_proto();
         let (_remote_static_key, socket) = noise_config

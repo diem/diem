@@ -29,10 +29,10 @@ proptest! {
 
     #[test]
     fn convert_from_ed25519_publickey(keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()) {
-        let x25519_public_key = x25519::PublicKey::from_ed25519_public_bytes(&keypair.public_key.to_bytes()[..]).unwrap();
+        let x25519_public_key = x25519::X25519PublicKey::from_ed25519_public_bytes(&keypair.public_key.to_bytes()[..]).unwrap();
 
         // Let's construct an x25519 private key from the ed25519 private key.
-        let x25519_privatekey = x25519::PrivateKey::from_ed25519_private_bytes(&keypair.private_key.to_bytes()[..]);
+        let x25519_privatekey = x25519::X25519PrivateKey::from_ed25519_private_bytes(&keypair.private_key.to_bytes()[..]);
 
         // This is the important part! We abandon the entire test if an x25519 private
         // key can't be built from this ed25519 private key, thus "grinding"
@@ -46,24 +46,24 @@ proptest! {
     }
 
     #[test]
-    fn ed25519_and_x25519_privkeys(keypair in uniform_keypair_strategy::<x25519::PrivateKey, x25519::PublicKey>()){
+    fn ed25519_and_x25519_privkeys(keypair in uniform_keypair_strategy::<x25519::X25519PrivateKey, x25519::X25519PublicKey>()){
         let x25519_public_bytes = keypair.public_key.to_bytes();
         let x25519_private_bytes = keypair.private_key.to_bytes();
         //sanity-check
-        prop_assert_eq!(x25519_public_bytes.clone(), x25519::PublicKey::from(&keypair.private_key).to_bytes());
+        prop_assert_eq!(x25519_public_bytes.clone(), x25519::X25519PublicKey::from(&keypair.private_key).to_bytes());
 
         // always pass false if you hope to ever get back to the original public key
         let ed25519_public = Ed25519PublicKey::from_x25519_public_bytes(&x25519_public_bytes, false).unwrap();
-        let x25519_backconverted_public = x25519::PublicKey::from_ed25519_public_bytes(&ed25519_public.to_bytes()[..]).unwrap();
+        let x25519_backconverted_public = x25519::X25519PublicKey::from_ed25519_public_bytes(&ed25519_public.to_bytes()[..]).unwrap();
 
         let ed25519_private = Ed25519PrivateKey::try_from(&x25519_private_bytes[..]).unwrap();
-        let x25519_backconverted_private = x25519::PrivateKey::try_from(&ed25519_private.to_bytes()[..]).unwrap();
+        let x25519_backconverted_private = x25519::X25519PrivateKey::try_from(&ed25519_private.to_bytes()[..]).unwrap();
 
         // Test that you can always retrieve a valid x25519 keypair after
         // "serialization" as an ed25519 keypair
         prop_assert_eq!(keypair.public_key, x25519_backconverted_public);
         prop_assert_eq!(keypair.private_key, x25519_backconverted_private.clone());
-        prop_assert_eq!(x25519_backconverted_public, x25519::PublicKey::from(&x25519_backconverted_private));
+        prop_assert_eq!(x25519_backconverted_public, x25519::X25519PublicKey::from(&x25519_backconverted_private));
         // Note that the reverse is not true: converting to an x25519 private
         // key mangles the ed25519 private key bits irreversibly !
     }
@@ -71,7 +71,7 @@ proptest! {
     #[test]
     fn ed25519_to_x25519_roundtrip(keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()){
         let ed25519_bytes = keypair.public_key.to_bytes();
-        let x25519 = x25519::PublicKey::from_ed25519_public_bytes(&ed25519_bytes).unwrap();
+        let x25519 = x25519::X25519PublicKey::from_ed25519_public_bytes(&ed25519_bytes).unwrap();
         let x25519_bytes = x25519.as_slice();
         let backconverted_ed_positive = Ed25519PublicKey::from_x25519_public_bytes(x25519_bytes, false).unwrap();
         let backconverted_ed_negative = Ed25519PublicKey::from_x25519_public_bytes(x25519_bytes, true).unwrap();

@@ -23,11 +23,11 @@
 //! fn example() -> std::io::Result<()> {
 //! // create client and server NoiseWrapper
 //! let mut rng = StdRng::from_seed(TEST_SEED);
-//! let client_private = x25519::PrivateKey::generate(&mut rng);
+//! let client_private = x25519::X25519PrivateKey::generate(&mut rng);
 //! let client_public = client_private.public_key();
 //! let client = NoiseWrapper::new(client_private);
 //!
-//! let server_private = x25519::PrivateKey::generate(&mut rng);
+//! let server_private = x25519::X25519PrivateKey::generate(&mut rng);
 //! let server_public = server_private.public_key();
 //! let server = NoiseWrapper::new(server_private);
 //!

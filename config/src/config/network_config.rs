@@ -54,7 +54,7 @@ pub struct NetworkConfig {
     pub seed_peers: SeedPeersConfig,
     pub seed_peers_file: PathBuf,
     #[serde(rename = "identity_private_key")]
-    pub identity_keypair: Option<KeyPair<x25519::PrivateKey>>,
+    pub identity_keypair: Option<KeyPair<x25519::X25519PrivateKey>>,
 }
 
 impl Default for NetworkConfig {
@@ -185,7 +185,7 @@ impl NetworkConfig {
     }
 
     pub fn random_with_peer_id(&mut self, rng: &mut StdRng, peer_id: Option<PeerId>) {
-        let identity_key = x25519::PrivateKey::generate(rng);
+        let identity_key = x25519::X25519PrivateKey::generate(rng);
         self.peer_id = if let Some(peer_id) = peer_id {
             peer_id
         } else {
@@ -237,7 +237,7 @@ impl std::fmt::Debug for NetworkPeersConfig {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct NetworkPeerInfo {
     #[serde(rename = "ni")]
-    pub identity_public_key: x25519::PublicKey,
+    pub identity_public_key: x25519::X25519PublicKey,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]

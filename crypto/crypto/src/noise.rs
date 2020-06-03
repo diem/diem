@@ -18,8 +18,8 @@
 //!
 //! # fn main() -> Result<(), libra_crypto::noise::NoiseError> {
 //! let mut rng = rand::thread_rng();
-//! let initiator_static = x25519::PrivateKey::generate(&mut rng);
-//! let responder_static = x25519::PrivateKey::generate(&mut rng);
+//! let initiator_static = x25519::X25519PrivateKey::generate(&mut rng);
+//! let responder_static = x25519::X25519PrivateKey::generate(&mut rng);
 //! let responder_public = responder_static.public_key();
 //!
 //! let initiator = noise::NoiseConfig::new(initiator_static);
@@ -205,8 +205,8 @@ fn mix_key(ck: &mut Vec<u8>, dh_output: &[u8]) -> Result<Vec<u8>, NoiseError> {
 /// A key holder structure used for both initiators and responders.
 #[derive(Debug)]
 pub struct NoiseConfig {
-    private_key: x25519::PrivateKey,
-    public_key: x25519::PublicKey,
+    private_key: x25519::X25519PrivateKey,
+    public_key: x25519::X25519PublicKey,
 }
 
 /// Refer to the Noise protocol framework specification in order to understand these fields.
@@ -217,9 +217,9 @@ pub struct InitiatorHandshakeState {
     /// chaining key
     ck: Vec<u8>,
     /// ephemeral key
-    e: x25519::PrivateKey,
+    e: x25519::X25519PrivateKey,
     /// remote static key used
-    rs: x25519::PublicKey,
+    rs: x25519::X25519PublicKey,
 }
 
 /// Refer to the Noise protocol framework specification in order to understand these fields.
@@ -230,14 +230,14 @@ pub struct ResponderHandshakeState {
     /// chaining key
     ck: Vec<u8>,
     /// remote static key received
-    rs: x25519::PublicKey,
+    rs: x25519::X25519PublicKey,
     /// remote ephemeral key receiced
-    re: x25519::PublicKey,
+    re: x25519::X25519PublicKey,
 }
 
 impl NoiseConfig {
     /// A peer must create a NoiseConfig through this function before being able to connect with other peers.
-    pub fn new(private_key: x25519::PrivateKey) -> Self {
+    pub fn new(private_key: x25519::X25519PrivateKey) -> Self {
         // we could take a public key as argument, and it would be faster, but this is cleaner
         let public_key = private_key.public_key();
         Self {
@@ -255,7 +255,7 @@ impl NoiseConfig {
         &self,
         rng: &mut (impl rand::RngCore + rand::CryptoRng),
         prologue: &[u8],
-        remote_public: x25519::PublicKey,
+        remote_public: x25519::X25519PublicKey,
         payload: Option<&[u8]>,
         response_buffer: &mut [u8],
     ) -> Result<InitiatorHandshakeState, NoiseError> {
@@ -276,7 +276,7 @@ impl NoiseConfig {
         mix_hash(&mut h, rs.as_slice());
 
         // -> e
-        let e = x25519::PrivateKey::generate(rng);
+        let e = x25519::X25519PrivateKey::generate(rng);
         let e_pub = e.public_key();
 
         mix_hash(&mut h, e_pub.as_slice());
@@ -358,7 +358,7 @@ impl NoiseConfig {
             .read_exact(&mut re)
             .map_err(|_| NoiseError::MsgTooShort)?;
         mix_hash(&mut h, &re);
-        let re = x25519::PublicKey::from(re);
+        let re = x25519::X25519PublicKey::from(re);
 
         // <- ee
         let dh_output = e.diffie_hellman(&re);
@@ -414,7 +414,7 @@ impl NoiseConfig {
         received_message: &[u8],
     ) -> Result<
         (
-            x25519::PublicKey,       // initiator's public key
+            x25519::X25519PublicKey, // initiator's public key
             ResponderHandshakeState, // state to be used in respond_to_client
             Vec<u8>,                 // payload received
         ),
@@ -439,7 +439,7 @@ impl NoiseConfig {
             .read_exact(&mut re)
             .map_err(|_| NoiseError::MsgTooShort)?;
         mix_hash(&mut h, &re);
-        let re = x25519::PublicKey::from(re);
+        let re = x25519::X25519PublicKey::from(re);
 
         // <- es
         let dh_output = self.private_key.diffie_hellman(&re);
@@ -465,7 +465,7 @@ impl NoiseConfig {
                 return Err(NoiseError::Decrypt);
             }
         };
-        let rs = x25519::PublicKey::try_from(rs.as_slice())
+        let rs = x25519::X25519PublicKey::try_from(rs.as_slice())
             .map_err(|_| NoiseError::WrongPublicKeyReceived)?;
         mix_hash(&mut h, &encrypted_remote_static);
 
@@ -526,7 +526,7 @@ impl NoiseConfig {
         } = handshake_state;
 
         // -> e
-        let e = x25519::PrivateKey::generate(rng);
+        let e = x25519::X25519PrivateKey::generate(rng);
         let e_pub = e.public_key();
 
         mix_hash(&mut h, e_pub.as_slice());
@@ -600,7 +600,7 @@ pub struct NoiseSession {
     /// a session can be marked as invalid if it has seen a decryption failure
     valid: bool,
     /// the public key of the other peer
-    remote_public_key: x25519::PublicKey,
+    remote_public_key: x25519::X25519PublicKey,
     /// key used to encrypt messages to the other peer
     write_key: Vec<u8>,
     /// associated nonce (in practice the maximum u64 value cannot be reached)
@@ -612,7 +612,11 @@ pub struct NoiseSession {
 }
 
 impl NoiseSession {
-    fn new(write_key: Vec<u8>, read_key: Vec<u8>, remote_public_key: x25519::PublicKey) -> Self {
+    fn new(
+        write_key: Vec<u8>,
+        read_key: Vec<u8>,
+        remote_public_key: x25519::X25519PublicKey,
+    ) -> Self {
         Self {
             valid: true,
             remote_public_key,
@@ -624,7 +628,7 @@ impl NoiseSession {
     }
 
     /// obtain remote static public key
-    pub fn get_remote_static(&self) -> x25519::PublicKey {
+    pub fn get_remote_static(&self) -> x25519::X25519PublicKey {
         self.remote_public_key
     }
 

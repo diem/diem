@@ -58,7 +58,7 @@ fn network_address(role: RoleType, config: &ValidatorConfig) -> Result<NetworkAd
 }
 
 /// Extracts the public key from the provided config, depending on role.
-fn public_key(role: RoleType, config: &ValidatorConfig) -> x25519::PublicKey {
+fn public_key(role: RoleType, config: &ValidatorConfig) -> x25519::X25519PublicKey {
     match role {
         RoleType::Validator => config.validator_network_identity_public_key,
         RoleType::FullNode => config.full_node_network_identity_public_key,

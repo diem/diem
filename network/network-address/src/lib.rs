@@ -133,8 +133,8 @@ pub enum Protocol {
     Dns6(DnsName),
     Tcp(u16),
     Memory(u16),
-    // human-readable x25519::PublicKey is lower-case hex encoded
-    NoiseIK(x25519::PublicKey),
+    // human-readable x25519::X25519PublicKey is lower-case hex encoded
+    NoiseIK(x25519::X25519PublicKey),
     // TODO(philiphayes): use actual handshake::MessagingProtocolVersion. we
     // probably need to move network wire into its own crate to avoid circular
     // dependency b/w network and types.
@@ -297,7 +297,7 @@ impl NetworkAddress {
     /// use std::str::FromStr;
     ///
     /// let pubkey_str = "080e287879c918794170e258bfaddd75acac5b3e350419044655e4983a487120";
-    /// let pubkey = x25519::PublicKey::from_encoded_string(pubkey_str).unwrap();
+    /// let pubkey = x25519::X25519PublicKey::from_encoded_string(pubkey_str).unwrap();
     /// let addr = NetworkAddress::from_str("/dns/example.com/tcp/6180").unwrap();
     /// let addr = addr.append_prod_protos(pubkey, 0);
     /// assert_eq!(
@@ -308,7 +308,7 @@ impl NetworkAddress {
     // TODO(philiphayes): use handshake version enum
     pub fn append_prod_protos(
         self,
-        network_pubkey: x25519::PublicKey,
+        network_pubkey: x25519::X25519PublicKey,
         handshake_version: u8,
     ) -> Self {
         self.push(Protocol::NoiseIK(network_pubkey))
@@ -369,7 +369,7 @@ impl NetworkAddress {
     /// A temporary, hacky function to parse out the first `/ln-noise-ik/<pubkey>` from
     /// a `NetworkAddress`. We can remove this soon, when we move to the interim
     /// "monolithic" transport model.
-    pub fn find_noise_proto(&self) -> Option<x25519::PublicKey> {
+    pub fn find_noise_proto(&self) -> Option<x25519::X25519PublicKey> {
         self.0.iter().find_map(|proto| match proto {
             Protocol::NoiseIK(pubkey) => Some(*pubkey),
             _ => None,
@@ -532,7 +532,7 @@ pub fn arb_libranet_addr() -> impl Strategy<Value = NetworkAddress> {
             .prop_map(|(name, port)| vec![Protocol::Dns6(name), Protocol::Tcp(port)]),
     ];
     let arb_libranet_protos = prop_oneof![
-        any::<(x25519::PublicKey, u8)>()
+        any::<(x25519::X25519PublicKey, u8)>()
             .prop_map(|(pubkey, hs)| vec![Protocol::NoiseIK(pubkey), Protocol::Handshake(hs)]),
         any::<u8>().prop_map(|hs| vec![Protocol::PeerIdExchange, Protocol::Handshake(hs)]),
     ];
@@ -595,7 +595,7 @@ impl Protocol {
             "dns6" => Protocol::Dns6(parse_one(args)?),
             "tcp" => Protocol::Tcp(parse_one(args)?),
             "memory" => Protocol::Memory(parse_one(args)?),
-            "ln-noise-ik" => Protocol::NoiseIK(x25519::PublicKey::from_encoded_string(
+            "ln-noise-ik" => Protocol::NoiseIK(x25519::X25519PublicKey::from_encoded_string(
                 args.next().ok_or(ParseError::UnexpectedEnd)?,
             )?),
             "ln-handshake" => Protocol::Handshake(parse_one(args)?),
@@ -759,7 +759,7 @@ pub fn parse_dns_tcp(protos: &[Protocol]) -> Option<((&DnsName, u16), &[Protocol
 
 /// parse the `&[Protocol]` into the `"/ln-noise-ik/<pubkey>"` prefix and
 /// unparsed `&[Protocol]` suffix.
-pub fn parse_noise_ik(protos: &[Protocol]) -> Option<(&x25519::PublicKey, &[Protocol])> {
+pub fn parse_noise_ik(protos: &[Protocol]) -> Option<(&x25519::X25519PublicKey, &[Protocol])> {
     match protos.split_first() {
         Some((Protocol::NoiseIK(pubkey), suffix)) => Some((pubkey, suffix)),
         _ => None,
@@ -855,7 +855,7 @@ mod test {
         use super::Protocol::*;
 
         let pubkey_str = "080e287879c918794170e258bfaddd75acac5b3e350419044655e4983a487120";
-        let pubkey = x25519::PublicKey::from_encoded_string(pubkey_str).unwrap();
+        let pubkey = x25519::X25519PublicKey::from_encoded_string(pubkey_str).unwrap();
         let noise_addr_str = format!(
             "/dns/example.com/tcp/1234/ln-noise-ik/{}/ln-handshake/5",
             pubkey_str
@@ -1021,7 +1021,7 @@ mod test {
     #[test]
     fn test_parse_noise_ik() {
         let pubkey_str = "080e287879c918794170e258bfaddd75acac5b3e350419044655e4983a487120";
-        let pubkey = x25519::PublicKey::from_encoded_string(pubkey_str).unwrap();
+        let pubkey = x25519::X25519PublicKey::from_encoded_string(pubkey_str).unwrap();
         let addr = NetworkAddress::from_str(&format!("/ln-noise-ik/{}", pubkey_str)).unwrap();
         let expected_suffix: &[Protocol] = &[];
         assert_eq!(

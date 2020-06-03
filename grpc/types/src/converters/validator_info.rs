@@ -19,10 +19,10 @@ impl TryFrom<crate::proto::types::ValidatorInfo> for ValidatorInfo {
         let consensus_voting_power = proto.consensus_voting_power;
 
         let validator_network_identity_public_key =
-            x25519::PublicKey::try_from(&proto.validator_network_identity_public_key[..])?;
+            x25519::X25519PublicKey::try_from(&proto.validator_network_identity_public_key[..])?;
         let validator_network_address = RawNetworkAddress::new(proto.validator_network_address);
         let full_node_network_identity_public_key =
-            x25519::PublicKey::try_from(&proto.full_node_network_identity_public_key[..])?;
+            x25519::X25519PublicKey::try_from(&proto.full_node_network_identity_public_key[..])?;
         let full_node_network_address = RawNetworkAddress::new(proto.full_node_network_address);
 
         let config = ValidatorConfig::new(

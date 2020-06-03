@@ -16,9 +16,9 @@ use serde::*;
 fn simple_handshake() {
     // setup peers
     let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
-    let initiator_private = x25519::PrivateKey::generate(&mut rng);
+    let initiator_private = x25519::X25519PrivateKey::generate(&mut rng);
     let initiator_public = initiator_private.public_key();
-    let responder_private = x25519::PrivateKey::generate(&mut rng);
+    let responder_private = x25519::X25519PrivateKey::generate(&mut rng);
     let responder_public = responder_private.public_key();
     let initiator = NoiseConfig::new(initiator_private);
     let responder = NoiseConfig::new(responder_private);
@@ -172,11 +172,11 @@ fn test_vectors() {
     // initiate peers with test vector
     use crate::traits::ValidCryptoMaterialStringExt;
     let initiator_private =
-        x25519::PrivateKey::from_encoded_string(&test_vector.init_static.as_ref().unwrap())
+        x25519::X25519PrivateKey::from_encoded_string(&test_vector.init_static.as_ref().unwrap())
             .unwrap();
     let initiator_public = initiator_private.public_key();
     let responder_private =
-        x25519::PrivateKey::from_encoded_string(&test_vector.resp_static.as_ref().unwrap())
+        x25519::X25519PrivateKey::from_encoded_string(&test_vector.resp_static.as_ref().unwrap())
             .unwrap();
     let responder_public = responder_private.public_key();
 
@@ -322,8 +322,8 @@ fn test_vectors() {
 fn wrong_buffer_sizes() {
     // setup peers
     let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
-    let initiator_private = x25519::PrivateKey::generate(&mut rng);
-    let responder_private = x25519::PrivateKey::generate(&mut rng);
+    let initiator_private = x25519::X25519PrivateKey::generate(&mut rng);
+    let responder_private = x25519::X25519PrivateKey::generate(&mut rng);
     let responder_public = responder_private.public_key();
     let initiator = NoiseConfig::new(initiator_private);
     let responder = NoiseConfig::new(responder_private);

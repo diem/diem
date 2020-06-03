@@ -28,9 +28,9 @@ fn benchmarks(c: &mut Criterion) {
         Benchmark::new("xx", |b| {
             // setup keys first
             let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
-            let initiator_static = x25519::PrivateKey::generate(&mut rng);
+            let initiator_static = x25519::X25519PrivateKey::generate(&mut rng);
             let initiator_static = initiator_static.to_bytes();
-            let responder_static = x25519::PrivateKey::generate(&mut rng);
+            let responder_static = x25519::X25519PrivateKey::generate(&mut rng);
             let responder_public = responder_static.public_key();
             let responder_static = responder_static.to_bytes();
 
@@ -39,9 +39,11 @@ fn benchmarks(c: &mut Criterion) {
 
             b.iter(|| {
                 let initiator_static =
-                    x25519::PrivateKey::try_from(initiator_static.clone().as_slice()).unwrap();
+                    x25519::X25519PrivateKey::try_from(initiator_static.clone().as_slice())
+                        .unwrap();
                 let responder_static =
-                    x25519::PrivateKey::try_from(responder_static.clone().as_slice()).unwrap();
+                    x25519::X25519PrivateKey::try_from(responder_static.clone().as_slice())
+                        .unwrap();
 
                 let initiator = NoiseConfig::new(initiator_static);
                 let responder = NoiseConfig::new(responder_static);
@@ -80,8 +82,8 @@ fn benchmarks(c: &mut Criterion) {
 
             // setup keys first
             let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
-            let initiator_static = x25519::PrivateKey::generate(&mut rng);
-            let responder_static = x25519::PrivateKey::generate(&mut rng);
+            let initiator_static = x25519::X25519PrivateKey::generate(&mut rng);
+            let responder_static = x25519::X25519PrivateKey::generate(&mut rng);
             let responder_public = responder_static.public_key();
 
             // handshake first

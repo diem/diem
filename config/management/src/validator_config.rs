@@ -128,8 +128,8 @@ fn ed25519_from_storage(
 fn x25519_from_storage(
     key_name: &'static str,
     storage: &dyn Storage,
-) -> Result<x25519::PublicKey, Error> {
+) -> Result<x25519::X25519PublicKey, Error> {
     let edkey = ed25519_from_storage(key_name, storage)?;
-    x25519::PublicKey::from_ed25519_public_bytes(&edkey.to_bytes())
+    x25519::X25519PublicKey::from_ed25519_public_bytes(&edkey.to_bytes())
         .map_err(|e| Error::UnexpectedError(e.to_string()))
 }

@@ -74,11 +74,11 @@ pub enum AuthenticationMode {
     /// clients/dialers will authenticate the servers/listeners. More specifically,
     /// dialers will pin the connection to a specific, expected pubkey while
     /// listeners will accept any inbound dialer's pubkey.
-    ServerOnly(x25519::PrivateKey),
+    ServerOnly(x25519::X25519PrivateKey),
     /// Inbound and outbound connections are secured with NoiseIK. Both dialer and
     /// listener will only accept connections that successfully authenticate to a
     /// pubkey in their "trusted peers" set.
-    Mutual(x25519::PrivateKey),
+    Mutual(x25519::X25519PrivateKey),
 }
 
 /// Append the correct libranet protocols to the given base address, depending on

@@ -59,12 +59,12 @@ impl ValidatorInfo {
         consensus_public_key: Ed25519PublicKey,
         consensus_voting_power: u64,
     ) -> Self {
-        let private_key = x25519::PrivateKey::generate_for_testing();
+        let private_key = x25519::X25519PrivateKey::generate_for_testing();
         let validator_network_identity_public_key = private_key.public_key();
         let network_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
         let validator_network_address = RawNetworkAddress::try_from(&network_address).unwrap();
 
-        let private_key = x25519::PrivateKey::generate_for_testing();
+        let private_key = x25519::X25519PrivateKey::generate_for_testing();
         let full_node_network_identity_public_key = private_key.public_key();
         let full_node_network_address = RawNetworkAddress::try_from(&network_address).unwrap();
         let config = ValidatorConfig::new(
@@ -99,7 +99,7 @@ impl ValidatorInfo {
     }
 
     /// Returns the key that establishes a validator's identity in the p2p network
-    pub fn network_identity_public_key(&self) -> x25519::PublicKey {
+    pub fn network_identity_public_key(&self) -> x25519::X25519PublicKey {
         self.config.validator_network_identity_public_key
     }
 

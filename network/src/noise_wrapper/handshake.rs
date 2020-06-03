@@ -33,12 +33,12 @@ use std::{
 /// we can abort the handshake early and avoid heavy Diffie-Hellman computations.
 /// If the client timestamp is valid, we store it.
 #[derive(Default)]
-pub struct AntiReplayTimestamps(HashMap<x25519::PublicKey, u64>);
+pub struct AntiReplayTimestamps(HashMap<x25519::X25519PublicKey, u64>);
 
 impl AntiReplayTimestamps {
     /// Returns true if the timestamp has already been observed for this peer
     /// or if it's an old timestamp
-    pub fn is_replay(&self, pubkey: x25519::PublicKey, timestamp: u64) -> bool {
+    pub fn is_replay(&self, pubkey: x25519::X25519PublicKey, timestamp: u64) -> bool {
         if let Some(last_timestamp) = self.0.get(&pubkey) {
             &timestamp <= last_timestamp
         } else {
@@ -47,7 +47,7 @@ impl AntiReplayTimestamps {
     }
 
     /// Stores the timestamp
-    pub fn store_timestamp(&mut self, pubkey: x25519::PublicKey, timestamp: u64) {
+    pub fn store_timestamp(&mut self, pubkey: x25519::X25519PublicKey, timestamp: u64) {
         self.0
             .entry(pubkey)
             .and_modify(|last_timestamp| *last_timestamp = timestamp)
@@ -75,7 +75,7 @@ pub struct NoiseWrapper(noise::NoiseConfig);
 
 impl NoiseWrapper {
     /// Create a new NoiseConfig with the provided keypair
-    pub fn new(key: x25519::PrivateKey) -> Self {
+    pub fn new(key: x25519::X25519PrivateKey) -> Self {
         Self(noise::NoiseConfig::new(key))
     }
 
@@ -88,9 +88,9 @@ impl NoiseWrapper {
         socket: TSocket,
         origin: ConnectionOrigin,
         anti_replay_timestamps: Option<Arc<RwLock<AntiReplayTimestamps>>>,
-        remote_public_key: Option<x25519::PublicKey>,
+        remote_public_key: Option<x25519::X25519PublicKey>,
         trusted_peers: Option<&Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>>,
-    ) -> io::Result<(x25519::PublicKey, NoiseStream<TSocket>)>
+    ) -> io::Result<(x25519::X25519PublicKey, NoiseStream<TSocket>)>
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
@@ -125,7 +125,7 @@ impl NoiseWrapper {
         &self,
         mut socket: TSocket,
         mutual_authentication: bool,
-        remote_public_key: x25519::PublicKey,
+        remote_public_key: x25519::X25519PublicKey,
     ) -> io::Result<NoiseStream<TSocket>>
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
@@ -296,15 +296,15 @@ mod test {
 
     /// helper to setup two testing peers
     fn build_peers() -> (
-        (NoiseWrapper, x25519::PublicKey),
-        (NoiseWrapper, x25519::PublicKey),
+        (NoiseWrapper, x25519::X25519PublicKey),
+        (NoiseWrapper, x25519::X25519PublicKey),
     ) {
         let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
 
-        let client_private = x25519::PrivateKey::generate(&mut rng);
+        let client_private = x25519::X25519PrivateKey::generate(&mut rng);
         let client_public = client_private.public_key();
 
-        let server_private = x25519::PrivateKey::generate(&mut rng);
+        let server_private = x25519::X25519PrivateKey::generate(&mut rng);
         let server_public = server_private.public_key();
 
         let client = NoiseWrapper::new(client_private);
@@ -316,7 +316,7 @@ mod test {
     /// helper to perform a noise handshake with two peers
     fn perform_handshake(
         client: NoiseWrapper,
-        server_public_key: x25519::PublicKey,
+        server_public_key: x25519::X25519PublicKey,
         server: NoiseWrapper,
         trusted_peers: Option<&Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>>,
     ) -> io::Result<(NoiseStream<MemorySocket>, NoiseStream<MemorySocket>)> {

@@ -171,7 +171,7 @@ impl DiscoverySetInternal {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct DiscoveryInfoInternal(pub x25519::PublicKey, pub Vec<NetworkAddress>);
+pub struct DiscoveryInfoInternal(pub x25519::X25519PublicKey, pub Vec<NetworkAddress>);
 
 impl DiscoveryInfoInternal {
     pub fn try_from_validator_info(

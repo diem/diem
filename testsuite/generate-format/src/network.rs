@@ -3,7 +3,7 @@
 
 use libra_crypto::{
     traits::Uniform,
-    x25519::{PrivateKey, PublicKey},
+    x25519,
 };
 use libra_network_address as address;
 use network::protocols::wire::{handshake, messaging};
@@ -19,8 +19,8 @@ pub fn output_file() -> Option<&'static str> {
 /// Record sample values for crypto types used by network.
 fn trace_crypto_values(tracer: &mut Tracer, samples: &mut Samples) -> Result<()> {
     let mut rng: StdRng = SeedableRng::from_seed([0; 32]);
-    let private_key = PrivateKey::generate(&mut rng);
-    let public_key: PublicKey = (&private_key).into();
+    let private_key = x25519::X25519PrivateKey::generate(&mut rng);
+    let public_key = private_key.public_key();
 
     tracer.trace_value(samples, &public_key)?;
     Ok(())
