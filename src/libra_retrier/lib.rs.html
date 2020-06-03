@@ -109,7 +109,7 @@
 
 <span class="attribute">#![<span class="ident">forbid</span>(<span class="ident">unsafe_code</span>)]</span>
 
-<span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">error</span>;
+<span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">debug</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">future</span>::<span class="ident">Future</span>, <span class="ident">pin</span>::<span class="ident">Pin</span>, <span class="ident">thread</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
 
 <span class="doccomment">/// Given an operation retries it successfully sleeping everytime it fails</span>
@@ -146,7 +146,7 @@
             <span class="prelude-val">Ok</span>(<span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">value</span>),
             <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">delay</span>) <span class="op">=</span> <span class="ident">iterator</span>.<span class="ident">next</span>() {
-                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error: {}. Retrying in {} seconds..&quot;</span>, <span class="ident">err</span>, <span class="ident">delay</span>.<span class="ident">as_secs</span>());
+                    <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{}. Retrying in {} seconds..&quot;</span>, <span class="ident">err</span>, <span class="ident">delay</span>.<span class="ident">as_secs</span>());
                     <span class="ident">tokio</span>::<span class="ident">time</span>::<span class="ident">delay_for</span>(<span class="ident">delay</span>).<span class="kw">await</span>;
                 } <span class="kw">else</span> {
                     <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>);
