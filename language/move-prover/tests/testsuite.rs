@@ -25,6 +25,14 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
 
     let temp_dir = TempPath::new();
     std::fs::create_dir_all(temp_dir.path())?;
+
+    // We appear to have a racing condition on files Boogie creates. It's unknown at this point
+    // which files this are (looks like the SMTLIB file). This sets  $TMPDIR to our temp_dir to
+    // mitigate.
+    // TODO: This is an experiment to fix the spurious racing conditions. Either remove if
+    //   it doesn't help, or document better.
+    std::env::set_var("TMPDIR", temp_dir.path().to_string_lossy().to_string());
+
     let (flags, baseline_path) = get_flags(temp_dir.path(), path)?;
 
     let mut args = vec!["mvp_test".to_string()];
