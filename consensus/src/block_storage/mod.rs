@@ -38,16 +38,14 @@ pub enum VoteReceptionResult {
 }
 
 pub trait BlockReader: Send + Sync {
-    type Payload;
-
     /// Check if a block with the block_id exist in the BlockTree.
     fn block_exists(&self, block_id: HashValue) -> bool;
 
     /// Try to get a block with the block_id, return an Arc of it if found.
-    fn get_block(&self, block_id: HashValue) -> Option<Arc<ExecutedBlock<Self::Payload>>>;
+    fn get_block(&self, block_id: HashValue) -> Option<Arc<ExecutedBlock>>;
 
     /// Get the current root block of the BlockTree.
-    fn root(&self) -> Arc<ExecutedBlock<Self::Payload>>;
+    fn root(&self) -> Arc<ExecutedBlock>;
 
     fn get_quorum_cert_for_block(&self, block_id: HashValue) -> Option<Arc<QuorumCert>>;
 
@@ -58,11 +56,10 @@ pub trait BlockReader: Send + Sync {
     /// path_from_root(b2) -> Some([b2, b1])
     /// path_from_root(b0) -> Some([])
     /// path_from_root(a) -> None
-    fn path_from_root(&self, block_id: HashValue)
-        -> Option<Vec<Arc<ExecutedBlock<Self::Payload>>>>;
+    fn path_from_root(&self, block_id: HashValue) -> Option<Vec<Arc<ExecutedBlock>>>;
 
     /// Return the certified block with the highest round.
-    fn highest_certified_block(&self) -> Arc<ExecutedBlock<Self::Payload>>;
+    fn highest_certified_block(&self) -> Arc<ExecutedBlock>;
 
     /// Return the quorum certificate with the highest round
     fn highest_quorum_cert(&self) -> Arc<QuorumCert>;

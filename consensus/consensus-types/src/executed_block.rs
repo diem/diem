@@ -1,7 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{block::Block, common::Round, quorum_cert::QuorumCert};
+use crate::{
+    block::Block,
+    common::{Payload, Round},
+    quorum_cert::QuorumCert,
+};
 use executor_types::StateComputeResult;
 use libra_crypto::hash::HashValue;
 use libra_types::block_info::BlockInfo;
@@ -11,30 +15,30 @@ use std::fmt::{Display, Formatter};
 /// block data, each executed block also has other derived meta data which could be regenerated from
 /// blocks.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ExecutedBlock<T> {
+pub struct ExecutedBlock {
     /// Block data that cannot be regenerated.
-    block: Block<T>,
+    block: Block,
     /// The state_compute_result is calculated for all the pending blocks prior to insertion to
     /// the tree. The execution results are not persisted: they're recalculated again for the
     /// pending blocks upon restart.
     state_compute_result: StateComputeResult,
 }
 
-impl<T> Display for ExecutedBlock<T> {
+impl Display for ExecutedBlock {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{}", self.block())
     }
 }
 
-impl<T> ExecutedBlock<T> {
-    pub fn new(block: Block<T>, state_compute_result: StateComputeResult) -> Self {
+impl ExecutedBlock {
+    pub fn new(block: Block, state_compute_result: StateComputeResult) -> Self {
         Self {
             block,
             state_compute_result,
         }
     }
 
-    pub fn block(&self) -> &Block<T> {
+    pub fn block(&self) -> &Block {
         &self.block
     }
 
@@ -50,7 +54,7 @@ impl<T> ExecutedBlock<T> {
         self.block().id()
     }
 
-    pub fn payload(&self) -> Option<&T> {
+    pub fn payload(&self) -> Option<&Payload> {
         self.block().payload()
     }
 
@@ -81,12 +85,7 @@ impl<T> ExecutedBlock<T> {
             self.compute_result().epoch_state().clone(),
         )
     }
-}
 
-impl<T> ExecutedBlock<T>
-where
-    T: PartialEq,
-{
     pub fn is_nil_block(&self) -> bool {
         self.block().is_nil_block()
     }

@@ -7,7 +7,6 @@ use crate::counters;
 use channel::message_queues::QueueStyle;
 use consensus_types::{
     block_retrieval::{BlockRetrievalRequest, BlockRetrievalResponse},
-    common::Payload,
     epoch_retrieval::EpochRetrievalRequest,
     proposal_msg::ProposalMsg,
     sync_info::SyncInfo,
@@ -32,18 +31,16 @@ use std::time::Duration;
 
 /// Network type for consensus
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum ConsensusMsg<T> {
+pub enum ConsensusMsg {
     /// RPC to get a chain of block of the given length starting from the given block id.
     BlockRetrievalRequest(Box<BlockRetrievalRequest>),
-    #[serde(bound = "T: Payload")]
     /// Carries the returned blocks and the retrieval status.
-    BlockRetrievalResponse(Box<BlockRetrievalResponse<T>>),
+    BlockRetrievalResponse(Box<BlockRetrievalResponse>),
     /// Request to get a EpochChangeProof from current_epoch to target_epoch
     EpochRetrievalRequest(Box<EpochRetrievalRequest>),
-    #[serde(bound = "T: Payload")]
     /// ProposalMsg contains the required information for the proposer election protocol to make
     /// its choice (typically depends on round and proposer info).
-    ProposalMsg(Box<ProposalMsg<T>>),
+    ProposalMsg(Box<ProposalMsg>),
     /// This struct describes basic synchronization metadata.
     SyncInfo(Box<SyncInfo>),
     /// A vector of LedgerInfo with contiguous increasing epoch numbers to prove a sequence of
@@ -60,7 +57,7 @@ pub enum ConsensusMsg<T> {
 /// raw `Bytes` direct-send and rpc messages are deserialized into
 /// `ConsensusMessage` types. `ConsensusNetworkEvents` is a thin wrapper around
 /// an `channel::Receiver<PeerManagerNotification>`.
-pub type ConsensusNetworkEvents<T> = NetworkEvents<ConsensusMsg<T>>;
+pub type ConsensusNetworkEvents = NetworkEvents<ConsensusMsg>;
 
 /// The interface from Consensus to Networking layer.
 ///
@@ -71,17 +68,17 @@ pub type ConsensusNetworkEvents<T> = NetworkEvents<ConsensusMsg<T>>;
 /// makes the most sense to make the rpc call on a separate async task, which
 /// requires the `ConsensusNetworkSender` to be `Clone` and `Send`.
 #[derive(Clone)]
-pub struct ConsensusNetworkSender<T> {
-    network_sender: NetworkSender<ConsensusMsg<T>>,
+pub struct ConsensusNetworkSender {
+    network_sender: NetworkSender<ConsensusMsg>,
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
 }
 
 /// Create a new Sender that only sends for the `CONSENSUS_DIRECT_SEND_PROTOCOL` and
 /// `CONSENSUS_RPC_PROTOCOL` ProtocolId and a Receiver (Events) that explicitly returns only said
 /// ProtocolId.
-pub fn add_to_network<T: Payload>(
+pub fn add_to_network(
     network: &mut NetworkBuilder,
-) -> (ConsensusNetworkSender<T>, ConsensusNetworkEvents<T>) {
+) -> (ConsensusNetworkSender, ConsensusNetworkEvents) {
     let (network_sender, network_receiver, connection_reqs_tx, connection_notifs_rx) = network
         .add_protocol_handler(
             vec![ProtocolId::ConsensusRpc],
@@ -102,7 +99,7 @@ pub fn add_to_network<T: Payload>(
     )
 }
 
-impl<T: Payload> ConsensusNetworkSender<T> {
+impl ConsensusNetworkSender {
     /// Returns a Sender that only sends for the `CONSENSUS_DIRECT_SEND_PROTOCOL` and
     /// `CONSENSUS_RPC_PROTOCOL` ProtocolId.
     pub fn new(
@@ -121,7 +118,7 @@ impl<T: Payload> ConsensusNetworkSender<T> {
     pub fn send_to(
         &mut self,
         recipient: PeerId,
-        message: ConsensusMsg<T>,
+        message: ConsensusMsg,
     ) -> Result<(), NetworkError> {
         let protocol = ProtocolId::ConsensusDirectSend;
         self.network_sender.send_to(recipient, protocol, message)
@@ -132,7 +129,7 @@ impl<T: Payload> ConsensusNetworkSender<T> {
     pub fn send_to_many(
         &mut self,
         recipients: impl Iterator<Item = PeerId>,
-        message: ConsensusMsg<T>,
+        message: ConsensusMsg,
     ) -> Result<(), NetworkError> {
         let protocol = ProtocolId::ConsensusDirectSend;
         self.network_sender
@@ -143,9 +140,9 @@ impl<T: Payload> ConsensusNetworkSender<T> {
     pub async fn send_rpc(
         &mut self,
         recipient: PeerId,
-        message: ConsensusMsg<T>,
+        message: ConsensusMsg,
         timeout: Duration,
-    ) -> Result<ConsensusMsg<T>, RpcError> {
+    ) -> Result<ConsensusMsg, RpcError> {
         let protocol = ProtocolId::ConsensusRpc;
         self.network_sender
             .send_rpc(recipient, protocol, message, timeout)

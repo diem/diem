@@ -3,52 +3,32 @@
 
 use crate::{test_utils, ConsensusState, Error, SafetyRulesManager, TSafetyRules};
 use consensus_types::{
-    block::Block,
-    block_data::BlockData,
-    common::{Payload, Round},
-    quorum_cert::QuorumCert,
-    timeout::Timeout,
-    vote::Vote,
+    block::Block, block_data::BlockData, quorum_cert::QuorumCert, timeout::Timeout, vote::Vote,
     vote_proposal::VoteProposal,
 };
 use libra_config::{
-    config::{ConsensusType, NodeConfig, RemoteService, SafetyRulesService, SecureBackend},
+    config::{NodeConfig, RemoteService, SafetyRulesService, SecureBackend},
     utils,
 };
 use libra_crypto::ed25519::Ed25519Signature;
 use libra_types::{epoch_change::EpochChangeProof, validator_signer::ValidatorSigner};
-use std::{
-    any::TypeId,
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 /// This container exists only so that we can kill the spawned process after testing is complete.
 /// Otherwise the process will be killed at the end of the safety_rules function and the test will
 /// fail.
-pub struct ProcessClientWrapper<T> {
+pub struct ProcessClientWrapper {
     signer: ValidatorSigner,
-    _safety_rules_manager: SafetyRulesManager<T>,
-    safety_rules: Box<dyn TSafetyRules<T>>,
+    _safety_rules_manager: SafetyRulesManager,
+    safety_rules: Box<dyn TSafetyRules>,
 }
 
-impl<T: Payload> ProcessClientWrapper<T> {
+impl ProcessClientWrapper {
     pub fn new(backend: SecureBackend) -> Self {
         let server_port = utils::get_available_port();
         let server_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
 
-        let type_id = TypeId::of::<T>();
-        let consensus_type = if type_id == TypeId::of::<Round>() {
-            ConsensusType::Rounds
-        } else if type_id == TypeId::of::<Vec<u8>>() {
-            ConsensusType::Bytes
-        } else {
-            panic!("Invalid type: {:?}", type_id);
-        };
-
-        let remote_service = RemoteService {
-            server_address,
-            consensus_type,
-        };
+        let remote_service = RemoteService { server_address };
         let mut config = NodeConfig::random();
 
         let mut test_config = config.test.as_ref().unwrap().clone();
@@ -86,7 +66,7 @@ impl<T: Payload> ProcessClientWrapper<T> {
     }
 }
 
-impl<T: Payload> TSafetyRules<T> for ProcessClientWrapper<T> {
+impl TSafetyRules for ProcessClientWrapper {
     fn consensus_state(&mut self) -> Result<ConsensusState, Error> {
         self.safety_rules.consensus_state()
     }
@@ -99,11 +79,11 @@ impl<T: Payload> TSafetyRules<T> for ProcessClientWrapper<T> {
         self.safety_rules.update(qc)
     }
 
-    fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal<T>) -> Result<Vote, Error> {
+    fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal) -> Result<Vote, Error> {
         self.safety_rules.construct_and_sign_vote(vote_proposal)
     }
 
-    fn sign_proposal(&mut self, block_data: BlockData<T>) -> Result<Block<T>, Error> {
+    fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
         self.safety_rules.sign_proposal(block_data)
     }
 

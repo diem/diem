@@ -3,7 +3,7 @@
 
 use crate::{
     block_data::{BlockData, BlockType},
-    common::{Author, Round},
+    common::{Author, Payload, Round},
     quorum_cert::QuorumCert,
 };
 use anyhow::{bail, ensure, format_err};
@@ -14,7 +14,7 @@ use libra_types::{
     validator_verifier::ValidatorVerifier,
 };
 use mirai_annotations::debug_checked_verify_eq;
-use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::fmt::{self, Display, Formatter};
 
 #[path = "block_test_utils.rs"]
@@ -28,24 +28,24 @@ pub mod block_test;
 #[derive(Serialize, Clone, PartialEq, Eq)]
 /// Block has the core data of a consensus block that should be persistent when necessary.
 /// Each block must know the id of its parent and keep the QuorurmCertificate to that parent.
-pub struct Block<T> {
+pub struct Block {
     /// This block's id as a hash value, it is generated at call time
     #[serde(skip)]
     id: HashValue,
     /// The container for the actual block
-    block_data: BlockData<T>,
+    block_data: BlockData,
     /// Signature that the hash of this block has been authored by the owner of the private key,
     /// this is only set within Proposal blocks
     signature: Option<Ed25519Signature>,
 }
 
-impl<T> fmt::Debug for Block<T> {
+impl fmt::Debug for Block {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}", self)
     }
 }
 
-impl<T> Display for Block<T> {
+impl Display for Block {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         let nil_marker = if self.is_nil_block() { " (NIL)" } else { "" };
         write!(
@@ -60,7 +60,7 @@ impl<T> Display for Block<T> {
     }
 }
 
-impl<T> Block<T> {
+impl Block {
     pub fn author(&self) -> Option<Author> {
         self.block_data.author()
     }
@@ -83,7 +83,7 @@ impl<T> Block<T> {
         self.block_data.quorum_cert().certified_block().id()
     }
 
-    pub fn payload(&self) -> Option<&T> {
+    pub fn payload(&self) -> Option<&Payload> {
         self.block_data.payload()
     }
 
@@ -119,9 +119,7 @@ impl<T> Block<T> {
             next_epoch_state,
         )
     }
-}
 
-impl<T> Block<T> {
     pub fn is_genesis_block(&self) -> bool {
         self.block_data.is_genesis_block()
     }
@@ -129,12 +127,7 @@ impl<T> Block<T> {
     pub fn is_nil_block(&self) -> bool {
         self.block_data.is_nil_block()
     }
-}
 
-impl<T> Block<T>
-where
-    T: Default + PartialEq + Serialize,
-{
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn make_genesis_block() -> Self {
         Self::make_genesis_block_from_ledger_info(&LedgerInfo::mock_genesis(None))
@@ -164,7 +157,7 @@ where
     }
 
     pub fn new_proposal(
-        payload: T,
+        payload: Payload,
         round: Round,
         timestamp_usecs: u64,
         quorum_cert: QuorumCert,
@@ -182,7 +175,7 @@ where
     }
 
     pub fn new_proposal_from_block_data(
-        block_data: BlockData<T>,
+        block_data: BlockData,
         validator_signer: &ValidatorSigner,
     ) -> Self {
         let id = block_data.hash();
@@ -230,7 +223,7 @@ where
         );
         if parent.has_reconfiguration() {
             ensure!(
-                self.payload().filter(|p| **p != T::default()).is_none(),
+                self.payload().map_or(true, |p| p.is_empty()),
                 "Reconfiguration suffix should not carry payload"
             );
         }
@@ -258,16 +251,15 @@ where
     }
 }
 
-impl<'de, T: DeserializeOwned + Serialize> Deserialize<'de> for Block<T> {
+impl<'de> Deserialize<'de> for Block {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
         #[derive(Deserialize)]
         #[serde(rename = "Block")]
-        struct BlockWithoutId<T> {
-            #[serde(bound(deserialize = "BlockData<T>: Deserialize<'de>"))]
-            block_data: BlockData<T>,
+        struct BlockWithoutId {
+            block_data: BlockData,
             signature: Option<Ed25519Signature>,
         };
 
@@ -284,8 +276,8 @@ impl<'de, T: DeserializeOwned + Serialize> Deserialize<'de> for Block<T> {
     }
 }
 
-impl<T> From<&Block<T>> for BlockMetadata {
-    fn from(block: &Block<T>) -> Self {
+impl From<&Block> for BlockMetadata {
+    fn from(block: &Block) -> Self {
         Self::new(
             block.id(),
             block.round(),

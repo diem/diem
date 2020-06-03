@@ -15,7 +15,7 @@ use std::{collections::BTreeMap, panic, sync::Arc};
 #[test]
 fn test_genesis() {
     // Test genesis and the next block
-    let genesis_block = Block::<i16>::make_genesis_block();
+    let genesis_block = Block::make_genesis_block();
     assert_eq!(genesis_block.parent_id(), HashValue::zero());
     assert_ne!(genesis_block.id(), HashValue::zero());
     assert!(genesis_block.is_genesis_block());
@@ -23,10 +23,10 @@ fn test_genesis() {
 
 #[test]
 fn test_nil_block() {
-    let genesis_block = Block::<i16>::make_genesis_block();
+    let genesis_block = Block::make_genesis_block();
     let quorum_cert = certificate_for_genesis();
 
-    let nil_block = Block::<i16>::new_nil(1, quorum_cert);
+    let nil_block = Block::new_nil(1, quorum_cert);
     assert_eq!(
         nil_block.quorum_cert().certified_block().id(),
         genesis_block.id()
@@ -43,7 +43,7 @@ fn test_nil_block() {
     assert!(nil_block.verify_well_formed().is_ok());
 
     let signer = ValidatorSigner::random(None);
-    let payload = 101;
+    let payload = vec![];
     let parent_block_info = nil_block.quorum_cert().certified_block();
     let nil_block_qc = gen_test_certificate(
         vec![&signer],
@@ -78,9 +78,9 @@ fn test_block_relation() {
     // Test genesis and the next block
     let genesis_block = Block::make_genesis_block();
     let quorum_cert = certificate_for_genesis();
-    let payload = 101;
+    let payload = vec![];
     let next_block = Block::new_proposal(
-        payload,
+        payload.clone(),
         1,
         get_current_timestamp().as_micros() as u64,
         quorum_cert,
@@ -105,10 +105,10 @@ fn test_same_qc_different_authors() {
     let signer = ValidatorSigner::random(None);
     let genesis_qc = certificate_for_genesis();
     let round = 1;
-    let payload = 42;
+    let payload = vec![];
     let current_timestamp = get_current_timestamp().as_micros() as u64;
     let block_round_1 = Block::new_proposal(
-        payload,
+        payload.clone(),
         round,
         current_timestamp,
         genesis_qc.clone(),
@@ -121,7 +121,7 @@ fn test_same_qc_different_authors() {
     let genesis_qc_altered = QuorumCert::new(genesis_qc.vote_data().clone(), ledger_info_altered);
 
     let block_round_1_altered = Block::new_proposal(
-        payload,
+        payload.clone(),
         round,
         current_timestamp,
         genesis_qc_altered,

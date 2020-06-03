@@ -8,12 +8,11 @@ use crate::{
     network_tests::NetworkPlayground,
     test_utils::{
         consensus_runtime, timed_block_on, MockStateComputer, MockStorage, MockTransactionManager,
-        TestPayload,
     },
     util::mock_time_service::SimulatedTimeService,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use consensus_types::block::Block;
+use consensus_types::{block::Block, common::Payload};
 use futures::channel::mpsc;
 use libra_config::{
     config::{
@@ -41,8 +40,8 @@ struct SMRNode {
     smr_id: usize,
     runtime: Runtime,
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
-    storage: Arc<MockStorage<TestPayload>>,
-    state_sync: mpsc::UnboundedReceiver<Vec<usize>>,
+    storage: Arc<MockStorage>,
+    state_sync: mpsc::UnboundedReceiver<Payload>,
     shared_mempool: MockSharedMempool,
 }
 
@@ -51,7 +50,7 @@ impl SMRNode {
         playground: &mut NetworkPlayground,
         mut config: NodeConfig,
         smr_id: usize,
-        storage: Arc<MockStorage<TestPayload>>,
+        storage: Arc<MockStorage>,
     ) -> Self {
         let author = config.validator_network.as_ref().unwrap().peer_id();
 
@@ -175,12 +174,10 @@ fn basic_start_test() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let nodes = SMRNode::start_num_nodes(4, &mut playground, RotatingProposer);
-    let genesis = Block::<TestPayload>::make_genesis_block_from_ledger_info(
-        &nodes[0].storage.get_ledger_info(),
-    );
+    let genesis = Block::make_genesis_block_from_ledger_info(&nodes[0].storage.get_ledger_info());
     timed_block_on(&mut runtime, async {
         let msg = playground
-            .wait_for_messages(1, NetworkPlayground::proposals_only::<TestPayload>)
+            .wait_for_messages(1, NetworkPlayground::proposals_only)
             .await;
         let first_proposal = match &msg[0].1 {
             ConsensusMsg::ProposalMsg(proposal) => proposal,

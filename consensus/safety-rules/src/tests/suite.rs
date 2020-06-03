@@ -3,8 +3,8 @@
 
 use crate::{test_utils, Error, TSafetyRules};
 use consensus_types::{
-    block::Block,
-    common::{Payload, Round},
+    block::{block_test_utils::random_payload, Block},
+    common::Round,
     quorum_cert::QuorumCert,
     timeout::Timeout,
     vote_proposal::VoteProposal,
@@ -17,17 +17,16 @@ use libra_types::{
     validator_info::ValidatorInfo,
     validator_signer::ValidatorSigner,
 };
-use rand::Rng;
 use std::collections::BTreeMap;
 
 type Proof = test_utils::Proof;
 
-fn make_genesis<T: Payload>(signer: &ValidatorSigner) -> (EpochChangeProof, QuorumCert) {
+fn make_genesis(signer: &ValidatorSigner) -> (EpochChangeProof, QuorumCert) {
     let validator_info =
         ValidatorInfo::new_with_test_network_keys(signer.author(), signer.public_key(), 1);
     let validator_set = ValidatorSet::new(vec![validator_info]);
     let li = LedgerInfo::mock_genesis(Some(validator_set));
-    let block = Block::<T>::make_genesis_block_from_ledger_info(&li);
+    let block = Block::make_genesis_block_from_ledger_info(&li);
     let qc = QuorumCert::certificate_for_genesis_from_ledger_info(&li, block.id());
     let lis = LedgerInfoWithSignatures::new(li, BTreeMap::new());
     let proof = EpochChangeProof::new(vec![lis], false);
@@ -39,35 +38,34 @@ fn make_proposal_with_qc_and_proof(
     proof: Proof,
     qc: QuorumCert,
     signer: &ValidatorSigner,
-) -> VoteProposal<Round> {
-    test_utils::make_proposal_with_qc_and_proof(round, round, proof, qc, signer)
+) -> VoteProposal {
+    test_utils::make_proposal_with_qc_and_proof(vec![], round, proof, qc, signer)
 }
 
 fn make_proposal_with_parent(
     round: Round,
-    parent: &VoteProposal<Round>,
-    committed: Option<&VoteProposal<Round>>,
+    parent: &VoteProposal,
+    committed: Option<&VoteProposal>,
     signer: &ValidatorSigner,
-) -> VoteProposal<Round> {
-    test_utils::make_proposal_with_parent(round, round, parent, committed, signer)
+) -> VoteProposal {
+    test_utils::make_proposal_with_parent(vec![], round, parent, committed, signer)
 }
 
-type RoundCallback = fn() -> (Box<dyn TSafetyRules<Round>>, ValidatorSigner);
-type ByteArrayCallback = fn() -> (Box<dyn TSafetyRules<Vec<u8>>>, ValidatorSigner);
+type Callback = fn() -> (Box<dyn TSafetyRules>, ValidatorSigner);
 
-pub fn run_test_suite(round_func: RoundCallback, byte_func: ByteArrayCallback) {
-    test_bad_execution_output(round_func);
-    test_commit_rule_consecutive_rounds(round_func);
-    test_end_to_end(byte_func);
-    test_initialize(round_func);
-    test_preferred_block_rule(round_func);
-    test_sign_timeout(round_func);
-    test_voting(round_func);
-    test_voting_potential_commit_id(round_func);
-    test_voting_bad_epoch(round_func);
+pub fn run_test_suite(func: Callback) {
+    test_bad_execution_output(func);
+    test_commit_rule_consecutive_rounds(func);
+    test_end_to_end(func);
+    test_initialize(func);
+    test_preferred_block_rule(func);
+    test_sign_timeout(func);
+    test_voting(func);
+    test_voting_potential_commit_id(func);
+    test_voting_bad_epoch(func);
 }
 
-fn test_bad_execution_output(func: RoundCallback) {
+fn test_bad_execution_output(func: Callback) {
     // build a tree of the following form:
     //                 _____
     //                /     \
@@ -77,7 +75,7 @@ fn test_bad_execution_output(func: RoundCallback) {
     // a3 works as it properly extends a2
     let (mut safety_rules, signer) = func();
 
-    let (proof, genesis_qc) = make_genesis::<Round>(&signer);
+    let (proof, genesis_qc) = make_genesis(&signer);
     let round = genesis_qc.certified_block().round();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
@@ -98,7 +96,7 @@ fn test_bad_execution_output(func: RoundCallback) {
     let evil_proof = Proof::new(
         a1_output.frozen_subtree_roots().clone(),
         a1_output.num_leaves(),
-        vec![Timeout::new(0, *a3.block().payload().unwrap()).hash()],
+        vec![Timeout::new(0, a3.block().round()).hash()],
     );
 
     let evil_a3 = make_proposal_with_qc_and_proof(
@@ -115,7 +113,7 @@ fn test_bad_execution_output(func: RoundCallback) {
     assert!(a3_block.is_ok());
 }
 
-fn test_commit_rule_consecutive_rounds(func: RoundCallback) {
+fn test_commit_rule_consecutive_rounds(func: Callback) {
     // build a tree of the following form:
     //             ___________
     //            /           \
@@ -126,7 +124,7 @@ fn test_commit_rule_consecutive_rounds(func: RoundCallback) {
     // a2 can be committed after a4 gathers QC
     let (mut safety_rules, signer) = func();
 
-    let (proof, genesis_qc) = make_genesis::<Round>(&signer);
+    let (proof, genesis_qc) = make_genesis(&signer);
     let round = genesis_qc.certified_block().round();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &signer);
@@ -145,14 +143,13 @@ fn test_commit_rule_consecutive_rounds(func: RoundCallback) {
     safety_rules.construct_and_sign_vote(&a4).unwrap();
 }
 
-fn test_end_to_end(func: ByteArrayCallback) {
+fn test_end_to_end(func: Callback) {
     let (mut safety_rules, signer) = func();
 
-    let (proof, genesis_qc) = make_genesis::<Round>(&signer);
+    let (proof, genesis_qc) = make_genesis(&signer);
     let round = genesis_qc.certified_block().round();
 
-    let mut rng = rand::thread_rng();
-    let data: Vec<u8> = (0..2048).map(|_| rng.gen::<u8>()).collect();
+    let data = random_payload(2048);
 
     let p0 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &signer);
     let p1 = test_utils::make_proposal_with_parent(data.clone(), round + 2, &p0, None, &signer);
@@ -186,7 +183,7 @@ fn test_end_to_end(func: ByteArrayCallback) {
 
 /// Initialize from scratch, ensure that SafetyRules can properly initialize from a Waypoint and
 /// that it rejects invalid LedgerInfos or those that do not match.
-fn test_initialize(func: RoundCallback) {
+fn test_initialize(func: Callback) {
     let (mut safety_rules, signer) = func();
 
     let state = safety_rules.consensus_state().unwrap();
@@ -194,11 +191,11 @@ fn test_initialize(func: RoundCallback) {
     assert_eq!(state.preferred_round(), 0);
     assert_eq!(state.epoch(), 1);
 
-    let (proof, _genesis_qc) = make_genesis::<Round>(&signer);
+    let (proof, _genesis_qc) = make_genesis(&signer);
     safety_rules.initialize(&proof).unwrap();
 
     let signer1 = ValidatorSigner::from_int(1);
-    let (bad_proof, _bad_genesis_qc) = make_genesis::<Round>(&signer1);
+    let (bad_proof, _bad_genesis_qc) = make_genesis(&signer1);
 
     match safety_rules.initialize(&bad_proof) {
         Err(Error::WaypointMismatch(_)) => (),
@@ -206,7 +203,7 @@ fn test_initialize(func: RoundCallback) {
     };
 }
 
-fn test_preferred_block_rule(func: RoundCallback) {
+fn test_preferred_block_rule(func: Callback) {
     // Preferred block is the highest 2-chain head.
     //
     // build a tree of the following form:
@@ -218,7 +215,7 @@ fn test_preferred_block_rule(func: RoundCallback) {
     // PB should change from genesis to b1 and then a2.
     let (mut safety_rules, signer) = func();
 
-    let (proof, genesis_qc) = make_genesis::<Round>(&signer);
+    let (proof, genesis_qc) = make_genesis(&signer);
     let genesis_round = genesis_qc.certified_block().round();
     let round = genesis_round;
 
@@ -279,10 +276,10 @@ fn test_preferred_block_rule(func: RoundCallback) {
 /// that poorly set last_voted_rounds both historical and in the future fail as well as
 /// synchronization issues on preferred round are correct. Effectivelly ensure that equivocation is
 /// impossible for signing timeouts.
-fn test_sign_timeout(func: RoundCallback) {
+fn test_sign_timeout(func: Callback) {
     let (mut safety_rules, signer) = func();
 
-    let (proof, genesis_qc) = make_genesis::<Round>(&signer);
+    let (proof, genesis_qc) = make_genesis(&signer);
     let round = genesis_qc.certified_block().round();
     let epoch = genesis_qc.certified_block().epoch();
 
@@ -325,7 +322,7 @@ fn test_sign_timeout(func: RoundCallback) {
     assert_eq!(actual_err, expected_err);
 }
 
-fn test_voting(func: RoundCallback) {
+fn test_voting(func: Callback) {
     // build a tree of the following form:
     //             _____    __________
     //            /     \  /          \
@@ -346,7 +343,7 @@ fn test_voting(func: RoundCallback) {
     // b4 (round lower then round of pb. PB: a2, parent(b4)=b2)
     let (mut safety_rules, signer) = func();
 
-    let (proof, genesis_qc) = make_genesis::<Round>(&signer);
+    let (proof, genesis_qc) = make_genesis(&signer);
     let round = genesis_qc.certified_block().round();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &signer);
@@ -409,17 +406,17 @@ fn test_voting(func: RoundCallback) {
     );
 }
 
-fn test_voting_bad_epoch(func: RoundCallback) {
+fn test_voting_bad_epoch(func: Callback) {
     // Test to verify epoch is the same between parent and proposed in a vote proposal
     // genesis--a1 -> a2 fails due to jumping to a different epoch
     let (mut safety_rules, signer) = func();
 
-    let (proof, genesis_qc) = make_genesis::<Round>(&signer);
+    let (proof, genesis_qc) = make_genesis(&signer);
     let round = genesis_qc.certified_block().round();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
     let a2 = test_utils::make_proposal_with_parent_and_overrides(
-        round + 3,
+        vec![],
         round + 3,
         &a1,
         None,
@@ -435,7 +432,7 @@ fn test_voting_bad_epoch(func: RoundCallback) {
     );
 }
 
-fn test_voting_potential_commit_id(func: RoundCallback) {
+fn test_voting_potential_commit_id(func: Callback) {
     // Test the potential ledger info that we're going to use in case of voting
     // build a tree of the following form:
     //            _____
@@ -447,7 +444,7 @@ fn test_voting_potential_commit_id(func: RoundCallback) {
     // A potential commit for proposal a4 is a2, a potential commit for proposal a5 is a3.
     let (mut safety_rules, signer) = func();
 
-    let (proof, genesis_qc) = make_genesis::<Round>(&signer);
+    let (proof, genesis_qc) = make_genesis(&signer);
     let round = genesis_qc.certified_block().round();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &signer);

@@ -6,14 +6,8 @@ use crate::{
     persistent_safety_storage::PersistentSafetyStorage, t_safety_rules::TSafetyRules, COUNTERS,
 };
 use consensus_types::{
-    block::Block,
-    block_data::BlockData,
-    common::{Author, Payload},
-    quorum_cert::QuorumCert,
-    timeout::Timeout,
-    vote::Vote,
-    vote_data::VoteData,
-    vote_proposal::VoteProposal,
+    block::Block, block_data::BlockData, common::Author, quorum_cert::QuorumCert, timeout::Timeout,
+    vote::Vote, vote_data::VoteData, vote_proposal::VoteProposal,
 };
 use libra_crypto::{ed25519::Ed25519Signature, hash::HashValue};
 use libra_logger::debug;
@@ -21,7 +15,6 @@ use libra_types::{
     block_info::BlockInfo, epoch_change::EpochChangeProof, ledger_info::LedgerInfo,
     validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier, waypoint::Waypoint,
 };
-use std::marker::PhantomData;
 
 /// SafetyRules is responsible for the safety of the consensus:
 /// 1) voting rules
@@ -32,14 +25,13 @@ use std::marker::PhantomData;
 /// @TODO bootstrap with a hash of a ledger info (waypoint) that includes a validator set
 /// @TODO update storage with hash of ledger info (waypoint) during epoch changes (includes a new validator
 /// set)
-pub struct SafetyRules<T> {
+pub struct SafetyRules {
     persistent_storage: PersistentSafetyStorage,
     validator_signer: ValidatorSigner,
     validator_verifier: Option<ValidatorVerifier>,
-    marker: PhantomData<T>,
 }
 
-impl<T: Payload> SafetyRules<T> {
+impl SafetyRules {
     /// Constructs a new instance of SafetyRules with the given persistent storage and the
     /// consensus private keys
     /// @TODO replace this with an API that takes in a SafetyRulesConfig
@@ -52,7 +44,6 @@ impl<T: Payload> SafetyRules<T> {
             persistent_storage,
             validator_signer,
             validator_verifier: None,
-            marker: PhantomData,
         }
     }
 
@@ -62,7 +53,7 @@ impl<T: Payload> SafetyRules<T> {
     /// 1) B0 <- B1 <- B2 <--
     /// 2) round(B0) + 1 = round(B1), and
     /// 3) round(B1) + 1 = round(B2).
-    pub fn construct_ledger_info(&self, proposed_block: &Block<T>) -> LedgerInfo {
+    pub fn construct_ledger_info(&self, proposed_block: &Block) -> LedgerInfo {
         let block2 = proposed_block.round();
         let block1 = proposed_block.quorum_cert().certified_block().round();
         let block0 = proposed_block.quorum_cert().parent_block().round();
@@ -138,7 +129,7 @@ impl<T: Payload> SafetyRules<T> {
     }
 }
 
-impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
+impl TSafetyRules for SafetyRules {
     fn consensus_state(&mut self) -> Result<ConsensusState, Error> {
         Ok(ConsensusState::new(
             self.persistent_storage.epoch()?,
@@ -171,7 +162,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
 
     /// @TODO verify signature on vote proposal
     /// @TODO verify QC correctness
-    fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal<T>) -> Result<Vote, Error> {
+    fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal) -> Result<Vote, Error> {
         debug!("Incoming vote proposal to sign.");
         let proposed_block = vote_proposal.block();
 
@@ -233,7 +224,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
     /// @TODO only sign blocks that are later than last_voted_round and match the current epoch
     /// @TODO verify QC correctness
     /// @TODO verify QC matches preferred round
-    fn sign_proposal(&mut self, block_data: BlockData<T>) -> Result<Block<T>, Error> {
+    fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
         debug!("Incoming proposal to sign.");
         COUNTERS.sign_proposal.inc();
         Ok(Block::new_proposal_from_block_data(

@@ -6,8 +6,8 @@ use anyhow::{ensure, format_err, Result};
 use executor::db_bootstrapper;
 use libra_config::{
     config::{
-        ConsensusType, NodeConfig, OnDiskStorageConfig, RemoteService, SafetyRulesService,
-        SecureBackend, Token, VaultConfig,
+        NodeConfig, OnDiskStorageConfig, RemoteService, SafetyRulesService, SecureBackend, Token,
+        VaultConfig,
     },
     generator,
 };
@@ -247,10 +247,8 @@ impl ValidatorConfig {
     fn build_safety_rules(&self, config: &mut NodeConfig) -> Result<()> {
         let safety_rules_config = &mut config.consensus.safety_rules;
         if let Some(server_address) = self.safety_rules_addr {
-            safety_rules_config.service = SafetyRulesService::Process(RemoteService {
-                server_address,
-                consensus_type: ConsensusType::SignedTransactions,
-            })
+            safety_rules_config.service =
+                SafetyRulesService::Process(RemoteService { server_address })
         }
 
         if let Some(backend) = &self.safety_rules_backend {

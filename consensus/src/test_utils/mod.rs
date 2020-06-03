@@ -20,7 +20,7 @@ mod mock_storage;
 #[cfg(any(test, feature = "fuzzing"))]
 mod mock_txn_manager;
 
-use consensus_types::block::block_test_utils::gen_test_certificate;
+use consensus_types::{block::block_test_utils::gen_test_certificate, common::Payload};
 use libra_types::block_info::BlockInfo;
 pub use mock_state_computer::{EmptyStateComputer, MockStateComputer};
 pub use mock_storage::{EmptyStorage, MockSharedStorage, MockStorage};
@@ -28,12 +28,7 @@ pub use mock_txn_manager::MockTransactionManager;
 
 pub const TEST_TIMEOUT: Duration = Duration::from_secs(60);
 
-pub type TestPayload = Vec<usize>;
-
-pub fn build_simple_tree() -> (
-    Vec<Arc<ExecutedBlock<TestPayload>>>,
-    Arc<BlockStore<TestPayload>>,
-) {
+pub fn build_simple_tree() -> (Vec<Arc<ExecutedBlock>>, Arc<BlockStore>) {
     let mut inserter = TreeInserter::default();
     let block_store = inserter.block_store();
     let genesis = block_store.root();
@@ -61,7 +56,7 @@ pub fn build_simple_tree() -> (
     (vec![genesis_block, a1, a2, a3, b1, b2, c1], block_store)
 }
 
-pub fn build_chain() -> Vec<Arc<ExecutedBlock<TestPayload>>> {
+pub fn build_chain() -> Vec<Arc<ExecutedBlock>> {
     let mut inserter = TreeInserter::default();
     let block_store = inserter.block_store();
     let genesis = block_store.root();
@@ -75,7 +70,7 @@ pub fn build_chain() -> Vec<Arc<ExecutedBlock<TestPayload>>> {
     vec![genesis, a1, a2, a3, a4, a5, a6, a7]
 }
 
-pub fn build_empty_tree() -> Arc<BlockStore<TestPayload>> {
+pub fn build_empty_tree() -> Arc<BlockStore> {
     let (initial_data, storage) = EmptyStorage::start_for_testing();
     Arc::new(BlockStore::new(
         storage,
@@ -87,8 +82,7 @@ pub fn build_empty_tree() -> Arc<BlockStore<TestPayload>> {
 
 pub struct TreeInserter {
     signer: ValidatorSigner,
-    payload_val: usize,
-    block_store: Arc<BlockStore<TestPayload>>,
+    block_store: Arc<BlockStore>,
 }
 
 impl TreeInserter {
@@ -100,18 +94,13 @@ impl TreeInserter {
         let block_store = build_empty_tree();
         Self {
             signer,
-            payload_val: 0,
             block_store,
         }
     }
 
-    pub fn new_with_store(
-        signer: ValidatorSigner,
-        block_store: Arc<BlockStore<TestPayload>>,
-    ) -> Self {
+    pub fn new_with_store(signer: ValidatorSigner, block_store: Arc<BlockStore>) -> Self {
         Self {
             signer,
-            payload_val: 0,
             block_store,
         }
     }
@@ -120,7 +109,7 @@ impl TreeInserter {
         &self.signer
     }
 
-    pub fn block_store(&self) -> Arc<BlockStore<TestPayload>> {
+    pub fn block_store(&self) -> Arc<BlockStore> {
         Arc::clone(&self.block_store)
     }
 
@@ -129,10 +118,10 @@ impl TreeInserter {
     /// `insert_block_with_qc`.
     pub fn insert_block(
         &mut self,
-        parent: &ExecutedBlock<TestPayload>,
+        parent: &ExecutedBlock,
         round: Round,
         committed_block: Option<BlockInfo>,
-    ) -> Arc<ExecutedBlock<TestPayload>> {
+    ) -> Arc<ExecutedBlock> {
         // Node must carry a QC to its parent
         let parent_qc = self.create_qc_for_block(parent, committed_block);
         self.insert_block_with_qc(parent_qc, parent, round)
@@ -141,23 +130,22 @@ impl TreeInserter {
     pub fn insert_block_with_qc(
         &mut self,
         parent_qc: QuorumCert,
-        parent: &ExecutedBlock<TestPayload>,
+        parent: &ExecutedBlock,
         round: Round,
-    ) -> Arc<ExecutedBlock<TestPayload>> {
-        self.payload_val += 1;
+    ) -> Arc<ExecutedBlock> {
         self.block_store
             .insert_block_with_qc(self.create_block_with_qc(
                 parent_qc,
                 parent.timestamp_usecs() + 1,
                 round,
-                vec![self.payload_val],
+                vec![],
             ))
             .unwrap()
     }
 
     pub fn create_qc_for_block(
         &self,
-        block: &ExecutedBlock<TestPayload>,
+        block: &ExecutedBlock,
         committed_block: Option<BlockInfo>,
     ) -> QuorumCert {
         gen_test_certificate(
@@ -168,11 +156,7 @@ impl TreeInserter {
         )
     }
 
-    pub fn insert_qc_for_block(
-        &self,
-        block: &ExecutedBlock<TestPayload>,
-        committed_block: Option<BlockInfo>,
-    ) {
+    pub fn insert_qc_for_block(&self, block: &ExecutedBlock, committed_block: Option<BlockInfo>) {
         self.block_store
             .insert_single_quorum_cert(self.create_qc_for_block(block, committed_block))
             .unwrap()
@@ -183,23 +167,22 @@ impl TreeInserter {
         parent_qc: QuorumCert,
         timestamp_usecs: u64,
         round: Round,
-        payload: TestPayload,
-    ) -> Block<TestPayload> {
+        payload: Payload,
+    ) -> Block {
         Block::new_proposal(payload, round, timestamp_usecs, parent_qc, &self.signer)
     }
 
     pub fn insert_reconfiguration_block(
         &mut self,
-        parent: &ExecutedBlock<TestPayload>,
+        parent: &ExecutedBlock,
         round: Round,
-    ) -> Arc<ExecutedBlock<TestPayload>> {
-        self.payload_val += 1;
+    ) -> Arc<ExecutedBlock> {
         self.block_store
             .insert_reconfiguration_block(self.create_block_with_qc(
                 self.create_qc_for_block(parent, None),
                 parent.timestamp_usecs() + 1,
                 round,
-                vec![self.payload_val],
+                vec![],
             ))
             .unwrap()
     }

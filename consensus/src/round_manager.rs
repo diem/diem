@@ -9,7 +9,7 @@ use termion::color::*;
 use consensus_types::{
     block::Block,
     block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus},
-    common::{Author, Payload, Round},
+    common::{Author, Round},
     proposal_msg::ProposalMsg,
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
@@ -47,14 +47,14 @@ use crate::{
     },
 };
 
-pub enum UnverifiedEvent<T> {
-    ProposalMsg(Box<ProposalMsg<T>>),
+pub enum UnverifiedEvent {
+    ProposalMsg(Box<ProposalMsg>),
     VoteMsg(Box<VoteMsg>),
     SyncInfo(Box<SyncInfo>),
 }
 
-impl<T: Payload> UnverifiedEvent<T> {
-    pub fn verify(self, validator: &ValidatorVerifier) -> Result<VerifiedEvent<T>> {
+impl UnverifiedEvent {
+    pub fn verify(self, validator: &ValidatorVerifier) -> Result<VerifiedEvent> {
         Ok(match self {
             UnverifiedEvent::ProposalMsg(p) => {
                 p.verify(validator)?;
@@ -80,8 +80,8 @@ impl<T: Payload> UnverifiedEvent<T> {
     }
 }
 
-impl<T> From<ConsensusMsg<T>> for UnverifiedEvent<T> {
-    fn from(value: ConsensusMsg<T>) -> Self {
+impl From<ConsensusMsg> for UnverifiedEvent {
+    fn from(value: ConsensusMsg) -> Self {
         match value {
             ConsensusMsg::ProposalMsg(m) => UnverifiedEvent::ProposalMsg(m),
             ConsensusMsg::VoteMsg(m) => UnverifiedEvent::VoteMsg(m),
@@ -91,8 +91,8 @@ impl<T> From<ConsensusMsg<T>> for UnverifiedEvent<T> {
     }
 }
 
-pub enum VerifiedEvent<T> {
-    ProposalMsg(Box<ProposalMsg<T>>),
+pub enum VerifiedEvent {
+    ProposalMsg(Box<ProposalMsg>),
     VoteMsg(Box<VoteMsg>),
     SyncInfo(Box<SyncInfo>),
 }
@@ -107,20 +107,20 @@ pub mod round_manager_fuzzing;
 
 /// If the node can't recover corresponding blocks from local storage, RecoveryManager is responsible
 /// for processing the events carrying sync info and use the info to retrieve blocks from peers
-pub struct RecoveryManager<T> {
+pub struct RecoveryManager {
     epoch_state: EpochState,
-    network: NetworkSender<T>,
-    storage: Arc<dyn PersistentLivenessStorage<T>>,
-    state_computer: Arc<dyn StateComputer<Payload = T>>,
+    network: NetworkSender,
+    storage: Arc<dyn PersistentLivenessStorage>,
+    state_computer: Arc<dyn StateComputer>,
     last_committed_round: Round,
 }
 
-impl<T: Payload> RecoveryManager<T> {
+impl RecoveryManager {
     pub fn new(
         epoch_state: EpochState,
-        network: NetworkSender<T>,
-        storage: Arc<dyn PersistentLivenessStorage<T>>,
-        state_computer: Arc<dyn StateComputer<Payload = T>>,
+        network: NetworkSender,
+        storage: Arc<dyn PersistentLivenessStorage>,
+        state_computer: Arc<dyn StateComputer>,
         last_committed_round: Round,
     ) -> Self {
         RecoveryManager {
@@ -134,20 +134,20 @@ impl<T: Payload> RecoveryManager<T> {
 
     pub async fn process_proposal_msg(
         &mut self,
-        proposal_msg: ProposalMsg<T>,
-    ) -> Result<RecoveryData<T>> {
+        proposal_msg: ProposalMsg,
+    ) -> Result<RecoveryData> {
         let author = proposal_msg.proposer();
         let sync_info = proposal_msg.sync_info();
         self.sync_up(&sync_info, author).await
     }
 
-    pub async fn process_vote(&mut self, vote_msg: VoteMsg) -> Result<RecoveryData<T>> {
+    pub async fn process_vote(&mut self, vote_msg: VoteMsg) -> Result<RecoveryData> {
         let author = vote_msg.vote().author();
         let sync_info = vote_msg.sync_info();
         self.sync_up(&sync_info, author).await
     }
 
-    async fn sync_up(&mut self, sync_info: &SyncInfo, peer: Author) -> Result<RecoveryData<T>> {
+    async fn sync_up(&mut self, sync_info: &SyncInfo, peer: Author) -> Result<RecoveryData> {
         sync_info.verify(&self.epoch_state.verifier)?;
         ensure!(
             sync_info.highest_round() > self.last_committed_round,
@@ -179,30 +179,30 @@ impl<T: Payload> RecoveryManager<T> {
 /// etc.). It is exposing the async processing functions for each event type.
 /// The caller is responsible for running the event loops and driving the execution via some
 /// executors.
-pub struct RoundManager<T> {
+pub struct RoundManager {
     epoch_state: EpochState,
-    block_store: Arc<BlockStore<T>>,
+    block_store: Arc<BlockStore>,
     round_state: RoundState,
-    proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
-    proposal_generator: ProposalGenerator<T>,
-    safety_rules: Box<dyn TSafetyRules<T> + Send + Sync>,
-    network: NetworkSender<T>,
-    txn_manager: Box<dyn TxnManager<Payload = T>>,
-    storage: Arc<dyn PersistentLivenessStorage<T>>,
+    proposer_election: Box<dyn ProposerElection + Send + Sync>,
+    proposal_generator: ProposalGenerator,
+    safety_rules: Box<dyn TSafetyRules + Send + Sync>,
+    network: NetworkSender,
+    txn_manager: Box<dyn TxnManager>,
+    storage: Arc<dyn PersistentLivenessStorage>,
     time_service: Arc<dyn TimeService>,
 }
 
-impl<T: Payload> RoundManager<T> {
+impl RoundManager {
     pub fn new(
         epoch_state: EpochState,
-        block_store: Arc<BlockStore<T>>,
+        block_store: Arc<BlockStore>,
         round_state: RoundState,
-        proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
-        proposal_generator: ProposalGenerator<T>,
-        safety_rules: Box<dyn TSafetyRules<T> + Send + Sync>,
-        network: NetworkSender<T>,
-        txn_manager: Box<dyn TxnManager<Payload = T>>,
-        storage: Arc<dyn PersistentLivenessStorage<T>>,
+        proposer_election: Box<dyn ProposerElection + Send + Sync>,
+        proposal_generator: ProposalGenerator,
+        safety_rules: Box<dyn TSafetyRules + Send + Sync>,
+        network: NetworkSender,
+        txn_manager: Box<dyn TxnManager>,
+        storage: Arc<dyn PersistentLivenessStorage>,
         time_service: Arc<dyn TimeService>,
     ) -> Self {
         counters::BLOCK_RETRIEVAL_COUNT.get();
@@ -222,7 +222,7 @@ impl<T: Payload> RoundManager<T> {
         }
     }
 
-    fn create_block_retriever(&self, author: Author) -> BlockRetriever<T> {
+    fn create_block_retriever(&self, author: Author) -> BlockRetriever {
         BlockRetriever::new(self.network.clone(), author)
     }
 
@@ -271,7 +271,7 @@ impl<T: Payload> RoundManager<T> {
     async fn generate_proposal(
         &mut self,
         new_round_event: NewRoundEvent,
-    ) -> anyhow::Result<ProposalMsg<T>> {
+    ) -> anyhow::Result<ProposalMsg> {
         // Proposal generator will ensure that at most one proposal is generated per round
         let proposal = self
             .proposal_generator
@@ -281,10 +281,7 @@ impl<T: Payload> RoundManager<T> {
             )
             .await?;
         let signed_proposal = self.safety_rules.sign_proposal(proposal)?;
-        if let Some(ref payload) = signed_proposal.payload() {
-            self.txn_manager
-                .trace_transactions(payload, signed_proposal.id());
-        }
+        self.txn_manager.trace_transactions(&signed_proposal);
         trace_edge!("parent_proposal", {"block", signed_proposal.parent_id()}, {"block", signed_proposal.id()});
         trace_event!("round_manager::generate_proposal", {"block", signed_proposal.id()});
         debug!("Propose {}", signed_proposal);
@@ -297,10 +294,7 @@ impl<T: Payload> RoundManager<T> {
 
     /// Process a ProposalMsg, pre_process would bring all the dependencies and filter out invalid
     /// proposal, process_proposed_block would execute and decide whether to vote for it.
-    pub async fn process_proposal_msg(
-        &mut self,
-        proposal_msg: ProposalMsg<T>,
-    ) -> anyhow::Result<()> {
+    pub async fn process_proposal_msg(&mut self, proposal_msg: ProposalMsg) -> anyhow::Result<()> {
         let block = self.pre_process_proposal(proposal_msg).await?;
         self.process_proposed_block(block).await
     }
@@ -311,7 +305,7 @@ impl<T: Payload> RoundManager<T> {
     /// and fetch all the blocks from the committed state to the HQC
     /// 2. forwarding the proposals to the ProposerElection queue,
     /// which is going to eventually trigger one winning proposal per round
-    async fn pre_process_proposal(&mut self, proposal_msg: ProposalMsg<T>) -> Result<Block<T>> {
+    async fn pre_process_proposal(&mut self, proposal_msg: ProposalMsg) -> Result<Block> {
         trace_event!("round_manager::pre_process_proposal", {"block", proposal_msg.proposal().id()});
         // RoundState is going to be updated with all the proposal certificates later,
         // but it's known that the round_state's round is not going to decrease so we can already
@@ -475,7 +469,7 @@ impl<T: Payload> RoundManager<T> {
     /// 2. Try to vote for it following the safety rules.
     /// 3. In case a validator chooses to vote, send the vote to the representatives at the next
     /// position.
-    async fn process_proposed_block(&mut self, proposal: Block<T>) -> Result<()> {
+    async fn process_proposed_block(&mut self, proposal: Block) -> Result<()> {
         debug!("RoundManager: process_proposed_block {}", proposal);
 
         if let Some(time_to_receival) =
@@ -572,21 +566,23 @@ impl<T: Payload> RoundManager<T> {
     /// * return a VoteMsg with the LedgerInfo to be committed in case the vote gathers QC.
     ///
     /// This function assumes that it might be called from different tasks concurrently.
-    async fn execute_and_vote(&mut self, proposed_block: Block<T>) -> anyhow::Result<Vote> {
+    async fn execute_and_vote(&mut self, proposed_block: Block) -> anyhow::Result<Vote> {
         trace_code_block!("round_manager::execute_and_vote", {"block", proposed_block.id()});
         let executed_block = self
             .block_store
             .execute_and_insert_block(proposed_block)
             .context("[RoundManager] Failed to execute_and_insert the block")?;
         // notify mempool about failed txn
-        if let Some(payload) = executed_block.payload() {
-            let compute_result = executed_block.compute_result();
-            if let Err(e) = self.txn_manager.commit_txns(payload, &compute_result).await {
-                error!(
-                    "[RoundManager] Failed to notify mempool of rejected txns: {:?}",
-                    e
-                );
-            }
+        let compute_result = executed_block.compute_result();
+        if let Err(e) = self
+            .txn_manager
+            .commit(executed_block.block(), compute_result)
+            .await
+        {
+            error!(
+                "[RoundManager] Failed to notify mempool of rejected txns: {:?}",
+                e
+            );
         }
         let block = executed_block.block();
 

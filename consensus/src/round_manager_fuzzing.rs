@@ -12,7 +12,7 @@ use crate::{
     network_interface::ConsensusNetworkSender,
     persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
     round_manager::RoundManager,
-    test_utils::{EmptyStateComputer, MockStorage, MockTransactionManager, TestPayload},
+    test_utils::{EmptyStateComputer, MockStorage, MockTransactionManager},
     util::mock_time_service::SimulatedTimeService,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
@@ -50,9 +50,9 @@ static FUZZING_SIGNER: Lazy<ValidatorSigner> = Lazy::new(|| ValidatorSigner::fro
 
 // helpers
 fn build_empty_store(
-    storage: Arc<dyn PersistentLivenessStorage<TestPayload>>,
-    initial_data: RecoveryData<TestPayload>,
-) -> Arc<BlockStore<TestPayload>> {
+    storage: Arc<dyn PersistentLivenessStorage>,
+    initial_data: RecoveryData,
+) -> Arc<BlockStore> {
     let (_commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
 
     Arc::new(BlockStore::new(
@@ -73,7 +73,7 @@ fn create_round_state() -> RoundState {
 }
 
 // Creates an RoundManager for fuzzing
-fn create_node_for_fuzzing() -> RoundManager<TestPayload> {
+fn create_node_for_fuzzing() -> RoundManager {
     // signer is re-used accross fuzzing runs
     let signer = FUZZING_SIGNER.clone();
 
@@ -82,7 +82,7 @@ fn create_node_for_fuzzing() -> RoundManager<TestPayload> {
     let validator_set = (&validator).into();
 
     // TODO: EmptyStorage
-    let (initial_data, storage) = MockStorage::<TestPayload>::start_for_testing(validator_set);
+    let (initial_data, storage) = MockStorage::start_for_testing(validator_set);
 
     // TODO: remove
     let safety_rules = SafetyRules::new(signer.author(), test_utils::test_storage(&signer));
@@ -152,7 +152,7 @@ pub fn fuzz_proposal(data: &[u8]) {
     // create node
     let mut round_manager = create_node_for_fuzzing();
 
-    let proposal: ProposalMsg<TestPayload> = match lcs::from_bytes(data) {
+    let proposal: ProposalMsg = match lcs::from_bytes(data) {
         Ok(xx) => xx,
         Err(_) => {
             if cfg!(test) {

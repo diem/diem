@@ -21,7 +21,7 @@ use crate::{
 use anyhow::{anyhow, bail, ensure, Context};
 use channel::libra_channel;
 use consensus_types::{
-    common::{Author, Payload, Round},
+    common::{Author, Round},
     epoch_retrieval::EpochRetrievalRequest,
 };
 use futures::{select, StreamExt};
@@ -46,19 +46,19 @@ use std::{
 /// RoundManager is used for normal event handling.
 /// We suppress clippy warning here because we expect most of the time we will have RoundManager
 #[allow(clippy::large_enum_variant)]
-pub enum RoundProcessor<T> {
-    Recovery(RecoveryManager<T>),
-    Normal(RoundManager<T>),
+pub enum RoundProcessor {
+    Recovery(RecoveryManager),
+    Normal(RoundManager),
 }
 
 #[allow(clippy::large_enum_variant)]
-pub enum LivenessStorageData<T> {
-    RecoveryData(RecoveryData<T>),
+pub enum LivenessStorageData {
+    RecoveryData(RecoveryData),
     LedgerRecoveryData(LedgerRecoveryData),
 }
 
-impl<T: Payload> LivenessStorageData<T> {
-    pub fn expect_recovery_data(self, msg: &str) -> RecoveryData<T> {
+impl LivenessStorageData {
+    pub fn expect_recovery_data(self, msg: &str) -> RecoveryData {
         match self {
             LivenessStorageData::RecoveryData(data) => data,
             LivenessStorageData::LedgerRecoveryData(_) => panic!("{}", msg),
@@ -68,30 +68,30 @@ impl<T: Payload> LivenessStorageData<T> {
 
 // Manager the components that shared across epoch and spawn per-epoch RoundManager with
 // epoch-specific input.
-pub struct EpochManager<T> {
+pub struct EpochManager {
     author: Author,
     config: ConsensusConfig,
     time_service: Arc<dyn TimeService>,
-    self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
-    network_sender: ConsensusNetworkSender<T>,
+    self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
+    network_sender: ConsensusNetworkSender,
     timeout_sender: channel::Sender<Round>,
-    txn_manager: Box<dyn TxnManager<Payload = T>>,
-    state_computer: Arc<dyn StateComputer<Payload = T>>,
-    storage: Arc<dyn PersistentLivenessStorage<T>>,
-    safety_rules_manager: SafetyRulesManager<T>,
-    processor: Option<RoundProcessor<T>>,
+    txn_manager: Box<dyn TxnManager>,
+    state_computer: Arc<dyn StateComputer>,
+    storage: Arc<dyn PersistentLivenessStorage>,
+    safety_rules_manager: SafetyRulesManager,
+    processor: Option<RoundProcessor>,
 }
 
-impl<T: Payload> EpochManager<T> {
+impl EpochManager {
     pub fn new(
         node_config: &mut NodeConfig,
         time_service: Arc<dyn TimeService>,
-        self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
-        network_sender: ConsensusNetworkSender<T>,
+        self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
+        network_sender: ConsensusNetworkSender,
         timeout_sender: channel::Sender<Round>,
-        txn_manager: Box<dyn TxnManager<Payload = T>>,
-        state_computer: Arc<dyn StateComputer<Payload = T>>,
-        storage: Arc<dyn PersistentLivenessStorage<T>>,
+        txn_manager: Box<dyn TxnManager>,
+        state_computer: Arc<dyn StateComputer>,
+        storage: Arc<dyn PersistentLivenessStorage>,
     ) -> Self {
         let author = config::peer_id(node_config.validator_network.as_ref().unwrap());
         let config = node_config.consensus.clone();
@@ -145,7 +145,7 @@ impl<T: Payload> EpochManager<T> {
     fn create_proposer_election(
         &self,
         epoch_state: &EpochState,
-    ) -> Box<dyn ProposerElection<T> + Send + Sync> {
+    ) -> Box<dyn ProposerElection + Send + Sync> {
         let proposers = epoch_state
             .verifier
             .get_ordered_account_addresses_iter()
@@ -187,7 +187,7 @@ impl<T: Payload> EpochManager<T> {
             .libra_db()
             .get_epoch_change_ledger_infos(request.start_epoch, request.end_epoch)
             .context("[EpochManager] Failed to get epoch proof")?;
-        let msg = ConsensusMsg::EpochChangeProof::<T>(Box::new(proof));
+        let msg = ConsensusMsg::EpochChangeProof(Box::new(proof));
         self.network_sender.send_to(peer_id, msg).context(format!(
             "[EpochManager] Failed to send epoch proof to {}",
             peer_id
@@ -217,7 +217,7 @@ impl<T: Payload> EpochManager<T> {
                     start_epoch: self.epoch(),
                     end_epoch: different_epoch,
                 };
-                let msg = ConsensusMsg::EpochRetrievalRequest::<T>(Box::new(request));
+                let msg = ConsensusMsg::EpochRetrievalRequest(Box::new(request));
                 self.network_sender.send_to(peer_id, msg).context(format!(
                     "[EpochManager] Failed to send epoch retrieval to {}",
                     peer_id
@@ -249,11 +249,7 @@ impl<T: Payload> EpochManager<T> {
         // state_computer notifies reconfiguration in another channel
     }
 
-    async fn start_round_manager(
-        &mut self,
-        recovery_data: RecoveryData<T>,
-        epoch_state: EpochState,
-    ) {
+    async fn start_round_manager(&mut self, recovery_data: RecoveryData, epoch_state: EpochState) {
         // Release the previous RoundManager, especially the SafetyRule client
         self.processor = None;
         counters::EPOCH.set(epoch_state.epoch as i64);
@@ -379,7 +375,7 @@ impl<T: Payload> EpochManager<T> {
     pub async fn process_message(
         &mut self,
         peer_id: AccountAddress,
-        consensus_msg: ConsensusMsg<T>,
+        consensus_msg: ConsensusMsg,
     ) -> anyhow::Result<()> {
         if let Some(event) = self.process_epoch(peer_id, consensus_msg).await? {
             let verified_event = event
@@ -393,11 +389,11 @@ impl<T: Payload> EpochManager<T> {
     async fn process_epoch(
         &mut self,
         peer_id: AccountAddress,
-        msg: ConsensusMsg<T>,
-    ) -> anyhow::Result<Option<UnverifiedEvent<T>>> {
+        msg: ConsensusMsg,
+    ) -> anyhow::Result<Option<UnverifiedEvent>> {
         match msg {
             ConsensusMsg::ProposalMsg(_) | ConsensusMsg::SyncInfo(_) | ConsensusMsg::VoteMsg(_) => {
-                let event: UnverifiedEvent<T> = msg.into();
+                let event: UnverifiedEvent = msg.into();
                 if event.epoch() == self.epoch() {
                     return Ok(Some(event));
                 } else {
@@ -429,7 +425,7 @@ impl<T: Payload> EpochManager<T> {
     async fn process_event(
         &mut self,
         peer_id: AccountAddress,
-        event: VerifiedEvent<T>,
+        event: VerifiedEvent,
     ) -> anyhow::Result<()> {
         match self.processor_mut() {
             RoundProcessor::Recovery(p) => {
@@ -453,7 +449,7 @@ impl<T: Payload> EpochManager<T> {
         }
     }
 
-    fn processor_mut(&mut self) -> &mut RoundProcessor<T> {
+    fn processor_mut(&mut self) -> &mut RoundProcessor {
         self.processor
             .as_mut()
             .expect("[EpochManager] not started yet")
@@ -479,7 +475,7 @@ impl<T: Payload> EpochManager<T> {
     pub async fn start(
         mut self,
         mut round_timeout_sender_rx: channel::Receiver<Round>,
-        mut network_receivers: NetworkReceivers<T>,
+        mut network_receivers: NetworkReceivers,
         mut reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     ) {
         // initial start of the processor

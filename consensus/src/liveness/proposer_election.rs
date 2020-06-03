@@ -9,7 +9,7 @@ use consensus_types::{
 /// ProposerElection incorporates the logic of choosing a leader among multiple candidates.
 /// We are open to a possibility for having multiple proposers per round, the ultimate choice
 /// of a proposal is exposed by the election protocol via the stream of proposals.
-pub trait ProposerElection<T> {
+pub trait ProposerElection {
     /// If a given author is a valid candidate for being a proposer, generate the info,
     /// otherwise return None.
     /// Note that this function is synchronous.
@@ -22,7 +22,7 @@ pub trait ProposerElection<T> {
     fn get_valid_proposer(&self, round: Round) -> Author;
 
     /// Return if a given proposed block is valid.
-    fn is_valid_proposal(&self, block: &Block<T>) -> bool {
+    fn is_valid_proposal(&self, block: &Block) -> bool {
         block.author().map_or(false, |author| {
             self.is_valid_proposer(author, block.round())
         })

@@ -10,7 +10,7 @@ use bytes::Bytes;
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::{
     block_retrieval::{BlockRetrievalRequest, BlockRetrievalResponse},
-    common::{Author, Payload},
+    common::Author,
     proposal_msg::ProposalMsg,
     sync_info::SyncInfo,
     vote_msg::VoteMsg,
@@ -24,7 +24,6 @@ use libra_types::{
 };
 use network::protocols::{network::Event, rpc::error::RpcError};
 use std::{
-    marker::PhantomData,
     mem::{discriminant, Discriminant},
     num::NonZeroUsize,
     time::{Duration, Instant},
@@ -40,33 +39,32 @@ pub struct IncomingBlockRetrievalRequest {
 
 /// Just a convenience struct to keep all the network proxy receiving queues in one place.
 /// Will be returned by the NetworkTask upon startup.
-pub struct NetworkReceivers<T> {
+pub struct NetworkReceivers {
     /// Provide a LIFO buffer for each (Author, MessageType) key
     pub consensus_messages: libra_channel::Receiver<
-        (AccountAddress, Discriminant<ConsensusMsg<T>>),
-        (AccountAddress, ConsensusMsg<T>),
+        (AccountAddress, Discriminant<ConsensusMsg>),
+        (AccountAddress, ConsensusMsg),
     >,
     pub block_retrieval: libra_channel::Receiver<AccountAddress, IncomingBlockRetrievalRequest>,
 }
 
 /// Implements the actual networking support for all consensus messaging.
 #[derive(Clone)]
-pub struct NetworkSender<T> {
+pub struct NetworkSender {
     author: Author,
-    network_sender: ConsensusNetworkSender<T>,
+    network_sender: ConsensusNetworkSender,
     // Self sender and self receivers provide a shortcut for sending the messages to itself.
     // (self sending is not supported by the networking API).
     // Note that we do not support self rpc requests as it might cause infinite recursive calls.
-    self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
+    self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
     validators: ValidatorVerifier,
-    marker: PhantomData<T>,
 }
 
-impl<T: Payload> NetworkSender<T> {
+impl NetworkSender {
     pub fn new(
         author: Author,
-        network_sender: ConsensusNetworkSender<T>,
-        self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
+        network_sender: ConsensusNetworkSender,
+        self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
         validators: ValidatorVerifier,
     ) -> Self {
         NetworkSender {
@@ -74,7 +72,6 @@ impl<T: Payload> NetworkSender<T> {
             network_sender,
             self_sender,
             validators,
-            marker: PhantomData,
         }
     }
 
@@ -85,11 +82,11 @@ impl<T: Payload> NetworkSender<T> {
         retrieval_request: BlockRetrievalRequest,
         from: Author,
         timeout: Duration,
-    ) -> anyhow::Result<BlockRetrievalResponse<T>> {
+    ) -> anyhow::Result<BlockRetrievalResponse> {
         ensure!(from != self.author, "Retrieve block from self");
         counters::BLOCK_RETRIEVAL_COUNT.inc_by(retrieval_request.num_blocks() as i64);
         let pre_retrieval_instant = Instant::now();
-        let msg = ConsensusMsg::BlockRetrievalRequest::<T>(Box::new(retrieval_request.clone()));
+        let msg = ConsensusMsg::BlockRetrievalRequest(Box::new(retrieval_request.clone()));
         let response_msg = self.network_sender.send_rpc(from, msg, timeout).await?;
         counters::BLOCK_RETRIEVAL_DURATION_S.observe_duration(pre_retrieval_instant.elapsed());
         let response = match response_msg {
@@ -121,13 +118,13 @@ impl<T: Payload> NetworkSender<T> {
     /// internal(to provide back pressure), it does not indicate the message is delivered or sent
     /// out. It does not give indication about when the message is delivered to the recipients,
     /// as well as there is no indication about the network failures.
-    pub async fn broadcast_proposal(&mut self, proposal: ProposalMsg<T>) {
+    pub async fn broadcast_proposal(&mut self, proposal: ProposalMsg) {
         let msg = ConsensusMsg::ProposalMsg(Box::new(proposal));
         // counters::UNWRAPPED_PROPOSAL_SIZE_BYTES.observe(msg.message.len() as f64);
         self.broadcast(msg).await
     }
 
-    async fn broadcast(&mut self, msg: ConsensusMsg<T>) {
+    async fn broadcast(&mut self, msg: ConsensusMsg) {
         // Directly send the message to ourself without going through network.
         let self_msg = Event::Message((self.author, msg.clone()));
         if let Err(err) = self.self_sender.send(Ok(self_msg)).await {
@@ -159,7 +156,7 @@ impl<T: Payload> NetworkSender<T> {
     pub async fn send_vote(&self, vote_msg: VoteMsg, recipients: Vec<Author>) {
         let mut network_sender = self.network_sender.clone();
         let mut self_sender = self.self_sender.clone();
-        let msg = ConsensusMsg::VoteMsg::<T>(Box::new(vote_msg));
+        let msg = ConsensusMsg::VoteMsg(Box::new(vote_msg));
         for peer in recipients {
             if self.author == peer {
                 let self_msg = Event::Message((self.author, msg.clone()));
@@ -176,7 +173,7 @@ impl<T: Payload> NetworkSender<T> {
 
     /// Broadcasts vote message to all validators
     pub async fn broadcast_vote(&mut self, vote_msg: VoteMsg) {
-        let msg = ConsensusMsg::VoteMsg::<T>(Box::new(vote_msg));
+        let msg = ConsensusMsg::VoteMsg(Box::new(vote_msg));
         self.broadcast(msg).await
     }
 
@@ -184,7 +181,7 @@ impl<T: Payload> NetworkSender<T> {
     /// The future is fulfilled as soon as the message is added to the internal network channel
     /// (does not indicate whether the message is delivered or sent out).
     pub fn send_sync_info(&self, sync_info: SyncInfo, recipient: Author) {
-        let msg = ConsensusMsg::SyncInfo::<T>(Box::new(sync_info));
+        let msg = ConsensusMsg::SyncInfo(Box::new(sync_info));
         let mut network_sender = self.network_sender.clone();
         if let Err(e) = network_sender.send_to(recipient, msg) {
             warn!(
@@ -197,12 +194,12 @@ impl<T: Payload> NetworkSender<T> {
     /// Broadcast about epoch changes with proof to the current validator set (including self)
     /// when we commit the reconfiguration block
     pub async fn broadcast_epoch_change(&mut self, proof: EpochChangeProof) {
-        let msg = ConsensusMsg::EpochChangeProof::<T>(Box::new(proof));
+        let msg = ConsensusMsg::EpochChangeProof(Box::new(proof));
         self.broadcast(msg).await
     }
 
     pub async fn notify_epoch_change(&mut self, proof: EpochChangeProof) {
-        let msg = ConsensusMsg::EpochChangeProof::<T>(Box::new(proof));
+        let msg = ConsensusMsg::EpochChangeProof(Box::new(proof));
         let self_msg = Event::Message((self.author, msg));
         if let Err(e) = self.self_sender.send(Ok(self_msg)).await {
             warn!("Failed to notify to self an epoch change {:?}", e);
@@ -210,21 +207,21 @@ impl<T: Payload> NetworkSender<T> {
     }
 }
 
-pub struct NetworkTask<T> {
+pub struct NetworkTask {
     consensus_messages_tx: libra_channel::Sender<
-        (AccountAddress, Discriminant<ConsensusMsg<T>>),
-        (AccountAddress, ConsensusMsg<T>),
+        (AccountAddress, Discriminant<ConsensusMsg>),
+        (AccountAddress, ConsensusMsg),
     >,
     block_retrieval_tx: libra_channel::Sender<AccountAddress, IncomingBlockRetrievalRequest>,
-    all_events: Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg<T>>>> + Send + Unpin>,
+    all_events: Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg>>> + Send + Unpin>,
 }
 
-impl<T: Payload> NetworkTask<T> {
+impl NetworkTask {
     /// Establishes the initial connections with the peers and returns the receivers.
     pub fn new(
-        network_events: ConsensusNetworkEvents<T>,
-        self_receiver: channel::Receiver<anyhow::Result<Event<ConsensusMsg<T>>>>,
-    ) -> (NetworkTask<T>, NetworkReceivers<T>) {
+        network_events: ConsensusNetworkEvents,
+        self_receiver: channel::Receiver<anyhow::Result<Event<ConsensusMsg>>>,
+    ) -> (NetworkTask, NetworkReceivers) {
         let (consensus_messages_tx, consensus_messages) = libra_channel::new(
             QueueStyle::LIFO,
             NonZeroUsize::new(1).unwrap(),

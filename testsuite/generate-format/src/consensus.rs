@@ -4,10 +4,12 @@
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     hash::{CryptoHasher, TestOnlyHasher},
+    multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature},
     traits::{SigningKey, Uniform},
 };
+use libra_types::{contract_event, event, transaction, write_set};
+use move_core_types::language_storage;
 use rand::{rngs::StdRng, SeedableRng};
-use serde::{Deserialize, Serialize};
 use serde_reflection::{Registry, Result, Samples, Tracer, TracerConfig};
 
 /// Return a relative path to start tracking changes in commits.
@@ -28,12 +30,10 @@ fn trace_crypto_values(tracer: &mut Tracer, samples: &mut Samples) -> Result<()>
 
     tracer.trace_value(samples, &public_key)?;
     tracer.trace_value(samples, &signature)?;
+    tracer.trace_value::<MultiEd25519PublicKey>(samples, &public_key.into())?;
+    tracer.trace_value::<MultiEd25519Signature>(samples, &signature.into())?;
     Ok(())
 }
-
-/// Placeholder type.
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Default, Clone)]
-struct Payload;
 
 /// Create a registry for consensus types.
 pub fn get_registry() -> Result<Registry> {
@@ -44,12 +44,21 @@ pub fn get_registry() -> Result<Registry> {
     trace_crypto_values(&mut tracer, &mut samples)?;
     tracer.trace_value(
         &mut samples,
-        &consensus_types::block::Block::<Payload>::make_genesis_block(),
+        &consensus_types::block::Block::make_genesis_block(),
     )?;
+    tracer.trace_value(&mut samples, &event::EventKey::random())?;
 
     // 2. Trace the main entry point(s) + every enum separately.
-    tracer.trace_type::<consensus::network_interface::ConsensusMsg<Payload>>(&samples)?;
-    tracer.trace_type::<consensus_types::block_data::BlockType<Payload>>(&samples)?;
+    tracer.trace_type::<contract_event::ContractEvent>(&samples)?;
+    tracer.trace_type::<language_storage::TypeTag>(&samples)?;
+    tracer.trace_type::<transaction::Transaction>(&samples)?;
+    tracer.trace_type::<transaction::TransactionArgument>(&samples)?;
+    tracer.trace_type::<transaction::TransactionPayload>(&samples)?;
+    tracer.trace_type::<transaction::authenticator::TransactionAuthenticator>(&samples)?;
+    tracer.trace_type::<write_set::WriteOp>(&samples)?;
+
+    tracer.trace_type::<consensus::network_interface::ConsensusMsg>(&samples)?;
+    tracer.trace_type::<consensus_types::block_data::BlockType>(&samples)?;
     tracer.trace_type::<consensus_types::block_retrieval::BlockRetrievalStatus>(&samples)?;
 
     tracer.registry()
