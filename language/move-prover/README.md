@@ -10,7 +10,7 @@ custom_edit_url: https://github.com/libra/libra/edit/master/language/move-prover
 
 # The Move Prover
 
-The Move Prover supports formal specification and verification of Move programs. It can automatically prove
+The Move Prover supports formal specification and verification of Move code. It can automatically prove
 logical properties of Move smart contracts, while providing a user experience similar to a type checker or linter.
 It's purpose is to make contracts more *trustworthy*, specifically:
 
@@ -22,6 +22,7 @@ It's purpose is to make contracts more *trustworthy*, specifically:
 
 For more information, refer to the documentation:
 
+- [To be done] Move Prover Whitepaper
 -  [Move Prover User Guide](./doc/user/prover-guide.md)
--  [To be done] Move Specification Language
+-  [Move Specification Language](./doc/user/spec-lang.md)
 -  [To be done] Move Prover Developer Guide
