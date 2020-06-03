@@ -142,7 +142,7 @@ pub(crate) async fn process_client_transaction_submission<V>(
 {
     let mut statuses =
         process_incoming_transactions(&smp, vec![transaction], TimelineState::NotReady).await;
-    log_txn_process_results(statuses.clone(), None);
+    log_txn_process_results(&statuses, None);
     let status;
     if statuses.is_empty() {
         error!("[shared mempool] missing status for client transaction submission");
@@ -170,14 +170,28 @@ pub(crate) async fn process_transaction_broadcast<V>(
     V: TransactionValidation,
 {
     let results = process_incoming_transactions(&smp, transactions, timeline_state).await;
-    log_txn_process_results(results, Some(peer.peer_id()));
+    log_txn_process_results(&results, Some(peer.peer_id()));
     // send back ACK
     let mut network_sender = smp
         .network_senders
         .get_mut(&peer.network_id())
         .expect("[shared mempool] missing network sender");
+    let retry_txns = results
+        .into_iter()
+        .enumerate()
+        .filter_map(|(idx, result)| {
+            if is_txn_retryable(result) {
+                Some(idx as u64)
+            } else {
+                None
+            }
+        })
+        .collect();
     if let Err(e) = send_mempool_sync_msg(
-        MempoolSyncMsg::BroadcastTransactionsResponse { request_id },
+        MempoolSyncMsg::BroadcastTransactionsResponse {
+            request_id,
+            retry_txns,
+        },
         peer.peer_id(),
         &mut network_sender,
     ) {
@@ -186,6 +200,12 @@ pub(crate) async fn process_transaction_broadcast<V>(
             peer, e
         );
     }
+}
+
+fn is_txn_retryable(result: SubmissionStatus) -> bool {
+    let mempool_status = result.0.code;
+    mempool_status == MempoolStatusCode::TooManyTransactions
+        || mempool_status == MempoolStatusCode::MempoolIsFull
 }
 
 /// submits a list of SignedTransaction to the local mempool
@@ -279,7 +299,7 @@ where
 }
 
 // TODO update counters to ID peers using PeerNetworkId
-fn log_txn_process_results(results: Vec<SubmissionStatus>, sender: Option<PeerId>) {
+fn log_txn_process_results(results: &[SubmissionStatus], sender: Option<PeerId>) {
     let sender = match sender {
         Some(peer) => peer.to_string(),
         None => "client".to_string(),
@@ -311,6 +331,7 @@ fn log_txn_process_results(results: Vec<SubmissionStatus>, sender: Option<PeerId
 pub(crate) fn process_broadcast_ack(
     mempool: &Mutex<CoreMempool>,
     request_id: String,
+    retry_txns: Vec<u64>,
     is_validator: bool, // whether this node is a validator or not
 ) {
     if is_validator {
@@ -323,8 +344,10 @@ pub(crate) fn process_broadcast_ack(
                 .lock()
                 .expect("[shared mempool] failed to acquire mempool lock");
 
-            for txn in mempool.timeline_range(start_id, end_id).iter() {
-                mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
+            for (idx, txn) in mempool.timeline_range(start_id, end_id).iter().enumerate() {
+                if !retry_txns.contains(&(idx as u64 + start_id)) {
+                    mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
+                }
             }
         }
         Err(err) => warn!("[shared mempool] ACK with invalid request_id: {:?}", err),
