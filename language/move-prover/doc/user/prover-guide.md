@@ -20,7 +20,7 @@ release mode than in debug mode.
 In the sequel, we assume that `mvp` invokes the binary of the prover, either via an alias as above, or by
 other means.
 
-## Command Line Interface and Configuration
+## Command Line Interface
 
 The Move prover has a traditional compiler-style command line interface: you pass a set of sources, tell it where to
 look for dependencies of those sources, and optionally provide flags to control operation:
@@ -58,19 +58,19 @@ explain the different types of diagnoses below, based on the following evolving 
 
 ```move
 module M {
-  resource struct Counter {
-      value: u8,
-  }
+    resource struct Counter {
+        value: u8,
+    }
 
-  public fun increment(a: address) acquires Counter {
-      let r = borrow_global_mut<Counter>(a);
-      r.value = r.value + 1;
-  }
+    public fun increment(a: address) acquires Counter {
+        let r = borrow_global_mut<Counter>(a);
+        r.value = r.value + 1;
+    }
 
-  spec fun increment {
-      aborts_if aborts_if !exists<Counter>(a);
-      ensures global<Counter>(a).value == old(global<Counter>(a)).value + 1;
-  }
+    spec fun increment {
+        aborts_if aborts_if !exists<Counter>(a);
+        ensures global<Counter>(a).value == old(global<Counter>(a)).value + 1;
+    }
 }
 ```
 
