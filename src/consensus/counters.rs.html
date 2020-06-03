@@ -420,12 +420,6 @@
 <span id="420">420</span>
 <span id="421">421</span>
 <span id="422">422</span>
-<span id="423">423</span>
-<span id="424">424</span>
-<span id="425">425</span>
-<span id="426">426</span>
-<span id="427">427</span>
-<span id="428">428</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -564,12 +558,6 @@
 <span class="doccomment">/// (both primary and secondary)</span>
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">PROPOSALS_COUNT</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounter</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
     <span class="macro">register_int_counter</span><span class="macro">!</span>(<span class="string">&quot;libra_consensus_proposals_count&quot;</span>, <span class="string">&quot;Count of the block proposals sent by this validator since last restart (both primary and secondary)&quot;</span>).<span class="ident">unwrap</span>()
-});
-
-<span class="doccomment">/// Count the number of times a validator voted for secondary proposals (upon timeout) since</span>
-<span class="doccomment">/// last restart.</span>
-<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">VOTE_SECONDARY_PROPOSAL_COUNT</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounter</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
-    <span class="macro">register_int_counter</span><span class="macro">!</span>(<span class="string">&quot;libra_consensus_vote_secondary_proposal_count&quot;</span>, <span class="string">&quot;Count the number of times a validator voted for secondary proposals (upon timeout) since last restart.&quot;</span>).<span class="ident">unwrap</span>()
 });
 
 <span class="doccomment">/// Count the number of times a validator voted for a nil block since last restart.</span>

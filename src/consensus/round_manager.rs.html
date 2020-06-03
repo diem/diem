@@ -796,41 +796,13 @@
 <span id="796">796</span>
 <span id="797">797</span>
 <span id="798">798</span>
-<span id="799">799</span>
-<span id="800">800</span>
-<span id="801">801</span>
-<span id="802">802</span>
-<span id="803">803</span>
-<span id="804">804</span>
-<span id="805">805</span>
-<span id="806">806</span>
-<span id="807">807</span>
-<span id="808">808</span>
-<span id="809">809</span>
-<span id="810">810</span>
-<span id="811">811</span>
-<span id="812">812</span>
-<span id="813">813</span>
-<span id="814">814</span>
-<span id="815">815</span>
-<span id="816">816</span>
-<span id="817">817</span>
-<span id="818">818</span>
-<span id="819">819</span>
-<span id="820">820</span>
-<span id="821">821</span>
-<span id="822">822</span>
-<span id="823">823</span>
-<span id="824">824</span>
-<span id="825">825</span>
-<span id="826">826</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">sync</span>::<span class="ident">Arc</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
 
-<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">ensure</span>, <span class="ident">format_err</span>, <span class="ident">Context</span>, <span class="prelude-ty">Result</span>};
+<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">ensure</span>, <span class="ident">Context</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">termion</span>::<span class="ident">color</span>::<span class="kw-2">*</span>;
 
 <span class="kw">use</span> <span class="ident">consensus_types</span>::{
@@ -1077,10 +1049,9 @@
                 <span class="ident">counters</span>::<span class="ident">TIMEOUT_ROUNDS_COUNT</span>.<span class="ident">inc</span>();
             }
         };
-        <span class="kw">if</span> <span class="self">self</span>
+        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>
             .<span class="ident">proposer_election</span>
             .<span class="ident">is_valid_proposer</span>(<span class="self">self</span>.<span class="ident">proposal_generator</span>.<span class="ident">author</span>(), <span class="ident">new_round_event</span>.<span class="ident">round</span>)
-            .<span class="ident">is_none</span>()
         {
             <span class="kw">return</span>;
         }
@@ -1153,8 +1124,7 @@
         );
         <span class="macro">ensure</span><span class="macro">!</span>(
             <span class="self">self</span>.<span class="ident">proposer_election</span>
-                .<span class="ident">is_valid_proposer</span>(<span class="ident">proposal_msg</span>.<span class="ident">proposer</span>(), <span class="ident">proposal_msg</span>.<span class="ident">round</span>())
-                .<span class="ident">is_some</span>(),
+                .<span class="ident">is_valid_proposal</span>(<span class="ident">proposal_msg</span>.<span class="ident">proposal</span>()),
             <span class="string">&quot;[RoundManager] Proposer {} for block {} is not a valid proposer for this round&quot;</span>,
             <span class="ident">proposal_msg</span>.<span class="ident">proposer</span>(),
             <span class="ident">proposal_msg</span>.<span class="ident">proposal</span>()
@@ -1169,10 +1139,7 @@
             <span class="ident">proposal_msg</span>.<span class="ident">round</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">current_round</span>,
             <span class="string">&quot;[RoundManager] Proposal round doesn&#39;t match current round after sync&quot;</span>
         );
-
-        <span class="self">self</span>.<span class="ident">proposer_election</span>
-            .<span class="ident">process_proposal</span>(<span class="ident">proposal_msg</span>.<span class="ident">take_proposal</span>())
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;[RoundManager] Not primary proposal&quot;</span>))
+        <span class="prelude-val">Ok</span>(<span class="ident">proposal_msg</span>.<span class="ident">take_proposal</span>())
     }
 
     <span class="doccomment">/// The function makes sure that it brings the missing dependencies from the QC and LedgerInfo</span>
@@ -1259,11 +1226,11 @@
             <span class="prelude-val">Some</span>(<span class="ident">vote</span>) <span class="kw">if</span> <span class="ident">vote</span>.<span class="ident">vote_data</span>().<span class="ident">proposed</span>().<span class="ident">round</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">round</span> <span class="op">=</span><span class="op">&gt;</span> (<span class="bool-val">true</span>, <span class="ident">vote</span>),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="comment">// Didn&#39;t vote in this round yet, generate a backup vote</span>
-                <span class="kw">let</span> <span class="ident">backup_vote</span> <span class="op">=</span> <span class="self">self</span>
-                    .<span class="ident">gen_backup_vote</span>(<span class="ident">round</span>)
-                    .<span class="kw">await</span>
-                    .<span class="ident">context</span>(<span class="string">&quot;[RoundManager] Generate backup vote&quot;</span>)<span class="question-mark">?</span>;
-                (<span class="bool-val">false</span>, <span class="ident">backup_vote</span>)
+                <span class="kw">let</span> <span class="ident">nil_block</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">proposal_generator</span>.<span class="ident">generate_nil_block</span>(<span class="ident">round</span>)<span class="question-mark">?</span>;
+                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Planning to vote for a NIL block {}&quot;</span>, <span class="ident">nil_block</span>);
+                <span class="ident">counters</span>::<span class="ident">VOTE_NIL_COUNT</span>.<span class="ident">inc</span>();
+                <span class="kw">let</span> <span class="ident">nil_vote</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute_and_vote</span>(<span class="ident">nil_block</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+                (<span class="bool-val">false</span>, <span class="ident">nil_vote</span>)
             }
         };
 
@@ -1271,7 +1238,7 @@
             <span class="string">&quot;Round {} timed out: {}, expected round proposer was {:?}, broadcasting the vote to all replicas&quot;</span>,
             <span class="ident">round</span>,
             <span class="kw">if</span> <span class="ident">use_last_vote</span> { <span class="string">&quot;already executed and voted at this round&quot;</span> } <span class="kw">else</span> { <span class="string">&quot;will try to generate a backup vote&quot;</span> },
-            <span class="self">self</span>.<span class="ident">proposer_election</span>.<span class="ident">get_valid_proposers</span>(<span class="ident">round</span>).<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span>.<span class="ident">short_str</span>()).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+            <span class="self">self</span>.<span class="ident">proposer_election</span>.<span class="ident">get_valid_proposer</span>(<span class="ident">round</span>),
         );
 
         <span class="kw">if</span> <span class="op">!</span><span class="ident">timeout_vote</span>.<span class="ident">is_timeout</span>() {
@@ -1287,28 +1254,6 @@
         <span class="kw">let</span> <span class="ident">timeout_vote_msg</span> <span class="op">=</span> <span class="ident">VoteMsg</span>::<span class="ident">new</span>(<span class="ident">timeout_vote</span>, <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">sync_info</span>());
         <span class="self">self</span>.<span class="ident">network</span>.<span class="ident">broadcast_vote</span>(<span class="ident">timeout_vote_msg</span>).<span class="kw">await</span>;
         <span class="prelude-val">Ok</span>(())
-    }
-
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">gen_backup_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vote</span><span class="op">&gt;</span> {
-        <span class="comment">// We generally assume that this function is called only if no votes have been sent in this</span>
-        <span class="comment">// round, but having a duplicate proposal here would work ok because block store makes</span>
-        <span class="comment">// sure the calls to `execute_and_insert_block` are idempotent.</span>
-
-        <span class="comment">// Either use the best proposal received in this round or a NIL block if nothing available.</span>
-        <span class="kw">let</span> <span class="ident">block</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">proposer_election</span>.<span class="ident">take_backup_proposal</span>(<span class="ident">round</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">b</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Planning to vote for a backup proposal {}&quot;</span>, <span class="ident">b</span>);
-                <span class="ident">counters</span>::<span class="ident">VOTE_SECONDARY_PROPOSAL_COUNT</span>.<span class="ident">inc</span>();
-                <span class="ident">b</span>
-            }
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">nil_block</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">proposal_generator</span>.<span class="ident">generate_nil_block</span>(<span class="ident">round</span>)<span class="question-mark">?</span>;
-                <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Planning to vote for a NIL block {}&quot;</span>, <span class="ident">nil_block</span>);
-                <span class="ident">counters</span>::<span class="ident">VOTE_NIL_COUNT</span>.<span class="ident">inc</span>();
-                <span class="ident">nil_block</span>
-            }
-        };
-        <span class="self">self</span>.<span class="ident">execute_and_vote</span>(<span class="ident">block</span>).<span class="kw">await</span>
     }
 
     <span class="doccomment">/// This function is called only after all the dependencies of the given QC have been retrieved.</span>
@@ -1347,12 +1292,12 @@
 
         <span class="kw">let</span> <span class="ident">recipients</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">proposer_election</span>
-            .<span class="ident">get_valid_proposers</span>(<span class="ident">proposal_round</span> <span class="op">+</span> <span class="number">1</span>);
+            .<span class="ident">get_valid_proposer</span>(<span class="ident">proposal_round</span> <span class="op">+</span> <span class="number">1</span>);
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{}Voted: {} {}&quot;</span>, <span class="ident">Fg</span>(<span class="ident">Green</span>), <span class="ident">Fg</span>(<span class="ident">Reset</span>), <span class="ident">vote</span>);
 
         <span class="self">self</span>.<span class="ident">round_state</span>.<span class="ident">record_vote</span>(<span class="ident">vote</span>.<span class="ident">clone</span>());
         <span class="kw">let</span> <span class="ident">vote_msg</span> <span class="op">=</span> <span class="ident">VoteMsg</span>::<span class="ident">new</span>(<span class="ident">vote</span>, <span class="self">self</span>.<span class="ident">block_store</span>.<span class="ident">sync_info</span>());
-        <span class="self">self</span>.<span class="ident">network</span>.<span class="ident">send_vote</span>(<span class="ident">vote_msg</span>, <span class="ident">recipients</span>).<span class="kw">await</span>;
+        <span class="self">self</span>.<span class="ident">network</span>.<span class="ident">send_vote</span>(<span class="ident">vote_msg</span>, <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">recipients</span>]).<span class="kw">await</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -1514,8 +1459,7 @@
             <span class="kw">let</span> <span class="ident">next_round</span> <span class="op">=</span> <span class="ident">vote_msg</span>.<span class="ident">vote</span>().<span class="ident">vote_data</span>().<span class="ident">proposed</span>().<span class="ident">round</span>() <span class="op">+</span> <span class="number">1</span>;
             <span class="macro">ensure</span><span class="macro">!</span>(
                 <span class="self">self</span>.<span class="ident">proposer_election</span>
-                    .<span class="ident">is_valid_proposer</span>(<span class="self">self</span>.<span class="ident">proposal_generator</span>.<span class="ident">author</span>(), <span class="ident">next_round</span>)
-                    .<span class="ident">is_some</span>(),
+                    .<span class="ident">is_valid_proposer</span>(<span class="self">self</span>.<span class="ident">proposal_generator</span>.<span class="ident">author</span>(), <span class="ident">next_round</span>),
                 <span class="string">&quot;[RoundManager] Received {}, but I am not a valid proposer for round {}, ignore.&quot;</span>,
                 <span class="ident">vote_msg</span>,
                 <span class="ident">next_round</span>

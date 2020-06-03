@@ -175,39 +175,12 @@
 <span id="175">175</span>
 <span id="176">176</span>
 <span id="177">177</span>
-<span id="178">178</span>
-<span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
-<span id="182">182</span>
-<span id="183">183</span>
-<span id="184">184</span>
-<span id="185">185</span>
-<span id="186">186</span>
-<span id="187">187</span>
-<span id="188">188</span>
-<span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
-<span id="196">196</span>
-<span id="197">197</span>
-<span id="198">198</span>
-<span id="199">199</span>
-<span id="200">200</span>
-<span id="201">201</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">liveness</span>::<span class="ident">proposer_election</span>::{<span class="ident">next</span>, <span class="ident">ProposerElection</span>};
-<span class="kw">use</span> <span class="ident">consensus_types</span>::{
-    <span class="ident">block</span>::<span class="ident">Block</span>,
-    <span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Round</span>},
-};
+<span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Round</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">block_metadata</span>::{<span class="ident">new_block_event_key</span>, <span class="ident">NewBlockEvent</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">export</span>::<span class="ident">PhantomData</span>;
@@ -355,15 +328,7 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">ProposerElection</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LeaderReputation</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">is_valid_proposer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">author</span>: <span class="ident">Author</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Author</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">get_valid_proposers</span>(<span class="ident">round</span>).<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">author</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">author</span>)
-        } <span class="kw">else</span> {
-            <span class="prelude-val">None</span>
-        }
-    }
-
-    <span class="kw">fn</span> <span class="ident">get_valid_proposers</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Author</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">get_valid_proposer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Author</span> {
         <span class="comment">// TODO: configure the round gap</span>
         <span class="kw">let</span> <span class="ident">target_round</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">round</span> <span class="op">&gt;</span><span class="op">=</span> <span class="number">4</span> { <span class="ident">round</span> <span class="op">-</span> <span class="number">4</span> } <span class="kw">else</span> { <span class="number">0</span> };
         <span class="kw">let</span> <span class="ident">sliding_window</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">backend</span>.<span class="ident">get_block_metadata</span>(<span class="ident">target_round</span>);
@@ -385,20 +350,7 @@
                 }
             })
             .<span class="ident">unwrap_err</span>();
-        <span class="macro">vec</span><span class="macro">!</span>[<span class="self">self</span>.<span class="ident">proposers</span>[<span class="ident">chosen_index</span>]]
-    }
-
-    <span class="kw">fn</span> <span class="ident">process_proposal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposal</span>: <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">author</span> <span class="op">=</span> <span class="ident">proposal</span>.<span class="ident">author</span>()<span class="question-mark">?</span>;
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">get_valid_proposers</span>(<span class="ident">proposal</span>.<span class="ident">round</span>()).<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">author</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">proposal</span>)
-        } <span class="kw">else</span> {
-            <span class="prelude-val">None</span>
-        }
-    }
-
-    <span class="kw">fn</span> <span class="ident">take_backup_proposal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="prelude-val">None</span>
+        <span class="self">self</span>.<span class="ident">proposers</span>[<span class="ident">chosen_index</span>]
     }
 }
 </pre></div>

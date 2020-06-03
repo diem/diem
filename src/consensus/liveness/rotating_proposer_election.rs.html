@@ -38,46 +38,12 @@
 <span id="38">38</span>
 <span id="39">39</span>
 <span id="40">40</span>
-<span id="41">41</span>
-<span id="42">42</span>
-<span id="43">43</span>
-<span id="44">44</span>
-<span id="45">45</span>
-<span id="46">46</span>
-<span id="47">47</span>
-<span id="48">48</span>
-<span id="49">49</span>
-<span id="50">50</span>
-<span id="51">51</span>
-<span id="52">52</span>
-<span id="53">53</span>
-<span id="54">54</span>
-<span id="55">55</span>
-<span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
-<span id="63">63</span>
-<span id="64">64</span>
-<span id="65">65</span>
-<span id="66">66</span>
-<span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">liveness</span>::<span class="ident">proposer_election</span>::<span class="ident">ProposerElection</span>;
-<span class="kw">use</span> <span class="ident">consensus_types</span>::{
-    <span class="ident">block</span>::<span class="ident">Block</span>,
-    <span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Payload</span>, <span class="ident">Round</span>},
-};
+<span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Payload</span>, <span class="ident">Round</span>};
 
 <span class="doccomment">/// The rotating proposer maps a round to an author according to a round-robin rotation.</span>
 <span class="doccomment">/// A fixed proposer strategy loses liveness when the fixed proposer is down. Rotating proposers</span>
@@ -94,7 +60,6 @@
 <span class="doccomment">/// election only).</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">choose_leader</span>(<span class="ident">peers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Author</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Author</span> {
     <span class="comment">// As it is just a tmp hack function, pick the min PeerId to be a proposer.</span>
-    <span class="comment">// TODO: VRF will be integrated later.</span>
     <span class="ident">peers</span>.<span class="ident">into_iter</span>().<span class="ident">min</span>().<span class="ident">expect</span>(<span class="string">&quot;No trusted peers found!&quot;</span>)
 }
 
@@ -106,39 +71,12 @@
             <span class="ident">contiguous_rounds</span>,
         }
     }
-
-    <span class="kw">fn</span> <span class="ident">get_proposer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Author</span> {
-        <span class="self">self</span>.<span class="ident">proposers</span>
-            [((<span class="ident">round</span> <span class="op">/</span> <span class="ident">u64</span>::<span class="ident">from</span>(<span class="self">self</span>.<span class="ident">contiguous_rounds</span>)) <span class="op">%</span> <span class="self">self</span>.<span class="ident">proposers</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>) <span class="kw">as</span> <span class="ident">usize</span>]
-    }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">ProposerElection</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RotatingProposer</span> {
-    <span class="kw">fn</span> <span class="ident">is_valid_proposer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">author</span>: <span class="ident">Author</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Author</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">get_proposer</span>(<span class="ident">round</span>) <span class="op">=</span><span class="op">=</span> <span class="ident">author</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">author</span>)
-        } <span class="kw">else</span> {
-            <span class="prelude-val">None</span>
-        }
-    }
-
-    <span class="kw">fn</span> <span class="ident">get_valid_proposers</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Author</span><span class="op">&gt;</span> {
-        <span class="macro">vec</span><span class="macro">!</span>[<span class="self">self</span>.<span class="ident">get_proposer</span>(<span class="ident">round</span>)]
-    }
-
-    <span class="kw">fn</span> <span class="ident">process_proposal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposal</span>: <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="comment">// This is a simple rotating proposer, the proposal is processed in the context of the</span>
-        <span class="comment">// caller task, no synchronization required because there is no mutable state.</span>
-        <span class="kw">let</span> <span class="ident">round_author</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_proposer</span>(<span class="ident">proposal</span>.<span class="ident">round</span>());
-        <span class="kw">if</span> <span class="prelude-val">Some</span>(<span class="ident">round_author</span>) <span class="op">!</span><span class="op">=</span> <span class="ident">proposal</span>.<span class="ident">author</span>() {
-            <span class="prelude-val">None</span>
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">proposal</span>)
-        }
-    }
-
-    <span class="kw">fn</span> <span class="ident">take_backup_proposal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="prelude-val">None</span>
+    <span class="kw">fn</span> <span class="ident">get_valid_proposer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Author</span> {
+        <span class="self">self</span>.<span class="ident">proposers</span>
+            [((<span class="ident">round</span> <span class="op">/</span> <span class="ident">u64</span>::<span class="ident">from</span>(<span class="self">self</span>.<span class="ident">contiguous_rounds</span>)) <span class="op">%</span> <span class="self">self</span>.<span class="ident">proposers</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>) <span class="kw">as</span> <span class="ident">usize</span>]
     }
 }
 </pre></div>
