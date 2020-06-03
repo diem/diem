@@ -12,18 +12,22 @@
 <span id="12">12</span>
 <span id="13">13</span>
 <span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">mod</span> <span class="ident">error</span>;
 <span class="kw">mod</span> <span class="ident">full_node_config</span>;
+<span class="kw">mod</span> <span class="ident">key_manager_config</span>;
 <span class="kw">mod</span> <span class="ident">swarm_config</span>;
 <span class="kw">mod</span> <span class="ident">validator_config</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">error</span>::<span class="ident">Error</span>,
     <span class="ident">full_node_config</span>::<span class="ident">FullNodeConfig</span>,
+    <span class="ident">key_manager_config</span>::<span class="ident">KeyManagerConfig</span>,
     <span class="ident">swarm_config</span>::{<span class="ident">BuildSwarm</span>, <span class="ident">SwarmConfig</span>},
     <span class="ident">validator_config</span>::{<span class="ident">test_config</span>, <span class="ident">ValidatorConfig</span>},
 };

@@ -341,11 +341,6 @@
 <span id="341">341</span>
 <span id="342">342</span>
 <span id="343">343</span>
-<span id="344">344</span>
-<span id="345">345</span>
-<span id="346">346</span>
-<span id="347">347</span>
-<span id="348">348</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -355,8 +350,8 @@
 <span class="kw">use</span> <span class="ident">executor</span>::<span class="ident">db_bootstrapper</span>;
 <span class="kw">use</span> <span class="ident">libra_config</span>::{
     <span class="ident">config</span>::{
-        <span class="ident">ConsensusType</span>, <span class="ident">NodeConfig</span>, <span class="ident">RemoteService</span>, <span class="ident">SafetyRulesService</span>, <span class="ident">SecureBackend</span>, <span class="ident">Token</span>,
-        <span class="ident">VaultConfig</span>,
+        <span class="ident">ConsensusType</span>, <span class="ident">NodeConfig</span>, <span class="ident">OnDiskStorageConfig</span>, <span class="ident">RemoteService</span>, <span class="ident">SafetyRulesService</span>,
+        <span class="ident">SecureBackend</span>, <span class="ident">Token</span>, <span class="ident">VaultConfig</span>,
     },
     <span class="ident">generator</span>,
 };
@@ -457,23 +452,18 @@
         <span class="self">self</span>
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">safety_rules_backend</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">safety_rules_backend</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">safety_rules_backend</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">safety_rules_backend</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+        <span class="ident">safety_rules_host</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+        <span class="ident">safety_rules_namespace</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+        <span class="ident">safety_rules_token</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
         <span class="self">self</span>.<span class="ident">safety_rules_backend</span> <span class="op">=</span> <span class="ident">safety_rules_backend</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">safety_rules_host</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">safety_rules_host</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
         <span class="self">self</span>.<span class="ident">safety_rules_host</span> <span class="op">=</span> <span class="ident">safety_rules_host</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">safety_rules_namespace</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">safety_rules_namespace</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
         <span class="self">self</span>.<span class="ident">safety_rules_namespace</span> <span class="op">=</span> <span class="ident">safety_rules_namespace</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">safety_rules_token</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">safety_rules_token</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
         <span class="self">self</span>.<span class="ident">safety_rules_token</span> <span class="op">=</span> <span class="ident">safety_rules_token</span>;
+
         <span class="self">self</span>
     }
 
@@ -610,7 +600,7 @@
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">backend</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">safety_rules_backend</span> {
             <span class="ident">safety_rules_config</span>.<span class="ident">backend</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">backend</span>.<span class="ident">as_str</span>() {
                 <span class="string">&quot;in-memory&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SecureBackend</span>::<span class="ident">InMemoryStorage</span>,
-                <span class="string">&quot;on-disk&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">safety_rules_config</span>.<span class="ident">backend</span>.<span class="ident">clone</span>(),
+                <span class="string">&quot;on-disk&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SecureBackend</span>::<span class="ident">OnDiskStorage</span>(<span class="ident">OnDiskStorageConfig</span>::<span class="ident">default</span>()),
                 <span class="string">&quot;vault&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SecureBackend</span>::<span class="ident">Vault</span>(<span class="ident">VaultConfig</span> {
                     <span class="ident">namespace</span>: <span class="self">self</span>.<span class="ident">safety_rules_namespace</span>.<span class="ident">clone</span>(),
                     <span class="ident">server</span>: <span class="self">self</span>

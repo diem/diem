@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["Error",""]],"fn":[["test_config",""]],"struct":[["FullNodeConfig",""],["SwarmConfig",""],["ValidatorConfig",""]],"trait":[["BuildSwarm",""]]});
+initSidebarItems({"enum":[["Error",""]],"fn":[["test_config",""]],"struct":[["FullNodeConfig",""],["KeyManagerConfig",""],["SwarmConfig",""],["ValidatorConfig",""]],"trait":[["BuildSwarm",""]]});
