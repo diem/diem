@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use consensus_types::{block::Block, common::Payload};
-use executor_types::StateComputeResult;
+use executor_types::{Error, StateComputeResult};
 use libra_crypto::HashValue;
 use libra_types::ledger_info::LedgerInfoWithSignatures;
 
@@ -37,7 +37,7 @@ pub trait StateComputer: Send + Sync {
         block: &Block,
         // The parent block root hash.
         parent_block_id: HashValue,
-    ) -> Result<StateComputeResult>;
+    ) -> Result<StateComputeResult, Error>;
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     async fn commit(

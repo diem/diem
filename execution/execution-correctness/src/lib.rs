@@ -21,7 +21,7 @@ pub use crate::{
     execution_correctness_manager::ExecutionCorrectnessManager, process::Process,
 };
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(test)]
 #[path = "process_client_wrapper.rs"]
 pub mod process_client_wrapper;
 

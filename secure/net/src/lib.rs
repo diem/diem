@@ -109,9 +109,9 @@ pub struct NetworkServer {
 
 impl NetworkServer {
     pub fn new(listen: SocketAddr) -> Self {
-        let listener = TcpListener::bind(listen).unwrap();
+        let listener = TcpListener::bind(listen);
         Self {
-            listener: Some(listener),
+            listener: Some(listener.unwrap()),
             stream: None,
         }
     }

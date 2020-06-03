@@ -16,8 +16,7 @@ use consensus_types::{
     timeout_certificate::TimeoutCertificate,
 };
 use debug_interface::prelude::*;
-use executor_types::StateComputeResult;
-
+use executor_types::{Error, StateComputeResult};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -33,6 +32,10 @@ use termion::color::*;
 #[cfg(test)]
 #[path = "block_store_test.rs"]
 mod block_store_test;
+
+#[cfg(test)]
+#[path = "block_store_and_lec_recovery_test.rs"]
+mod block_store_and_lec_recovery_test;
 
 #[path = "sync_manager.rs"]
 pub mod sync_manager;
@@ -290,7 +293,27 @@ impl BlockStore {
         if let Some(existing_block) = self.get_block(block.id()) {
             return Ok(existing_block);
         }
-        let executed_block = self.execute_block(block)?;
+        ensure!(
+            self.inner.read().unwrap().root().round() < block.round(),
+            "Block with old round"
+        );
+
+        let executed_block = match self.execute_block(block.clone()) {
+            Ok(res) => Ok(res),
+            Err(Error::BlockNotFound(parent_block_id)) => {
+                // recover the block tree in executor
+                let blocks_to_reexecute = self
+                    .path_from_root(parent_block_id)
+                    .unwrap_or_else(Vec::new);
+
+                for block in blocks_to_reexecute {
+                    self.execute_block(block.block().clone())?;
+                }
+                self.execute_block(block)
+            }
+            err => err,
+        }?;
+
         // ensure local time past the block time
         let block_time = Duration::from_micros(executed_block.timestamp_usecs());
         self.time_service.wait_until(block_time);
@@ -300,25 +323,14 @@ impl BlockStore {
         self.inner.write().unwrap().insert_block(executed_block)
     }
 
-    fn execute_block(&self, block: Block) -> anyhow::Result<ExecutedBlock> {
+    fn execute_block(&self, block: Block) -> anyhow::Result<ExecutedBlock, Error> {
         trace_code_block!("block_store::execute_block", {"block", block.id()});
-        ensure!(
-            self.inner.read().unwrap().root().round() < block.round(),
-            "Block with old round"
-        );
-
-        let parent_block = self
-            .get_block(block.parent_id())
-            .ok_or_else(|| format_err!("Block with missing parent {}", block.parent_id()))?;
 
         // Although NIL blocks don't have a payload, we still send a T::default() to compute
         // because we may inject a block prologue transaction.
-        let state_compute_result_with_sig = self
-            .state_computer
-            .compute(&block, parent_block.id())
-            .with_context(|| format!("Execution failure for block {}", block))?;
+        let state_compute_result = self.state_computer.compute(&block, block.parent_id())?;
 
-        Ok(ExecutedBlock::new(block, state_compute_result_with_sig))
+        Ok(ExecutedBlock::new(block, state_compute_result))
     }
 
     /// Validates quorum certificates and inserts it into block tree assuming dependencies exist.

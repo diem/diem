@@ -830,6 +830,7 @@ dependencies = [
  "debug-interface 0.1.0",
  "execution-correctness 0.1.0",
  "executor 0.1.0",
+ "executor-test-helpers 0.1.0",
  "executor-types 0.1.0",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1366,13 +1367,9 @@ dependencies = [
  "libra-types 0.1.0",
  "libra-vm 0.1.0",
  "libra-workspace-hack 0.1.0",
- "libradb 0.1.0",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-client 0.1.0",
- "storage-interface 0.1.0",
- "storage-service 0.1.0",
- "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
  "workspace-builder 0.1.0",
@@ -1441,11 +1438,19 @@ dependencies = [
 name = "executor-test-helpers"
 version = "0.1.0"
 dependencies = [
+ "config-builder 0.1.0",
+ "executor 0.1.0",
  "executor-types 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-temppath 0.1.0",
  "libra-types 0.1.0",
+ "libra-vm 0.1.0",
  "libra-workspace-hack 0.1.0",
+ "libradb 0.1.0",
+ "storage-interface 0.1.0",
+ "storage-service 0.1.0",
+ "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
