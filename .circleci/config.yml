@@ -16,6 +16,10 @@ executors:
     docker:
       - image: circleci/rust:buster
     resource_class: xlarge
+  premainnet-cluster-test-executor:
+    docker:
+      - image: circleci/rust:buster
+    resource_class: xlarge
   audit-executor:
     docker:
       - image: circleci/rust:buster
@@ -554,12 +558,9 @@ jobs:
           command: |
             gh-pages --dotfiles --message "[skip ci] documentation update" --dist target/doc
   premainnet_cluster_test:
-    machine:
-      docker_layer_caching: true
-      image: ubuntu-1604:202004-01
-    resource_class: 2xlarge  
+    executor: premainnet-cluster-test-executor
+    description: Run cluster test against Premainnet
     steps:
-      - checkout
       - run:
           name: Set Premainnet Clustetest Environment
           command: |
@@ -572,7 +573,7 @@ jobs:
             a569b48655cbc40d092379f55e630966-e1f284c7eb8add73.elb.eu-west-1.amazonaws.com:80,\
             aa4d66f81665240019022d50326c1654-cf61b8e99df12293.elb.eu-west-1.amazonaws.com:80,\
             a5b46d6b8b23e42538ec0de5f0680350-46d80c995764cdd9.elb.us-west-2.amazonaws.com:80,\
-            a88662827a2d341bbb7beb883d6e32b9-2e166f46672c7f2b.elb.us-east-1.amazonaws.com:80'\
+            a88662827a2d341bbb7beb883d6e32b9-2e166f46672c7f2b.elb.us-east-1.amazonaws.com:80,\
             libra-fullnode-pre-mainnet.shopifyapps.com:80,\
             20.50.43.42:80,\
             34.68.134.0:80,\
@@ -585,42 +586,33 @@ jobs:
             echo 'export CONFIG_NUM_VAL_PREMAIN=15' >> $BASH_ENV
             echo 'export CARGO_INCREMENTAL=0' >> $BASH_ENV
             echo 'export CI_TIMEOUT="timeout 40m"' >> $BASH_ENV
+      - checkout
       - run:
-          name: Checkout Premainnet Git Revision
-          command: |
-            git checkout $GIT_REV_PREMIAN
-      - run:
-          name: install_rustup
-          command: |     
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-            echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> $BASH_ENV
+          name: Get premain git revision
+          command: git checkout $GIT_REV_PREMIAN
       - rust_setup
       - print_versions
+      - env_setup
       - install_deps
       - run:
-          name: Build premainnet config key 
+          name: Build config-builder
           command: |
-            cd config/config-builder
-            cargo build
-            cargo run faucet \
+            cargo build -p config-builder
+      - run:
+          name: Build cluster-test
+          command: |
+            cargo build -p cluster-test
+      - run:
+          name: Generate premaintnet config key
+          command: |
+            cargo run -p config-builder -- faucet \
             --output-dir "/tmp/config" \
             --validators-in-genesis $CONFIG_NUM_VAL_PREMAIN \
             --seed $CONFIG_SEED_PREMAIN
       - run:
-          name: Build or restore image from Circle Docker Layer Cache
-          command: |
-            echo test 
-            ls -la /tmp/config
-            ./docker/cluster-test/build.sh
-      - run:      
           name: Premainnet cluster test
           command: |
-            echo $NODES
-            docker run -v /tmp/config:/data --tty --rm cluster-test:latest \
-            --swarm \
-            --emit-tx \
-            --mint-file /data/mint.key \
-            --peers "$NODES"
+            cargo run -p cluster-test -- --swarm --emit-tx --mint-file /tmp/config/mint.key --peers $NODES
 workflows:
   commit-workflow:
     jobs:
@@ -683,4 +675,3 @@ workflows:
               only: master
     jobs:
       - premainnet_cluster_test
-  
