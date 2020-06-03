@@ -61,8 +61,8 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ValidatorConfigResource</span> {
-    <span class="kw">pub</span> <span class="ident">validator_config</span>: <span class="ident">ValidatorConfig</span>,
-    <span class="kw">pub</span> <span class="ident">delegated_account</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">validator_config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ValidatorConfig</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">delegated_account</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">MoveResource</span> <span class="kw">for</span> <span class="ident">ValidatorConfigResource</span> {

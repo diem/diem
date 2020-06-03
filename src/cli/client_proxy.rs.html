@@ -1699,6 +1699,34 @@
 <span id="1699">1699</span>
 <span id="1700">1700</span>
 <span id="1701">1701</span>
+<span id="1702">1702</span>
+<span id="1703">1703</span>
+<span id="1704">1704</span>
+<span id="1705">1705</span>
+<span id="1706">1706</span>
+<span id="1707">1707</span>
+<span id="1708">1708</span>
+<span id="1709">1709</span>
+<span id="1710">1710</span>
+<span id="1711">1711</span>
+<span id="1712">1712</span>
+<span id="1713">1713</span>
+<span id="1714">1714</span>
+<span id="1715">1715</span>
+<span id="1716">1716</span>
+<span id="1717">1717</span>
+<span id="1718">1718</span>
+<span id="1719">1719</span>
+<span id="1720">1720</span>
+<span id="1721">1721</span>
+<span id="1722">1722</span>
+<span id="1723">1723</span>
+<span id="1724">1724</span>
+<span id="1725">1725</span>
+<span id="1726">1726</span>
+<span id="1727">1727</span>
+<span id="1728">1728</span>
+<span id="1729">1729</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2204,7 +2232,7 @@
         }
     }
 
-    <span class="doccomment">/// Remove a existing validator.</span>
+    <span class="doccomment">/// Remove an existing validator from Validator Set.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">remove_validator</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">space_delim_strings</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>],
@@ -2216,21 +2244,35 @@
             <span class="ident">space_delim_strings</span>[<span class="number">0</span>]
         );
         <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="ident">space_delim_strings</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">2</span>,
+            <span class="ident">space_delim_strings</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">3</span>,
             <span class="string">&quot;Invalid number of arguments for removing validator&quot;</span>
         );
         <span class="kw">let</span> (<span class="ident">account_address</span>, <span class="kw">_</span>) <span class="op">=</span>
             <span class="self">self</span>.<span class="ident">get_account_address_from_parameter</span>(<span class="ident">space_delim_strings</span>[<span class="number">1</span>])<span class="question-mark">?</span>;
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">faucet_account</span> {
-            <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">association_transaction_with_local_faucet_account</span>(
-                <span class="ident">transaction_builder</span>::<span class="ident">encode_remove_validator_script</span>(<span class="ident">account_address</span>),
-                <span class="ident">is_blocking</span>,
-            ),
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unimplemented</span><span class="macro">!</span>(),
+        <span class="kw">let</span> <span class="ident">private_key</span> <span class="op">=</span> <span class="ident">Ed25519PrivateKey</span>::<span class="ident">from_encoded_string</span>(<span class="ident">space_delim_strings</span>[<span class="number">2</span>])<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">program</span> <span class="op">=</span> <span class="ident">transaction_builder</span>::<span class="ident">encode_remove_validator_script</span>(<span class="ident">account_address</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sender</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">get_account_data_from_address</span>(
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">client</span>,
+            <span class="ident">account_address</span>,
+            <span class="bool-val">true</span>,
+            <span class="prelude-val">Some</span>(<span class="ident">KeyPair</span>::<span class="ident">from</span>(<span class="ident">private_key</span>)),
+            <span class="prelude-val">None</span>,
+        )<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">txn</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">create_txn_to_submit</span>(
+            <span class="ident">TransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">program</span>),
+            <span class="kw-2">&amp;</span><span class="ident">sender</span>,
+            <span class="prelude-val">None</span>,
+            <span class="prelude-val">None</span>,
+            <span class="prelude-val">None</span>,
+        )<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">submit_transaction</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sender</span>), <span class="ident">txn</span>)<span class="question-mark">?</span>;
+        <span class="kw">if</span> <span class="ident">is_blocking</span> {
+            <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(<span class="ident">sender</span>.<span class="ident">address</span>, <span class="ident">sender</span>.<span class="ident">sequence_number</span>)<span class="question-mark">?</span>;
         }
+        <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Add a new validator.</span>
+    <span class="doccomment">/// Add a new validator to the Validator Set.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_validator</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">space_delim_strings</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>], <span class="ident">is_blocking</span>: <span class="ident">bool</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="macro">ensure</span><span class="macro">!</span>(
             <span class="ident">space_delim_strings</span>[<span class="number">0</span>] <span class="op">=</span><span class="op">=</span> <span class="string">&quot;add_validator&quot;</span>,
@@ -2238,18 +2280,32 @@
             <span class="ident">space_delim_strings</span>[<span class="number">0</span>]
         );
         <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="ident">space_delim_strings</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">2</span>,
+            <span class="ident">space_delim_strings</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">3</span>,
             <span class="string">&quot;Invalid number of arguments for adding validator&quot;</span>
         );
         <span class="kw">let</span> (<span class="ident">account_address</span>, <span class="kw">_</span>) <span class="op">=</span>
             <span class="self">self</span>.<span class="ident">get_account_address_from_parameter</span>(<span class="ident">space_delim_strings</span>[<span class="number">1</span>])<span class="question-mark">?</span>;
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">faucet_account</span> {
-            <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">association_transaction_with_local_faucet_account</span>(
-                <span class="ident">transaction_builder</span>::<span class="ident">encode_add_validator_script</span>(<span class="ident">account_address</span>),
-                <span class="ident">is_blocking</span>,
-            ),
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unimplemented</span><span class="macro">!</span>(),
+        <span class="kw">let</span> <span class="ident">private_key</span> <span class="op">=</span> <span class="ident">Ed25519PrivateKey</span>::<span class="ident">from_encoded_string</span>(<span class="ident">space_delim_strings</span>[<span class="number">2</span>])<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sender</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">get_account_data_from_address</span>(
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">client</span>,
+            <span class="ident">account_address</span>,
+            <span class="bool-val">true</span>,
+            <span class="prelude-val">Some</span>(<span class="ident">KeyPair</span>::<span class="ident">from</span>(<span class="ident">private_key</span>)),
+            <span class="prelude-val">None</span>,
+        )<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">program</span> <span class="op">=</span> <span class="ident">transaction_builder</span>::<span class="ident">encode_add_validator_script</span>(<span class="ident">account_address</span>);
+        <span class="kw">let</span> <span class="ident">txn</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">create_txn_to_submit</span>(
+            <span class="ident">TransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">program</span>),
+            <span class="kw-2">&amp;</span><span class="ident">sender</span>,
+            <span class="prelude-val">None</span>,
+            <span class="prelude-val">None</span>,
+            <span class="prelude-val">None</span>,
+        )<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">submit_transaction</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sender</span>), <span class="ident">txn</span>)<span class="question-mark">?</span>;
+        <span class="kw">if</span> <span class="ident">is_blocking</span> {
+            <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(<span class="ident">sender</span>.<span class="ident">address</span>, <span class="ident">sender</span>.<span class="ident">sequence_number</span>)<span class="question-mark">?</span>;
         }
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Register an account as validator candidate with ValidatorConfig</span>

@@ -251,6 +251,12 @@
 <span id="251">251</span>
 <span id="252">252</span>
 <span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -284,6 +290,7 @@
     <span class="ident">CreateChildVaspAccount</span>,
     <span class="ident">CreateDesignatedDealer</span>,
     <span class="ident">CreateParentVaspAccount</span>,
+    <span class="ident">CreateValidatorAccount</span>,
     <span class="ident">EmptyScript</span>,
     <span class="ident">FreezeAccount</span>,
     <span class="ident">Mint</span>,
@@ -301,6 +308,7 @@
     <span class="ident">RotateAuthenticationKeyWithNonce</span>,
     <span class="ident">RotateBaseUrl</span>,
     <span class="ident">RotateCompliancePublicKey</span>,
+    <span class="ident">RotateValidatorConfig</span>,
     <span class="ident">RotateConsensusPubkey</span>,
     <span class="ident">RotateSharedEd2551PublicKey</span>,
     <span class="ident">TieredMint</span>,
@@ -326,6 +334,7 @@
             <span class="ident">CreateChildVaspAccount</span>,
             <span class="ident">CreateDesignatedDealer</span>,
             <span class="ident">CreateParentVaspAccount</span>,
+            <span class="ident">CreateValidatorAccount</span>,
             <span class="ident">EmptyScript</span>,
             <span class="ident">FreezeAccount</span>,
             <span class="ident">Mint</span>,
@@ -343,6 +352,7 @@
             <span class="ident">RotateAuthenticationKeyWithNonce</span>,
             <span class="ident">RotateBaseUrl</span>,
             <span class="ident">RotateCompliancePublicKey</span>,
+            <span class="ident">RotateValidatorConfig</span>,
             <span class="ident">RotateConsensusPubkey</span>,
             <span class="ident">RotateSharedEd2551PublicKey</span>,
             <span class="ident">TieredMint</span>,
@@ -446,6 +456,7 @@
                 <span class="ident">CreateChildVaspAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_child_vasp_account&quot;</span>,
                 <span class="ident">CreateDesignatedDealer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_designated_dealer&quot;</span>,
                 <span class="ident">CreateParentVaspAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_parent_vasp_account&quot;</span>,
+                <span class="ident">CreateValidatorAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_validator_account&quot;</span>,
                 <span class="ident">EmptyScript</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;empty_script&quot;</span>,
                 <span class="ident">FreezeAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;freeze_account&quot;</span>,
                 <span class="ident">Mint</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;mint&quot;</span>,
@@ -463,6 +474,7 @@
                 <span class="ident">RotateAuthenticationKeyWithNonce</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_authentication_key_with_nonce&quot;</span>,
                 <span class="ident">RotateBaseUrl</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_base_url&quot;</span>,
                 <span class="ident">RotateCompliancePublicKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_compliance_public_key&quot;</span>,
+                <span class="ident">RotateValidatorConfig</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_validator_config&quot;</span>,
                 <span class="ident">RotateConsensusPubkey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_consensus_pubkey&quot;</span>,
                 <span class="ident">RotateSharedEd2551PublicKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_shared_ed25519_public_key&quot;</span>,
                 <span class="ident">TieredMint</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;tiered_mint&quot;</span>,

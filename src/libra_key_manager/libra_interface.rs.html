@@ -187,6 +187,7 @@
 <span id="187">187</span>
 <span id="188">188</span>
 <span id="189">189</span>
+<span id="190">190</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -335,6 +336,7 @@
         <span class="kw">match</span> <span class="ident">validator_config_resource</span> {
             <span class="prelude-val">Ok</span>(<span class="ident">config_resource</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">config_resource</span>
                 .<span class="ident">map</span>(<span class="op">|</span><span class="ident">config_resource</span><span class="op">|</span> <span class="ident">config_resource</span>.<span class="ident">validator_config</span>)
+                .<span class="ident">flatten</span>()
                 .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
                     <span class="ident">Error</span>::<span class="ident">DataDoesNotExist</span>(<span class="macro">format</span><span class="macro">!</span>(
                         <span class="string">&quot;ValidatorConfigResource not found for account: {:?}&quot;</span>,

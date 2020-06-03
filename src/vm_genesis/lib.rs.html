@@ -353,15 +353,6 @@
 <span id="353">353</span>
 <span id="354">354</span>
 <span id="355">355</span>
-<span id="356">356</span>
-<span id="357">357</span>
-<span id="358">358</span>
-<span id="359">359</span>
-<span id="360">360</span>
-<span id="361">361</span>
-<span id="362">362</span>
-<span id="363">363</span>
-<span id="364">364</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -575,7 +566,7 @@
 
         <span class="ident">context</span>.<span class="ident">exec</span>(
             <span class="string">&quot;LibraAccount&quot;</span>,
-            <span class="string">&quot;create_testnet_account&quot;</span>,
+            <span class="string">&quot;create_validator_account&quot;</span>,
             <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">lbr_ty</span>.<span class="ident">clone</span>()],
             <span class="macro">vec</span><span class="macro">!</span>[
                 <span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">account</span>),
@@ -585,15 +576,6 @@
 
         <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">account</span>);
         <span class="ident">context</span>.<span class="ident">exec_script</span>(<span class="ident">registration</span>);
-
-        <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">account_config</span>::<span class="ident">association_address</span>());
-        <span class="comment">// Finally, add the account to the validator set</span>
-        <span class="ident">context</span>.<span class="ident">exec</span>(
-            <span class="string">&quot;LibraSystem&quot;</span>,
-            <span class="string">&quot;add_validator&quot;</span>,
-            <span class="macro">vec</span><span class="macro">!</span>[],
-            <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">account</span>)],
-        );
     }
 }
 
