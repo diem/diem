@@ -3,7 +3,7 @@
 
 use std::{sync::Arc, time::Duration};
 
-use anyhow::{ensure, format_err, Context, Result};
+use anyhow::{ensure, Context, Result};
 use termion::color::*;
 
 use consensus_types::{
@@ -250,10 +250,9 @@ impl<T: Payload> RoundManager<T> {
                 counters::TIMEOUT_ROUNDS_COUNT.inc();
             }
         };
-        if self
+        if !self
             .proposer_election
             .is_valid_proposer(self.proposal_generator.author(), new_round_event.round)
-            .is_none()
         {
             return;
         }
@@ -326,8 +325,7 @@ impl<T: Payload> RoundManager<T> {
         );
         ensure!(
             self.proposer_election
-                .is_valid_proposer(proposal_msg.proposer(), proposal_msg.round())
-                .is_some(),
+                .is_valid_proposal(proposal_msg.proposal()),
             "[RoundManager] Proposer {} for block {} is not a valid proposer for this round",
             proposal_msg.proposer(),
             proposal_msg.proposal()
@@ -342,10 +340,7 @@ impl<T: Payload> RoundManager<T> {
             proposal_msg.round() == current_round,
             "[RoundManager] Proposal round doesn't match current round after sync"
         );
-
-        self.proposer_election
-            .process_proposal(proposal_msg.take_proposal())
-            .ok_or_else(|| format_err!("[RoundManager] Not primary proposal"))
+        Ok(proposal_msg.take_proposal())
     }
 
     /// The function makes sure that it brings the missing dependencies from the QC and LedgerInfo
@@ -432,11 +427,11 @@ impl<T: Payload> RoundManager<T> {
             Some(vote) if vote.vote_data().proposed().round() == round => (true, vote),
             _ => {
                 // Didn't vote in this round yet, generate a backup vote
-                let backup_vote = self
-                    .gen_backup_vote(round)
-                    .await
-                    .context("[RoundManager] Generate backup vote")?;
-                (false, backup_vote)
+                let nil_block = self.proposal_generator.generate_nil_block(round)?;
+                debug!("Planning to vote for a NIL block {}", nil_block);
+                counters::VOTE_NIL_COUNT.inc();
+                let nil_vote = self.execute_and_vote(nil_block).await?;
+                (false, nil_vote)
             }
         };
 
@@ -444,7 +439,7 @@ impl<T: Payload> RoundManager<T> {
             "Round {} timed out: {}, expected round proposer was {:?}, broadcasting the vote to all replicas",
             round,
             if use_last_vote { "already executed and voted at this round" } else { "will try to generate a backup vote" },
-            self.proposer_election.get_valid_proposers(round).iter().map(|p| p.short_str()).collect::<Vec<String>>(),
+            self.proposer_election.get_valid_proposer(round),
         );
 
         if !timeout_vote.is_timeout() {
@@ -460,28 +455,6 @@ impl<T: Payload> RoundManager<T> {
         let timeout_vote_msg = VoteMsg::new(timeout_vote, self.block_store.sync_info());
         self.network.broadcast_vote(timeout_vote_msg).await;
         Ok(())
-    }
-
-    async fn gen_backup_vote(&mut self, round: Round) -> anyhow::Result<Vote> {
-        // We generally assume that this function is called only if no votes have been sent in this
-        // round, but having a duplicate proposal here would work ok because block store makes
-        // sure the calls to `execute_and_insert_block` are idempotent.
-
-        // Either use the best proposal received in this round or a NIL block if nothing available.
-        let block = match self.proposer_election.take_backup_proposal(round) {
-            Some(b) => {
-                debug!("Planning to vote for a backup proposal {}", b);
-                counters::VOTE_SECONDARY_PROPOSAL_COUNT.inc();
-                b
-            }
-            None => {
-                let nil_block = self.proposal_generator.generate_nil_block(round)?;
-                debug!("Planning to vote for a NIL block {}", nil_block);
-                counters::VOTE_NIL_COUNT.inc();
-                nil_block
-            }
-        };
-        self.execute_and_vote(block).await
     }
 
     /// This function is called only after all the dependencies of the given QC have been retrieved.
@@ -520,12 +493,12 @@ impl<T: Payload> RoundManager<T> {
 
         let recipients = self
             .proposer_election
-            .get_valid_proposers(proposal_round + 1);
+            .get_valid_proposer(proposal_round + 1);
         debug!("{}Voted: {} {}", Fg(Green), Fg(Reset), vote);
 
         self.round_state.record_vote(vote.clone());
         let vote_msg = VoteMsg::new(vote, self.block_store.sync_info());
-        self.network.send_vote(vote_msg, recipients).await;
+        self.network.send_vote(vote_msg, vec![recipients]).await;
         Ok(())
     }
 
@@ -687,8 +660,7 @@ impl<T: Payload> RoundManager<T> {
             let next_round = vote_msg.vote().vote_data().proposed().round() + 1;
             ensure!(
                 self.proposer_election
-                    .is_valid_proposer(self.proposal_generator.author(), next_round)
-                    .is_some(),
+                    .is_valid_proposer(self.proposal_generator.author(), next_round),
                 "[RoundManager] Received {}, but I am not a valid proposer for round {}, ignore.",
                 vote_msg,
                 next_round
