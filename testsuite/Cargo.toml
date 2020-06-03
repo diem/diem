@@ -13,10 +13,10 @@ edition = "2018"
 # running tests all binaries which are being tested under this testsuite
 # should have their crates listed as dev-dependencies.
 [dev-dependencies]
-num = "0.2.0"
-num-traits = "0.2"
+num = "0.2.1"
+num-traits = "0.2.11"
 rust_decimal = "1.6.0"
-statistical = "1"
+statistical = "1.0.0"
 
 cli = { path = "cli", version = "0.1.0" }
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }

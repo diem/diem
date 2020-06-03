@@ -10,11 +10,11 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0"
+anyhow = "1.0.31"
 serde = { version = "1.0.111", features = ["rc"], default-features = false }
 structopt = "0.3.14"
-thiserror = "1.0"
-toml = { version = "0.5.3", default-features = false }
+thiserror = "1.0.19"
+toml = { version = "0.5.6", default-features = false }
 
 executor = { path = "../../execution/executor", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }

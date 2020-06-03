@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 hex = "0.4.2"
 serde_json = "1.0.53"
-thiserror = "1.0"
+thiserror = "1.0.19"
 ureq = { version = "1.1.1", features = ["json"] }
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
@@ -22,7 +22,7 @@ libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0"
 serde = { version = "1.0.111", features = ["derive"], default-features = false }
 
 [dev-dependencies]
-anyhow = "1.0"
+anyhow = "1.0.31"
 futures = "0.3.5"
 tokio = { version = "0.2.21", features = ["full"] }
 

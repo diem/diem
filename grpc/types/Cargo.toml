@@ -10,8 +10,8 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0"
-prost = "0.6"
+anyhow = "1.0.31"
+prost = "0.6.1"
 proptest = { version = "0.10.0", default-features = false, optional = true }
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
@@ -26,7 +26,7 @@ libra-prost-test-helpers = { path = "../../common/prost-test-helpers", version =
 
 
 [build-dependencies]
-prost-build = "0.6"
+prost-build = "0.6.1"
 
 [features]
 default = []

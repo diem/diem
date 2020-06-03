@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 backtrace = "0.3.48"
-toml = "0.5.3"
+toml = "0.5.6"
 
 libra-logger = { path = "../logger", version = "0.1.0" }
 libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }

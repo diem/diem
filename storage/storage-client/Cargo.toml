@@ -10,8 +10,8 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0"
-serde = "1.0"
+anyhow = "1.0.31"
+serde = "1.0.111"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }

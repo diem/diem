@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 libc = "0.2.71"
-static_assertions = "1.0.0"
+static_assertions = "1.1.0"
 
 grpc-types = {path = "../../grpc/types", version = "0.1.0"}
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
