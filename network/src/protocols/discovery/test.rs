@@ -19,13 +19,6 @@ use libra_network_address::NetworkAddress;
 use std::{num::NonZeroUsize, str::FromStr};
 use tokio::runtime::Runtime;
 
-fn gen_peer_info() -> PeerInfo {
-    PeerInfo {
-        addrs: vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()],
-        epoch: 1,
-    }
-}
-
 fn get_raw_message(msg: DiscoveryMsg) -> Message {
     Message {
         protocol: ProtocolId::DiscoveryDirectSend,
@@ -129,7 +122,7 @@ fn inbound() {
             other_peer_id,
             other_addrs.clone(),
             b"example.com",
-            get_unix_epoch(),
+            100, /* epoch */
         );
         let msg = DiscoveryMsg {
             notes: vec![other_note],
@@ -164,7 +157,7 @@ fn inbound() {
             new_peer_id,
             new_addrs.clone(),
             b"example.com",
-            get_unix_epoch(),
+            200, /* epoch */
         );
 
         // Update other peer's note.
@@ -173,7 +166,7 @@ fn inbound() {
             other_peer_id,
             other_addrs.clone(),
             b"example.com",
-            get_unix_epoch(),
+            300, /* epoch */
         );
 
         let msg = DiscoveryMsg {
@@ -218,7 +211,7 @@ fn outbound() {
 
     // Setup other peer.
     let other_peer_id = PeerId::random();
-    let other_peer_info = gen_peer_info();
+    let other_peer_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/8080").unwrap();
 
     // Setup discovery.
     let (
@@ -236,10 +229,7 @@ fn outbound() {
         connection_notifs_tx
             .push_with_feedback(
                 other_peer_id,
-                peer_manager::ConnectionNotification::NewPeer(
-                    other_peer_id,
-                    other_peer_info.addrs[0].clone(),
-                ),
+                peer_manager::ConnectionNotification::NewPeer(other_peer_id, other_peer_addr),
                 Some(delivered_tx),
             )
             .unwrap();
@@ -304,7 +294,7 @@ fn old_note_higher_epoch() {
         // Send DiscoveryMsg consisting of the this node's older note which has higher epoch than
         // current note.
         let old_self_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9091").unwrap()];
-        let old_epoch = get_unix_epoch() + 100;
+        let old_epoch = get_unix_epoch() + 1_000_000;
         let old_note = Note::new(peer_id, old_self_addrs.clone(), b"example.com", old_epoch);
         let msg = DiscoveryMsg {
             notes: vec![old_note],
