@@ -7,8 +7,8 @@
 use prometheus::{
     core::{Collector, Desc},
     proto::MetricFamily,
-    Histogram, HistogramOpts, HistogramTimer, HistogramVec, IntCounter, IntCounterVec, IntGauge,
-    IntGaugeVec, Opts,
+    Histogram, HistogramOpts, HistogramTimer, HistogramVec, IntCounterVec, IntGauge, IntGaugeVec,
+    Opts,
 };
 
 use std::time::Duration;
@@ -94,11 +94,6 @@ impl OpMetrics {
     #[inline]
     pub fn peer_gauge(&self, name: &str, remote_peer_id: &str) -> IntGauge {
         self.peer_gauges.with_label_values(&[name, remote_peer_id])
-    }
-
-    #[inline]
-    pub fn counter(&self, name: &str) -> IntCounter {
-        self.counters.with_label_values(&[name])
     }
 
     #[inline]
