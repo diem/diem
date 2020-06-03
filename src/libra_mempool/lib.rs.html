@@ -143,9 +143,9 @@
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">shared_mempool</span>::{
     <span class="ident">bootstrap</span>, <span class="ident">network</span>,
     <span class="ident">types</span>::{
-        <span class="ident">CommitNotification</span>, <span class="ident">CommitResponse</span>, <span class="ident">CommittedTransaction</span>, <span class="ident">ConsensusRequest</span>,
-        <span class="ident">ConsensusResponse</span>, <span class="ident">MempoolClientSender</span>, <span class="ident">SubmissionStatus</span>, <span class="ident">TransactionExclusion</span>,
-        <span class="ident">MEMPOOL_SUBSCRIBED_CONFIGS</span>,
+        <span class="ident">gen_mempool_reconfig_subscription</span>, <span class="ident">CommitNotification</span>, <span class="ident">CommitResponse</span>,
+        <span class="ident">CommittedTransaction</span>, <span class="ident">ConsensusRequest</span>, <span class="ident">ConsensusResponse</span>, <span class="ident">MempoolClientSender</span>,
+        <span class="ident">SubmissionStatus</span>, <span class="ident">TransactionExclusion</span>,
     },
 };
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>)]</span>

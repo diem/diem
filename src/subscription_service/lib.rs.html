@@ -48,6 +48,32 @@
 <span id="48">48</span>
 <span id="49">49</span>
 <span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -61,42 +87,68 @@
     <span class="ident">libra_channel</span>::{<span class="self">self</span>, <span class="ident">Receiver</span>, <span class="ident">Sender</span>},
     <span class="ident">message_queues</span>::<span class="ident">QueueStyle</span>,
 };
-<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">on_chain_config</span>::{<span class="ident">ConfigID</span>, <span class="ident">OnChainConfigPayload</span>};
+<span class="kw">use</span> <span class="ident">libra_types</span>::{
+    <span class="ident">event</span>::<span class="ident">EventKey</span>,
+    <span class="ident">on_chain_config</span>::{<span class="ident">ConfigID</span>, <span class="ident">OnChainConfigPayload</span>},
+};
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashSet</span>, <span class="ident">num</span>::<span class="ident">NonZeroUsize</span>};
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SubscriptionService</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">U</span><span class="op">&gt;</span> {
-    <span class="ident">subscribed_items</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+    <span class="ident">subscribed_items</span>: <span class="ident">T</span>,
     <span class="ident">sender</span>: <span class="ident">Sender</span><span class="op">&lt;</span>(), <span class="ident">U</span><span class="op">&gt;</span>,
 }
 
-<span class="doccomment">/// A subscription service for on-chain reconfiguration notifications from state sync</span>
-<span class="doccomment">/// TODO move this to on-chain config crate when ready</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">ReconfigSubscription</span> <span class="op">=</span> <span class="ident">SubscriptionService</span><span class="op">&lt;</span><span class="ident">ConfigID</span>, <span class="ident">OnChainConfigPayload</span><span class="op">&gt;</span>;
-<span class="kw">impl</span> <span class="ident">SubscriptionService</span><span class="op">&lt;</span><span class="ident">ConfigID</span>, <span class="ident">OnChainConfigPayload</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Constructs an reconfig subscription object for a set of configs `subscribed_configs`</span>
-    <span class="doccomment">/// Returns the subscription object, and the receiving end of a channel that reconfig notifications</span>
-    <span class="doccomment">/// will be sent to</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">subscribe</span>(
-        <span class="ident">subscribed_configs</span>: <span class="kw-2">&amp;</span>[<span class="ident">ConfigID</span>],
-    ) <span class="op">-</span><span class="op">&gt;</span> (<span class="self">Self</span>, <span class="ident">Receiver</span><span class="op">&lt;</span>(), <span class="ident">OnChainConfigPayload</span><span class="op">&gt;</span>) {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span>, <span class="ident">U</span><span class="op">&gt;</span> <span class="ident">SubscriptionService</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">U</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Constructs an subscription object for `items`</span>
+    <span class="doccomment">/// Returns the subscription object, and the receiving end of a channel that subscription will be sent to</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">subscribe</span>(<span class="ident">items</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="self">Self</span>, <span class="ident">Receiver</span><span class="op">&lt;</span>(), <span class="ident">U</span><span class="op">&gt;</span>) {
         <span class="kw">let</span> (<span class="ident">sender</span>, <span class="ident">receiver</span>) <span class="op">=</span>
             <span class="ident">libra_channel</span>::<span class="ident">new</span>(<span class="ident">QueueStyle</span>::<span class="ident">LIFO</span>, <span class="ident">NonZeroUsize</span>::<span class="ident">new</span>(<span class="number">1</span>).<span class="ident">unwrap</span>(), <span class="prelude-val">None</span>);
-        <span class="kw">let</span> <span class="ident">subscribed_items</span> <span class="op">=</span> <span class="ident">subscribed_configs</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">HashSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
         (
             <span class="self">Self</span> {
                 <span class="ident">sender</span>,
-                <span class="ident">subscribed_items</span>,
+                <span class="ident">subscribed_items</span>: <span class="ident">items</span>,
             },
             <span class="ident">receiver</span>,
         )
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">publish</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">payload</span>: <span class="ident">OnChainConfigPayload</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">publish</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">payload</span>: <span class="ident">U</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">sender</span>.<span class="ident">push</span>((), <span class="ident">payload</span>)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">subscribed_configs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">ConfigID</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">subscribed_items</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span> {
         <span class="self">self</span>.<span class="ident">subscribed_items</span>.<span class="ident">clone</span>()
+    }
+}
+
+<span class="doccomment">/// A subscription service for on-chain reconfiguration notifications from state sync</span>
+<span class="doccomment">/// This is declared/implemented here instead of in `types/on_chain_config` because</span>
+<span class="doccomment">/// when `subscription_service` crate is a dependency of `types`, the build-dev fails</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">ReconfigSubscription</span> <span class="op">=</span> <span class="ident">SubscriptionService</span><span class="op">&lt;</span><span class="ident">SubscriptionBundle</span>, <span class="ident">OnChainConfigPayload</span><span class="op">&gt;</span>;
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SubscriptionBundle</span> {
+    <span class="kw">pub</span> <span class="ident">configs</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">ConfigID</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">events</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">EventKey</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">SubscriptionBundle</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">configs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ConfigID</span><span class="op">&gt;</span>, <span class="ident">events</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">EventKey</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">configs</span> <span class="op">=</span> <span class="ident">configs</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">HashSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+        <span class="kw">let</span> <span class="ident">events</span> <span class="op">=</span> <span class="ident">events</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">HashSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+
+        <span class="self">Self</span> { <span class="ident">configs</span>, <span class="ident">events</span> }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">ReconfigSubscription</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">subscribe_all</span>(
+        <span class="ident">configs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ConfigID</span><span class="op">&gt;</span>,
+        <span class="ident">events</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">EventKey</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> (<span class="self">Self</span>, <span class="ident">Receiver</span><span class="op">&lt;</span>(), <span class="ident">OnChainConfigPayload</span><span class="op">&gt;</span>) {
+        <span class="kw">let</span> <span class="ident">bundle</span> <span class="op">=</span> <span class="ident">SubscriptionBundle</span>::<span class="ident">new</span>(<span class="ident">configs</span>, <span class="ident">events</span>);
+        <span class="self">Self</span>::<span class="ident">subscribe</span>(<span class="ident">bundle</span>)
     }
 }
 </pre></div>

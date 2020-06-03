@@ -432,13 +432,14 @@
 <span id="432">432</span>
 <span id="433">433</span>
 <span id="434">434</span>
+<span id="435">435</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="ident">admission_control_service</span>::<span class="ident">admission_control_service</span>::<span class="ident">AdmissionControlService</span>;
 <span class="kw">use</span> <span class="ident">backup_service</span>::<span class="ident">start_backup_service</span>;
-<span class="kw">use</span> <span class="ident">consensus</span>::<span class="ident">consensus_provider</span>::<span class="ident">start_consensus</span>;
+<span class="kw">use</span> <span class="ident">consensus</span>::{<span class="ident">consensus_provider</span>::<span class="ident">start_consensus</span>, <span class="ident">gen_consensus_reconfig_subscription</span>};
 <span class="kw">use</span> <span class="ident">debug_interface</span>::<span class="ident">node_debug_service</span>::<span class="ident">NodeDebugService</span>;
 <span class="kw">use</span> <span class="ident">executor</span>::{<span class="ident">db_bootstrapper</span>::<span class="ident">bootstrap_db_if_empty</span>, <span class="ident">Executor</span>};
 <span class="kw">use</span> <span class="ident">executor_types</span>::<span class="ident">ChunkExecutor</span>;
@@ -449,13 +450,15 @@
 };
 <span class="kw">use</span> <span class="ident">libra_json_rpc</span>::<span class="ident">bootstrap_from_config</span> <span class="kw">as</span> <span class="ident">bootstrap_rpc</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">libra_mempool</span>::<span class="ident">MEMPOOL_SUBSCRIBED_CONFIGS</span>;
+<span class="kw">use</span> <span class="ident">libra_mempool</span>::<span class="ident">gen_mempool_reconfig_subscription</span>;
 <span class="kw">use</span> <span class="ident">libra_metrics</span>::<span class="ident">metric_server</span>;
-<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">on_chain_config</span>::<span class="ident">ON_CHAIN_CONFIG_REGISTRY</span>, <span class="ident">waypoint</span>::<span class="ident">Waypoint</span>, <span class="ident">PeerId</span>};
+<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">waypoint</span>::<span class="ident">Waypoint</span>, <span class="ident">PeerId</span>};
 <span class="kw">use</span> <span class="ident">libra_vm</span>::<span class="ident">LibraVM</span>;
 <span class="kw">use</span> <span class="ident">libradb</span>::<span class="ident">LibraDB</span>;
 <span class="kw">use</span> <span class="ident">network</span>::<span class="ident">validator_network</span>::<span class="ident">network_builder</span>::{<span class="ident">AuthenticationMode</span>, <span class="ident">NetworkBuilder</span>};
-<span class="kw">use</span> <span class="ident">network_simple_onchain_discovery</span>::<span class="ident">ConfigurationChangeListener</span>;
+<span class="kw">use</span> <span class="ident">network_simple_onchain_discovery</span>::{
+    <span class="ident">gen_simple_discovery_reconfig_subscription</span>, <span class="ident">ConfigurationChangeListener</span>,
+};
 <span class="kw">use</span> <span class="ident">onchain_discovery</span>::{<span class="ident">client</span>::<span class="ident">OnchainDiscovery</span>, <span class="ident">service</span>::<span class="ident">OnchainDiscoveryService</span>};
 <span class="kw">use</span> <span class="ident">state_synchronizer</span>::<span class="ident">StateSynchronizer</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -468,7 +471,6 @@
 };
 <span class="kw">use</span> <span class="ident">storage_interface</span>::{<span class="ident">DbReader</span>, <span class="ident">DbReaderWriter</span>};
 <span class="kw">use</span> <span class="ident">storage_service</span>::<span class="ident">start_storage_service_with_db</span>;
-<span class="kw">use</span> <span class="ident">subscription_service</span>::<span class="ident">ReconfigSubscription</span>;
 <span class="kw">use</span> <span class="ident">tokio</span>::{
     <span class="ident">runtime</span>::{<span class="ident">Builder</span>, <span class="ident">Handle</span>, <span class="ident">Runtime</span>},
     <span class="ident">time</span>::<span class="ident">interval</span>,
@@ -702,11 +704,11 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reconfig_subscriptions</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
 
     <span class="kw">let</span> (<span class="ident">mempool_reconfig_subscription</span>, <span class="ident">mempool_reconfig_events</span>) <span class="op">=</span>
-        <span class="ident">ReconfigSubscription</span>::<span class="ident">subscribe</span>(<span class="ident">MEMPOOL_SUBSCRIBED_CONFIGS</span>);
+        <span class="ident">gen_mempool_reconfig_subscription</span>();
     <span class="ident">reconfig_subscriptions</span>.<span class="ident">push</span>(<span class="ident">mempool_reconfig_subscription</span>);
     <span class="comment">// consensus has to subscribe to ALL on-chain configs</span>
     <span class="kw">let</span> (<span class="ident">consensus_reconfig_subscription</span>, <span class="ident">consensus_reconfig_events</span>) <span class="op">=</span>
-        <span class="ident">ReconfigSubscription</span>::<span class="ident">subscribe</span>(<span class="ident">ON_CHAIN_CONFIG_REGISTRY</span>);
+        <span class="ident">gen_consensus_reconfig_subscription</span>();
     <span class="ident">reconfig_subscriptions</span>.<span class="ident">push</span>(<span class="ident">consensus_reconfig_subscription</span>);
 
     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">network</span>) <span class="op">=</span> <span class="ident">node_config</span>.<span class="ident">validator_network</span>.<span class="ident">as_mut</span>() {
@@ -720,7 +722,7 @@
         <span class="comment">// Set up to listen for network configuration changes from StateSync.</span>
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">conn_mgr_reqs_tx</span>) <span class="op">=</span> <span class="ident">network_builder</span>.<span class="ident">conn_mgr_reqs_tx</span>() {
             <span class="kw">let</span> (<span class="ident">simple_discovery_reconfig_subscription</span>, <span class="ident">simple_discovery_reconfig_rx</span>) <span class="op">=</span>
-                <span class="ident">ReconfigSubscription</span>::<span class="ident">subscribe</span>(<span class="ident">ON_CHAIN_CONFIG_REGISTRY</span>);
+                <span class="ident">gen_simple_discovery_reconfig_subscription</span>();
             <span class="ident">reconfig_subscriptions</span>.<span class="ident">push</span>(<span class="ident">simple_discovery_reconfig_subscription</span>);
             <span class="kw">let</span> <span class="ident">network_config_listener</span> <span class="op">=</span>
                 <span class="ident">ConfigurationChangeListener</span>::<span class="ident">new</span>(<span class="ident">conn_mgr_reqs_tx</span>, <span class="ident">RoleType</span>::<span class="ident">Validator</span>);

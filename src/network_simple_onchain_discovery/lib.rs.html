@@ -158,11 +158,17 @@
 <span id="158">158</span>
 <span id="159">159</span>
 <span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="ident">channel</span>::<span class="ident">libra_channel</span>;
+<span class="kw">use</span> <span class="ident">channel</span>::<span class="ident">libra_channel</span>::{<span class="self">self</span>, <span class="ident">Receiver</span>};
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">sink</span>::<span class="ident">SinkExt</span>, <span class="ident">StreamExt</span>};
 <span class="kw">use</span> <span class="ident">libra_canonical_serialization</span> <span class="kw">as</span> <span class="ident">lcs</span>;
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">RoleType</span>;
@@ -171,7 +177,7 @@
 <span class="kw">use</span> <span class="ident">libra_metrics</span>::{<span class="ident">register_histogram</span>, <span class="ident">DurationHistogram</span>};
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">on_chain_config</span>::{<span class="ident">OnChainConfigPayload</span>, <span class="ident">ValidatorSet</span>},
+    <span class="ident">on_chain_config</span>::{<span class="ident">OnChainConfigPayload</span>, <span class="ident">ValidatorSet</span>, <span class="ident">ON_CHAIN_CONFIG_REGISTRY</span>},
     <span class="ident">validator_config</span>::<span class="ident">ValidatorConfig</span>,
 };
 <span class="kw">use</span> <span class="ident">network</span>::{
@@ -180,6 +186,7 @@
 };
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">time</span>::<span class="ident">Instant</span>};
+<span class="kw">use</span> <span class="ident">subscription_service</span>::<span class="ident">ReconfigSubscription</span>;
 
 <span class="doccomment">/// Histogram of idle time of spent in event processing loop</span>
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">EVENT_PROCESSING_LOOP_IDLE_DURATION_S</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">DurationHistogram</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
@@ -208,6 +215,11 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConfigurationChangeListener</span> {
     <span class="ident">conn_mgr_reqs_tx</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">ConnectivityRequest</span><span class="op">&gt;</span>,
     <span class="ident">role</span>: <span class="ident">RoleType</span>,
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">gen_simple_discovery_reconfig_subscription</span>(
+) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">ReconfigSubscription</span>, <span class="ident">Receiver</span><span class="op">&lt;</span>(), <span class="ident">OnChainConfigPayload</span><span class="op">&gt;</span>) {
+    <span class="ident">ReconfigSubscription</span>::<span class="ident">subscribe_all</span>(<span class="ident">ON_CHAIN_CONFIG_REGISTRY</span>.<span class="ident">to_vec</span>(), <span class="macro">vec</span><span class="macro">!</span>[])
 }
 
 <span class="doccomment">/// Extract the network_address from the provided config, depending on role.</span>
