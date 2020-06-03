@@ -334,14 +334,16 @@
 <span id="334">334</span>
 <span id="335">335</span>
 <span id="336">336</span>
+<span id="337">337</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">super</span>::<span class="ident">core</span>::{<span class="self">self</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">expansion</span>::<span class="ident">ast</span>::<span class="ident">Value_</span>,
     <span class="ident">naming</span>::<span class="ident">ast</span>::{<span class="ident">BuiltinTypeName_</span>, <span class="ident">FunctionSignature</span>, <span class="ident">TParam</span>, <span class="ident">Type</span>, <span class="ident">Type_</span>},
-    <span class="ident">parser</span>::<span class="ident">ast</span>::{<span class="ident">Kind</span>, <span class="ident">Kind_</span>, <span class="ident">Value_</span>},
+    <span class="ident">parser</span>::<span class="ident">ast</span>::{<span class="ident">Kind</span>, <span class="ident">Kind_</span>},
     <span class="ident">typing</span>::<span class="ident">ast</span> <span class="kw">as</span> <span class="ident">T</span>,
 };
 <span class="kw">use</span> <span class="ident">move_ir_types</span>::<span class="ident">location</span>::<span class="kw-2">*</span>;

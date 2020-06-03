@@ -643,17 +643,15 @@
 <span id="643">643</span>
 <span id="644">644</span>
 <span id="645">645</span>
-<span id="646">646</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">expansion</span>::<span class="ident">ast</span>::{<span class="ident">Fields</span>, <span class="ident">SpecId</span>},
+    <span class="ident">expansion</span>::<span class="ident">ast</span>::{<span class="ident">Fields</span>, <span class="ident">SpecId</span>, <span class="ident">Value</span>},
     <span class="ident">naming</span>::<span class="ident">ast</span>::{<span class="ident">FunctionSignature</span>, <span class="ident">StructDefinition</span>, <span class="ident">Type</span>, <span class="ident">TypeName_</span>, <span class="ident">Type_</span>},
     <span class="ident">parser</span>::<span class="ident">ast</span>::{
-        <span class="ident">BinOp</span>, <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">FunctionVisibility</span>, <span class="ident">ModuleIdent</span>, <span class="ident">StructName</span>, <span class="ident">UnaryOp</span>, <span class="ident">Value</span>,
-        <span class="ident">Var</span>,
+        <span class="ident">BinOp</span>, <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">FunctionVisibility</span>, <span class="ident">ModuleIdent</span>, <span class="ident">StructName</span>, <span class="ident">UnaryOp</span>, <span class="ident">Var</span>,
     },
     <span class="ident">shared</span>::{<span class="ident">ast_debug</span>::<span class="kw-2">*</span>, <span class="ident">unique_map</span>::<span class="ident">UniqueMap</span>},
 };

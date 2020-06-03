@@ -5434,7 +5434,7 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">_loc</span>: <span class="kw-2">&amp;</span><span class="ident">Loc</span>,
         <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="ident">SpecBlockContext</span>,
-        <span class="ident">properties</span>: <span class="kw-2">&amp;</span>[<span class="ident">PA</span>::<span class="ident">PragmaProperty</span>],
+        <span class="ident">properties</span>: <span class="kw-2">&amp;</span>[<span class="ident">EA</span>::<span class="ident">PragmaProperty</span>],
     ) {
         <span class="comment">// For now we pass properties just on. We may want to check against a set of known</span>
         <span class="comment">// property names and types.</span>
@@ -7494,10 +7494,10 @@
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">translate_value</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">v</span>: <span class="kw-2">&amp;</span><span class="ident">PA</span>::<span class="ident">Value</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">Value</span>, <span class="ident">Type</span>)<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">translate_value</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">v</span>: <span class="kw-2">&amp;</span><span class="ident">EA</span>::<span class="ident">Value</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">Value</span>, <span class="ident">Type</span>)<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">loc</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">to_loc</span>(<span class="kw-2">&amp;</span><span class="ident">v</span>.<span class="ident">loc</span>);
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">v</span>.<span class="ident">value</span> {
-            <span class="ident">PA</span>::<span class="ident">Value_</span>::<span class="ident">Address</span>(<span class="ident">addr</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">EA</span>::<span class="ident">Value_</span>::<span class="ident">Address</span>(<span class="ident">addr</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">addr_str</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">addr</span>);
                 <span class="kw">if</span> <span class="kw-2">&amp;</span><span class="ident">addr_str</span>[..<span class="number">2</span>] <span class="op">=</span><span class="op">=</span> <span class="string">&quot;0x&quot;</span> {
                     <span class="kw">let</span> <span class="ident">digits_only</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">addr_str</span>[<span class="number">2</span>..];
@@ -7512,20 +7512,20 @@
                     <span class="prelude-val">None</span>
                 }
             }
-            <span class="ident">PA</span>::<span class="ident">Value_</span>::<span class="ident">U8</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>((
+            <span class="ident">EA</span>::<span class="ident">Value_</span>::<span class="ident">U8</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>((
                 <span class="ident">Value</span>::<span class="ident">Number</span>(<span class="ident">BigUint</span>::<span class="ident">from_u8</span>(<span class="kw-2">*</span><span class="ident">x</span>).<span class="ident">unwrap</span>()),
                 <span class="ident">Type</span>::<span class="ident">new_prim</span>(<span class="ident">PrimitiveType</span>::<span class="ident">U8</span>),
             )),
-            <span class="ident">PA</span>::<span class="ident">Value_</span>::<span class="ident">U64</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>((
+            <span class="ident">EA</span>::<span class="ident">Value_</span>::<span class="ident">U64</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>((
                 <span class="ident">Value</span>::<span class="ident">Number</span>(<span class="ident">BigUint</span>::<span class="ident">from_u64</span>(<span class="kw-2">*</span><span class="ident">x</span>).<span class="ident">unwrap</span>()),
                 <span class="ident">Type</span>::<span class="ident">new_prim</span>(<span class="ident">PrimitiveType</span>::<span class="ident">U64</span>),
             )),
-            <span class="ident">PA</span>::<span class="ident">Value_</span>::<span class="ident">U128</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>((
+            <span class="ident">EA</span>::<span class="ident">Value_</span>::<span class="ident">U128</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>((
                 <span class="ident">Value</span>::<span class="ident">Number</span>(<span class="ident">BigUint</span>::<span class="ident">from_u128</span>(<span class="kw-2">*</span><span class="ident">x</span>).<span class="ident">unwrap</span>()),
                 <span class="ident">Type</span>::<span class="ident">new_prim</span>(<span class="ident">PrimitiveType</span>::<span class="ident">U128</span>),
             )),
-            <span class="ident">PA</span>::<span class="ident">Value_</span>::<span class="ident">Bool</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>((<span class="ident">Value</span>::<span class="ident">Bool</span>(<span class="kw-2">*</span><span class="ident">x</span>), <span class="ident">Type</span>::<span class="ident">new_prim</span>(<span class="ident">PrimitiveType</span>::<span class="ident">Bool</span>))),
-            <span class="ident">PA</span>::<span class="ident">Value_</span>::<span class="ident">Bytearray</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">EA</span>::<span class="ident">Value_</span>::<span class="ident">Bool</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>((<span class="ident">Value</span>::<span class="ident">Bool</span>(<span class="kw-2">*</span><span class="ident">x</span>), <span class="ident">Type</span>::<span class="ident">new_prim</span>(<span class="ident">PrimitiveType</span>::<span class="ident">Bool</span>))),
+            <span class="ident">EA</span>::<span class="ident">Value_</span>::<span class="ident">Bytearray</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">Type</span>::<span class="ident">new_prim</span>(<span class="ident">PrimitiveType</span>::<span class="ident">U8</span>)));
                 <span class="prelude-val">Some</span>((<span class="ident">Value</span>::<span class="ident">ByteArray</span>(<span class="ident">x</span>.<span class="ident">clone</span>()), <span class="ident">ty</span>))
             }

@@ -982,7 +982,7 @@
     <span class="ident">cfgir</span>::<span class="ident">ast</span> <span class="kw">as</span> <span class="ident">G</span>,
     <span class="ident">compiled_unit</span>::<span class="kw-2">*</span>,
     <span class="ident">errors</span>::<span class="kw-2">*</span>,
-    <span class="ident">expansion</span>::<span class="ident">ast</span>::<span class="ident">SpecId</span>,
+    <span class="ident">expansion</span>::<span class="ident">ast</span>::{<span class="ident">SpecId</span>, <span class="ident">Value_</span>},
     <span class="ident">hlir</span>::{
         <span class="ident">ast</span>::{<span class="self">self</span> <span class="kw">as</span> <span class="ident">H</span>},
         <span class="ident">translate</span>::{<span class="ident">display_var</span>, <span class="ident">DisplayVar</span>},
@@ -990,7 +990,7 @@
     <span class="ident">naming</span>::<span class="ident">ast</span>::{<span class="ident">BuiltinTypeName_</span>, <span class="ident">TParam</span>},
     <span class="ident">parser</span>::<span class="ident">ast</span>::{
         <span class="ident">BinOp</span>, <span class="ident">BinOp_</span>, <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">FunctionVisibility</span>, <span class="ident">Kind</span>, <span class="ident">Kind_</span>, <span class="ident">ModuleIdent</span>,
-        <span class="ident">StructName</span>, <span class="ident">UnaryOp</span>, <span class="ident">UnaryOp_</span>, <span class="ident">Value_</span>, <span class="ident">Var</span>,
+        <span class="ident">StructName</span>, <span class="ident">UnaryOp</span>, <span class="ident">UnaryOp_</span>, <span class="ident">Var</span>,
     },
     <span class="ident">shared</span>::{<span class="ident">unique_map</span>::<span class="ident">UniqueMap</span>, <span class="kw-2">*</span>},
 };

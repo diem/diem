@@ -1379,6 +1379,10 @@
 <span id="1379">1379</span>
 <span id="1380">1380</span>
 <span id="1381">1381</span>
+<span id="1382">1382</span>
+<span id="1383">1383</span>
+<span id="1384">1384</span>
+<span id="1385">1385</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1743,7 +1747,10 @@
     <span class="comment">// true</span>
     <span class="comment">// false</span>
     <span class="ident">Bool</span>(<span class="ident">bool</span>),
-    <span class="ident">Bytearray</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>),
+    <span class="comment">// x&quot;[0..9A..F]+&quot;</span>
+    <span class="ident">HexString</span>(<span class="ident">String</span>),
+    <span class="comment">// b&quot;(&lt;ascii&gt; | \n | \r | \t | \\ | \0 | \&quot; | \x[0..9A..F][0..9A..F])+&quot;</span>
+    <span class="ident">ByteString</span>(<span class="ident">String</span>),
 }
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Value</span> <span class="op">=</span> <span class="ident">Spanned</span><span class="op">&lt;</span><span class="ident">Value_</span><span class="op">&gt;</span>;
 
@@ -2721,7 +2728,8 @@
             <span class="ident">V</span>::<span class="ident">U64</span>(<span class="ident">u</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}u64&quot;</span>, <span class="ident">u</span>),
             <span class="ident">V</span>::<span class="ident">U128</span>(<span class="ident">u</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}u128&quot;</span>, <span class="ident">u</span>),
             <span class="ident">V</span>::<span class="ident">Bool</span>(<span class="ident">b</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">b</span>),
-            <span class="ident">V</span>::<span class="ident">Bytearray</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">v</span>),
+            <span class="ident">V</span>::<span class="ident">HexString</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;x\&quot;{}\&quot;&quot;</span>, <span class="ident">s</span>),
+            <span class="ident">V</span>::<span class="ident">ByteString</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;b\&quot;{}\&quot;&quot;</span>, <span class="ident">s</span>),
         })
     }
 }

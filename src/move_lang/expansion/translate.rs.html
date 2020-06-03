@@ -1594,6 +1594,57 @@
 <span id="1594">1594</span>
 <span id="1595">1595</span>
 <span id="1596">1596</span>
+<span id="1597">1597</span>
+<span id="1598">1598</span>
+<span id="1599">1599</span>
+<span id="1600">1600</span>
+<span id="1601">1601</span>
+<span id="1602">1602</span>
+<span id="1603">1603</span>
+<span id="1604">1604</span>
+<span id="1605">1605</span>
+<span id="1606">1606</span>
+<span id="1607">1607</span>
+<span id="1608">1608</span>
+<span id="1609">1609</span>
+<span id="1610">1610</span>
+<span id="1611">1611</span>
+<span id="1612">1612</span>
+<span id="1613">1613</span>
+<span id="1614">1614</span>
+<span id="1615">1615</span>
+<span id="1616">1616</span>
+<span id="1617">1617</span>
+<span id="1618">1618</span>
+<span id="1619">1619</span>
+<span id="1620">1620</span>
+<span id="1621">1621</span>
+<span id="1622">1622</span>
+<span id="1623">1623</span>
+<span id="1624">1624</span>
+<span id="1625">1625</span>
+<span id="1626">1626</span>
+<span id="1627">1627</span>
+<span id="1628">1628</span>
+<span id="1629">1629</span>
+<span id="1630">1630</span>
+<span id="1631">1631</span>
+<span id="1632">1632</span>
+<span id="1633">1633</span>
+<span id="1634">1634</span>
+<span id="1635">1635</span>
+<span id="1636">1636</span>
+<span id="1637">1637</span>
+<span id="1638">1638</span>
+<span id="1639">1639</span>
+<span id="1640">1640</span>
+<span id="1641">1641</span>
+<span id="1642">1642</span>
+<span id="1643">1643</span>
+<span id="1644">1644</span>
+<span id="1645">1645</span>
+<span id="1646">1646</span>
+<span id="1647">1647</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1603,6 +1654,7 @@
     <span class="ident">expansion</span>::{
         <span class="ident">aliases</span>::{<span class="ident">AliasMap</span>, <span class="ident">AliasSet</span>},
         <span class="ident">ast</span>::{<span class="self">self</span> <span class="kw">as</span> <span class="ident">E</span>, <span class="ident">Fields</span>, <span class="ident">SpecId</span>},
+        <span class="ident">byte_string</span>, <span class="ident">hex_string</span>,
     },
     <span class="ident">parser</span>::<span class="ident">ast</span>::{
         <span class="self">self</span> <span class="kw">as</span> <span class="ident">P</span>, <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">FunctionVisibility</span>, <span class="ident">Kind</span>, <span class="ident">ModuleIdent</span>, <span class="ident">ModuleIdent_</span>,
@@ -2468,9 +2520,26 @@
             <span class="ident">patterns</span>,
             <span class="ident">exclusion_patterns</span>,
         },
-        <span class="ident">PM</span>::<span class="ident">Pragma</span> { <span class="ident">properties</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EM</span>::<span class="ident">Pragma</span> { <span class="ident">properties</span> },
+        <span class="ident">PM</span>::<span class="ident">Pragma</span> {
+            <span class="ident">properties</span>: <span class="ident">pproperties</span>,
+        } <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">properties</span> <span class="op">=</span> <span class="ident">pproperties</span>
+                .<span class="ident">into_iter</span>()
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">pragma_property</span>(<span class="ident">context</span>, <span class="ident">p</span>))
+                .<span class="ident">collect</span>();
+            <span class="ident">EM</span>::<span class="ident">Pragma</span> { <span class="ident">properties</span> }
+        }
     };
     <span class="prelude-val">Some</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">em</span>))
+}
+
+<span class="kw">fn</span> <span class="ident">pragma_property</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">pp_</span>): <span class="ident">P</span>::<span class="ident">PragmaProperty</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">E</span>::<span class="ident">PragmaProperty</span> {
+    <span class="kw">let</span> <span class="ident">P</span>::<span class="ident">PragmaProperty_</span> {
+        <span class="ident">name</span>,
+        <span class="ident">value</span>: <span class="ident">pv_opt</span>,
+    } <span class="op">=</span> <span class="ident">pp_</span>;
+    <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">pv_opt</span>.<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">pv</span><span class="op">|</span> <span class="ident">value</span>(<span class="ident">context</span>, <span class="ident">pv</span>));
+    <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">E</span>::<span class="ident">PragmaProperty_</span> { <span class="ident">name</span>, <span class="ident">value</span> })
 }
 
 <span class="comment">//**************************************************************************************************</span>
@@ -2661,7 +2730,13 @@
     <span class="kw">use</span> <span class="ident">P</span>::<span class="ident">Exp_</span> <span class="kw">as</span> <span class="ident">PE</span>;
     <span class="kw">let</span> <span class="ident">e_</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">pe_</span> {
         <span class="ident">PE</span>::<span class="ident">Unit</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EE</span>::<span class="ident">Unit</span>,
-        <span class="ident">PE</span>::<span class="ident">Value</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EE</span>::<span class="ident">Value</span>(<span class="ident">v</span>),
+        <span class="ident">PE</span>::<span class="ident">Value</span>(<span class="ident">pv</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">value</span>(<span class="ident">context</span>, <span class="ident">pv</span>) {
+            <span class="prelude-val">Some</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EE</span>::<span class="ident">Value</span>(<span class="ident">v</span>),
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">context</span>.<span class="ident">has_errors</span>());
+                <span class="ident">EE</span>::<span class="ident">UnresolvedError</span>
+            }
+        },
         <span class="ident">PE</span>::<span class="ident">InferredNum</span>(<span class="ident">u</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EE</span>::<span class="ident">InferredNum</span>(<span class="ident">u</span>),
         <span class="ident">PE</span>::<span class="ident">Move</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EE</span>::<span class="ident">Move</span>(<span class="ident">v</span>),
         <span class="ident">PE</span>::<span class="ident">Copy</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EE</span>::<span class="ident">Copy</span>(<span class="ident">v</span>),
@@ -2837,6 +2912,33 @@
         <span class="ident">pe_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EE</span>::<span class="ident">Exp</span>(<span class="ident">exp_</span>(<span class="ident">context</span>, <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">pe_</span>))),
     };
     <span class="prelude-val">Some</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">edotted_</span>))
+}
+
+<span class="kw">fn</span> <span class="ident">value</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">pvalue_</span>): <span class="ident">P</span>::<span class="ident">Value</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">E</span>::<span class="ident">Value</span><span class="op">&gt;</span> {
+    <span class="kw">use</span> <span class="ident">E</span>::<span class="ident">Value_</span> <span class="kw">as</span> <span class="ident">EV</span>;
+    <span class="kw">use</span> <span class="ident">P</span>::<span class="ident">Value_</span> <span class="kw">as</span> <span class="ident">PV</span>;
+    <span class="kw">let</span> <span class="ident">value_</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">pvalue_</span> {
+        <span class="ident">PV</span>::<span class="ident">Address</span>(<span class="ident">addr</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EV</span>::<span class="ident">Address</span>(<span class="ident">addr</span>),
+        <span class="ident">PV</span>::<span class="ident">U8</span>(<span class="ident">u</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EV</span>::<span class="ident">U8</span>(<span class="ident">u</span>),
+        <span class="ident">PV</span>::<span class="ident">U64</span>(<span class="ident">u</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EV</span>::<span class="ident">U64</span>(<span class="ident">u</span>),
+        <span class="ident">PV</span>::<span class="ident">U128</span>(<span class="ident">u</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EV</span>::<span class="ident">U128</span>(<span class="ident">u</span>),
+        <span class="ident">PV</span>::<span class="ident">Bool</span>(<span class="ident">b</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EV</span>::<span class="ident">Bool</span>(<span class="ident">b</span>),
+        <span class="ident">PV</span>::<span class="ident">HexString</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">hex_string</span>::<span class="ident">decode</span>(<span class="ident">loc</span>, <span class="kw-2">&amp;</span><span class="ident">s</span>) {
+            <span class="prelude-val">Ok</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EV</span>::<span class="ident">Bytearray</span>(<span class="ident">v</span>),
+            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">context</span>.<span class="ident">errors</span>.<span class="ident">extend</span>(<span class="ident">e</span>);
+                <span class="kw">return</span> <span class="prelude-val">None</span>;
+            }
+        },
+        <span class="ident">PV</span>::<span class="ident">ByteString</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">byte_string</span>::<span class="ident">decode</span>(<span class="ident">loc</span>, <span class="kw-2">&amp;</span><span class="ident">s</span>) {
+            <span class="prelude-val">Ok</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EV</span>::<span class="ident">Bytearray</span>(<span class="ident">v</span>),
+            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">context</span>.<span class="ident">errors</span>.<span class="ident">extend</span>(<span class="ident">e</span>);
+                <span class="kw">return</span> <span class="prelude-val">None</span>;
+            }
+        },
+    };
+    <span class="prelude-val">Some</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">value_</span>))
 }
 
 <span class="comment">//**************************************************************************************************</span>
