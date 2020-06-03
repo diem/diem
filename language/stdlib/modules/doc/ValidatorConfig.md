@@ -118,7 +118,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_publish">publish</a>(signer: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_publish">publish</a>(creator: &signer, account: &signer)
 </code></pre>
 
 
@@ -127,9 +127,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_publish">publish</a>(signer: &signer) {
-    Transaction::assert(Transaction::sender() == 0xA550C18, 1101);
-    move_to(signer, <a href="#0x0_ValidatorConfig_T">T</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_publish">publish</a>(creator: &signer, account: &signer) {
+    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(creator) == 0xA550C18, 1101);
+    move_to(account, <a href="#0x0_ValidatorConfig_T">T</a> {
         config: <a href="Option.md#0x0_Option_none">Option::none</a>(),
         operator_account: <a href="Option.md#0x0_Option_none">Option::none</a>(),
     });
@@ -146,7 +146,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_set_operator">set_operator</a>(operator_account: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_set_operator">set_operator</a>(account: &signer, operator_account: address)
 </code></pre>
 
 
@@ -155,8 +155,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_set_operator">set_operator</a>(operator_account: address) <b>acquires</b> <a href="#0x0_ValidatorConfig_T">T</a> {
-    (borrow_global_mut&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(Transaction::sender())).operator_account = <a href="Option.md#0x0_Option_some">Option::some</a>(operator_account);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_set_operator">set_operator</a>(account: &signer, operator_account: address) <b>acquires</b> <a href="#0x0_ValidatorConfig_T">T</a> {
+    <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
+    (borrow_global_mut&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(sender)).operator_account = <a href="Option.md#0x0_Option_some">Option::some</a>(operator_account);
 }
 </code></pre>
 
@@ -170,7 +171,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_remove_operator">remove_operator</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_remove_operator">remove_operator</a>(account: &signer)
 </code></pre>
 
 
@@ -179,9 +180,10 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_remove_operator">remove_operator</a>() <b>acquires</b> <a href="#0x0_ValidatorConfig_T">T</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_remove_operator">remove_operator</a>(account: &signer) <b>acquires</b> <a href="#0x0_ValidatorConfig_T">T</a> {
+    <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     // <a href="#0x0_ValidatorConfig_Config">Config</a> field remains set
-    (borrow_global_mut&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(Transaction::sender())).operator_account = <a href="Option.md#0x0_Option_none">Option::none</a>();
+    (borrow_global_mut&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(sender)).operator_account = <a href="Option.md#0x0_Option_none">Option::none</a>();
 }
 </code></pre>
 
@@ -213,8 +215,10 @@
     full_node_network_identity_pubkey: vector&lt;u8&gt;,
     full_node_network_address: vector&lt;u8&gt;,
 ) <b>acquires</b> <a href="#0x0_ValidatorConfig_T">T</a> {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(signer) ==
-                        <a href="#0x0_ValidatorConfig_get_operator">get_operator</a>(validator_account), 1101);
+    Transaction::assert(
+        <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(signer) == <a href="#0x0_ValidatorConfig_get_operator">get_operator</a>(validator_account),
+        1101
+    );
     // TODO(valerini): verify the validity of new_config.consensus_pubkey and
     // the proof of posession
     <b>let</b> t_ref = borrow_global_mut&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(validator_account);
@@ -238,7 +242,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_set_consensus_pubkey">set_consensus_pubkey</a>(validator_account: address, consensus_pubkey: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_set_consensus_pubkey">set_consensus_pubkey</a>(account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -248,11 +252,14 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_set_consensus_pubkey">set_consensus_pubkey</a>(
+    account: &signer,
     validator_account: address,
     consensus_pubkey: vector&lt;u8&gt;,
 ) <b>acquires</b> <a href="#0x0_ValidatorConfig_T">T</a> {
-    Transaction::assert(Transaction::sender() ==
-                        <a href="#0x0_ValidatorConfig_get_operator">get_operator</a>(validator_account), 1101);
+    Transaction::assert(
+        <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="#0x0_ValidatorConfig_get_operator">get_operator</a>(validator_account),
+        1101
+    );
     <b>let</b> t_config_ref = <a href="Option.md#0x0_Option_borrow_mut">Option::borrow_mut</a>(&<b>mut</b> borrow_global_mut&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(validator_account).config);
     t_config_ref.consensus_pubkey = consensus_pubkey;
 }

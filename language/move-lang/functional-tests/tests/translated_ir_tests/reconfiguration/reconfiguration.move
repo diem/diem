@@ -11,8 +11,8 @@
 script {
 use 0x0::LibraConfig;
 
-fun main() {
-    LibraConfig::reconfigure()
+fun main(account: &signer) {
+    LibraConfig::reconfigure(account)
 }
 }
 
@@ -24,8 +24,8 @@ fun main() {
 script {
 use 0x0::LibraConfig;
 
-fun main() {
-    LibraConfig::reconfigure()
+fun main(account: &signer) {
+    LibraConfig::reconfigure(account)
 }
 }
 
@@ -38,8 +38,8 @@ fun main() {
 script {
 use 0x0::LibraConfig;
 
-fun main() {
-    LibraConfig::reconfigure()
+fun main(account: &signer) {
+    LibraConfig::reconfigure(account)
 }
 }
 
@@ -55,8 +55,8 @@ fun main() {
 script {
 use 0x0::LibraConfig;
 
-fun main() {
-    LibraConfig::reconfigure()
+fun main(account: &signer) {
+    LibraConfig::reconfigure(account)
 }
 }
 

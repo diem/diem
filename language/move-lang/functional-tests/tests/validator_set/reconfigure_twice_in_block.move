@@ -17,8 +17,8 @@
 //! sender: alice
 script {
 use 0x0::LibraSystem;
-fun main() {
-    LibraSystem::remove_validator({{alice}});
+fun main(account: &signer) {
+    LibraSystem::remove_validator(account, {{alice}});
 }
 }
 
@@ -29,8 +29,8 @@ fun main() {
 //! sender: bob
 script {
 use 0x0::LibraSystem;
-fun main() {
-    LibraSystem::remove_validator({{bob}});
+fun main(account: &signer) {
+    LibraSystem::remove_validator(account, {{bob}});
 }
 }
 
@@ -46,8 +46,8 @@ fun main() {
 //! sender: bob
 script {
 use 0x0::LibraSystem;
-fun main() {
-    LibraSystem::remove_validator({{bob}});
+fun main(account: &signer) {
+    LibraSystem::remove_validator(account, {{bob}});
 }
 }
 

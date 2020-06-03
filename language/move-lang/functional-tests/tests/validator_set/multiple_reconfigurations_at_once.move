@@ -13,13 +13,13 @@ script{
     use 0x0::LibraSystem;
     // Decertify two validators to make sure we can remove both
     // from the set and trigger reconfiguration
-    fun main() {
+    fun main(account: &signer) {
         0x0::Transaction::assert(LibraSystem::is_validator({{alice}}) == true, 98);
         0x0::Transaction::assert(LibraSystem::is_validator({{vivian}}) == true, 99);
         0x0::Transaction::assert(LibraSystem::is_validator({{viola}}) == true, 100);
-        LibraAccount::decertify<LibraAccount::ValidatorRole>({{vivian}});
-        LibraAccount::decertify<LibraAccount::ValidatorRole>({{alice}});
-        LibraSystem::update_and_reconfigure();
+        LibraAccount::decertify<LibraAccount::ValidatorRole>(account, {{vivian}});
+        LibraAccount::decertify<LibraAccount::ValidatorRole>(account, {{alice}});
+        LibraSystem::update_and_reconfigure(account);
         0x0::Transaction::assert(LibraSystem::is_validator({{alice}}) == false, 101);
         0x0::Transaction::assert(LibraSystem::is_validator({{vivian}}) == false, 102);
         0x0::Transaction::assert(LibraSystem::is_validator({{viola}}) == true, 103);
@@ -36,12 +36,12 @@ script{
     use 0x0::LibraSystem;
     use 0x0::ValidatorConfig;
     // Two reconfigurations cannot happen in the same block
-    fun main() {
-        ValidatorConfig::set_consensus_pubkey({{viola}}, x"40");
-        LibraSystem::update_and_reconfigure();
+    fun main(account: &signer) {
+        ValidatorConfig::set_consensus_pubkey(account, {{viola}}, x"40");
+        LibraSystem::update_and_reconfigure(account);
 
-        ValidatorConfig::set_consensus_pubkey({{viola}}, x"50");
-        LibraSystem::update_and_reconfigure();
+        ValidatorConfig::set_consensus_pubkey(account, {{viola}}, x"50");
+        LibraSystem::update_and_reconfigure(account);
     }
 }
 

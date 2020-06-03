@@ -17,16 +17,16 @@
 script {
 use 0x0::ValidatorConfig;
 use 0x0::LibraSystem;
-fun main() {
+fun main(account: &signer) {
     // assert alice is a validator
     0x0::Transaction::assert(ValidatorConfig::is_valid({{bob}}) == true, 98);
     0x0::Transaction::assert(LibraSystem::is_validator({{bob}}) == true, 98);
 
     // bob rotates his public key
-    ValidatorConfig::set_consensus_pubkey({{bob}}, x"30");
+    ValidatorConfig::set_consensus_pubkey(account, {{bob}}, x"30");
 
     // use the update_token to trigger reconfiguration
-    LibraSystem::update_and_reconfigure();
+    LibraSystem::update_and_reconfigure(account);
 
     // check bob's public key
     let validator_config = LibraSystem::get_validator_config({{bob}});

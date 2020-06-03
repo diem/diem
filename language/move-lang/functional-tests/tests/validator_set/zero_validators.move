@@ -19,13 +19,13 @@ script {
 script {
     use 0x0::LibraAccount;
     use 0x0::LibraSystem;
-    fun main() {
+    fun main(account: &signer) {
         let num_validators = LibraSystem::validator_set_size();
         0x0::Transaction::assert(num_validators == 1, 98);
         let index = 0;
         while (index < num_validators) {
             let addr = LibraSystem::get_ith_validator_address(index);
-            LibraAccount::decertify<LibraAccount::ValidatorRole>(addr);
+            LibraAccount::decertify<LibraAccount::ValidatorRole>(account, addr);
             index = index + 1;
         }
     }
@@ -36,8 +36,8 @@ script {
 //! sender: association
 script {
     use 0x0::LibraSystem;
-    fun main() {
-        LibraSystem::update_and_reconfigure();
+    fun main(account: &signer) {
+        LibraSystem::update_and_reconfigure(account);
         let num_validators = LibraSystem::validator_set_size();
         0x0::Transaction::assert(num_validators == 0, 98);
     }

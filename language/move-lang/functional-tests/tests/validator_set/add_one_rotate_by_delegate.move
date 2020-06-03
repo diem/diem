@@ -8,9 +8,9 @@
 //! sender: bob
 script {
 use 0x0::ValidatorConfig;
-fun main() {
+fun main(account: &signer) {
     // register alice as bob's delegate
-    ValidatorConfig::set_operator({{alice}});
+    ValidatorConfig::set_operator(account, {{alice}});
 }
 }
 
@@ -21,9 +21,9 @@ fun main() {
 script {
 use 0x0::ValidatorConfig;
 // test alice can rotate bob's consensus public key
-fun main() {
+fun main(account: &signer) {
     0x0::Transaction::assert(ValidatorConfig::get_operator({{bob}}) == {{alice}}, 44);
-    ValidatorConfig::set_consensus_pubkey({{bob}}, x"20");
+    ValidatorConfig::set_consensus_pubkey(account, {{bob}}, x"20");
 
     // check new key is "20"
     let config = ValidatorConfig::get_config({{bob}});
@@ -38,12 +38,12 @@ fun main() {
 script {
 use 0x0::ValidatorConfig;
 // test bob can not rotate his public key because it delegated
-fun main() {
+fun main(account: &signer) {
     // check initial key was "beefbeef"
     let config = ValidatorConfig::get_config({{bob}});
     0x0::Transaction::assert(*ValidatorConfig::get_consensus_pubkey(&config) == x"20", 99);
 
-    ValidatorConfig::set_consensus_pubkey({{bob}}, x"30");
+    ValidatorConfig::set_consensus_pubkey(account, {{bob}}, x"30");
 }
 }
 
@@ -62,11 +62,11 @@ script {
 use 0x0::ValidatorConfig;
 use 0x0::LibraSystem;
 // test alice can invoke reconfiguration upon successful rotation of bob's consensus public key
-fun main() {
-    ValidatorConfig::set_consensus_pubkey({{bob}}, x"30");
+fun main(account: &signer) {
+    ValidatorConfig::set_consensus_pubkey(account, {{bob}}, x"30");
 
     // call update to reconfigure
-    LibraSystem::update_and_reconfigure();
+    LibraSystem::update_and_reconfigure(account);
 
     // check bob's public key is updated
     let validator_config = LibraSystem::get_validator_config({{bob}});

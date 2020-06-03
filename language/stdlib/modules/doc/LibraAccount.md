@@ -1546,7 +1546,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_rotate_authentication_key">rotate_authentication_key</a>(new_authentication_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_rotate_authentication_key">rotate_authentication_key</a>(sender: &signer, new_authentication_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -1555,13 +1555,15 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_rotate_authentication_key">rotate_authentication_key</a>(new_authentication_key: vector&lt;u8&gt;) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
-    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(Transaction::sender());
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_rotate_authentication_key">rotate_authentication_key</a>(
+    sender: &signer, new_authentication_key: vector&lt;u8&gt;
+) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
+    <b>let</b> sender_account_resource = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(sender));
     // The sender has delegated the privilege <b>to</b> rotate her key elsewhere--<b>abort</b>
-    Transaction::assert(!sender_account.delegated_key_rotation_capability, 11);
+    Transaction::assert(!sender_account_resource.delegated_key_rotation_capability, 11);
     // The sender has retained her key rotation privileges--proceed.
     <a href="#0x0_LibraAccount_rotate_authentication_key_for_account">rotate_authentication_key_for_account</a>(
-        sender_account,
+        sender_account_resource,
         new_authentication_key
     );
 }
@@ -2474,7 +2476,7 @@ also be added. This account will be a child of
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_freeze_account">freeze_account</a>(addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_freeze_account">freeze_account</a>(account: &signer, frozen_address: address)
 </code></pre>
 
 
@@ -2483,17 +2485,18 @@ also be added. This account will be a child of
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_freeze_account">freeze_account</a>(addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_freeze_account">freeze_account</a>(account: &signer, frozen_address: address)
 <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
-    <a href="#0x0_LibraAccount_assert_can_freeze">assert_can_freeze</a>(Transaction::sender());
+    <b>let</b> initiator_address = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
+    <a href="#0x0_LibraAccount_assert_can_freeze">assert_can_freeze</a>(initiator_address);
     // The root association account cannot be frozen
-    Transaction::assert(addr != <a href="Association.md#0x0_Association_root_address">Association::root_address</a>(), 14);
-    borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(addr).is_frozen = <b>true</b>;
+    Transaction::assert(frozen_address != <a href="Association.md#0x0_Association_root_address">Association::root_address</a>(), 14);
+    borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(frozen_address).is_frozen = <b>true</b>;
     <a href="Event.md#0x0_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x0_LibraAccount_FreezeAccountEvent">FreezeAccountEvent</a>&gt;(
         &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(0xA550C18).freeze_event_handle,
         <a href="#0x0_LibraAccount_FreezeAccountEvent">FreezeAccountEvent</a> {
-            initiator_address: Transaction::sender(),
-            frozen_address: addr
+            initiator_address,
+            frozen_address
         },
     );
 }
@@ -2509,7 +2512,7 @@ also be added. This account will be a child of
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_unfreeze_account">unfreeze_account</a>(addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_unfreeze_account">unfreeze_account</a>(account: &signer, unfrozen_address: address)
 </code></pre>
 
 
@@ -2518,15 +2521,16 @@ also be added. This account will be a child of
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_unfreeze_account">unfreeze_account</a>(addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_unfreeze_account">unfreeze_account</a>(account: &signer, unfrozen_address: address)
 <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
-    <a href="#0x0_LibraAccount_assert_can_freeze">assert_can_freeze</a>(Transaction::sender());
-    borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(addr).is_frozen = <b>false</b>;
+    <b>let</b> initiator_address = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
+    <a href="#0x0_LibraAccount_assert_can_freeze">assert_can_freeze</a>(initiator_address);
+    borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(unfrozen_address).is_frozen = <b>false</b>;
     <a href="Event.md#0x0_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x0_LibraAccount_UnfreezeAccountEvent">UnfreezeAccountEvent</a>&gt;(
         &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(0xA550C18).unfreeze_event_handle,
         <a href="#0x0_LibraAccount_UnfreezeAccountEvent">UnfreezeAccountEvent</a> {
-            initiator_address: Transaction::sender(),
-            unfrozen_address: addr
+            initiator_address,
+            unfrozen_address
         },
     );
 }
@@ -2744,7 +2748,7 @@ also be added. This account will be a child of
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_decertify">decertify</a>&lt;RoleType: <b>copyable</b>&gt;(addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_decertify">decertify</a>&lt;RoleType: <b>copyable</b>&gt;(account: &signer, addr: address)
 </code></pre>
 
 
@@ -2753,8 +2757,8 @@ also be added. This account will be a child of
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_decertify">decertify</a>&lt;RoleType: <b>copyable</b>&gt;(addr: address) <b>acquires</b> <a href="#0x0_LibraAccount_Role_temp">Role_temp</a> {
-    Transaction::assert(<a href="Association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(Transaction::sender()), 1002);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_decertify">decertify</a>&lt;RoleType: <b>copyable</b>&gt;(account: &signer, addr: address) <b>acquires</b> <a href="#0x0_LibraAccount_Role_temp">Role_temp</a> {
+    Transaction::assert(<a href="Association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)), 1002);
     borrow_global_mut&lt;<a href="#0x0_LibraAccount_Role_temp">Role_temp</a>&lt;RoleType&gt;&gt;(addr).is_certified = <b>false</b>;
 }
 </code></pre>
@@ -2769,7 +2773,7 @@ also be added. This account will be a child of
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_certify">certify</a>&lt;RoleType: <b>copyable</b>&gt;(addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_certify">certify</a>&lt;RoleType: <b>copyable</b>&gt;(account: &signer, addr: address)
 </code></pre>
 
 
@@ -2778,8 +2782,8 @@ also be added. This account will be a child of
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_certify">certify</a>&lt;RoleType: <b>copyable</b>&gt;(addr: address) <b>acquires</b> <a href="#0x0_LibraAccount_Role_temp">Role_temp</a> {
-    Transaction::assert(<a href="Association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(Transaction::sender()), 1002);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_certify">certify</a>&lt;RoleType: <b>copyable</b>&gt;(account: &signer, addr: address) <b>acquires</b> <a href="#0x0_LibraAccount_Role_temp">Role_temp</a> {
+    Transaction::assert(<a href="Association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)), 1002);
     // <a href="#0x0_LibraAccount_Role">Role</a> can be only published under the account at its creation
     borrow_global_mut&lt;<a href="#0x0_LibraAccount_Role_temp">Role_temp</a>&lt;RoleType&gt;&gt;(addr).is_certified = <b>true</b>;
 }
@@ -2795,7 +2799,7 @@ also be added. This account will be a child of
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_validator_account">create_validator_account</a>&lt;Token&gt;(new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_validator_account">create_validator_account</a>&lt;Token&gt;(creator: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2805,13 +2809,14 @@ also be added. This account will be a child of
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_validator_account">create_validator_account</a>&lt;Token&gt;(
+    creator: &signer,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
 ) {
-    Transaction::assert(<a href="Association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(Transaction::sender()), 1002);
+    Transaction::assert(<a href="Association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(creator)), 1002);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
-    <a href="ValidatorConfig.md#0x0_ValidatorConfig_publish">ValidatorConfig::publish</a>(&new_account);
+    <a href="ValidatorConfig.md#0x0_ValidatorConfig_publish">ValidatorConfig::publish</a>(creator, &new_account);
     move_to(&new_account, <a href="#0x0_LibraAccount_Role_temp">Role_temp</a>&lt;<a href="#0x0_LibraAccount_ValidatorRole">ValidatorRole</a>&gt; { role_type: <a href="#0x0_LibraAccount_ValidatorRole">ValidatorRole</a> { }, is_certified: <b>true</b> });
     <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="Empty.md#0x0_Empty_T">Empty::T</a>&gt;(new_account, auth_key_prefix, <a href="Empty.md#0x0_Empty_create">Empty::create</a>(), <b>false</b>)
 }

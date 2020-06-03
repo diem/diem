@@ -15,7 +15,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;(new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;(creator: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -24,10 +24,12 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Token&gt;(new_account_address: address, auth_key_prefix: vector&lt;u8&gt;) {
+<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Token&gt;(creator: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;) {
     <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_create_validator_account">LibraAccount::create_validator_account</a>&lt;Token&gt;(
+        creator,
         new_account_address,
-        auth_key_prefix);
+        auth_key_prefix
+    );
 }
 </code></pre>
 

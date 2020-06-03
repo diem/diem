@@ -1,6 +1,6 @@
 script {
     use 0x0::LibraSystem;
-    use 0x0::Transaction;
+    use 0x0::Signer;
     use 0x0::ValidatorConfig;
 
     // Here the sender's address should already be certified as both a Validator.
@@ -13,15 +13,16 @@ script {
         fullnodes_network_identity_pubkey: vector<u8>,
         fullnodes_network_address: vector<u8>,
     ) {
+        let sender = Signer::address_of(account);
         ValidatorConfig::set_config(
             account,
-            Transaction::sender(),
+            sender,
             consensus_pubkey,
             validator_network_identity_pubkey,
             validator_network_address,
             fullnodes_network_identity_pubkey,
             fullnodes_network_address
         );
-        LibraSystem::add_validator(Transaction::sender());
+        LibraSystem::add_validator(account, sender)
 }
 }

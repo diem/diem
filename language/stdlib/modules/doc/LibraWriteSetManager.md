@@ -75,7 +75,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraWriteSetManager_initialize">initialize</a>(sig: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraWriteSetManager_initialize">initialize</a>(account: &signer)
 </code></pre>
 
 
@@ -84,13 +84,13 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraWriteSetManager_initialize">initialize</a>(sig: &signer) {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(sig) == 0xA550C18, 1);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraWriteSetManager_initialize">initialize</a>(account: &signer) {
+    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == 0xA550C18, 1);
 
     move_to(
-        sig,
+        account,
         <a href="#0x0_LibraWriteSetManager_T">T</a> {
-            upgrade_events: <a href="Event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_LibraWriteSetManager_UpgradeEvent">Self::UpgradeEvent</a>&gt;(sig),
+            upgrade_events: <a href="Event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_LibraWriteSetManager_UpgradeEvent">Self::UpgradeEvent</a>&gt;(account),
         }
     );
 }
@@ -146,7 +146,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraWriteSetManager_epilogue">epilogue</a>(writeset_payload: vector&lt;u8&gt;)
+<pre><code><b>fun</b> <a href="#0x0_LibraWriteSetManager_epilogue">epilogue</a>(account: &signer, writeset_payload: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -155,14 +155,14 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraWriteSetManager_epilogue">epilogue</a>(writeset_payload: vector&lt;u8&gt;) <b>acquires</b> <a href="#0x0_LibraWriteSetManager_T">T</a> {
+<pre><code><b>fun</b> <a href="#0x0_LibraWriteSetManager_epilogue">epilogue</a>(account: &signer, writeset_payload: vector&lt;u8&gt;) <b>acquires</b> <a href="#0x0_LibraWriteSetManager_T">T</a> {
     <b>let</b> t_ref = borrow_global_mut&lt;<a href="#0x0_LibraWriteSetManager_T">T</a>&gt;(0xA550C18);
 
     <a href="Event.md#0x0_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x0_LibraWriteSetManager_UpgradeEvent">Self::UpgradeEvent</a>&gt;(
         &<b>mut</b> t_ref.upgrade_events,
         <a href="#0x0_LibraWriteSetManager_UpgradeEvent">UpgradeEvent</a> { writeset_payload },
     );
-    <a href="LibraConfig.md#0x0_LibraConfig_reconfigure">LibraConfig::reconfigure</a>();
+    <a href="LibraConfig.md#0x0_LibraConfig_reconfigure">LibraConfig::reconfigure</a>(account);
 }
 </code></pre>
 

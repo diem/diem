@@ -12,9 +12,9 @@
 //! sender: bob
 script {
 use 0x0::ValidatorConfig;
-fun main() {
+fun main(account: &signer) {
     // set alice to change bob's key
-    ValidatorConfig::set_operator({{alice}});
+    ValidatorConfig::set_operator(account, {{alice}});
 }
 }
 
@@ -25,8 +25,8 @@ fun main() {
 // check bob can not rotate his consensus key
 script {
 use 0x0::ValidatorConfig;
-fun main() {
-    ValidatorConfig::set_consensus_pubkey({{bob}}, x"30");
+fun main(account: &signer) {
+    ValidatorConfig::set_consensus_pubkey(account, {{bob}}, x"30");
 }
 }
 
@@ -37,8 +37,8 @@ fun main() {
 // check bob can not rotate alice's consensus key
 script {
 use 0x0::ValidatorConfig;
-fun main() {
-    ValidatorConfig::set_consensus_pubkey({{alice}}, x"30");
+fun main(account: &signer) {
+    ValidatorConfig::set_consensus_pubkey(account, {{alice}}, x"30");
 }
 }
 
@@ -49,8 +49,8 @@ fun main() {
 // check alice can rotate bob's consensus key
 script {
 use 0x0::ValidatorConfig;
-fun main() {
-    ValidatorConfig::set_consensus_pubkey({{bob}}, x"30");
+fun main(account: &signer) {
+    ValidatorConfig::set_consensus_pubkey(account, {{bob}}, x"30");
     0x0::Transaction::assert(*ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{bob}})) == x"30", 99);
 }
 }
@@ -62,8 +62,8 @@ fun main() {
 // check alice can rotate her consensus key
 script {
 use 0x0::ValidatorConfig;
-fun main() {
-    ValidatorConfig::set_consensus_pubkey({{alice}}, x"20");
+fun main(account: &signer) {
+    ValidatorConfig::set_consensus_pubkey(account, {{alice}}, x"20");
     0x0::Transaction::assert(*ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{alice}})) == x"20", 99);
 }
 }
@@ -75,8 +75,8 @@ fun main() {
 // check alice can rotate her consensus key
 script {
 use 0x0::ValidatorConfig;
-fun main() {
-    ValidatorConfig::set_consensus_pubkey({{alice}}, x"30");
+fun main(account: &signer) {
+    ValidatorConfig::set_consensus_pubkey(account, {{alice}}, x"30");
     0x0::Transaction::assert(*ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{alice}})) == x"30", 99);
 }
 }

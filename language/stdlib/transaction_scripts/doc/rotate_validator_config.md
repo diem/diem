@@ -33,14 +33,16 @@
     fullnodes_network_identity_pubkey: vector&lt;u8&gt;,
     fullnodes_network_address: vector&lt;u8&gt;,
 ) {
-    <a href="../../modules/doc/ValidatorConfig.md#0x0_ValidatorConfig_set_config">ValidatorConfig::set_config</a>(account,
-                                validator_account,
-                                consensus_pubkey,
-                                validator_network_identity_pubkey,
-                                validator_network_address,
-                                fullnodes_network_identity_pubkey,
-                                fullnodes_network_address);
-    <a href="../../modules/doc/LibraSystem.md#0x0_LibraSystem_update_and_reconfigure">LibraSystem::update_and_reconfigure</a>();
+    <a href="../../modules/doc/ValidatorConfig.md#0x0_ValidatorConfig_set_config">ValidatorConfig::set_config</a>(
+        account,
+        validator_account,
+        consensus_pubkey,
+        validator_network_identity_pubkey,
+        validator_network_address,
+        fullnodes_network_identity_pubkey,
+        fullnodes_network_address
+    );
+    <a href="../../modules/doc/LibraSystem.md#0x0_LibraSystem_update_and_reconfigure">LibraSystem::update_and_reconfigure</a>(account);
 }
 </code></pre>
 

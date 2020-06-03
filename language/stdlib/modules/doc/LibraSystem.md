@@ -19,7 +19,7 @@
 -  [Function `validator_set_size`](#0x0_LibraSystem_validator_set_size)
 -  [Function `get_ith_validator_address`](#0x0_LibraSystem_get_ith_validator_address)
 -  [Function `is_valid_and_certified`](#0x0_LibraSystem_is_valid_and_certified)
--  [Function `is_sender_authorized_to_reconfigure_`](#0x0_LibraSystem_is_sender_authorized_to_reconfigure_)
+-  [Function `is_authorized_to_reconfigure_`](#0x0_LibraSystem_is_authorized_to_reconfigure_)
 -  [Function `get_validator_index_`](#0x0_LibraSystem_get_validator_index_)
 -  [Function `update_ith_validator_info_`](#0x0_LibraSystem_update_ith_validator_info_)
 -  [Function `is_validator_`](#0x0_LibraSystem_is_validator_)
@@ -147,7 +147,10 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_initialize_validator_set">initialize_validator_set</a>(config_account: &signer) {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="LibraConfig.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>(), 1);
+    Transaction::assert(
+        <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="LibraConfig.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>(),
+        1
+    );
 
     <b>let</b> cap = <a href="LibraConfig.md#0x0_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>&lt;<a href="#0x0_LibraSystem_T">T</a>&gt;(
         config_account,
@@ -194,7 +197,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_add_validator">add_validator</a>(account_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_add_validator">add_validator</a>(operator: &signer, account_address: address)
 </code></pre>
 
 
@@ -203,10 +206,15 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_add_validator">add_validator</a>(account_address: address) <b>acquires</b> <a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_add_validator">add_validator</a>(
+    operator: &signer,
+    account_address: address
+) <b>acquires</b> <a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
     // Validator's operator can add its certified validator <b>to</b> the validator set
-    Transaction::assert(Transaction::sender() ==
-                        <a href="ValidatorConfig.md#0x0_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(account_address), 22);
+    Transaction::assert(
+        <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(operator) == <a href="ValidatorConfig.md#0x0_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(account_address),
+        22
+    );
 
     // A prospective validator must have a validator config <b>resource</b>
     Transaction::assert(<a href="#0x0_LibraSystem_is_valid_and_certified">is_valid_and_certified</a>(account_address), 33);
@@ -237,7 +245,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_remove_validator">remove_validator</a>(account_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_remove_validator">remove_validator</a>(operator: &signer, account_address: address)
 </code></pre>
 
 
@@ -246,9 +254,12 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_remove_validator">remove_validator</a>(account_address: address) <b>acquires</b> <a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_remove_validator">remove_validator</a>(
+    operator: &signer,
+    account_address: address
+) <b>acquires</b> <a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
     // Validator's operator can remove its certified validator from the validator set
-    Transaction::assert(Transaction::sender() ==
+    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(operator) ==
                         <a href="ValidatorConfig.md#0x0_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(account_address), 22);
 
     <b>let</b> validator_set = <a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>();
@@ -273,7 +284,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_update_and_reconfigure">update_and_reconfigure</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_update_and_reconfigure">update_and_reconfigure</a>(account: &signer)
 </code></pre>
 
 
@@ -282,8 +293,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_update_and_reconfigure">update_and_reconfigure</a>() <b>acquires</b> <a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
-    Transaction::assert(<a href="#0x0_LibraSystem_is_sender_authorized_to_reconfigure_">is_sender_authorized_to_reconfigure_</a>(), 22);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_update_and_reconfigure">update_and_reconfigure</a>(account: &signer) <b>acquires</b> <a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
+    Transaction::assert(<a href="#0x0_LibraSystem_is_authorized_to_reconfigure_">is_authorized_to_reconfigure_</a>(account), 22);
 
     <b>let</b> validator_set = <a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>();
     <b>let</b> validators = &<b>mut</b> validator_set.validators;
@@ -467,13 +478,13 @@
 
 </details>
 
-<a name="0x0_LibraSystem_is_sender_authorized_to_reconfigure_"></a>
+<a name="0x0_LibraSystem_is_authorized_to_reconfigure_"></a>
 
-## Function `is_sender_authorized_to_reconfigure_`
+## Function `is_authorized_to_reconfigure_`
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraSystem_is_sender_authorized_to_reconfigure_">is_sender_authorized_to_reconfigure_</a>(): bool
+<pre><code><b>fun</b> <a href="#0x0_LibraSystem_is_authorized_to_reconfigure_">is_authorized_to_reconfigure_</a>(account: &signer): bool
 </code></pre>
 
 
@@ -482,9 +493,10 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraSystem_is_sender_authorized_to_reconfigure_">is_sender_authorized_to_reconfigure_</a>(): bool {
+<pre><code><b>fun</b> <a href="#0x0_LibraSystem_is_authorized_to_reconfigure_">is_authorized_to_reconfigure_</a>(account: &signer): bool {
+    <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     // succeed fast
-    <b>if</b> (Transaction::sender() == 0xA550C18 || Transaction::sender() == 0x0) {
+    <b>if</b> (sender == 0xA550C18 || sender == 0x0) {
         <b>return</b> <b>true</b>
     };
     <b>let</b> validators = &<a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>().validators;
@@ -494,11 +506,10 @@
 
     <b>let</b> i = 0;
     <b>while</b> (i &lt; size) {
-        <b>if</b> (<a href="Vector.md#0x0_Vector_borrow">Vector::borrow</a>(validators, i).addr == Transaction::sender()) {
+        <b>if</b> (<a href="Vector.md#0x0_Vector_borrow">Vector::borrow</a>(validators, i).addr == sender) {
             <b>return</b> <b>true</b>
         };
-        <b>if</b> (<a href="ValidatorConfig.md#0x0_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(<a href="Vector.md#0x0_Vector_borrow">Vector::borrow</a>(validators, i).addr) ==
-            Transaction::sender()) {
+        <b>if</b> (<a href="ValidatorConfig.md#0x0_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(<a href="Vector.md#0x0_Vector_borrow">Vector::borrow</a>(validators, i).addr) == sender) {
             <b>return</b> <b>true</b>
         };
         i = i + 1;

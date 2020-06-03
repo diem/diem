@@ -18,8 +18,8 @@ fun main() {
 script {
 use 0x0::LibraAccount;
 // A special association privilege is needed for freezing an account
-fun main() {
-    LibraAccount::freeze_account({{bob}});
+fun main(account: &signer) {
+    LibraAccount::freeze_account(account, {{bob}});
 }
 }
 // check: ABORTED
@@ -31,12 +31,12 @@ script {
 use 0x0::LibraAccount;
 use 0x0::Transaction;
 // Make sure we can freeze and unfreeze accounts.
-fun main() {
-    LibraAccount::freeze_account({{bob}});
+fun main(account: &signer) {
+    LibraAccount::freeze_account(account, {{bob}});
     Transaction::assert(LibraAccount::account_is_frozen({{bob}}), 1);
-    LibraAccount::unfreeze_account({{bob}});
+    LibraAccount::unfreeze_account(account, {{bob}});
     Transaction::assert(!LibraAccount::account_is_frozen({{bob}}), 2);
-    LibraAccount::freeze_account({{bob}});
+    LibraAccount::freeze_account(account, {{bob}});
 }
 }
 
@@ -56,8 +56,8 @@ fun main() { }
 //! sender: blessed
 script {
 use 0x0::LibraAccount;
-fun main() {
-    LibraAccount::unfreeze_account({{bob}});
+fun main(account: &signer) {
+    LibraAccount::unfreeze_account(account, {{bob}});
 }
 }
 
@@ -74,8 +74,8 @@ fun main() { }
 //! sender: blessed
 script {
 use 0x0::LibraAccount;
-fun main() {
-    LibraAccount::freeze_account({{association}})
+fun main(account: &signer) {
+    LibraAccount::freeze_account(account, {{association}})
 }
 }
 // check: ABORTED
@@ -101,16 +101,16 @@ use 0x0::LibraAccount;
 use 0x0::Transaction;
 // Freezing a child account doesn't freeze the root, freezing the root
 // doesn't freeze the child
-fun main() {
-    LibraAccount::freeze_account(0xAA);
+fun main(account: &signer) {
+    LibraAccount::freeze_account(account, 0xAA);
     Transaction::assert(LibraAccount::account_is_frozen(0xAA), 3);
     Transaction::assert(!LibraAccount::account_is_frozen({{vasp}}), 4);
-    LibraAccount::unfreeze_account(0xAA);
+    LibraAccount::unfreeze_account(account, 0xAA);
     Transaction::assert(!LibraAccount::account_is_frozen(0xAA), 5);
-    LibraAccount::freeze_account({{vasp}});
+    LibraAccount::freeze_account(account, {{vasp}});
     Transaction::assert(LibraAccount::account_is_frozen({{vasp}}), 6);
     Transaction::assert(!LibraAccount::account_is_frozen(0xAA), 7);
-    LibraAccount::unfreeze_account({{vasp}});
+    LibraAccount::unfreeze_account(account, {{vasp}});
     Transaction::assert(!LibraAccount::account_is_frozen({{vasp}}), 8);
 }
 }

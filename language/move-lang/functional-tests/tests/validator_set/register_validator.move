@@ -40,8 +40,10 @@ script{
     use 0x0::LibraAccount;
 
     // register Alice as a validator candidate
-    fun main() {
-        LibraAccount::create_validator_account<LBR::T>(0xAA, x"00000000000000000000000000000000");
+    fun main(creator: &signer) {
+        LibraAccount::create_validator_account<LBR::T>(
+            creator, 0xAA, x"00000000000000000000000000000000"
+        );
     }
 }
 

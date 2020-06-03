@@ -29,9 +29,7 @@ module Genesis {
         fee_account: &signer,
         tc_account: &signer,
         tc_addr: address,
-        tc_auth_key_prefix: vector<u8>,
         genesis_auth_key: vector<u8>,
-        _fee_auth_key: vector<u8>,
     ) {
         let dummy_auth_key_prefix = x"00000000000000000000000000000000";
 
@@ -74,7 +72,7 @@ module Genesis {
         LibraAccount::create_treasury_compliance_account<LBR::T>(
             association,
             tc_addr,
-            tc_auth_key_prefix,
+            copy dummy_auth_key_prefix,
             coin1_mint_cap,
             coin1_burn_cap,
             coin2_mint_cap,
@@ -94,13 +92,8 @@ module Genesis {
         LibraBlock::initialize_block_metadata(association);
         LibraWriteSetManager::initialize(association);
         LibraTimestamp::initialize(association);
-        LibraAccount::rotate_authentication_key(copy genesis_auth_key);
+        LibraAccount::rotate_authentication_key(association, genesis_auth_key);
     }
 
-    // TODO: combine with the above once `rotate_authentication_key` and
-    // `publish_preburn` take a `signer` parameter.
-    fun initialize_txn_fee_account(_fee_account: &signer, auth_key: vector<u8>) {
-        LibraAccount::rotate_authentication_key(auth_key);
-    }
 }
 }
