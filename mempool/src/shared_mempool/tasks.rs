@@ -14,7 +14,7 @@ use crate::{
     CommitNotification, CommitResponse, CommittedTransaction, ConsensusRequest, ConsensusResponse,
     SubmissionStatus,
 };
-use anyhow::{ensure, format_err, Result};
+use anyhow::{format_err, Result};
 use futures::{channel::oneshot, stream::FuturesUnordered};
 use libra_config::config::PeerNetworkId;
 use libra_logger::prelude::*;
@@ -337,25 +337,23 @@ pub(crate) fn process_broadcast_ack(
     is_validator: bool, // whether this node is a validator or not
     peer_manager: Arc<PeerManager>,
 ) {
-    match parse_request_id(request_id.clone()) {
-        Ok((start_id, end_id)) => {
-            // for full nodes, remove successfully ACK'ed txns from mempool
-            if !is_validator {
-                let mut mempool = mempool
-                    .lock()
-                    .expect("[shared mempool] failed to acquire mempool lock");
+    // for full nodes, remove successfully ACK'ed txns from mempool
+    if !is_validator {
+        if let Some(broadcasted_batch) = peer_manager.get_broadcast_batch(peer, &request_id) {
+            let mut mempool = mempool
+                .lock()
+                .expect("[shared mempool] failed to acquire mempool lock");
 
-                for (idx, txn) in mempool.timeline_range(start_id, end_id).iter().enumerate() {
-                    if !retry_txns.contains(&(idx as u64 + start_id)) {
-                        mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
-                    }
+            let batch_txns = mempool.filter_read_timeline(broadcasted_batch);
+            for (timeline_id, txn) in batch_txns {
+                if !retry_txns.contains(&timeline_id) {
+                    mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
                 }
             }
-
-            peer_manager.process_broadcast_ack(peer, request_id, retry_txns);
         }
-        Err(err) => warn!("[shared mempool] ACK with invalid request_id: {:?}", err),
     }
+
+    peer_manager.process_broadcast_ack(peer, request_id, retry_txns);
 }
 
 // ================================= //
@@ -463,14 +461,4 @@ pub(crate) async fn process_config_update<V>(
 /// and end equals to timeline ID of last transaction in a batch
 fn create_request_id(start_timeline_id: u64, end_timeline_id: u64) -> String {
     format!("{}_{}", start_timeline_id, end_timeline_id)
-}
-
-/// parses request_id according to format "{start_id}_{end_id}"
-fn parse_request_id(request_id: String) -> Result<(u64, u64)> {
-    let timeline_ids: Vec<_> = request_id.split('_').collect();
-    ensure!(timeline_ids.len() == 2, "invalid request_id {}", request_id);
-    let start_id = timeline_ids[0].parse::<u64>()?;
-    let end_id = timeline_ids[1].parse::<u64>()?;
-    ensure!(start_id < end_id, "invalid broadcast range {}", request_id);
-    Ok((start_id, end_id))
 }
