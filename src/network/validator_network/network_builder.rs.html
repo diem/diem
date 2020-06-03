@@ -486,77 +486,6 @@
 <span id="486">486</span>
 <span id="487">487</span>
 <span id="488">488</span>
-<span id="489">489</span>
-<span id="490">490</span>
-<span id="491">491</span>
-<span id="492">492</span>
-<span id="493">493</span>
-<span id="494">494</span>
-<span id="495">495</span>
-<span id="496">496</span>
-<span id="497">497</span>
-<span id="498">498</span>
-<span id="499">499</span>
-<span id="500">500</span>
-<span id="501">501</span>
-<span id="502">502</span>
-<span id="503">503</span>
-<span id="504">504</span>
-<span id="505">505</span>
-<span id="506">506</span>
-<span id="507">507</span>
-<span id="508">508</span>
-<span id="509">509</span>
-<span id="510">510</span>
-<span id="511">511</span>
-<span id="512">512</span>
-<span id="513">513</span>
-<span id="514">514</span>
-<span id="515">515</span>
-<span id="516">516</span>
-<span id="517">517</span>
-<span id="518">518</span>
-<span id="519">519</span>
-<span id="520">520</span>
-<span id="521">521</span>
-<span id="522">522</span>
-<span id="523">523</span>
-<span id="524">524</span>
-<span id="525">525</span>
-<span id="526">526</span>
-<span id="527">527</span>
-<span id="528">528</span>
-<span id="529">529</span>
-<span id="530">530</span>
-<span id="531">531</span>
-<span id="532">532</span>
-<span id="533">533</span>
-<span id="534">534</span>
-<span id="535">535</span>
-<span id="536">536</span>
-<span id="537">537</span>
-<span id="538">538</span>
-<span id="539">539</span>
-<span id="540">540</span>
-<span id="541">541</span>
-<span id="542">542</span>
-<span id="543">543</span>
-<span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
-<span id="547">547</span>
-<span id="548">548</span>
-<span id="549">549</span>
-<span id="550">550</span>
-<span id="551">551</span>
-<span id="552">552</span>
-<span id="553">553</span>
-<span id="554">554</span>
-<span id="555">555</span>
-<span id="556">556</span>
-<span id="557">557</span>
-<span id="558">558</span>
-<span id="559">559</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -688,9 +617,6 @@
     <span class="ident">connection_reqs_rx</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">ConnectionRequest</span><span class="op">&gt;</span>,
     <span class="ident">conn_mgr_reqs_tx</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">ConnectivityRequest</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">connectivity_check_interval_ms</span>: <span class="ident">u64</span>,
-    <span class="ident">inbound_rpc_timeout_ms</span>: <span class="ident">u64</span>,
-    <span class="ident">max_concurrent_outbound_rpcs</span>: <span class="ident">u32</span>,
-    <span class="ident">max_concurrent_inbound_rpcs</span>: <span class="ident">u32</span>,
     <span class="ident">max_concurrent_network_reqs</span>: <span class="ident">usize</span>,
     <span class="ident">max_concurrent_network_notifs</span>: <span class="ident">usize</span>,
     <span class="ident">max_connection_delay_ms</span>: <span class="ident">u64</span>,
@@ -740,9 +666,6 @@
             <span class="ident">ping_timeout_ms</span>: <span class="ident">PING_TIMEOUT_MS</span>,
             <span class="ident">ping_failures_tolerated</span>: <span class="ident">PING_FAILURES_TOLERATED</span>,
             <span class="ident">connectivity_check_interval_ms</span>: <span class="ident">CONNECTIVITY_CHECK_INTERNAL_MS</span>,
-            <span class="ident">inbound_rpc_timeout_ms</span>: <span class="ident">INBOUND_RPC_TIMEOUT_MS</span>,
-            <span class="ident">max_concurrent_outbound_rpcs</span>: <span class="ident">MAX_CONCURRENT_OUTBOUND_RPCS</span>,
-            <span class="ident">max_concurrent_inbound_rpcs</span>: <span class="ident">MAX_CONCURRENT_INBOUND_RPCS</span>,
             <span class="ident">max_concurrent_network_reqs</span>: <span class="ident">MAX_CONCURRENT_NETWORK_REQS</span>,
             <span class="ident">max_concurrent_network_notifs</span>: <span class="ident">MAX_CONCURRENT_NETWORK_NOTIFS</span>,
             <span class="ident">max_connection_delay_ms</span>: <span class="ident">MAX_CONNECTION_DELAY_MS</span>,
@@ -782,77 +705,12 @@
         <span class="self">self</span>
     }
 
-    <span class="doccomment">/// Set ping interval.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ping_interval_ms</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">ping_interval_ms</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">ping_interval_ms</span> <span class="op">=</span> <span class="ident">ping_interval_ms</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="doccomment">/// Set number of ping failures tolerated.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ping_failures_tolerated</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">ping_failures_tolerated</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">ping_failures_tolerated</span> <span class="op">=</span> <span class="ident">ping_failures_tolerated</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="doccomment">/// Set ping timeout.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ping_timeout_ms</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">ping_timeout_ms</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">ping_timeout_ms</span> <span class="op">=</span> <span class="ident">ping_timeout_ms</span>;
-        <span class="self">self</span>
-    }
-
     <span class="doccomment">/// Set connectivity check ticker interval</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">connectivity_check_interval_ms</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">connectivity_check_interval_ms</span>: <span class="ident">u64</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
         <span class="self">self</span>.<span class="ident">connectivity_check_interval_ms</span> <span class="op">=</span> <span class="ident">connectivity_check_interval_ms</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="doccomment">/// Set inbound rpc timeout.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">inbound_rpc_timeout_ms</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">inbound_rpc_timeout_ms</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">inbound_rpc_timeout_ms</span> <span class="op">=</span> <span class="ident">inbound_rpc_timeout_ms</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="doccomment">/// The maximum number of concurrent outbound rpc requests we will service.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">max_concurrent_outbound_rpcs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">max_concurrent_outbound_rpcs</span>: <span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">max_concurrent_outbound_rpcs</span> <span class="op">=</span> <span class="ident">max_concurrent_outbound_rpcs</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="doccomment">/// The maximum number of concurrent inbound rpc requests we will service.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">max_concurrent_inbound_rpcs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">max_concurrent_inbound_rpcs</span>: <span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">max_concurrent_inbound_rpcs</span> <span class="op">=</span> <span class="ident">max_concurrent_inbound_rpcs</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="doccomment">/// The maximum number of concurrent NetworkRequests we will service in NetworkProvider.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">max_concurrent_network_reqs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">max_concurrent_network_reqs</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">max_concurrent_network_reqs</span> <span class="op">=</span> <span class="ident">max_concurrent_network_reqs</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="doccomment">/// The maximum number of concurrent Notifications from each actor we will service in</span>
-    <span class="doccomment">/// NetworkProvider.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">max_concurrent_network_notifs</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">max_concurrent_network_notifs</span>: <span class="ident">usize</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">max_concurrent_network_notifs</span> <span class="op">=</span> <span class="ident">max_concurrent_network_notifs</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="doccomment">/// The maximum duration (in milliseconds) we should wait before dialing a peer we should</span>
-    <span class="doccomment">/// connect to.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">max_connection_delay_ms</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">max_connection_delay_ms</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">max_connection_delay_ms</span> <span class="op">=</span> <span class="ident">max_connection_delay_ms</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="doccomment">/// Set the size of the channels between different network actors.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">channel_size</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">channel_size</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">channel_size</span> <span class="op">=</span> <span class="ident">channel_size</span>;
         <span class="self">self</span>
     }
 
