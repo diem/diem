@@ -1163,6 +1163,8 @@
 <span id="1163">1163</span>
 <span id="1164">1164</span>
 <span id="1165">1165</span>
+<span id="1166">1166</span>
+<span id="1167">1167</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1681,6 +1683,7 @@
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>((<span class="ident">round</span>, <span class="ident">timestamp</span>, <span class="ident">previous_vote</span>, <span class="ident">proposer</span>)) <span class="op">=</span> <span class="ident">block_metadata</span>.<span class="ident">into_inner</span>() {
             <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[
+                <span class="ident">Value</span>::<span class="ident">transaction_argument_signer_reference</span>(<span class="ident">txn_data</span>.<span class="ident">sender</span>),
                 <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">round</span>),
                 <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">timestamp</span>),
                 <span class="ident">Value</span>::<span class="ident">vector_address</span>(<span class="ident">previous_vote</span>),
@@ -1924,6 +1927,7 @@
                 <span class="kw-2">&amp;</span><span class="ident">PROLOGUE_NAME</span>,
                 <span class="macro">vec</span><span class="macro">!</span>[],
                 <span class="macro">vec</span><span class="macro">!</span>[
+                    <span class="ident">Value</span>::<span class="ident">transaction_argument_signer_reference</span>(<span class="ident">txn_data</span>.<span class="ident">sender</span>),
                     <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">txn_sequence_number</span>),
                     <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">txn_public_key</span>),
                 ],
