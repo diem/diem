@@ -334,11 +334,6 @@ impl InternalNode {
         self.children.get(&n)
     }
 
-    /// Return the total number of existing children.
-    pub fn num_children(&self) -> usize {
-        self.children.len()
-    }
-
     /// Generates `existence_bitmap` and `leaf_bitmap` as a pair of `u16`s: child at index `i`
     /// exists if `existence_bitmap[i]` is set; child at index `i` is leaf node if
     /// `leaf_bitmap[i]` is set.
