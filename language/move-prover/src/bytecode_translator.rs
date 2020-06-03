@@ -153,7 +153,11 @@ impl<'env> ModuleTranslator<'env> {
     fn translate_struct_type(&self, struct_env: &StructEnv<'_>) {
         // Emit TypeName
         let struct_name = boogie_struct_name(&struct_env);
-        emitln!(self.writer, "const unique {}: $TypeName;", struct_name);
+        // Special treatment of well-known resource LibraAccount_T. The type_name
+        // is forward-declared in the prelude.
+        if struct_name != "$LibraAccount_T" {
+            emitln!(self.writer, "const unique {}: $TypeName;", struct_name);
+        }
 
         // Emit FieldNames
         for (i, field_env) in struct_env.get_fields().enumerate() {
