@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/use_inner_scope_invalid.move:6:9 ───
+   │
+ 6 │         use 0x0::M::foo;
+   │         ^^^ Unexpected 'use'
+   ·
+ 6 │         use 0x0::M::foo;
+   │         --- Expected an expression term
+   │
+

@@ -963,7 +963,13 @@ fn module_access(
 // TODO Support uses inside functions. AliasMap will become an accumulator
 
 fn sequence(context: &mut Context, loc: Loc, seq: P::Sequence) -> E::Sequence {
-    let (pitems, maybe_last_semicolon_loc, pfinal_item) = seq;
+    let (uses, pitems, maybe_last_semicolon_loc, pfinal_item) = seq;
+
+    let mut new_scope = AliasMap::new();
+    for u in uses {
+        use_(context, &mut new_scope, u);
+    }
+    let old_aliases = context.new_alias_scope(new_scope);
     let mut items: VecDeque<E::SequenceItem> = pitems
         .into_iter()
         .map(|item| sequence_item(context, item))
@@ -981,6 +987,7 @@ fn sequence(context: &mut Context, loc: Loc, seq: P::Sequence) -> E::Sequence {
     };
     let final_item = sp(final_e.loc, E::SequenceItem_::Seq(final_e));
     items.push_back(final_item);
+    context.set_to_outer_scope(old_aliases);
     items
 }
 
