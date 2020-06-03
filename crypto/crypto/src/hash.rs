@@ -163,11 +163,6 @@ impl HashValue {
         }
     }
 
-    /// Check if the hash value is zero.
-    pub fn is_zero(&self) -> bool {
-        *self == HashValue::zero()
-    }
-
     /// Create a cryptographically random instance.
     pub fn random() -> Self {
         let mut rng = OsRng;
