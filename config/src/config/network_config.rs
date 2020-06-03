@@ -31,7 +31,6 @@ pub const HANDSHAKE_VERSION: u8 = 0;
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct NetworkConfig {
-    pub peer_id: PeerId,
     // TODO: Add support for multiple listen/advertised addresses in config.
     // The address that this node is listening on for new connections.
     pub listen_address: NetworkAddress,
@@ -53,26 +52,25 @@ pub struct NetworkConfig {
     #[serde(skip)]
     pub seed_peers: SeedPeersConfig,
     pub seed_peers_file: PathBuf,
-    pub identity_key: IdentityKey,
+    pub identity: Identity,
 }
 
 impl Default for NetworkConfig {
     fn default() -> Self {
         let mut config = Self {
-            peer_id: PeerId::default(),
             listen_address: "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
             advertised_address: "/ip4/127.0.0.1/tcp/6180".parse().unwrap(),
             discovery_interval_ms: 1000,
             connectivity_check_interval_ms: 5000,
             enable_remote_authentication: true,
             discovery_method: DiscoveryMethod::Gossip,
-            identity_key: IdentityKey::None,
+            identity: Identity::None,
             network_peers_file: PathBuf::new(),
             network_peers: NetworkPeersConfig::default(),
             seed_peers_file: PathBuf::new(),
             seed_peers: SeedPeersConfig::default(),
         };
-        config.prepare_identity().unwrap();
+        config.prepare_identity();
         config
     }
 }
@@ -82,14 +80,13 @@ impl NetworkConfig {
     /// template for another config.
     pub fn clone_for_template(&self) -> Self {
         Self {
-            peer_id: PeerId::default(),
             listen_address: self.listen_address.clone(),
             advertised_address: self.advertised_address.clone(),
             discovery_interval_ms: self.discovery_interval_ms,
             connectivity_check_interval_ms: self.connectivity_check_interval_ms,
             enable_remote_authentication: self.enable_remote_authentication,
             discovery_method: self.discovery_method,
-            identity_key: IdentityKey::None,
+            identity: Identity::None,
             network_peers_file: self.network_peers_file.clone(),
             network_peers: self.network_peers.clone(),
             seed_peers_file: self.seed_peers_file.clone(),
@@ -126,41 +123,37 @@ impl NetworkConfig {
             );
         }
 
-        self.prepare_identity()
-    }
-
-    fn prepare_identity(&mut self) -> Result<()> {
-        if let IdentityKey::FromStorage(_) = self.identity_key {
-            return Ok(());
-        }
-
-        if let IdentityKey::None = self.identity_key {
-            let mut rng = StdRng::from_seed(OsRng.gen());
-            let key = x25519::PrivateKey::generate(&mut rng);
-            self.identity_key = IdentityKey::from_config(key);
-        }
-
-        let pubkey = if let IdentityKey::FromConfig(config) = &self.identity_key {
-            Some(config.keypair.public_key())
-        } else {
-            None
-        };
-
-        let pubkey = pubkey.ok_or_else(|| anyhow!("Invalid network identity_key"))?;
-        let peer_id = AuthenticationKey::try_from(pubkey.as_slice())
-            .unwrap()
-            .derived_address();
-
-        // If PeerId is not set, derive the PeerId from identity_key.
-        if self.peer_id == PeerId::default() {
-            self.peer_id = peer_id;
-        }
-
+        self.prepare_identity();
         Ok(())
     }
 
+    fn prepare_identity(&mut self) {
+        match &mut self.identity {
+            Identity::FromStorage(_) => (),
+            Identity::None => {
+                let mut rng = StdRng::from_seed(OsRng.gen());
+                let key = x25519::PrivateKey::generate(&mut rng);
+                let peer_id = AuthenticationKey::try_from(key.public_key().as_slice())
+                    .unwrap()
+                    .derived_address();
+                self.identity = Identity::from_config(key, peer_id);
+            }
+            Identity::FromConfig(config) => {
+                let pubkey = config.keypair.public_key();
+                let peer_id = AuthenticationKey::try_from(pubkey.as_slice())
+                    .unwrap()
+                    .derived_address();
+
+                if config.peer_id == PeerId::default() {
+                    config.peer_id = peer_id;
+                }
+            }
+        };
+    }
+
     fn default_path(&self, config_path: &str) -> String {
-        format!("{}.{}", self.peer_id.to_string(), config_path)
+        let peer_id = self.identity.peer_id_from_config().unwrap_or_default();
+        format!("{}.{}", peer_id.to_string(), config_path)
     }
 
     pub fn save(&mut self, root_dir: &RootPath) -> Result<()> {
@@ -188,14 +181,19 @@ impl NetworkConfig {
 
     pub fn random_with_peer_id(&mut self, rng: &mut StdRng, peer_id: Option<PeerId>) {
         let identity_key = x25519::PrivateKey::generate(rng);
-        self.peer_id = if let Some(peer_id) = peer_id {
+        let peer_id = if let Some(peer_id) = peer_id {
             peer_id
         } else {
             AuthenticationKey::try_from(identity_key.public_key().as_slice())
                 .unwrap()
                 .derived_address()
         };
-        self.identity_key = IdentityKey::from_config(identity_key);
+        self.identity = Identity::from_config(identity_key, peer_id);
+    }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn peer_id(&self) -> PeerId {
+        self.identity.peer_id_from_config().unwrap()
     }
 }
 
@@ -255,24 +253,35 @@ pub enum DiscoveryMethod {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
-pub enum IdentityKey {
-    FromConfig(KeyFromConfig),
-    FromStorage(KeyFromStorage),
+pub enum Identity {
+    FromConfig(IdentityFromConfig),
+    FromStorage(IdentityFromStorage),
     None,
 }
 
-impl IdentityKey {
-    pub fn from_config(key: x25519::PrivateKey) -> Self {
+impl Identity {
+    pub fn from_config(key: x25519::PrivateKey, peer_id: PeerId) -> Self {
         let keypair = KeyPair::load(key);
-        IdentityKey::FromConfig(KeyFromConfig { keypair })
+        Identity::FromConfig(IdentityFromConfig { keypair, peer_id })
     }
 
-    pub fn from_storage(key_name: String, backend: SecureBackend) -> Self {
-        IdentityKey::FromStorage(KeyFromStorage { key_name, backend })
+    pub fn from_storage(key_name: String, peer_id_name: String, backend: SecureBackend) -> Self {
+        Identity::FromStorage(IdentityFromStorage {
+            key_name,
+            peer_id_name,
+            backend,
+        })
+    }
+
+    pub fn peer_id_from_config(&self) -> Option<PeerId> {
+        match self {
+            Identity::FromConfig(config) => Some(config.peer_id),
+            _ => None,
+        }
     }
 
     pub fn public_key_from_config(&self) -> Option<x25519::PublicKey> {
-        if let IdentityKey::FromConfig(config) = self {
+        if let Identity::FromConfig(config) = self {
             Some(config.keypair.public_key())
         } else {
             None
@@ -280,20 +289,21 @@ impl IdentityKey {
     }
 }
 
-/// The key is stored within the config.
+/// The identity is stored within the config.
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
 #[derive(Debug, Deserialize, Serialize)]
-pub struct KeyFromConfig {
+pub struct IdentityFromConfig {
     #[serde(rename = "key")]
     pub keypair: KeyPair<x25519::PrivateKey>,
+    pub peer_id: PeerId,
 }
 
-/// This represents a key in a secure-storage as defined in NodeConfig::secure.
-/// This is not implemented yet.
+/// This represents an identity in a secure-storage as defined in NodeConfig::secure.
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
 #[derive(Debug, Deserialize, Serialize)]
-pub struct KeyFromStorage {
+pub struct IdentityFromStorage {
     pub key_name: String,
+    pub peer_id_name: String,
     pub backend: SecureBackend,
 }
 
@@ -310,20 +320,17 @@ mod test {
         let (mut config, path) = generate_config();
         assert_eq!(config.network_peers, NetworkPeersConfig::default());
         assert_eq!(config.network_peers_file, PathBuf::new());
-        assert_ne!(config.identity_key, IdentityKey::None);
-        assert_ne!(config.peer_id, PeerId::default());
+        assert_ne!(config.identity, Identity::None);
         assert_eq!(config.seed_peers, SeedPeersConfig::default());
         assert_eq!(config.seed_peers_file, PathBuf::new());
-        let identity_key = config.identity_key.clone();
-        let peer_id = config.peer_id;
+        let identity = config.identity.clone();
 
         // Assert default loading doesn't affect paths and defaults remain in place
         let root_dir = RootPath::new_path(path.path());
         config.load(&root_dir, RoleType::FullNode).unwrap();
         assert_eq!(config.network_peers, NetworkPeersConfig::default());
         assert_eq!(config.network_peers_file, PathBuf::new());
-        assert_eq!(config.identity_key, identity_key);
-        assert_eq!(config.peer_id, peer_id);
+        assert_eq!(config.identity, identity);
         assert_eq!(config.seed_peers_file, PathBuf::new());
         assert_eq!(config.seed_peers, SeedPeersConfig::default());
 
@@ -336,7 +343,7 @@ mod test {
         );
 
         // Assert paths and values are not set (i.e., no defaults apply)
-        assert_eq!(config.identity_key, identity_key);
+        assert_eq!(config.identity, identity);
         assert_eq!(config.network_peers, NetworkPeersConfig::default());
         assert_eq!(config.network_peers_file, PathBuf::new());
     }
@@ -348,9 +355,10 @@ mod test {
         let mut rng = StdRng::from_seed([5u8; 32]);
         config.random(&mut rng);
         // This is default (empty) otherwise
-        config.seed_peers.seed_peers.insert(config.peer_id, vec![]);
+        let peer_id = config.identity.peer_id_from_config().unwrap();
+        config.seed_peers.seed_peers.insert(peer_id, vec![]);
 
-        let key = config.identity_key.clone();
+        let identity = config.identity.clone();
         let peers = config.network_peers.clone();
         let seed_peers = config.seed_peers.clone();
 
@@ -361,9 +369,9 @@ mod test {
         // Assert saving updates paths
         let root_dir = RootPath::new_path(path.path());
         config.save(&root_dir).unwrap();
-        assert_eq!(config.identity_key, key);
+        assert_eq!(config.identity, identity);
         assert_eq!(config.network_peers, peers);
-        assert_eq!(config.network_peers_file, PathBuf::new(),);
+        assert_eq!(config.network_peers_file, PathBuf::new());
         assert_eq!(config.seed_peers, seed_peers);
         assert_eq!(
             config.seed_peers_file,
@@ -372,14 +380,13 @@ mod test {
 
         // Assert a fresh load correctly populates the config
         let mut new_config = NetworkConfig::default();
-        new_config.peer_id = config.peer_id;
         // First that paths are empty
         assert_eq!(new_config.network_peers_file, PathBuf::new());
         assert_eq!(new_config.seed_peers_file, PathBuf::new());
         // Loading populates things correctly
         let result = new_config.load(&root_dir, RoleType::Validator);
         result.unwrap();
-        assert_eq!(config.identity_key, key);
+        assert_eq!(config.identity, identity);
         assert_eq!(config.network_peers, peers);
         assert_eq!(config.network_peers_file, PathBuf::new(),);
         assert_eq!(config.seed_peers, seed_peers);
@@ -387,28 +394,6 @@ mod test {
             config.seed_peers_file,
             PathBuf::from(config.default_path(SEED_PEERS_DEFAULT))
         );
-    }
-
-    #[test]
-    fn test_default_peer_id() {
-        // Generate a random node and verify a distinct peer id
-        let (mut config, path) = generate_config();
-        let mut rng = StdRng::from_seed([32u8; 32]);
-        config.random(&mut rng);
-        let root_dir = RootPath::new_path(path.path());
-
-        let default_peer_id = PeerId::default();
-        let actual_peer_id = config.peer_id;
-        assert!(actual_peer_id != default_peer_id);
-
-        // Now reset and save
-        config.peer_id = default_peer_id;
-        config.save(&root_dir).unwrap();
-
-        // Now load and verify the distinct peer id
-        assert_eq!(config.peer_id, default_peer_id);
-        config.load(&root_dir, RoleType::FullNode).unwrap();
-        assert_eq!(config.peer_id, actual_peer_id);
     }
 
     #[test]

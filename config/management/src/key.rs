@@ -17,6 +17,7 @@ impl AssociationKey {
     pub fn execute(self) -> Result<Ed25519PublicKey, Error> {
         submit_key(
             libra_global_constants::ASSOCIATION_KEY,
+            None,
             self.secure_backends,
         )
     }
@@ -30,7 +31,11 @@ pub struct OperatorKey {
 
 impl OperatorKey {
     pub fn execute(self) -> Result<Ed25519PublicKey, Error> {
-        submit_key(libra_global_constants::OPERATOR_KEY, self.secure_backends)
+        submit_key(
+            libra_global_constants::OPERATOR_KEY,
+            Some(libra_global_constants::OPERATOR_ACCOUNT),
+            self.secure_backends,
+        )
     }
 }
 
@@ -42,15 +47,20 @@ pub struct OwnerKey {
 
 impl OwnerKey {
     pub fn execute(self) -> Result<Ed25519PublicKey, Error> {
-        submit_key(libra_global_constants::OWNER_KEY, self.secure_backends)
+        submit_key(
+            libra_global_constants::OWNER_KEY,
+            Some(libra_global_constants::OWNER_ACCOUNT),
+            self.secure_backends,
+        )
     }
 }
 
 fn submit_key(
     key_name: &'static str,
+    account_name: Option<&'static str>,
     secure_backends: SecureBackends,
 ) -> Result<Ed25519PublicKey, Error> {
-    let local: Box<dyn Storage> = secure_backends.local.try_into()?;
+    let mut local: Box<dyn Storage> = secure_backends.local.try_into()?;
     local
         .available()
         .map_err(|e| Error::LocalStorageUnavailable(e.to_string()))?;
@@ -59,6 +69,13 @@ fn submit_key(
         .get_public_key(key_name)
         .map_err(|e| Error::LocalStorageReadError(key_name, e.to_string()))?
         .public_key;
+
+    if let Some(account_name) = account_name {
+        let peer_id = libra_types::account_address::from_public_key(&key);
+        local
+            .set(account_name, Value::String(peer_id.to_string()))
+            .map_err(|e| Error::LocalStorageWriteError(account_name, e.to_string()))?
+    }
 
     if let Some(remote) = secure_backends.remote {
         let key = Value::Ed25519PublicKey(key.clone());

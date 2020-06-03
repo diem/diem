@@ -183,6 +183,10 @@ impl NetworkBuilder {
         }
     }
 
+    pub fn peer_id(&self) -> PeerId {
+        self.peer_id
+    }
+
     /// Set network authentication mode.
     pub fn authentication_mode(&mut self, authentication_mode: AuthenticationMode) -> &mut Self {
         self.authentication_mode = Some(authentication_mode);

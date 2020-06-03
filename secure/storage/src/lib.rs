@@ -6,6 +6,7 @@
 use libra_config::config::SecureBackend;
 use std::convert::From;
 
+pub mod config;
 mod crypto_kv_storage;
 mod crypto_storage;
 mod error;

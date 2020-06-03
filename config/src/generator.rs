@@ -29,7 +29,9 @@ pub fn validator_swarm(
 
         // For a validator node, any of its validator peers are considered an upstream peer
         let network = node.validator_network.as_mut().unwrap();
-        node.upstream.primary_networks.push(network.peer_id);
+        node.upstream
+            .primary_networks
+            .push(network.identity.peer_id_from_config().unwrap());
 
         nodes.push(node);
     }
@@ -59,16 +61,16 @@ pub fn build_seed_peers(
     seed_base_addr: NetworkAddress,
 ) -> SeedPeersConfig {
     let seed_pubkey = seed_config
-        .identity_key
+        .identity
         .public_key_from_config()
         .expect("Missing identity key");
-
     let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, HANDSHAKE_VERSION);
 
     let mut seed_peers = SeedPeersConfig::default();
-    seed_peers
-        .seed_peers
-        .insert(seed_config.peer_id, vec![seed_addr]);
+    seed_peers.seed_peers.insert(
+        seed_config.identity.peer_id_from_config().unwrap(),
+        vec![seed_addr],
+    );
     seed_peers
         .verify_libranet_addrs()
         .expect("Expect LibraNet addresses");

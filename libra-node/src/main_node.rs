@@ -9,14 +9,14 @@ use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on, stream::StreamExt};
 use libra_config::{
-    config::{DiscoveryMethod, IdentityKey, NetworkConfig, NodeConfig, RoleType},
+    config::{DiscoveryMethod, NetworkConfig, NodeConfig, RoleType},
     utils::get_genesis_txn,
 };
-use libra_crypto::x25519;
 use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_mempool::gen_mempool_reconfig_subscription;
 use libra_metrics::metric_server;
+use libra_secure_storage::config;
 use libra_types::{waypoint::Waypoint, PeerId};
 use libra_vm::LibraVM;
 use libradb::LibraDB;
@@ -126,16 +126,16 @@ pub fn setup_network(
         .build()
         .expect("Failed to start runtime. Won't be able to start networking.");
 
+    let identity_key = config::identity_key(config);
+    let peer_id = config::peer_id(config);
+
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
-        config.peer_id,
+        peer_id,
         role,
         config.listen_address.clone(),
     );
     network_builder.add_connection_monitoring();
-
-    // TODO(philiphayes): it might make more sense to refactor this so we have a
-    // config per "archetype"?
 
     if config.enable_remote_authentication {
         // Sanity check seed peer addresses.
@@ -146,8 +146,6 @@ pub fn setup_network(
 
         let network_peers = config.network_peers.peers.clone();
         let seed_peers = config.seed_peers.seed_peers.clone();
-
-        let identity_key = retrieve_network_identity_key(config);
 
         let trusted_peers = if role == RoleType::Validator {
             // for validators, trusted_peers is empty will be populated from consensus
@@ -170,8 +168,6 @@ pub fn setup_network(
             // TODO:  Why is the connectivity manager related to remote_authentication?
             .add_connectivity_manager();
     } else {
-        let identity_key = retrieve_network_identity_key(config);
-
         // Even if a network end-point operates without remote authentication, it might want to prove
         // its identity to another peer it connects to. For this, we use TCP + Noise but without
         // enforcing a trusted peers set.
@@ -189,7 +185,7 @@ pub fn setup_network(
         DiscoveryMethod::Onchain => {
             setup_onchain_discovery(
                 &mut network_builder,
-                config.peer_id,
+                peer_id,
                 role,
                 libra_db,
                 waypoint,
@@ -200,23 +196,6 @@ pub fn setup_network(
     }
 
     (runtime, network_builder)
-}
-
-fn retrieve_network_identity_key(config: &mut NetworkConfig) -> x25519::PrivateKey {
-    let key = match &mut config.identity_key {
-        IdentityKey::FromConfig(config) => config.keypair.take_private(),
-        IdentityKey::FromStorage(config) => {
-            let storage: Box<dyn libra_secure_storage::Storage> = (&config.backend).into();
-            let key = storage
-                .export_private_key(&config.key_name)
-                .expect("Unable to read key");
-            let key = x25519::PrivateKey::from_ed25519_private_bytes(&key.to_bytes())
-                .expect("Unable to convert key");
-            Some(key)
-        }
-        IdentityKey::None => None,
-    };
-    key.expect("identity key should be present")
 }
 
 pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
@@ -280,6 +259,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             Arc::clone(&db_rw.reader),
             node_config.base.waypoint.expect("No waypoint in config"),
         );
+        let peer_id = network_builder.peer_id();
 
         // Set up to listen for network configuration changes from StateSync.
         if let Some(conn_mgr_reqs_tx) = network_builder.conn_mgr_reqs_tx() {
@@ -295,14 +275,14 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
         let (state_sync_sender, state_sync_events) =
             state_synchronizer::network::add_to_network(&mut network_builder);
-        state_sync_network_handles.push((network.peer_id, state_sync_sender, state_sync_events));
+        state_sync_network_handles.push((peer_id, state_sync_sender, state_sync_events));
 
         let (mempool_sender, mempool_events) = libra_mempool::network::add_to_network(
             &mut network_builder,
             node_config.mempool.max_broadcasts_per_peer,
         );
-        mempool_network_handles.push((network.peer_id, mempool_sender, mempool_events));
-        validator_network_provider = Some((network.peer_id, runtime, network_builder));
+        mempool_network_handles.push((peer_id, mempool_sender, mempool_events));
+        validator_network_provider = Some((peer_id, runtime, network_builder));
     }
 
     for mut full_node_network in node_config.full_node_networks.iter_mut() {
@@ -312,24 +292,21 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             Arc::clone(&db_rw.reader),
             node_config.base.waypoint.expect("No waypoint in config"),
         );
+        let peer_id = network_builder.peer_id();
 
         network_runtimes.push(runtime);
         let (state_sync_sender, state_sync_events) =
             state_synchronizer::network::add_to_network(&mut network_builder);
-        state_sync_network_handles.push((
-            full_node_network.peer_id,
-            state_sync_sender,
-            state_sync_events,
-        ));
+        state_sync_network_handles.push((peer_id, state_sync_sender, state_sync_events));
         let (mempool_sender, mempool_events) = libra_mempool::network::add_to_network(
             &mut network_builder,
             node_config.mempool.max_broadcasts_per_peer,
         );
-        mempool_network_handles.push((full_node_network.peer_id, mempool_sender, mempool_events));
+        mempool_network_handles.push((peer_id, mempool_sender, mempool_events));
 
         // Start the network provider.
         let _listen_addr = network_builder.build();
-        debug!("Network started for peer_id: {}", full_node_network.peer_id);
+        debug!("Network started for peer_id: {}", peer_id);
     }
 
     // TODO set up on-chain discovery network based on UpstreamConfig.fallback_network
