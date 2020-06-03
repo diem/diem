@@ -102,6 +102,7 @@ impl PersistentSafetyStorage {
             .get(WAYPOINT)
             .and_then(|r| r.value.string())?;
         Waypoint::from_str(&waypoint)
+            .map_err(|e| anyhow::anyhow!("Unable to parse waypoint: {}", e))
     }
 
     pub fn set_waypoint(&mut self, waypoint: &Waypoint) -> Result<()> {
