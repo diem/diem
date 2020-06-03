@@ -14,10 +14,6 @@ impl Policy {
         Self { permissions }
     }
 
-    pub fn is_default(&self) -> bool {
-        Self::default() == *self
-    }
-
     pub fn public() -> Self {
         Self::new(vec![Permission::new(
             Identity::Anyone,
