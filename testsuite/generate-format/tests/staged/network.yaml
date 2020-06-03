@@ -99,7 +99,7 @@ Protocol:
     7:
       NoiseIK:
         NEWTYPE:
-          TYPENAME: PublicKey
+          TYPENAME: X25519PublicKey
     8:
       Handshake:
         NEWTYPE: U8
@@ -123,8 +123,6 @@ ProtocolId:
       IdentityDirectSend: UNIT
     7:
       OnchainDiscoveryRpc: UNIT
-PublicKey:
-  NEWTYPESTRUCT: BYTES
 RawNetworkAddress:
   NEWTYPESTRUCT: BYTES
 RpcRequest:
@@ -142,3 +140,5 @@ RpcResponse:
 SupportedProtocols:
   NEWTYPESTRUCT:
     SEQ: U8
+X25519PublicKey:
+  NEWTYPESTRUCT: BYTES
