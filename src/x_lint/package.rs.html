@@ -77,6 +77,7 @@
 <span id="77">77</span>
 <span id="78">78</span>
 <span id="79">79</span>
+<span id="80">80</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -84,6 +85,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">LintContext</span>};
 <span class="kw">use</span> <span class="ident">guppy</span>::<span class="ident">graph</span>::{<span class="ident">PackageGraph</span>, <span class="ident">PackageMetadata</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">Path</span>;
+<span class="kw">use</span> <span class="ident">x_core</span>::<span class="ident">WorkspaceStatus</span>;
 
 <span class="doccomment">/// Represents a linter that runs once per package.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">PackageLinter</span>: <span class="ident">Linter</span> {
@@ -119,7 +121,7 @@
             <span class="ident">package_graph</span>,
             <span class="ident">workspace_path</span>,
             <span class="ident">metadata</span>,
-            <span class="ident">is_default_member</span>: <span class="ident">default_members</span>.<span class="ident">contains</span>(<span class="ident">metadata</span>.<span class="ident">id</span>()),
+            <span class="ident">is_default_member</span>: <span class="ident">default_members</span>.<span class="ident">status_of</span>(<span class="ident">metadata</span>.<span class="ident">id</span>()) <span class="op">!</span><span class="op">=</span> <span class="ident">WorkspaceStatus</span>::<span class="ident">Absent</span>,
         })
     }
 

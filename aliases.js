@@ -81,6 +81,7 @@ ALIASES["move_core_types"] = {};
 ALIASES["move_coverage"] = {};
 ALIASES["move_ir_types"] = {};
 ALIASES["move_lang"] = {};
+ALIASES["move_lang_functional_tests"] = {};
 ALIASES["move_prover"] = {};
 ALIASES["move_vm_natives"] = {};
 ALIASES["move_vm_runtime"] = {};
