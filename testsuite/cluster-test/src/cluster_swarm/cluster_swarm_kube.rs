@@ -257,8 +257,25 @@ impl ClusterSwarmKube {
             let resource_api = resource_api.clone();
             let name = name.to_string();
             Box::pin(async move {
-                // Log and ignore error here because we may have already deleted resource
-                resource_api.delete(&name, &Default::default()).await.map_err(|err| error!("delete call failed for {} {}. Maybe it has already been deleted. Error : {}", T::KIND, name, err)).ok();
+                match resource_api.delete(&name, &Default::default()).await {
+                    Ok(_) => {}
+                    Err(kube::Error::Api(ae)) => {
+                        if ae.code == ERROR_NOT_FOUND {
+                            debug!("{} {} deleted successfully", T::KIND, name);
+                            return Ok(());
+                        } else {
+                            error!(
+                                "delete failed for {} {} with kube::Error::Api: {}",
+                                T::KIND,
+                                name,
+                                ae
+                            )
+                        }
+                    }
+                    Err(err) => {
+                        error!("delete failed for {} {} with error: {}", T::KIND, name, err)
+                    }
+                }
                 match resource_api.get(&name).await {
                     Ok(_) => {
                         bail!("Waiting for {} {} to be deleted..", T::KIND, name);
@@ -271,7 +288,12 @@ impl ClusterSwarmKube {
                             bail!("Waiting for {} {} to be deleted..", T::KIND, name)
                         }
                     }
-                    Err(err) => bail!("Waiting for {} {} to be deleted... Error: {}", T::KIND, name, err),
+                    Err(err) => bail!(
+                        "Waiting for {} {} to be deleted... Error: {}",
+                        T::KIND,
+                        name,
+                        err
+                    ),
                 }
             })
         })
