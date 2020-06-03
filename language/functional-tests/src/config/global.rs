@@ -166,7 +166,7 @@ impl Config {
                 .nodes
                 .iter_mut()
                 .map(|c| {
-                    let peer_id = c.validator_network.as_ref().unwrap().peer_id;
+                    let peer_id = c.validator_network.as_ref().unwrap().peer_id();
                     let account_keypair =
                         c.test.as_mut().unwrap().operator_keypair.as_mut().unwrap();
                     let privkey = account_keypair.take_private().unwrap();

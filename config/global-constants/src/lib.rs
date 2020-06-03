@@ -12,7 +12,9 @@
 pub const ASSOCIATION_KEY: &str = "association";
 pub const CONSENSUS_KEY: &str = "consensus";
 pub const FULLNODE_NETWORK_KEY: &str = "fullnode_network";
+pub const OPERATOR_ACCOUNT: &str = "operator_account";
 pub const OPERATOR_KEY: &str = "operator";
+pub const OWNER_ACCOUNT: &str = "owner_account";
 pub const OWNER_KEY: &str = "owner";
 pub const VALIDATOR_NETWORK_KEY: &str = "validator_network";
 

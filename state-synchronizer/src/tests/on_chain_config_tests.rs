@@ -75,7 +75,7 @@ fn test_on_chain_config_pub_sub() {
     //////////////////////////////////////////////////
     let genesis_account = association_address();
     let network_config = config.validator_network.as_ref().unwrap();
-    let validator_account = network_config.peer_id;
+    let validator_account = network_config.peer_id();
     let keys = config
         .test
         .as_mut()

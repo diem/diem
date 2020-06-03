@@ -13,7 +13,7 @@ use crate::{
 };
 use consensus_types::common::{Author, Payload};
 use libra_config::config::{NodeConfig, SafetyRulesService};
-use libra_secure_storage::Storage;
+use libra_secure_storage::{config, Storage};
 use std::{
     convert::TryInto,
     net::SocketAddr,
@@ -21,11 +21,12 @@ use std::{
 };
 
 pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSafetyStorage) {
-    let author = config
-        .validator_network
-        .as_ref()
-        .expect("Missing validator network")
-        .peer_id;
+    let author = config::peer_id(
+        config
+            .validator_network
+            .as_ref()
+            .expect("Missing validator network"),
+    );
 
     let backend = &config.consensus.safety_rules.backend;
     let internal_storage: Box<dyn Storage> =

@@ -380,7 +380,7 @@ mod test {
 
         expected_network.advertised_address = actual_network.advertised_address.clone();
         expected_network.listen_address = actual_network.listen_address.clone();
-        expected_network.identity_key = actual_network.identity_key.clone();
+        expected_network.identity = actual_network.identity.clone();
         expected_network.network_peers = actual_network.network_peers.clone();
         expected_network.seed_peers = actual_network.seed_peers.clone();
         expected_network.seed_peers_file = actual_network.seed_peers_file.clone();

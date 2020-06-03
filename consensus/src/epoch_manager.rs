@@ -27,6 +27,7 @@ use consensus_types::{
 use futures::{select, StreamExt};
 use libra_config::config::{ConsensusConfig, ConsensusProposerType, NodeConfig};
 use libra_logger::prelude::*;
+use libra_secure_storage::config;
 use libra_types::{
     account_address::AccountAddress,
     epoch_change::EpochChangeProof,
@@ -92,7 +93,7 @@ impl<T: Payload> EpochManager<T> {
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
     ) -> Self {
-        let author = node_config.validator_network.as_ref().unwrap().peer_id;
+        let author = config::peer_id(node_config.validator_network.as_ref().unwrap());
         let config = node_config.consensus.clone();
         let safety_rules_manager = SafetyRulesManager::new(node_config);
         Self {

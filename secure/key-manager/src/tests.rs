@@ -293,7 +293,7 @@ fn create_test_configs() -> (NodeConfig, KeyManagerConfig) {
     let (node_config, _genesis_key) = config_builder::test_config();
 
     let mut key_manager_config = KeyManagerConfig::default();
-    key_manager_config.validator_account = node_config.validator_network.clone().unwrap().peer_id;
+    key_manager_config.validator_account = node_config.validator_network.clone().unwrap().peer_id();
 
     (node_config, key_manager_config)
 }

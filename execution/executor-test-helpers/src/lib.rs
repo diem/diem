@@ -49,7 +49,7 @@ pub fn gen_ledger_info_with_sigs(
 
 pub fn extract_signer(config: &mut NodeConfig) -> ValidatorSigner {
     ValidatorSigner::new(
-        config.validator_network.as_ref().unwrap().peer_id,
+        config.validator_network.as_ref().unwrap().peer_id(),
         config
             .test
             .as_mut()

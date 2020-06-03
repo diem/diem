@@ -258,7 +258,7 @@ fn service_handles_remote_query() {
     ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let config = gen_configs(1).swap_remove(0);
-    let self_peer_id = config.validator_network.as_ref().unwrap().peer_id;
+    let self_peer_id = config.validator_network.as_ref().unwrap().peer_id();
     let role = config.base.role;
 
     let (libra_db, _executor, waypoint) = setup_storage_service_and_executor(&config);
@@ -315,7 +315,7 @@ fn queries_storage_on_tick() {
     ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let config = gen_configs(1).swap_remove(0);
-    let self_peer_id = config.validator_network.as_ref().unwrap().peer_id;
+    let self_peer_id = config.validator_network.as_ref().unwrap().peer_id();
     let role = config.base.role;
 
     let (libra_db, _executor, waypoint) = setup_storage_service_and_executor(&config);
@@ -375,7 +375,7 @@ fn queries_peers_on_tick() {
     // server setup
 
     let server_config = configs.swap_remove(0);
-    let server_peer_id = server_config.validator_network.as_ref().unwrap().peer_id;
+    let server_peer_id = server_config.validator_network.as_ref().unwrap().peer_id();
     let server_role = server_config.base.role;
 
     let (server_libra_db, _server_executor, waypoint) =
@@ -400,7 +400,7 @@ fn queries_peers_on_tick() {
     // client setup
 
     let client_config = configs.swap_remove(0);
-    let client_peer_id = client_config.validator_network.as_ref().unwrap().peer_id;
+    let client_peer_id = client_config.validator_network.as_ref().unwrap().peer_id();
     let client_role = client_config.base.role;
 
     let (libra_db, _executor, waypoint) = setup_storage_service_and_executor(&client_config);
