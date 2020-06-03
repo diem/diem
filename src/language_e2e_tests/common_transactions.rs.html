@@ -190,6 +190,36 @@
 <span id="190">190</span>
 <span id="191">191</span>
 <span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -197,12 +227,42 @@
 <span class="doccomment">//! Support for encoding transactions for common situations.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">account</span>::<span class="ident">Account</span>, <span class="ident">gas_costs</span>};
+<span class="kw">use</span> <span class="ident">compiler</span>::<span class="ident">Compiler</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
+    <span class="ident">account_config</span>,
     <span class="ident">account_config</span>::{<span class="ident">lbr_type_tag</span>, <span class="ident">LBR_NAME</span>},
     <span class="ident">transaction</span>::{<span class="ident">RawTransaction</span>, <span class="ident">SignedTransaction</span>, <span class="ident">TransactionArgument</span>},
 };
+<span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
 <span class="kw">use</span> <span class="ident">stdlib</span>::<span class="ident">transaction_scripts</span>::<span class="ident">StdlibScript</span>;
+
+<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">CREATE_ACCOUNT_SCRIPT</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
+    <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="string">&quot;
+    import 0x0.Libra;
+    import 0x0.LibraAccount;
+
+    main&lt;Token&gt;(fresh_address: address, auth_key_prefix: vector&lt;u8&gt;, initial_amount: u64) {
+      LibraAccount.create_testnet_account&lt;Token&gt;(copy(fresh_address), move(auth_key_prefix));
+      if (copy(initial_amount) &gt; 0) {
+         LibraAccount.deposit&lt;Token&gt;(
+           move(fresh_address),
+           LibraAccount.withdraw_from_sender&lt;Token&gt;(move(initial_amount))
+         );
+      }
+      return;
+    }
+&quot;</span>;
+
+    <span class="kw">let</span> <span class="ident">compiler</span> <span class="op">=</span> <span class="ident">Compiler</span> {
+        <span class="ident">address</span>: <span class="ident">account_config</span>::<span class="ident">CORE_CODE_ADDRESS</span>,
+        <span class="ident">extra_deps</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+        ..<span class="ident">Compiler</span>::<span class="ident">default</span>()
+    };
+    <span class="ident">compiler</span>
+        .<span class="ident">into_script_blob</span>(<span class="string">&quot;file_name&quot;</span>, <span class="ident">code</span>)
+        .<span class="ident">expect</span>(<span class="string">&quot;Failed to compile&quot;</span>)
+});
 
 <span class="doccomment">/// Returns a transaction to add a new validator</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_validator_txn</span>(
@@ -237,7 +297,7 @@
     <span class="ident">args</span>.<span class="ident">push</span>(<span class="ident">TransactionArgument</span>::<span class="ident">U64</span>(<span class="ident">initial_amount</span>));
 
     <span class="ident">sender</span>.<span class="ident">create_signed_txn_with_args</span>(
-        <span class="ident">StdlibScript</span>::<span class="ident">CreateAccount</span>.<span class="ident">compiled_bytes</span>().<span class="ident">into_vec</span>(),
+        <span class="ident">CREATE_ACCOUNT_SCRIPT</span>.<span class="ident">to_vec</span>(),
         <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">lbr_type_tag</span>()],
         <span class="ident">args</span>,
         <span class="ident">seq_num</span>,
