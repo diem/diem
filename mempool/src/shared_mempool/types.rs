@@ -18,10 +18,7 @@ use libra_config::config::{MempoolConfig, PeerNetworkId};
 use libra_types::{
     account_address::AccountAddress,
     mempool_status::MempoolStatus,
-    on_chain_config::{
-        ConfigID, LibraVersion, OnChainConfig, OnChainConfigPayload, ReconfigSubscription,
-        SubscriptionBundle, VMConfig,
-    },
+    on_chain_config::{ConfigID, LibraVersion, OnChainConfig, OnChainConfigPayload, VMConfig},
     transaction::SignedTransaction,
     vm_error::VMStatus,
     PeerId,
@@ -34,6 +31,7 @@ use std::{
     time::Instant,
 };
 use storage_interface::DbReader;
+use subscription_service::ReconfigSubscription;
 use tokio::runtime::Handle;
 use vm_validator::vm_validator::TransactionValidation;
 
@@ -199,6 +197,5 @@ const MEMPOOL_SUBSCRIBED_CONFIGS: &[ConfigID] = &[LibraVersion::CONFIG_ID, VMCon
 /// Creates mempool's subscription bundle for on-chain reconfiguration
 pub fn gen_mempool_reconfig_subscription(
 ) -> (ReconfigSubscription, Receiver<(), OnChainConfigPayload>) {
-    let bundle = SubscriptionBundle::new(MEMPOOL_SUBSCRIBED_CONFIGS.to_vec(), vec![]);
-    ReconfigSubscription::subscribe(bundle)
+    ReconfigSubscription::subscribe_all(MEMPOOL_SUBSCRIBED_CONFIGS.to_vec(), vec![])
 }
