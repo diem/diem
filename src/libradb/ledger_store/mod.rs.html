@@ -403,6 +403,12 @@
 <span id="403">403</span>
 <span id="404">404</span>
 <span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -553,6 +559,12 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_latest_ledger_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ledger_info_with_sigs</span>: <span class="ident">LedgerInfoWithSignatures</span>) {
         <span class="self">self</span>.<span class="ident">latest_ledger_info</span>
             .<span class="ident">store</span>(<span class="ident">Arc</span>::<span class="ident">new</span>(<span class="prelude-val">Some</span>(<span class="ident">ledger_info_with_sigs</span>)));
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_latest_ledger_info_in_epoch</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">epoch</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">db</span>.<span class="ident">get</span>::<span class="op">&lt;</span><span class="ident">LedgerInfoSchema</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">epoch</span>)<span class="question-mark">?</span>.<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+            <span class="ident">LibraDbError</span>::<span class="ident">NotFound</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Last LedgerInfo of epoch {}&quot;</span>, <span class="ident">epoch</span>)).<span class="ident">into</span>()
+        })
     }
 
     <span class="kw">fn</span> <span class="ident">get_epoch_state</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">epoch</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">EpochState</span><span class="op">&gt;</span> {

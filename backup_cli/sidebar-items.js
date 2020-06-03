@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["backup",""],["restore",""],["storage",""]]});
+initSidebarItems({"mod":[["backup",""],["manifest",""],["restore",""],["storage",""]]});

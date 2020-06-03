@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["restore_account_state",""]]});
+initSidebarItems({"struct":[["GlobalRestoreOpt",""],["StateSnapshotRestoreController",""],["StateSnapshotRestoreOpt",""]]});

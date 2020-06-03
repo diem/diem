@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["backup_account_state",""]],"struct":[["BackupServiceClient",""]]});
+initSidebarItems({"struct":[["BackupServiceClient",""],["BackupServiceClientOpt",""],["GlobalBackupOpt",""],["StateSnapshotBackupController",""],["StateSnapshotBackupOpt",""]]});
