@@ -309,7 +309,7 @@ mod test {
         network.seed_peers.verify_libranet_addrs().unwrap();
         let (seed_peer_id, seed_addrs) = network.seed_peers.seed_peers.iter().next().unwrap();
         assert_eq!(seed_addrs.len(), 1);
-        assert_ne!(&network.peer_id, seed_peer_id);
+        assert_ne!(&network.peer_id(), seed_peer_id);
         assert_ne!(&network.advertised_address, &seed_addrs[0]);
 
         assert_eq!(

@@ -81,7 +81,7 @@ fn test_reconfiguration() {
 
     let genesis_account = association_address();
     let network_config = config.validator_network.as_ref().unwrap();
-    let validator_account = network_config.peer_id;
+    let validator_account = network_config.peer_id();
     let keys = config
         .test
         .as_mut()
@@ -172,7 +172,7 @@ fn test_change_publishing_option_to_custom() {
 
     let genesis_account = association_address();
     let network_config = config.validator_network.as_ref().unwrap();
-    let validator_account = network_config.peer_id;
+    let validator_account = network_config.peer_id();
     let keys = config
         .test
         .as_mut()
@@ -339,7 +339,7 @@ fn test_extend_whitelist() {
 
     let genesis_account = association_address();
     let network_config = config.validator_network.as_ref().unwrap();
-    let validator_account = network_config.peer_id;
+    let validator_account = network_config.peer_id();
     let keys = config
         .test
         .as_mut()

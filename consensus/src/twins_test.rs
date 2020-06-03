@@ -53,7 +53,7 @@ impl SMRNode {
         smr_id: usize,
         storage: Arc<MockStorage<TestPayload>>,
     ) -> Self {
-        let author = config.validator_network.as_ref().unwrap().peer_id;
+        let author = config.validator_network.as_ref().unwrap().peer_id();
 
         let (network_reqs_tx, network_reqs_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
@@ -138,7 +138,7 @@ impl SMRNode {
                 .iter()
                 .map(|config| {
                     ValidatorInfo::new_with_test_network_keys(
-                        config.validator_network.as_ref().unwrap().peer_id, // account address
+                        config.validator_network.as_ref().unwrap().peer_id(), // account address
                         config
                             .test
                             .as_ref()
@@ -147,7 +147,7 @@ impl SMRNode {
                             .as_ref()
                             .unwrap()
                             .public_key(), // consensus pubkey
-                        1,                                                  // voting power
+                        1,                                                    // voting power
                     )
                 })
                 .collect(),

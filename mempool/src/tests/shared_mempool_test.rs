@@ -181,11 +181,9 @@ impl SharedMempoolNetwork {
         let mut peers = vec![];
 
         for _ in 0..validator_nodes_count {
-            let peer_id = PeerId::random();
-            let mut validator_network_config = NetworkConfig::default();
-            validator_network_config.peer_id = peer_id;
             let mut config = NodeConfig::random();
-            config.validator_network = Some(validator_network_config);
+            config.validator_network = Some(NetworkConfig::default());
+            let peer_id = config.validator_network.as_ref().unwrap().peer_id();
             config.mempool.shared_mempool_batch_size = broadcast_batch_size;
             config.upstream = UpstreamConfig::default();
             config.upstream.primary_networks.push(peer_id);

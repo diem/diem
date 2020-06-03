@@ -165,7 +165,9 @@ impl FullNodeConfig {
         let mut full_node_config = self.build()?;
         let new_net = full_node_config.full_node_networks.swap_remove(0);
         for net in &config.full_node_networks {
-            ensure!(new_net.peer_id != net.peer_id, "Network already exists");
+            let new_net_id = new_net.identity.peer_id_from_config().unwrap();
+            let net_id = net.identity.peer_id_from_config().unwrap();
+            ensure!(new_net_id != net_id, "Network already exists");
         }
         config.full_node_networks.push(new_net);
         Ok(())
@@ -223,10 +225,10 @@ impl FullNodeConfig {
             network.enable_remote_authentication = self.enable_remote_authentication;
 
             network_peers.peers.insert(
-                network.peer_id,
+                network.identity.peer_id_from_config().unwrap(),
                 NetworkPeerInfo {
                     identity_public_key: network
-                        .identity_key
+                        .identity
                         .public_key_from_config()
                         .ok_or(Error::MissingNetworkKeyPairs)?,
                 },
@@ -242,7 +244,10 @@ impl FullNodeConfig {
             .ok_or(Error::MissingFullNodeNetwork)?;
         let seed_peers =
             generator::build_seed_peers(&validator_full_node_network, self.bootstrap.clone());
-        let upstream_peer_id = validator_full_node_network.peer_id;
+        let upstream_peer_id = validator_full_node_network
+            .identity
+            .peer_id_from_config()
+            .unwrap();
         for config in configs.iter_mut() {
             let network = config
                 .full_node_networks
@@ -251,7 +256,8 @@ impl FullNodeConfig {
             network.network_peers = network_peers.clone();
             network.seed_peers = seed_peers.clone();
             let mut upstream = UpstreamConfig::default();
-            upstream.upstream_peers = vec![PeerNetworkId(network.peer_id, upstream_peer_id)]
+            let peer_id = network.identity.peer_id_from_config().unwrap();
+            upstream.upstream_peers = vec![PeerNetworkId(peer_id, upstream_peer_id)]
                 .into_iter()
                 .collect::<HashSet<_>>();
             config.upstream = upstream;
@@ -283,7 +289,10 @@ mod test {
         network.seed_peers.verify_libranet_addrs().unwrap();
         let (seed_peer_id, seed_addrs) = network.seed_peers.seed_peers.iter().next().unwrap();
         assert_eq!(seed_addrs.len(), 1);
-        assert_ne!(&network.peer_id, seed_peer_id);
+        assert_ne!(
+            &network.identity.peer_id_from_config().unwrap(),
+            seed_peer_id
+        );
         assert_ne!(&network.advertised_address, &seed_addrs[0]);
 
         assert_eq!(
@@ -307,11 +316,11 @@ mod test {
         let val_fn = &validator_config.full_node_networks[0];
 
         let fnc = FullNodeConfig::new().build().unwrap();
-        let fn_network_id = fnc.full_node_networks[0].peer_id;
+        let fn_network_id = fnc.full_node_networks[0].peer_id();
         assert!(fnc
             .upstream
             .upstream_peers
-            .contains(&PeerNetworkId(fn_network_id, val_fn.peer_id)));
+            .contains(&PeerNetworkId(fn_network_id, val_fn.peer_id())));
     }
 
     #[test]

@@ -4,7 +4,7 @@
 use crate::{layout::Layout, storage_helper::StorageHelper};
 use config_builder::{BuildSwarm, SwarmConfig};
 use libra_config::config::{
-    DiscoveryMethod, IdentityKey, NetworkConfig, NodeConfig, OnDiskStorageConfig, RoleType,
+    DiscoveryMethod, Identity, NetworkConfig, NodeConfig, OnDiskStorageConfig, RoleType,
     SecureBackend,
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
@@ -71,7 +71,6 @@ fn smoke_test() {
 
         let mut network = NetworkConfig::default();
         network.discovery_method = DiscoveryMethod::Onchain;
-        network.peer_id = validator_account;
         config.validator_network = Some(network);
 
         let mut network = NetworkConfig::default();
@@ -81,15 +80,17 @@ fn smoke_test() {
 
         let validator_network = config.validator_network.as_mut().unwrap();
         let validator_network_address = validator_network.listen_address.clone();
-        validator_network.identity_key = IdentityKey::from_storage(
+        validator_network.identity = Identity::from_storage(
             libra_global_constants::VALIDATOR_NETWORK_KEY.into(),
-            secure_backend(helper.path(), &swarm_path, &ns, "full_node"),
+            libra_global_constants::OPERATOR_ACCOUNT.into(),
+            secure_backend(helper.path(), &swarm_path, &ns, "validator"),
         );
 
         let fullnode_network = &mut config.full_node_networks[0];
         let fullnode_network_address = fullnode_network.listen_address.clone();
-        fullnode_network.identity_key = IdentityKey::from_storage(
+        fullnode_network.identity = Identity::from_storage(
             libra_global_constants::FULLNODE_NETWORK_KEY.into(),
+            libra_global_constants::OPERATOR_ACCOUNT.into(),
             secure_backend(helper.path(), &swarm_path, &ns, "full_node"),
         );
 
