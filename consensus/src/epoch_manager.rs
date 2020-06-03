@@ -6,7 +6,6 @@ use crate::{
     counters,
     liveness::{
         leader_reputation::{ActiveInactiveHeuristic, LeaderReputation, LibraDBBackend},
-        multi_proposer_election::MultiProposer,
         proposal_generator::ProposalGenerator,
         proposer_election::ProposerElection,
         rotating_proposer_election::{choose_leader, RotatingProposer},
@@ -151,9 +150,6 @@ impl<T: Payload> EpochManager<T> {
             .get_ordered_account_addresses_iter()
             .collect::<Vec<_>>();
         match self.config.proposer_type {
-            ConsensusProposerType::MultipleOrderedProposers => {
-                Box::new(MultiProposer::new(epoch_state.epoch, proposers, 2))
-            }
             ConsensusProposerType::RotatingProposer => Box::new(RotatingProposer::new(
                 proposers,
                 self.config.contiguous_rounds,

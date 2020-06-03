@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::liveness::proposer_election::{next, ProposerElection};
-use consensus_types::{
-    block::Block,
-    common::{Author, Round},
-};
+use consensus_types::common::{Author, Round};
 use libra_logger::prelude::*;
 use libra_types::block_metadata::{new_block_event_key, NewBlockEvent};
 use serde::export::PhantomData;
@@ -153,15 +150,7 @@ impl<T> LeaderReputation<T> {
 }
 
 impl<T> ProposerElection<T> for LeaderReputation<T> {
-    fn is_valid_proposer(&self, author: Author, round: Round) -> Option<Author> {
-        if self.get_valid_proposers(round).contains(&author) {
-            Some(author)
-        } else {
-            None
-        }
-    }
-
-    fn get_valid_proposers(&self, round: Round) -> Vec<Author> {
+    fn get_valid_proposer(&self, round: Round) -> Author {
         // TODO: configure the round gap
         let target_round = if round >= 4 { round - 4 } else { 0 };
         let sliding_window = self.backend.get_block_metadata(target_round);
@@ -183,19 +172,6 @@ impl<T> ProposerElection<T> for LeaderReputation<T> {
                 }
             })
             .unwrap_err();
-        vec![self.proposers[chosen_index]]
-    }
-
-    fn process_proposal(&mut self, proposal: Block<T>) -> Option<Block<T>> {
-        let author = proposal.author()?;
-        if self.get_valid_proposers(proposal.round()).contains(&author) {
-            Some(proposal)
-        } else {
-            None
-        }
-    }
-
-    fn take_backup_proposal(&mut self, _round: Round) -> Option<Block<T>> {
-        None
+        self.proposers[chosen_index]
     }
 }

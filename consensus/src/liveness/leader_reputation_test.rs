@@ -123,16 +123,11 @@ fn test_api() {
         }
     }
     let unexpected_index = (expected_index + 1) % proposers.len();
-    let mut proposer_election: Box<dyn ProposerElection<TestPayload>> = Box::new(leader_reputation);
-    let output = proposer_election.get_valid_proposers(round);
-    assert_eq!(output.len(), 1);
-    assert_eq!(output[0], proposers[expected_index]);
-    assert!(proposer_election
-        .is_valid_proposer(proposers[expected_index], 42)
-        .is_some());
-    assert!(proposer_election
-        .is_valid_proposer(proposers[unexpected_index], 42)
-        .is_none());
+    let proposer_election: Box<dyn ProposerElection<TestPayload>> = Box::new(leader_reputation);
+    let output = proposer_election.get_valid_proposer(round);
+    assert_eq!(output, proposers[expected_index]);
+    assert!(proposer_election.is_valid_proposer(proposers[expected_index], 42));
+    assert!(!proposer_election.is_valid_proposer(proposers[unexpected_index], 42));
     let good_proposal = Block::new_proposal(
         vec![1],
         round,
@@ -140,7 +135,7 @@ fn test_api() {
         certificate_for_genesis(),
         &signers[expected_index],
     );
-    assert!(proposer_election.process_proposal(good_proposal).is_some());
+    assert!(proposer_election.is_valid_proposal(&good_proposal));
     let bad_proposal = Block::new_proposal(
         vec![1],
         round,
@@ -148,6 +143,5 @@ fn test_api() {
         certificate_for_genesis(),
         &signers[unexpected_index],
     );
-    assert!(proposer_election.process_proposal(bad_proposal).is_none());
-    assert!(proposer_election.take_backup_proposal(round).is_none());
+    assert!(!proposer_election.is_valid_proposal(&bad_proposal));
 }
