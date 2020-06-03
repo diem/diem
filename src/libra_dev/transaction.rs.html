@@ -1064,19 +1064,6 @@
 <span id="1064">1064</span>
 <span id="1065">1065</span>
 <span id="1066">1066</span>
-<span id="1067">1067</span>
-<span id="1068">1068</span>
-<span id="1069">1069</span>
-<span id="1070">1070</span>
-<span id="1071">1071</span>
-<span id="1072">1072</span>
-<span id="1073">1073</span>
-<span id="1074">1074</span>
-<span id="1075">1075</span>
-<span id="1076">1076</span>
-<span id="1077">1077</span>
-<span id="1078">1078</span>
-<span id="1079">1079</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1218,18 +1205,17 @@
         <span class="ident">update_last_error</span>(<span class="string">&quot;receiver parameter must not be null.&quot;</span>.<span class="ident">to_string</span>());
         <span class="kw">return</span> <span class="ident">LibraStatus</span>::<span class="ident">InvalidArgument</span>;
     }
-    <span class="kw">let</span> <span class="ident">receiver_buf</span> <span class="op">=</span> <span class="ident">slice</span>::<span class="ident">from_raw_parts</span>(<span class="ident">receiver</span>, <span class="ident">AuthenticationKey</span>::<span class="ident">LENGTH</span>);
-    <span class="kw">let</span> <span class="ident">receiver_auth_key</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">AuthenticationKey</span>::<span class="ident">try_from</span>(<span class="ident">receiver_buf</span>) {
+    <span class="kw">let</span> <span class="ident">receiver_buf</span> <span class="op">=</span> <span class="ident">slice</span>::<span class="ident">from_raw_parts</span>(<span class="ident">receiver</span>, <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>);
+    <span class="kw">let</span> <span class="ident">receiver_address</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="ident">receiver_buf</span>) {
         <span class="prelude-val">Ok</span>(<span class="ident">result</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">result</span>,
         <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">update_last_error</span>(<span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;Invalid receiver authentication key: {}&quot;</span>,
+                <span class="string">&quot;Invalid receiver account address: {}&quot;</span>,
                 <span class="ident">e</span>.<span class="ident">to_string</span>()
             ));
             <span class="kw">return</span> <span class="ident">LibraStatus</span>::<span class="ident">InvalidArgument</span>;
         }
     };
-    <span class="kw">let</span> <span class="ident">receiver_address</span> <span class="op">=</span> <span class="ident">receiver_auth_key</span>.<span class="ident">derived_address</span>();
 
     <span class="kw">let</span> <span class="ident">metadata</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">metadata_bytes</span>.<span class="ident">is_null</span>() {
         <span class="macro">vec</span><span class="macro">!</span>[]
@@ -1257,8 +1243,7 @@
 
     <span class="kw">let</span> <span class="ident">script</span> <span class="op">=</span> <span class="ident">encode_transfer_with_metadata_script</span>(
         <span class="ident">coin_type_tag</span>,
-        <span class="kw-2">&amp;</span><span class="ident">receiver_address</span>,
-        <span class="ident">receiver_auth_key</span>.<span class="ident">prefix</span>().<span class="ident">to_vec</span>(),
+        <span class="ident">receiver_address</span>,
         <span class="ident">num_coins</span>,
         <span class="ident">metadata</span>,
         <span class="ident">metadata_signature</span>,
@@ -1365,18 +1350,14 @@
         <span class="ident">update_last_error</span>(<span class="string">&quot;receiver parameter must not be null.&quot;</span>.<span class="ident">to_string</span>());
         <span class="kw">return</span> <span class="ident">LibraStatus</span>::<span class="ident">InvalidArgument</span>;
     }
-    <span class="kw">let</span> <span class="ident">receiver_buf</span> <span class="op">=</span> <span class="ident">slice</span>::<span class="ident">from_raw_parts</span>(<span class="ident">receiver</span>, <span class="ident">AuthenticationKey</span>::<span class="ident">LENGTH</span>);
-    <span class="kw">let</span> <span class="ident">receiver_auth_key</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">AuthenticationKey</span>::<span class="ident">try_from</span>(<span class="ident">receiver_buf</span>) {
+    <span class="kw">let</span> <span class="ident">receiver_buf</span> <span class="op">=</span> <span class="ident">slice</span>::<span class="ident">from_raw_parts</span>(<span class="ident">receiver</span>, <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>);
+    <span class="kw">let</span> <span class="ident">receiver_address</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="ident">receiver_buf</span>) {
         <span class="prelude-val">Ok</span>(<span class="ident">result</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">result</span>,
         <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="ident">update_last_error</span>(<span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;Invalid receiver authentication key: {}&quot;</span>,
-                <span class="ident">e</span>.<span class="ident">to_string</span>()
-            ));
+            <span class="ident">update_last_error</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Invalid receiver address: {}&quot;</span>, <span class="ident">e</span>.<span class="ident">to_string</span>()));
             <span class="kw">return</span> <span class="ident">LibraStatus</span>::<span class="ident">InvalidArgument</span>;
         }
     };
-    <span class="kw">let</span> <span class="ident">receiver_address</span> <span class="op">=</span> <span class="ident">receiver_auth_key</span>.<span class="ident">derived_address</span>();
     <span class="kw">let</span> <span class="ident">expiration_time</span> <span class="op">=</span> <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="ident">expiration_time_secs</span>);
 
     <span class="kw">let</span> <span class="ident">metadata</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">metadata_bytes</span>.<span class="ident">is_null</span>() {
@@ -1392,8 +1373,7 @@
 
     <span class="kw">let</span> <span class="ident">program</span> <span class="op">=</span> <span class="ident">encode_transfer_with_metadata_script</span>(
         <span class="ident">lbr_type_tag</span>(),
-        <span class="kw-2">&amp;</span><span class="ident">receiver_address</span>,
-        <span class="ident">receiver_auth_key</span>.<span class="ident">prefix</span>().<span class="ident">to_vec</span>(),
+        <span class="ident">receiver_address</span>,
         <span class="ident">num_coins</span>,
         <span class="ident">metadata</span>,
         <span class="ident">metadata_signature</span>,
@@ -1562,7 +1542,6 @@
                         <span class="ident">args</span>: <span class="ident">LibraP2PTransferTransactionArgument</span> {
                             <span class="ident">value</span>: <span class="kw-2">*</span><span class="ident">amount</span>,
                             <span class="ident">address</span>: <span class="ident">addr</span>.<span class="ident">into</span>(),
-                            <span class="ident">auth_key_prefix</span>: <span class="ident">auth_key_prefix_buffer</span>,
                             <span class="ident">metadata_bytes</span>: <span class="macro">vec</span><span class="macro">!</span>[].<span class="ident">as_ptr</span>(),
                             <span class="ident">metadata_len</span>: <span class="number">0</span>,
                             <span class="ident">metadata_signature_bytes</span>: <span class="macro">vec</span><span class="macro">!</span>[].<span class="ident">as_ptr</span>(),
@@ -1576,19 +1555,14 @@
             }
             <span class="string">&quot;peer_to_peer_with_metadata_transaction&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="ident">script</span>.<span class="ident">args</span>();
-                <span class="kw">if</span> <span class="kw">let</span> [<span class="ident">TransactionArgument</span>::<span class="ident">Address</span>(<span class="ident">addr</span>), <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">auth_key_prefix</span>), <span class="ident">TransactionArgument</span>::<span class="ident">U64</span>(<span class="ident">amount</span>), <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">metadata</span>), <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">metadata_signature</span>)] <span class="op">=</span>
+                <span class="kw">if</span> <span class="kw">let</span> [<span class="ident">TransactionArgument</span>::<span class="ident">Address</span>(<span class="ident">addr</span>), <span class="ident">TransactionArgument</span>::<span class="ident">U64</span>(<span class="ident">amount</span>), <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">metadata</span>), <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">metadata_signature</span>)] <span class="op">=</span>
                     <span class="kw-2">&amp;</span><span class="ident">args</span>[..]
                 {
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">auth_key_prefix_buffer</span> <span class="op">=</span>
-                        [<span class="number">0u8</span>; <span class="ident">AuthenticationKey</span>::<span class="ident">LENGTH</span> <span class="op">-</span> <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>];
-                    <span class="ident">auth_key_prefix_buffer</span>.<span class="ident">copy_from_slice</span>(<span class="ident">auth_key_prefix</span>.<span class="ident">as_slice</span>());
-
                     <span class="ident">txn_payload</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">LibraTransactionPayload</span> {
                         <span class="ident">txn_type</span>: <span class="ident">TransactionType</span>::<span class="ident">PeerToPeer</span>,
                         <span class="ident">args</span>: <span class="ident">LibraP2PTransferTransactionArgument</span> {
                             <span class="ident">value</span>: <span class="kw-2">*</span><span class="ident">amount</span>,
                             <span class="ident">address</span>: <span class="ident">addr</span>.<span class="ident">into</span>(),
-                            <span class="ident">auth_key_prefix</span>: <span class="ident">auth_key_prefix_buffer</span>,
                             <span class="ident">metadata_bytes</span>: (<span class="kw-2">*</span><span class="ident">Box</span>::<span class="ident">into_raw</span>(<span class="ident">metadata</span>.<span class="ident">clone</span>().<span class="ident">into_boxed_slice</span>()))
                                 .<span class="ident">as_ptr</span>(),
                             <span class="ident">metadata_len</span>: <span class="ident">metadata</span>.<span class="ident">len</span>(),
@@ -1672,7 +1646,7 @@
 
         <span class="comment">// create transfer parameters</span>
         <span class="kw">let</span> <span class="ident">sender_address</span> <span class="op">=</span> <span class="ident">account_address</span>::<span class="ident">from_public_key</span>(<span class="kw-2">&amp;</span><span class="ident">public_key</span>);
-        <span class="kw">let</span> <span class="ident">receiver_auth_key</span> <span class="op">=</span> <span class="ident">AuthenticationKey</span>::<span class="ident">random</span>();
+        <span class="kw">let</span> <span class="ident">receiver_address</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">random</span>();
         <span class="kw">let</span> <span class="ident">sequence</span> <span class="op">=</span> <span class="number">0</span>;
         <span class="kw">let</span> <span class="ident">amount</span> <span class="op">=</span> <span class="number">100_000_000</span>;
         <span class="kw">let</span> <span class="ident">gas_unit_price</span> <span class="op">=</span> <span class="number">123</span>;
@@ -1688,7 +1662,7 @@
 
         <span class="kw">let</span> <span class="ident">script_result</span> <span class="op">=</span> <span class="kw">unsafe</span> {
             <span class="ident">libra_TransactionP2PScript_from</span>(
-                <span class="ident">receiver_auth_key</span>.<span class="ident">as_ref</span>().<span class="ident">as_ptr</span>(),
+                <span class="ident">receiver_address</span>.<span class="ident">as_ref</span>().<span class="ident">as_ptr</span>(),
                 <span class="ident">coin_ident</span>.<span class="ident">as_ptr</span>(),
                 <span class="ident">amount</span>,
                 <span class="ident">metadata</span>.<span class="ident">as_ptr</span>(),
@@ -1731,15 +1705,15 @@
             <span class="ident">from_bytes</span>(<span class="ident">signed_txn_bytes_buf</span>).<span class="ident">expect</span>(<span class="string">&quot;LCS deserialization failed&quot;</span>);
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="ident">TransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">program</span>) <span class="op">=</span> <span class="ident">deserialized_signed_txn</span>.<span class="ident">payload</span>() {
-            <span class="kw">match</span> <span class="ident">program</span>.<span class="ident">args</span>()[<span class="number">2</span>] {
+            <span class="kw">match</span> <span class="ident">program</span>.<span class="ident">args</span>()[<span class="number">1</span>] {
                 <span class="ident">TransactionArgument</span>::<span class="ident">U64</span>(<span class="ident">val</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">val</span>, <span class="ident">amount</span>),
                 <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
             }
-            <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">program</span>.<span class="ident">args</span>()[<span class="number">3</span>] {
+            <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">program</span>.<span class="ident">args</span>()[<span class="number">2</span>] {
                 <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">val</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">val</span>, <span class="kw-2">&amp;</span><span class="ident">metadata</span>),
                 <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
             }
-            <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">program</span>.<span class="ident">args</span>()[<span class="number">4</span>] {
+            <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">program</span>.<span class="ident">args</span>()[<span class="number">3</span>] {
                 <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">val</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">val</span>, <span class="kw-2">&amp;</span><span class="ident">metadata_signature</span>),
                 <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
             }
@@ -1862,7 +1836,7 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_lcs_p2p_transaction_script</span>() {
         <span class="comment">// create transfer parameters</span>
-        <span class="kw">let</span> <span class="ident">receiver_auth_key</span> <span class="op">=</span> <span class="ident">AuthenticationKey</span>::<span class="ident">random</span>();
+        <span class="kw">let</span> <span class="ident">receiver_address</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">random</span>();
         <span class="kw">let</span> <span class="ident">amount</span> <span class="op">=</span> <span class="number">100_000_000</span>;
         <span class="kw">let</span> <span class="ident">metadata</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
         <span class="kw">let</span> <span class="ident">metadata_signature</span> <span class="op">=</span> [<span class="number">0x1</span>; <span class="number">64</span>].<span class="ident">to_vec</span>();
@@ -1874,7 +1848,7 @@
 
         <span class="kw">let</span> <span class="ident">script_result</span> <span class="op">=</span> <span class="kw">unsafe</span> {
             <span class="ident">libra_TransactionP2PScript_from</span>(
-                <span class="ident">receiver_auth_key</span>.<span class="ident">as_ref</span>().<span class="ident">as_ptr</span>(),
+                <span class="ident">receiver_address</span>.<span class="ident">as_ref</span>().<span class="ident">as_ptr</span>(),
                 <span class="ident">coin_ident</span>.<span class="ident">as_ptr</span>(),
                 <span class="ident">amount</span>,
                 <span class="ident">metadata</span>.<span class="ident">as_ptr</span>(),
@@ -1892,17 +1866,22 @@
         <span class="kw">let</span> <span class="ident">deserialized_script</span>: <span class="ident">Script</span> <span class="op">=</span>
             <span class="ident">from_bytes</span>(<span class="ident">script_bytes</span>).<span class="ident">expect</span>(<span class="string">&quot;LCS deserialization failed for Script&quot;</span>);
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">TransactionArgument</span>::<span class="ident">U64</span>(<span class="ident">val</span>) <span class="op">=</span> <span class="ident">deserialized_script</span>.<span class="ident">args</span>()[<span class="number">2</span>] {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">TransactionArgument</span>::<span class="ident">Address</span>(<span class="ident">val</span>) <span class="op">=</span> <span class="ident">deserialized_script</span>.<span class="ident">args</span>()[<span class="number">0</span>] {
+            <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">val</span>, <span class="ident">receiver_address</span>);
+        } <span class="kw">else</span> {
+            <span class="macro">unreachable</span><span class="macro">!</span>()
+        }
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">TransactionArgument</span>::<span class="ident">U64</span>(<span class="ident">val</span>) <span class="op">=</span> <span class="ident">deserialized_script</span>.<span class="ident">args</span>()[<span class="number">1</span>] {
             <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">val</span>, <span class="ident">amount</span>);
         } <span class="kw">else</span> {
             <span class="macro">unreachable</span><span class="macro">!</span>()
         }
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">val</span>) <span class="op">=</span> <span class="ident">deserialized_script</span>.<span class="ident">args</span>()[<span class="number">3</span>].<span class="ident">clone</span>() {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">val</span>) <span class="op">=</span> <span class="ident">deserialized_script</span>.<span class="ident">args</span>()[<span class="number">2</span>].<span class="ident">clone</span>() {
             <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">val</span>, <span class="ident">metadata</span>)
         } <span class="kw">else</span> {
             <span class="macro">unreachable</span><span class="macro">!</span>()
         }
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">val</span>) <span class="op">=</span> <span class="ident">deserialized_script</span>.<span class="ident">args</span>()[<span class="number">4</span>].<span class="ident">clone</span>() {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">val</span>) <span class="op">=</span> <span class="ident">deserialized_script</span>.<span class="ident">args</span>()[<span class="number">3</span>].<span class="ident">clone</span>() {
             <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">val</span>, <span class="ident">metadata_signature</span>)
         } <span class="kw">else</span> {
             <span class="macro">unreachable</span><span class="macro">!</span>()
@@ -1963,7 +1942,7 @@
 
         <span class="comment">// create transfer parameters</span>
         <span class="kw">let</span> <span class="ident">sender_address</span> <span class="op">=</span> <span class="ident">account_address</span>::<span class="ident">from_public_key</span>(<span class="kw-2">&amp;</span><span class="ident">public_key</span>);
-        <span class="kw">let</span> <span class="ident">receiver_auth_key</span> <span class="op">=</span> <span class="ident">AuthenticationKey</span>::<span class="ident">random</span>();
+        <span class="kw">let</span> <span class="ident">receiver_address</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">random</span>();
         <span class="kw">let</span> <span class="ident">sequence</span> <span class="op">=</span> <span class="number">0</span>;
         <span class="kw">let</span> <span class="ident">amount</span> <span class="op">=</span> <span class="number">100_000_000</span>;
         <span class="kw">let</span> <span class="ident">gas_unit_price</span> <span class="op">=</span> <span class="number">123</span>;
@@ -1977,7 +1956,7 @@
         <span class="kw">unsafe</span> {
             <span class="ident">libra_RawTransactionBytes_from</span>(
                 <span class="ident">sender_address</span>.<span class="ident">as_ref</span>().<span class="ident">as_ptr</span>(),
-                <span class="ident">receiver_auth_key</span>.<span class="ident">as_ref</span>().<span class="ident">as_ptr</span>(),
+                <span class="ident">receiver_address</span>.<span class="ident">as_ref</span>().<span class="ident">as_ptr</span>(),
                 <span class="ident">sequence</span>,
                 <span class="ident">amount</span>,
                 <span class="ident">max_gas_amount</span>,
@@ -2047,7 +2026,7 @@
     <span class="kw">fn</span> <span class="ident">test_libra_signed_transaction_deserialize</span>() {
         <span class="kw">let</span> <span class="ident">public_key</span> <span class="op">=</span> <span class="ident">Ed25519PrivateKey</span>::<span class="ident">generate_for_testing</span>().<span class="ident">public_key</span>();
         <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">random</span>();
-        <span class="kw">let</span> <span class="ident">receiver_auth_key</span> <span class="op">=</span> <span class="ident">AuthenticationKey</span>::<span class="ident">random</span>();
+        <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">random</span>();
         <span class="kw">let</span> <span class="ident">sequence_number</span> <span class="op">=</span> <span class="number">1</span>;
         <span class="kw">let</span> <span class="ident">amount</span> <span class="op">=</span> <span class="number">10_000_000</span>;
         <span class="kw">let</span> <span class="ident">max_gas_amount</span> <span class="op">=</span> <span class="number">10</span>;
@@ -2059,8 +2038,7 @@
 
         <span class="kw">let</span> <span class="ident">program</span> <span class="op">=</span> <span class="ident">encode_transfer_with_metadata_script</span>(
             <span class="ident">lbr_type_tag</span>(),
-            <span class="kw-2">&amp;</span><span class="ident">receiver_auth_key</span>.<span class="ident">derived_address</span>(),
-            <span class="ident">receiver_auth_key</span>.<span class="ident">prefix</span>().<span class="ident">to_vec</span>(),
+            <span class="ident">receiver</span>,
             <span class="ident">amount</span>,
             <span class="ident">metadata</span>.<span class="ident">clone</span>(),
             <span class="ident">metadata_signature</span>.<span class="ident">clone</span>(),
@@ -2117,10 +2095,6 @@
             <span class="macro">assert_eq</span><span class="macro">!</span>(
                 <span class="ident">TransactionType</span>::<span class="ident">PeerToPeer</span>,
                 <span class="ident">libra_signed_txn</span>.<span class="ident">raw_txn</span>.<span class="ident">payload</span>.<span class="ident">txn_type</span>
-            );
-            <span class="macro">assert_eq</span><span class="macro">!</span>(
-                <span class="ident">receiver_auth_key</span>.<span class="ident">derived_address</span>(),
-                <span class="ident">AccountAddress</span>::<span class="ident">new</span>(<span class="ident">libra_signed_txn</span>.<span class="ident">raw_txn</span>.<span class="ident">payload</span>.<span class="ident">args</span>.<span class="ident">address</span>)
             );
             <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">amount</span>, <span class="ident">libra_signed_txn</span>.<span class="ident">raw_txn</span>.<span class="ident">payload</span>.<span class="ident">args</span>.<span class="ident">value</span>);
             <span class="kw">let</span> <span class="ident">txn_metadata</span> <span class="op">=</span> <span class="kw">unsafe</span> {

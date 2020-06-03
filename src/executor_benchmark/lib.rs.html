@@ -365,7 +365,6 @@
 <span id="365">365</span>
 <span id="366">366</span>
 <span id="367">367</span>
-<span id="368">368</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -518,8 +517,7 @@
                     <span class="ident">sender</span>.<span class="ident">public_key</span>.<span class="ident">clone</span>(),
                     <span class="ident">encode_transfer_with_metadata_script</span>(
                         <span class="ident">lbr_type_tag</span>(),
-                        <span class="kw-2">&amp;</span><span class="ident">receiver</span>.<span class="ident">address</span>,
-                        <span class="ident">receiver</span>.<span class="ident">auth_key_prefix</span>(),
+                        <span class="ident">receiver</span>.<span class="ident">address</span>,
                         <span class="number">1</span>, <span class="comment">/* amount */</span>
                         <span class="macro">vec</span><span class="macro">!</span>[],
                         <span class="macro">vec</span><span class="macro">!</span>[],

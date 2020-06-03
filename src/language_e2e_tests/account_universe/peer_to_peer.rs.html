@@ -102,77 +102,14 @@
 <span id="102">102</span>
 <span id="103">103</span>
 <span id="104">104</span>
-<span id="105">105</span>
-<span id="106">106</span>
-<span id="107">107</span>
-<span id="108">108</span>
-<span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
-<span id="122">122</span>
-<span id="123">123</span>
-<span id="124">124</span>
-<span id="125">125</span>
-<span id="126">126</span>
-<span id="127">127</span>
-<span id="128">128</span>
-<span id="129">129</span>
-<span id="130">130</span>
-<span id="131">131</span>
-<span id="132">132</span>
-<span id="133">133</span>
-<span id="134">134</span>
-<span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">account</span>::{<span class="ident">lbr_currency_code</span>, <span class="ident">Account</span>, <span class="ident">AccountData</span>, <span class="ident">AccountTypeSpecifier</span>},
-    <span class="ident">account_universe</span>::{
-        <span class="ident">txn_one_account_result</span>, <span class="ident">AUTransactionGen</span>, <span class="ident">AccountPair</span>, <span class="ident">AccountPairGen</span>, <span class="ident">AccountUniverse</span>,
-    },
+    <span class="ident">account_universe</span>::{<span class="ident">AUTransactionGen</span>, <span class="ident">AccountPair</span>, <span class="ident">AccountPairGen</span>, <span class="ident">AccountUniverse</span>},
     <span class="ident">common_transactions</span>::<span class="ident">peer_to_peer_txn</span>,
 };
-<span class="kw">use</span> <span class="ident">libra_proptest_helpers</span>::<span class="ident">Index</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">transaction</span>::{<span class="ident">SignedTransaction</span>, <span class="ident">TransactionStatus</span>},
     <span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>},
@@ -187,18 +124,6 @@
 <span class="attribute">#[<span class="ident">proptest</span>(<span class="ident">params</span> <span class="op">=</span> <span class="string">&quot;(u64, u64)&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">P2PTransferGen</span> {
     <span class="ident">sender_receiver</span>: <span class="ident">AccountPairGen</span>,
-    <span class="attribute">#[<span class="ident">proptest</span>(<span class="ident">strategy</span> <span class="op">=</span> <span class="string">&quot;params.0 ..= params.1&quot;</span>)]</span>
-    <span class="ident">amount</span>: <span class="ident">u64</span>,
-}
-
-<span class="doccomment">/// Represents a peer-to-peer transaction performed in the account universe to a new receiver.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// The parameters are the minimum and maximum balances to transfer.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Arbitrary</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="attribute">#[<span class="ident">proptest</span>(<span class="ident">params</span> <span class="op">=</span> <span class="string">&quot;(u64, u64)&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">P2PNewReceiverGen</span> {
-    <span class="ident">sender</span>: <span class="ident">Index</span>,
-    <span class="ident">receiver</span>: <span class="ident">Account</span>,
     <span class="attribute">#[<span class="ident">proptest</span>(<span class="ident">strategy</span> <span class="op">=</span> <span class="string">&quot;params.0 ..= params.1&quot;</span>)]</span>
     <span class="ident">amount</span>: <span class="ident">u64</span>,
 }
@@ -277,49 +202,6 @@
                     <span class="ident">StatusCode</span>::<span class="ident">INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE</span>,
                 ));
             }
-        }
-
-        (<span class="ident">txn</span>, (<span class="ident">status</span>, <span class="ident">gas_used</span>))
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">AUTransactionGen</span> <span class="kw">for</span> <span class="ident">P2PNewReceiverGen</span> {
-    <span class="kw">fn</span> <span class="ident">apply</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">universe</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AccountUniverse</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">SignedTransaction</span>, (<span class="ident">TransactionStatus</span>, <span class="ident">u64</span>)) {
-        <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="ident">universe</span>.<span class="ident">pick</span>(<span class="self">self</span>.<span class="ident">sender</span>).<span class="number">1</span>;
-
-        <span class="comment">// Create a new, nonexistent account for the receiver.</span>
-        <span class="kw">let</span> <span class="ident">txn</span> <span class="op">=</span> <span class="ident">peer_to_peer_txn</span>(
-            <span class="ident">sender</span>.<span class="ident">account</span>(),
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">receiver</span>,
-            <span class="ident">sender</span>.<span class="ident">sequence_number</span>,
-            <span class="self">self</span>.<span class="ident">amount</span>,
-        );
-
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gas_used</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">peer_to_peer_new_receiver_gas_cost</span>();
-        <span class="kw">let</span> <span class="ident">low_balance_gas_used</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">peer_to_peer_new_receiver_too_low_gas_cost</span>();
-        <span class="kw">let</span> <span class="ident">gas_price</span> <span class="op">=</span> <span class="ident">txn</span>.<span class="ident">gas_unit_price</span>();
-
-        <span class="kw">let</span> (<span class="ident">status</span>, <span class="ident">is_success</span>) <span class="op">=</span> <span class="ident">txn_one_account_result</span>(
-            <span class="ident">sender</span>,
-            <span class="self">self</span>.<span class="ident">amount</span>,
-            <span class="ident">gas_price</span>,
-            <span class="ident">gas_used</span>,
-            <span class="ident">low_balance_gas_used</span>,
-        );
-        <span class="kw">if</span> <span class="ident">is_success</span> {
-            <span class="ident">sender</span>.<span class="ident">event_counter_created</span> <span class="op">=</span> <span class="bool-val">true</span>;
-            <span class="ident">universe</span>.<span class="ident">add_account</span>(<span class="ident">AccountData</span>::<span class="ident">with_account</span>(
-                <span class="self">self</span>.<span class="ident">receiver</span>.<span class="ident">clone</span>(),
-                <span class="self">self</span>.<span class="ident">amount</span>,
-                <span class="ident">lbr_currency_code</span>(),
-                <span class="number">0</span>,
-                <span class="ident">AccountTypeSpecifier</span>::<span class="ident">default</span>(),
-            ));
-        } <span class="kw">else</span> {
-            <span class="ident">gas_used</span> <span class="op">=</span> <span class="number">0</span>;
         }
 
         (<span class="ident">txn</span>, (<span class="ident">status</span>, <span class="ident">gas_used</span>))

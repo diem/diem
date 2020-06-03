@@ -602,8 +602,6 @@
 <span id="602">602</span>
 <span id="603">603</span>
 <span id="604">604</span>
-<span id="605">605</span>
-<span id="606">606</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -956,7 +954,6 @@
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;peer_to_peer_transaction&quot;</span>)]</span>
     <span class="ident">PeerToPeer</span> {
         <span class="ident">receiver</span>: <span class="ident">String</span>,
-        <span class="ident">auth_key_prefix</span>: <span class="ident">BytesView</span>,
         <span class="ident">amount</span>: <span class="ident">u64</span>,
         <span class="ident">currency</span>: <span class="ident">String</span>,
         <span class="ident">metadata</span>: <span class="ident">BytesView</span>,
@@ -1067,12 +1064,11 @@
 
         <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">code</span>.<span class="ident">as_str</span>() {
             <span class="string">&quot;peer_to_peer_with_metadata_transaction&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">if</span> <span class="kw">let</span> [<span class="ident">TransactionArgument</span>::<span class="ident">Address</span>(<span class="ident">receiver</span>), <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">auth_key_prefix</span>), <span class="ident">TransactionArgument</span>::<span class="ident">U64</span>(<span class="ident">amount</span>), <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">metadata</span>), <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">metadata_signature</span>)] <span class="op">=</span>
+                <span class="kw">if</span> <span class="kw">let</span> [<span class="ident">TransactionArgument</span>::<span class="ident">Address</span>(<span class="ident">receiver</span>), <span class="ident">TransactionArgument</span>::<span class="ident">U64</span>(<span class="ident">amount</span>), <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">metadata</span>), <span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">metadata_signature</span>)] <span class="op">=</span>
                     <span class="kw-2">&amp;</span><span class="ident">args</span>[..]
                 {
                     <span class="prelude-val">Ok</span>(<span class="ident">ScriptView</span>::<span class="ident">PeerToPeer</span> {
                         <span class="ident">receiver</span>: <span class="ident">receiver</span>.<span class="ident">to_string</span>(),
-                        <span class="ident">auth_key_prefix</span>: <span class="ident">BytesView</span>::<span class="ident">from</span>(<span class="ident">auth_key_prefix</span>),
                         <span class="ident">amount</span>: <span class="kw-2">*</span><span class="ident">amount</span>,
                         <span class="ident">currency</span>: <span class="ident">ty_args</span>.<span class="ident">get</span>(<span class="number">0</span>).<span class="ident">unwrap_or</span>(<span class="kw-2">&amp;</span><span class="ident">unknown_currency</span>).<span class="ident">to_string</span>(),
                         <span class="ident">metadata</span>: <span class="ident">BytesView</span>::<span class="ident">from</span>(<span class="ident">metadata</span>),

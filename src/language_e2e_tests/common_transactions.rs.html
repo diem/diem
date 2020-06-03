@@ -219,7 +219,6 @@
 <span id="219">219</span>
 <span id="220">220</span>
 <span id="221">221</span>
-<span id="222">222</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -340,7 +339,6 @@
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SignedTransaction</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TransactionArgument</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
     <span class="ident">args</span>.<span class="ident">push</span>(<span class="ident">TransactionArgument</span>::<span class="ident">Address</span>(<span class="kw-2">*</span><span class="ident">receiver</span>.<span class="ident">address</span>()));
-    <span class="ident">args</span>.<span class="ident">push</span>(<span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="ident">receiver</span>.<span class="ident">auth_key_prefix</span>()));
     <span class="ident">args</span>.<span class="ident">push</span>(<span class="ident">TransactionArgument</span>::<span class="ident">U64</span>(<span class="ident">transfer_amount</span>));
     <span class="ident">args</span>.<span class="ident">push</span>(<span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="macro">vec</span><span class="macro">!</span>[]));
     <span class="ident">args</span>.<span class="ident">push</span>(<span class="ident">TransactionArgument</span>::<span class="ident">U8Vector</span>(<span class="macro">vec</span><span class="macro">!</span>[]));
