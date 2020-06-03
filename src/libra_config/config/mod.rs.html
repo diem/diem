@@ -482,8 +482,6 @@
 <span id="482">482</span>
 <span id="483">483</span>
 <span id="484">484</span>
-<span id="485">485</span>
-<span id="486">486</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -510,6 +508,8 @@
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">debug_interface_config</span>::<span class="kw-2">*</span>;
 <span class="kw">mod</span> <span class="ident">execution_config</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">execution_config</span>::<span class="kw-2">*</span>;
+<span class="kw">mod</span> <span class="ident">key_manager_config</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">key_manager_config</span>::<span class="kw-2">*</span>;
 <span class="kw">mod</span> <span class="ident">logger_config</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">logger_config</span>::<span class="kw-2">*</span>;
 <span class="kw">mod</span> <span class="ident">metrics_config</span>;
@@ -518,8 +518,8 @@
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">mempool_config</span>::<span class="kw-2">*</span>;
 <span class="kw">mod</span> <span class="ident">network_config</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">network_config</span>::<span class="kw-2">*</span>;
-<span class="kw">mod</span> <span class="ident">secure_config</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">secure_config</span>::<span class="kw-2">*</span>;
+<span class="kw">mod</span> <span class="ident">secure_backend_config</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">secure_backend_config</span>::<span class="kw-2">*</span>;
 <span class="kw">mod</span> <span class="ident">state_sync_config</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">state_sync_config</span>::<span class="kw-2">*</span>;
 <span class="kw">mod</span> <span class="ident">storage_config</span>;
@@ -560,8 +560,6 @@
     <span class="kw">pub</span> <span class="ident">metrics</span>: <span class="ident">MetricsConfig</span>,
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
     <span class="kw">pub</span> <span class="ident">mempool</span>: <span class="ident">MempoolConfig</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">secure</span>: <span class="ident">SecureConfig</span>,
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
     <span class="kw">pub</span> <span class="ident">state_sync</span>: <span class="ident">StateSyncConfig</span>,
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
@@ -643,7 +641,6 @@
         <span class="self">self</span>.<span class="ident">base</span>.<span class="ident">data_dir</span> <span class="op">=</span> <span class="ident">data_dir</span>.<span class="ident">clone</span>();
         <span class="self">self</span>.<span class="ident">consensus</span>.<span class="ident">set_data_dir</span>(<span class="ident">data_dir</span>.<span class="ident">clone</span>());
         <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">set_data_dir</span>(<span class="ident">data_dir</span>.<span class="ident">clone</span>());
-        <span class="self">self</span>.<span class="ident">secure</span>.<span class="ident">set_data_dir</span>(<span class="ident">data_dir</span>.<span class="ident">clone</span>());
         <span class="self">self</span>.<span class="ident">storage</span>.<span class="ident">set_data_dir</span>(<span class="ident">data_dir</span>);
     }
 
@@ -666,7 +663,6 @@
             <span class="ident">metrics</span>: <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">clone</span>(),
             <span class="ident">mempool</span>: <span class="self">self</span>.<span class="ident">mempool</span>.<span class="ident">clone</span>(),
             <span class="ident">state_sync</span>: <span class="self">self</span>.<span class="ident">state_sync</span>.<span class="ident">clone</span>(),
-            <span class="ident">secure</span>: <span class="self">self</span>.<span class="ident">secure</span>.<span class="ident">clone</span>(),
             <span class="ident">storage</span>: <span class="self">self</span>.<span class="ident">storage</span>.<span class="ident">clone</span>(),
             <span class="ident">test</span>: <span class="prelude-val">None</span>,
             <span class="ident">upstream</span>: <span class="self">self</span>.<span class="ident">upstream</span>.<span class="ident">clone</span>(),
