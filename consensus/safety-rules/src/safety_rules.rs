@@ -133,7 +133,7 @@ impl SafetyRules {
         let validator_signer_author = &self.validator_signer.author();
         let author = author
             .ok_or_else(|| Error::InvalidProposal("No author found in the proposal".into()))?;
-        if (*validator_signer_author) != author {
+        if validator_signer_author != &author {
             return Err(Error::InvalidProposal(
                 "Proposal author is not validator signer!".into(),
             ));
@@ -234,37 +234,31 @@ impl TSafetyRules for SafetyRules {
         ))
     }
 
-    fn sign_proposal(&mut self, block_data: BlockData<T>) -> Result<Block<T>, Error> {
+    fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
         debug!("Incoming proposal to sign.");
-        let proposal_epoch = block_data.epoch();
-        let proposal_round = block_data.round();
-        let last_voted_round = self.persistent_storage.last_voted_round()?;
-
         self.verify_author(block_data.author())?;
-
-        self.verify_epoch(proposal_epoch)?;
-
-        if proposal_round <= last_voted_round {
+        self.verify_epoch(block_data.epoch())?;
+        let last_voted_round = self.persistent_storage.last_voted_round()?;
+        if block_data.round() <= last_voted_round {
             debug!(
                 "Block round is older than last_voted_round ({} <= {})",
-                proposal_round, last_voted_round
+                block_data.round(),
+                last_voted_round
             );
             return Err(Error::OldProposal {
-                proposal_round,
+                proposal_round: block_data.round(),
                 last_voted_round,
             });
         }
 
         let qc = block_data.quorum_cert();
-        let qc_round = qc.certified_block().round();
-        let preferred_round = self.persistent_storage.preferred_round()?;
-
         self.verify_qc(qc)?;
-
-        if qc_round < preferred_round {
+        let preferred_round = self.persistent_storage.preferred_round()?;
+        if qc.certified_block().round() < preferred_round {
             debug!(
                 "QC round does not match preferred round {} < {}",
-                qc_round, preferred_round
+                qc.certified_block().round(),
+                preferred_round
             );
             return Err(Error::InvalidQuorumCertificate(
                 "QC's certified round is older than the preferred round".into(),

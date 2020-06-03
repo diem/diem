@@ -63,6 +63,10 @@ pub fn run_test_suite(func: Callback) {
     test_voting(func);
     test_voting_potential_commit_id(func);
     test_voting_bad_epoch(func);
+    test_sign_old_proposal(func);
+    test_sign_proposal_with_bad_signer(func);
+    test_sign_proposal_with_invalid_qc(func);
+    test_sign_proposal_with_early_preferred_round(func);
 }
 
 fn test_bad_execution_output(func: Callback) {
@@ -480,5 +484,119 @@ fn test_voting_potential_commit_id(func: Callback) {
             .ledger_info()
             .consensus_block_id(),
         a3.block().id(),
+    );
+}
+
+fn test_sign_old_proposal(func: Callback) {
+    // Test to sign a proposal which makes no progress, compared with last voted round
+
+    let (mut safety_rules, signer) = func();
+
+    let (proof, genesis_qc) = make_genesis(&signer);
+    let round = genesis_qc.certified_block().round();
+    safety_rules.initialize(&proof).unwrap();
+
+    let a1 = test_utils::make_proposal_with_qc(round, genesis_qc, &signer);
+    safety_rules.update(a1.block().quorum_cert()).unwrap();
+    let err = safety_rules
+        .sign_proposal(a1.block().block_data().clone())
+        .unwrap_err();
+    assert_eq!(
+        err,
+        Error::OldProposal {
+            last_voted_round: 0,
+            proposal_round: 0,
+        }
+    );
+}
+
+fn test_sign_proposal_with_bad_signer(func: Callback) {
+    // Test to sign a proposal signed by an unrecognizable signer
+
+    let (mut safety_rules, signer) = func();
+
+    let (proof, genesis_qc) = make_genesis(&signer);
+    let round = genesis_qc.certified_block().round();
+    safety_rules.initialize(&proof).unwrap();
+
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
+    safety_rules.update(a1.block().quorum_cert()).unwrap();
+    safety_rules
+        .sign_proposal(a1.block().block_data().clone())
+        .unwrap();
+
+    let bad_signer = ValidatorSigner::from_int(0xef);
+    let a2 = make_proposal_with_parent(round + 2, &a1, None, &bad_signer);
+    let err = safety_rules
+        .sign_proposal(a2.block().block_data().clone())
+        .unwrap_err();
+    assert_eq!(
+        err,
+        Error::InvalidProposal("Proposal author is not validator signer!".into())
+    );
+}
+
+fn test_sign_proposal_with_invalid_qc(func: Callback) {
+    // Test to sign a proposal with an invalid qc inherited from proposal a2, which
+    // is signed by a bad_signer.
+
+    let (mut safety_rules, signer) = func();
+
+    let (proof, genesis_qc) = make_genesis(&signer);
+    let round = genesis_qc.certified_block().round();
+    safety_rules.initialize(&proof).unwrap();
+
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
+    safety_rules.update(a1.block().quorum_cert()).unwrap();
+    safety_rules
+        .sign_proposal(a1.block().block_data().clone())
+        .unwrap();
+
+    let bad_signer = ValidatorSigner::from_int(0xef);
+    let a2 = make_proposal_with_parent(round + 2, &a1, Some(&a1), &bad_signer);
+    let a3 =
+        test_utils::make_proposal_with_qc(round + 3, a2.block().quorum_cert().clone(), &signer);
+    let err = safety_rules
+        .sign_proposal(a3.block().block_data().clone())
+        .unwrap_err();
+    assert_eq!(
+        err,
+        Error::InvalidQuorumCertificate("Fail to verify QuorumCert".into())
+    );
+}
+
+fn test_sign_proposal_with_early_preferred_round(func: Callback) {
+    let (mut safety_rules, signer) = func();
+
+    let (proof, genesis_qc) = make_genesis(&signer);
+    let round = genesis_qc.certified_block().round();
+    safety_rules.initialize(&proof).unwrap();
+
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
+    safety_rules.update(a1.block().quorum_cert()).unwrap();
+    safety_rules
+        .sign_proposal(a1.block().block_data().clone())
+        .unwrap();
+
+    // Update preferred round with a few legal proposals
+    let a2 = make_proposal_with_parent(round + 2, &a1, None, &signer);
+    let a3 = make_proposal_with_parent(round + 3, &a2, None, &signer);
+    let a4 = make_proposal_with_parent(round + 4, &a3, Some(&a2), &signer);
+    safety_rules.update(a2.block().quorum_cert()).unwrap();
+    safety_rules.update(a3.block().quorum_cert()).unwrap();
+    safety_rules.update(a4.block().quorum_cert()).unwrap();
+
+    let a5 = make_proposal_with_qc_and_proof(
+        round + 5,
+        test_utils::empty_proof(),
+        a1.block().quorum_cert().clone(),
+        &signer,
+    );
+    let err = safety_rules
+        .sign_proposal(a5.block().block_data().clone())
+        .unwrap_err();
+    assert_eq!(
+        err,
+        Error::InvalidQuorumCertificate("Preferred round too early".into())
     );
 }

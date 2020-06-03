@@ -120,6 +120,10 @@ impl Block {
         )
     }
 
+    pub fn block_data(&self) -> &BlockData {
+        &self.block_data
+    }
+
     pub fn is_genesis_block(&self) -> bool {
         self.block_data.is_genesis_block()
     }
