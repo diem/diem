@@ -114,6 +114,13 @@
 <span id="114">114</span>
 <span id="115">115</span>
 <span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -160,11 +167,17 @@
             <span class="self">self</span>.<span class="ident">amount</span>,
         );
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gas_cost</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">create_account_gas_cost</span>();
-        <span class="kw">let</span> <span class="ident">low_balance_gas_cost</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">create_account_low_balance_gas_cost</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gas_used</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">create_account_gas_cost</span>();
+        <span class="kw">let</span> <span class="ident">low_balance_gas_used</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">create_account_low_balance_gas_cost</span>();
+        <span class="kw">let</span> <span class="ident">gas_price</span> <span class="op">=</span> <span class="ident">txn</span>.<span class="ident">gas_unit_price</span>();
 
-        <span class="kw">let</span> (<span class="ident">status</span>, <span class="ident">is_success</span>) <span class="op">=</span>
-            <span class="ident">txn_one_account_result</span>(<span class="ident">sender</span>, <span class="self">self</span>.<span class="ident">amount</span>, <span class="ident">gas_cost</span>, <span class="ident">low_balance_gas_cost</span>);
+        <span class="kw">let</span> (<span class="ident">status</span>, <span class="ident">is_success</span>) <span class="op">=</span> <span class="ident">txn_one_account_result</span>(
+            <span class="ident">sender</span>,
+            <span class="self">self</span>.<span class="ident">amount</span>,
+            <span class="ident">gas_price</span>,
+            <span class="ident">gas_used</span>,
+            <span class="ident">low_balance_gas_used</span>,
+        );
         <span class="kw">if</span> <span class="ident">is_success</span> {
             <span class="ident">sender</span>.<span class="ident">event_counter_created</span> <span class="op">=</span> <span class="bool-val">true</span>;
             <span class="ident">universe</span>.<span class="ident">add_account</span>(<span class="ident">AccountData</span>::<span class="ident">with_account</span>(
@@ -175,10 +188,10 @@
                 <span class="ident">AccountTypeSpecifier</span>::<span class="ident">default</span>(),
             ));
         } <span class="kw">else</span> {
-            <span class="ident">gas_cost</span> <span class="op">=</span> <span class="number">0</span>;
+            <span class="ident">gas_used</span> <span class="op">=</span> <span class="number">0</span>;
         }
 
-        (<span class="ident">txn</span>, (<span class="ident">status</span>, <span class="ident">gas_cost</span>))
+        (<span class="ident">txn</span>, (<span class="ident">status</span>, <span class="ident">gas_used</span>))
     }
 }
 
@@ -214,12 +227,13 @@
 
         <span class="comment">// This transaction should never work, but it will fail differently if there&#39;s not enough</span>
         <span class="comment">// gas to reserve.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gas_cost</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">let</span> <span class="ident">enough_max_gas</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">balance</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">gas_costs</span>::<span class="ident">TXN_RESERVED</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gas_used</span> <span class="op">=</span> <span class="number">0</span>;
+        <span class="kw">let</span> <span class="ident">gas_price</span> <span class="op">=</span> <span class="ident">txn</span>.<span class="ident">gas_unit_price</span>();
+        <span class="kw">let</span> <span class="ident">enough_max_gas</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">balance</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">gas_costs</span>::<span class="ident">TXN_RESERVED</span> <span class="op">*</span> <span class="ident">gas_price</span>;
         <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">enough_max_gas</span> {
             <span class="ident">sender</span>.<span class="ident">sequence_number</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
-            <span class="ident">gas_cost</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">create_existing_account_gas_cost</span>();
-            <span class="ident">sender</span>.<span class="ident">balance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">gas_cost</span>;
+            <span class="ident">gas_used</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">create_existing_account_gas_cost</span>();
+            <span class="ident">sender</span>.<span class="ident">balance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">gas_used</span> <span class="op">*</span> <span class="ident">gas_price</span>;
             <span class="ident">TransactionStatus</span>::<span class="ident">Keep</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">ABORTED</span>).<span class="ident">with_sub_status</span>(<span class="number">777_777</span>))
         } <span class="kw">else</span> {
             <span class="comment">// Not enough gas to get past the prologue.</span>
@@ -228,7 +242,7 @@
             ))
         };
 
-        (<span class="ident">txn</span>, (<span class="ident">status</span>, <span class="ident">gas_cost</span>))
+        (<span class="ident">txn</span>, (<span class="ident">status</span>, <span class="ident">gas_used</span>))
     }
 }
 </pre></div>

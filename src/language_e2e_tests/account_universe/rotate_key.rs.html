@@ -100,12 +100,12 @@
         <span class="kw">let</span> <span class="ident">txn</span> <span class="op">=</span> <span class="ident">rotate_key_txn</span>(<span class="ident">sender</span>.<span class="ident">account</span>(), <span class="ident">key_hash</span>, <span class="ident">sender</span>.<span class="ident">sequence_number</span>);
 
         <span class="comment">// This should work all the time except for if the balance is too low for gas.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gas_cost</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">let</span> <span class="ident">enough_max_gas</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">balance</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">gas_costs</span>::<span class="ident">TXN_RESERVED</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gas_used</span> <span class="op">=</span> <span class="number">0</span>;
+        <span class="kw">let</span> <span class="ident">enough_max_gas</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">balance</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">gas_costs</span>::<span class="ident">TXN_RESERVED</span> <span class="op">*</span> <span class="ident">txn</span>.<span class="ident">gas_unit_price</span>();
         <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">enough_max_gas</span> {
             <span class="ident">sender</span>.<span class="ident">sequence_number</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
-            <span class="ident">gas_cost</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">rotate_key_gas_cost</span>();
-            <span class="ident">sender</span>.<span class="ident">balance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">gas_cost</span>;
+            <span class="ident">gas_used</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">rotate_key_gas_cost</span>();
+            <span class="ident">sender</span>.<span class="ident">balance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">gas_used</span> <span class="op">*</span> <span class="ident">txn</span>.<span class="ident">gas_unit_price</span>();
             <span class="ident">sender</span>.<span class="ident">rotate_key</span>(
                 <span class="self">self</span>.<span class="ident">new_keypair</span>.<span class="ident">private_key</span>.<span class="ident">clone</span>(),
                 <span class="self">self</span>.<span class="ident">new_keypair</span>.<span class="ident">public_key</span>.<span class="ident">clone</span>(),
@@ -118,7 +118,7 @@
             ))
         };
 
-        (<span class="ident">txn</span>, (<span class="ident">status</span>, <span class="ident">gas_cost</span>))
+        (<span class="ident">txn</span>, (<span class="ident">status</span>, <span class="ident">gas_used</span>))
     }
 }
 </pre></div>

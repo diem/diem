@@ -435,6 +435,15 @@
 <span id="435">435</span>
 <span id="436">436</span>
 <span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -548,6 +557,15 @@
     <span class="ident">doc</span>: <span class="string">&quot;Permanently destroy the coins stored in the oldest burn request under the `Preburn`\
           resource stored at `preburn_address`. This will only succeed if the sender has a\
           `MintCapability` stored under their account and `preburn_address` has a pending burn request&quot;</span>
+}
+
+<span class="macro">encode_txn_script</span><span class="macro">!</span> {
+    <span class="ident">name</span>: <span class="ident">encode_burn_txn_fees_script</span>,
+    <span class="ident">type_arg</span>: <span class="ident">currency</span>,
+    <span class="ident">args</span>: [],
+    <span class="ident">script</span>: <span class="ident">BurnTxnFees</span>,
+    <span class="ident">doc</span>: <span class="string">&quot;Burn transaction fees that have been collected in the given `currency`,\
+          and relinquish to the association. The currency must be non-synthetic.&quot;</span>
 }
 
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {

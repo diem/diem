@@ -156,6 +156,11 @@
 <span id="156">156</span>
 <span id="157">157</span>
 <span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -166,7 +171,6 @@
         <span class="ident">txn_one_account_result</span>, <span class="ident">AUTransactionGen</span>, <span class="ident">AccountPair</span>, <span class="ident">AccountPairGen</span>, <span class="ident">AccountUniverse</span>,
     },
     <span class="ident">common_transactions</span>::<span class="ident">peer_to_peer_txn</span>,
-    <span class="ident">gas_costs</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_proptest_helpers</span>::<span class="ident">Index</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
@@ -217,13 +221,13 @@
             <span class="self">self</span>.<span class="ident">amount</span>,
         );
 
-        <span class="comment">// Now figure out whether the transaction will actually work. (The transactions set the</span>
-        <span class="comment">// gas cost to 1 microlibra.)</span>
-        <span class="kw">let</span> <span class="ident">enough_max_gas</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">balance</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">gas_costs</span>::<span class="ident">TXN_RESERVED</span>;
+        <span class="comment">// Now figure out whether the transaction will actually work.</span>
         <span class="comment">// This means that we&#39;ll get through the main part of the transaction.</span>
         <span class="kw">let</span> <span class="ident">enough_to_transfer</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">balance</span> <span class="op">&gt;</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">amount</span>;
-        <span class="kw">let</span> <span class="ident">to_deduct</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">amount</span> <span class="op">+</span> <span class="ident">sender</span>.<span class="ident">peer_to_peer_gas_cost</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gas_cost</span> <span class="op">=</span> <span class="number">0</span>;
+        <span class="kw">let</span> <span class="ident">gas_amount</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">peer_to_peer_gas_cost</span>() <span class="op">*</span> <span class="ident">txn</span>.<span class="ident">gas_unit_price</span>();
+        <span class="kw">let</span> <span class="ident">to_deduct</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">amount</span> <span class="op">+</span> <span class="ident">gas_amount</span>;
+        <span class="kw">let</span> <span class="ident">enough_max_gas</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">balance</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">gas_amount</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gas_used</span> <span class="op">=</span> <span class="number">0</span>;
         <span class="comment">// This means that we&#39;ll get through the entire transaction, including the epilogue</span>
         <span class="comment">// (where gas costs are deducted).</span>
         <span class="kw">let</span> <span class="ident">enough_to_succeed</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">balance</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">to_deduct</span>;
@@ -242,15 +246,15 @@
                 <span class="ident">receiver</span>.<span class="ident">received_events_count</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
 
                 <span class="ident">status</span> <span class="op">=</span> <span class="ident">TransactionStatus</span>::<span class="ident">Keep</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">EXECUTED</span>));
-                <span class="ident">gas_cost</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">peer_to_peer_gas_cost</span>();
+                <span class="ident">gas_used</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">peer_to_peer_gas_cost</span>();
             }
             (<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="comment">// Enough gas to pass validation and to do the transfer, but not enough to succeed</span>
                 <span class="comment">// in the epilogue. The transaction will be run and gas will be deducted from the</span>
                 <span class="comment">// sender, but no other changes will happen.</span>
                 <span class="ident">sender</span>.<span class="ident">sequence_number</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
-                <span class="ident">gas_cost</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">peer_to_peer_gas_cost</span>();
-                <span class="ident">sender</span>.<span class="ident">balance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">gas_cost</span>;
+                <span class="ident">gas_used</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">peer_to_peer_gas_cost</span>();
+                <span class="ident">sender</span>.<span class="ident">balance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">gas_used</span> <span class="op">*</span> <span class="ident">txn</span>.<span class="ident">gas_unit_price</span>();
                 <span class="comment">// 6 means the balance was insufficient while trying to deduct gas costs in the</span>
                 <span class="comment">// epilogue.</span>
                 <span class="comment">// TODO: define these values in a central location</span>
@@ -261,8 +265,8 @@
                 <span class="comment">// Enough to pass validation but not to do the transfer. The transaction will be run</span>
                 <span class="comment">// and gas will be deducted from the sender, but no other changes will happen.</span>
                 <span class="ident">sender</span>.<span class="ident">sequence_number</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
-                <span class="ident">gas_cost</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">peer_to_peer_too_low_gas_cost</span>();
-                <span class="ident">sender</span>.<span class="ident">balance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">gas_cost</span>;
+                <span class="ident">gas_used</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">peer_to_peer_too_low_gas_cost</span>();
+                <span class="ident">sender</span>.<span class="ident">balance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">gas_used</span> <span class="op">*</span> <span class="ident">txn</span>.<span class="ident">gas_unit_price</span>();
                 <span class="comment">// 10 means the balance was insufficient while trying to transfer.</span>
                 <span class="ident">status</span> <span class="op">=</span>
                     <span class="ident">TransactionStatus</span>::<span class="ident">Keep</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">ABORTED</span>).<span class="ident">with_sub_status</span>(<span class="number">10</span>));
@@ -275,7 +279,7 @@
             }
         }
 
-        (<span class="ident">txn</span>, (<span class="ident">status</span>, <span class="ident">gas_cost</span>))
+        (<span class="ident">txn</span>, (<span class="ident">status</span>, <span class="ident">gas_used</span>))
     }
 }
 
@@ -294,11 +298,17 @@
             <span class="self">self</span>.<span class="ident">amount</span>,
         );
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gas_cost</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">peer_to_peer_new_receiver_gas_cost</span>();
-        <span class="kw">let</span> <span class="ident">low_balance_gas_cost</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">peer_to_peer_new_receiver_too_low_gas_cost</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gas_used</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">peer_to_peer_new_receiver_gas_cost</span>();
+        <span class="kw">let</span> <span class="ident">low_balance_gas_used</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">peer_to_peer_new_receiver_too_low_gas_cost</span>();
+        <span class="kw">let</span> <span class="ident">gas_price</span> <span class="op">=</span> <span class="ident">txn</span>.<span class="ident">gas_unit_price</span>();
 
-        <span class="kw">let</span> (<span class="ident">status</span>, <span class="ident">is_success</span>) <span class="op">=</span>
-            <span class="ident">txn_one_account_result</span>(<span class="ident">sender</span>, <span class="self">self</span>.<span class="ident">amount</span>, <span class="ident">gas_cost</span>, <span class="ident">low_balance_gas_cost</span>);
+        <span class="kw">let</span> (<span class="ident">status</span>, <span class="ident">is_success</span>) <span class="op">=</span> <span class="ident">txn_one_account_result</span>(
+            <span class="ident">sender</span>,
+            <span class="self">self</span>.<span class="ident">amount</span>,
+            <span class="ident">gas_price</span>,
+            <span class="ident">gas_used</span>,
+            <span class="ident">low_balance_gas_used</span>,
+        );
         <span class="kw">if</span> <span class="ident">is_success</span> {
             <span class="ident">sender</span>.<span class="ident">event_counter_created</span> <span class="op">=</span> <span class="bool-val">true</span>;
             <span class="ident">universe</span>.<span class="ident">add_account</span>(<span class="ident">AccountData</span>::<span class="ident">with_account</span>(
@@ -309,10 +319,10 @@
                 <span class="ident">AccountTypeSpecifier</span>::<span class="ident">default</span>(),
             ));
         } <span class="kw">else</span> {
-            <span class="ident">gas_cost</span> <span class="op">=</span> <span class="number">0</span>;
+            <span class="ident">gas_used</span> <span class="op">=</span> <span class="number">0</span>;
         }
 
-        (<span class="ident">txn</span>, (<span class="ident">status</span>, <span class="ident">gas_cost</span>))
+        (<span class="ident">txn</span>, (<span class="ident">status</span>, <span class="ident">gas_used</span>))
     }
 }
 </pre></div>
