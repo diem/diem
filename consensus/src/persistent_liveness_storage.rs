@@ -4,8 +4,7 @@
 use crate::{consensusdb::ConsensusDB, epoch_manager::LivenessStorageData};
 use anyhow::{format_err, Context, Result};
 use consensus_types::{
-    block::Block, common::Payload, quorum_cert::QuorumCert,
-    timeout_certificate::TimeoutCertificate, vote::Vote,
+    block::Block, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use debug_interface::prelude::*;
 use executor_types::ExecutedTrees;
@@ -24,9 +23,9 @@ use storage_interface::DbReader;
 /// guaranteed.
 /// Blocks persisted are proposed but not yet committed.  The committed state is persisted
 /// via StateComputer.
-pub trait PersistentLivenessStorage<T>: Send + Sync {
+pub trait PersistentLivenessStorage: Send + Sync {
     /// Persist the blocks and quorum certs into storage atomically.
-    fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()>;
+    fn save_tree(&self, blocks: Vec<Block>, quorum_certs: Vec<QuorumCert>) -> Result<()>;
 
     /// Delete the corresponding blocks and quorum certs atomically.
     fn prune_tree(&self, block_ids: Vec<HashValue>) -> Result<()>;
@@ -38,7 +37,7 @@ pub trait PersistentLivenessStorage<T>: Send + Sync {
     fn recover_from_ledger(&self) -> LedgerRecoveryData;
 
     /// Construct necessary data to start consensus.
-    fn start(&self) -> LivenessStorageData<T>;
+    fn start(&self) -> LivenessStorageData;
 
     /// Persist the highest timeout certificate for improved liveness - proof for other replicas
     /// to jump to this round
@@ -53,7 +52,7 @@ pub trait PersistentLivenessStorage<T>: Send + Sync {
 }
 
 #[derive(Clone)]
-pub struct RootInfo<T>(pub Block<T>, pub QuorumCert, pub QuorumCert);
+pub struct RootInfo(pub Block, pub QuorumCert, pub QuorumCert);
 
 /// LedgerRecoveryData is a subset of RecoveryData that we can get solely from ledger info.
 #[derive(Clone)]
@@ -74,11 +73,11 @@ impl LedgerRecoveryData {
     /// and the ledger info for the root block, return an error if it can not be found.
     ///
     /// We guarantee that the block corresponding to the storage's latest ledger info always exists.
-    fn find_root<T: Payload>(
+    fn find_root(
         &self,
-        blocks: &mut Vec<Block<T>>,
+        blocks: &mut Vec<Block>,
         quorum_certs: &mut Vec<QuorumCert>,
-    ) -> Result<RootInfo<T>> {
+    ) -> Result<RootInfo> {
         info!(
             "The last committed block id as recorded in storage: {}",
             self.storage_ledger
@@ -152,14 +151,14 @@ impl RootMetadata {
 
 /// The recovery data constructed from raw consensusdb data, it'll find the root value and
 /// blocks that need cleanup or return error if the input data is inconsistent.
-pub struct RecoveryData<T> {
+pub struct RecoveryData {
     // The last vote message sent by this validator.
     last_vote: Option<Vote>,
-    root: RootInfo<T>,
+    root: RootInfo,
     root_metadata: RootMetadata,
     // 1. the blocks guarantee the topological ordering - parent <- child.
     // 2. all blocks are children of the root.
-    blocks: Vec<Block<T>>,
+    blocks: Vec<Block>,
     quorum_certs: Vec<QuorumCert>,
     blocks_to_prune: Option<Vec<HashValue>>,
 
@@ -167,11 +166,11 @@ pub struct RecoveryData<T> {
     highest_timeout_certificate: Option<TimeoutCertificate>,
 }
 
-impl<T: Payload> RecoveryData<T> {
+impl RecoveryData {
     pub fn new(
         last_vote: Option<Vote>,
         ledger_recovery_data: LedgerRecoveryData,
-        mut blocks: Vec<Block<T>>,
+        mut blocks: Vec<Block>,
         root_metadata: RootMetadata,
         mut quorum_certs: Vec<QuorumCert>,
         highest_timeout_certificate: Option<TimeoutCertificate>,
@@ -220,7 +219,7 @@ impl<T: Payload> RecoveryData<T> {
         })
     }
 
-    pub fn root_block(&self) -> &Block<T> {
+    pub fn root_block(&self) -> &Block {
         &self.root.0
     }
 
@@ -228,7 +227,7 @@ impl<T: Payload> RecoveryData<T> {
         self.last_vote.clone()
     }
 
-    pub fn take(self) -> (RootInfo<T>, RootMetadata, Vec<Block<T>>, Vec<QuorumCert>) {
+    pub fn take(self) -> (RootInfo, RootMetadata, Vec<Block>, Vec<QuorumCert>) {
         (
             self.root,
             self.root_metadata,
@@ -249,7 +248,7 @@ impl<T: Payload> RecoveryData<T> {
 
     fn find_blocks_to_prune(
         root_id: HashValue,
-        blocks: &mut Vec<Block<T>>,
+        blocks: &mut Vec<Block>,
         quorum_certs: &mut Vec<QuorumCert>,
     ) -> Vec<HashValue> {
         // prune all the blocks that don't have root as ancestor
@@ -284,8 +283,8 @@ impl StorageWriteProxy {
     }
 }
 
-impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
-    fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
+impl PersistentLivenessStorage for StorageWriteProxy {
+    fn save_tree(&self, blocks: Vec<Block>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
         let mut trace_batch = vec![];
         for block in blocks.iter() {
             trace_code_block!("consensusdb::save_tree", {"block", block.id()}, trace_batch);
@@ -297,8 +296,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
     fn prune_tree(&self, block_ids: Vec<HashValue>) -> Result<()> {
         if !block_ids.is_empty() {
             // quorum certs that certified the block_ids will get removed
-            self.db
-                .delete_blocks_and_quorum_certificates::<T>(block_ids)?;
+            self.db.delete_blocks_and_quorum_certificates(block_ids)?;
         }
         Ok(())
     }
@@ -317,7 +315,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
         LedgerRecoveryData::new(startup_info.latest_ledger_info.ledger_info().clone())
     }
 
-    fn start(&self) -> LivenessStorageData<T> {
+    fn start(&self) -> LivenessStorageData {
         info!("Start consensus recovery.");
         let raw_data = self
             .db
@@ -373,7 +371,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
             highest_timeout_certificate,
         ) {
             Ok(mut initial_data) => {
-                (self as &dyn PersistentLivenessStorage<T>)
+                (self as &dyn PersistentLivenessStorage)
                     .prune_tree(initial_data.take_blocks_to_prune())
                     .expect("unable to prune dangling blocks during restart");
                 if initial_data.last_vote.is_none() {

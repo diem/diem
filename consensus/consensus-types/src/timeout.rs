@@ -23,7 +23,7 @@ impl Timeout {
         Self { epoch, round }
     }
 
-    pub fn from_block<T>(block: &Block<T>) -> Self {
+    pub fn from_block(block: &Block) -> Self {
         Self {
             epoch: block.epoch(),
             round: block.round(),

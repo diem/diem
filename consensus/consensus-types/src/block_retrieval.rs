@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{block::Block, common::Payload};
+use crate::block::Block;
 use anyhow::ensure;
 use libra_crypto::hash::HashValue;
 use libra_types::validator_verifier::ValidatorVerifier;
@@ -52,14 +52,13 @@ pub enum BlockRetrievalStatus {
 
 /// Carries the returned blocks and the retrieval status.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct BlockRetrievalResponse<T> {
+pub struct BlockRetrievalResponse {
     status: BlockRetrievalStatus,
-    #[serde(bound(deserialize = "Block<T>: Deserialize<'de>"))]
-    blocks: Vec<Block<T>>,
+    blocks: Vec<Block>,
 }
 
-impl<T: Payload> BlockRetrievalResponse<T> {
-    pub fn new(status: BlockRetrievalStatus, blocks: Vec<Block<T>>) -> Self {
+impl BlockRetrievalResponse {
+    pub fn new(status: BlockRetrievalStatus, blocks: Vec<Block>) -> Self {
         Self { status, blocks }
     }
 
@@ -67,7 +66,7 @@ impl<T: Payload> BlockRetrievalResponse<T> {
         self.status.clone()
     }
 
-    pub fn blocks(&self) -> &Vec<Block<T>> {
+    pub fn blocks(&self) -> &Vec<Block> {
         &self.blocks
     }
 
@@ -101,7 +100,7 @@ impl<T: Payload> BlockRetrievalResponse<T> {
     }
 }
 
-impl<T: Payload> fmt::Display for BlockRetrievalResponse<T> {
+impl fmt::Display for BlockRetrievalResponse {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.status() {
             BlockRetrievalStatus::Succeeded => {

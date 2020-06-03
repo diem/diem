@@ -11,7 +11,7 @@ use consensus_types::{
     block::{
         block_test_utils::{
             self, certificate_for_genesis, placeholder_certificate_for_block,
-            placeholder_ledger_info,
+            placeholder_ledger_info, random_payload,
         },
         Block,
     },
@@ -323,7 +323,7 @@ fn test_illegal_timestamp() {
     let signer = ValidatorSigner::random(None);
     let block_store = build_empty_tree();
     let genesis = block_store.root();
-    let block_with_illegal_timestamp = Block::<Vec<usize>>::new_proposal(
+    let block_with_illegal_timestamp = Block::new_proposal(
         vec![],
         0,
         // This timestamp is illegal, it is the same as genesis
@@ -402,6 +402,7 @@ fn test_empty_reconfiguration_suffix() {
     let mut inserter = TreeInserter::default();
     let block_store = inserter.block_store();
     let genesis = block_store.root();
+    let payload = random_payload(1);
     let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     let a2 = inserter.insert_block(&a1, 2, None);
     let a3 = inserter.insert_reconfiguration_block(&a2, 3);
@@ -409,10 +410,10 @@ fn test_empty_reconfiguration_suffix() {
         inserter.create_qc_for_block(a3.as_ref(), None),
         a3.as_ref().timestamp_usecs(),
         4,
-        vec![42],
+        payload.clone(),
     );
     // Child of reconfiguration carries a payload will fail to insert
-    assert!(a4.verify_well_formed().is_err());
+    a4.verify_well_formed().unwrap_err();
     let a5 = inserter.create_block_with_qc(
         inserter.create_qc_for_block(a3.as_ref(), None),
         a3.as_ref().timestamp_usecs(),
@@ -430,7 +431,7 @@ fn test_empty_reconfiguration_suffix() {
         inserter.create_qc_for_block(a5.as_ref(), None),
         a5.as_ref().timestamp_usecs(),
         5,
-        vec![42],
+        payload,
     );
-    assert!(a6.verify_well_formed().is_err());
+    a6.verify_well_formed().unwrap_err();
 }

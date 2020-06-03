@@ -1,12 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    state_replication::StateComputer,
-    test_utils::{mock_storage::MockStorage, TestPayload},
-};
+use crate::{state_replication::StateComputer, test_utils::mock_storage::MockStorage};
 use anyhow::{format_err, Result};
-use consensus_types::block::Block;
+use consensus_types::{block::Block, common::Payload};
 use executor_types::StateComputeResult;
 use futures::channel::mpsc;
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
@@ -19,17 +16,17 @@ use std::{
 use termion::color::*;
 
 pub struct MockStateComputer {
-    state_sync_client: mpsc::UnboundedSender<Vec<usize>>,
+    state_sync_client: mpsc::UnboundedSender<Payload>,
     commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures>,
-    consensus_db: Arc<MockStorage<TestPayload>>,
-    block_cache: Mutex<HashMap<HashValue, Vec<usize>>>,
+    consensus_db: Arc<MockStorage>,
+    block_cache: Mutex<HashMap<HashValue, Payload>>,
 }
 
 impl MockStateComputer {
     pub fn new(
-        state_sync_client: mpsc::UnboundedSender<Vec<usize>>,
+        state_sync_client: mpsc::UnboundedSender<Payload>,
         commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures>,
-        consensus_db: Arc<MockStorage<TestPayload>>,
+        consensus_db: Arc<MockStorage>,
     ) -> Self {
         MockStateComputer {
             state_sync_client,
@@ -42,13 +39,7 @@ impl MockStateComputer {
 
 #[async_trait::async_trait]
 impl StateComputer for MockStateComputer {
-    type Payload = Vec<usize>;
-
-    fn compute(
-        &self,
-        block: &Block<Self::Payload>,
-        _parent_block_id: HashValue,
-    ) -> Result<StateComputeResult> {
+    fn compute(&self, block: &Block, _parent_block_id: HashValue) -> Result<StateComputeResult> {
         self.block_cache
             .lock()
             .unwrap()
@@ -112,13 +103,7 @@ pub struct EmptyStateComputer;
 
 #[async_trait::async_trait]
 impl StateComputer for EmptyStateComputer {
-    type Payload = TestPayload;
-
-    fn compute(
-        &self,
-        _block: &Block<Self::Payload>,
-        _parent_block_id: HashValue,
-    ) -> Result<StateComputeResult> {
+    fn compute(&self, _block: &Block, _parent_block_id: HashValue) -> Result<StateComputeResult> {
         Ok(StateComputeResult::new(
             *ACCUMULATOR_PLACEHOLDER_HASH,
             vec![],

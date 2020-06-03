@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::liveness::proposer_election::ProposerElection;
-use consensus_types::common::{Author, Payload, Round};
+use consensus_types::common::{Author, Round};
 
 /// The rotating proposer maps a round to an author according to a round-robin rotation.
 /// A fixed proposer strategy loses liveness when the fixed proposer is down. Rotating proposers
@@ -32,7 +32,7 @@ impl RotatingProposer {
     }
 }
 
-impl<T: Payload> ProposerElection<T> for RotatingProposer {
+impl ProposerElection for RotatingProposer {
     fn get_valid_proposer(&self, round: Round) -> Author {
         self.proposers
             [((round / u64::from(self.contiguous_rounds)) % self.proposers.len() as u64) as usize]

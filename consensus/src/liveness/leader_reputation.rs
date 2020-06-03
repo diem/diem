@@ -5,7 +5,6 @@ use crate::liveness::proposer_election::{next, ProposerElection};
 use consensus_types::common::{Author, Round};
 use libra_logger::prelude::*;
 use libra_types::block_metadata::{new_block_event_key, NewBlockEvent};
-use serde::export::PhantomData;
 use std::{
     cmp::Ordering,
     collections::HashSet,
@@ -127,14 +126,13 @@ impl ReputationHeuristic for ActiveInactiveHeuristic {
 
 /// Committed history based proposer election implementation that could help bias towards
 /// successful leaders to help improve performance.
-pub struct LeaderReputation<T> {
+pub struct LeaderReputation {
     proposers: Vec<Author>,
     backend: Box<dyn MetadataBackend>,
     heuristic: Box<dyn ReputationHeuristic>,
-    phantom: PhantomData<T>,
 }
 
-impl<T> LeaderReputation<T> {
+impl LeaderReputation {
     pub fn new(
         proposers: Vec<Author>,
         backend: Box<dyn MetadataBackend>,
@@ -144,12 +142,11 @@ impl<T> LeaderReputation<T> {
             proposers,
             backend,
             heuristic,
-            phantom: PhantomData,
         }
     }
 }
 
-impl<T> ProposerElection<T> for LeaderReputation<T> {
+impl ProposerElection for LeaderReputation {
     fn get_valid_proposer(&self, round: Round) -> Author {
         // TODO: configure the round gap
         let target_round = if round >= 4 { round - 4 } else { 0 };

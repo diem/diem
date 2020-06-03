@@ -9,31 +9,29 @@ use consensus_types::{
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use mirai_annotations::{checked_verify_eq, precondition};
-use serde::Serialize;
 use std::{
     collections::{vec_deque::VecDeque, HashMap, HashSet},
-    fmt::Debug,
     sync::Arc,
 };
 
 /// This structure is a wrapper of [`ExecutedBlock`](crate::consensus_types::block::ExecutedBlock)
 /// that adds `children` field to know the parent-child relationship between blocks.
-struct LinkableBlock<T> {
+struct LinkableBlock {
     /// Executed block that has raw block data and execution output.
-    executed_block: Arc<ExecutedBlock<T>>,
+    executed_block: Arc<ExecutedBlock>,
     /// The set of children for cascading pruning. Note: a block may have multiple children.
     children: HashSet<HashValue>,
 }
 
-impl<T> LinkableBlock<T> {
-    pub fn new(block: ExecutedBlock<T>) -> Self {
+impl LinkableBlock {
+    pub fn new(block: ExecutedBlock) -> Self {
         Self {
             executed_block: Arc::new(block),
             children: HashSet::new(),
         }
     }
 
-    pub fn executed_block(&self) -> &Arc<ExecutedBlock<T>> {
+    pub fn executed_block(&self) -> &Arc<ExecutedBlock> {
         &self.executed_block
     }
 
@@ -50,10 +48,7 @@ impl<T> LinkableBlock<T> {
     }
 }
 
-impl<T> LinkableBlock<T>
-where
-    T: Serialize + Default + PartialEq,
-{
+impl LinkableBlock {
     pub fn id(&self) -> HashValue {
         self.executed_block().id()
     }
@@ -62,9 +57,9 @@ where
 /// This structure maintains a consistent block tree of parent and children links. Blocks contain
 /// parent links and are immutable.  For all parent links, a child link exists. This structure
 /// should only be used internally in BlockStore.
-pub struct BlockTree<T> {
+pub struct BlockTree {
     /// All the blocks known to this replica (with parent links)
-    id_to_block: HashMap<HashValue, LinkableBlock<T>>,
+    id_to_block: HashMap<HashValue, LinkableBlock>,
     /// Root of the tree.
     root_id: HashValue,
     /// A certified block id with highest round
@@ -84,12 +79,9 @@ pub struct BlockTree<T> {
     max_pruned_blocks_in_mem: usize,
 }
 
-impl<T> BlockTree<T>
-where
-    T: Serialize + Default + Debug + PartialEq,
-{
+impl BlockTree {
     pub(super) fn new(
-        root: ExecutedBlock<T>,
+        root: ExecutedBlock,
         root_quorum_cert: QuorumCert,
         root_ledger_info: QuorumCert,
         max_pruned_blocks_in_mem: usize,
@@ -129,17 +121,17 @@ where
     }
 
     // This method will only be used in this module.
-    fn get_linkable_block(&self, block_id: &HashValue) -> Option<&LinkableBlock<T>> {
+    fn get_linkable_block(&self, block_id: &HashValue) -> Option<&LinkableBlock> {
         self.id_to_block.get(block_id)
     }
 
     // This method will only be used in this module.
-    fn get_linkable_block_mut(&mut self, block_id: &HashValue) -> Option<&mut LinkableBlock<T>> {
+    fn get_linkable_block_mut(&mut self, block_id: &HashValue) -> Option<&mut LinkableBlock> {
         self.id_to_block.get_mut(block_id)
     }
 
     // This method will only be used in this module.
-    fn linkable_root(&self) -> &LinkableBlock<T> {
+    fn linkable_root(&self) -> &LinkableBlock {
         self.get_linkable_block(&self.root_id)
             .expect("Root must exist")
     }
@@ -154,16 +146,16 @@ where
         self.id_to_block.contains_key(block_id)
     }
 
-    pub(super) fn get_block(&self, block_id: &HashValue) -> Option<Arc<ExecutedBlock<T>>> {
+    pub(super) fn get_block(&self, block_id: &HashValue) -> Option<Arc<ExecutedBlock>> {
         self.get_linkable_block(block_id)
             .map(|lb| Arc::clone(lb.executed_block()))
     }
 
-    pub(super) fn root(&self) -> Arc<ExecutedBlock<T>> {
+    pub(super) fn root(&self) -> Arc<ExecutedBlock> {
         self.get_block(&self.root_id).expect("Root must exist")
     }
 
-    pub(super) fn highest_certified_block(&self) -> Arc<ExecutedBlock<T>> {
+    pub(super) fn highest_certified_block(&self) -> Arc<ExecutedBlock> {
         self.get_block(&self.highest_certified_block_id)
             .expect("Highest cerfified block must exist")
     }
@@ -194,8 +186,8 @@ where
 
     pub(super) fn insert_block(
         &mut self,
-        block: ExecutedBlock<T>,
-    ) -> anyhow::Result<Arc<ExecutedBlock<T>>> {
+        block: ExecutedBlock,
+    ) -> anyhow::Result<Arc<ExecutedBlock>> {
         let block_id = block.id();
         if let Some(existing_block) = self.get_block(&block_id) {
             debug!("Already had block {:?} for id {:?} when trying to add another block {:?} for the same id",
@@ -328,7 +320,7 @@ where
     /// a race, in which the root of the tree is propagated forward between retrieving the block
     /// and getting its path from root (e.g., at proposal generator). Hence, we don't want to panic
     /// and prefer to return None instead.
-    pub(super) fn path_from_root(&self, block_id: HashValue) -> Option<Vec<Arc<ExecutedBlock<T>>>> {
+    pub(super) fn path_from_root(&self, block_id: HashValue) -> Option<Vec<Arc<ExecutedBlock>>> {
         let mut res = vec![];
         let mut cur_block_id = block_id;
         loop {
@@ -362,10 +354,7 @@ where
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
-impl<T> BlockTree<T>
-where
-    T: Serialize + Default + Debug + PartialEq,
-{
+impl BlockTree {
     /// Returns the number of blocks in the tree
     pub(super) fn len(&self) -> usize {
         // BFS over the tree to find the number of blocks in the tree.

@@ -2,19 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::remote_service::RemoteService;
-use consensus_types::common::Payload;
+
 use libra_config::config::{NodeConfig, PersistableConfig, SafetyRulesService};
 use libra_temppath::TempPath;
-use std::{marker::PhantomData, net::SocketAddr, process::Child};
+use std::{net::SocketAddr, process::Child};
 
-pub struct SpawnedProcess<T> {
+pub struct SpawnedProcess {
     handle: Child,
     server_addr: SocketAddr,
     _config_path: TempPath,
-    marker: PhantomData<T>,
 }
 
-impl<T: Payload> SpawnedProcess<T> {
+impl SpawnedProcess {
     pub fn new(config: &NodeConfig) -> Self {
         let mut config_path = TempPath::new();
         config_path.persist();
@@ -32,19 +31,18 @@ impl<T: Payload> SpawnedProcess<T> {
             handle: runner::run(&config_path.path()),
             server_addr,
             _config_path: config_path,
-            marker: PhantomData,
         }
     }
 }
 
-impl<T: Payload> RemoteService<T> for SpawnedProcess<T> {
+impl RemoteService for SpawnedProcess {
     fn server_address(&self) -> SocketAddr {
         self.server_addr
     }
 }
 
 /// Kill SafetyRules process upon this object going out of scope
-impl<T> Drop for SpawnedProcess<T> {
+impl Drop for SpawnedProcess {
     fn drop(&mut self) {
         match self.handle.try_wait() {
             Ok(Some(_)) => {}

@@ -10,21 +10,21 @@ use std::fmt::{Display, Formatter};
 /// This structure contains all the information needed by safety rules to
 /// evaluate a proposal / block for correctness / safety and to produce a Vote.
 #[derive(Clone, Deserialize, Serialize)]
-pub struct VoteProposal<T> {
+pub struct VoteProposal {
     /// Contains the data necessary to construct the parent's execution output state
     /// and the childs in a verifiable way
     accumulator_extension_proof: AccumulatorExtensionProof<TransactionAccumulatorHasher>,
     /// The block / proposal to evaluate
-    #[serde(bound(deserialize = "Block<T>: Deserialize<'de>"))]
-    block: Block<T>,
+    #[serde(bound(deserialize = "Block: Deserialize<'de>"))]
+    block: Block,
     /// An optional field containing the next epoch info.
     next_epoch_state: Option<EpochState>,
 }
 
-impl<T> VoteProposal<T> {
+impl VoteProposal {
     pub fn new(
         accumulator_extension_proof: AccumulatorExtensionProof<TransactionAccumulatorHasher>,
-        block: Block<T>,
+        block: Block,
         next_epoch_state: Option<EpochState>,
     ) -> Self {
         Self {
@@ -40,7 +40,7 @@ impl<T> VoteProposal<T> {
         &self.accumulator_extension_proof
     }
 
-    pub fn block(&self) -> &Block<T> {
+    pub fn block(&self) -> &Block {
         &self.block
     }
 
@@ -49,7 +49,7 @@ impl<T> VoteProposal<T> {
     }
 }
 
-impl<T: PartialEq> Display for VoteProposal<T> {
+impl Display for VoteProposal {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "VoteProposal[block: {}]", self.block,)
     }

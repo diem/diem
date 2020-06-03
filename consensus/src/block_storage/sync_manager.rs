@@ -12,7 +12,7 @@ use anyhow::{bail, format_err};
 use consensus_types::{
     block::Block,
     block_retrieval::{BlockRetrievalRequest, BlockRetrievalStatus},
-    common::{Author, Payload},
+    common::Author,
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
 };
@@ -36,7 +36,7 @@ pub enum NeedFetchResult {
     NeedFetch,
 }
 
-impl<T: Payload> BlockStore<T> {
+impl BlockStore {
     /// Check if we're far away from this ledger info and need to sync.
     /// Returns false if we have this block in the tree or the root's round is higher than the
     /// block.
@@ -76,7 +76,7 @@ impl<T: Payload> BlockStore<T> {
     pub async fn add_certs(
         &self,
         sync_info: &SyncInfo,
-        mut retriever: BlockRetriever<T>,
+        mut retriever: BlockRetriever,
     ) -> anyhow::Result<()> {
         self.sync_to_highest_commit_cert(sync_info.highest_commit_cert().clone(), &mut retriever)
             .await?;
@@ -96,7 +96,7 @@ impl<T: Payload> BlockStore<T> {
     pub async fn insert_quorum_cert(
         &self,
         qc: &QuorumCert,
-        retriever: &mut BlockRetriever<T>,
+        retriever: &mut BlockRetriever,
     ) -> anyhow::Result<()> {
         match self.need_fetch_for_quorum_cert(&qc) {
             NeedFetchResult::NeedFetch => self.fetch_quorum_cert(qc.clone(), retriever).await?,
@@ -126,7 +126,7 @@ impl<T: Payload> BlockStore<T> {
     async fn fetch_quorum_cert(
         &self,
         qc: QuorumCert,
-        retriever: &mut BlockRetriever<T>,
+        retriever: &mut BlockRetriever,
     ) -> anyhow::Result<()> {
         let mut pending = vec![];
         let mut retrieve_qc = qc.clone();
@@ -160,7 +160,7 @@ impl<T: Payload> BlockStore<T> {
     async fn sync_to_highest_commit_cert(
         &self,
         highest_commit_cert: QuorumCert,
-        retriever: &mut BlockRetriever<T>,
+        retriever: &mut BlockRetriever,
     ) -> anyhow::Result<()> {
         if !self.need_sync_for_quorum_cert(&highest_commit_cert) {
             return Ok(());
@@ -191,10 +191,10 @@ impl<T: Payload> BlockStore<T> {
 
     pub async fn fast_forward_sync<'a>(
         highest_commit_cert: &'a QuorumCert,
-        retriever: &'a mut BlockRetriever<T>,
-        storage: Arc<dyn PersistentLivenessStorage<T>>,
-        state_computer: Arc<dyn StateComputer<Payload = T>>,
-    ) -> anyhow::Result<RecoveryData<T>> {
+        retriever: &'a mut BlockRetriever,
+        storage: Arc<dyn PersistentLivenessStorage>,
+        state_computer: Arc<dyn StateComputer>,
+    ) -> anyhow::Result<RecoveryData> {
         debug!(
             "Start state sync with peer: {}, to block: {}",
             retriever.preferred_peer.short_str(),
@@ -237,13 +237,13 @@ impl<T: Payload> BlockStore<T> {
 }
 
 /// BlockRetriever is used internally to retrieve blocks
-pub struct BlockRetriever<T> {
-    network: NetworkSender<T>,
+pub struct BlockRetriever {
+    network: NetworkSender,
     preferred_peer: Author,
 }
 
-impl<T: Payload> BlockRetriever<T> {
-    pub fn new(network: NetworkSender<T>, preferred_peer: Author) -> Self {
+impl BlockRetriever {
+    pub fn new(network: NetworkSender, preferred_peer: Author) -> Self {
         Self {
             network,
             preferred_peer,
@@ -264,7 +264,7 @@ impl<T: Payload> BlockRetriever<T> {
         &'a mut self,
         qc: &'a QuorumCert,
         num_blocks: u64,
-    ) -> anyhow::Result<Vec<Block<T>>> {
+    ) -> anyhow::Result<Vec<Block>> {
         let block_id = qc.certified_block().id();
         let mut peers: Vec<&AccountAddress> = qc.ledger_info().signatures().keys().collect();
         let mut attempt = 0_u32;
