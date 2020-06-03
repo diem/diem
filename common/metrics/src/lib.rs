@@ -25,15 +25,10 @@ pub use prometheus::{
 
 use anyhow::Result;
 use libra_logger::prelude::*;
-use prometheus::{
-    core::{Collector, Metric},
-    proto::MetricType,
-    Encoder, TextEncoder,
-};
+use prometheus::{core::Collector, proto::MetricType, Encoder, TextEncoder};
 use std::{
     collections::HashMap,
     fs::{create_dir_all, File, OpenOptions},
-    hash::BuildHasher,
     io::Write,
     path::Path,
     thread, time,
@@ -121,18 +116,6 @@ pub fn dump_all_metrics_to_file_periodically<P: AsRef<Path>>(
         }
         thread::sleep(time::Duration::from_millis(interval));
     });
-}
-
-pub fn export_counter<M, S>(col: &mut HashMap<String, String, S>, counter: &M)
-where
-    M: Metric,
-    S: BuildHasher,
-{
-    let c = counter.metric();
-    col.insert(
-        c.get_label()[0].get_name().to_string(),
-        c.get_counter().get_value().to_string(),
-    );
 }
 
 pub fn get_metric_name<M>(metric: &M) -> String
