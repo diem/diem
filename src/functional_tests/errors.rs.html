@@ -31,7 +31,7 @@
 <span class="doccomment">/// Defines all errors in this crate.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Error</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ErrorKind</span> {
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;an error occurred when executing the transaction&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;an error occurred when executing the transaction, txn status {:?}&quot;</span>, .<span class="number">0</span>.<span class="ident">status</span>())]</span>
     <span class="ident">VMExecutionFailure</span>(<span class="ident">TransactionOutput</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;the transaction was discarded&quot;</span>)]</span>
     <span class="ident">DiscardedTransaction</span>(<span class="ident">TransactionOutput</span>),
