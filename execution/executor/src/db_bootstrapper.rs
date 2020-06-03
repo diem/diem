@@ -59,10 +59,6 @@ impl<V: VMExecutor> GenesisCommitter<V> {
         })
     }
 
-    pub fn ledger_info_with_sigs(&self) -> &LedgerInfoWithSignatures {
-        &self.ledger_info_with_sigs
-    }
-
     pub fn waypoint(&self) -> Waypoint {
         self.waypoint
     }
