@@ -128,8 +128,8 @@ impl BorrowState {
                 let field = match field_lbl {
                     Label::Field(f) => f,
                     Label::Local(_) | Label::Resource(_) => panic!(
-                        "ICE local/resource should not be field borrows \
-                         as they only exist from the virtual 'root' reference"
+                        "ICE local/resource should not be field borrows as they only exist from \
+                         the virtual 'root' reference"
                     ),
                 };
                 error.push((

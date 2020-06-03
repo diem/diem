@@ -143,12 +143,12 @@ impl<'a> CFG for BlockCFG<'a> {
 }
 
 const DEAD_ERR_CMD: &str = "Unreachable code. This statement (and any following statements) will \
-     not be executed. In some cases, this will result in unused resource values.";
+                            not be executed. In some cases, this will result in unused resource \
+                            values.";
 
-const DEAD_ERR_EXP: &str =
-    "Invalid use of a divergent expression. The code following the evaluation of this \
-     expression will be dead and should be removed. In some cases, this is necessary to prevent \
-     unused resource values.";
+const DEAD_ERR_EXP: &str = "Invalid use of a divergent expression. The code following the \
+                            evaluation of this expression will be dead and should be removed. In \
+                            some cases, this is necessary to prevent unused resource values.";
 
 fn dead_code_error(block: &BasicBlock) -> Error {
     let first_command = block.front().unwrap();

@@ -295,8 +295,8 @@ mod last_usage {
                         DisplayVar::Tmp => (),
                         DisplayVar::Orig(v_str) => {
                             let msg = format!(
-                                "Unused assignment or binding for local '{}'. Consider \
-                                 removing or replacing it with '_'",
+                                "Unused assignment or binding for local '{}'. Consider removing \
+                                 or replacing it with '_'",
                                 v_str
                             );
                             context.error(vec![(l.loc, msg)]);

@@ -511,7 +511,7 @@ fn parse_num(tokens: &mut Lexer) -> Result<u128, Error> {
             let end_loc = start_loc + tokens.content().len();
             let loc = make_loc(tokens.file_name(), start_loc, end_loc);
             let msg = "Invalid number literal. The given literal is too large to fit into the \
-                         largest number type 'u128'";
+                       largest number type 'u128'";
             Err(vec![(loc, msg.to_owned())])
         }
     };
@@ -1636,14 +1636,15 @@ fn parse_spec_block_member<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlo
         },
         _ => Err(unexpected_token_error(
             tokens,
-            "one of `assert`, `assume`, `decreases`, `aborts_if`, `ensures`,\
-                 `requires`, `include`, `apply`, `pragma`, `global`, or a name",
+            "one of `assert`, `assume`, `decreases`, `aborts_if`, `ensures`, `requires`, \
+             `include`, `apply`, `pragma`, `global`, or a name",
         )),
     }
 }
 
 // Parse a specification condition:
-//    SpecCondition = ("assert" | "assume" | "decreases" | "aborts_if" | "ensures" | "requires" ) <Exp> ";"
+//    SpecCondition =
+//        ("assert" | "assume" | "decreases" | "aborts_if" | "ensures" | "requires" ) <Exp> ";"
 fn parse_condition<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
     let start_loc = tokens.start_loc();
     let kind = match tokens.content() {
@@ -1719,7 +1720,8 @@ fn parse_invariant<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember
 // Parse a specification function.
 //     SpecFunction = "define" <SpecFunctionSignature> "{" <Sequence> "}"
 //                  | "native" "define" <SpecFunctionSignature> ";"
-//     SpecFunctionSignature = <Identifier> <OptionalTypeParameters> "(" Comma<Parameter> ")" ":" <Type>
+//     SpecFunctionSignature =
+//         <Identifier> <OptionalTypeParameters> "(" Comma<Parameter> ")" ":" <Type>
 fn parse_spec_function<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
     let start_loc = tokens.start_loc();
     let native_opt = consume_optional_token_with_loc(tokens, Tok::Native)?;
