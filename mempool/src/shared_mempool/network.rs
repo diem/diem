@@ -29,6 +29,8 @@ pub enum MempoolSyncMsg {
     BroadcastTransactionsResponse {
         /// unique id of received broadcast request
         request_id: String,
+        /// indices of transactions that failed that may succeed on resend
+        retry_txns: Vec<u64>,
     },
 }
 
