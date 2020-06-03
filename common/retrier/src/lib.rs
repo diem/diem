@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use libra_logger::error;
+use libra_logger::debug;
 use std::{future::Future, pin::Pin, thread, time::Duration};
 
 /// Given an operation retries it successfully sleeping everytime it fails
@@ -40,7 +40,7 @@ where
             Ok(value) => return Ok(value),
             Err(err) => {
                 if let Some(delay) = iterator.next() {
-                    error!("Error: {}. Retrying in {} seconds..", err, delay.as_secs());
+                    debug!("{}. Retrying in {} seconds..", err, delay.as_secs());
                     tokio::time::delay_for(delay).await;
                 } else {
                     return Err(err);
