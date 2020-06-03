@@ -2021,7 +2021,7 @@
             <span class="kw">if</span> <span class="op">!</span><span class="ident">func_env</span>.<span class="ident">is_native</span>() {
                 <span class="ident">num_fun</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
             }
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">func_env</span>.<span class="ident">get_spec</span>().<span class="ident">has_conditions</span>() <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">func_env</span>.<span class="ident">is_native</span>() {
+            <span class="kw">if</span> <span class="ident">func_env</span>.<span class="ident">get_spec</span>().<span class="ident">has_conditions</span>() <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">func_env</span>.<span class="ident">is_native</span>() {
                 <span class="ident">num_fun_specified</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
             }
             <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">set_location</span>(<span class="kw-2">&amp;</span><span class="ident">func_env</span>.<span class="ident">get_loc</span>());
