@@ -4,7 +4,7 @@
 use crate::{state_replication::StateComputer, test_utils::mock_storage::MockStorage};
 use anyhow::{format_err, Result};
 use consensus_types::{block::Block, common::Payload};
-use executor_types::StateComputeResult;
+use executor_types::{Error, StateComputeResult};
 use futures::channel::mpsc;
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use libra_logger::prelude::*;
@@ -39,7 +39,11 @@ impl MockStateComputer {
 
 #[async_trait::async_trait]
 impl StateComputer for MockStateComputer {
-    fn compute(&self, block: &Block, _parent_block_id: HashValue) -> Result<StateComputeResult> {
+    fn compute(
+        &self,
+        block: &Block,
+        _parent_block_id: HashValue,
+    ) -> Result<StateComputeResult, Error> {
         self.block_cache
             .lock()
             .unwrap()
@@ -106,7 +110,11 @@ pub struct EmptyStateComputer;
 
 #[async_trait::async_trait]
 impl StateComputer for EmptyStateComputer {
-    fn compute(&self, _block: &Block, _parent_block_id: HashValue) -> Result<StateComputeResult> {
+    fn compute(
+        &self,
+        _block: &Block,
+        _parent_block_id: HashValue,
+    ) -> Result<StateComputeResult, Error> {
         Ok(StateComputeResult::new(
             *ACCUMULATOR_PLACEHOLDER_HASH,
             vec![],

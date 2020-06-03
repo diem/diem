@@ -8,7 +8,7 @@ use executor::Executor;
 use executor_types::Error;
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_logger::warn;
-use libra_secure_net::{NetworkClient, NetworkServer};
+use libra_secure_net::{Error as NetError, NetworkClient, NetworkServer};
 use libra_vm::LibraVM;
 use std::net::SocketAddr;
 use storage_client::StorageClient;
@@ -64,8 +64,15 @@ impl RemoteClient {
 impl TSerializerClient for RemoteClient {
     fn request(&mut self, input: ExecutionCorrectnessInput) -> Result<Vec<u8>, Error> {
         let input_message = lcs::to_bytes(&input)?;
-        self.network_client.write(&input_message)?;
-        let result = self.network_client.read()?;
+        let result = loop {
+            while self.network_client.write(&input_message).is_err() {}
+            let res = self.network_client.read();
+            match res {
+                Ok(res) => break res,
+                Err(NetError::RemoteStreamClosed) => (),
+                Err(err) => return Err(err.into()),
+            }
+        };
         Ok(result)
     }
 }

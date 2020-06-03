@@ -113,9 +113,7 @@ impl StateSynchronizer {
     }
 
     pub fn create_client(&self) -> Arc<StateSyncClient> {
-        Arc::new(StateSyncClient {
-            coordinator_sender: self.coordinator_sender.clone(),
-        })
+        Arc::new(StateSyncClient::new(self.coordinator_sender.clone()))
     }
 
     /// The function returns a future that is fulfilled when the state synchronizer is
@@ -135,6 +133,10 @@ pub struct StateSyncClient {
 }
 
 impl StateSyncClient {
+    pub fn new(coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>) -> Self {
+        Self { coordinator_sender }
+    }
+
     /// Sync validator's state to target.
     /// In case of success (`Result::Ok`) the LI of storage is at the given target.
     /// In case of failure (`Result::Error`) the LI of storage remains unchanged, and the validator

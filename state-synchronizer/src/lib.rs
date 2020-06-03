@@ -13,7 +13,7 @@ pub use synchronizer::{StateSyncClient, StateSynchronizer};
 
 mod chunk_request;
 mod chunk_response;
-mod coordinator;
+pub mod coordinator;
 mod counters;
 mod executor_proxy;
 pub mod network;

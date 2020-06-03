@@ -37,7 +37,7 @@ use std::{
 };
 use tokio::time::{interval, timeout};
 
-pub(crate) struct SyncRequest {
+pub struct SyncRequest {
     // The Result value returned to the caller is Error in case the StateSynchronizer failed to
     // reach the target (the LI in the storage remains unchanged as if nothing happened).
     pub callback: oneshot::Sender<Result<()>>,
@@ -46,7 +46,7 @@ pub(crate) struct SyncRequest {
 }
 
 /// message used by StateSyncClient for communication with Coordinator
-pub(crate) enum CoordinatorMessage {
+pub enum CoordinatorMessage {
     // used to initiate new sync
     Request(Box<SyncRequest>),
     // used to notify about new txn commit

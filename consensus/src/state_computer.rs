@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::state_replication::StateComputer;
-use anyhow::{Error, Result};
+use anyhow::Result;
 use consensus_types::block::Block;
 use execution_correctness::ExecutionCorrectness;
-use executor_types::StateComputeResult;
+use executor_types::{Error, StateComputeResult};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_metrics::monitor;
@@ -43,7 +43,7 @@ impl StateComputer for ExecutionProxy {
         block: &Block,
         // The parent block id.
         parent_block_id: HashValue,
-    ) -> Result<StateComputeResult> {
+    ) -> Result<StateComputeResult, Error> {
         debug!(
             "Executing block {:x}. Parent: {:x}.",
             block.id(),
@@ -51,14 +51,12 @@ impl StateComputer for ExecutionProxy {
         );
 
         // TODO: figure out error handling for the prologue txn
-
         monitor!(
             "execute_block",
             self.execution_correctness_client
                 .lock()
                 .unwrap()
                 .execute_block(block.clone(), parent_block_id)
-                .map_err(Error::from)
         )
     }
 

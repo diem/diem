@@ -1,8 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use executor::db_bootstrapper::bootstrap_db_if_empty;
 use executor_types::StateComputeResult;
-use libra_config::config::NodeConfig;
+use libra_config::{config::NodeConfig, utils};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     hash::CryptoHash,
@@ -17,6 +18,28 @@ use libra_types::{
     transaction::{Script, Transaction},
     validator_signer::ValidatorSigner,
 };
+use libra_vm::LibraVM;
+use libradb::LibraDB;
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::Arc,
+    thread::JoinHandle,
+};
+use storage_interface::{DbReader, DbReaderWriter};
+use storage_service::start_storage_service_with_db;
+
+pub fn start_storage_service() -> (NodeConfig, JoinHandle<()>, Arc<dyn DbReader>) {
+    let (mut config, _genesis_key) = config_builder::test_config();
+    let tmp_dir = libra_temppath::TempPath::new();
+    config.storage.dir = tmp_dir.path().to_path_buf();
+
+    let server_port = utils::get_available_port();
+    config.storage.address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
+    let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
+    bootstrap_db_if_empty::<LibraVM>(&db_rw, utils::get_genesis_txn(&config).unwrap()).unwrap();
+    let handle = start_storage_service_with_db(&config, db.clone());
+    (config, handle, db as Arc<dyn DbReader>)
+}
 
 pub fn gen_block_id(index: u8) -> HashValue {
     HashValue::new([index; HashValue::LENGTH])
