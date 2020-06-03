@@ -821,13 +821,13 @@
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {
     <span class="ident">name</span>: <span class="ident">encode_create_child_vasp_account</span>,
     <span class="ident">type_arg</span>: <span class="ident">currency</span>,
-    <span class="ident">args</span>: [<span class="ident">address</span>: <span class="ident">Address</span>, <span class="ident">auth_key_prefix</span>: <span class="ident">Bytes</span>, <span class="ident">add_all_currencies</span>: <span class="ident">Bool</span>],
+    <span class="ident">args</span>: [<span class="ident">address</span>: <span class="ident">Address</span>, <span class="ident">auth_key_prefix</span>: <span class="ident">Bytes</span>, <span class="ident">add_all_currencies</span>: <span class="ident">Bool</span>, <span class="ident">initial_balance</span>: <span class="ident">U64</span>],
     <span class="ident">script</span>: <span class="ident">CreateChildVaspAccount</span>,
     <span class="ident">doc</span>: <span class="string">&quot;Create an account with the ChildVASP role at `address` with authentication key\
-          `auth_key_prefix` | `new_account_address` and a 0 balance of type `currency`. If\
-          `add_all_currencies` is true, 0 balances for all available currencies in the system will\
-          also be added to the account. This account will be a child of the transaction sender\
-          which must be a ParentVASP.&quot;</span>
+          `auth_key_prefix` | `new_account_address` and `initial_balance` of type `currency`\
+          transferred from the sender. If `add_all_currencies` is true, 0 balances for all\
+          available currencies in the system will also be added to the account. This account will\
+          be a child of the transaction sender, which must be a ParentVASP.&quot;</span>
 }
 
 <span class="comment">//...........................................................................</span>
