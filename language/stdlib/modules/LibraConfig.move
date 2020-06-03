@@ -143,10 +143,10 @@ module LibraConfig {
         move_to(account, Offer::redeem<ModifyConfigCapability<Config>>(account, offer_address))
     }
 
-    public fun reconfigure() acquires Configuration {
+    public fun reconfigure(account: &signer) acquires Configuration {
         // Only callable by association address or by the VM internally.
         Transaction::assert(
-            Association::has_privilege<Self::CreateConfigCapability>(Transaction::sender()),
+            Association::has_privilege<Self::CreateConfigCapability>(Signer::address_of(account)),
             1
         );
         reconfigure_();

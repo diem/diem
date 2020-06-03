@@ -15,7 +15,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(validator_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, validator_address: address)
 </code></pre>
 
 
@@ -24,8 +24,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(validator_address: address) {
-    <a href="../../modules/doc/LibraSystem.md#0x0_LibraSystem_add_validator">LibraSystem::add_validator</a>(validator_address);
+<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, validator_address: address) {
+    <a href="../../modules/doc/LibraSystem.md#0x0_LibraSystem_add_validator">LibraSystem::add_validator</a>(account, validator_address);
 }
 </code></pre>
 

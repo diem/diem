@@ -16,13 +16,13 @@ module LibraWriteSetManager {
         writeset_payload: vector<u8>,
     }
 
-    public fun initialize(sig: &signer) {
-        Transaction::assert(Signer::address_of(sig) == 0xA550C18, 1);
+    public fun initialize(account: &signer) {
+        Transaction::assert(Signer::address_of(account) == 0xA550C18, 1);
 
         move_to(
-            sig,
+            account,
             T {
-                upgrade_events: Event::new_event_handle<Self::UpgradeEvent>(sig),
+                upgrade_events: Event::new_event_handle<Self::UpgradeEvent>(account),
             }
         );
     }
@@ -47,14 +47,14 @@ module LibraWriteSetManager {
         );
     }
 
-    fun epilogue(writeset_payload: vector<u8>) acquires T {
+    fun epilogue(account: &signer, writeset_payload: vector<u8>) acquires T {
         let t_ref = borrow_global_mut<T>(0xA550C18);
 
         Event::emit_event<Self::UpgradeEvent>(
             &mut t_ref.upgrade_events,
             UpgradeEvent { writeset_payload },
         );
-        LibraConfig::reconfigure();
+        LibraConfig::reconfigure(account);
     }
 }
 

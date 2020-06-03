@@ -484,13 +484,15 @@ module LibraAccount {
 
     // Rotate the transaction sender's authentication key
     // The new key will be used for signing future transactions
-    public fun rotate_authentication_key(new_authentication_key: vector<u8>) acquires T {
-        let sender_account = borrow_global_mut<T>(Transaction::sender());
+    public fun rotate_authentication_key(
+        sender: &signer, new_authentication_key: vector<u8>
+    ) acquires T {
+        let sender_account_resource = borrow_global_mut<T>(Signer::address_of(sender));
         // The sender has delegated the privilege to rotate her key elsewhere--abort
-        Transaction::assert(!sender_account.delegated_key_rotation_capability, 11);
+        Transaction::assert(!sender_account_resource.delegated_key_rotation_capability, 11);
         // The sender has retained her key rotation privileges--proceed.
         rotate_authentication_key_for_account(
-            sender_account,
+            sender_account_resource,
             new_authentication_key
         );
     }
@@ -824,31 +826,33 @@ module LibraAccount {
     ///////////////////////////////////////////////////////////////////////////
 
     // Freeze the account at `addr`.
-    public fun freeze_account(addr: address)
+    public fun freeze_account(account: &signer, frozen_address: address)
     acquires T, AccountOperationsCapability {
-        assert_can_freeze(Transaction::sender());
+        let initiator_address = Signer::address_of(account);
+        assert_can_freeze(initiator_address);
         // The root association account cannot be frozen
-        Transaction::assert(addr != Association::root_address(), 14);
-        borrow_global_mut<T>(addr).is_frozen = true;
+        Transaction::assert(frozen_address != Association::root_address(), 14);
+        borrow_global_mut<T>(frozen_address).is_frozen = true;
         Event::emit_event<FreezeAccountEvent>(
             &mut borrow_global_mut<AccountOperationsCapability>(0xA550C18).freeze_event_handle,
             FreezeAccountEvent {
-                initiator_address: Transaction::sender(),
-                frozen_address: addr
+                initiator_address,
+                frozen_address
             },
         );
     }
 
     // Unfreeze the account at `addr`.
-    public fun unfreeze_account(addr: address)
+    public fun unfreeze_account(account: &signer, unfrozen_address: address)
     acquires T, AccountOperationsCapability {
-        assert_can_freeze(Transaction::sender());
-        borrow_global_mut<T>(addr).is_frozen = false;
+        let initiator_address = Signer::address_of(account);
+        assert_can_freeze(initiator_address);
+        borrow_global_mut<T>(unfrozen_address).is_frozen = false;
         Event::emit_event<UnfreezeAccountEvent>(
             &mut borrow_global_mut<AccountOperationsCapability>(0xA550C18).unfreeze_event_handle,
             UnfreezeAccountEvent {
-                initiator_address: Transaction::sender(),
-                unfrozen_address: addr
+                initiator_address,
+                unfrozen_address
             },
         );
     }
@@ -964,25 +968,26 @@ module LibraAccount {
         ::exists<Role_temp<RoleType>>(addr) && borrow_global<Role_temp<RoleType>>(addr).is_certified
     }
 
-    public fun decertify<RoleType: copyable>(addr: address) acquires Role_temp {
-        Transaction::assert(Association::addr_is_association(Transaction::sender()), 1002);
+    public fun decertify<RoleType: copyable>(account: &signer, addr: address) acquires Role_temp {
+        Transaction::assert(Association::addr_is_association(Signer::address_of(account)), 1002);
         borrow_global_mut<Role_temp<RoleType>>(addr).is_certified = false;
     }
 
-    public fun certify<RoleType: copyable>(addr: address) acquires Role_temp {
-        Transaction::assert(Association::addr_is_association(Transaction::sender()), 1002);
+    public fun certify<RoleType: copyable>(account: &signer, addr: address) acquires Role_temp {
+        Transaction::assert(Association::addr_is_association(Signer::address_of(account)), 1002);
         // Role can be only published under the account at its creation
         borrow_global_mut<Role_temp<RoleType>>(addr).is_certified = true;
     }
 
     public fun create_validator_account<Token>(
+        creator: &signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
     ) {
-        Transaction::assert(Association::addr_is_association(Transaction::sender()), 1002);
+        Transaction::assert(Association::addr_is_association(Signer::address_of(creator)), 1002);
         let new_account = create_signer(new_account_address);
         Event::publish_generator(&new_account);
-        ValidatorConfig::publish(&new_account);
+        ValidatorConfig::publish(creator, &new_account);
         move_to(&new_account, Role_temp<ValidatorRole> { role_type: ValidatorRole { }, is_certified: true });
         make_account<Token, Empty::T>(new_account, auth_key_prefix, Empty::create(), false)
     }

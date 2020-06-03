@@ -10,8 +10,8 @@
 // Reconfiguration can only be invoked by association.
 import 0x0.LibraConfig;
 
-main() {
-    LibraConfig.reconfigure();
+main(account: &signer) {
+    LibraConfig.reconfigure(move(account));
     return;
 }
 
@@ -22,8 +22,8 @@ main() {
 //! sender: config
 import 0x0.LibraConfig;
 
-main() {
-    LibraConfig.reconfigure();
+main(account: &signer) {
+    LibraConfig.reconfigure(move(account));
     return;
 }
 
@@ -35,8 +35,8 @@ main() {
 // Cannot trigger two reconfiguration within the same block.
 import 0x0.LibraConfig;
 
-main() {
-    LibraConfig.reconfigure();
+main(account: &signer) {
+    LibraConfig.reconfigure(move(account));
     return;
 }
 
@@ -51,8 +51,8 @@ main() {
 //! sender: config
 import 0x0.LibraConfig;
 
-main() {
-    LibraConfig.reconfigure();
+main(account: &signer) {
+    LibraConfig.reconfigure(move(account));
     return;
 }
 

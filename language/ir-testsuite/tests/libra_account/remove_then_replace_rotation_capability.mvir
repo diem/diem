@@ -1,11 +1,12 @@
 import 0x0.LibraAccount;
+import 0x0.Signer;
 
-main() {
+main(account: &signer) {
   let sender: address;
   let old_auth_key: vector<u8>;
   let cap: LibraAccount.KeyRotationCapability;
 
-  sender = get_txn_sender();
+  sender = Signer.address_of(copy(account));
   old_auth_key = LibraAccount.authentication_key(copy(sender));
   // by default, an account has not delegated its key rotation capability
   assert(!LibraAccount.delegated_key_rotation_capability(copy(sender)), 50);
@@ -19,7 +20,7 @@ main() {
   assert(!LibraAccount.delegated_key_rotation_capability(copy(sender)), 52);
 
   // and the sender should be able to rotate once again
-  LibraAccount.rotate_authentication_key(move(old_auth_key));
+  LibraAccount.rotate_authentication_key(move(account), move(old_auth_key));
 
   return;
 }
@@ -30,12 +31,12 @@ main() {
 //! new-transaction
 import 0x0.LibraAccount;
 
-main() {
+main(account: &signer) {
   let cap: LibraAccount.KeyRotationCapability;
 
   cap = LibraAccount.extract_sender_key_rotation_capability();
   // should fail
-  LibraAccount.rotate_authentication_key(h"00");
+  LibraAccount.rotate_authentication_key(move(account), h"00");
   LibraAccount.restore_key_rotation_capability(move(cap));
 
   return;

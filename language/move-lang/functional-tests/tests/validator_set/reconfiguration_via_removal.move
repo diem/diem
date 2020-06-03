@@ -13,8 +13,8 @@
 //! sender: vivian
 script{
 use 0x0::LibraSystem;
-fun main() {
-    LibraSystem::remove_validator({{vivian}});
+fun main(account: &signer) {
+    LibraSystem::remove_validator(account, {{vivian}});
 }
 }
 

@@ -13,8 +13,8 @@
 // remove_validator cannot be called on a non-validator
 script{
     use 0x0::LibraSystem;
-    fun main() {
-        LibraSystem::remove_validator({{alice}});
+    fun main(account: &signer) {
+        LibraSystem::remove_validator(account, {{alice}});
     }
 }
 
@@ -26,8 +26,8 @@ script{
 //! sender: alice
 script{
     use 0x0::LibraSystem;
-    fun main() {
-        LibraSystem::remove_validator({{vivian}});
+    fun main(account: &signer) {
+        LibraSystem::remove_validator(account, {{vivian}});
     }
 }
 
@@ -39,8 +39,8 @@ script{
 // should work because Vivian is a validator
 script{
     use 0x0::LibraSystem;
-    fun main() {
-        LibraSystem::remove_validator({{vivian}});
+    fun main(account: &signer) {
+        LibraSystem::remove_validator(account, {{vivian}});
     }
 }
 
@@ -52,8 +52,8 @@ script{
 // double-removing Vivian should fail
 script{
     use 0x0::LibraSystem;
-    fun main() {
-        LibraSystem::remove_validator({{vivian}});
+    fun main(account: &signer) {
+        LibraSystem::remove_validator(account, {{vivian}});
     }
 }
 

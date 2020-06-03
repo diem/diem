@@ -770,7 +770,10 @@ impl LibraVM {
             &LIBRA_WRITESET_MANAGER_MODULE,
             &EPILOGUE_NAME,
             vec![],
-            vec![Value::vector_u8(change_set_bytes)],
+            vec![
+                Value::transaction_argument_signer_reference(txn_data.sender),
+                Value::vector_u8(change_set_bytes),
+            ],
             txn_data.sender(),
             data_store,
             &mut cost_strategy,

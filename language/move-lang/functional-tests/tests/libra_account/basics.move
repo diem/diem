@@ -45,8 +45,8 @@ script {
 //! sender: bob
 script {
     use 0x0::LibraAccount;
-    fun main() {
-        LibraAccount::rotate_authentication_key(x"123abc");
+    fun main(account: &signer) {
+        LibraAccount::rotate_authentication_key(account, x"123abc");
     }
 }
 // check: ABORTED

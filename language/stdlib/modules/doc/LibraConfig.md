@@ -473,7 +473,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_reconfigure">reconfigure</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_reconfigure">reconfigure</a>(account: &signer)
 </code></pre>
 
 
@@ -482,10 +482,10 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_reconfigure">reconfigure</a>() <b>acquires</b> <a href="#0x0_LibraConfig_Configuration">Configuration</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_reconfigure">reconfigure</a>(account: &signer) <b>acquires</b> <a href="#0x0_LibraConfig_Configuration">Configuration</a> {
     // Only callable by association address or by the VM internally.
     Transaction::assert(
-        <a href="Association.md#0x0_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">Self::CreateConfigCapability</a>&gt;(Transaction::sender()),
+        <a href="Association.md#0x0_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">Self::CreateConfigCapability</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)),
         1
     );
     <a href="#0x0_LibraConfig_reconfigure_">reconfigure_</a>();

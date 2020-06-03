@@ -6,9 +6,9 @@
 //! sender: alice
 script {
 use 0x0::LibraSystem;
-fun main() {
-    // alice cannot remove itself
-    LibraSystem::remove_validator({{alice}});
+fun main(account: &signer) {
+    // alice cannot remove herself
+    LibraSystem::remove_validator(account, {{alice}});
 }
 }
 
@@ -18,9 +18,9 @@ fun main() {
 //! sender: alice
 script {
 use 0x0::LibraSystem;
-fun main() {
+fun main(account: &signer) {
     // alice cannot remove bob
-    LibraSystem::remove_validator({{bob}});
+    LibraSystem::remove_validator(account, {{bob}});
 }
 }
 
@@ -30,9 +30,9 @@ fun main() {
 //! sender: bob
 script {
 use 0x0::LibraSystem;
-fun main() {
+fun main(account: &signer) {
     // bob cannot remove alice
-    LibraSystem::remove_validator({{alice}});
+    LibraSystem::remove_validator(account, {{alice}});
 }
 }
 

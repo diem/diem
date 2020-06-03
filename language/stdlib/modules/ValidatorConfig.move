@@ -39,9 +39,9 @@ module ValidatorConfig {
     // Validator setup methods
     ///////////////////////////////////////////////////////////////////////////
 
-    public fun publish(signer: &signer) {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 1101);
-        move_to(signer, T {
+    public fun publish(creator: &signer, account: &signer) {
+        Transaction::assert(Signer::address_of(creator) == 0xA550C18, 1101);
+        move_to(account, T {
             config: Option::none(),
             operator_account: Option::none(),
         });
@@ -52,15 +52,17 @@ module ValidatorConfig {
     ///////////////////////////////////////////////////////////////////////////
 
     // Sets a new operator account, preserving the old config.
-    public fun set_operator(operator_account: address) acquires T {
-        (borrow_global_mut<T>(Transaction::sender())).operator_account = Option::some(operator_account);
+    public fun set_operator(account: &signer, operator_account: address) acquires T {
+        let sender = Signer::address_of(account);
+        (borrow_global_mut<T>(sender)).operator_account = Option::some(operator_account);
     }
 
     // Removes an operator account, setting a corresponding field to Opetion::none.
     // The old config is preserved.
-    public fun remove_operator() acquires T {
+    public fun remove_operator(account: &signer) acquires T {
+        let sender = Signer::address_of(account);
         // Config field remains set
-        (borrow_global_mut<T>(Transaction::sender())).operator_account = Option::none();
+        (borrow_global_mut<T>(sender)).operator_account = Option::none();
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -79,8 +81,10 @@ module ValidatorConfig {
         full_node_network_identity_pubkey: vector<u8>,
         full_node_network_address: vector<u8>,
     ) acquires T {
-        Transaction::assert(Signer::address_of(signer) ==
-                            get_operator(validator_account), 1101);
+        Transaction::assert(
+            Signer::address_of(signer) == get_operator(validator_account),
+            1101
+        );
         // TODO(valerini): verify the validity of new_config.consensus_pubkey and
         // the proof of posession
         let t_ref = borrow_global_mut<T>(validator_account);
@@ -95,11 +99,14 @@ module ValidatorConfig {
 
     // TODO(valerini): to remove and call into set_config instead
     public fun set_consensus_pubkey(
+        account: &signer,
         validator_account: address,
         consensus_pubkey: vector<u8>,
     ) acquires T {
-        Transaction::assert(Transaction::sender() ==
-                            get_operator(validator_account), 1101);
+        Transaction::assert(
+            Signer::address_of(account) == get_operator(validator_account),
+            1101
+        );
         let t_config_ref = Option::borrow_mut(&mut borrow_global_mut<T>(validator_account).config);
         t_config_ref.consensus_pubkey = consensus_pubkey;
     }

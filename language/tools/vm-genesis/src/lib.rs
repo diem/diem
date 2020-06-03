@@ -144,35 +144,38 @@ fn create_and_initialize_main_accounts(
             Value::transaction_argument_signer_reference(fee_account_address),
             Value::transaction_argument_signer_reference(tc_account_address),
             Value::address(tc_account_address),
-            Value::vector_u8(AuthenticationKey::prefix(&genesis_auth_key).to_vec()), // TODO: different key here?
-            Value::vector_u8(genesis_auth_key.to_vec()),
             Value::vector_u8(genesis_auth_key.to_vec()),
         ],
     );
 
-    // TODO: use signer to eliminate this
     context.set_sender(config_address());
     context.exec(
         "LibraAccount",
         "rotate_authentication_key",
         vec![],
-        vec![Value::vector_u8(genesis_auth_key.to_vec())],
+        vec![
+            Value::transaction_argument_signer_reference(config_address()),
+            Value::vector_u8(genesis_auth_key.to_vec()),
+        ],
     );
 
-    // TODO: use signer to eliminate this
     context.set_sender(account_config::treasury_compliance_account_address());
     context.exec(
         "LibraAccount",
         "rotate_authentication_key",
         vec![],
-        vec![Value::vector_u8(genesis_auth_key.to_vec())],
+        vec![
+            Value::transaction_argument_signer_reference(
+                account_config::treasury_compliance_account_address(),
+            ),
+            Value::vector_u8(genesis_auth_key.to_vec()),
+        ],
     );
 
-    // TODO: use signer to eliminate this
     context.set_sender(fee_account_address);
     context.exec(
-        GENESIS_MODULE_NAME,
-        "initialize_txn_fee_account",
+        "LibraAccount",
+        "rotate_authentication_key",
         vec![],
         vec![
             Value::transaction_argument_signer_reference(fee_account_address),
@@ -216,6 +219,7 @@ fn initialize_validators(
             "create_validator_account",
             vec![lbr_ty.clone()],
             vec![
+                Value::transaction_argument_signer_reference(account_config::association_address()),
                 Value::address(account),
                 Value::vector_u8(auth_key.prefix().to_vec()),
             ],
