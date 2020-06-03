@@ -11,7 +11,9 @@ module LibraAccount {
     use 0x0::Vector;
 
     spec module {
-        pragma verify=true;
+        //pragma verify=true;
+        // TODO: set this to false temporarily as we are investigating Boogie/Z3 crashes on this file.
+        pragma verify=false;
     }
 
     // Every Libra account has a LibraAccount::T resource
