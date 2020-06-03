@@ -521,11 +521,6 @@ impl LeafNode {
         self.account_key
     }
 
-    /// Gets the hash of associated blob.
-    pub fn blob_hash(&self) -> HashValue {
-        self.blob_hash
-    }
-
     /// Gets the associated blob itself.
     pub fn blob(&self) -> &AccountStateBlob {
         &self.blob
