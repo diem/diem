@@ -100,12 +100,16 @@
 <span id="100">100</span>
 <span id="101">101</span>
 <span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="attribute">#![<span class="ident">forbid</span>(<span class="ident">unsafe_code</span>)]</span>
 
+<span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">error</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">future</span>::<span class="ident">Future</span>, <span class="ident">pin</span>::<span class="ident">Pin</span>, <span class="ident">thread</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
 
 <span class="doccomment">/// Given an operation retries it successfully sleeping everytime it fails</span>
@@ -134,6 +138,7 @@
 <span class="kw">where</span>
     <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">Duration</span><span class="op">&gt;</span>,
     <span class="ident">O</span>: <span class="ident">FnMut</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">E</span>: <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Display</span> <span class="op">+</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span>,
 {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">iterator</span> <span class="op">=</span> <span class="ident">iterable</span>.<span class="ident">into_iter</span>();
     <span class="kw">loop</span> {
@@ -141,6 +146,7 @@
             <span class="prelude-val">Ok</span>(<span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">value</span>),
             <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">delay</span>) <span class="op">=</span> <span class="ident">iterator</span>.<span class="ident">next</span>() {
+                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error: {}. Retrying in {} seconds..&quot;</span>, <span class="ident">err</span>, <span class="ident">delay</span>.<span class="ident">as_secs</span>());
                     <span class="ident">tokio</span>::<span class="ident">time</span>::<span class="ident">delay_for</span>(<span class="ident">delay</span>).<span class="kw">await</span>;
                 } <span class="kw">else</span> {
                     <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>);
