@@ -375,8 +375,8 @@ impl BaseType_ {
             BaseType_::Apply(k, _, _) => k.clone(),
             BaseType_::Param(TParam { kind, .. }) => kind.clone(),
             BaseType_::Unreachable | BaseType_::UnresolvedError => panic!(
-                "ICE unreachable/unresolved error has no kind. \
-                 Should only exist in dead code that should not be analyzed"
+                "ICE unreachable/unresolved error has no kind. Should only exist in dead code \
+                 that should not be analyzed"
             ),
         }
     }

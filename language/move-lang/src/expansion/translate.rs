@@ -99,11 +99,11 @@ impl Context {
 
     fn restricted_self_error(&mut self, case: &str, name: &Name) {
         let msg = format!(
-            "Invalid {case} name '{name}'. '{self_ident}' is restricted and cannot be used to name \
-            a {case}",
-            case=case,
-            name=name,
-            self_ident=ModuleName::SELF_NAME,
+            "Invalid {case} name '{name}'. '{self_ident}' is restricted and cannot be used to \
+             name a {case}",
+            case = case,
+            name = name,
+            self_ident = ModuleName::SELF_NAME,
         );
         self.error(vec![(name.loc, msg)])
     }
@@ -981,8 +981,8 @@ fn module_access(
         (Access::Term, PN::Name(n)) => EN::Name(n),
         (_, PN::Global(n)) => {
             let msg = format!(
-                "Invalid use of global name '::{}'. \
-                Global names can only be used in function calls",
+                "Invalid use of global name '::{}'. Global names can only be used in function \
+                 calls",
                 n
             );
             context.error(vec![(loc, msg)]);
@@ -1098,7 +1098,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
             if !context.require_spec_context(
                 loc,
                 "Expected name to be followed by a brace-enclosed list of field expressions or a \
-              parenthesized list of arguments for a function call",
+                 parenthesized list of arguments for a function call",
             ) =>
         {
             assert!(context.has_errors());

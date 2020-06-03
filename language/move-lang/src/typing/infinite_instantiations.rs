@@ -309,8 +309,8 @@ fn cycle_error(context: &Context, graph: &DiGraphMap<&TParam, Edge>, scc: Vec<&T
     };
     let tparam_msg = format!(
         "The type parameter '{param_n}::{param_t}' was instantiated with the type {ty}, which \
-        contains the type parameter '{arg_n}::{arg_t}'. {case} causes the instantiation to recurse \
-        infinitely",
+         contains the type parameter '{arg_n}::{arg_t}'. {case} causes the instantiation to \
+         recurse infinitely",
         param_n = &param_info.name,
         param_t = &critical_head.user_specified_name,
         ty = ty_str,

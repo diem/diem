@@ -243,8 +243,8 @@ fn check_acquire_listed<F>(
 {
     if !annotated_acquires.contains_key(global_type_name) {
         let tmsg = format!(
-            "The call acquires '{}::{}', but the 'acquires' list for the current function does not \
-            contain this type. It must be present in the calling context's acquires list",
+            "The call acquires '{}::{}', but the 'acquires' list for the current function does \
+             not contain this type. It must be present in the calling context's acquires list",
             context.current_module.as_ref().unwrap(),
             global_type_name
         );

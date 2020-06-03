@@ -190,25 +190,7 @@ pub fn output_compiled_units(
         let mut path = PathBuf::from(format!("{}/{}/{}", out_dir, SCRIPT_SUB_DIR, unit.name()));
         emit_unit!(path, unit);
     }
-    // let script_map = {
-    //     let mut m: BTreeMap<String, Vec<CompiledUnit>> = BTreeMap::new();
-    //     for u in scripts {
-    //         m.entry(u.name()).or_insert_with(Vec::new).push(u)
-    //     }
-    //     m
-    // };
-    // for (n, units) in script_map {
-    //     let num_units = units.len();
-    //     for (idx, unit) in units.into_iter().enumerate() {
-    //         let file_name = if num_units == 1 {
-    //             format!("{}", n)
-    //         } else {
-    //             format!("{}_{}", n, idx)
-    //         };
-    //         let mut path = PathBuf::from(format!("{}/{}/{}", out_dir, SCRIPT_SUB_DIR, file_name));
-    //         emit_unit!(path, unit);
-    //     }
-    // }
+
     if !ice_errors.is_empty() {
         errors::report_errors(files, ice_errors)
     }
@@ -405,9 +387,8 @@ fn verify_string(fname: &'static str, string: &str) -> Result<(), Errors> {
             let span = Span::new(ByteIndex(idx as u32), ByteIndex(idx as u32));
             let loc = Loc::new(fname, span);
             let msg = format!(
-                "Invalid character '{}' found when reading file. \
-                 Only ASCII printable characters, tabs (\\t), and line endings (\\n) \
-                 are permitted.",
+                "Invalid character '{}' found when reading file. Only ASCII printable characters, \
+                 tabs (\\t), and line endings (\\n) are permitted.",
                 chr
             );
             Err(vec![vec![(loc, msg)]])

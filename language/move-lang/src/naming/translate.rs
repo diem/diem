@@ -378,8 +378,8 @@ fn acquires_type_struct(
     };
     if !declared_in_current {
         let tmsg = format!(
-            "The struct '{}' was not declared in the current module. Global \
-             storage access is internal to the module'",
+            "The struct '{}' was not declared in the current module. Global storage access is \
+             internal to the module'",
             n
         );
         context.error(vec![(loc, "Invalid acquires item".into()), (n.loc(), tmsg)]);
@@ -439,8 +439,8 @@ fn check_no_nominal_resources(context: &mut Context, s: &StructName, field: &Fie
     match ty_ {
         T::Apply(Some(sp!(kloc, Kind_::Resource)), _, _) => {
             let field_msg = format!(
-                "Invalid resource field '{}' for struct '{}'. Structs cannot \
-                 contain resource types, except through type parameters",
+                "Invalid resource field '{}' for struct '{}'. Structs cannot contain resource \
+                 types, except through type parameters",
                 field, s
             );
             let tmsg = format!(
@@ -757,9 +757,8 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
             assert!(context.has_errors());
             NE::UnresolvedError
         }
-        EE::Index(..) | EE::Lambda(..) |
-        // matches name variants only allowed in specs (we handle the allowed ones above)
-        EE::Name(..) => {
+        // `Name` matches name variants only allowed in specs (we handle the allowed ones above)
+        EE::Index(..) | EE::Lambda(..) | EE::Name(..) => {
             panic!("ICE unexpected specification construct")
         }
     };

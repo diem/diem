@@ -724,8 +724,8 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                     let msg = format!("Invalid arguments to '{}'", &bop);
                     context.add_single_type_constraint(eloc, msg, ty.clone());
                     let msg = format!(
-                        "Cannot use '{}' on resource values. This would destroy the resource. \
-                         Try borrowing the values with '&' first.'",
+                        "Cannot use '{}' on resource values. This would destroy the resource. Try \
+                         borrowing the values with '&' first.'",
                         &bop
                     );
                     context.add_copyable_constraint(eloc, msg, ty.clone());
@@ -786,8 +786,8 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             });
             if !context.is_current_module(&m) {
                 let msg = format!(
-                    "Invalid instantiation of '{}::{}'.\n\
-                     All structs can only be constructed in the module in which they are declared",
+                    "Invalid instantiation of '{}::{}'.\nAll structs can only be constructed in \
+                     the module in which they are declared",
                     &m, &n,
                 );
                 context.error(vec![(eloc, msg)])
@@ -1101,8 +1101,8 @@ fn lvalue(
             });
             if !context.is_current_module(&m) {
                 let msg = format!(
-                    "Invalid deconstruction {} of '{}::{}'.\n All \
-                     structs can only be deconstructed in the module in which they are declared",
+                    "Invalid deconstruction {} of '{}::{}'.\n All structs can only be \
+                     deconstructed in the module in which they are declared",
                     verb, &m, &n,
                 );
                 context.error(vec![(loc, msg)])
@@ -1161,8 +1161,8 @@ fn resolve_field(context: &mut Context, loc: Loc, ty: Type, field: &Field) -> Ty
         sp!(_, Apply(_, sp!(_, ModuleType(m, n)), targs)) => {
             if !context.is_current_module(&m) {
                 let msg = format!(
-                    "Invalid access of field '{}' on '{}::{}'. \
-                     Fields can only be accessed inside the struct's module",
+                    "Invalid access of field '{}' on '{}::{}'. Fields can only be accessed inside \
+                     the struct's module",
                     field, &m, &n
                 );
                 context.error(vec![(loc, msg)])
@@ -1199,8 +1199,8 @@ fn add_field_types<T>(
         N::StructFields::Defined(m) => m,
         N::StructFields::Native(nloc) => {
             let msg = format!(
-                "Invalid {} usage for native struct '{}::{}'. Native structs cannot \
-                 be directly constructed/deconstructd, and their fields cannot be dirctly accessed",
+                "Invalid {} usage for native struct '{}::{}'. Native structs cannot be directly \
+                 constructed/deconstructd, and their fields cannot be dirctly accessed",
                 verb, m, n
             );
             context.error(vec![(loc, msg), (nloc, "Declared 'native' here".into())]);

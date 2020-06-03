@@ -1439,11 +1439,16 @@ fn check_trailing_unit(context: &mut Context, block: &mut Block) {
     }
     macro_rules! trailing {
         ($uloc: pat) => {
-           hcmd!(_, C::IgnoreAndPop { exp: H::Exp { exp: sp!($uloc, E::Unit { trailing: true }), .. }, .. })
+           hcmd!(
+               _,
+               C::IgnoreAndPop {
+                    exp: H::Exp { exp: sp!($uloc, E::Unit { trailing: true }), .. }, ..
+                }
+            )
         }
     }
     macro_rules! trailing_returned {
-        ($uloc: pat) => {
+        ($uloc:pat) => {
             hcmd!(
                 _,
                 C::Return(H::Exp {
@@ -1468,7 +1473,7 @@ fn check_trailing_unit(context: &mut Context, block: &mut Block) {
             let semi_msg = "Invalid trailing ';'";
             let unreachable_msg = "Any code after this expression will not be reached";
             let info_msg = "A trailing ';' in an expression block implicitly adds a '()' value \
-            after the semicolon. That '()' value will not be reachable";
+                        after the semicolon. That '()' value will not be reachable";
             $context.error(vec![
                 ($uloc, semi_msg),
                 ($loc, unreachable_msg),

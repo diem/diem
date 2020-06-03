@@ -170,14 +170,16 @@ impl AliasMap {
         // propagate uses of aliases
         used_modules
             .iter()
-            .filter(|a| /* remove newly declared aliaes */ !inner_scope_modules.contains(a))
+            // remove newly declared aliaes
+            .filter(|a| !inner_scope_modules.contains(a))
             .for_each(|a| {
                 // get the module alias to mark it as used
                 outer_scope.module_alias_get(a);
             });
         used_members
             .iter()
-            .filter(|a| /* remove newly declared aliaes */ !inner_scope_members.contains(a))
+            // remove newly declared aliaes
+            .filter(|a| !inner_scope_members.contains(a))
             .for_each(|a| {
                 // get the member alias to mark it as used
                 outer_scope.member_alias_get(a);

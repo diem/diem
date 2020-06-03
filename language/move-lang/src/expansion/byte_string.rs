@@ -106,8 +106,8 @@ fn decode_(context: &mut Context, buffer: &mut Vec<u8>, chars: Vec<char>) {
                             None => "".to_string(),
                         };
                         let err_text = format!(
-                            "Invalid escape: '\\x{}'. Hex literals are represented by two symbols: \
-                            [\\x00-\\xFF].",
+                            "Invalid escape: '\\x{}'. Hex literals are represented by two \
+                             symbols: [\\x00-\\xFF].",
                             h
                         );
                         context.error(cur, len, err_text);

@@ -151,7 +151,8 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
                                         format!("The parameter '{}' {} a resource value", l, verb)
                                     } else {
                                         format!(
-                                            "The local '{}' {} a resource value due to this assignment",
+                                            "The local '{}' {} a resource value due to this \
+                                             assignment",
                                             l, verb
                                         )
                                     }
@@ -201,8 +202,8 @@ fn lvalue(context: &mut Context, sp!(loc, l_): &LValue) {
                             DisplayVar::Orig(s) => s,
                         };
                         let msg = format!(
-                            "The local {} a resource value due to this assignment. The \
-                             resource must be used before you assign to this local again",
+                            "The local {} a resource value due to this assignment. The resource \
+                             must be used before you assign to this local again",
                             verb
                         );
                         context.error(vec![
@@ -275,8 +276,8 @@ fn use_local(context: &mut Context, loc: &Loc, local: &Var) {
                 DisplayVar::Orig(s) => s,
             };
             let msg = format!(
-                "The local {} not have a value due to this position. The local must be assigned \
-                 a value before being used",
+                "The local {} not have a value due to this position. The local must be assigned a \
+                 value before being used",
                 verb
             );
             context.error(vec![
