@@ -7,7 +7,6 @@ use libra_crypto::{
     HashValue,
 };
 use serde::{Deserialize, Serialize};
-use std::time::{Duration, SystemTime};
 
 /// CryptoStorage offers a secure storage engine for generating, using and managing cryptographic
 /// keys securely. The API offered here is inspired by the 'Transit Secret Engine' provided by
@@ -88,21 +87,4 @@ pub struct PublicKeyResponse {
     pub last_update: u64,
     /// Ed25519PublicKey stored at the provided key
     pub public_key: Ed25519PublicKey,
-}
-
-impl PublicKeyResponse {
-    /// Creates a PublicKeyResponse using the current time for the timestamp
-    pub fn new(public_key: Ed25519PublicKey) -> Self {
-        Self {
-            public_key,
-            last_update: Self::now().as_secs(),
-        }
-    }
-
-    /// Returns back a Duration encompassing the current system time less the Unix Epoch
-    fn now() -> Duration {
-        SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-    }
 }
