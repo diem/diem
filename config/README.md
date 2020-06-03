@@ -151,7 +151,7 @@ Similarly a public network could be added via:
 There are several different configurations contained within Libra Configuration.
 
 ### Libra Node Configuration
-The Libra Configuration contains several modules:
+The Libra Node configuration contains several modules:
 
 - AdmissionControlConfig - Where a Libra Node hosts their AC
 - BaseConfig - Specifies the Node's role and base directories
@@ -160,7 +160,6 @@ The Libra Configuration contains several modules:
   system
 - ExecutionConfig - The gRPC service endpoint and path to the genesis file
   that defines the Move standard library and the initial Validator set.
-- LoggerConfig - Configures the Libra logging service
 - MempoolConfig - Parameters for configuring uncommitted transaction storage
 - MetricsConfig - Local storage for metrics
 - NetworkConfig - LibraNet configuration file that specifies peers with keys,
@@ -173,8 +172,17 @@ and other network configuration parameters
   set of peers that provide the data
 - StorageConfig - Where the LibraDB is stored and its gRPC service endpoints
 
+### External Component Configurations
+Outside of each Libra Node, external components can also be configured:
+
+- KeyManagerConfig - This contains configurations details for starting and
+operating the Key Manager: the component service responsible for rotating
+cryptographic keys for Libra Nodes.
+
 ### Shared Configuration
 
+- LoggerConfig - Configures the logging service for each component
+- SecureBackendConfig - Configures the secure storage backend used by each component
 - TestConfig - Used during tests to hold account keys and temporary paths for
   the configurations that will automatically be cleaned up after the test.
 
