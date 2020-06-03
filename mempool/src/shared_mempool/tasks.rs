@@ -7,8 +7,9 @@ use crate::{
     core_mempool::{CoreMempool, TimelineState, TxnPointer},
     counters,
     network::{MempoolNetworkSender, MempoolSyncMsg},
-    shared_mempool::types::{
-        notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification,
+    shared_mempool::{
+        peer_manager::PeerManager,
+        types::{notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification},
     },
     CommitNotification, CommitResponse, CommittedTransaction, ConsensusRequest, ConsensusResponse,
     SubmissionStatus,
@@ -330,25 +331,28 @@ fn log_txn_process_results(results: &[SubmissionStatus], sender: Option<PeerId>)
 /// processes ACK from peer node regarding txn submission to that node
 pub(crate) fn process_broadcast_ack(
     mempool: &Mutex<CoreMempool>,
+    peer: PeerNetworkId,
     request_id: String,
     retry_txns: Vec<u64>,
     is_validator: bool, // whether this node is a validator or not
+    peer_manager: Arc<PeerManager>,
 ) {
-    if is_validator {
-        return;
-    }
-
-    match parse_request_id(request_id) {
+    match parse_request_id(request_id.clone()) {
         Ok((start_id, end_id)) => {
-            let mut mempool = mempool
-                .lock()
-                .expect("[shared mempool] failed to acquire mempool lock");
+            // for full nodes, remove successfully ACK'ed txns from mempool
+            if !is_validator {
+                let mut mempool = mempool
+                    .lock()
+                    .expect("[shared mempool] failed to acquire mempool lock");
 
-            for (idx, txn) in mempool.timeline_range(start_id, end_id).iter().enumerate() {
-                if !retry_txns.contains(&(idx as u64 + start_id)) {
-                    mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
+                for (idx, txn) in mempool.timeline_range(start_id, end_id).iter().enumerate() {
+                    if !retry_txns.contains(&(idx as u64 + start_id)) {
+                        mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
+                    }
                 }
             }
+
+            peer_manager.process_broadcast_ack(peer, request_id, retry_txns);
         }
         Err(err) => warn!("[shared mempool] ACK with invalid request_id: {:?}", err),
     }
