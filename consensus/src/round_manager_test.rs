@@ -238,7 +238,7 @@ impl NodeSetup {
         match self.all_events.next().await.unwrap().unwrap() {
             Event::Message((_, msg)) => match msg {
                 ConsensusMsg::ProposalMsg(p) => *p,
-                _ => panic!("Unexpected Consensus Message"),
+                msg => panic!("Unexpected Consensus Message: {:?}", msg),
             },
             _ => panic!("Unexpected Network Event"),
         }
@@ -248,7 +248,7 @@ impl NodeSetup {
         match self.all_events.next().await.unwrap().unwrap() {
             Event::Message((_, msg)) => match msg {
                 ConsensusMsg::VoteMsg(v) => *v,
-                _ => panic!("Unexpected Consensus Message"),
+                msg => panic!("Unexpected Consensus Message: {:?}", msg),
             },
             _ => panic!("Unexpected Network Event"),
         }
@@ -258,7 +258,7 @@ impl NodeSetup {
         match self.all_events.next().await.unwrap().unwrap() {
             Event::Message((_, msg)) => match msg {
                 ConsensusMsg::SyncInfo(s) => *s,
-                _ => panic!("Unexpected Consensus Message"),
+                msg => panic!("Unexpected Consensus Message: {:?}", msg),
             },
             _ => panic!("Unexpected Network Event"),
         }

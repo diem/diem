@@ -14,7 +14,7 @@ fn test_rotating_proposer() {
     let another_validator_signer = ValidatorSigner::random([1u8; 32]);
     let another_author = another_validator_signer.author();
     let proposers = vec![chosen_author, another_author];
-    let mut pe: Box<dyn ProposerElection<u32>> = Box::new(RotatingProposer::new(proposers, 1));
+    let pe: Box<dyn ProposerElection<u32>> = Box::new(RotatingProposer::new(proposers, 1));
 
     // Send a proposal from both chosen author and another author, the only winning proposals
     // follow the round-robin rotation.
@@ -26,24 +26,15 @@ fn test_rotating_proposer() {
         Block::new_proposal(1, 1, 1, quorum_cert.clone(), &another_validator_signer);
     let bad_proposal = Block::new_proposal(2, 1, 2, quorum_cert.clone(), &chosen_validator_signer);
     let next_good_proposal = Block::new_proposal(3, 2, 3, quorum_cert, &chosen_validator_signer);
-    assert_eq!(
-        pe.process_proposal(good_proposal.clone()),
-        Some(good_proposal)
-    );
-    assert_eq!(pe.process_proposal(bad_proposal), None);
-    assert_eq!(
-        pe.process_proposal(next_good_proposal.clone()),
-        Some(next_good_proposal)
-    );
-    assert_eq!(pe.is_valid_proposer(chosen_author, 1), None);
-    assert_eq!(
-        pe.is_valid_proposer(another_author, 1),
-        Some(another_author)
-    );
-    assert_eq!(pe.is_valid_proposer(chosen_author, 2), Some(chosen_author));
-    assert_eq!(pe.is_valid_proposer(another_author, 2), None);
-    assert_eq!(pe.get_valid_proposers(1), vec![another_author]);
-    assert_eq!(pe.get_valid_proposers(2), vec![chosen_author]);
+    assert!(pe.is_valid_proposal(&good_proposal));
+    assert!(!pe.is_valid_proposal(&bad_proposal));
+    assert!(pe.is_valid_proposal(&next_good_proposal),);
+    assert!(!pe.is_valid_proposer(chosen_author, 1));
+    assert!(pe.is_valid_proposer(another_author, 1),);
+    assert!(pe.is_valid_proposer(chosen_author, 2));
+    assert!(!pe.is_valid_proposer(another_author, 2));
+    assert_eq!(pe.get_valid_proposer(1), another_author);
+    assert_eq!(pe.get_valid_proposer(2), chosen_author);
 }
 
 #[test]
@@ -53,7 +44,7 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
     let another_validator_signer = ValidatorSigner::random([1u8; 32]);
     let another_author = another_validator_signer.author();
     let proposers = vec![chosen_author, another_author];
-    let mut pe: Box<dyn ProposerElection<u32>> = Box::new(RotatingProposer::new(proposers, 3));
+    let pe: Box<dyn ProposerElection<u32>> = Box::new(RotatingProposer::new(proposers, 3));
 
     // Send a proposal from both chosen author and another author, the only winning proposals
     // follow the round-robin rotation with 3 contiguous rounds.
@@ -64,21 +55,15 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
     let good_proposal = Block::new_proposal(1, 1, 1, quorum_cert.clone(), &chosen_validator_signer);
     let bad_proposal = Block::new_proposal(2, 1, 2, quorum_cert.clone(), &another_validator_signer);
     let next_good_proposal = Block::new_proposal(3, 2, 3, quorum_cert, &chosen_validator_signer);
-    assert_eq!(
-        pe.process_proposal(good_proposal.clone()),
-        Some(good_proposal)
-    );
-    assert_eq!(pe.process_proposal(bad_proposal), None);
-    assert_eq!(
-        pe.process_proposal(next_good_proposal.clone()),
-        Some(next_good_proposal)
-    );
-    assert_eq!(pe.is_valid_proposer(another_author, 1), None);
-    assert_eq!(pe.is_valid_proposer(chosen_author, 1), Some(chosen_author));
-    assert_eq!(pe.is_valid_proposer(chosen_author, 2), Some(chosen_author));
-    assert_eq!(pe.is_valid_proposer(another_author, 2), None);
-    assert_eq!(pe.get_valid_proposers(1), vec![chosen_author]);
-    assert_eq!(pe.get_valid_proposers(2), vec![chosen_author]);
+    assert!(pe.is_valid_proposal(&good_proposal),);
+    assert!(!pe.is_valid_proposal(&bad_proposal));
+    assert!(pe.is_valid_proposal(&next_good_proposal),);
+    assert!(!pe.is_valid_proposer(another_author, 1));
+    assert!(pe.is_valid_proposer(chosen_author, 1));
+    assert!(pe.is_valid_proposer(chosen_author, 2));
+    assert!(!pe.is_valid_proposer(another_author, 2));
+    assert_eq!(pe.get_valid_proposer(1), chosen_author);
+    assert_eq!(pe.get_valid_proposer(2), chosen_author);
 }
 
 #[test]
@@ -87,7 +72,7 @@ fn test_fixed_proposer() {
     let chosen_author = chosen_validator_signer.author();
     let another_validator_signer = ValidatorSigner::random([1u8; 32]);
     let another_author = another_validator_signer.author();
-    let mut pe: Box<dyn ProposerElection<u32>> =
+    let pe: Box<dyn ProposerElection<u32>> =
         Box::new(RotatingProposer::new(vec![chosen_author], 1));
 
     // Send a proposal from both chosen author and another author, the only winning proposal is
@@ -99,16 +84,10 @@ fn test_fixed_proposer() {
     let good_proposal = Block::new_proposal(1, 1, 1, quorum_cert.clone(), &chosen_validator_signer);
     let bad_proposal = Block::new_proposal(2, 1, 2, quorum_cert.clone(), &another_validator_signer);
     let next_good_proposal = Block::new_proposal(2, 2, 3, quorum_cert, &chosen_validator_signer);
-    assert_eq!(
-        pe.process_proposal(good_proposal.clone()),
-        Some(good_proposal)
-    );
-    assert_eq!(pe.process_proposal(bad_proposal), None);
-    assert_eq!(
-        pe.process_proposal(next_good_proposal.clone()),
-        Some(next_good_proposal)
-    );
-    assert_eq!(pe.is_valid_proposer(chosen_author, 1), Some(chosen_author));
-    assert_eq!(pe.is_valid_proposer(another_author, 1), None);
-    assert_eq!(pe.get_valid_proposers(1), vec![chosen_author]);
+    assert!(pe.is_valid_proposal(&good_proposal));
+    assert!(!pe.is_valid_proposal(&bad_proposal));
+    assert!(pe.is_valid_proposal(&next_good_proposal));
+    assert!(pe.is_valid_proposer(chosen_author, 1));
+    assert!(!pe.is_valid_proposer(another_author, 1));
+    assert_eq!(pe.get_valid_proposer(1), chosen_author);
 }

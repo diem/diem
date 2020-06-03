@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::liveness::proposer_election::ProposerElection;
-use consensus_types::{
-    block::Block,
-    common::{Author, Payload, Round},
-};
+use consensus_types::common::{Author, Payload, Round};
 
 /// The rotating proposer maps a round to an author according to a round-robin rotation.
 /// A fixed proposer strategy loses liveness when the fixed proposer is down. Rotating proposers
@@ -22,7 +19,6 @@ pub struct RotatingProposer {
 /// election only).
 pub fn choose_leader(peers: Vec<Author>) -> Author {
     // As it is just a tmp hack function, pick the min PeerId to be a proposer.
-    // TODO: VRF will be integrated later.
     peers.into_iter().min().expect("No trusted peers found!")
 }
 
@@ -34,38 +30,11 @@ impl RotatingProposer {
             contiguous_rounds,
         }
     }
-
-    fn get_proposer(&self, round: Round) -> Author {
-        self.proposers
-            [((round / u64::from(self.contiguous_rounds)) % self.proposers.len() as u64) as usize]
-    }
 }
 
 impl<T: Payload> ProposerElection<T> for RotatingProposer {
-    fn is_valid_proposer(&self, author: Author, round: Round) -> Option<Author> {
-        if self.get_proposer(round) == author {
-            Some(author)
-        } else {
-            None
-        }
-    }
-
-    fn get_valid_proposers(&self, round: Round) -> Vec<Author> {
-        vec![self.get_proposer(round)]
-    }
-
-    fn process_proposal(&mut self, proposal: Block<T>) -> Option<Block<T>> {
-        // This is a simple rotating proposer, the proposal is processed in the context of the
-        // caller task, no synchronization required because there is no mutable state.
-        let round_author = self.get_proposer(proposal.round());
-        if Some(round_author) != proposal.author() {
-            None
-        } else {
-            Some(proposal)
-        }
-    }
-
-    fn take_backup_proposal(&mut self, _round: Round) -> Option<Block<T>> {
-        None
+    fn get_valid_proposer(&self, round: Round) -> Author {
+        self.proposers
+            [((round / u64::from(self.contiguous_rounds)) % self.proposers.len() as u64) as usize]
     }
 }

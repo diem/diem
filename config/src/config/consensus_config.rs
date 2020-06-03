@@ -45,8 +45,6 @@ pub enum ConsensusProposerType {
     FixedProposer,
     // Round robin rotation of proposers
     RotatingProposer,
-    // Multiple ordered proposers per round (primary, secondary, etc.)
-    MultipleOrderedProposers,
     // Committed history based proposer election
     LeaderReputation(LeaderReputationConfig),
 }

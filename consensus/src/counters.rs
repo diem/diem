@@ -137,12 +137,6 @@ pub static PROPOSALS_COUNT: Lazy<IntCounter> = Lazy::new(|| {
     register_int_counter!("libra_consensus_proposals_count", "Count of the block proposals sent by this validator since last restart (both primary and secondary)").unwrap()
 });
 
-/// Count the number of times a validator voted for secondary proposals (upon timeout) since
-/// last restart.
-pub static VOTE_SECONDARY_PROPOSAL_COUNT: Lazy<IntCounter> = Lazy::new(|| {
-    register_int_counter!("libra_consensus_vote_secondary_proposal_count", "Count the number of times a validator voted for secondary proposals (upon timeout) since last restart.").unwrap()
-});
-
 /// Count the number of times a validator voted for a nil block since last restart.
 pub static VOTE_NIL_COUNT: Lazy<IntCounter> = Lazy::new(|| {
     register_int_counter!(
