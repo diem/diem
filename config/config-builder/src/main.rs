@@ -309,20 +309,18 @@ fn build_key_manager(args: KeyManagerArgs) {
     }
 
     let mut config_builder = KeyManagerConfig::new();
-    config_builder
-        .json_rpc_endpoint(args.json_rpc_endpoint.clone())
-        .time_constants(
-            args.rotation_period_secs.clone(),
-            args.sleep_period_secs.clone(),
-            args.txn_expiration_secs.clone(),
-        )
-        .validator_account(args.validator_account.clone())
-        .vault_storage(
-            args.vault_host.clone(),
-            args.vault_namespace.clone(),
-            args.vault_token.clone(),
-        )
-        .template(load_key_manager_template(args.template.as_ref()));
+    config_builder.rotation_period_secs = args.rotation_period_secs;
+    config_builder.sleep_period_secs = args.sleep_period_secs;
+    config_builder.txn_expiration_secs = args.txn_expiration_secs;
+
+    config_builder.json_rpc_endpoint = args.json_rpc_endpoint.clone();
+    config_builder.validator_account = args.validator_account;
+
+    config_builder.vault_host = args.vault_host.clone();
+    config_builder.vault_namespace = args.vault_namespace.clone();
+    config_builder.vault_token = args.vault_token.clone();
+
+    config_builder.template = load_key_manager_template(args.template.as_ref());
 
     let mut key_manager_config = config_builder.build().expect("ConfigBuilder failed");
     key_manager_config.set_data_dir(args.data_dir);
