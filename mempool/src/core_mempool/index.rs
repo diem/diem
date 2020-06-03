@@ -201,6 +201,11 @@ impl TimelineIndex {
         }
     }
 
+    /// get transaction at `timeline_id`
+    pub(crate) fn get_timeline_entry(&mut self, timeline_id: u64) -> Option<(AccountAddress, u64)> {
+        self.timeline.get(&timeline_id).cloned()
+    }
+
     /// read all transactions from timeline since <timeline_id>
     pub(crate) fn read_timeline(
         &mut self,
@@ -216,22 +221,6 @@ impl TimelineIndex {
             if batch.len() == count {
                 break;
             }
-        }
-        batch
-    }
-
-    /// read all transactions from timeline for timeline id in range (`start_timeline_id`, `end_timeline_id`]
-    pub(crate) fn range(
-        &mut self,
-        start_timeline_id: u64,
-        end_timeline_id: u64,
-    ) -> Vec<(AccountAddress, u64)> {
-        let mut batch = vec![];
-        for (_, &(address, sequence_number)) in self.timeline.range((
-            Bound::Excluded(start_timeline_id),
-            Bound::Included(end_timeline_id),
-        )) {
-            batch.push((address, sequence_number));
         }
         batch
     }

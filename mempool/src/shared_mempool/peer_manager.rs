@@ -130,6 +130,18 @@ impl PeerManager {
         }
     }
 
+    pub fn get_broadcast_batch(&self, peer: PeerNetworkId, batch_id: &str) -> Option<Vec<u64>> {
+        self.peer_info
+            .lock()
+            .expect("failed to acquire lock")
+            .get(&peer)
+            .expect("missing peer")
+            .broadcast_info
+            .sent_batches
+            .get(batch_id)
+            .cloned()
+    }
+
     pub fn is_upstream_peer(&self, peer: PeerNetworkId) -> bool {
         self.upstream_config.is_upstream_peer(peer)
     }
