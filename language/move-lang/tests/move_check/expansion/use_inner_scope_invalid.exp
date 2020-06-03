@@ -1,0 +1,24 @@
+error: 
+
+    ┌── tests/move_check/expansion/use_inner_scope_invalid.move:17:23 ───
+    │
+ 17 │         use 0x1::M as Self;
+    │                       ^^^^ Invalid module alias name 'Self'. 'Self' is restricted and cannot be used to name a module alias
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/use_inner_scope_invalid.move:18:28 ───
+    │
+ 18 │         use 0x1::M::{S1 as s1, Foo as foo};
+    │                            ^^ Invalid struct alias name 's1'. Struct alias names must start with 'A'..'Z'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/use_inner_scope_invalid.move:18:39 ───
+    │
+ 18 │         use 0x1::M::{S1 as s1, Foo as foo};
+    │                                       ^^^ Invalid schema alias name 'foo'. Schema alias names must start with 'A'..'Z'
+    │
+
