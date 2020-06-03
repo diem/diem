@@ -469,8 +469,9 @@ function {:inline} $TxnSender(txn: $Transaction): $Value {
 
 // Forward declaration of type Value of LibraAccount. This is declared so we can define
 // $ExistsTxnSenderAccount and $LibraAccount_save_account
+const unique $LibraAccount_T: $TypeName;
 function $LibraAccount_T_type_value(): $TypeValue;
-
+axiom is#$StructType($LibraAccount_T_type_value()) && name#$StructType($LibraAccount_T_type_value()) == $LibraAccount_T;
 function $LibraAccount_Balance_type_value(tv: $TypeValue): $TypeValue;
 
 // ============================================================================================
