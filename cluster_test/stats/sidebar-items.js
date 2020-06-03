@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["avg_latency",""],["avg_tps",""],["avg_txns_per_block",""],["txn_stats",""]]});
+initSidebarItems({"fn":[["avg_txns_per_block",""]]});
