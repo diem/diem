@@ -25,7 +25,7 @@ pub use prometheus::{
 
 use anyhow::Result;
 use libra_logger::prelude::*;
-use prometheus::{core::Collector, proto::MetricType, Encoder, TextEncoder};
+use prometheus::{proto::MetricType, Encoder, TextEncoder};
 use std::{
     collections::HashMap,
     fs::{create_dir_all, File, OpenOptions},
@@ -116,11 +116,4 @@ pub fn dump_all_metrics_to_file_periodically<P: AsRef<Path>>(
         }
         thread::sleep(time::Duration::from_millis(interval));
     });
-}
-
-pub fn get_metric_name<M>(metric: &M) -> String
-where
-    M: Collector,
-{
-    metric.collect()[0].get_name().to_string()
 }
