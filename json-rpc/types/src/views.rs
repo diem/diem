@@ -332,16 +332,6 @@ pub enum TransactionDataView {
     UnknownTransaction {},
 }
 
-impl TransactionView {
-    pub fn get_transaction_name(&self) -> String {
-        if let TransactionDataView::UserTransaction { script, .. } = &self.transaction {
-            script.get_name()
-        } else {
-            "".to_string()
-        }
-    }
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(tag = "type")]
 // TODO cover all script types
