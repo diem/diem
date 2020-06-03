@@ -10,11 +10,11 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0"
+anyhow = "1.0.31"
 hex = "0.4.2"
 rand = "0.7.3"
 structopt = "0.3.14"
-thiserror = "1.0"
+thiserror = "1.0.19"
 
 executor = { path = "../../execution/executor", version = "0.1.0" }
 generate-key = { path = "../../config/generate-key", version = "0.1.0" }

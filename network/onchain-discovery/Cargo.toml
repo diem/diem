@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0"
+anyhow = "1.0.31"
 bytes = "0.5.4"
 futures = "0.3.5"
 rand = "0.7.3"

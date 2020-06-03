@@ -10,15 +10,15 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0"
+anyhow = "1.0.31"
 hex = "0.4.2"
 rand = "0.7.3"
 proptest = { version = "0.10.0", default-features = false, optional = true }
 mirai-annotations = "1.8.0"
 proptest-derive = { version = "0.2.0", default-features = false, optional = true }
-ref-cast = "1.0"
+ref-cast = "1.0.1"
 serde = { version = "1.0.111", default-features = false }
-thiserror = "1.0"
+thiserror = "1.0.19"
 
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }

@@ -12,7 +12,7 @@ edition = "2018"
 # Do NOT add any inter-project dependencies.
 # This is to avoid ever having a circular dependency with the libra-logger crate.
 [dependencies]
-chrono = "0.4.9"
+chrono = "0.4.11"
 env_logger = { version = "0.7.1", default-features = false }
 libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 log = "0.4.8"
