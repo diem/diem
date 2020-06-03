@@ -9,8 +9,7 @@
 
 use executor_types::ExecutedTrees;
 use libra_types::{
-    account_address::AccountAddress, epoch_state::EpochState,
-    ledger_info::LedgerInfoWithSignatures, validator_verifier::ValidatorVerifier,
+    account_address::AccountAddress, epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures,
 };
 pub use synchronizer::{StateSyncClient, StateSynchronizer};
 
@@ -66,10 +65,6 @@ impl SynchronizerState {
 
     pub fn epoch(&self) -> u64 {
         self.trusted_epoch.epoch
-    }
-
-    pub fn verifier(&self) -> &ValidatorVerifier {
-        &self.trusted_epoch.verifier
     }
 }
 
