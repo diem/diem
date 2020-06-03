@@ -26,20 +26,20 @@ const DEFAULT_ADVERTISED: &str = "/ip4/127.0.0.1/tcp/6180";
 const DEFAULT_LISTEN: &str = "/ip4/0.0.0.0/tcp/6180";
 
 pub struct ValidatorConfig {
-    advertised: NetworkAddress,
-    build_waypoint: bool,
-    bootstrap: NetworkAddress,
-    index: usize,
-    listen: NetworkAddress,
-    nodes: usize,
-    nodes_in_genesis: Option<usize>,
-    safety_rules_addr: Option<SocketAddr>,
-    safety_rules_backend: Option<String>,
-    safety_rules_host: Option<String>,
-    safety_rules_namespace: Option<String>,
-    safety_rules_token: Option<String>,
-    seed: [u8; 32],
-    template: NodeConfig,
+    pub advertised: NetworkAddress,
+    pub build_waypoint: bool,
+    pub bootstrap: NetworkAddress,
+    pub index: usize,
+    pub listen: NetworkAddress,
+    pub nodes: usize,
+    pub nodes_in_genesis: Option<usize>,
+    pub safety_rules_addr: Option<SocketAddr>,
+    pub safety_rules_backend: Option<String>,
+    pub safety_rules_host: Option<String>,
+    pub safety_rules_namespace: Option<String>,
+    pub safety_rules_token: Option<String>,
+    pub seed: [u8; 32],
+    pub template: NodeConfig,
 }
 
 impl Default for ValidatorConfig {
@@ -66,71 +66,6 @@ impl Default for ValidatorConfig {
 impl ValidatorConfig {
     pub fn new() -> Self {
         Self::default()
-    }
-
-    pub fn advertised(&mut self, advertised: NetworkAddress) -> &mut Self {
-        self.advertised = advertised;
-        self
-    }
-
-    pub fn bootstrap(&mut self, bootstrap: NetworkAddress) -> &mut Self {
-        self.bootstrap = bootstrap;
-        self
-    }
-
-    pub fn build_waypoint(&mut self, enabled: bool) -> &mut Self {
-        self.build_waypoint = enabled;
-        self
-    }
-
-    pub fn validator_index(&mut self, index: usize) -> &mut Self {
-        self.index = index;
-        self
-    }
-
-    pub fn listen(&mut self, listen: NetworkAddress) -> &mut Self {
-        self.listen = listen;
-        self
-    }
-
-    pub fn validators(&mut self, nodes: usize) -> &mut Self {
-        self.nodes = nodes;
-        self
-    }
-
-    pub fn validators_in_genesis(&mut self, nodes_in_genesis: Option<usize>) -> &mut Self {
-        self.nodes_in_genesis = nodes_in_genesis;
-        self
-    }
-
-    pub fn safety_rules_addr(&mut self, safety_rules_addr: Option<SocketAddr>) -> &mut Self {
-        self.safety_rules_addr = safety_rules_addr;
-        self
-    }
-
-    pub fn safety_rules_backend(
-        &mut self,
-        safety_rules_backend: Option<String>,
-        safety_rules_host: Option<String>,
-        safety_rules_namespace: Option<String>,
-        safety_rules_token: Option<String>,
-    ) -> &mut Self {
-        self.safety_rules_backend = safety_rules_backend;
-        self.safety_rules_host = safety_rules_host;
-        self.safety_rules_namespace = safety_rules_namespace;
-        self.safety_rules_token = safety_rules_token;
-
-        self
-    }
-
-    pub fn seed(&mut self, seed: [u8; 32]) -> &mut Self {
-        self.seed = seed;
-        self
-    }
-
-    pub fn template(&mut self, template: NodeConfig) -> &mut Self {
-        self.template = template;
-        self
     }
 
     pub fn build(&self) -> Result<NodeConfig> {
@@ -297,11 +232,10 @@ mod test {
     #[test]
     fn verify_correctness() {
         let mut validator_config = ValidatorConfig::new();
-        let config = validator_config
-            .validators(2)
-            .validator_index(1)
-            .build()
-            .unwrap();
+        validator_config.nodes = 2;
+        validator_config.index = 1;
+
+        let config = validator_config.build().unwrap();
         let network = config.validator_network.as_ref().unwrap();
 
         network.seed_peers.verify_libranet_addrs().unwrap();
@@ -324,17 +258,16 @@ mod test {
 
     #[test]
     fn verify_same_genesis() {
-        let config1 = ValidatorConfig::new()
-            .validators(10)
-            .validator_index(1)
-            .build()
-            .unwrap();
-        let config2 = ValidatorConfig::new()
-            .validators(13)
-            .validator_index(12)
-            .validators_in_genesis(Some(10))
-            .build()
-            .unwrap();
+        let mut config1 = ValidatorConfig::new();
+        config1.nodes = 10;
+        config1.index = 1;
+        let config1 = config1.build().unwrap();
+
+        let mut config2 = ValidatorConfig::new();
+        config2.nodes = 13;
+        config2.index = 12;
+        config2.nodes_in_genesis = Some(10);
+        let config2 = config2.build().unwrap();
 
         assert_eq!(config1.execution.genesis, config2.execution.genesis);
     }

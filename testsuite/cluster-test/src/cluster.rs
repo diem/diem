@@ -48,7 +48,9 @@ impl Cluster {
         let seed = "1337133713371337133713371337133713371337133713371337133713371337";
         let seed = hex::decode(seed).expect("Invalid hex in seed.");
         let seed = seed[..32].try_into().expect("Invalid seed");
-        let (mint_key, _) = ValidatorConfig::new().seed(seed).build_faucet_key();
+        let mut validator_config = ValidatorConfig::new();
+        validator_config.seed = seed;
+        let (mint_key, _) = validator_config.build_faucet_key();
         KeyPair::from(mint_key)
     }
 

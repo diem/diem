@@ -25,10 +25,8 @@ use std::collections::BTreeMap;
 
 fn build_test_config() -> (NodeConfig, Ed25519PrivateKey) {
     let mut validator_config = config_builder::ValidatorConfig::new();
-    let (mut configs, key) = validator_config
-        .build_waypoint(false)
-        .build_common(false)
-        .unwrap();
+    validator_config.build_waypoint = false;
+    let (mut configs, key) = validator_config.build_common(false).unwrap();
     (configs.swap_remove(0), key)
 }
 
