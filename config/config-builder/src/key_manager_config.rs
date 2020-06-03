@@ -6,18 +6,18 @@ use libra_config::config::{KeyManagerConfig as KMConfig, SecureBackend, Token, V
 use libra_types::account_address::AccountAddress;
 
 pub struct KeyManagerConfig {
-    rotation_period_secs: Option<u64>,
-    sleep_period_secs: Option<u64>,
-    txn_expiration_secs: Option<u64>,
+    pub rotation_period_secs: Option<u64>,
+    pub sleep_period_secs: Option<u64>,
+    pub txn_expiration_secs: Option<u64>,
 
-    json_rpc_endpoint: String,
-    validator_account: AccountAddress,
+    pub json_rpc_endpoint: String,
+    pub validator_account: AccountAddress,
 
-    vault_host: String,
-    vault_namespace: Option<String>,
-    vault_token: String,
+    pub vault_host: String,
+    pub vault_namespace: Option<String>,
+    pub vault_token: String,
 
-    template: KMConfig,
+    pub template: KMConfig,
 }
 
 impl Default for KeyManagerConfig {
@@ -40,45 +40,6 @@ impl Default for KeyManagerConfig {
 impl KeyManagerConfig {
     pub fn new() -> Self {
         Self::default()
-    }
-
-    pub fn json_rpc_endpoint(&mut self, json_rpc_endpoint: String) -> &mut Self {
-        self.json_rpc_endpoint = json_rpc_endpoint;
-        self
-    }
-
-    pub fn time_constants(
-        &mut self,
-        rotation_period_secs: Option<u64>,
-        sleep_period_secs: Option<u64>,
-        txn_expiration_secs: Option<u64>,
-    ) -> &mut Self {
-        self.rotation_period_secs = rotation_period_secs;
-        self.sleep_period_secs = sleep_period_secs;
-        self.txn_expiration_secs = txn_expiration_secs;
-        self
-    }
-
-    pub fn validator_account(&mut self, validator_account: AccountAddress) -> &mut Self {
-        self.validator_account = validator_account;
-        self
-    }
-
-    pub fn vault_storage(
-        &mut self,
-        vault_host: String,
-        vault_namespace: Option<String>,
-        vault_token: String,
-    ) -> &mut Self {
-        self.vault_host = vault_host;
-        self.vault_namespace = vault_namespace;
-        self.vault_token = vault_token;
-        self
-    }
-
-    pub fn template(&mut self, template: KMConfig) -> &mut Self {
-        self.template = template;
-        self
     }
 
     pub fn build(&self) -> Result<KMConfig> {
@@ -114,18 +75,18 @@ mod test {
     fn verify_generation() {
         let json_rpc_endpoint = "http://127.12.12.12:7873";
         let rotation_period_secs = 100;
+        let validator_account = AccountAddress::default();
         let vault_host = "182.0.0.1:8080";
         let vault_token = "root_token";
-        let validator_account = AccountAddress::default();
 
         let mut key_manager_config = KeyManagerConfig::new();
-        let key_manager_config = key_manager_config
-            .json_rpc_endpoint(json_rpc_endpoint.into())
-            .time_constants(Some(rotation_period_secs), None, None)
-            .validator_account(validator_account)
-            .vault_storage(vault_host.into(), None, vault_token.into())
-            .build()
-            .unwrap();
+        key_manager_config.json_rpc_endpoint = json_rpc_endpoint.into();
+        key_manager_config.rotation_period_secs = Some(rotation_period_secs);
+        key_manager_config.validator_account = validator_account;
+        key_manager_config.vault_host = vault_host.into();
+        key_manager_config.vault_token = vault_token.into();
+
+        let key_manager_config = key_manager_config.build().unwrap();
 
         assert_eq!(json_rpc_endpoint, key_manager_config.json_rpc_endpoint);
         assert_eq!(validator_account, key_manager_config.validator_account);
