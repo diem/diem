@@ -96,7 +96,7 @@ impl FullNodeConfig {
     }
 
     pub fn validators(&mut self, nodes: usize) -> &mut Self {
-        self.validator_config.validators(nodes);
+        self.validator_config.nodes = nodes;
         self
     }
 
@@ -111,7 +111,7 @@ impl FullNodeConfig {
     }
 
     pub fn seed(&mut self, seed: [u8; 32]) -> &mut Self {
-        self.validator_config.seed(seed);
+        self.validator_config.seed = seed;
         self
     }
 

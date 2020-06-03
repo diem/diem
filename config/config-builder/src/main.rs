@@ -216,11 +216,11 @@ fn main() {
 
 fn build_faucet(args: FaucetArgs) {
     let mut config_builder = ValidatorConfig::new();
-    config_builder.validators(args.validators_in_genesis);
+    config_builder.nodes = args.validators_in_genesis;
 
     if let Some(seed) = args.seed.as_ref() {
         let seed = hex::decode(seed).expect("Invalid hex in seed.");
-        config_builder.seed(seed[..32].try_into().expect("Invalid seed"));
+        config_builder.seed = seed[..32].try_into().expect("Invalid seed");
     }
 
     let (faucet_key, waypoint) = config_builder
@@ -346,16 +346,15 @@ fn build_validator(args: ValidatorArgs) {
     }
 
     let mut config_builder = safety_rules_common(&args.validator_common);
-    config_builder
-        .advertised(args.advertised)
-        .bootstrap(args.bootstrap)
-        .validator_index(args.validator_common.validator_index)
-        .listen(args.listen)
-        .validators(args.validator_common.validators)
-        .validators_in_genesis(args.validator_common.validators_in_genesis);
+    config_builder.advertised = args.advertised;
+    config_builder.bootstrap = args.bootstrap;
+    config_builder.index = args.validator_common.validator_index;
+    config_builder.listen = args.listen;
+    config_builder.nodes = args.validator_common.validators;
+    config_builder.nodes_in_genesis = args.validator_common.validators_in_genesis;
 
     if let Some(seed) = args.validator_common.seed.as_ref() {
-        config_builder.seed(parse_seed(seed));
+        config_builder.seed = parse_seed(seed);
     }
 
     let mut node_config = config_builder.build().expect("ConfigBuilder failed");
@@ -368,20 +367,17 @@ fn build_validator(args: ValidatorArgs) {
 fn safety_rules_common(args: &ValidatorCommonArgs) -> ValidatorConfig {
     let mut config_builder = ValidatorConfig::new();
 
-    config_builder
-        .validator_index(args.validator_index)
-        .validators(args.validators)
-        .safety_rules_addr(args.safety_rules_addr.clone())
-        .safety_rules_backend(
-            args.safety_rules_backend.clone(),
-            args.safety_rules_host.clone(),
-            args.safety_rules_namespace.clone(),
-            args.safety_rules_token.clone(),
-        )
-        .template(load_node_template(args.template.as_ref()));
+    config_builder.index = args.validator_index;
+    config_builder.nodes = args.validators;
+    config_builder.safety_rules_addr = args.safety_rules_addr;
+    config_builder.safety_rules_backend = args.safety_rules_backend.clone();
+    config_builder.safety_rules_host = args.safety_rules_host.clone();
+    config_builder.safety_rules_namespace = args.safety_rules_namespace.clone();
+    config_builder.safety_rules_token = args.safety_rules_token.clone();
+    config_builder.template = load_node_template(args.template.as_ref());
 
     if let Some(seed) = args.seed.as_ref() {
-        config_builder.seed(parse_seed(seed));
+        config_builder.seed = parse_seed(seed);
     }
 
     config_builder
