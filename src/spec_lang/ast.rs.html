@@ -602,7 +602,7 @@
     <span class="doccomment">/// Returns true if this condition is allowed on a private function declaration.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">allowed_on_private_fun_decl</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="kw">use</span> <span class="ident">ConditionKind</span>::<span class="kw-2">*</span>;
-        <span class="macro">matches</span><span class="macro">!</span>(<span class="self">self</span>, <span class="ident">Requires</span> <span class="op">|</span> <span class="ident">AbortsIf</span> <span class="op">|</span> <span class="ident">Ensures</span>)
+        <span class="macro">matches</span><span class="macro">!</span>(<span class="self">self</span>, <span class="ident">Requires</span> <span class="op">|</span> <span class="ident">RequiresModule</span> <span class="op">|</span> <span class="ident">AbortsIf</span> <span class="op">|</span> <span class="ident">Ensures</span>)
     }
 
     <span class="doccomment">/// Returns true if this condition is allowed in a function body.</span>
