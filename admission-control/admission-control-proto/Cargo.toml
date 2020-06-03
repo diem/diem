@@ -10,10 +10,10 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0"
-tonic = "0.2"
+anyhow = "1.0.31"
+tonic = "0.2.1"
 tokio = { version = "0.2.21", features = ["full"] }
-prost = "0.6"
+prost = "0.6.1"
 
 grpc-types = { path = "../../grpc/types", version = "0.1.0"}
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
@@ -21,7 +21,7 @@ libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 [build-dependencies]
-tonic-build = "0.2"
+tonic-build = "0.2.0"
 
 [features]
 default = []

@@ -7,7 +7,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0"
+anyhow = "1.0.31"
 rand = { version = "0.7.3", default-features = false }
 
 executor = { path = "../executor", version = "0.1.0" }
@@ -23,7 +23,7 @@ libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 serde = { version = "1.0.111", default-features = false }
 storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
-thiserror = "1.0"
+thiserror = "1.0.19"
 
 [dev-dependencies]
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
