@@ -96,10 +96,6 @@ impl OpMetrics {
         self.peer_gauges.with_label_values(&[name, remote_peer_id])
     }
 
-    pub fn duration_histogram(&self, name: &str) -> DurationHistogram {
-        DurationHistogram::new(self.duration_histograms.with_label_values(&[name]))
-    }
-
     #[inline]
     pub fn inc(&self, op: &str) {
         self.counters.with_label_values(&[op]).inc();
