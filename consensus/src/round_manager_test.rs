@@ -11,7 +11,7 @@ use crate::{
     },
     network::{IncomingBlockRetrievalRequest, NetworkSender},
     network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
-    network_tests::NetworkPlayground,
+    network_tests::{NetworkPlayground, TwinId},
     persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
     round_manager::RoundManager,
     test_utils::{
@@ -68,6 +68,7 @@ pub struct NodeSetup {
     all_events: Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg>>> + Send + Unpin>,
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
     state_sync_receiver: mpsc::UnboundedReceiver<Payload>,
+    id: usize,
 }
 
 impl NodeSetup {
@@ -92,8 +93,11 @@ impl NodeSetup {
         let validator_set = (&validators).into();
         let waypoint =
             Waypoint::new_epoch_boundary(&LedgerInfo::mock_genesis(Some(validator_set))).unwrap();
+
         let mut nodes = vec![];
-        for signer in signers.iter().take(num_nodes) {
+        //let mut id = 0;
+        //for signer in signers.iter().take(num_nodes) {
+        for (id, signer) in signers.iter().take(num_nodes).enumerate() {
             let (initial_data, storage) = MockStorage::start_for_testing((&validators).into());
 
             let author = signer.author();
@@ -107,12 +111,14 @@ impl NodeSetup {
             nodes.push(Self::new(
                 playground,
                 executor.clone(),
-                signer.clone(),
+                signer.to_owned(),
                 proposer_author,
                 storage,
                 initial_data,
                 safety_rules_manager,
+                id,
             ));
+            //id += 1;
         }
         nodes
     }
@@ -122,9 +128,15 @@ impl NodeSetup {
         executor: Handle,
         signer: ValidatorSigner,
         proposer_author: Author,
+        /*
+        storage: Arc<MockStorage<TestPayload>>,
+        initial_data: RecoveryData<TestPayload>,
+        safety_rules_manager: SafetyRulesManager<TestPayload>,
+        */
         storage: Arc<MockStorage>,
         initial_data: RecoveryData,
         safety_rules_manager: SafetyRulesManager,
+        id: usize,
     ) -> Self {
         let epoch_state = EpochState {
             epoch: 1,
@@ -147,7 +159,9 @@ impl NodeSetup {
         let network_events = network_events.map_err(Into::<anyhow::Error>::into);
         let author = signer.author();
 
-        playground.add_node(author, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
+        let twin_id = TwinId { id, author };
+
+        playground.add_node(twin_id, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
 
         let (self_sender, self_receiver) = channel::new_test(1000);
         let network = NetworkSender::new(author, network_sender, self_sender, validators.clone());
@@ -210,6 +224,7 @@ impl NodeSetup {
             all_events,
             commit_cb_receiver,
             state_sync_receiver,
+            id,
         }
     }
 
@@ -226,6 +241,7 @@ impl NodeSetup {
             self.storage,
             recover_data,
             self.safety_rules_manager,
+            self.id,
         )
     }
 
