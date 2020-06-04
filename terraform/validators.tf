@@ -233,7 +233,7 @@ data "template_file" "ecs_task_definition" {
     logstash_version           = local.logstash_image_version
     logstash_config            = local.logstash_config
     safety_rules_image         = local.safety_rules_image_repo
-    safety_rules_image_version = local.safety_rules_image_version
+    safety_rules_image_version = local.override_image_versions == [] ? local.safety_rules_image_version : local.override_image_versions[count.index % length(local.override_image_versions)]
     push_metrics_endpoint      = "http://${aws_instance.monitoring.private_ip}:9092/metrics/job/safety_rules/role/validator/peer_id/val-${count.index}"
     cfg_vault_addr             = "http://${aws_instance.vault.private_ip}:8200"
     cfg_vault_namespace        = "val-${count.index}"
