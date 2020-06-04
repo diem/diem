@@ -5,7 +5,7 @@ use crate::{
     epoch_manager::EpochManager,
     network::NetworkTask,
     network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
-    network_tests::NetworkPlayground,
+    network_tests::{NetworkPlayground, TwinId},
     test_utils::{
         consensus_runtime, timed_block_on, MockStateComputer, MockStorage, MockTransactionManager,
     },
@@ -51,9 +51,8 @@ impl SMRNode {
         mut config: NodeConfig,
         smr_id: usize,
         storage: Arc<MockStorage>,
+        twin_id: TwinId,
     ) -> Self {
-        let author = config.validator_network.as_ref().unwrap().peer_id();
-
         let (network_reqs_tx, network_reqs_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (connection_reqs_tx, _) =
@@ -67,7 +66,9 @@ impl SMRNode {
             ConnectionRequestSender::new(connection_reqs_tx),
         );
         let network_events = ConsensusNetworkEvents::new(consensus_rx, conn_notifs_channel);
-        playground.add_node(author, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
+
+        playground.add_node(twin_id, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
+
         let (state_sync_client, state_sync) = mpsc::unbounded();
         let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let shared_mempool = MockSharedMempool::new(None);
@@ -162,7 +163,12 @@ impl SMRNode {
             // Use in memory storage for testing
             // node_config.consensus.safety_rules = SafetyRulesConfig::default();
 
-            smr_nodes.push(Self::start(playground, config, smr_id, storage));
+            let twin_id = TwinId {
+                id: smr_id,
+                author: config.validator_network.as_ref().unwrap().peer_id(),
+            };
+
+            smr_nodes.push(Self::start(playground, config, smr_id, storage, twin_id));
         }
         smr_nodes
     }
