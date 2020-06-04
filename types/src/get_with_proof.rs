@@ -388,15 +388,6 @@ pub enum ResponseItem {
 }
 
 impl ResponseItem {
-    pub fn into_get_account_state_response(self) -> Result<AccountStateWithProof> {
-        match self {
-            ResponseItem::GetAccountState {
-                account_state_with_proof,
-            } => Ok(account_state_with_proof),
-            _ => bail!("Not ResponseItem::GetAccountState."),
-        }
-    }
-
     pub fn into_get_account_txn_by_seq_num_response(
         self,
     ) -> Result<(Option<TransactionWithProof>, Option<AccountStateWithProof>)> {
