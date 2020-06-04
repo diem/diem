@@ -376,12 +376,11 @@ mod tests {
                 libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
             let (consensus_tx, consensus_rx) =
                 libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-            let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
+            let (_conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
             let (_, conn_status_rx) = conn_notifs_channel::new();
             let network_sender = ConsensusNetworkSender::new(
                 PeerManagerRequestSender::new(network_reqs_tx),
                 ConnectionRequestSender::new(connection_reqs_tx),
-                conn_mgr_reqs_tx,
             );
             let network_events = ConsensusNetworkEvents::new(consensus_rx, conn_status_rx);
 
@@ -457,12 +456,11 @@ mod tests {
                 libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
             let (consensus_tx, consensus_rx) =
                 libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-            let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
+            let (_conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
             let (_, conn_status_rx) = conn_notifs_channel::new();
             let network_sender = ConsensusNetworkSender::new(
                 PeerManagerRequestSender::new(network_reqs_tx),
                 ConnectionRequestSender::new(connection_reqs_tx),
-                conn_mgr_reqs_tx,
             );
             let network_events = ConsensusNetworkEvents::new(consensus_rx, conn_status_rx);
 

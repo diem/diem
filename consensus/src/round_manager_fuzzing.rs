@@ -92,11 +92,9 @@ fn create_node_for_fuzzing() -> RoundManager {
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let (connection_reqs_tx, _) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-    let (conn_mgr_reqs_tx, _conn_mgr_reqs_rx) = channel::new_test(8);
     let network_sender = ConsensusNetworkSender::new(
         PeerManagerRequestSender::new(network_reqs_tx),
         ConnectionRequestSender::new(connection_reqs_tx),
-        conn_mgr_reqs_tx,
     );
     let (self_sender, _self_receiver) = channel::new_test(8);
 
