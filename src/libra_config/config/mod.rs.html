@@ -644,7 +644,7 @@
         <span class="self">self</span>.<span class="ident">storage</span>.<span class="ident">set_data_dir</span>(<span class="ident">data_dir</span>);
     }
 
-    <span class="doccomment">/// This clones the underlying data except for the keypair so that this config can be used as a</span>
+    <span class="doccomment">/// This clones the underlying data except for the keys so that this config can be used as a</span>
     <span class="doccomment">/// template for another config.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">clone_for_template</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
@@ -865,7 +865,7 @@
 
         <span class="ident">expected_network</span>.<span class="ident">advertised_address</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">advertised_address</span>.<span class="ident">clone</span>();
         <span class="ident">expected_network</span>.<span class="ident">listen_address</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>();
-        <span class="ident">expected_network</span>.<span class="ident">identity_keypair</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">identity_keypair</span>.<span class="ident">clone</span>();
+        <span class="ident">expected_network</span>.<span class="ident">identity</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">identity</span>.<span class="ident">clone</span>();
         <span class="ident">expected_network</span>.<span class="ident">network_peers</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">network_peers</span>.<span class="ident">clone</span>();
         <span class="ident">expected_network</span>.<span class="ident">seed_peers</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">seed_peers</span>.<span class="ident">clone</span>();
         <span class="ident">expected_network</span>.<span class="ident">seed_peers_file</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">seed_peers_file</span>.<span class="ident">clone</span>();

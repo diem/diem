@@ -388,12 +388,47 @@
 <span id="388">388</span>
 <span id="389">389</span>
 <span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">config</span>::{<span class="ident">PersistableConfig</span>, <span class="ident">RoleType</span>, <span class="ident">RootPath</span>},
+    <span class="ident">config</span>::{<span class="ident">PersistableConfig</span>, <span class="ident">RoleType</span>, <span class="ident">RootPath</span>, <span class="ident">SecureBackend</span>},
     <span class="ident">keys</span>::<span class="ident">KeyPair</span>,
     <span class="ident">utils</span>,
 };
@@ -401,7 +436,10 @@
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::{<span class="ident">x25519</span>, <span class="ident">Uniform</span>};
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">transaction</span>::<span class="ident">authenticator</span>::<span class="ident">AuthenticationKey</span>, <span class="ident">PeerId</span>};
-<span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">rngs</span>::<span class="ident">StdRng</span>;
+<span class="kw">use</span> <span class="ident">rand</span>::{
+    <span class="ident">rngs</span>::{<span class="ident">OsRng</span>, <span class="ident">StdRng</span>},
+    <span class="ident">Rng</span>, <span class="ident">SeedableRng</span>,
+};
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">path</span>::<span class="ident">PathBuf</span>, <span class="ident">string</span>::<span class="ident">ToString</span>};
 
@@ -419,7 +457,6 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NetworkConfig</span> {
-    <span class="kw">pub</span> <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
     <span class="comment">// TODO: Add support for multiple listen/advertised addresses in config.</span>
     <span class="comment">// The address that this node is listening on for new connections.</span>
     <span class="kw">pub</span> <span class="ident">listen_address</span>: <span class="ident">NetworkAddress</span>,
@@ -427,11 +464,8 @@
     <span class="kw">pub</span> <span class="ident">advertised_address</span>: <span class="ident">NetworkAddress</span>,
     <span class="kw">pub</span> <span class="ident">discovery_interval_ms</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">connectivity_check_interval_ms</span>: <span class="ident">u64</span>,
-    <span class="comment">// Flag to toggle if Noise is used for encryption and authentication.</span>
-    <span class="kw">pub</span> <span class="ident">enable_noise</span>: <span class="ident">bool</span>,
     <span class="comment">// If the network uses remote authentication, only trusted peers are allowed to connect.</span>
-    <span class="comment">// Otherwise, any node can connect. If this flag is set to true, `enable_noise` must</span>
-    <span class="comment">// also be set to true.</span>
+    <span class="comment">// Otherwise, any node can connect.</span>
     <span class="kw">pub</span> <span class="ident">enable_remote_authentication</span>: <span class="ident">bool</span>,
     <span class="comment">// Enable this network to use either gossip discovery or onchain discovery.</span>
     <span class="kw">pub</span> <span class="ident">discovery_method</span>: <span class="ident">DiscoveryMethod</span>,
@@ -444,44 +478,41 @@
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">skip</span>)]</span>
     <span class="kw">pub</span> <span class="ident">seed_peers</span>: <span class="ident">SeedPeersConfig</span>,
     <span class="kw">pub</span> <span class="ident">seed_peers_file</span>: <span class="ident">PathBuf</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;identity_private_key&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">identity_keypair</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">KeyPair</span><span class="op">&lt;</span><span class="ident">x25519</span>::<span class="ident">PrivateKey</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">identity</span>: <span class="ident">Identity</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">NetworkConfig</span> {
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">peer_id</span>: <span class="ident">PeerId</span>::<span class="ident">default</span>(),
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">Self</span> {
             <span class="ident">listen_address</span>: <span class="string">&quot;/ip4/0.0.0.0/tcp/6180&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
             <span class="ident">advertised_address</span>: <span class="string">&quot;/ip4/127.0.0.1/tcp/6180&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
             <span class="ident">discovery_interval_ms</span>: <span class="number">1000</span>,
             <span class="ident">connectivity_check_interval_ms</span>: <span class="number">5000</span>,
-            <span class="ident">enable_noise</span>: <span class="bool-val">true</span>,
             <span class="ident">enable_remote_authentication</span>: <span class="bool-val">true</span>,
             <span class="ident">discovery_method</span>: <span class="ident">DiscoveryMethod</span>::<span class="ident">Gossip</span>,
-            <span class="ident">identity_keypair</span>: <span class="prelude-val">None</span>,
+            <span class="ident">identity</span>: <span class="ident">Identity</span>::<span class="prelude-val">None</span>,
             <span class="ident">network_peers_file</span>: <span class="ident">PathBuf</span>::<span class="ident">new</span>(),
             <span class="ident">network_peers</span>: <span class="ident">NetworkPeersConfig</span>::<span class="ident">default</span>(),
             <span class="ident">seed_peers_file</span>: <span class="ident">PathBuf</span>::<span class="ident">new</span>(),
             <span class="ident">seed_peers</span>: <span class="ident">SeedPeersConfig</span>::<span class="ident">default</span>(),
-        }
+        };
+        <span class="ident">config</span>.<span class="ident">prepare_identity</span>();
+        <span class="ident">config</span>
     }
 }
 
 <span class="kw">impl</span> <span class="ident">NetworkConfig</span> {
-    <span class="doccomment">/// This clones the underlying data except for the keypair so that this config can be used as a</span>
+    <span class="doccomment">/// This clones the underlying data except for the key so that this config can be used as a</span>
     <span class="doccomment">/// template for another config.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">clone_for_template</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">peer_id</span>: <span class="self">self</span>.<span class="ident">peer_id</span>,
             <span class="ident">listen_address</span>: <span class="self">self</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>(),
             <span class="ident">advertised_address</span>: <span class="self">self</span>.<span class="ident">advertised_address</span>.<span class="ident">clone</span>(),
             <span class="ident">discovery_interval_ms</span>: <span class="self">self</span>.<span class="ident">discovery_interval_ms</span>,
             <span class="ident">connectivity_check_interval_ms</span>: <span class="self">self</span>.<span class="ident">connectivity_check_interval_ms</span>,
-            <span class="ident">enable_noise</span>: <span class="self">self</span>.<span class="ident">enable_noise</span>,
             <span class="ident">enable_remote_authentication</span>: <span class="self">self</span>.<span class="ident">enable_remote_authentication</span>,
             <span class="ident">discovery_method</span>: <span class="self">self</span>.<span class="ident">discovery_method</span>,
-            <span class="ident">identity_keypair</span>: <span class="prelude-val">None</span>,
+            <span class="ident">identity</span>: <span class="ident">Identity</span>::<span class="prelude-val">None</span>,
             <span class="ident">network_peers_file</span>: <span class="self">self</span>.<span class="ident">network_peers_file</span>.<span class="ident">clone</span>(),
             <span class="ident">network_peers</span>: <span class="self">self</span>.<span class="ident">network_peers</span>.<span class="ident">clone</span>(),
             <span class="ident">seed_peers_file</span>: <span class="self">self</span>.<span class="ident">seed_peers_file</span>.<span class="ident">clone</span>(),
@@ -507,13 +538,6 @@
             <span class="self">self</span>.<span class="ident">listen_address</span> <span class="op">=</span> <span class="ident">utils</span>::<span class="ident">get_local_ip</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;No local IP&quot;</span>))<span class="question-mark">?</span>;
         }
 
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">enable_remote_authentication</span> {
-            <span class="macro">ensure</span><span class="macro">!</span>(
-                <span class="self">self</span>.<span class="ident">enable_noise</span>,
-                <span class="string">&quot;For a node to enforce remote authentication, noise must be enabled.&quot;</span>,
-            );
-        }
-
         <span class="kw">if</span> <span class="ident">network_role</span>.<span class="ident">is_validator</span>() {
             <span class="macro">ensure</span><span class="macro">!</span>(
                 <span class="self">self</span>.<span class="ident">network_peers_file</span>.<span class="ident">as_os_str</span>().<span class="ident">is_empty</span>(),
@@ -525,31 +549,37 @@
             );
         }
 
-        <span class="comment">// TODO(joshlind): investigate the implications of removing these checks.</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">identity_keypair</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">identity_keypair</span> {
-            <span class="kw">let</span> <span class="ident">identity_public_key</span> <span class="op">=</span> <span class="ident">identity_keypair</span>.<span class="ident">public_key</span>();
-            <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">AuthenticationKey</span>::<span class="ident">try_from</span>(<span class="ident">identity_public_key</span>.<span class="ident">as_slice</span>())
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">derived_address</span>();
-
-            <span class="comment">// If PeerId is not set, derive the PeerId from identity_key.</span>
-            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">peer_id</span> <span class="op">=</span><span class="op">=</span> <span class="ident">PeerId</span>::<span class="ident">default</span>() {
-                <span class="self">self</span>.<span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">peer_id</span>;
-            }
-            <span class="comment">// Full nodes with remote authentication must derive PeerId from identity_key.</span>
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">network_role</span>.<span class="ident">is_validator</span>() <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">enable_remote_authentication</span> {
-                <span class="macro">ensure</span><span class="macro">!</span>(
-                    <span class="self">self</span>.<span class="ident">peer_id</span> <span class="op">=</span><span class="op">=</span> <span class="ident">peer_id</span>,
-                    <span class="string">&quot;For full-nodes that use remote authentication, \
-                    the peer_id must be derived from the identity key.&quot;</span>,
-                );
-            }
-        }
+        <span class="self">self</span>.<span class="ident">prepare_identity</span>();
         <span class="prelude-val">Ok</span>(())
     }
 
+    <span class="kw">fn</span> <span class="ident">prepare_identity</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">identity</span> {
+            <span class="ident">Identity</span>::<span class="ident">FromStorage</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
+            <span class="ident">Identity</span>::<span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">StdRng</span>::<span class="ident">from_seed</span>(<span class="ident">OsRng</span>.<span class="ident">gen</span>());
+                <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">x25519</span>::<span class="ident">PrivateKey</span>::<span class="ident">generate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">rng</span>);
+                <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">AuthenticationKey</span>::<span class="ident">try_from</span>(<span class="ident">key</span>.<span class="ident">public_key</span>().<span class="ident">as_slice</span>())
+                    .<span class="ident">unwrap</span>()
+                    .<span class="ident">derived_address</span>();
+                <span class="self">self</span>.<span class="ident">identity</span> <span class="op">=</span> <span class="ident">Identity</span>::<span class="ident">from_config</span>(<span class="ident">key</span>, <span class="ident">peer_id</span>);
+            }
+            <span class="ident">Identity</span>::<span class="ident">FromConfig</span>(<span class="ident">config</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">pubkey</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">keypair</span>.<span class="ident">public_key</span>();
+                <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">AuthenticationKey</span>::<span class="ident">try_from</span>(<span class="ident">pubkey</span>.<span class="ident">as_slice</span>())
+                    .<span class="ident">unwrap</span>()
+                    .<span class="ident">derived_address</span>();
+
+                <span class="kw">if</span> <span class="ident">config</span>.<span class="ident">peer_id</span> <span class="op">=</span><span class="op">=</span> <span class="ident">PeerId</span>::<span class="ident">default</span>() {
+                    <span class="ident">config</span>.<span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">peer_id</span>;
+                }
+            }
+        };
+    }
+
     <span class="kw">fn</span> <span class="ident">default_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">config_path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
-        <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}.{}&quot;</span>, <span class="self">self</span>.<span class="ident">peer_id</span>.<span class="ident">to_string</span>(), <span class="ident">config_path</span>)
+        <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">identity</span>.<span class="ident">peer_id_from_config</span>().<span class="ident">unwrap_or_default</span>();
+        <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}.{}&quot;</span>, <span class="ident">peer_id</span>.<span class="ident">to_string</span>(), <span class="ident">config_path</span>)
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">save</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">root_dir</span>: <span class="kw-2">&amp;</span><span class="ident">RootPath</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
@@ -577,14 +607,19 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">random_with_peer_id</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">rng</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">StdRng</span>, <span class="ident">peer_id</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PeerId</span><span class="op">&gt;</span>) {
         <span class="kw">let</span> <span class="ident">identity_key</span> <span class="op">=</span> <span class="ident">x25519</span>::<span class="ident">PrivateKey</span>::<span class="ident">generate</span>(<span class="ident">rng</span>);
-        <span class="self">self</span>.<span class="ident">peer_id</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">peer_id</span>) <span class="op">=</span> <span class="ident">peer_id</span> {
+        <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">peer_id</span>) <span class="op">=</span> <span class="ident">peer_id</span> {
             <span class="ident">peer_id</span>
         } <span class="kw">else</span> {
             <span class="ident">AuthenticationKey</span>::<span class="ident">try_from</span>(<span class="ident">identity_key</span>.<span class="ident">public_key</span>().<span class="ident">as_slice</span>())
                 .<span class="ident">unwrap</span>()
                 .<span class="ident">derived_address</span>()
         };
-        <span class="self">self</span>.<span class="ident">identity_keypair</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">KeyPair</span>::<span class="ident">load</span>(<span class="ident">identity_key</span>));
+        <span class="self">self</span>.<span class="ident">identity</span> <span class="op">=</span> <span class="ident">Identity</span>::<span class="ident">from_config</span>(<span class="ident">identity_key</span>, <span class="ident">peer_id</span>);
+    }
+
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">PeerId</span> {
+        <span class="self">self</span>.<span class="ident">identity</span>.<span class="ident">peer_id_from_config</span>().<span class="ident">unwrap</span>()
     }
 }
 
@@ -640,6 +675,64 @@
     <span class="prelude-val">None</span>,
 }
 
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>), <span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>))]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;type&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;snake_case&quot;</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Identity</span> {
+    <span class="ident">FromConfig</span>(<span class="ident">IdentityFromConfig</span>),
+    <span class="ident">FromStorage</span>(<span class="ident">IdentityFromStorage</span>),
+    <span class="prelude-val">None</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Identity</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_config</span>(<span class="ident">key</span>: <span class="ident">x25519</span>::<span class="ident">PrivateKey</span>, <span class="ident">peer_id</span>: <span class="ident">PeerId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">keypair</span> <span class="op">=</span> <span class="ident">KeyPair</span>::<span class="ident">load</span>(<span class="ident">key</span>);
+        <span class="ident">Identity</span>::<span class="ident">FromConfig</span>(<span class="ident">IdentityFromConfig</span> { <span class="ident">keypair</span>, <span class="ident">peer_id</span> })
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_storage</span>(<span class="ident">key_name</span>: <span class="ident">String</span>, <span class="ident">peer_id_name</span>: <span class="ident">String</span>, <span class="ident">backend</span>: <span class="ident">SecureBackend</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">Identity</span>::<span class="ident">FromStorage</span>(<span class="ident">IdentityFromStorage</span> {
+            <span class="ident">key_name</span>,
+            <span class="ident">peer_id_name</span>,
+            <span class="ident">backend</span>,
+        })
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_id_from_config</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PeerId</span><span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Identity</span>::<span class="ident">FromConfig</span>(<span class="ident">config</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">config</span>.<span class="ident">peer_id</span>),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">public_key_from_config</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">x25519</span>::<span class="ident">PublicKey</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Identity</span>::<span class="ident">FromConfig</span>(<span class="ident">config</span>) <span class="op">=</span> <span class="self">self</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">config</span>.<span class="ident">keypair</span>.<span class="ident">public_key</span>())
+        } <span class="kw">else</span> {
+            <span class="prelude-val">None</span>
+        }
+    }
+}
+
+<span class="doccomment">/// The identity is stored within the config.</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>), <span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>))]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">IdentityFromConfig</span> {
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;key&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">keypair</span>: <span class="ident">KeyPair</span><span class="op">&lt;</span><span class="ident">x25519</span>::<span class="ident">PrivateKey</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
+}
+
+<span class="doccomment">/// This represents an identity in a secure-storage as defined in NodeConfig::secure.</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>), <span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>))]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">IdentityFromStorage</span> {
+    <span class="kw">pub</span> <span class="ident">key_name</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">peer_id_name</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">backend</span>: <span class="ident">SecureBackend</span>,
+}
+
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">test</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
@@ -653,18 +746,17 @@
         <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">config</span>, <span class="ident">path</span>) <span class="op">=</span> <span class="ident">generate_config</span>();
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">network_peers</span>, <span class="ident">NetworkPeersConfig</span>::<span class="ident">default</span>());
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">network_peers_file</span>, <span class="ident">PathBuf</span>::<span class="ident">new</span>());
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">identity_keypair</span>, <span class="prelude-val">None</span>);
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">peer_id</span>, <span class="ident">PeerId</span>::<span class="ident">default</span>());
+        <span class="macro">assert_ne</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">identity</span>, <span class="ident">Identity</span>::<span class="prelude-val">None</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">seed_peers</span>, <span class="ident">SeedPeersConfig</span>::<span class="ident">default</span>());
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">seed_peers_file</span>, <span class="ident">PathBuf</span>::<span class="ident">new</span>());
+        <span class="kw">let</span> <span class="ident">identity</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">identity</span>.<span class="ident">clone</span>();
 
         <span class="comment">// Assert default loading doesn&#39;t affect paths and defaults remain in place</span>
         <span class="kw">let</span> <span class="ident">root_dir</span> <span class="op">=</span> <span class="ident">RootPath</span>::<span class="ident">new_path</span>(<span class="ident">path</span>.<span class="ident">path</span>());
         <span class="ident">config</span>.<span class="ident">load</span>(<span class="kw-2">&amp;</span><span class="ident">root_dir</span>, <span class="ident">RoleType</span>::<span class="ident">FullNode</span>).<span class="ident">unwrap</span>();
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">network_peers</span>, <span class="ident">NetworkPeersConfig</span>::<span class="ident">default</span>());
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">network_peers_file</span>, <span class="ident">PathBuf</span>::<span class="ident">new</span>());
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">identity_keypair</span>, <span class="prelude-val">None</span>);
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">peer_id</span>, <span class="ident">PeerId</span>::<span class="ident">default</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">identity</span>, <span class="ident">identity</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">seed_peers_file</span>, <span class="ident">PathBuf</span>::<span class="ident">new</span>());
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">seed_peers</span>, <span class="ident">SeedPeersConfig</span>::<span class="ident">default</span>());
 
@@ -677,7 +769,7 @@
         );
 
         <span class="comment">// Assert paths and values are not set (i.e., no defaults apply)</span>
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">identity_keypair</span>, <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">identity</span>, <span class="ident">identity</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">network_peers</span>, <span class="ident">NetworkPeersConfig</span>::<span class="ident">default</span>());
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">network_peers_file</span>, <span class="ident">PathBuf</span>::<span class="ident">new</span>());
     }
@@ -689,9 +781,10 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">StdRng</span>::<span class="ident">from_seed</span>([<span class="number">5u8</span>; <span class="number">32</span>]);
         <span class="ident">config</span>.<span class="ident">random</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">rng</span>);
         <span class="comment">// This is default (empty) otherwise</span>
-        <span class="ident">config</span>.<span class="ident">seed_peers</span>.<span class="ident">seed_peers</span>.<span class="ident">insert</span>(<span class="ident">config</span>.<span class="ident">peer_id</span>, <span class="macro">vec</span><span class="macro">!</span>[]);
+        <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">identity</span>.<span class="ident">peer_id_from_config</span>().<span class="ident">unwrap</span>();
+        <span class="ident">config</span>.<span class="ident">seed_peers</span>.<span class="ident">seed_peers</span>.<span class="ident">insert</span>(<span class="ident">peer_id</span>, <span class="macro">vec</span><span class="macro">!</span>[]);
 
-        <span class="kw">let</span> <span class="ident">keypair</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">identity_keypair</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">identity</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">identity</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">peers</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">network_peers</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">seed_peers</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">seed_peers</span>.<span class="ident">clone</span>();
 
@@ -702,9 +795,9 @@
         <span class="comment">// Assert saving updates paths</span>
         <span class="kw">let</span> <span class="ident">root_dir</span> <span class="op">=</span> <span class="ident">RootPath</span>::<span class="ident">new_path</span>(<span class="ident">path</span>.<span class="ident">path</span>());
         <span class="ident">config</span>.<span class="ident">save</span>(<span class="kw-2">&amp;</span><span class="ident">root_dir</span>).<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">identity_keypair</span>, <span class="ident">keypair</span>);
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">identity</span>, <span class="ident">identity</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">network_peers</span>, <span class="ident">peers</span>);
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">network_peers_file</span>, <span class="ident">PathBuf</span>::<span class="ident">new</span>(),);
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">network_peers_file</span>, <span class="ident">PathBuf</span>::<span class="ident">new</span>());
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">seed_peers</span>, <span class="ident">seed_peers</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(
             <span class="ident">config</span>.<span class="ident">seed_peers_file</span>,
@@ -713,14 +806,13 @@
 
         <span class="comment">// Assert a fresh load correctly populates the config</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">new_config</span> <span class="op">=</span> <span class="ident">NetworkConfig</span>::<span class="ident">default</span>();
-        <span class="ident">new_config</span>.<span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">peer_id</span>;
         <span class="comment">// First that paths are empty</span>
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">new_config</span>.<span class="ident">network_peers_file</span>, <span class="ident">PathBuf</span>::<span class="ident">new</span>());
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">new_config</span>.<span class="ident">seed_peers_file</span>, <span class="ident">PathBuf</span>::<span class="ident">new</span>());
         <span class="comment">// Loading populates things correctly</span>
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">new_config</span>.<span class="ident">load</span>(<span class="kw-2">&amp;</span><span class="ident">root_dir</span>, <span class="ident">RoleType</span>::<span class="ident">Validator</span>);
         <span class="ident">result</span>.<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">identity_keypair</span>, <span class="ident">keypair</span>);
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">identity</span>, <span class="ident">identity</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">network_peers</span>, <span class="ident">peers</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">network_peers_file</span>, <span class="ident">PathBuf</span>::<span class="ident">new</span>(),);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">seed_peers</span>, <span class="ident">seed_peers</span>);
@@ -728,28 +820,6 @@
             <span class="ident">config</span>.<span class="ident">seed_peers_file</span>,
             <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="ident">config</span>.<span class="ident">default_path</span>(<span class="ident">SEED_PEERS_DEFAULT</span>))
         );
-    }
-
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_default_peer_id</span>() {
-        <span class="comment">// Generate a random node and verify a distinct peer id</span>
-        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">config</span>, <span class="ident">path</span>) <span class="op">=</span> <span class="ident">generate_config</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">StdRng</span>::<span class="ident">from_seed</span>([<span class="number">32u8</span>; <span class="number">32</span>]);
-        <span class="ident">config</span>.<span class="ident">random</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">rng</span>);
-        <span class="kw">let</span> <span class="ident">root_dir</span> <span class="op">=</span> <span class="ident">RootPath</span>::<span class="ident">new_path</span>(<span class="ident">path</span>.<span class="ident">path</span>());
-
-        <span class="kw">let</span> <span class="ident">default_peer_id</span> <span class="op">=</span> <span class="ident">PeerId</span>::<span class="ident">default</span>();
-        <span class="kw">let</span> <span class="ident">actual_peer_id</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">peer_id</span>;
-        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">actual_peer_id</span> <span class="op">!</span><span class="op">=</span> <span class="ident">default_peer_id</span>);
-
-        <span class="comment">// Now reset and save</span>
-        <span class="ident">config</span>.<span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">default_peer_id</span>;
-        <span class="ident">config</span>.<span class="ident">save</span>(<span class="kw-2">&amp;</span><span class="ident">root_dir</span>).<span class="ident">unwrap</span>();
-
-        <span class="comment">// Now load and verify the distinct peer id</span>
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">peer_id</span>, <span class="ident">default_peer_id</span>);
-        <span class="ident">config</span>.<span class="ident">load</span>(<span class="kw-2">&amp;</span><span class="ident">root_dir</span>, <span class="ident">RoleType</span>::<span class="ident">FullNode</span>).<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">peer_id</span>, <span class="ident">actual_peer_id</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>

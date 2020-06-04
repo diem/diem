@@ -105,6 +105,12 @@
 <span id="105">105</span>
 <span id="106">106</span>
 <span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -160,7 +166,13 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">NodeConfig</span>::<span class="ident">random</span>();
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">test_config</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">test</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>().<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">author</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">validator_network</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>().<span class="ident">peer_id</span>;
+        <span class="kw">let</span> <span class="ident">author</span> <span class="op">=</span> <span class="ident">config</span>
+            .<span class="ident">validator_network</span>
+            .<span class="ident">as_ref</span>()
+            .<span class="ident">unwrap</span>()
+            .<span class="ident">identity</span>
+            .<span class="ident">peer_id_from_config</span>()
+            .<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">private_key</span> <span class="op">=</span> <span class="ident">test_config</span>
             .<span class="ident">consensus_keypair</span>
             .<span class="ident">as_mut</span>()

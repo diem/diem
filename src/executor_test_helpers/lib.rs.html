@@ -139,7 +139,7 @@
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">extract_signer</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">NodeConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ValidatorSigner</span> {
     <span class="ident">ValidatorSigner</span>::<span class="ident">new</span>(
-        <span class="ident">config</span>.<span class="ident">validator_network</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>().<span class="ident">peer_id</span>,
+        <span class="ident">config</span>.<span class="ident">validator_network</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>().<span class="ident">peer_id</span>(),
         <span class="ident">config</span>
             .<span class="ident">test</span>
             .<span class="ident">as_mut</span>()
