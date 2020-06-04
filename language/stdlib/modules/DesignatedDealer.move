@@ -3,7 +3,6 @@ module DesignatedDealer {
     use 0x0::LibraTimestamp;
     use 0x0::Vector;
     use 0x0::Transaction as Txn;
-    use 0x0::Signer;
 
     struct Dealer {
         /// Time window start in microseconds
@@ -15,6 +14,7 @@ module DesignatedDealer {
         /// 0-indexed array of tier upperbounds
         tiers: vector<u64>
     }
+    // Preburn published at top level in Libra.move
 
     ///////////////////////////////////////////////////////////////////////////
     // To-be designated-dealer called functions
@@ -30,10 +30,10 @@ module DesignatedDealer {
         }
     }
 
-
     ///////////////////////////////////////////////////////////////////////////
     // Publicly callable APIs by Treasury Compliance Account
     ///////////////////////////////////////////////////////////////////////////
+
 
     public fun add_tier(dealer: &mut Dealer, next_tier_upperbound: u64)
     {
@@ -102,18 +102,11 @@ module DesignatedDealer {
         }
     }
 
-    public fun assert_account_is_blessed(sender_account: &signer) {
-        // Verify that the sender is treasury compliant account
-        Txn::assert(Signer::address_of(sender_account) == treasury_compliance_account(), 0)
-    }
 
     fun window_length(): u64 {
         // number of microseconds in a day
         86400000000
     }
 
-    fun treasury_compliance_account(): address {
-        0xB1E55ED
-    }
 }
 }

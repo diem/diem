@@ -11,7 +11,6 @@ module LibraAccount {
     use 0x0::Hash;
     use 0x0::LBR;
     use 0x0::LCS;
-    use 0x0::Libra;
     use 0x0::LibraTimestamp;
     use 0x0::LibraTransactionTimeout;
     use 0x0::Signature;
@@ -24,6 +23,7 @@ module LibraAccount {
     use 0x0::VASP;
     use 0x0::Vector;
     use 0x0::DesignatedDealer;
+    use 0x0::Libra;
 
     // Every Libra account has a LibraAccount::T resource
     resource struct T {
@@ -659,32 +659,34 @@ module LibraAccount {
     }
 
     public fun add_tier(blessed: &signer, addr: address, tier_upperbound: u64) acquires Role {
-        DesignatedDealer::assert_account_is_blessed(blessed);
+        Association::assert_account_is_blessed(blessed);
         let dealer =
             &mut borrow_global_mut<Role<DesignatedDealer::Dealer>>(addr).role_data;
         DesignatedDealer::add_tier(dealer, tier_upperbound)
     }
 
     public fun update_tier(blessed: &signer, addr: address, tier_index: u64, new_upperbound: u64) acquires Role {
-        DesignatedDealer::assert_account_is_blessed(blessed);
+        Association::assert_account_is_blessed(blessed);
         let dealer =
             &mut borrow_global_mut<Role<DesignatedDealer::Dealer>>(addr).role_data;
         DesignatedDealer::update_tier(dealer, tier_index, new_upperbound)
     }
 
     /// Create a designated dealer account at `new_account_address` with authentication key
-    /// `auth_key_prefix` | `new_account_address`, for non synthetic CoinType
+    /// `auth_key_prefix` | `new_account_address`, for non synthetic CoinType.
+    /// Creates Preburn resource under account 'new_account_address'
     public fun create_designated_dealer<CoinType>(
         blessed: &signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
     ) {
-        DesignatedDealer::assert_account_is_blessed(blessed);
+        Association::assert_account_is_blessed(blessed);
         Transaction::assert(!Libra::is_synthetic_currency<CoinType>(), 202);
         let new_dd_account = create_signer(new_account_address);
+        Event::publish_generator(&new_dd_account);
+        Libra::publish_preburn_to_account<CoinType>(blessed, &new_dd_account);
         let dealer =
             DesignatedDealer::create_designated_dealer();
-        Event::publish_generator(&new_dd_account);
         make_account<CoinType, DesignatedDealer::Dealer>(new_dd_account, auth_key_prefix, dealer, false)
     }
 
@@ -693,7 +695,7 @@ module LibraAccount {
     public fun mint_to_designated_dealer<CoinType>(
         blessed: &signer, dealer_address: address, amount: u64, tier: u64
     ) acquires Role, AccountOperationsCapability, Balance, T {
-        DesignatedDealer::assert_account_is_blessed(blessed);
+        Association::assert_account_is_blessed(blessed);
         // INVALID_MINT_AMOUNT
         Transaction::assert(amount > 0, 6);
         let dealer =

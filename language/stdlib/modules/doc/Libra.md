@@ -27,6 +27,7 @@
 -  [Function `mint_with_capability`](#0x0_Libra_mint_with_capability)
 -  [Function `new_preburn_with_capability`](#0x0_Libra_new_preburn_with_capability)
 -  [Function `preburn_with_resource`](#0x0_Libra_preburn_with_resource)
+-  [Function `publish_preburn_to_account`](#0x0_Libra_publish_preburn_to_account)
 -  [Function `preburn_to`](#0x0_Libra_preburn_to)
 -  [Function `burn_with_capability`](#0x0_Libra_burn_with_capability)
 -  [Function `burn_with_resource_cap`](#0x0_Libra_burn_with_resource_cap)
@@ -841,6 +842,32 @@
             }
         );
     };
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_Libra_publish_preburn_to_account"></a>
+
+## Function `publish_preburn_to_account`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_preburn_to_account">publish_preburn_to_account</a>&lt;Token&gt;(creator: &signer, account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_preburn_to_account">publish_preburn_to_account</a>&lt;Token&gt;(creator: &signer, account: &signer) {
+    <a href="Association.md#0x0_Association_assert_account_is_blessed">Association::assert_account_is_blessed</a>(creator);
+    <b>let</b> preburn = <a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt; { requests: <a href="Vector.md#0x0_Vector_empty">Vector::empty</a>(), is_approved: <b>true</b> };
+    move_to(account, preburn)
 }
 </code></pre>
 

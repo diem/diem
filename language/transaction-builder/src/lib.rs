@@ -406,7 +406,7 @@ encode_txn_script! {
 encode_txn_script! {
     name: encode_create_designated_dealer,
     type_arg: coin_type,
-    args: [new_account_address: Address, auth_key_prefix: Bytes],
+    args: [nonce: U64, new_account_address: Address, auth_key_prefix: Bytes],
     script: CreateDesignatedDealer,
     doc: "Creates designated dealer at 'new_account_address"
 }

@@ -90,6 +90,15 @@ module Association {
         exists<PrivilegedCapability<T>>(addr)
     }
 
+    public fun assert_account_is_blessed(sender_account: &signer) {
+        // Verify that the sender is treasury compliant account
+        Transaction::assert(Signer::address_of(sender_account) == treasury_compliance_account(), 0)
+    }
+
+    fun treasury_compliance_account(): address {
+        0xB1E55ED
+    }
+
     /// The address at which the root account will be published.
     public fun root_address(): address {
         0xA550C18

@@ -16,6 +16,8 @@
 -  [Function `assert_is_association`](#0x0_Association_assert_is_association)
 -  [Function `assert_is_root`](#0x0_Association_assert_is_root)
 -  [Function `addr_is_association`](#0x0_Association_addr_is_association)
+-  [Function `assert_account_is_blessed`](#0x0_Association_assert_account_is_blessed)
+-  [Function `treasury_compliance_account`](#0x0_Association_treasury_compliance_account)
 -  [Function `root_address`](#0x0_Association_root_address)
 -  [Function `assert_addr_is_association`](#0x0_Association_assert_addr_is_association)
 -  [Specification](#0x0_Association_Specification)
@@ -360,6 +362,55 @@ Return whether the account at
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_addr_is_association">addr_is_association</a>(addr: address): bool {
     exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association_T">T</a>&gt;&gt;(addr)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_Association_assert_account_is_blessed"></a>
+
+## Function `assert_account_is_blessed`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_account_is_blessed">assert_account_is_blessed</a>(sender_account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_account_is_blessed">assert_account_is_blessed</a>(sender_account: &signer) {
+    // Verify that the sender is treasury compliant account
+    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(sender_account) == <a href="#0x0_Association_treasury_compliance_account">treasury_compliance_account</a>(), 0)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_Association_treasury_compliance_account"></a>
+
+## Function `treasury_compliance_account`
+
+
+
+<pre><code><b>fun</b> <a href="#0x0_Association_treasury_compliance_account">treasury_compliance_account</a>(): address
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="#0x0_Association_treasury_compliance_account">treasury_compliance_account</a>(): address {
+    0xB1E55ED
 }
 </code></pre>
 

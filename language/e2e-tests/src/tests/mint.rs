@@ -23,6 +23,7 @@ fn tiered_mint_designated_dealer() {
     executor.execute_and_apply(blessed.signed_script_txn(
         encode_create_designated_dealer(
             account_config::coin1_tag(),
+            0,
             *dd.address(),
             dd.auth_key_prefix(),
         ),
