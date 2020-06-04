@@ -400,18 +400,6 @@ impl ResponseItem {
         }
     }
 
-    pub fn into_get_events_by_access_path_response(
-        self,
-    ) -> Result<(Vec<EventWithProof>, AccountStateWithProof)> {
-        match self {
-            ResponseItem::GetEventsByEventAccessPath {
-                events_with_proof,
-                proof_of_latest_event,
-            } => Ok((events_with_proof, proof_of_latest_event)),
-            _ => bail!("Not ResponseItem::GetEventsByEventAccessPath."),
-        }
-    }
-
     pub fn into_get_transactions_response(self) -> Result<TransactionListWithProof> {
         match self {
             ResponseItem::GetTransactions {
