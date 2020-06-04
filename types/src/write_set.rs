@@ -48,11 +48,6 @@ pub struct WriteSet(WriteSetMut);
 
 impl WriteSet {
     #[inline]
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    #[inline]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -83,11 +78,6 @@ impl WriteSetMut {
 
     pub fn push(&mut self, item: (AccessPath, WriteOp)) {
         self.write_set.push(item);
-    }
-
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.write_set.len()
     }
 
     #[inline]
