@@ -11,7 +11,6 @@ use crate::{
 };
 use anyhow::{Context as _, Result};
 use futures::{
-    channel::mpsc,
     future::{Future, FutureExt},
     sink::SinkExt,
     stream::{FusedStream, Stream, StreamExt},
@@ -304,13 +303,6 @@ where
         };
     }
 
-    async fn send_connectivity_request(
-        &mut self,
-        req: ConnectivityRequest,
-    ) -> Result<(), mpsc::SendError> {
-        self.conn_mgr_reqs_tx.send(req).await
-    }
-
     async fn handle_new_discovery_set_event(&mut self, validator_set: ValidatorSet) {
         let latest_discovery_set =
             DiscoverySetInternal::from_validator_set(self.role, validator_set);
@@ -334,12 +326,13 @@ where
                     (*peer_id, addrs.clone())
                 })
                 .collect();
-            self.send_connectivity_request(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::OnChain,
-                update_addr_reqs,
-            ))
-            .await
-            .unwrap();
+            self.conn_mgr_reqs_tx
+                .send(ConnectivityRequest::UpdateAddresses(
+                    DiscoverySource::OnChain,
+                    update_addr_reqs,
+                ))
+                .await
+                .unwrap();
         }
     }
 
