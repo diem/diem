@@ -273,11 +273,11 @@ fn group_events_by_query_path(
         for (address, account_blob) in txn.account_states().iter() {
             let account = AccountResource::try_from(account_blob).unwrap();
             event_key_to_query_path.insert(
-                account.sent_events().key().clone(),
+                *account.sent_events().key(),
                 AccessPath::new_for_sent_event(*address),
             );
             event_key_to_query_path.insert(
-                account.received_events().key().clone(),
+                *account.received_events().key(),
                 AccessPath::new_for_received_event(*address),
             );
         }

@@ -9,6 +9,7 @@ allowed = [
     "clippy::unit_arg",
     # Known to have false positive at the moment,
     "clippy::mutable_key_type",
+    "clippy::eval-order-dependence",
 ]
 
 [workspace.enforced-attributes]

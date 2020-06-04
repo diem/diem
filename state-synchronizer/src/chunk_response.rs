@@ -10,6 +10,7 @@ use std::fmt;
 
 /// The response can carry different LedgerInfo types depending on whether the verification
 /// is done via the local trusted validator set or a local waypoint.
+#[allow(clippy::large_enum_variant)]
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub enum ResponseLedgerInfo {
     /// A typical response carries a LedgerInfo with signatures that should be verified using the

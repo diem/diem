@@ -161,7 +161,7 @@ impl WalletLibrary {
     /// AccountAddress is not contained in the addr_map, then this function will return an Error
     pub fn sign_txn(&self, txn: RawTransaction) -> Result<SignedTransaction> {
         if let Some(child) = self.addr_map.get(&txn.sender()) {
-            let child_key = self.key_factory.private_child(child.clone())?;
+            let child_key = self.key_factory.private_child(*child)?;
             let signature = child_key.sign(txn.hash());
             Ok(SignedTransaction::new(
                 txn,

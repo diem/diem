@@ -284,7 +284,7 @@ impl MoveStorage for &dyn DbReader {
 
         let results = addresses
             .iter()
-            .map(|addr| self.get_account_state_with_proof(addr.clone(), version, version))
+            .map(|addr| self.get_account_state_with_proof(*addr, version, version))
             .collect::<Result<Vec<_>>>()?;
 
         // Account address --> AccountState

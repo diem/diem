@@ -137,7 +137,7 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
             let picked_idx = mutation.function_def.index(function_def_len);
             mutation_map
                 .entry(picked_idx)
-                .or_insert_with(|| vec![])
+                .or_insert_with(Vec::new)
                 .push(mutation);
         }
 

@@ -136,7 +136,7 @@ async fn send_inbound_ping(
     let (delivered_tx, delivered_rx) = oneshot::channel();
     network_notifs_tx
         .push_with_feedback(
-            key.clone(),
+            key,
             PeerManagerNotification::RecvRpc(peer_id, inbound_rpc_req),
             Some(delivered_tx),
         )

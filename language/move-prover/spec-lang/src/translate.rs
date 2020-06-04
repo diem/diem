@@ -188,7 +188,7 @@ impl<'env> Translator<'env> {
         // TODO: check whether overloads are distinguishable
         self.spec_fun_table
             .entry(name)
-            .or_insert_with(|| vec![])
+            .or_insert_with(Vec::new)
             .push(entry);
     }
 
@@ -333,7 +333,7 @@ impl<'env> Translator<'env> {
             trans
                 .spec_fun_table
                 .entry(name)
-                .or_insert_with(|| vec![])
+                .or_insert_with(Vec::new)
                 .push(entry);
         };
 
@@ -1681,7 +1681,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 let tys = tys_opt
                     .as_ref()
                     .map(|tys| et.translate_types(tys))
-                    .unwrap_or_else(|| vec![]);
+                    .unwrap_or_else(Vec::new);
                 if let Some(spec_var) = et.parent.parent.spec_var_table.get(&var_name) {
                     Some((spec_var.module_id, spec_var.var_id, tys, rhs.as_ref()))
                 } else {
@@ -2829,14 +2829,14 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             let node_id = NodeId::new(i);
             if let Some(ty) = self.parent.type_map.get(&node_id) {
                 let ty = self.finalize_type(node_id, ty);
-                self.parent.type_map.insert(node_id.clone(), ty);
+                self.parent.type_map.insert(node_id, ty);
             }
             if let Some(inst) = self.parent.instantiation_map.get(&node_id) {
                 let inst = inst
                     .iter()
                     .map(|ty| self.finalize_type(node_id, ty))
                     .collect_vec();
-                self.parent.instantiation_map.insert(node_id.clone(), inst);
+                self.parent.instantiation_map.insert(node_id, inst);
             }
         }
     }
@@ -3193,7 +3193,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         tys_opt
             .as_deref()
             .map(|tys| self.translate_types(tys))
-            .unwrap_or_else(|| vec![])
+            .unwrap_or_else(Vec::new)
     }
 }
 

@@ -56,7 +56,7 @@ where
 
         // insert new one
         if let Some(expiration_time) = SystemTime::now().checked_add(self.default_timeout) {
-            self.ttl_index.insert(expiration_time.clone(), key.clone());
+            self.ttl_index.insert(expiration_time, key.clone());
             let value_info = ValueInfo {
                 value,
                 ttl: expiration_time,

@@ -49,7 +49,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
     // the iteration once NUM_MSGS messages are received.
     let f_listener = async move {
         let mut counter = 0u32;
-        while let Some(_) = listener_events.next().await {
+        while listener_events.next().await.is_some() {
             counter += 1;
             // By the nature of DirectSend protocol, some messages may be lost when a connection is
             // broken temporarily.

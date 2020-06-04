@@ -68,7 +68,7 @@ fn create_and_execute_key_manager(key_manager_config: KeyManagerConfig) -> Resul
 fn create_libra_interface(json_rpc_endpoint: String) -> JsonRpcLibraInterface {
     info!(
         "Creating a libra interface that talks to the JSON RPC endpoint at: {:?}.",
-        json_rpc_endpoint.clone()
+        json_rpc_endpoint
     );
     JsonRpcLibraInterface::new(json_rpc_endpoint)
 }

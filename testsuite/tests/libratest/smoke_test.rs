@@ -1314,7 +1314,7 @@ fn test_key_manager_consensus_rotation() {
 
     // Create a json-rpc connection to the blockchain and verify storage matches the on-chain state.
     let libra_interface = JsonRpcLibraInterface::new(json_rpc_endpoint);
-    let account = node_config.validator_network.clone().unwrap().peer_id();
+    let account = node_config.validator_network.unwrap().peer_id();
     let current_consensus = storage.get_public_key(CONSENSUS_KEY).unwrap().public_key;
     let validator_info = libra_interface.retrieve_validator_info(account).unwrap();
     assert_eq!(&current_consensus, validator_info.consensus_public_key());

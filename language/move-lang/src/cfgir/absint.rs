@@ -87,7 +87,7 @@ pub trait AbstractInterpreter: TransferFunctions {
         let start = cfg.start_block();
         let mut work_list = vec![start];
         inv_map.insert(
-            start.clone(),
+            start,
             BlockInvariant {
                 pre: initial_state,
                 post: BlockPostcondition::Unprocessed,
@@ -118,7 +118,7 @@ pub trait AbstractInterpreter: TransferFunctions {
                             }
                             JoinResult::Changed => {
                                 // The pre changed. Schedule the next block.
-                                work_list.push(next_lbl.clone());
+                                work_list.push(*next_lbl);
                             }
                         }
                     }
@@ -126,13 +126,13 @@ pub trait AbstractInterpreter: TransferFunctions {
                         // Haven't visited the next block yet. Use the post of the current block as
                         // its pre and schedule it.
                         inv_map.insert(
-                            next_lbl.clone(),
+                            *next_lbl,
                             BlockInvariant {
                                 pre: post_state.clone(),
                                 post: BlockPostcondition::Unprocessed,
                             },
                         );
-                        work_list.push(next_lbl.clone());
+                        work_list.push(*next_lbl);
                     }
                 }
             }
