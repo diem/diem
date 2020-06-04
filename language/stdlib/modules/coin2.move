@@ -16,7 +16,7 @@ module Coin2 {
             false,   // is_synthetic
             1000000, // scaling_factor = 10^6
             100,     // fractional_part = 10^2
-            x"436F696E32", // UTF8 encoding of "Coin2" in hex
+            b"Coin2",
         )
     }
 }
