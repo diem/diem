@@ -399,7 +399,8 @@ pub mod tests {
             .unwrap()
             .split("Key not set")
             .count();
-        assert_eq!(output, 10); // 9 KeyNotSet results in 9 splits
+        // 11 KeyNotSet results in 12 splits
+        assert_eq!(output, 12);
 
         helper.initialize(namespace.into());
 
@@ -408,7 +409,8 @@ pub mod tests {
             .unwrap()
             .split("Key not set")
             .count();
-        assert_eq!(output, 1); // 0 KeyNotSet results in 1 split
+        // 2 KeyNotSet results in 3 split (the accounts aren't initialized via initialize)
+        assert_eq!(output, 3);
     }
 
     #[test]
