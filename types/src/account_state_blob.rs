@@ -28,12 +28,6 @@ pub struct AccountStateBlob {
     blob: Vec<u8>,
 }
 
-impl AccountStateBlob {
-    pub fn blob(&self) -> &Vec<u8> {
-        &self.blob
-    }
-}
-
 impl fmt::Debug for AccountStateBlob {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let decoded = lcs::from_bytes(&self.blob)
