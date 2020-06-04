@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{on_chain_config::OnChainConfig, validator_info::ValidatorInfo};
-use anyhow::Result;
+
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -47,10 +47,6 @@ impl ValidatorSet {
 
     pub fn empty() -> Self {
         ValidatorSet::new(Vec::new())
-    }
-
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        lcs::from_bytes(bytes).map_err(Into::into)
     }
 }
 
