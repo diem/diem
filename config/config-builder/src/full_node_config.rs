@@ -61,7 +61,7 @@ impl FullNodeConfig {
     }
 
     pub fn validators(&mut self, nodes: usize) -> &mut Self {
-        self.validator_config.nodes = nodes;
+        self.validator_config.num_nodes = nodes;
         self
     }
 

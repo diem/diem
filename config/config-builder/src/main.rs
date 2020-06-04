@@ -216,7 +216,7 @@ fn main() {
 
 fn build_faucet(args: FaucetArgs) {
     let mut config_builder = ValidatorConfig::new();
-    config_builder.nodes = args.validators_in_genesis;
+    config_builder.num_nodes = args.validators_in_genesis;
 
     if let Some(seed) = args.seed.as_ref() {
         let seed = hex::decode(seed).expect("Invalid hex in seed.");
@@ -346,12 +346,12 @@ fn build_validator(args: ValidatorArgs) {
     }
 
     let mut config_builder = safety_rules_common(&args.validator_common);
-    config_builder.advertised = args.advertised;
+    config_builder.advertised_address = args.advertised;
     config_builder.bootstrap = args.bootstrap;
-    config_builder.index = args.validator_common.validator_index;
-    config_builder.listen = args.listen;
-    config_builder.nodes = args.validator_common.validators;
-    config_builder.nodes_in_genesis = args.validator_common.validators_in_genesis;
+    config_builder.node_index = args.validator_common.validator_index;
+    config_builder.listen_address = args.listen;
+    config_builder.num_nodes = args.validator_common.validators;
+    config_builder.num_nodes_in_genesis = args.validator_common.validators_in_genesis;
 
     if let Some(seed) = args.validator_common.seed.as_ref() {
         config_builder.seed = parse_seed(seed);
@@ -367,8 +367,8 @@ fn build_validator(args: ValidatorArgs) {
 fn safety_rules_common(args: &ValidatorCommonArgs) -> ValidatorConfig {
     let mut config_builder = ValidatorConfig::new();
 
-    config_builder.index = args.validator_index;
-    config_builder.nodes = args.validators;
+    config_builder.node_index = args.validator_index;
+    config_builder.num_nodes = args.validators;
     config_builder.safety_rules_addr = args.safety_rules_addr;
     config_builder.safety_rules_backend = args.safety_rules_backend.clone();
     config_builder.safety_rules_host = args.safety_rules_host.clone();
