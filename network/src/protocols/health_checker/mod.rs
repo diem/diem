@@ -18,14 +18,13 @@
 //! - Use successful inbound pings as a sign of remote note being healthy
 //! - Ping a peer only in periods of no application-level communication with the peer
 use crate::{
-    counters,
+    constants, counters,
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::{
-        network::{Event, NetworkEvents, NetworkSender},
+        network::{Event, NetworkEvents, NetworkSender, NewNetEvent, NewNetworkSender},
         rpc::error::RpcError,
     },
-    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
     ProtocolId,
 };
 use bytes::Bytes;
@@ -35,8 +34,10 @@ use futures::{
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
 use libra_logger::prelude::*;
+use libra_metrics::IntCounterVec;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
+use once_cell::sync::Lazy;
 use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, time::Duration};
@@ -65,25 +66,24 @@ pub struct HealthCheckerNetworkSender {
     inner: NetworkSender<HealthCheckerMsg>,
 }
 
-pub fn add_to_network(
-    network: &mut NetworkBuilder,
-) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents) {
-    let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
-        .add_protocol_handler(
-            vec![ProtocolId::HealthCheckerRpc],
-            vec![],
-            QueueStyle::LIFO,
-            NETWORK_CHANNEL_SIZE,
-            Some(&counters::PENDING_HEALTH_CHECKER_NETWORK_EVENTS),
-        );
+pub fn endpoint_config() -> (
+    Vec<ProtocolId>,
+    Vec<ProtocolId>,
+    QueueStyle,
+    usize,
+    Option<&'static Lazy<IntCounterVec>>
+) {
     (
-        HealthCheckerNetworkSender::new(sender, connection_reqs_tx),
-        HealthCheckerNetworkEvents::new(receiver, connection_notifs_rx),
+        /* rpc_protocols = */ vec![ProtocolId::HealthCheckerRpc],
+        /* direct_send_protocols = */ vec![],
+        /* queue_preference = */ QueueStyle::LIFO,
+        /* max_queue_size_per_peer = */ constants::NETWORK_CHANNEL_SIZE,
+        /* counter = */ Some(&counters::PENDING_HEALTH_CHECKER_NETWORK_EVENTS),
     )
 }
 
-impl HealthCheckerNetworkSender {
-    pub fn new(
+impl NewNetworkSender for HealthCheckerNetworkSender {
+    fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         connection_reqs_tx: ConnectionRequestSender,
     ) -> Self {
@@ -91,7 +91,9 @@ impl HealthCheckerNetworkSender {
             inner: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
         }
     }
+}
 
+impl HealthCheckerNetworkSender {
     /// Send a HealthChecker Ping RPC request to remote peer `recipient`. Returns
     /// the remote peer's future `Pong` reply.
     ///

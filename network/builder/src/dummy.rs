@@ -3,15 +3,21 @@
 
 //! Integration tests for validator_network.
 
-use crate::{
+use crate::network_builder::{AuthenticationMode, NetworkBuilder};
+
+use channel::message_queues::QueueStyle;
+use futures::{executor::block_on, StreamExt};
+use libra_config::config::RoleType;
+use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
+use libra_network_address::NetworkAddress;
+use libra_types::PeerId;
+use network::{
+    constants,
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::{
         network::{Event, NetworkEvents, NetworkSender},
         rpc::error::RpcError,
-    },
-    validator_network::network_builder::{
-        AuthenticationMode, NetworkBuilder, NETWORK_CHANNEL_SIZE,
     },
     NetworkPublicKeys, ProtocolId,
 };
@@ -38,7 +44,7 @@ fn add_to_network(network: &mut NetworkBuilder) -> (DummyNetworkSender, DummyNet
             vec![TEST_RPC_PROTOCOL],
             vec![TEST_DIRECT_SEND_PROTOCOL],
             QueueStyle::LIFO,
-            NETWORK_CHANNEL_SIZE,
+            constants::NETWORK_CHANNEL_SIZE,
             None,
         );
     (

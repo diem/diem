@@ -25,14 +25,11 @@ use pin_project::pin_project;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{marker::PhantomData, pin::Pin, time::Duration};
 
-#[cfg(any(feature = "testing", test))]
-pub mod dummy;
-#[cfg(test)]
-mod test;
-
 pub trait Message: DeserializeOwned + Serialize {}
 impl<T: DeserializeOwned + Serialize> Message for T {}
 
+// TODO:  is this comment still correct?  specifically, does this cover all network clients or only
+// validators (and full nodes are handled elsewhere)?
 /// Events received by network clients in a validator
 ///
 /// An enumeration of the various types of messages that the network will be sending
@@ -96,8 +93,15 @@ pub struct NetworkEvents<TMessage> {
     _marker: PhantomData<TMessage>,
 }
 
-impl<TMessage: Message> NetworkEvents<TMessage> {
-    pub fn new(
+pub trait NewNetEvent {
+    fn new(
+        peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+        connection_notifs_rx: libra_channel::Receiver<PeerId, ConnectionNotification>,
+    ) -> Self;
+}
+
+impl<TMessage: Message> NewNetEvent for NetworkEvents<TMessage> {
+    fn new(
         peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
         connection_notifs_rx: libra_channel::Receiver<PeerId, ConnectionNotification>,
     ) -> Self {
@@ -180,8 +184,15 @@ pub struct NetworkSender<TMessage> {
     _marker: PhantomData<TMessage>,
 }
 
-impl<TMessage> NetworkSender<TMessage> {
-    pub fn new(
+pub trait NewNetworkSender {
+    fn new(
+        peer_mgr_reqs_tx: PeerManagerRequestSender,
+        connection_reqs_tx: ConnectionRequestSender,
+    ) -> Self;
+}
+
+impl<TMessage> NewNetworkSender for NetworkSender<TMessage> {
+    fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         connection_reqs_tx: ConnectionRequestSender,
     ) -> Self {
@@ -191,7 +202,9 @@ impl<TMessage> NetworkSender<TMessage> {
             _marker: PhantomData,
         }
     }
+}
 
+impl<TMessage> NetworkSender<TMessage> {
     /// Request that a given Peer be dialed at the provided `NetworkAddress` and
     /// synchronously wait for the request to be performed.
     pub async fn dial_peer(

@@ -12,16 +12,17 @@ pub use interface::NetworkProvider;
 
 pub mod common;
 pub mod connectivity_manager;
+pub mod constants;
 pub mod error;
 pub mod interface;
 pub mod peer_manager;
 pub mod protocols;
-pub mod validator_network;
 
 pub mod counters;
 mod peer;
 mod sink;
-mod transport;
+// TODO:  pub as part of **builder refactoring.  should be de-pubified.
+pub mod transport;
 
 #[cfg(not(any(feature = "testing", feature = "fuzzing")))]
 mod noise_wrapper;

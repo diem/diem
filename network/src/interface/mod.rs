@@ -12,7 +12,7 @@
 //! [`NetworkProvider`] actor. Inbound RPC requests are forwarded to the appropriate
 //! handler, determined using the protocol negotiated on the RPC substream.
 use crate::{
-    counters,
+    constants, counters,
     peer::{Peer, PeerHandle, PeerNotification},
     peer_manager::TransportNotification,
     protocols::{
@@ -20,7 +20,7 @@ use crate::{
         rpc::{InboundRpcRequest, OutboundRpcRequest, Rpc, RpcNotification},
     },
     transport::Connection,
-    validator_network, ProtocolId,
+    ProtocolId,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use futures::{
@@ -129,9 +129,9 @@ where
             rpc_reqs_rx,
             peer_rpc_notifs_rx,
             rpc_notifs_tx,
-            Duration::from_millis(validator_network::network_builder::INBOUND_RPC_TIMEOUT_MS),
-            validator_network::network_builder::MAX_CONCURRENT_OUTBOUND_RPCS,
-            validator_network::network_builder::MAX_CONCURRENT_INBOUND_RPCS,
+            Duration::from_millis(constants::INBOUND_RPC_TIMEOUT_MS),
+            constants::MAX_CONCURRENT_OUTBOUND_RPCS,
+            constants::MAX_CONCURRENT_INBOUND_RPCS,
         );
         executor.spawn(rpc.start());
 

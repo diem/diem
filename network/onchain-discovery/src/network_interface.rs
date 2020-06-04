@@ -4,7 +4,7 @@
 //! Protobuf based interface between OnchainDiscovery and Network layers.
 use crate::types::{OnchainDiscoveryMsg,QueryDiscoverySetRequest, QueryDiscoverySetResponse};
 use channel::{ message_queues::QueueStyle, libra_channel};
-use libra_types::PeerId;
+use futures::{channel::mpsc, sink::SinkExt};
 use network::{
     peer_manager::{
         ConnectionRequestSender,
@@ -12,11 +12,11 @@ use network::{
         PeerManagerNotification,
         ConnectionNotification
     },
+    connectivity_manager::ConnectivityRequest,
     protocols::{
         network::{ NetworkSender},
-        rpc::error::RpcError,
+        protocols::{network::NetworkSender, rpc::error::RpcError},
     },
-    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
     ProtocolId,
 };
 use std::time::Duration;
@@ -80,25 +80,4 @@ impl OnchainDiscoveryNetworkSender {
         };
         Ok(res_msg)
     }
-}
-
-/// Construct OnchainDiscoveryNetworkSender/Events and register them with the
-/// given network builder.
-pub fn add_to_network(
-    network: &mut NetworkBuilder,
-) -> (OnchainDiscoveryNetworkSender, OnchainDiscoveryNetworkEvents) {
-    let (network_sender, network_receiver, conn_reqs_tx, conn_notifs_rx) = network
-        .add_protocol_handler(
-            vec![ProtocolId::OnchainDiscoveryRpc],
-            vec![],
-            QueueStyle::LIFO,
-            NETWORK_CHANNEL_SIZE,
-            // Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
-            // TODO(philiphayes): add a counter for onchain discovery
-            None,
-        );
-    (
-        OnchainDiscoveryNetworkSender::new(network_sender, conn_reqs_tx),
-        OnchainDiscoveryNetworkEvents::new(network_receiver, conn_notifs_rx),
-    )
 }

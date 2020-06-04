@@ -9,18 +9,28 @@
 //! authentication -- a network end-point running with remote authentication enabled will
 //! connect to or accept connections from an end-point running in authenticated mode as
 //! long as the latter is in its trusted peers set.
-use crate::{
+use channel::{self, libra_channel, message_queues::QueueStyle};
+use futures::stream::StreamExt;
+use libra_config::config::{RoleType, HANDSHAKE_VERSION};
+use libra_crypto::x25519;
+use libra_logger::prelude::*;
+use libra_metrics::IntCounterVec;
+use libra_network_address::NetworkAddress;
+use libra_types::PeerId;
+use netcore::transport::Transport;
+use network::{
+
     common::NetworkPublicKeys,
     connectivity_manager::{ConnectivityManager, ConnectivityRequest},
-    counters,
+    constants, counters,
     peer_manager::{
         conn_notifs_channel, ConnectionRequest, ConnectionRequestSender, PeerManager,
         PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
     },
     protocols::{
-        discovery::{self, Discovery},
-        health_checker::{self, HealthChecker},
-        wire::handshake::v1::SupportedProtocols,
+        discovery::{Discovery, DiscoveryNetworkEvents, DiscoveryNetworkSender},
+        health_checker::{HealthChecker, HealthCheckerNetworkEvents, HealthCheckerNetworkSender},
+        wire::handshake::v1::SupportedProtocols,network::{NewNetworkSender, NewNetEvent}
     },
     transport,
     transport::*,
@@ -48,30 +58,16 @@ use std::{
 use tokio::{runtime::Handle, time::interval};
 use tokio_retry::strategy::ExponentialBackoff;
 
-// NB: Almost all of these values are educated guesses, and not determined using any empirical
-// data. If you run into a limit and believe that it is unreasonably tight, please submit a PR
-// with your use-case. If you do change a value, please add a comment linking to the PR which
-// advocated the change.
-pub const NETWORK_CHANNEL_SIZE: usize = 1024;
-pub const DISCOVERY_INTERVAL_MS: u64 = 1000;
-pub const PING_INTERVAL_MS: u64 = 1000;
-pub const PING_TIMEOUT_MS: u64 = 10_000;
-pub const DISOVERY_MSG_TIMEOUT_MS: u64 = 10_000;
-pub const CONNECTIVITY_CHECK_INTERNAL_MS: u64 = 5000;
-pub const INBOUND_RPC_TIMEOUT_MS: u64 = 10_000;
-pub const MAX_CONCURRENT_OUTBOUND_RPCS: u32 = 100;
-pub const MAX_CONCURRENT_INBOUND_RPCS: u32 = 100;
-pub const PING_FAILURES_TOLERATED: u64 = 10;
-pub const MAX_CONCURRENT_NETWORK_REQS: usize = 100;
-pub const MAX_CONCURRENT_NETWORK_NOTIFS: usize = 100;
-pub const MAX_CONNECTION_DELAY_MS: u64 = 10 * 60 * 1000 /* 10 minutes */;
-
+// TODO:  AuthenticationModes should be defined lower in the technical stack;  the mode is useful
+// for the *integrations* performed by the NetworkBuilder, but the semantic context is not meaningful
+// here.
 #[derive(Debug)]
 pub enum AuthenticationMode {
     /// Inbound and outbound connections are unauthenticated and unencrypted, using
     /// a simple PeerId exchange protocol to share each peer's PeerId in-band.
     /// This mode is obviously insecure and should never be used in production.
     // TODO(philiphayes): remove? gate with cfg(test)? should never use this in prod.
+    // TODO(agc):  remove if possible;  gate with cfg(test) if not.
     Unauthenticated,
     /// Inbound and outbound connections are secured with NoiseIK; however, only
     /// clients/dialers will authenticate the servers/listeners. More specifically,
@@ -149,13 +145,13 @@ impl NetworkBuilder {
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) = libra_channel::new(
             QueueStyle::FIFO,
-            NonZeroUsize::new(NETWORK_CHANNEL_SIZE).unwrap(),
+            NonZeroUsize::new(constants::NETWORK_CHANNEL_SIZE).unwrap(),
             Some(&counters::PENDING_PEER_MANAGER_REQUESTS),
         );
         // Setup channel to send connection requests to peer manager.
         let (connection_reqs_tx, connection_reqs_rx) = libra_channel::new(
             QueueStyle::FIFO,
-            NonZeroUsize::new(NETWORK_CHANNEL_SIZE).unwrap(),
+            NonZeroUsize::new(constants::NETWORK_CHANNEL_SIZE).unwrap(),
             None,
         );
         NetworkBuilder {
@@ -168,7 +164,7 @@ impl NetworkBuilder {
             seed_peers: HashMap::new(),
             trusted_peers: Arc::new(RwLock::new(HashMap::new())),
             authentication_mode: None,
-            channel_size: NETWORK_CHANNEL_SIZE,
+            channel_size: constants::NETWORK_CHANNEL_SIZE,
             direct_send_protocols: vec![],
             rpc_protocols: vec![],
             upstream_handlers: HashMap::new(),
@@ -178,14 +174,14 @@ impl NetworkBuilder {
             connection_reqs_tx,
             connection_reqs_rx,
             conn_mgr_reqs_tx: None,
-            discovery_interval_ms: DISCOVERY_INTERVAL_MS,
-            ping_interval_ms: PING_INTERVAL_MS,
-            ping_timeout_ms: PING_TIMEOUT_MS,
-            ping_failures_tolerated: PING_FAILURES_TOLERATED,
-            connectivity_check_interval_ms: CONNECTIVITY_CHECK_INTERNAL_MS,
-            max_concurrent_network_reqs: MAX_CONCURRENT_NETWORK_REQS,
-            max_concurrent_network_notifs: MAX_CONCURRENT_NETWORK_NOTIFS,
-            max_connection_delay_ms: MAX_CONNECTION_DELAY_MS,
+            discovery_interval_ms: constants::DISCOVERY_INTERVAL_MS,
+            ping_interval_ms: constants::PING_INTERVAL_MS,
+            ping_timeout_ms: constants::PING_TIMEOUT_MS,
+            ping_failures_tolerated: constants::PING_FAILURES_TOLERATED,
+            connectivity_check_interval_ms: constants::CONNECTIVITY_CHECK_INTERNAL_MS,
+            max_concurrent_network_reqs: constants::MAX_CONCURRENT_NETWORK_REQS,
+            max_concurrent_network_notifs: constants::MAX_CONCURRENT_NETWORK_NOTIFS,
+            max_connection_delay_ms: constants::MAX_CONNECTION_DELAY_MS,
         }
     }
 
@@ -247,7 +243,7 @@ impl NetworkBuilder {
     }
 
     /// Add a handler for given protocols using raw bytes.
-    pub fn add_protocol_handler(
+    fn inner_add_protocol_handler(
         &mut self,
         rpc_protocols: Vec<ProtocolId>,
         direct_send_protocols: Vec<ProtocolId>,
@@ -344,7 +340,7 @@ impl NetworkBuilder {
             .conn_mgr_reqs_tx()
             .expect("ConnectivityManager not enabled");
         // Get handles for network events and sender.
-        let (discovery_network_tx, discovery_network_rx) = discovery::add_to_network(self);
+        let (discovery_network_tx, discovery_network_rx) = self.add_discovery_endpoints();
 
         // TODO(philiphayes): the current setup for gossip discovery doesn't work
         // when we don't have an `advertised_address` set, since it uses the
@@ -388,7 +384,7 @@ impl NetworkBuilder {
 
     pub fn add_connection_monitoring(&mut self) -> &mut Self {
         // Initialize and start HealthChecker.
-        let (hc_network_tx, hc_network_rx) = health_checker::add_to_network(self);
+        let (hc_network_tx, hc_network_rx) = self.add_health_checker_endpoints();
         let ping_interval_ms = self.ping_interval_ms;
         let ping_timeout_ms = self.ping_timeout_ms;
         let ping_failures_tolerated = self.ping_failures_tolerated;
@@ -497,5 +493,85 @@ impl NetworkBuilder {
         debug!("Started peer manager");
 
         listen_addr
+    }
+
+    pub fn add_onchain_discovery_endpoints(
+        &mut self,
+    ) -> (
+        OnchainDiscoveryNetworkSender,
+        libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+        conn_notifs_channel::Receiver,
+    ) {
+        let (network_sender, network_receiver, conn_reqs_tx, conn_notifs_rx) = self
+            .add_protocol_handler(
+                vec![ProtocolId::OnchainDiscoveryRpc],
+                vec![],
+                QueueStyle::LIFO,
+                constants::NETWORK_CHANNEL_SIZE,
+                // Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
+                // TODO(philiphayes): add a counter for onchain discovery
+                None,
+            );
+        (
+            OnchainDiscoveryNetworkSender::new(
+                network_sender,
+                conn_reqs_tx,
+                self.conn_mgr_reqs_tx()
+                    .expect("ConnecitivtyManager not enabled"),
+            ),
+            network_receiver,
+            conn_notifs_rx,
+        )
+    }
+
+    /// Register the discovery sender and event handler with network and return interfaces for those
+    /// actors.
+    pub fn add_discovery_endpoints(&mut self) -> (DiscoveryNetworkSender, DiscoveryNetworkEvents) {
+        let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = self
+            .add_protocol_handler(network::protocols::discovery::endpoint_config()
+            );
+        (
+            DiscoveryNetworkSender::new(sender, connection_reqs_tx),
+            DiscoveryNetworkEvents::new(receiver, connection_notifs_rx),
+        )
+    }
+
+    pub fn add_health_checker_endpoints(
+        &mut self,
+    ) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents) {
+        let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = self
+            .add_protocol_handler(
+                network::protocols::health_checker::endpoint_config())
+                    );
+        (
+            HealthCheckerNetworkSender::new(sender, connection_reqs_tx),
+            HealthCheckerNetworkEvents::new(receiver, connection_notifs_rx),
+        )
+    }
+
+    pub fn add_protocol_handler<SenderT, EventT>(&mut self,
+        (rpc_protocols, direct_send_protocols, queue_preferences, max_queue_size_per_peer): (
+            Vec<ProtocolId>,
+            Vec<ProtocolId>,
+            QueueStyle,
+            usize,
+            Option<&'static Lazy<IntCounterVec>>),
+        ),
+    ) -> (SenderT, EventT) where
+        EventT: NewNetworkEvent,
+        SenderT: NewNetworkSende,
+    {
+        let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = self
+            .inner_add_protocol_handler(
+                rpc_protocols,
+                direct_send_protocols,
+                queue_preference,
+                max_queue_size_per_peer,
+                counter,
+            );
+        (
+            SenderT::new(sender, connection_reqs_tx),
+            EventT::new(receiver, connection_notifs_rx),
+        )
     }
 }

@@ -35,11 +35,10 @@
 
 use crate::{
     connectivity_manager::{ConnectivityRequest, DiscoverySource},
-    counters,
+    constants, counters,
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
-    protocols::network::{Event, NetworkEvents, NetworkSender},
-    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
+    protocols::network::{Event, NetworkEvents, NetworkSender, NewNetEvent, NewNetworkSender},
     ProtocolId,
 };
 use bytes::Bytes;
@@ -51,9 +50,11 @@ use futures::{
 use libra_config::config::RoleType;
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_logger::prelude::*;
+use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
+use once_cell::sync::Lazy;
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -87,22 +88,19 @@ pub struct DiscoveryNetworkSender {
     inner: NetworkSender<DiscoveryMsg>,
 }
 
-/// Register the discovery sender and event handler with network and return interfaces for those
-/// actors.
-pub fn add_to_network(
-    network: &mut NetworkBuilder,
-) -> (DiscoveryNetworkSender, DiscoveryNetworkEvents) {
-    let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
-        .add_protocol_handler(
-            vec![],
-            vec![ProtocolId::DiscoveryDirectSend],
-            QueueStyle::LIFO,
-            NETWORK_CHANNEL_SIZE,
-            Some(&counters::PENDING_DISCOVERY_NETWORK_EVENTS),
-        );
+pub fn endpoint_config() -> (
+    Vec<ProtocolId>,
+    Vec<ProtocolId>,
+    QueueStyle,
+    usize,
+    Option<&'static Lazy<IntCounterVec>>)
+ {
     (
-        DiscoveryNetworkSender::new(sender, connection_reqs_tx),
-        DiscoveryNetworkEvents::new(receiver, connection_notifs_rx),
+        /* rpc_protocols = */ vec![],
+        /* direct_send_protocols = */ vec![QueueStyle::LIFO],
+        /* queue_preference = */ QueueStyle::LIFO,
+        /* max_queue_size_per_peer = */ constants::NETWORK_CHANNEL_SIZE,
+        /* counter = */ Some(&counters::PENDING_DISCOVERY_NETWORK_EVENTS),
     )
 }
 

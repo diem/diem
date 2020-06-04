@@ -10,7 +10,6 @@ use network::{
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NetworkEvents, NetworkSender},
-    validator_network::network_builder::NetworkBuilder,
     ProtocolId,
 };
 use serde::{Deserialize, Serialize};

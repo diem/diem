@@ -47,26 +47,13 @@
 //! 4. notifies the connectivity_manager with updated network info whenever we
 //!    detect a newer discovery set
 
-use crate::{
-    client::OnchainDiscovery,
-    service::OnchainDiscoveryService,
-    types::{QueryDiscoverySetRequest, QueryDiscoverySetResponse},
-};
+use crate::types::{QueryDiscoverySetRequest, QueryDiscoverySetResponse};
 use anyhow::{Context as AnyhowContext, Result};
-use futures::{
-    future::{Future, FutureExt},
-    stream::{Fuse, StreamExt},
-};
-use libra_config::config::RoleType;
-use libra_types::{account_config, waypoint::Waypoint, PeerId};
-use network::validator_network::network_builder::NetworkBuilder;
-use std::{sync::Arc, time::Duration};
+use futures::future::{Future, FutureExt};
+use libra_types::account_config;
+use std::sync::Arc;
 use storage_interface::DbReader;
-use tokio::{
-    runtime::Handle,
-    task,
-    time::{interval, Interval},
-};
+use tokio::task;
 
 #[cfg(test)]
 mod test;

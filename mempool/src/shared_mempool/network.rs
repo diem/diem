@@ -10,9 +10,9 @@ use network::{
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NetworkEvents, NetworkSender},
-    validator_network::network_builder::NetworkBuilder,
     ProtocolId,
 };
+use network_builder::network_builder::NetworkBuilder;
 use serde::{Deserialize, Serialize};
 
 /// Container for exchanging transactions with other Mempools

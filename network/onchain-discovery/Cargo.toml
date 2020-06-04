@@ -27,7 +27,7 @@ libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-network-address = { path = "../network-address", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-network = { path = "../", version = "0.1.0" }
+network = { path = "../../network", version = "0.1.0" }
 option-future = { path = "../../common/option-future", version = "0.1.0" }
 storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
 
