@@ -11,7 +11,9 @@ use crate::{
 };
 use anyhow::{Context as _, Result};
 use futures::{
+    channel::mpsc,
     future::{Future, FutureExt},
+    sink::SinkExt,
     stream::{FusedStream, Stream, StreamExt},
 };
 use libra_config::config::RoleType;
@@ -49,6 +51,8 @@ pub struct OnchainDiscovery<TTicker> {
     connected_peers: HashSet<PeerId>,
     /// A channel to send requests to the network instance.
     network_tx: OnchainDiscoveryNetworkSender,
+    /// A channel to send requests to the connectivity manager
+    conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     /// A channel to receive connection updates from the network.
     conn_notifs_rx: conn_notifs_channel::Receiver,
     /// internal gRPC client to send read requests to Libra Storage.
@@ -80,6 +84,7 @@ where
         role: RoleType,
         waypoint: Waypoint,
         network_tx: OnchainDiscoveryNetworkSender,
+        conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         conn_notifs_rx: conn_notifs_channel::Receiver,
         libra_db: Arc<dyn DbReader>,
         peer_query_ticker: TTicker,
@@ -95,6 +100,7 @@ where
             latest_discovery_set: DiscoverySetInternal::empty(),
             connected_peers: HashSet::new(),
             network_tx,
+            conn_mgr_reqs_tx,
             conn_notifs_rx,
             libra_db,
             peer_query_ticker,
@@ -298,6 +304,13 @@ where
         };
     }
 
+    async fn send_connectivity_request(
+        &mut self,
+        req: ConnectivityRequest,
+    ) -> Result<(), mpsc::SendError> {
+        self.conn_mgr_reqs_tx.send(req).await
+    }
+
     async fn handle_new_discovery_set_event(&mut self, validator_set: ValidatorSet) {
         let latest_discovery_set =
             DiscoverySetInternal::from_validator_set(self.role, validator_set);
@@ -321,13 +334,12 @@ where
                     (*peer_id, addrs.clone())
                 })
                 .collect();
-            self.network_tx
-                .send_connectivity_request(ConnectivityRequest::UpdateAddresses(
-                    DiscoverySource::OnChain,
-                    update_addr_reqs,
-                ))
-                .await
-                .unwrap();
+            self.send_connectivity_request(ConnectivityRequest::UpdateAddresses(
+                DiscoverySource::OnChain,
+                update_addr_reqs,
+            ))
+            .await
+            .unwrap();
         }
     }
 
