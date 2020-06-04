@@ -10,7 +10,7 @@
 address 0x0 {
 
 module ValidatorConfig {
-    use 0x0::Option;
+    use 0x0::Option::{Self, Option};
     use 0x0::Transaction;
     use 0x0::Signer;
 
@@ -27,10 +27,10 @@ module ValidatorConfig {
         full_node_network_address: vector<u8>,
     }
 
-    resource struct T {
+    resource struct ValidatorConfig {
         // set and rotated by the operator_account
-        config: Option::T<Config>,
-        operator_account: Option::T<address>,
+        config: Option<Config>,
+        operator_account: Option<address>,
     }
 
     // TODO(valerini): add events here
@@ -41,32 +41,32 @@ module ValidatorConfig {
 
     public fun publish(creator: &signer, account: &signer) {
         Transaction::assert(Signer::address_of(creator) == 0xA550C18, 1101);
-        move_to(account, T {
+        move_to(account, ValidatorConfig {
             config: Option::none(),
             operator_account: Option::none(),
         });
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // Rotation methods callable by ValidatorConfig::T owner
+    // Rotation methods callable by ValidatorConfig owner
     ///////////////////////////////////////////////////////////////////////////
 
     // Sets a new operator account, preserving the old config.
-    public fun set_operator(account: &signer, operator_account: address) acquires T {
+    public fun set_operator(account: &signer, operator_account: address) acquires ValidatorConfig {
         let sender = Signer::address_of(account);
-        (borrow_global_mut<T>(sender)).operator_account = Option::some(operator_account);
+        (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::some(operator_account);
     }
 
     // Removes an operator account, setting a corresponding field to Opetion::none.
     // The old config is preserved.
-    public fun remove_operator(account: &signer) acquires T {
+    public fun remove_operator(account: &signer) acquires ValidatorConfig {
         let sender = Signer::address_of(account);
         // Config field remains set
-        (borrow_global_mut<T>(sender)).operator_account = Option::none();
+        (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::none();
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // Rotation methods callable by ValidatorConfig::T.operator_account
+    // Rotation methods callable by ValidatorConfig.operator_account
     ///////////////////////////////////////////////////////////////////////////
 
     // Rotate the config in the validator_account
@@ -80,14 +80,14 @@ module ValidatorConfig {
         validator_network_address: vector<u8>,
         full_node_network_identity_pubkey: vector<u8>,
         full_node_network_address: vector<u8>,
-    ) acquires T {
+    ) acquires ValidatorConfig {
         Transaction::assert(
             Signer::address_of(signer) == get_operator(validator_account),
             1101
         );
         // TODO(valerini): verify the validity of new_config.consensus_pubkey and
         // the proof of posession
-        let t_ref = borrow_global_mut<T>(validator_account);
+        let t_ref = borrow_global_mut<ValidatorConfig>(validator_account);
         t_ref.config = Option::some(Config {
             consensus_pubkey,
             validator_network_identity_pubkey,
@@ -102,12 +102,12 @@ module ValidatorConfig {
         account: &signer,
         validator_account: address,
         consensus_pubkey: vector<u8>,
-    ) acquires T {
+    ) acquires ValidatorConfig {
         Transaction::assert(
             Signer::address_of(account) == get_operator(validator_account),
             1101
         );
-        let t_config_ref = Option::borrow_mut(&mut borrow_global_mut<T>(validator_account).config);
+        let t_config_ref = Option::borrow_mut(&mut borrow_global_mut<ValidatorConfig>(validator_account).config);
         t_config_ref.consensus_pubkey = consensus_pubkey;
     }
 
@@ -119,24 +119,24 @@ module ValidatorConfig {
     // 1) there is a ValidatorConfig resource under the address, and
     // 2) the config is set, and
     // NB! currently we do not require the the operator_account to be set
-    public fun is_valid(addr: address): bool acquires T {
-        exists<T>(addr) && Option::is_some(&borrow_global<T>(addr).config)
+    public fun is_valid(addr: address): bool acquires ValidatorConfig {
+        exists<ValidatorConfig>(addr) && Option::is_some(&borrow_global<ValidatorConfig>(addr).config)
     }
 
     // Get Config
-    // Aborts if there is no ValidatorConfig::T resource of if its config is empty
-    public fun get_config(addr: address): Config acquires T {
-        Transaction::assert(exists<T>(addr), 1106);
-        let config = &borrow_global<T>(addr).config;
+    // Aborts if there is no ValidatorConfig resource of if its config is empty
+    public fun get_config(addr: address): Config acquires ValidatorConfig {
+        Transaction::assert(exists<ValidatorConfig>(addr), 1106);
+        let config = &borrow_global<ValidatorConfig>(addr).config;
         *Option::borrow(config)
     }
 
     // Get operator's account
-    // Aborts if there is no ValidatorConfig::T resouce, if its operator_account is
+    // Aborts if there is no ValidatorConfig resource, if its operator_account is
     // empty, returns the input
-    public fun get_operator(addr: address): address acquires T {
-        Transaction::assert(exists<T>(addr), 1106);
-        let t_ref = borrow_global<T>(addr);
+    public fun get_operator(addr: address): address acquires ValidatorConfig {
+        Transaction::assert(exists<ValidatorConfig>(addr), 1106);
+        let t_ref = borrow_global<ValidatorConfig>(addr);
         *Option::borrow_with_default(&t_ref.operator_account, &addr)
     }
 

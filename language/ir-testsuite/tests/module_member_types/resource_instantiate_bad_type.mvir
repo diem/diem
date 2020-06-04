@@ -4,7 +4,7 @@ module Test {
     resource B{b: bool}
     resource T{ft: Self.B}
 
-    public t1(x: Libra.T<LBR.T>): Self.T {
+    public t1(x: Libra.Libra<LBR.LBR>): Self.T {
         return T{ft: move(x)};
     }
 

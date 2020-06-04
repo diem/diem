@@ -189,7 +189,7 @@ fn bad_writesets() {
         StructTag {
             address: CORE_CODE_ADDRESS,
             module: Identifier::new("LibraWriteSetManager").unwrap(),
-            name: Identifier::new("T").unwrap(),
+            name: Identifier::new("LibraWriteSetManager").unwrap(),
             type_params: vec![],
         },
     );
@@ -219,7 +219,7 @@ fn bad_writesets() {
         StructTag {
             address: CORE_CODE_ADDRESS,
             module: Identifier::new("LibraAccount").unwrap(),
-            name: Identifier::new("T").unwrap(),
+            name: Identifier::new("LibraAccount").unwrap(),
             type_params: vec![],
         },
     );

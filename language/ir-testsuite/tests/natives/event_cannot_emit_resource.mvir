@@ -2,12 +2,12 @@ import 0x0.Event;
 import 0x0.LBR;
 import 0x0.Libra;
 main() {
-    let handle: Event.EventHandle<Libra.T<LBR.T>>;
-    let zero: Libra.T<LBR.T>;
-    handle = Event.new_event_handle<Libra.T<LBR.T>>();
-    zero = Libra.zero<LBR.T>();
-    Event.emit_event<Libra.T<LBR.T>>(&mut handle, move(zero));
-    Event.destroy_handle<Libra.T<LBR.T>>(move(handle));
+    let handle: Event.EventHandle<Libra.Libra<LBR.LBR>>;
+    let zero: Libra.Libra<LBR.LBR>;
+    handle = Event.new_event_handle<Libra.Libra<LBR.LBR>>();
+    zero = Libra.zero<LBR.LBR>();
+    Event.emit_event<Libra.Libra<LBR.LBR>>(&mut handle, move(zero));
+    Event.destroy_handle<Libra.Libra<LBR.LBR>>(move(handle));
     return;
 }
 

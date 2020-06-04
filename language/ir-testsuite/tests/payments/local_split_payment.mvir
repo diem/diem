@@ -13,9 +13,9 @@ main(account: &signer) {
     let struct1_original_balance: u64;
     let struct2_original_balance: u64;
     let struct3_original_balance: u64;
-    let five_coins1: Libra.T<LBR.T>;
-    let fc_ref: &mut Libra.T<LBR.T>;
-    let five_coins2: Libra.T<LBR.T>;
+    let five_coins1: Libra.Libra<LBR.LBR>;
+    let fc_ref: &mut Libra.Libra<LBR.LBR>;
+    let five_coins2: Libra.Libra<LBR.LBR>;
     let struct1_new_balance: u64;
     let struct2_new_balance: u64;
     let struct3_new_balance: u64;
@@ -24,20 +24,20 @@ main(account: &signer) {
     addr2 = {{bob}};
     addr3 = {{carol}};
 
-    struct1_original_balance = LibraAccount.balance<LBR.T>(copy(addr1));
-    struct2_original_balance = LibraAccount.balance<LBR.T>(copy(addr2));
-    struct3_original_balance = LibraAccount.balance<LBR.T>(copy(addr3));
+    struct1_original_balance = LibraAccount.balance<LBR.LBR>(copy(addr1));
+    struct2_original_balance = LibraAccount.balance<LBR.LBR>(copy(addr2));
+    struct3_original_balance = LibraAccount.balance<LBR.LBR>(copy(addr3));
 
-    five_coins1 = LibraAccount.withdraw_from<LBR.T>(copy(account), 10);
+    five_coins1 = LibraAccount.withdraw_from<LBR.LBR>(copy(account), 10);
     fc_ref = &mut five_coins1;
-    five_coins2 = Libra.withdraw<LBR.T>(move(fc_ref), 5);
+    five_coins2 = Libra.withdraw<LBR.LBR>(move(fc_ref), 5);
 
-    LibraAccount.deposit<LBR.T>(copy(account), copy(addr2), move(five_coins1));
-    LibraAccount.deposit<LBR.T>(copy(account), copy(addr3), move(five_coins2));
+    LibraAccount.deposit<LBR.LBR>(copy(account), copy(addr2), move(five_coins1));
+    LibraAccount.deposit<LBR.LBR>(copy(account), copy(addr3), move(five_coins2));
 
-    struct1_new_balance = LibraAccount.balance<LBR.T>(copy(addr1));
-    struct2_new_balance = LibraAccount.balance<LBR.T>(copy(addr2));
-    struct3_new_balance = LibraAccount.balance<LBR.T>(copy(addr3));
+    struct1_new_balance = LibraAccount.balance<LBR.LBR>(copy(addr1));
+    struct2_new_balance = LibraAccount.balance<LBR.LBR>(copy(addr2));
+    struct3_new_balance = LibraAccount.balance<LBR.LBR>(copy(addr3));
 
     assert(copy(struct1_new_balance) == copy(struct1_original_balance) - 10, 41);
     assert(copy(struct2_new_balance) == copy(struct2_original_balance) + 5, 42);

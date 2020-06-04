@@ -5,7 +5,7 @@ import 0x0.LBR;
     import 0x0.Libra;
 
     struct T{
-        fc: Libra.T<LBR.T>,
+        fc: Libra.Libra<LBR.LBR>,
         fint: u64,
     }
 }

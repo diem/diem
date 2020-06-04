@@ -7,7 +7,7 @@
 
 -  [Struct `Root`](#0x0_Association_Root)
 -  [Struct `PrivilegedCapability`](#0x0_Association_PrivilegedCapability)
--  [Struct `T`](#0x0_Association_T)
+-  [Struct `Association`](#0x0_Association_Association)
 -  [Function `initialize`](#0x0_Association_initialize)
 -  [Function `grant_privilege`](#0x0_Association_grant_privilege)
 -  [Function `grant_association_address`](#0x0_Association_grant_association_address)
@@ -109,17 +109,17 @@ account.
 
 </details>
 
-<a name="0x0_Association_T"></a>
+<a name="0x0_Association_Association"></a>
 
-## Struct `T`
+## Struct `Association`
 
 A type tag to mark that this account is an association account.
 It cannot be used for more specific/privileged operations.
-The presence of an instance of Association::T at and address
+The presence of an instance of Association::Association at and address
 means that the address is an association address.
 
 
-<pre><code><b>struct</b> <a href="#0x0_Association_T">T</a>
+<pre><code><b>struct</b> <a href="#0x0_Association">Association</a>
 </code></pre>
 
 
@@ -149,7 +149,7 @@ Initialization is called in genesis. It publishes the
 <code><a href="#0x0_Association_Root">Root</a></code> resource under
 <code>association</code>
 and marks it as an Association account by publishing a
-<code><a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association_T">T</a>&gt;</code> resource.
+<code><a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association">Association</a>&gt;</code> resource.
 Aborts if the address of
 <code>association</code> is not
 <code>root_address</code>
@@ -166,7 +166,7 @@ Aborts if the address of
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_initialize">initialize</a>(association: &signer) {
     Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == <a href="#0x0_Association_root_address">root_address</a>(), 1000);
-    move_to(association, <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association_T">T</a>&gt;{ });
+    move_to(association, <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association">Association</a>&gt;{ });
     move_to(association, <a href="#0x0_Association_Root">Root</a>{ });
 }
 </code></pre>
@@ -220,7 +220,7 @@ Grant the association privilege to
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_grant_association_address">grant_association_address</a>(association: &signer, recipient: &signer) {
-    <a href="#0x0_Association_grant_privilege">grant_privilege</a>&lt;<a href="#0x0_Association_T">T</a>&gt;(association, recipient)
+    <a href="#0x0_Association_grant_privilege">grant_privilege</a>&lt;<a href="#0x0_Association">Association</a>&gt;(association, recipient)
 }
 </code></pre>
 
@@ -361,7 +361,7 @@ Return whether the account at
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_addr_is_association">addr_is_association</a>(addr: address): bool {
-    exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association_T">T</a>&gt;&gt;(addr)
+    exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association">Association</a>&gt;&gt;(addr)
 }
 </code></pre>
 
@@ -526,7 +526,7 @@ Helper which mirrors Move
 
 
 <pre><code><b>define</b> <a href="#0x0_Association_spec_addr_is_association">spec_addr_is_association</a>(addr: address): bool {
-    exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association_T">T</a>&gt;&gt;(addr)
+    exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association">Association</a>&gt;&gt;(addr)
 }
 </code></pre>
 
@@ -666,7 +666,7 @@ itself.  I added assertion 1005 above to prevent that, and this verifies.
 > **Note:** Why doesn't this include initialize, root_address()?
 The prover reports a violation of this property:
 Root can remove its own association privilege, by calling
-remove_privilege<T>(root_address()).
+remove_privilege<Association>(root_address()).
 
 
 <pre><code><b>apply</b> <a href="#0x0_Association_RootAddressIsAssociationAddress">RootAddressIsAssociationAddress</a> <b>to</b> *&lt;Privilege&gt;, *;

@@ -6,7 +6,7 @@ address 0x0 {
 module LibraSystem {
     use 0x0::LibraAccount;
     use 0x0::LibraConfig;
-    use 0x0::Option;
+    use 0x0::Option::{Self, Option};
     use 0x0::Transaction;
     use 0x0::Signer;
     use 0x0::ValidatorConfig;
@@ -19,10 +19,10 @@ module LibraSystem {
     }
 
     resource struct CapabilityHolder {
-        cap: LibraConfig::ModifyConfigCapability<Self::T>,
+        cap: LibraConfig::ModifyConfigCapability<LibraSystem>,
     }
 
-    struct T {
+    struct LibraSystem {
         // The current consensus crypto scheme.
         scheme: u8,
         // The current validator set. Updated only at epoch boundaries via reconfiguration.
@@ -42,9 +42,9 @@ module LibraSystem {
             1
         );
 
-        let cap = LibraConfig::publish_new_config_with_capability<T>(
+        let cap = LibraConfig::publish_new_config_with_capability<LibraSystem>(
             config_account,
-            T {
+            LibraSystem {
                 scheme: 0,
                 validators: Vector::empty(),
             },
@@ -54,8 +54,8 @@ module LibraSystem {
 
     // This copies the vector of validators into the LibraConfig's resource
     // under ValidatorSet address
-    fun set_validator_set(value: T) acquires CapabilityHolder {
-        LibraConfig::set_with_capability<T>(&borrow_global<CapabilityHolder>(LibraConfig::default_config_address()).cap, value)
+    fun set_validator_set(value: LibraSystem) acquires CapabilityHolder {
+        LibraConfig::set_with_capability<LibraSystem>(&borrow_global<CapabilityHolder>(LibraConfig::default_config_address()).cap, value)
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -158,8 +158,8 @@ module LibraSystem {
     ///////////////////////////////////////////////////////////////////////////
 
     // This returns a copy of the current validator set.
-    public fun get_validator_set(): T {
-        LibraConfig::get<T>()
+    public fun get_validator_set(): LibraSystem {
+        LibraConfig::get<LibraSystem>()
     }
 
     // Return true if addr is a current validator
@@ -224,7 +224,7 @@ module LibraSystem {
     }
 
     // Get the index of the validator by address in the `validators` vector
-    fun get_validator_index_(validators: &vector<ValidatorInfo>, addr: address): Option::T<u64> {
+    fun get_validator_index_(validators: &vector<ValidatorInfo>, addr: address): Option<u64> {
         let size = Vector::length(validators);
         if (size == 0) {
             return Option::none()

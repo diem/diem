@@ -25,7 +25,7 @@
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, amount_lbr: u64) {
-    <b>let</b> lbr = <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_withdraw_from">LibraAccount::withdraw_from</a>&lt;<a href="../../modules/doc/LBR.md#0x0_LBR_T">LBR::T</a>&gt;(account, amount_lbr);
+    <b>let</b> lbr = <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_withdraw_from">LibraAccount::withdraw_from</a>&lt;<a href="../../modules/doc/LBR.md#0x0_LBR">LBR</a>&gt;(account, amount_lbr);
     <b>let</b> (coin1, coin2) = <a href="../../modules/doc/LBR.md#0x0_LBR_unpack">LBR::unpack</a>(account, lbr);
     <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_deposit_to">LibraAccount::deposit_to</a>(account, coin1);
     <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_deposit_to">LibraAccount::deposit_to</a>(account, coin2);

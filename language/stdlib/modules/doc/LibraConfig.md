@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `T`](#0x0_LibraConfig_T)
+-  [Struct `LibraConfig`](#0x0_LibraConfig_LibraConfig)
 -  [Struct `NewEpochEvent`](#0x0_LibraConfig_NewEpochEvent)
 -  [Struct `Configuration`](#0x0_LibraConfig_Configuration)
 -  [Struct `CreateConfigCapability`](#0x0_LibraConfig_CreateConfigCapability)
@@ -28,13 +28,13 @@
 
 
 
-<a name="0x0_LibraConfig_T"></a>
+<a name="0x0_LibraConfig_LibraConfig"></a>
 
-## Struct `T`
+## Struct `LibraConfig`
 
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_LibraConfig_T">T</a>&lt;Config: <b>copyable</b>&gt;
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config: <b>copyable</b>&gt;
 </code></pre>
 
 
@@ -233,10 +233,10 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_get">get</a>&lt;Config: <b>copyable</b>&gt;(): Config <b>acquires</b> <a href="#0x0_LibraConfig_T">T</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_get">get</a>&lt;Config: <b>copyable</b>&gt;(): Config <b>acquires</b> <a href="#0x0_LibraConfig">LibraConfig</a> {
     <b>let</b> addr = <a href="#0x0_LibraConfig_default_config_address">default_config_address</a>();
-    Transaction::assert(::exists&lt;<a href="#0x0_LibraConfig_T">T</a>&lt;Config&gt;&gt;(addr), 24);
-    *&borrow_global&lt;<a href="#0x0_LibraConfig_T">T</a>&lt;Config&gt;&gt;(addr).payload
+    Transaction::assert(::exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
+    *&borrow_global&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr).payload
 }
 </code></pre>
 
@@ -259,9 +259,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_set">set</a>&lt;Config: <b>copyable</b>&gt;(account: &signer, payload: Config) <b>acquires</b> <a href="#0x0_LibraConfig_T">T</a>, <a href="#0x0_LibraConfig_Configuration">Configuration</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_set">set</a>&lt;Config: <b>copyable</b>&gt;(account: &signer, payload: Config) <b>acquires</b> <a href="#0x0_LibraConfig">LibraConfig</a>, <a href="#0x0_LibraConfig_Configuration">Configuration</a> {
     <b>let</b> addr = <a href="#0x0_LibraConfig_default_config_address">default_config_address</a>();
-    Transaction::assert(::exists&lt;<a href="#0x0_LibraConfig_T">T</a>&lt;Config&gt;&gt;(addr), 24);
+    Transaction::assert(::exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
     <b>let</b> signer_address = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     Transaction::assert(
         ::exists&lt;<a href="#0x0_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(signer_address)
@@ -269,7 +269,7 @@
         24
     );
 
-    <b>let</b> config = borrow_global_mut&lt;<a href="#0x0_LibraConfig_T">T</a>&lt;Config&gt;&gt;(addr);
+    <b>let</b> config = borrow_global_mut&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr);
     config.payload = payload;
 
     <a href="#0x0_LibraConfig_reconfigure_">reconfigure_</a>();
@@ -298,10 +298,10 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_set_with_capability">set_with_capability</a>&lt;Config: <b>copyable</b>&gt;(
     _cap: &<a href="#0x0_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;,
     payload: Config
-) <b>acquires</b> <a href="#0x0_LibraConfig_T">T</a>, <a href="#0x0_LibraConfig_Configuration">Configuration</a> {
+) <b>acquires</b> <a href="#0x0_LibraConfig">LibraConfig</a>, <a href="#0x0_LibraConfig_Configuration">Configuration</a> {
     <b>let</b> addr = <a href="#0x0_LibraConfig_default_config_address">default_config_address</a>();
-    Transaction::assert(::exists&lt;<a href="#0x0_LibraConfig_T">T</a>&lt;Config&gt;&gt;(addr), 24);
-    <b>let</b> config = borrow_global_mut&lt;<a href="#0x0_LibraConfig_T">T</a>&lt;Config&gt;&gt;(addr);
+    Transaction::assert(::exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
+    <b>let</b> config = borrow_global_mut&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr);
     config.payload = payload;
 
     <a href="#0x0_LibraConfig_reconfigure_">reconfigure_</a>();
@@ -328,7 +328,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_is_published">is_published</a>&lt;Config: <b>copyable</b>&gt;(addr: address): bool {
-    exists&lt;<a href="#0x0_LibraConfig_T">T</a>&lt;Config&gt;&gt;(addr)
+    exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr)
 }
 </code></pre>
 
@@ -360,7 +360,7 @@
         1
     );
 
-    move_to(config_account, <a href="#0x0_LibraConfig_T">T</a> { payload });
+    move_to(config_account, <a href="#0x0_LibraConfig">LibraConfig</a> { payload });
     // We don't trigger reconfiguration here, instead we'll wait for all validators <b>update</b> the binary
     // <b>to</b> register this config into ON_CHAIN_CONFIG_REGISTRY then send another transaction <b>to</b> change
     // the value which triggers the reconfiguration.
@@ -395,7 +395,7 @@
     );
 
     move_to(config_account, <a href="#0x0_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {});
-    move_to(config_account, <a href="#0x0_LibraConfig_T">T</a>{ payload });
+    move_to(config_account, <a href="#0x0_LibraConfig">LibraConfig</a>{ payload });
     // We don't trigger reconfiguration here, instead we'll wait for all validators <b>update</b> the binary
     // <b>to</b> register this config into ON_CHAIN_CONFIG_REGISTRY then send another transaction <b>to</b> change
     // the value which triggers the reconfiguration.
@@ -432,7 +432,7 @@
     );
 
     <a href="Offer.md#0x0_Offer_create">Offer::create</a>(config_account, <a href="#0x0_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;{}, delegate);
-    move_to(config_account, <a href="#0x0_LibraConfig_T">T</a> { payload });
+    move_to(config_account, <a href="#0x0_LibraConfig">LibraConfig</a> { payload });
     // We don't trigger reconfiguration here, instead we'll wait for all validators <b>update</b> the
     // binary <b>to</b> register this config into ON_CHAIN_CONFIG_REGISTRY then send another
     // transaction <b>to</b> change the value which triggers the reconfiguration.
@@ -601,11 +601,11 @@
 <b>define</b> <a href="#0x0_LibraConfig_spec_default_config_address">spec_default_config_address</a>(): address { 0xF1A95 }
 <a name="0x0_LibraConfig_spec_get"></a>
 <b>define</b> <a href="#0x0_LibraConfig_spec_get">spec_get</a>&lt;Config&gt;(): Config {
-    <b>global</b>&lt;<a href="#0x0_LibraConfig_T">T</a>&lt;Config&gt;&gt;(<a href="#0x0_LibraConfig_spec_default_config_address">spec_default_config_address</a>()).payload
+    <b>global</b>&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="#0x0_LibraConfig_spec_default_config_address">spec_default_config_address</a>()).payload
 }
 <a name="0x0_LibraConfig_spec_is_published"></a>
 <b>define</b> <a href="#0x0_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(addr: address): bool {
-    exists&lt;<a href="#0x0_LibraConfig_T">T</a>&lt;Config&gt;&gt;(addr)
+    exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr)
 }
 </code></pre>
 

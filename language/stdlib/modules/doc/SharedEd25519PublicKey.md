@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `T`](#0x0_SharedEd25519PublicKey_T)
+-  [Struct `SharedEd25519PublicKey`](#0x0_SharedEd25519PublicKey_SharedEd25519PublicKey)
 -  [Function `publish`](#0x0_SharedEd25519PublicKey_publish)
 -  [Function `rotate_key_`](#0x0_SharedEd25519PublicKey_rotate_key_)
 -  [Function `rotate_key`](#0x0_SharedEd25519PublicKey_rotate_key)
@@ -14,13 +14,13 @@
 
 
 
-<a name="0x0_SharedEd25519PublicKey_T"></a>
+<a name="0x0_SharedEd25519PublicKey_SharedEd25519PublicKey"></a>
 
-## Struct `T`
+## Struct `SharedEd25519PublicKey`
 
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_SharedEd25519PublicKey_T">T</a>
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_SharedEd25519PublicKey">SharedEd25519PublicKey</a>
 </code></pre>
 
 
@@ -65,7 +65,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_publish">publish</a>(account: &signer, key: vector&lt;u8&gt;) {
-    <b>let</b> t = <a href="#0x0_SharedEd25519PublicKey_T">T</a> {
+    <b>let</b> t = <a href="#0x0_SharedEd25519PublicKey">SharedEd25519PublicKey</a> {
         key: x"",
         rotation_cap: <a href="LibraAccount.md#0x0_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(account)
     };
@@ -84,7 +84,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_SharedEd25519PublicKey_rotate_key_">rotate_key_</a>(shared_key: &<b>mut</b> <a href="#0x0_SharedEd25519PublicKey_T">SharedEd25519PublicKey::T</a>, new_public_key: vector&lt;u8&gt;)
+<pre><code><b>fun</b> <a href="#0x0_SharedEd25519PublicKey_rotate_key_">rotate_key_</a>(shared_key: &<b>mut</b> <a href="#0x0_SharedEd25519PublicKey_SharedEd25519PublicKey">SharedEd25519PublicKey::SharedEd25519PublicKey</a>, new_public_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -93,7 +93,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_SharedEd25519PublicKey_rotate_key_">rotate_key_</a>(shared_key: &<b>mut</b> <a href="#0x0_SharedEd25519PublicKey_T">T</a>, new_public_key: vector&lt;u8&gt;) {
+<pre><code><b>fun</b> <a href="#0x0_SharedEd25519PublicKey_rotate_key_">rotate_key_</a>(shared_key: &<b>mut</b> <a href="#0x0_SharedEd25519PublicKey">SharedEd25519PublicKey</a>, new_public_key: vector&lt;u8&gt;) {
     // Cryptographic check of <b>public</b> key validity
     Transaction::assert(
         <a href="Signature.md#0x0_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> new_public_key),
@@ -126,8 +126,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_rotate_key">rotate_key</a>(account: &signer, new_public_key: vector&lt;u8&gt;) <b>acquires</b> <a href="#0x0_SharedEd25519PublicKey_T">T</a> {
-    <a href="#0x0_SharedEd25519PublicKey_rotate_key_">rotate_key_</a>(borrow_global_mut&lt;<a href="#0x0_SharedEd25519PublicKey_T">T</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)), new_public_key);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_rotate_key">rotate_key</a>(account: &signer, new_public_key: vector&lt;u8&gt;) <b>acquires</b> <a href="#0x0_SharedEd25519PublicKey">SharedEd25519PublicKey</a> {
+    <a href="#0x0_SharedEd25519PublicKey_rotate_key_">rotate_key_</a>(borrow_global_mut&lt;<a href="#0x0_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)), new_public_key);
 }
 </code></pre>
 
@@ -150,8 +150,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_key">key</a>(addr: address): vector&lt;u8&gt; <b>acquires</b> <a href="#0x0_SharedEd25519PublicKey_T">T</a> {
-    *&borrow_global&lt;<a href="#0x0_SharedEd25519PublicKey_T">T</a>&gt;(addr).key
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_key">key</a>(addr: address): vector&lt;u8&gt; <b>acquires</b> <a href="#0x0_SharedEd25519PublicKey">SharedEd25519PublicKey</a> {
+    *&borrow_global&lt;<a href="#0x0_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr).key
 }
 </code></pre>
 
@@ -175,7 +175,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_exists">exists</a>(addr: address): bool {
-    ::<a href="#0x0_SharedEd25519PublicKey_exists">exists</a>&lt;<a href="#0x0_SharedEd25519PublicKey_T">T</a>&gt;(addr)
+    ::<a href="#0x0_SharedEd25519PublicKey_exists">exists</a>&lt;<a href="#0x0_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr)
 }
 </code></pre>
 

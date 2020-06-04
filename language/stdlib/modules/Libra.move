@@ -3,7 +3,7 @@ address 0x0 {
 module Libra {
     use 0x0::Association;
     use 0x0::Event;
-    use 0x0::FixedPoint32;
+    use 0x0::FixedPoint32::{Self, FixedPoint32};
     use 0x0::LibraConfig;
     use 0x0::RegisteredCurrencies;
     use 0x0::Signer;
@@ -12,7 +12,7 @@ module Libra {
 
     // The currency has a `CoinType` color that tells us what currency the
     // `value` inside represents.
-    resource struct T<CoinType> { value: u64 }
+    resource struct Libra<CoinType> { value: u64 }
 
     // A minting capability allows coins of type `CoinType` to be minted
     resource struct MintCapability<CoinType> { }
@@ -70,7 +70,7 @@ module Libra {
         // Value of funds that are in the process of being burned
         preburn_value: u64,
         // The (rough) exchange rate from `CoinType` to LBR.
-        to_lbr_exchange_rate: FixedPoint32::T,
+        to_lbr_exchange_rate: FixedPoint32,
         // Holds whether or not this currency is synthetic (contributes to the
         // off-chain reserve) or not. An example of such a currency would be
         // the LBR.
@@ -109,7 +109,7 @@ module Libra {
     // resolved in FIFO order.
     resource struct Preburn<Token> {
         // Queue of pending burn requests
-        requests: vector<T<Token>>,
+        requests: vector<Libra<Token>>,
         // Boolean that is true if the holder of the BurnCapability has approved this account as a
         // preburner
         is_approved: bool,
@@ -156,7 +156,7 @@ module Libra {
 
     // Return `amount` coins.
     // Fails if the sender does not have a published MintCapability.
-    public fun mint<Token>(account: &signer, amount: u64): T<Token>
+    public fun mint<Token>(account: &signer, amount: u64): Libra<Token>
     acquires CurrencyInfo, MintCapability {
         mint_with_capability(
             amount,
@@ -181,7 +181,7 @@ module Libra {
     public fun cancel_burn<Token>(
         account: &signer,
         preburn_address: address
-    ): T<Token> acquires BurnCapability, CurrencyInfo, Preburn {
+    ): Libra<Token> acquires BurnCapability, CurrencyInfo, Preburn {
         cancel_burn_with_capability(
             preburn_address,
             borrow_global<BurnCapability<Token>>(Signer::address_of(account))
@@ -193,13 +193,13 @@ module Libra {
         Preburn<Token> { requests: Vector::empty(), is_approved: false, }
     }
 
-    // Mint a new Libra::T worth `value`. The caller must have a reference to a MintCapability.
+    // Mint a new Libra worth `value`. The caller must have a reference to a MintCapability.
     // Only the Association account can acquire such a reference, and it can do so only via
     // `borrow_sender_mint_capability`
     public fun mint_with_capability<Token>(
         value: u64,
         _capability: &MintCapability<Token>
-    ): T<Token> acquires CurrencyInfo {
+    ): Libra<Token> acquires CurrencyInfo {
         assert_is_coin<Token>();
         // TODO: temporary measure for testnet only: limit minting to 1B Libra at a time.
         // this is to prevent the market cap's total value from hitting u64_max due to excessive
@@ -223,7 +223,7 @@ module Libra {
             );
         };
 
-        T<Token> { value }
+        Libra<Token> { value }
     }
 
     // Create a new Preburn resource.
@@ -237,7 +237,7 @@ module Libra {
 
     // Send a coin to the preburn holding area `preburn` that is passed in.
     public fun preburn_with_resource<Token>(
-        coin: T<Token>,
+        coin: Libra<Token>,
         preburn: &mut Preburn<Token>,
         preburn_address: address,
     ) acquires CurrencyInfo {
@@ -279,7 +279,7 @@ module Libra {
     /// Send coin to the preburn holding area for `account`, where it will wait to either be burned
     /// or returned to the balance of `account`.
     /// Fails if `account` does not have a published Preburn resource
-    public fun preburn_to<Token>(account: &signer, coin: T<Token>) acquires CurrencyInfo, Preburn {
+    public fun preburn_to<Token>(account: &signer, coin: Libra<Token>) acquires CurrencyInfo, Preburn {
         let sender = Signer::address_of(account);
         preburn_with_resource(coin, borrow_global_mut<Preburn<Token>>(sender), sender);
     }
@@ -312,7 +312,7 @@ module Libra {
         _capability: &BurnCapability<Token>
     ) acquires CurrencyInfo {
         // destroy the coin at the head of the preburn queue
-        let T { value } = Vector::remove(&mut preburn.requests, 0);
+        let Libra { value } = Vector::remove(&mut preburn.requests, 0);
         // update the market cap
         let currency_code = currency_code<Token>();
         let info = borrow_global_mut<CurrencyInfo<Token>>(0xA550C18);
@@ -339,7 +339,7 @@ module Libra {
     public fun cancel_burn_with_capability<Token>(
         preburn_address: address,
         _capability: &BurnCapability<Token>
-    ): T<Token> acquires CurrencyInfo, Preburn {
+    ): Libra<Token> acquires CurrencyInfo, Preburn {
         // destroy the coin at the head of the preburn queue
         let preburn = borrow_global_mut<Preburn<Token>>(preburn_address);
         let coin = Vector::remove(&mut preburn.requests, 0);
@@ -401,20 +401,20 @@ module Libra {
         borrow_global<CurrencyInfo<Token>>(0xA550C18).preburn_value
     }
 
-    // Create a new Libra::T<CoinType> with a value of 0
-    public fun zero<CoinType>(): T<CoinType> {
+    // Create a new Libra<CoinType> with a value of 0
+    public fun zero<CoinType>(): Libra<CoinType> {
         assert_is_coin<CoinType>();
-        T<CoinType> { value: 0 }
+        Libra<CoinType> { value: 0 }
     }
 
     // Public accessor for the value of a coin
-    public fun value<CoinType>(coin: &T<CoinType>): u64 {
+    public fun value<CoinType>(coin: &Libra<CoinType>): u64 {
         coin.value
     }
 
     // Splits the given coin into two and returns them both
     // It leverages `Self::withdraw` for any verifications of the values
-    public fun split<CoinType>(coin: T<CoinType>, amount: u64): (T<CoinType>, T<CoinType>) {
+    public fun split<CoinType>(coin: Libra<CoinType>, amount: u64): (Libra<CoinType>, Libra<CoinType>) {
         let other = withdraw(&mut coin, amount);
         (coin, other)
     }
@@ -423,16 +423,16 @@ module Libra {
     // The original coin will have value = original value - `amount`
     // The new coin will have a value = `amount`
     // Fails if the coins value is less than `amount`
-    public fun withdraw<CoinType>(coin: &mut T<CoinType>, amount: u64): T<CoinType> {
+    public fun withdraw<CoinType>(coin: &mut Libra<CoinType>, amount: u64): Libra<CoinType> {
         // Check that `amount` is less than the coin's value
         Transaction::assert(coin.value >= amount, 10);
         coin.value = coin.value - amount;
-        T { value: amount }
+        Libra { value: amount }
     }
 
     // Merges two coins of the same currency and returns a new coin whose
     // value is equal to the sum of the two inputs
-    public fun join<CoinType>(coin1: T<CoinType>, coin2: T<CoinType>): T<CoinType>  {
+    public fun join<CoinType>(coin1: Libra<CoinType>, coin2: Libra<CoinType>): Libra<CoinType>  {
         deposit(&mut coin1, coin2);
         coin1
     }
@@ -440,8 +440,8 @@ module Libra {
     // "Merges" the two coins
     // The coin passed in by reference will have a value equal to the sum of the two coins
     // The `check` coin is consumed in the process
-    public fun deposit<CoinType>(coin: &mut T<CoinType>, check: T<CoinType>) {
-        let T { value } = check;
+    public fun deposit<CoinType>(coin: &mut Libra<CoinType>, check: Libra<CoinType>) {
+        let Libra { value } = check;
         coin.value = coin.value + value;
     }
 
@@ -449,8 +449,8 @@ module Libra {
     // Fails if the value is non-zero
     // The amount of LibraCoin.T in the system is a tightly controlled property,
     // so you cannot "burn" any non-zero amount of LibraCoin.T
-    public fun destroy_zero<CoinType>(coin: T<CoinType>) {
-        let T { value } = coin;
+    public fun destroy_zero<CoinType>(coin: Libra<CoinType>) {
+        let Libra { value } = coin;
         Transaction::assert(value == 0, 5)
     }
 
@@ -462,7 +462,7 @@ module Libra {
     // cannot be used as a coin/currency unit n Libra.
     public fun register_currency<CoinType>(
         account: &signer,
-        to_lbr_exchange_rate: FixedPoint32::T,
+        to_lbr_exchange_rate: FixedPoint32,
         is_synthetic: bool,
         scaling_factor: u64,
         fractional_part: u64,
@@ -514,7 +514,7 @@ module Libra {
     // Returns the value of the coin in the `FromCoinType` currency in LBR.
     // This should only be used where a rough approximation of the exchange
     // rate is needed.
-    public fun approx_lbr_for_coin<FromCoinType>(coin: &T<FromCoinType>): u64
+    public fun approx_lbr_for_coin<FromCoinType>(coin: &Libra<FromCoinType>): u64
     acquires CurrencyInfo {
         let from_value = value(coin);
         approx_lbr_for_value<FromCoinType>(from_value)
@@ -554,7 +554,7 @@ module Libra {
     // Updates the exchange rate for `FromCoinType` to LBR exchange rate held on chain.
     public fun update_lbr_exchange_rate<FromCoinType>(
         account: &signer,
-        lbr_exchange_rate: FixedPoint32::T
+        lbr_exchange_rate: FixedPoint32
     ) acquires CurrencyInfo {
         assert_assoc_and_currency<FromCoinType>(account);
         let currency_info = borrow_global_mut<CurrencyInfo<FromCoinType>>(currency_addr());
@@ -562,7 +562,7 @@ module Libra {
     }
 
     // Return the (rough) exchange rate between `CoinType` and LBR
-    public fun lbr_exchange_rate<CoinType>(): FixedPoint32::T
+    public fun lbr_exchange_rate<CoinType>(): FixedPoint32
     acquires CurrencyInfo {
         *&borrow_global<CurrencyInfo<CoinType>>(currency_addr()).to_lbr_exchange_rate
     }
@@ -658,7 +658,7 @@ module Libra {
     spec module {
         global sum_of_coin_values<CoinType>: num;
     }
-    spec struct T {
+    spec struct Libra {
         invariant pack sum_of_coin_values<CoinType> = sum_of_coin_values<CoinType> + value;
         invariant unpack sum_of_coin_values<CoinType> = sum_of_coin_values<CoinType> - value;
     }

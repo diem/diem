@@ -7,15 +7,15 @@ module RegisteredCurrencies {
     use 0x0::Vector;
 
     // An on-chain config holding all of the currency codes for registered
-    // currencies. Must be named "T" for an on-chain config.
-    // The inner vector<u8>'s are string representations of currency names.
-    struct T {
+    // currencies. The inner vector<u8>'s are string representations of
+    // currency names.
+    struct RegisteredCurrencies {
         currency_codes: vector<vector<u8>>,
     }
 
     // An operations capability to allow updating of the on-chain config
     resource struct RegistrationCapability {
-        cap: LibraConfig::ModifyConfigCapability<Self::T>,
+        cap: LibraConfig::ModifyConfigCapability<Self::RegisteredCurrencies>,
     }
 
     public fun initialize(config_account: &signer): RegistrationCapability {
@@ -29,15 +29,15 @@ module RegisteredCurrencies {
         RegistrationCapability { cap }
     }
 
-    fun empty(): T {
-        T { currency_codes: Vector::empty() }
+    fun empty(): RegisteredCurrencies {
+        RegisteredCurrencies { currency_codes: Vector::empty() }
     }
 
     public fun add_currency_code(
         currency_code: vector<u8>,
         cap: &RegistrationCapability,
     ) {
-        let config = LibraConfig::get<T>();
+        let config = LibraConfig::get<RegisteredCurrencies>();
         Vector::push_back(&mut config.currency_codes, currency_code);
         LibraConfig::set_with_capability(&cap.cap, config);
     }
@@ -62,7 +62,7 @@ module RegisteredCurrencies {
         define spec_singleton_address():address { LibraConfig::spec_default_config_address() }
 
         // spec_is_initialized() is true iff initialize has been called.
-        define spec_is_initialized():bool { LibraConfig::spec_is_published<T>(spec_singleton_address()) }
+        define spec_is_initialized():bool { LibraConfig::spec_is_published<RegisteredCurrencies>(spec_singleton_address()) }
     }
 
     // Check spec_is_initialized on initialize()
@@ -72,15 +72,15 @@ module RegisteredCurrencies {
     }
 
     spec schema OnlySingletonHasT {
-        // *Informally:* There is no address with a T value before initialization.
+        // *Informally:* There is no address with a RegisteredCurrencies value before initialization.
         invariant !spec_is_initialized()
-            ==> all(domain<address>(), |addr| !LibraConfig::spec_is_published<T>(addr));
+            ==> all(domain<address>(), |addr| !LibraConfig::spec_is_published<RegisteredCurrencies>(addr));
 
-        // *Informally:* After initialization, only singleton_address() has a T value.
+        // *Informally:* After initialization, only singleton_address() has a RegisteredCurrencies value.
         invariant spec_is_initialized()
-            ==> LibraConfig::spec_is_published<T>(sender())
+            ==> LibraConfig::spec_is_published<RegisteredCurrencies>(sender())
                 && all(domain<address>(),
-                       |addr| LibraConfig::spec_is_published<T>(addr)
+                       |addr| LibraConfig::spec_is_published<RegisteredCurrencies>(addr)
                                   ==> addr == spec_singleton_address());
     }
     spec module {
@@ -89,8 +89,8 @@ module RegisteredCurrencies {
 
     spec schema OnlyAddCurrencyChangesT {
         ensures spec_is_initialized()
-                     ==> old(LibraConfig::spec_get<T>().currency_codes)
-                          == LibraConfig::spec_get<T>().currency_codes;
+                     ==> old(LibraConfig::spec_get<RegisteredCurrencies>().currency_codes)
+                          == LibraConfig::spec_get<RegisteredCurrencies>().currency_codes;
     }
     spec module {
         apply OnlyAddCurrencyChangesT to * except add_currency_code;

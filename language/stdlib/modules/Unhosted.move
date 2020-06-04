@@ -9,7 +9,7 @@ module Unhosted {
     // An unhosted account is subject to account holding/velocity limits.
     // This holds the metadata about the account transactions during a
     // given time period that tracks this and enforces these limits.
-    struct T {
+    struct Unhosted {
     }
 
     public fun publish_global_limits_definition(account: &signer) {
@@ -25,9 +25,9 @@ module Unhosted {
         AccountLimits::certify_limits_definition(account, limits_addr());
     }
 
-    public fun create(): T {
+    public fun create(): Unhosted {
         Transaction::assert(Testnet::is_testnet(), 10041);
-        T {  }
+        Unhosted {  }
     }
 
     public fun limits_addr(): address {

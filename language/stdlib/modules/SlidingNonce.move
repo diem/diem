@@ -10,13 +10,13 @@ module SlidingNonce {
     // When nonce X is recorded, all nonce lower then X-128 will be rejected with code 10001(see below)
     // In a nutshell, min_nonce records minimal nonce allowed
     // And nonce_mask contains a bitmap for nonce in range [min_nonce; min_nonce+127]
-    resource struct T {
+    resource struct SlidingNonce {
         min_nonce: u64,
         nonce_mask: u128,
     }
 
     // Calls try_record_nonce and aborts transaction if returned code is non-0
-    public fun record_nonce_or_abort(account: &signer, seq_nonce: u64) acquires T {
+    public fun record_nonce_or_abort(account: &signer, seq_nonce: u64) acquires SlidingNonce {
         let code = try_record_nonce(account, seq_nonce);
         Transaction::assert(code == 0, code);
     }
@@ -27,11 +27,11 @@ module SlidingNonce {
     // * code 10001: This nonce is too old and impossible to ensure whether it's duplicated or not
     // * code 10002: This nonce is too far in the future - this is not allowed to protect against nonce exhaustion
     // * code 10003: This nonce was already recorded previously
-    public fun try_record_nonce(account: &signer, seq_nonce: u64): u64 acquires T {
+    public fun try_record_nonce(account: &signer, seq_nonce: u64): u64 acquires SlidingNonce {
         if (seq_nonce == 0) {
             return 0
         };
-        let t = borrow_global_mut<T>(Signer::address_of(account));
+        let t = borrow_global_mut<SlidingNonce>(Signer::address_of(account));
         if (t.min_nonce > seq_nonce) {
             return 10001
         };
@@ -40,7 +40,7 @@ module SlidingNonce {
             return 10002
         };
         let bit_pos = seq_nonce - t.min_nonce;
-        let nonce_mask_size = 128; // size of T::nonce_mask in bits. no constants in move?
+        let nonce_mask_size = 128; // size of SlidingNonce::nonce_mask in bits. no constants in move?
         if (bit_pos >= nonce_mask_size) {
             let shift = (bit_pos - nonce_mask_size + 1);
             if(shift >= nonce_mask_size) {
@@ -63,7 +63,7 @@ module SlidingNonce {
     // Publishes nonce resource for `account`
     // This is required before other functions in this module can be called for `account
     public fun publish(account: &signer) {
-        move_to(account, T {  min_nonce: 0, nonce_mask: 0 });
+        move_to(account, SlidingNonce {  min_nonce: 0, nonce_mask: 0 });
     }
 
     // Publishes nonce resource into specific account
@@ -71,7 +71,7 @@ module SlidingNonce {
     // Alternative is publish_nonce_resource_for_user that publishes resource into current account
     public fun publish_nonce_resource(association: &signer, account: &signer) {
         Association::assert_is_root(association);
-        let new_resource = T {
+        let new_resource = SlidingNonce {
             min_nonce: 0,
             nonce_mask: 0,
         };

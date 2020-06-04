@@ -81,5 +81,5 @@ impl AccountResource {
 
 impl MoveResource for AccountResource {
     const MODULE_NAME: &'static str = ACCOUNT_MODULE_NAME;
-    const STRUCT_NAME: &'static str = "T";
+    const STRUCT_NAME: &'static str = ACCOUNT_MODULE_NAME;
 }

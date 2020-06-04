@@ -12,7 +12,7 @@ module Test {
         return;
     }
 
-    // Retrieve a read-only instance of a specific accounts ValidatorConfig.T.config
+    // Retrieve a read-only instance of a specific accounts ValidatorConfig.ValidatorConfig.config
     public config(addr: address): Self.Config acquires T {
         let t_ref: &Self.T;
 

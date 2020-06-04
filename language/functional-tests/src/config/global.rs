@@ -6,7 +6,7 @@
 
 use crate::{common::strip, errors::*, genesis_accounts::make_genesis_accounts};
 use language_e2e_tests::{
-    account::{Account, AccountData, AccountTypeSpecifier},
+    account::{Account, AccountData, AccountRoleSpecifier},
     keygen::KeyGen,
 };
 use libra_config::generator;
@@ -71,7 +71,7 @@ pub struct AccountDefinition {
     /// Special role this account has in the system (if any)
     pub role: Option<Role>,
     /// Specifier on what type of account this is. Default is VASP.
-    pub account_type_specifier: Option<AccountTypeSpecifier>,
+    pub account_type_specifier: Option<AccountRoleSpecifier>,
 }
 
 impl FromStr for Role {
@@ -130,7 +130,7 @@ impl FromStr for Entry {
             // These two are mutually exclusive, so we can double-use the third position
             let account_type_specifier = v
                 .get(3)
-                .and_then(|s| s.parse::<AccountTypeSpecifier>().ok());
+                .and_then(|s| s.parse::<AccountRoleSpecifier>().ok());
             return Ok(Entry::AccountDefinition(AccountDefinition {
                 name: v[0].to_string(),
                 balance,
@@ -234,7 +234,7 @@ impl Config {
                 DEFAULT_BALANCE.currency_code.clone(),
                 /* sequence_number */
                 0,
-                /* is_empty_account_type */ AccountTypeSpecifier::default(),
+                /* is_empty_account_type */ AccountRoleSpecifier::default(),
             ));
         }
         Ok(Config {

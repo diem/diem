@@ -3,10 +3,10 @@ address 0x0 {
 module TransactionFee {
     use 0x0::Signer;
     use 0x0::Transaction;
-    use 0x0::Coin1::T as Coin1;
-    use 0x0::Coin2::T as Coin2;
-    use 0x0::LBR::{Self, T as LBR};
-    use 0x0::Libra::{Self, T as Libra, Preburn, BurnCapability};
+    use 0x0::Coin1::Coin1;
+    use 0x0::Coin2::Coin2;
+    use 0x0::LBR::{Self, LBR};
+    use 0x0::Libra::{Self, Libra, Preburn, BurnCapability};
     use 0x0::LibraAccount;
 
     /// The `TransactionFeeCollection` resource holds the

@@ -7,11 +7,11 @@
 //! sender: blessed
 script {
     use 0x0::LibraAccount;
-    use 0x0::Coin1;
+    use 0x0::Coin1::Coin1;
     use 0x0::Transaction;
     fun main(tc_account: &signer) {
         let dummy_auth_key_prefix = x"00000000000000000000000000000001";
-        LibraAccount::create_designated_dealer<Coin1::T>(tc_account, 0xDEADBEEF, dummy_auth_key_prefix);
+        LibraAccount::create_designated_dealer<Coin1>(tc_account, 0xDEADBEEF, dummy_auth_key_prefix);
         Transaction::assert(LibraAccount::is_designated_dealer(0xDEADBEEF), 0);
         LibraAccount::add_tier(tc_account, 0xDEADBEEF, 100); // first Tier, 0th index
     }
@@ -27,9 +27,9 @@ script {
 //! sender: blessed
 script {
     use 0x0::LibraAccount;
-    use 0x0::Coin1;
+    use 0x0::Coin1::Coin1;
     fun main(tc_account: &signer) {
-        LibraAccount::mint_to_designated_dealer<Coin1::T>(tc_account, 0xDEADBEEF, 99, 0);
+        LibraAccount::mint_to_designated_dealer<Coin1>(tc_account, 0xDEADBEEF, 99, 0);
         LibraAccount::add_tier(tc_account, 0xDEADBEEF, 1000); // second Tier
         LibraAccount::add_tier(tc_account, 0xDEADBEEF, 10000); // third Tier
     }
@@ -45,9 +45,9 @@ script {
 //! sender: blessed
 script {
     use 0x0::LibraAccount;
-    use 0x0::Coin1;
+    use 0x0::Coin1::Coin1;
     fun main(tc_account: &signer) {
-        LibraAccount::mint_to_designated_dealer<Coin1::T>(tc_account, 0xDEADBEEF, 1001, 1);
+        LibraAccount::mint_to_designated_dealer<Coin1>(tc_account, 0xDEADBEEF, 1001, 1);
     }
 }
 
@@ -76,9 +76,9 @@ script {
 //! sender: ricky
 script {
     use 0x0::LibraAccount;
-    use 0x0::Coin1;
+    use 0x0::Coin1::Coin1;
     fun main(tc_account: &signer) {
-        LibraAccount::mint_to_designated_dealer<Coin1::T>(tc_account, 0xDEADBEEF, 1, 0);
+        LibraAccount::mint_to_designated_dealer<Coin1>(tc_account, 0xDEADBEEF, 1, 0);
     }
 }
 

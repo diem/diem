@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `T`](#0x0_RegisteredCurrencies_T)
+-  [Struct `RegisteredCurrencies`](#0x0_RegisteredCurrencies_RegisteredCurrencies)
 -  [Struct `RegistrationCapability`](#0x0_RegisteredCurrencies_RegistrationCapability)
 -  [Function `initialize`](#0x0_RegisteredCurrencies_initialize)
 -  [Function `empty`](#0x0_RegisteredCurrencies_empty)
@@ -17,13 +17,13 @@
 
 
 
-<a name="0x0_RegisteredCurrencies_T"></a>
+<a name="0x0_RegisteredCurrencies_RegisteredCurrencies"></a>
 
-## Struct `T`
+## Struct `RegisteredCurrencies`
 
 
 
-<pre><code><b>struct</b> <a href="#0x0_RegisteredCurrencies_T">T</a>
+<pre><code><b>struct</b> <a href="#0x0_RegisteredCurrencies">RegisteredCurrencies</a>
 </code></pre>
 
 
@@ -63,7 +63,7 @@
 <dl>
 <dt>
 
-<code>cap: <a href="LibraConfig.md#0x0_LibraConfig_ModifyConfigCapability">LibraConfig::ModifyConfigCapability</a>&lt;<a href="#0x0_RegisteredCurrencies_T">RegisteredCurrencies::T</a>&gt;</code>
+<code>cap: <a href="LibraConfig.md#0x0_LibraConfig_ModifyConfigCapability">LibraConfig::ModifyConfigCapability</a>&lt;<a href="#0x0_RegisteredCurrencies_RegisteredCurrencies">RegisteredCurrencies::RegisteredCurrencies</a>&gt;</code>
 </dt>
 <dd>
 
@@ -110,7 +110,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_RegisteredCurrencies_empty">empty</a>(): <a href="#0x0_RegisteredCurrencies_T">RegisteredCurrencies::T</a>
+<pre><code><b>fun</b> <a href="#0x0_RegisteredCurrencies_empty">empty</a>(): <a href="#0x0_RegisteredCurrencies_RegisteredCurrencies">RegisteredCurrencies::RegisteredCurrencies</a>
 </code></pre>
 
 
@@ -119,8 +119,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_RegisteredCurrencies_empty">empty</a>(): <a href="#0x0_RegisteredCurrencies_T">T</a> {
-    <a href="#0x0_RegisteredCurrencies_T">T</a> { currency_codes: <a href="Vector.md#0x0_Vector_empty">Vector::empty</a>() }
+<pre><code><b>fun</b> <a href="#0x0_RegisteredCurrencies_empty">empty</a>(): <a href="#0x0_RegisteredCurrencies">RegisteredCurrencies</a> {
+    <a href="#0x0_RegisteredCurrencies">RegisteredCurrencies</a> { currency_codes: <a href="Vector.md#0x0_Vector_empty">Vector::empty</a>() }
 }
 </code></pre>
 
@@ -147,7 +147,7 @@
     currency_code: vector&lt;u8&gt;,
     cap: &<a href="#0x0_RegisteredCurrencies_RegistrationCapability">RegistrationCapability</a>,
 ) {
-    <b>let</b> config = <a href="LibraConfig.md#0x0_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x0_RegisteredCurrencies_T">T</a>&gt;();
+    <b>let</b> config = <a href="LibraConfig.md#0x0_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x0_RegisteredCurrencies">RegisteredCurrencies</a>&gt;();
     <a href="Vector.md#0x0_Vector_push_back">Vector::push_back</a>(&<b>mut</b> config.currency_codes, currency_code);
     <a href="LibraConfig.md#0x0_LibraConfig_set_with_capability">LibraConfig::set_with_capability</a>(&cap.cap, config);
 }
@@ -196,7 +196,7 @@
 <a name="0x0_RegisteredCurrencies_spec_singleton_address"></a>
 <b>define</b> <a href="#0x0_RegisteredCurrencies_spec_singleton_address">spec_singleton_address</a>():address { <a href="LibraConfig.md#0x0_LibraConfig_spec_default_config_address">LibraConfig::spec_default_config_address</a>() }
 <a name="0x0_RegisteredCurrencies_spec_is_initialized"></a>
-<b>define</b> <a href="#0x0_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>():bool { <a href="LibraConfig.md#0x0_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x0_RegisteredCurrencies_T">T</a>&gt;(<a href="#0x0_RegisteredCurrencies_spec_singleton_address">spec_singleton_address</a>()) }
+<b>define</b> <a href="#0x0_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>():bool { <a href="LibraConfig.md#0x0_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x0_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(<a href="#0x0_RegisteredCurrencies_spec_singleton_address">spec_singleton_address</a>()) }
 </code></pre>
 
 
@@ -224,11 +224,11 @@
 
 <pre><code><b>schema</b> <a href="#0x0_RegisteredCurrencies_OnlySingletonHasT">OnlySingletonHasT</a> {
     <b>invariant</b> !<a href="#0x0_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>()
-        ==&gt; all(domain&lt;address&gt;(), |addr| !<a href="LibraConfig.md#0x0_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x0_RegisteredCurrencies_T">T</a>&gt;(addr));
+        ==&gt; all(domain&lt;address&gt;(), |addr| !<a href="LibraConfig.md#0x0_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x0_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(addr));
     <b>invariant</b> <a href="#0x0_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>()
-        ==&gt; <a href="LibraConfig.md#0x0_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x0_RegisteredCurrencies_T">T</a>&gt;(sender())
+        ==&gt; <a href="LibraConfig.md#0x0_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x0_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(sender())
             && all(domain&lt;address&gt;(),
-                   |addr| <a href="LibraConfig.md#0x0_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x0_RegisteredCurrencies_T">T</a>&gt;(addr)
+                   |addr| <a href="LibraConfig.md#0x0_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x0_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(addr)
                               ==&gt; addr == <a href="#0x0_RegisteredCurrencies_spec_singleton_address">spec_singleton_address</a>());
 }
 </code></pre>
@@ -247,8 +247,8 @@
 
 <pre><code><b>schema</b> <a href="#0x0_RegisteredCurrencies_OnlyAddCurrencyChangesT">OnlyAddCurrencyChangesT</a> {
     <b>ensures</b> <a href="#0x0_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>()
-                 ==&gt; <b>old</b>(<a href="LibraConfig.md#0x0_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x0_RegisteredCurrencies_T">T</a>&gt;().currency_codes)
-                      == <a href="LibraConfig.md#0x0_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x0_RegisteredCurrencies_T">T</a>&gt;().currency_codes;
+                 ==&gt; <b>old</b>(<a href="LibraConfig.md#0x0_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x0_RegisteredCurrencies">RegisteredCurrencies</a>&gt;().currency_codes)
+                      == <a href="LibraConfig.md#0x0_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x0_RegisteredCurrencies">RegisteredCurrencies</a>&gt;().currency_codes;
 }
 </code></pre>
 

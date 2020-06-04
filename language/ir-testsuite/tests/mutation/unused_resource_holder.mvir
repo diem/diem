@@ -4,16 +4,16 @@ module A {
 import 0x0.LBR;
     import 0x0.Libra;
 
-    resource T{g: Libra.T<LBR.T>}
+    resource T{g: Libra.Libra<LBR.LBR>}
 
-    public new(g: Libra.T<LBR.T>): Self.T {
+    public new(g: Libra.Libra<LBR.LBR>): Self.T {
         return T{g: move(g)};
     }
 
     public destroy(a: Self.T) {
-        let c: Libra.T<LBR.T>;
+        let c: Libra.Libra<LBR.LBR>;
         T{g: c} = move(a);
-        Libra.destroy_zero<LBR.T>(move(c));
+        Libra.destroy_zero<LBR.LBR>(move(c));
         return;
     }
 }
@@ -25,9 +25,9 @@ import 0x0.LBR;
 import 0x0.Libra;
 
 main() {
-    let zero_resource: Libra.T<LBR.T>;
+    let zero_resource: Libra.Libra<LBR.LBR>;
     let s: A.T;
-    zero_resource = Libra.zero<LBR.T>();
+    zero_resource = Libra.zero<LBR.LBR>();
     s = A.new(move(zero_resource));
 
     return;

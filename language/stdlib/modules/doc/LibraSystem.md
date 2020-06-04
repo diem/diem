@@ -7,7 +7,7 @@
 
 -  [Struct `ValidatorInfo`](#0x0_LibraSystem_ValidatorInfo)
 -  [Struct `CapabilityHolder`](#0x0_LibraSystem_CapabilityHolder)
--  [Struct `T`](#0x0_LibraSystem_T)
+-  [Struct `LibraSystem`](#0x0_LibraSystem_LibraSystem)
 -  [Function `initialize_validator_set`](#0x0_LibraSystem_initialize_validator_set)
 -  [Function `set_validator_set`](#0x0_LibraSystem_set_validator_set)
 -  [Function `add_validator`](#0x0_LibraSystem_add_validator)
@@ -86,7 +86,7 @@
 <dl>
 <dt>
 
-<code>cap: <a href="LibraConfig.md#0x0_LibraConfig_ModifyConfigCapability">LibraConfig::ModifyConfigCapability</a>&lt;<a href="#0x0_LibraSystem_T">LibraSystem::T</a>&gt;</code>
+<code>cap: <a href="LibraConfig.md#0x0_LibraConfig_ModifyConfigCapability">LibraConfig::ModifyConfigCapability</a>&lt;<a href="#0x0_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>&gt;</code>
 </dt>
 <dd>
 
@@ -96,13 +96,13 @@
 
 </details>
 
-<a name="0x0_LibraSystem_T"></a>
+<a name="0x0_LibraSystem_LibraSystem"></a>
 
-## Struct `T`
+## Struct `LibraSystem`
 
 
 
-<pre><code><b>struct</b> <a href="#0x0_LibraSystem_T">T</a>
+<pre><code><b>struct</b> <a href="#0x0_LibraSystem">LibraSystem</a>
 </code></pre>
 
 
@@ -152,9 +152,9 @@
         1
     );
 
-    <b>let</b> cap = <a href="LibraConfig.md#0x0_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>&lt;<a href="#0x0_LibraSystem_T">T</a>&gt;(
+    <b>let</b> cap = <a href="LibraConfig.md#0x0_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>&lt;<a href="#0x0_LibraSystem">LibraSystem</a>&gt;(
         config_account,
-        <a href="#0x0_LibraSystem_T">T</a> {
+        <a href="#0x0_LibraSystem">LibraSystem</a> {
             scheme: 0,
             validators: <a href="Vector.md#0x0_Vector_empty">Vector::empty</a>(),
         },
@@ -173,7 +173,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraSystem_set_validator_set">set_validator_set</a>(value: <a href="#0x0_LibraSystem_T">LibraSystem::T</a>)
+<pre><code><b>fun</b> <a href="#0x0_LibraSystem_set_validator_set">set_validator_set</a>(value: <a href="#0x0_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>)
 </code></pre>
 
 
@@ -182,8 +182,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraSystem_set_validator_set">set_validator_set</a>(value: <a href="#0x0_LibraSystem_T">T</a>) <b>acquires</b> <a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
-    <a href="LibraConfig.md#0x0_LibraConfig_set_with_capability">LibraConfig::set_with_capability</a>&lt;<a href="#0x0_LibraSystem_T">T</a>&gt;(&borrow_global&lt;<a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(<a href="LibraConfig.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>()).cap, value)
+<pre><code><b>fun</b> <a href="#0x0_LibraSystem_set_validator_set">set_validator_set</a>(value: <a href="#0x0_LibraSystem">LibraSystem</a>) <b>acquires</b> <a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
+    <a href="LibraConfig.md#0x0_LibraConfig_set_with_capability">LibraConfig::set_with_capability</a>&lt;<a href="#0x0_LibraSystem">LibraSystem</a>&gt;(&borrow_global&lt;<a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(<a href="LibraConfig.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>()).cap, value)
 }
 </code></pre>
 
@@ -334,7 +334,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>(): <a href="#0x0_LibraSystem_T">LibraSystem::T</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>(): <a href="#0x0_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>
 </code></pre>
 
 
@@ -343,8 +343,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>(): <a href="#0x0_LibraSystem_T">T</a> {
-    <a href="LibraConfig.md#0x0_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x0_LibraSystem_T">T</a>&gt;()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>(): <a href="#0x0_LibraSystem">LibraSystem</a> {
+    <a href="LibraConfig.md#0x0_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x0_LibraSystem">LibraSystem</a>&gt;()
 }
 </code></pre>
 
@@ -528,7 +528,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraSystem_get_validator_index_">get_validator_index_</a>(validators: &vector&lt;<a href="#0x0_LibraSystem_ValidatorInfo">LibraSystem::ValidatorInfo</a>&gt;, addr: address): <a href="Option.md#0x0_Option_T">Option::T</a>&lt;u64&gt;
+<pre><code><b>fun</b> <a href="#0x0_LibraSystem_get_validator_index_">get_validator_index_</a>(validators: &vector&lt;<a href="#0x0_LibraSystem_ValidatorInfo">LibraSystem::ValidatorInfo</a>&gt;, addr: address): <a href="Option.md#0x0_Option_Option">Option::Option</a>&lt;u64&gt;
 </code></pre>
 
 
@@ -537,7 +537,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraSystem_get_validator_index_">get_validator_index_</a>(validators: &vector&lt;<a href="#0x0_LibraSystem_ValidatorInfo">ValidatorInfo</a>&gt;, addr: address): <a href="Option.md#0x0_Option_T">Option::T</a>&lt;u64&gt; {
+<pre><code><b>fun</b> <a href="#0x0_LibraSystem_get_validator_index_">get_validator_index_</a>(validators: &vector&lt;<a href="#0x0_LibraSystem_ValidatorInfo">ValidatorInfo</a>&gt;, addr: address): <a href="Option.md#0x0_Option">Option</a>&lt;u64&gt; {
     <b>let</b> size = <a href="Vector.md#0x0_Vector_length">Vector::length</a>(validators);
     <b>if</b> (size == 0) {
         <b>return</b> <a href="Option.md#0x0_Option_none">Option::none</a>()

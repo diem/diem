@@ -17,7 +17,7 @@ pub struct ValidatorConfigResource {
 
 impl MoveResource for ValidatorConfigResource {
     const MODULE_NAME: &'static str = "ValidatorConfig";
-    const STRUCT_NAME: &'static str = "T";
+    const STRUCT_NAME: &'static str = "ValidatorConfig";
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]

@@ -18,10 +18,10 @@ fun main() {
 //! new-transaction
 //! sender: association
 script {
-use 0x0::LBR;
+use 0x0::LBR::LBR;
 use 0x0::LibraAccount;
 fun main(creator: &signer) {
-    LibraAccount::create_validator_account<LBR::T>(
+    LibraAccount::create_validator_account<LBR>(
         creator, 0xAA, x"00000000000000000000000000000000"
     );
 }

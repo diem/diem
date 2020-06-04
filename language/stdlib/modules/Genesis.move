@@ -5,10 +5,10 @@
 address 0x0 {
 module Genesis {
     use 0x0::Association;
-    use 0x0::Coin1;
-    use 0x0::Coin2;
+    use 0x0::Coin1::{Self, Coin1};
+    use 0x0::Coin2::{Self, Coin2};
     use 0x0::Event;
-    use 0x0::LBR;
+    use 0x0::LBR::{Self, LBR};
     use 0x0::Libra;
     use 0x0::LibraAccount;
     use 0x0::LibraBlock;
@@ -55,21 +55,21 @@ module Genesis {
 
         LibraAccount::initialize(association);
         Unhosted::publish_global_limits_definition(association);
-        LibraAccount::create_genesis_account<LBR::T>(
+        LibraAccount::create_genesis_account<LBR>(
             Signer::address_of(association),
             copy dummy_auth_key_prefix,
         );
-        Libra::grant_mint_capability_to_association<Coin1::T>(association);
-        Libra::grant_mint_capability_to_association<Coin2::T>(association);
+        Libra::grant_mint_capability_to_association<Coin1>(association);
+        Libra::grant_mint_capability_to_association<Coin2>(association);
 
         // Register transaction fee accounts
-        LibraAccount::create_testnet_account<LBR::T>(0xFEE, copy dummy_auth_key_prefix);
+        LibraAccount::create_testnet_account<LBR>(0xFEE, copy dummy_auth_key_prefix);
         TransactionFee::add_txn_fee_currency(fee_account, &coin1_burn_cap);
         TransactionFee::add_txn_fee_currency(fee_account, &coin2_burn_cap);
         TransactionFee::initialize(tc_account, fee_account);
 
         // Create the treasury compliance account
-        LibraAccount::create_treasury_compliance_account<LBR::T>(
+        LibraAccount::create_treasury_compliance_account<LBR>(
             association,
             tc_addr,
             copy dummy_auth_key_prefix,
@@ -80,7 +80,7 @@ module Genesis {
         );
 
         // Create the config account
-        LibraAccount::create_genesis_account<LBR::T>(
+        LibraAccount::create_genesis_account<LBR>(
             LibraConfig::default_config_address(),
             dummy_auth_key_prefix
         );

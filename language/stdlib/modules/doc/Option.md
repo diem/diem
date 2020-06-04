@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `T`](#0x0_Option_T)
+-  [Struct `Option`](#0x0_Option_Option)
 -  [Function `none`](#0x0_Option_none)
 -  [Function `some`](#0x0_Option_some)
 -  [Function `is_none`](#0x0_Option_is_none)
@@ -24,13 +24,13 @@
 
 
 
-<a name="0x0_Option_T"></a>
+<a name="0x0_Option_Option"></a>
 
-## Struct `T`
+## Struct `Option`
 
 
 
-<pre><code><b>struct</b> <a href="#0x0_Option_T">T</a>&lt;Element&gt;
+<pre><code><b>struct</b> <a href="#0x0_Option">Option</a>&lt;Element&gt;
 </code></pre>
 
 
@@ -58,7 +58,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_none">none</a>&lt;Element&gt;(): <a href="#0x0_Option_T">Option::T</a>&lt;Element&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_none">none</a>&lt;Element&gt;(): <a href="#0x0_Option_Option">Option::Option</a>&lt;Element&gt;
 </code></pre>
 
 
@@ -67,8 +67,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_none">none</a>&lt;Element&gt;(): <a href="#0x0_Option_T">T</a>&lt;Element&gt; {
-    <a href="#0x0_Option_T">T</a> { vec: <a href="Vector.md#0x0_Vector_empty">Vector::empty</a>() }
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_none">none</a>&lt;Element&gt;(): <a href="#0x0_Option">Option</a>&lt;Element&gt; {
+    <a href="#0x0_Option">Option</a> { vec: <a href="Vector.md#0x0_Vector_empty">Vector::empty</a>() }
 }
 </code></pre>
 
@@ -82,7 +82,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_some">some</a>&lt;Element&gt;(e: Element): <a href="#0x0_Option_T">Option::T</a>&lt;Element&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_some">some</a>&lt;Element&gt;(e: Element): <a href="#0x0_Option_Option">Option::Option</a>&lt;Element&gt;
 </code></pre>
 
 
@@ -91,8 +91,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_some">some</a>&lt;Element&gt;(e: Element): <a href="#0x0_Option_T">T</a>&lt;Element&gt; {
-    <a href="#0x0_Option_T">T</a> { vec: <a href="Vector.md#0x0_Vector_singleton">Vector::singleton</a>(e) }
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_some">some</a>&lt;Element&gt;(e: Element): <a href="#0x0_Option">Option</a>&lt;Element&gt; {
+    <a href="#0x0_Option">Option</a> { vec: <a href="Vector.md#0x0_Vector_singleton">Vector::singleton</a>(e) }
 }
 </code></pre>
 
@@ -106,7 +106,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_is_none">is_none</a>&lt;Element&gt;(t: &<a href="#0x0_Option_T">Option::T</a>&lt;Element&gt;): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_is_none">is_none</a>&lt;Element&gt;(t: &<a href="#0x0_Option_Option">Option::Option</a>&lt;Element&gt;): bool
 </code></pre>
 
 
@@ -115,7 +115,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_is_none">is_none</a>&lt;Element&gt;(t: &<a href="#0x0_Option_T">T</a>&lt;Element&gt;): bool {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_is_none">is_none</a>&lt;Element&gt;(t: &<a href="#0x0_Option">Option</a>&lt;Element&gt;): bool {
     <a href="Vector.md#0x0_Vector_is_empty">Vector::is_empty</a>(&t.vec)
 }
 </code></pre>
@@ -130,7 +130,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_is_some">is_some</a>&lt;Element&gt;(t: &<a href="#0x0_Option_T">Option::T</a>&lt;Element&gt;): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_is_some">is_some</a>&lt;Element&gt;(t: &<a href="#0x0_Option_Option">Option::Option</a>&lt;Element&gt;): bool
 </code></pre>
 
 
@@ -139,7 +139,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_is_some">is_some</a>&lt;Element&gt;(t: &<a href="#0x0_Option_T">T</a>&lt;Element&gt;): bool {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_is_some">is_some</a>&lt;Element&gt;(t: &<a href="#0x0_Option">Option</a>&lt;Element&gt;): bool {
     !<a href="Vector.md#0x0_Vector_is_empty">Vector::is_empty</a>(&t.vec)
 }
 </code></pre>
@@ -154,7 +154,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_contains">contains</a>&lt;Element&gt;(t: &<a href="#0x0_Option_T">Option::T</a>&lt;Element&gt;, e_ref: &Element): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_contains">contains</a>&lt;Element&gt;(t: &<a href="#0x0_Option_Option">Option::Option</a>&lt;Element&gt;, e_ref: &Element): bool
 </code></pre>
 
 
@@ -163,7 +163,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_contains">contains</a>&lt;Element&gt;(t: &<a href="#0x0_Option_T">T</a>&lt;Element&gt;, e_ref: &Element): bool {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_contains">contains</a>&lt;Element&gt;(t: &<a href="#0x0_Option">Option</a>&lt;Element&gt;, e_ref: &Element): bool {
     <a href="Vector.md#0x0_Vector_contains">Vector::contains</a>(&t.vec, e_ref)
 }
 </code></pre>
@@ -178,7 +178,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_borrow">borrow</a>&lt;Element&gt;(t: &<a href="#0x0_Option_T">Option::T</a>&lt;Element&gt;): &Element
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_borrow">borrow</a>&lt;Element&gt;(t: &<a href="#0x0_Option_Option">Option::Option</a>&lt;Element&gt;): &Element
 </code></pre>
 
 
@@ -187,7 +187,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_borrow">borrow</a>&lt;Element&gt;(t: &<a href="#0x0_Option_T">T</a>&lt;Element&gt;): &Element {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_borrow">borrow</a>&lt;Element&gt;(t: &<a href="#0x0_Option">Option</a>&lt;Element&gt;): &Element {
     <a href="Vector.md#0x0_Vector_borrow">Vector::borrow</a>(&t.vec, 0)
 }
 </code></pre>
@@ -202,7 +202,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_borrow_with_default">borrow_with_default</a>&lt;Element&gt;(t: &<a href="#0x0_Option_T">Option::T</a>&lt;Element&gt;, default_ref: &Element): &Element
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_borrow_with_default">borrow_with_default</a>&lt;Element&gt;(t: &<a href="#0x0_Option_Option">Option::Option</a>&lt;Element&gt;, default_ref: &Element): &Element
 </code></pre>
 
 
@@ -211,7 +211,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_borrow_with_default">borrow_with_default</a>&lt;Element&gt;(t: &<a href="#0x0_Option_T">T</a>&lt;Element&gt;, default_ref: &Element): &Element {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_borrow_with_default">borrow_with_default</a>&lt;Element&gt;(t: &<a href="#0x0_Option">Option</a>&lt;Element&gt;, default_ref: &Element): &Element {
     <b>let</b> vec_ref = &t.vec;
     <b>if</b> (<a href="Vector.md#0x0_Vector_is_empty">Vector::is_empty</a>(vec_ref)) default_ref
     <b>else</b> <a href="Vector.md#0x0_Vector_borrow">Vector::borrow</a>(vec_ref, 0)
@@ -228,7 +228,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_get_with_default">get_with_default</a>&lt;Element: <b>copyable</b>&gt;(t: &<a href="#0x0_Option_T">Option::T</a>&lt;Element&gt;, default: Element): Element
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_get_with_default">get_with_default</a>&lt;Element: <b>copyable</b>&gt;(t: &<a href="#0x0_Option_Option">Option::Option</a>&lt;Element&gt;, default: Element): Element
 </code></pre>
 
 
@@ -237,7 +237,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_get_with_default">get_with_default</a>&lt;Element: <b>copyable</b>&gt;(t: &<a href="#0x0_Option_T">T</a>&lt;Element&gt;, default: Element): Element {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_get_with_default">get_with_default</a>&lt;Element: <b>copyable</b>&gt;(t: &<a href="#0x0_Option">Option</a>&lt;Element&gt;, default: Element): Element {
     <b>let</b> vec_ref = &t.vec;
     <b>if</b> (<a href="Vector.md#0x0_Vector_is_empty">Vector::is_empty</a>(vec_ref)) default
     <b>else</b> *<a href="Vector.md#0x0_Vector_borrow">Vector::borrow</a>(vec_ref, 0)
@@ -254,7 +254,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_fill">fill</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x0_Option_T">Option::T</a>&lt;Element&gt;, e: Element)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_fill">fill</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x0_Option_Option">Option::Option</a>&lt;Element&gt;, e: Element)
 </code></pre>
 
 
@@ -263,7 +263,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_fill">fill</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x0_Option_T">T</a>&lt;Element&gt;, e: Element) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_fill">fill</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x0_Option">Option</a>&lt;Element&gt;, e: Element) {
     <b>let</b> vec_ref = &<b>mut</b> t.vec;
     <b>if</b> (<a href="Vector.md#0x0_Vector_is_empty">Vector::is_empty</a>(vec_ref)) <a href="Vector.md#0x0_Vector_push_back">Vector::push_back</a>(vec_ref, e)
     <b>else</b> <b>abort</b>(99)
@@ -280,7 +280,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_extract">extract</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x0_Option_T">Option::T</a>&lt;Element&gt;): Element
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_extract">extract</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x0_Option_Option">Option::Option</a>&lt;Element&gt;): Element
 </code></pre>
 
 
@@ -289,7 +289,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_extract">extract</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x0_Option_T">T</a>&lt;Element&gt;): Element {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_extract">extract</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x0_Option">Option</a>&lt;Element&gt;): Element {
     <a href="Vector.md#0x0_Vector_pop_back">Vector::pop_back</a>(&<b>mut</b> t.vec)
 }
 </code></pre>
@@ -304,7 +304,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_borrow_mut">borrow_mut</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x0_Option_T">Option::T</a>&lt;Element&gt;): &<b>mut</b> Element
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_borrow_mut">borrow_mut</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x0_Option_Option">Option::Option</a>&lt;Element&gt;): &<b>mut</b> Element
 </code></pre>
 
 
@@ -313,7 +313,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_borrow_mut">borrow_mut</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x0_Option_T">T</a>&lt;Element&gt;): &<b>mut</b> Element {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_borrow_mut">borrow_mut</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x0_Option">Option</a>&lt;Element&gt;): &<b>mut</b> Element {
     <a href="Vector.md#0x0_Vector_borrow_mut">Vector::borrow_mut</a>(&<b>mut</b> t.vec, 0)
 }
 </code></pre>
@@ -328,7 +328,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_swap">swap</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x0_Option_T">Option::T</a>&lt;Element&gt;, e: Element): Element
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_swap">swap</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x0_Option_Option">Option::Option</a>&lt;Element&gt;, e: Element): Element
 </code></pre>
 
 
@@ -337,7 +337,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_swap">swap</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x0_Option_T">T</a>&lt;Element&gt;, e: Element): Element {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_swap">swap</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x0_Option">Option</a>&lt;Element&gt;, e: Element): Element {
     <b>let</b> vec_ref = &<b>mut</b> t.vec;
     <b>let</b> old_value = <a href="Vector.md#0x0_Vector_pop_back">Vector::pop_back</a>(vec_ref);
     <a href="Vector.md#0x0_Vector_push_back">Vector::push_back</a>(vec_ref, e);
@@ -355,7 +355,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_destroy_with_default">destroy_with_default</a>&lt;Element: <b>copyable</b>&gt;(t: <a href="#0x0_Option_T">Option::T</a>&lt;Element&gt;, default: Element): Element
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_destroy_with_default">destroy_with_default</a>&lt;Element: <b>copyable</b>&gt;(t: <a href="#0x0_Option_Option">Option::Option</a>&lt;Element&gt;, default: Element): Element
 </code></pre>
 
 
@@ -364,8 +364,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_destroy_with_default">destroy_with_default</a>&lt;Element: <b>copyable</b>&gt;(t: <a href="#0x0_Option_T">T</a>&lt;Element&gt;, default: Element): Element {
-    <b>let</b> <a href="#0x0_Option_T">T</a> { vec } = t;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_destroy_with_default">destroy_with_default</a>&lt;Element: <b>copyable</b>&gt;(t: <a href="#0x0_Option">Option</a>&lt;Element&gt;, default: Element): Element {
+    <b>let</b> <a href="#0x0_Option">Option</a> { vec } = t;
     <b>if</b> (<a href="Vector.md#0x0_Vector_is_empty">Vector::is_empty</a>(&<b>mut</b> vec)) default
     <b>else</b> <a href="Vector.md#0x0_Vector_pop_back">Vector::pop_back</a>(&<b>mut</b> vec)
 }
@@ -381,7 +381,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_destroy_some">destroy_some</a>&lt;Element&gt;(t: <a href="#0x0_Option_T">Option::T</a>&lt;Element&gt;): Element
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_destroy_some">destroy_some</a>&lt;Element&gt;(t: <a href="#0x0_Option_Option">Option::Option</a>&lt;Element&gt;): Element
 </code></pre>
 
 
@@ -390,8 +390,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_destroy_some">destroy_some</a>&lt;Element&gt;(t: <a href="#0x0_Option_T">T</a>&lt;Element&gt;): Element {
-    <b>let</b> <a href="#0x0_Option_T">T</a> { vec } = t;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_destroy_some">destroy_some</a>&lt;Element&gt;(t: <a href="#0x0_Option">Option</a>&lt;Element&gt;): Element {
+    <b>let</b> <a href="#0x0_Option">Option</a> { vec } = t;
     <b>let</b> elem = <a href="Vector.md#0x0_Vector_pop_back">Vector::pop_back</a>(&<b>mut</b> vec);
     <a href="Vector.md#0x0_Vector_destroy_empty">Vector::destroy_empty</a>(vec);
     elem
@@ -408,7 +408,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_destroy_none">destroy_none</a>&lt;Element&gt;(t: <a href="#0x0_Option_T">Option::T</a>&lt;Element&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_destroy_none">destroy_none</a>&lt;Element&gt;(t: <a href="#0x0_Option_Option">Option::Option</a>&lt;Element&gt;)
 </code></pre>
 
 
@@ -417,8 +417,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_destroy_none">destroy_none</a>&lt;Element&gt;(t: <a href="#0x0_Option_T">T</a>&lt;Element&gt;) {
-    <b>let</b> <a href="#0x0_Option_T">T</a> { vec } = t;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Option_destroy_none">destroy_none</a>&lt;Element&gt;(t: <a href="#0x0_Option">Option</a>&lt;Element&gt;) {
+    <b>let</b> <a href="#0x0_Option">Option</a> { vec } = t;
     <a href="Vector.md#0x0_Vector_destroy_empty">Vector::destroy_empty</a>(vec)
 }
 </code></pre>

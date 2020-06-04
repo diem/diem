@@ -7,7 +7,7 @@
 // a hurdle that must be cleared for all payments to the payee. In addition, approved payments do
 // not have replay protection.
 module ApprovedPayment {
-    use 0x0::Libra;
+    use 0x0::Libra::Libra;
     use 0x0::LibraAccount;
     use 0x0::Signature;
     use 0x0::Signer;
@@ -18,7 +18,7 @@ module ApprovedPayment {
     resource struct T {
         // 32 byte single Ed25519 public key whose counterpart must be used to sign the payment
         // metadata. Note that this is different (and simpler) than the `authentication_key` used in
-        // LibraAccount::T, which is a hash of a public key + signature scheme identifier.
+        // LibraAccount, which is a hash of a public key + signature scheme identifier.
         public_key: vector<u8>,
         // TODO: events?
     }
@@ -29,7 +29,7 @@ module ApprovedPayment {
         payer: &signer,
         approved_payment: &T,
         payee: address,
-        coin: Libra::T<Token>,
+        coin: Libra<Token>,
         metadata: vector<u8>,
         signature: vector<u8>
     ) {
@@ -48,7 +48,7 @@ module ApprovedPayment {
     }
 
     // Wrapper of `deposit` that withdraw's from the sender's balance and uses the top-level
-    // `ApprovedPayment::T` resource under the payee account.
+    // `ApprovedPayment` resource under the payee account.
     public fun deposit_to_payee<Token>(
         payer: &signer,
         payee: address,
@@ -86,7 +86,7 @@ module ApprovedPayment {
         rotate_key(borrow_global_mut<T>(Signer::address_of(sender)), new_public_key)
     }
 
-    // Publish an ApprovedPayment::T resource under the sender's account with approval key
+    // Publish an ApprovedPayment resource under the sender's account with approval key
     // `public_key`
     public fun publish(account: &signer, public_key: vector<u8>) {
         // Sanity check for key validity
@@ -99,12 +99,12 @@ module ApprovedPayment {
         move_to(account, T { public_key })
     }
 
-    // Remove and destroy the ApprovedPayment::T resource under the sender's account
+    // Remove and destroy the ApprovedPayment resource under the sender's account
     public fun unpublish_from_sender(sender: &signer) acquires T {
         let T { public_key: _ } = move_from<T>(Signer::address_of(sender))
     }
 
-    // Return true if an ApprovedPayment::T resource exists under `addr`
+    // Return true if an ApprovedPayment resource exists under `addr`
     public fun exists(addr: address): bool {
         ::exists<T>(addr)
     }
@@ -207,11 +207,11 @@ fun main(account: &signer) {
 //! sender: bob2
 script {
 use {{default}}::ApprovedPayment;
-use 0x0::LBR;
+use 0x0::LBR::LBR;
 fun main(account: &signer) {
     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
     let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
-    ApprovedPayment::deposit_to_payee<LBR::T>(account, {{alice2}}, 1000, payment_id, signature);
+    ApprovedPayment::deposit_to_payee<LBR>(account, {{alice2}}, 1000, payment_id, signature);
 }
 }
 // check: EXECUTED
@@ -263,11 +263,11 @@ fun main(account: &signer) {
 //! sender: bob3
 script {
 use {{default}}::ApprovedPayment;
-use 0x0::LBR;
+use 0x0::LBR::LBR;
 fun main(account: &signer) {
     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
     let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
-    ApprovedPayment::deposit_to_payee<LBR::T>(account, {{alice3}}, 1000, payment_id, signature);
+    ApprovedPayment::deposit_to_payee<LBR>(account, {{alice3}}, 1000, payment_id, signature);
 }
 }
 // check: EXECUTED
@@ -278,11 +278,11 @@ fun main(account: &signer) {
 //! sender: bob3
 script {
 use {{default}}::ApprovedPayment;
-use 0x0::LBR;
+use 0x0::LBR::LBR;
 fun main(account: &signer) {
     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
     let signature = x"";
-    ApprovedPayment::deposit_to_payee<LBR::T>(account, {{alice}}, 1000, payment_id, signature);
+    ApprovedPayment::deposit_to_payee<LBR>(account, {{alice}}, 1000, payment_id, signature);
 }
 }
 
@@ -295,11 +295,11 @@ fun main(account: &signer) {
 //! sender: bob3
 script {
 use {{default}}::ApprovedPayment;
-use 0x0::LBR;
+use 0x0::LBR::LBR;
 fun main(account: &signer) {
     let payment_id = x"7";
     let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
-    ApprovedPayment::deposit_to_payee<LBR::T>(account, {{alice3}}, 1000, payment_id, signature);
+    ApprovedPayment::deposit_to_payee<LBR>(account, {{alice3}}, 1000, payment_id, signature);
 }
 }
 // check: ABORTED

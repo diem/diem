@@ -3,14 +3,14 @@ import 0x0.LBR;
 import 0x0.Libra;
 
 main(account: &signer) {
-    let ten_coins: Libra.T<LBR.T>;
-    let i_created_money: Libra.T<LBR.T>;
+    let ten_coins: Libra.Libra<LBR.LBR>;
+    let i_created_money: Libra.Libra<LBR.LBR>;
 
-    ten_coins = LibraAccount.withdraw_from<LBR.T>(copy(account), 10);
+    ten_coins = LibraAccount.withdraw_from<LBR.LBR>(copy(account), 10);
     i_created_money = copy(ten_coins);
 
-    LibraAccount.deposit_to<LBR.T>(copy(account), move(ten_coins));
-    LibraAccount.deposit_to<LBR.T>(copy(account), move(i_created_money));
+    LibraAccount.deposit_to<LBR.LBR>(copy(account), move(ten_coins));
+    LibraAccount.deposit_to<LBR.LBR>(copy(account), move(i_created_money));
 
     return;
 }

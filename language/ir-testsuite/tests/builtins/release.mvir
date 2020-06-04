@@ -3,8 +3,8 @@ import 0x0.LBR;
 import 0x0.Libra;
 
 main(account: &signer) {
-    let ten_coins: Libra.T<LBR.T>;
-    ten_coins = LibraAccount.withdraw_from<LBR.T>(move(account), 10);
+    let ten_coins: Libra.Libra<LBR.LBR>;
+    ten_coins = LibraAccount.withdraw_from<LBR.LBR>(move(account), 10);
     _ = move(ten_coins);
 
     return;

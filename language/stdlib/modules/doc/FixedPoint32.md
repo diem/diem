@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `T`](#0x0_FixedPoint32_T)
+-  [Struct `FixedPoint32`](#0x0_FixedPoint32_FixedPoint32)
 -  [Function `multiply_u64`](#0x0_FixedPoint32_multiply_u64)
 -  [Function `divide_u64`](#0x0_FixedPoint32_divide_u64)
 -  [Function `create_from_rational`](#0x0_FixedPoint32_create_from_rational)
@@ -20,13 +20,13 @@
 
 
 
-<a name="0x0_FixedPoint32_T"></a>
+<a name="0x0_FixedPoint32_FixedPoint32"></a>
 
-## Struct `T`
+## Struct `FixedPoint32`
 
 
 
-<pre><code><b>struct</b> <a href="#0x0_FixedPoint32_T">T</a>
+<pre><code><b>struct</b> <a href="#0x0_FixedPoint32">FixedPoint32</a>
 </code></pre>
 
 
@@ -54,7 +54,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_multiply_u64">multiply_u64</a>(num: u64, multiplier: <a href="#0x0_FixedPoint32_T">FixedPoint32::T</a>): u64
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_multiply_u64">multiply_u64</a>(num: u64, multiplier: <a href="#0x0_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>): u64
 </code></pre>
 
 
@@ -63,7 +63,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_multiply_u64">multiply_u64</a>(num: u64, multiplier: <a href="#0x0_FixedPoint32_T">T</a>): u64 {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_multiply_u64">multiply_u64</a>(num: u64, multiplier: <a href="#0x0_FixedPoint32">FixedPoint32</a>): u64 {
     // The product of two 64 bit values has 128 bits, so perform the
     // multiplication with u128 types and keep the full 128 bit product
     // <b>to</b> avoid losing accuracy.
@@ -88,7 +88,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_divide_u64">divide_u64</a>(num: u64, divisor: <a href="#0x0_FixedPoint32_T">FixedPoint32::T</a>): u64
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_divide_u64">divide_u64</a>(num: u64, divisor: <a href="#0x0_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>): u64
 </code></pre>
 
 
@@ -97,7 +97,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_divide_u64">divide_u64</a>(num: u64, divisor: <a href="#0x0_FixedPoint32_T">T</a>): u64 {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_divide_u64">divide_u64</a>(num: u64, divisor: <a href="#0x0_FixedPoint32">FixedPoint32</a>): u64 {
     // First convert <b>to</b> 128 bits and then shift left <b>to</b>
     // add 32 fractional zero bits <b>to</b> the dividend.
     <b>let</b> scaled_value = (num <b>as</b> u128) &lt;&lt; 32;
@@ -121,7 +121,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_create_from_rational">create_from_rational</a>(numerator: u64, denominator: u64): <a href="#0x0_FixedPoint32_T">FixedPoint32::T</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_create_from_rational">create_from_rational</a>(numerator: u64, denominator: u64): <a href="#0x0_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>
 </code></pre>
 
 
@@ -130,7 +130,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_create_from_rational">create_from_rational</a>(numerator: u64, denominator: u64): <a href="#0x0_FixedPoint32_T">T</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_create_from_rational">create_from_rational</a>(numerator: u64, denominator: u64): <a href="#0x0_FixedPoint32">FixedPoint32</a> {
     // Scale the numerator <b>to</b> have 64 fractional bits and the denominator
     // <b>to</b> have 32 fractional bits, so that the quotient will have 32
     // fractional bits.
@@ -145,7 +145,7 @@
     Transaction::assert(quotient != 0 || numerator == 0, 16);
     // Return the quotient <b>as</b> a fixed-point number. The cast will fail
     // with an arithmetic error <b>if</b> the number is too large.
-    <a href="#0x0_FixedPoint32_T">T</a> { value: (quotient <b>as</b> u64) }
+    <a href="#0x0_FixedPoint32">FixedPoint32</a> { value: (quotient <b>as</b> u64) }
 }
 </code></pre>
 
@@ -159,7 +159,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_create_from_raw_value">create_from_raw_value</a>(value: u64): <a href="#0x0_FixedPoint32_T">FixedPoint32::T</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_create_from_raw_value">create_from_raw_value</a>(value: u64): <a href="#0x0_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>
 </code></pre>
 
 
@@ -168,8 +168,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_create_from_raw_value">create_from_raw_value</a>(value: u64): <a href="#0x0_FixedPoint32_T">T</a> {
-    <a href="#0x0_FixedPoint32_T">T</a> { value }
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_create_from_raw_value">create_from_raw_value</a>(value: u64): <a href="#0x0_FixedPoint32">FixedPoint32</a> {
+    <a href="#0x0_FixedPoint32">FixedPoint32</a> { value }
 }
 </code></pre>
 
@@ -183,7 +183,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_get_raw_value">get_raw_value</a>(num: <a href="#0x0_FixedPoint32_T">FixedPoint32::T</a>): u64
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_get_raw_value">get_raw_value</a>(num: <a href="#0x0_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>): u64
 </code></pre>
 
 
@@ -192,7 +192,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_get_raw_value">get_raw_value</a>(num: <a href="#0x0_FixedPoint32_T">T</a>): u64 {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_get_raw_value">get_raw_value</a>(num: <a href="#0x0_FixedPoint32">FixedPoint32</a>): u64 {
     num.value
 }
 </code></pre>
@@ -211,7 +211,7 @@
 ### Function `multiply_u64`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_multiply_u64">multiply_u64</a>(num: u64, multiplier: <a href="#0x0_FixedPoint32_T">FixedPoint32::T</a>): u64
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_multiply_u64">multiply_u64</a>(num: u64, multiplier: <a href="#0x0_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>): u64
 </code></pre>
 
 
@@ -222,7 +222,7 @@
 ### Function `divide_u64`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_divide_u64">divide_u64</a>(num: u64, divisor: <a href="#0x0_FixedPoint32_T">FixedPoint32::T</a>): u64
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_divide_u64">divide_u64</a>(num: u64, divisor: <a href="#0x0_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>): u64
 </code></pre>
 
 
@@ -233,7 +233,7 @@
 ### Function `create_from_rational`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_create_from_rational">create_from_rational</a>(numerator: u64, denominator: u64): <a href="#0x0_FixedPoint32_T">FixedPoint32::T</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_create_from_rational">create_from_rational</a>(numerator: u64, denominator: u64): <a href="#0x0_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>
 </code></pre>
 
 
@@ -244,14 +244,14 @@
 ### Function `create_from_raw_value`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_create_from_raw_value">create_from_raw_value</a>(value: u64): <a href="#0x0_FixedPoint32_T">FixedPoint32::T</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_create_from_raw_value">create_from_raw_value</a>(value: u64): <a href="#0x0_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>
 </code></pre>
 
 
 
 
 <pre><code><b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="#0x0_FixedPoint32_T">T</a> { value };
+<b>ensures</b> result == <a href="#0x0_FixedPoint32">FixedPoint32</a> { value };
 </code></pre>
 
 
@@ -261,7 +261,7 @@
 ### Function `get_raw_value`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_get_raw_value">get_raw_value</a>(num: <a href="#0x0_FixedPoint32_T">FixedPoint32::T</a>): u64
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_get_raw_value">get_raw_value</a>(num: <a href="#0x0_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>): u64
 </code></pre>
 
 

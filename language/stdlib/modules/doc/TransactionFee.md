@@ -295,7 +295,7 @@ Burns the already preburned fees from a previous call to
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_TransactionFee_preburn_coin">preburn_coin</a>&lt;CoinType&gt;(coin: <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;CoinType&gt;)
+<pre><code><b>fun</b> <a href="#0x0_TransactionFee_preburn_coin">preburn_coin</a>&lt;CoinType&gt;(coin: <a href="Libra.md#0x0_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;)
 </code></pre>
 
 

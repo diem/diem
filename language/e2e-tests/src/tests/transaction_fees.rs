@@ -60,7 +60,7 @@ fn burn_txn_fees() {
     let lbr_ty = TypeTag::Struct(StructTag {
         address: account_config::CORE_CODE_ADDRESS,
         module: Identifier::new("LBR").unwrap(),
-        name: Identifier::new("T").unwrap(),
+        name: Identifier::new("LBR").unwrap(),
         type_params: vec![],
     });
 

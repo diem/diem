@@ -6,12 +6,12 @@ module FixedPoint32 {
     // Define a fixed-point numeric type with 32 fractional bits.
     // This is just a u64 integer but it is wrapped in a struct to
     // make a unique type.
-    struct T { value: u64 }
+    struct FixedPoint32 { value: u64 }
 
     // Multiply a u64 integer by a fixed-point number, truncating any
     // fractional part of the product. This will abort if the product
     // overflows.
-    public fun multiply_u64(num: u64, multiplier: T): u64 {
+    public fun multiply_u64(num: u64, multiplier: FixedPoint32): u64 {
         // The product of two 64 bit values has 128 bits, so perform the
         // multiplication with u128 types and keep the full 128 bit product
         // to avoid losing accuracy.
@@ -28,7 +28,7 @@ module FixedPoint32 {
     // Divide a u64 integer by a fixed-point number, truncating any
     // fractional part of the quotient. This will abort if the divisor
     // is zero or if the quotient overflows.
-    public fun divide_u64(num: u64, divisor: T): u64 {
+    public fun divide_u64(num: u64, divisor: FixedPoint32): u64 {
         // First convert to 128 bits and then shift left to
         // add 32 fractional zero bits to the dividend.
         let scaled_value = (num as u128) << 32;
@@ -46,7 +46,7 @@ module FixedPoint32 {
     // perfectly fine to create a fixed-point value by directly specifying the
     // raw value. This will abort if the denominator is zero or if the ratio is
     // not in the range 2^-32 .. 2^32-1.
-    public fun create_from_rational(numerator: u64, denominator: u64): T {
+    public fun create_from_rational(numerator: u64, denominator: u64): FixedPoint32 {
         // Scale the numerator to have 64 fractional bits and the denominator
         // to have 32 fractional bits, so that the quotient will have 32
         // fractional bits.
@@ -61,17 +61,17 @@ module FixedPoint32 {
         Transaction::assert(quotient != 0 || numerator == 0, 16);
         // Return the quotient as a fixed-point number. The cast will fail
         // with an arithmetic error if the number is too large.
-        T { value: (quotient as u64) }
+        FixedPoint32 { value: (quotient as u64) }
     }
 
-    public fun create_from_raw_value(value: u64): T {
-        T { value }
+    public fun create_from_raw_value(value: u64): FixedPoint32 {
+        FixedPoint32 { value }
     }
 
     // Accessor for the raw u64 value. Other less common operations, such as
     // adding or subtracting FixedPoint32 values, can be done using the raw
     // values directly.
-    public fun get_raw_value(num: T): u64 {
+    public fun get_raw_value(num: FixedPoint32): u64 {
         num.value
     }
 
@@ -121,7 +121,7 @@ module FixedPoint32 {
 
     spec fun create_from_raw_value {
         aborts_if false;
-        ensures result == T { value };
+        ensures result == FixedPoint32 { value };
     }
 
     spec fun get_raw_value {
@@ -143,14 +143,14 @@ module FixedPoint32 {
     15:            FixedPoint32::create_from_rational(1, 2), // exchange rate to LBR
 
     libra.move
-    73:        to_lbr_exchange_rate: FixedPoint32::T,
-    446:        to_lbr_exchange_rate: FixedPoint32::T,
+    73:        to_lbr_exchange_rate: FixedPoint32::FixedPoint32,
+    446:        to_lbr_exchange_rate: FixedPoint32::FixedPoint32,
     489:        FixedPoint32::multiply_u64(from_value, lbr_exchange_rate)
-    535:        lbr_exchange_rate: FixedPoint32::T
-    543:    public fun lbr_exchange_rate<CoinType>(): FixedPoint32::T
+    535:        lbr_exchange_rate: FixedPoint32::FixedPoint32
+    543:    public fun lbr_exchange_rate<CoinType>(): FixedPoint32::FixedPoint32
 
     lbr.move
-    19:        ratio: FixedPoint32::T,
+    19:        ratio: FixedPoint32::FixedPoint32,
     43:            FixedPoint32::create_from_rational(1, 1), // exchange rate to LBR
     51:            ratio: FixedPoint32::create_from_rational(1, 2),
     55:            ratio: FixedPoint32::create_from_rational(1, 2),

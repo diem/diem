@@ -8,7 +8,7 @@ module LibraWriteSetManager {
     use 0x0::Transaction;
     use 0x0::LibraConfig;
 
-    resource struct T {
+    resource struct LibraWriteSetManager {
         upgrade_events: Event::EventHandle<Self::UpgradeEvent>,
     }
 
@@ -21,7 +21,7 @@ module LibraWriteSetManager {
 
         move_to(
             account,
-            T {
+            LibraWriteSetManager {
                 upgrade_events: Event::new_event_handle<Self::UpgradeEvent>(account),
             }
         );
@@ -47,8 +47,8 @@ module LibraWriteSetManager {
         );
     }
 
-    fun epilogue(account: &signer, writeset_payload: vector<u8>) acquires T {
-        let t_ref = borrow_global_mut<T>(0xA550C18);
+    fun epilogue(account: &signer, writeset_payload: vector<u8>) acquires LibraWriteSetManager {
+        let t_ref = borrow_global_mut<LibraWriteSetManager>(0xA550C18);
 
         Event::emit_event<Self::UpgradeEvent>(
             &mut t_ref.upgrade_events,

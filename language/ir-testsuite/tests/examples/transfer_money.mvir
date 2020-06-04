@@ -7,10 +7,10 @@ import 0x0.LBR;
 import 0x0.Libra;
 
 main(account: &signer) {
-    let coins: Libra.T<LBR.T>;
+    let coins: Libra.Libra<LBR.LBR>;
 
-    coins = LibraAccount.withdraw_from<LBR.T>(copy(account), 42);
-    LibraAccount.deposit<LBR.T>(copy(account), {{bob}}, move(coins));
+    coins = LibraAccount.withdraw_from<LBR.LBR>(copy(account), 42);
+    LibraAccount.deposit<LBR.LBR>(copy(account), {{bob}}, move(coins));
 
     return;
 }

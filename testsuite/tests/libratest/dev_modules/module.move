@@ -9,11 +9,11 @@
 address {{sender}} {
 
 module MyModule {
-    use 0x0::Libra;
-    use 0x0::LBR;
+    use 0x0::Libra::Libra;
+    use 0x0::LBR::LBR;
 
-    // The identity function for coins: takes a Libra::T<LBR::T> as input and hands it back
-    public fun id(c: Libra::T<LBR::T>): Libra::T<LBR::T> {
+    // The identity function for coins: takes a Libra<LBR> as input and hands it back
+    public fun id(c: Libra<LBR>): Libra<LBR> {
         c
     }
 }

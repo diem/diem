@@ -5,20 +5,20 @@
 
 ### Table of Contents
 
--  [Struct `T`](#0x0_Unhosted_T)
+-  [Struct `Unhosted`](#0x0_Unhosted_Unhosted)
 -  [Function `publish_global_limits_definition`](#0x0_Unhosted_publish_global_limits_definition)
 -  [Function `create`](#0x0_Unhosted_create)
 -  [Function `limits_addr`](#0x0_Unhosted_limits_addr)
 
 
 
-<a name="0x0_Unhosted_T"></a>
+<a name="0x0_Unhosted_Unhosted"></a>
 
-## Struct `T`
+## Struct `Unhosted`
 
 
 
-<pre><code><b>struct</b> <a href="#0x0_Unhosted_T">T</a>
+<pre><code><b>struct</b> <a href="#0x0_Unhosted">Unhosted</a>
 </code></pre>
 
 
@@ -79,7 +79,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Unhosted_create">create</a>(): <a href="#0x0_Unhosted_T">Unhosted::T</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Unhosted_create">create</a>(): <a href="#0x0_Unhosted_Unhosted">Unhosted::Unhosted</a>
 </code></pre>
 
 
@@ -88,9 +88,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Unhosted_create">create</a>(): <a href="#0x0_Unhosted_T">T</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Unhosted_create">create</a>(): <a href="#0x0_Unhosted">Unhosted</a> {
     Transaction::assert(<a href="Testnet.md#0x0_Testnet_is_testnet">Testnet::is_testnet</a>(), 10041);
-    <a href="#0x0_Unhosted_T">T</a> {  }
+    <a href="#0x0_Unhosted">Unhosted</a> {  }
 }
 </code></pre>
 

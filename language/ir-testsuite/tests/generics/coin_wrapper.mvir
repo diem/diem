@@ -2,15 +2,15 @@ module M {
     import 0x0.LBR;
     import 0x0.Libra;
     resource Foo<T: resource> { x: T }
-    resource CoinWrapper { f: Self.Foo<Libra.T<LBR.T>> }
+    resource CoinWrapper { f: Self.Foo<Libra.Libra<LBR.LBR>> }
     resource InnerWrapper { f: Self.Foo<Self.Inner>}
     resource Inner { b: vector<u8> }
 
-    public coin_wrapper(c: Libra.T<LBR.T>) {
-        let foo: Self.Foo<Libra.T<LBR.T>>;
+    public coin_wrapper(c: Libra.Libra<LBR.LBR>) {
+        let foo: Self.Foo<Libra.Libra<LBR.LBR>>;
         let coin_wrapper: Self.CoinWrapper;
 
-        foo = Foo<Libra.T<LBR.T>> {x: move(c)};
+        foo = Foo<Libra.Libra<LBR.LBR>> {x: move(c)};
         coin_wrapper = CoinWrapper {f: move(foo)};
         move_to_sender<CoinWrapper>(move(coin_wrapper));
         return;
@@ -30,14 +30,14 @@ module M {
 
     public get_coin_value(): u64 acquires CoinWrapper {
         let coin_wrapper_ref: &Self.CoinWrapper;
-        let foo_ref: &Self.Foo<Libra.T<LBR.T>>;
-        let coin_ref: &Libra.T<LBR.T>;
+        let foo_ref: &Self.Foo<Libra.Libra<LBR.LBR>>;
+        let coin_ref: &Libra.Libra<LBR.LBR>;
 
         coin_wrapper_ref = borrow_global<CoinWrapper>(get_txn_sender());
         foo_ref = &move(coin_wrapper_ref).f;
         coin_ref = &move(foo_ref).x;
 
-        return Libra.value<LBR.T>(move(coin_ref));
+        return Libra.value<LBR.LBR>(move(coin_ref));
     }
 
     public get_inner(): vector<u8> acquires InnerWrapper {
@@ -53,14 +53,14 @@ module M {
     }
 
 
-    public destroy(): Libra.T<LBR.T> acquires CoinWrapper {
+    public destroy(): Libra.Libra<LBR.LBR> acquires CoinWrapper {
         let coin_wrapper: Self.CoinWrapper;
-        let f: Self.Foo<Libra.T<LBR.T>>;
-        let x: Libra.T<LBR.T>;
+        let f: Self.Foo<Libra.Libra<LBR.LBR>>;
+        let x: Libra.Libra<LBR.LBR>;
 
         coin_wrapper = move_from<CoinWrapper>(get_txn_sender());
         CoinWrapper {f} = move(coin_wrapper);
-        Foo<Libra.T<LBR.T>> {x} = move(f);
+        Foo<Libra.Libra<LBR.LBR>> {x} = move(f);
         return move(x);
     }
 }
@@ -72,11 +72,11 @@ import 0x0.LBR;
 import 0x0.Libra;
 
 main(account: &signer) {
-  let coin: Libra.T<LBR.T>;
+  let coin: Libra.Libra<LBR.LBR>;
   let byte: vector<u8>;
 
   byte = h"bac1ac";
-  coin = LibraAccount.withdraw_from<LBR.T>(move(account), 1000);
+  coin = LibraAccount.withdraw_from<LBR.LBR>(move(account), 1000);
 
   M.coin_wrapper(move(coin));
   M.inner_wrapper(move(byte));
@@ -90,7 +90,7 @@ import 0x0.LBR;
 import 0x0.Libra;
 
 main() {
-  let coin: Libra.T<LBR.T>;
+  let coin: Libra.Libra<LBR.LBR>;
   let byte: vector<u8>;
 
   byte = h"bac1ac";
@@ -106,8 +106,8 @@ import 0x0.Libra;
 import 0x0.LibraAccount;
 
 main(account: &signer) {
-  let coin: Libra.T<LBR.T>;
+  let coin: Libra.Libra<LBR.LBR>;
   coin = M.destroy();
-  LibraAccount.deposit_to<LBR.T>(move(account), move(coin));
+  LibraAccount.deposit_to<LBR.LBR>(move(account), move(coin));
   return;
 }

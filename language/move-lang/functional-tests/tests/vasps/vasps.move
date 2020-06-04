@@ -5,7 +5,7 @@
 //! new-transaction
 //! sender: association
 script {
-use 0x0::LBR;
+use 0x0::LBR::LBR;
 use 0x0::LibraAccount;
 use 0x0::LibraTimestamp;
 use 0x0::Transaction;
@@ -13,7 +13,7 @@ fun main(assoc: &signer) {
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     let add_all_currencies = false;
-    LibraAccount::create_parent_vasp_account<LBR::T>(
+    LibraAccount::create_parent_vasp_account<LBR>(
         assoc, 0xA, copy dummy_auth_key_prefix, x"A1", x"A2", copy pubkey, add_all_currencies
     );
 
@@ -39,12 +39,12 @@ fun main(assoc: &signer) {
 //! sender: parent
 script {
 use 0x0::LibraAccount;
-use 0x0::LBR;
+use 0x0::LBR::LBR;
 use 0x0::Transaction;
 fun main(parent_vasp: &signer) {
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
     let add_all_currencies = false;
-    LibraAccount::create_child_vasp_account<LBR::T>(
+    LibraAccount::create_child_vasp_account<LBR>(
         parent_vasp, 0xAA, dummy_auth_key_prefix, add_all_currencies
     );
 

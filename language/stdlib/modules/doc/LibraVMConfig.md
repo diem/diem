@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `T`](#0x0_LibraVMConfig_T)
+-  [Struct `LibraVMConfig`](#0x0_LibraVMConfig_LibraVMConfig)
 -  [Struct `GasSchedule`](#0x0_LibraVMConfig_GasSchedule)
 -  [Struct `GasConstants`](#0x0_LibraVMConfig_GasConstants)
 -  [Function `initialize`](#0x0_LibraVMConfig_initialize)
@@ -13,13 +13,13 @@
 
 
 
-<a name="0x0_LibraVMConfig_T"></a>
+<a name="0x0_LibraVMConfig_LibraVMConfig"></a>
 
-## Struct `T`
+## Struct `LibraVMConfig`
 
 
 
-<pre><code><b>struct</b> <a href="#0x0_LibraVMConfig_T">T</a>
+<pre><code><b>struct</b> <a href="#0x0_LibraVMConfig">LibraVMConfig</a>
 </code></pre>
 
 
@@ -212,9 +212,9 @@
     };
 
 
-    <a href="LibraConfig.md#0x0_LibraConfig_publish_new_config">LibraConfig::publish_new_config</a>&lt;<a href="#0x0_LibraVMConfig_T">Self::T</a>&gt;(
+    <a href="LibraConfig.md#0x0_LibraConfig_publish_new_config">LibraConfig::publish_new_config</a>&lt;<a href="#0x0_LibraVMConfig">LibraVMConfig</a>&gt;(
         config_account,
-        <a href="#0x0_LibraVMConfig_T">T</a> {
+        <a href="#0x0_LibraVMConfig">LibraVMConfig</a> {
             publishing_option,
             gas_schedule: <a href="#0x0_LibraVMConfig_GasSchedule">GasSchedule</a> {
                 instruction_schedule,
@@ -246,9 +246,9 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVMConfig_set_publishing_option">set_publishing_option</a>(account: &signer, publishing_option: vector&lt;u8&gt;) {
-    <b>let</b> current_config = <a href="LibraConfig.md#0x0_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x0_LibraVMConfig_T">Self::T</a>&gt;();
+    <b>let</b> current_config = <a href="LibraConfig.md#0x0_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x0_LibraVMConfig">LibraVMConfig</a>&gt;();
     current_config.publishing_option = publishing_option;
-    <a href="LibraConfig.md#0x0_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x0_LibraVMConfig_T">Self::T</a>&gt;(account, current_config);
+    <a href="LibraConfig.md#0x0_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x0_LibraVMConfig">LibraVMConfig</a>&gt;(account, current_config);
 }
 </code></pre>
 

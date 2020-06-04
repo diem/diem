@@ -92,10 +92,10 @@ pub struct UnhostedRole {
 
 impl MoveResource for EmptyRole {
     const MODULE_NAME: &'static str = "Empty";
-    const STRUCT_NAME: &'static str = "T";
+    const STRUCT_NAME: &'static str = "Empty";
 }
 
 impl MoveResource for UnhostedRole {
     const MODULE_NAME: &'static str = "Unhosted";
-    const STRUCT_NAME: &'static str = "T";
+    const STRUCT_NAME: &'static str = "Unhosted";
 }

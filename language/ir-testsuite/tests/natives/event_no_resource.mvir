@@ -3,14 +3,14 @@ module ResourceHandle {
 import 0x0.LBR;
     import 0x0.Libra;
     resource T {
-        foo: Event.EventHandle<Libra.T<LBR.T>>
+        foo: Event.EventHandle<Libra.Libra<LBR.LBR>>
         // check: INVALID_FIELD_DEF
         // check: CONTRAINT_KIND_MISMATCH
     }
 
     public new(): Self.T {
-        let handle: Event.EventHandle<Libra.T<LBR.T>>;
-        handle = Event.new_event_handle<Libra.T<LBR.T>>();
+        let handle: Event.EventHandle<Libra.Libra<LBR.LBR>>;
+        handle = Event.new_event_handle<Libra.Libra<LBR.LBR>>();
         return T { foo: move(handle) };
     }
 }
