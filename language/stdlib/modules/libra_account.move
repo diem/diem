@@ -274,8 +274,7 @@ module LibraAccount {
             // sanity check of signature validity
             Transaction::assert(Vector::length(&metadata_signature) == 64, 9001);
             // message should be metadata | sender_address | amount | domain_separator
-            // separator is the UTF8-encoded string @@$$LIBRA_ATTEST$$@@
-            let domain_separator = x"404024244C494252415F41545445535424244040";
+            let domain_separator = b"@@$$LIBRA_ATTEST$$@@";
             let message = copy metadata;
             Vector::append(&mut message, LCS::to_bytes(&sender));
             Vector::append(&mut message, LCS::to_bytes(&deposit_value));
@@ -539,10 +538,8 @@ module LibraAccount {
         Transaction::assert(Testnet::is_testnet(), 10042);
         let vasp_parent =
             VASP::create_parent_vasp_credential(
-                // "testnet"
-                x"746573746E6574",
-                // "https://libra.org"
-                x"68747470733A2F2F6C696272612E6F72672F",
+                b"testnet",
+                b"https://libra.org",
                 // An empty compliance key
                 x"00000000000000000000000000000000"
             );

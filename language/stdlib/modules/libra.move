@@ -29,14 +29,14 @@ module Libra {
     struct MintEvent {
         // funds added to the system
         amount: u64,
-        // UTF-8 encoded symbol for the coin type (e.g., "LBR")
+        // ASCII encoded symbol for the coin type (e.g., "LBR")
         currency_code: vector<u8>,
     }
 
     struct BurnEvent {
         // funds removed from the system
         amount: u64,
-        // UTF-8 encoded symbol for the coin type (e.g., "LBR")
+        // ASCII encoded symbol for the coin type (e.g., "LBR")
         currency_code: vector<u8>,
         // address with the Preburn resource that stored the now-burned funds
         preburn_address: address,
@@ -45,7 +45,7 @@ module Libra {
     struct PreburnEvent {
         // funds waiting to be removed from the system
         amount: u64,
-        // UTF-8 encoded symbol for the coin type (e.g., "LBR")
+        // ASCII encoded symbol for the coin type (e.g., "LBR")
         currency_code: vector<u8>,
         // address with the Preburn resource that now holds the funds
         preburn_address: address,
@@ -54,7 +54,7 @@ module Libra {
     struct CancelBurnEvent {
         // funds returned
         amount: u64,
-        // UTF-8 encoded symbol for the coin type (e.g., "LBR")
+        // ASCII encoded symbol for the coin type (e.g., "LBR")
         currency_code: vector<u8>,
         // address with the Preburn resource that holds the now-returned funds
         preburn_address: address,
@@ -82,7 +82,7 @@ module Libra {
         // used in the human-readable representation for the currency (e.g.
         // 10^2 for Coin1 cents)
         fractional_part: u64,
-        // The code symbol for this `CoinType`. UTF-8 encoded.
+        // The code symbol for this `CoinType`. ASCII encoded.
         // e.g. for "LBR" this is x"4C4252". No character limit.
         currency_code: vector<u8>,
         // We may want to disable the ability to mint further coins of a

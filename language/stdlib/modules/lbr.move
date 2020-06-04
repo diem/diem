@@ -44,7 +44,7 @@ module LBR {
             true,    // is_synthetic
             1000000, // scaling_factor = 10^6
             1000,    // fractional_part = 10^3
-            x"4C4252" // UTF8-encoded "LBR" as a hex string
+            b"LBR"
         );
         let preburn_cap = Libra::new_preburn_with_capability(&burn_cap);
         let coin1 = ReserveComponent<Coin1::T> {
