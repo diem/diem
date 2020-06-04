@@ -52,7 +52,7 @@ impl TestEnvironment {
         ::libra_logger::Logger::new().init();
         let mut template = NodeConfig::default();
         template.test = Some(TestConfig::open_module());
-        template.state_sync.chunk_limit = 2;
+        template.state_sync.chunk_limit = 5;
         template.consensus.safety_rules.backend =
             SecureBackend::OnDiskStorage(OnDiskStorageConfig::default());
 
@@ -683,7 +683,7 @@ fn test_basic_state_synchronization() {
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
 
-    // Test single chunk sync, chunk_size = 2
+    // Test single chunk sync, chunk_size = 5
     let node_to_restart = 0;
     env.validator_swarm.kill_node(node_to_restart);
     // All these are executed while one node is down
