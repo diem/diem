@@ -148,41 +148,6 @@ fn create_and_initialize_main_accounts(
         ],
     );
 
-    context.set_sender(config_address());
-    context.exec(
-        "LibraAccount",
-        "rotate_authentication_key",
-        vec![],
-        vec![
-            Value::transaction_argument_signer_reference(config_address()),
-            Value::vector_u8(genesis_auth_key.to_vec()),
-        ],
-    );
-
-    context.set_sender(account_config::treasury_compliance_account_address());
-    context.exec(
-        "LibraAccount",
-        "rotate_authentication_key",
-        vec![],
-        vec![
-            Value::transaction_argument_signer_reference(
-                account_config::treasury_compliance_account_address(),
-            ),
-            Value::vector_u8(genesis_auth_key.to_vec()),
-        ],
-    );
-
-    context.set_sender(fee_account_address);
-    context.exec(
-        "LibraAccount",
-        "rotate_authentication_key",
-        vec![],
-        vec![
-            Value::transaction_argument_signer_reference(fee_account_address),
-            Value::vector_u8(genesis_auth_key.to_vec()),
-        ],
-    );
-
     context.set_sender(root_association_address);
     // Bump the sequence number for the Association account. If we don't do this and a
     // subsequent transaction (e.g., minting) is sent from the Assocation account, a problem
@@ -193,6 +158,7 @@ fn create_and_initialize_main_accounts(
         "epilogue",
         vec![lbr_ty.clone()],
         vec![
+            Value::transaction_argument_signer_reference(root_association_address),
             Value::u64(/* txn_sequence_number */ 0),
             Value::u64(/* txn_gas_price */ 0),
             Value::u64(/* txn_max_gas_units */ 0),

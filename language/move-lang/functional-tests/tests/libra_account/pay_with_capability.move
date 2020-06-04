@@ -8,12 +8,12 @@ module AlicePays {
     use 0x0::LibraAccount;
 
     resource struct T {
-        cap: LibraAccount::WithdrawalCapability,
+        cap: LibraAccount::WithdrawCapability,
     }
 
     public fun create(sender: &signer) {
         move_to(sender, T {
-            cap: LibraAccount::extract_sender_withdrawal_capability(sender),
+            cap: LibraAccount::extract_withdraw_capability(sender),
         })
     }
 

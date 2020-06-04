@@ -10,6 +10,7 @@ module ApprovedPayment {
     use 0x0::Libra;
     use 0x0::LibraAccount;
     use 0x0::Signature;
+    use 0x0::Signer;
     use 0x0::Transaction;
     use 0x0::Vector;
 
@@ -25,6 +26,7 @@ module ApprovedPayment {
     // Deposit `coin` in `payee`'s account if the `signature` on the payment metadata matches the
     // public key stored in the `approved_payment` resource
     public fun deposit<Token>(
+        payer: &signer,
         approved_payment: &T,
         payee: address,
         coin: Libra::T<Token>,
@@ -42,21 +44,23 @@ module ApprovedPayment {
             ),
             9002, // TODO: proper error code
         );
-        LibraAccount::deposit_with_metadata<Token>(payee, coin, metadata, x"")
+        LibraAccount::deposit_with_metadata<Token>(payer, payee, coin, metadata, x"")
     }
 
     // Wrapper of `deposit` that withdraw's from the sender's balance and uses the top-level
     // `ApprovedPayment::T` resource under the payee account.
     public fun deposit_to_payee<Token>(
+        payer: &signer,
         payee: address,
         amount: u64,
         metadata: vector<u8>,
         signature: vector<u8>
     ) acquires T {
         deposit<Token>(
+            payer,
             borrow_global<T>(payee),
             payee,
-            LibraAccount::withdraw_from_sender<Token>(amount),
+            LibraAccount::withdraw_from<Token>(payer, amount),
             metadata,
             signature
         )
@@ -76,15 +80,15 @@ module ApprovedPayment {
     }
 
     // Wrapper of `rotate_key` that rotates the sender's key
-    public fun rotate_sender_key(new_public_key: vector<u8>) acquires T {
+    public fun rotate_sender_key(sender: &signer, new_public_key: vector<u8>) acquires T {
         // Sanity check for key validity
         Transaction::assert(Vector::length(&new_public_key) == 32, 9003); // TODO: proper error code
-        rotate_key(borrow_global_mut<T>(Transaction::sender()), new_public_key)
+        rotate_key(borrow_global_mut<T>(Signer::address_of(sender)), new_public_key)
     }
 
     // Publish an ApprovedPayment::T resource under the sender's account with approval key
     // `public_key`
-    public fun publish(public_key: vector<u8>) {
+    public fun publish(account: &signer, public_key: vector<u8>) {
         // Sanity check for key validity
         Transaction::assert(
             Signature::ed25519_validate_pubkey(
@@ -92,12 +96,12 @@ module ApprovedPayment {
             ),
             9003, // TODO: proper error code
         );
-        move_to_sender(T { public_key })
+        move_to(account, T { public_key })
     }
 
     // Remove and destroy the ApprovedPayment::T resource under the sender's account
-    public fun unpublish_from_sender() acquires T {
-        let T { public_key: _ } = move_from<T>(Transaction::sender())
+    public fun unpublish_from_sender(sender: &signer) acquires T {
+        let T { public_key: _ } = move_from<T>(Signer::address_of(sender))
     }
 
     // Return true if an ApprovedPayment::T resource exists under `addr`
@@ -118,9 +122,9 @@ module ApprovedPayment {
 //! sender: alice
 script {
 use {{default}}::ApprovedPayment;
-fun main() {
+fun main(account: &signer) {
     let invalid_pubkey = x"aa"; // too short
-    ApprovedPayment::publish(invalid_pubkey)
+    ApprovedPayment::publish(account, invalid_pubkey)
 }
 }
 // check: ABORTED
@@ -132,9 +136,9 @@ fun main() {
 //! sender: alice
 script {
 use {{default}}::ApprovedPayment;
-fun main() {
+fun main(account: &signer) {
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
-    ApprovedPayment::publish(pubkey)
+    ApprovedPayment::publish(account, pubkey)
 }
 }
 
@@ -146,9 +150,9 @@ fun main() {
 //! sender: alice
 script {
 use {{default}}::ApprovedPayment;
-fun main() {
+fun main(account: &signer) {
     let invalid_pubkey = x"aa"; // too short
-    ApprovedPayment::rotate_sender_key(invalid_pubkey)
+    ApprovedPayment::rotate_sender_key(account, invalid_pubkey)
 }
 }
 // check: ABORTED
@@ -164,12 +168,12 @@ fun main() {
 script {
 use {{default}}::ApprovedPayment;
 use 0x0::Transaction;
-fun main() {
+fun main(account: &signer) {
     Transaction::assert(!ApprovedPayment::exists({{alice1}}), 6001);
     let pubkey = x"aa306695ca5ade60240c67b9b886fe240a6f009b03e43e45838334eddeae49fe";
-    ApprovedPayment::publish(pubkey);
+    ApprovedPayment::publish(account, pubkey);
     Transaction::assert(ApprovedPayment::exists({{alice1}}), 6002);
-    ApprovedPayment::unpublish_from_sender();
+    ApprovedPayment::unpublish_from_sender(account);
     Transaction::assert(!ApprovedPayment::exists({{alice1}}), 6003);
 }
 }
@@ -188,10 +192,10 @@ fun main() {
 //! sender: alice2
 script {
 use {{default}}::ApprovedPayment;
-fun main() {
+fun main(account: &signer) {
     let pubkey = x"aa306695ca5ade60240c67b9b886fe240a6f009b03e43e45838334eddeae49fe";
-    ApprovedPayment::publish(pubkey);
-    ApprovedPayment::rotate_sender_key(x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d");
+    ApprovedPayment::publish(account, pubkey);
+    ApprovedPayment::rotate_sender_key(account, x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d");
 }
 }
 // check: EXECUTED
@@ -204,10 +208,10 @@ fun main() {
 script {
 use {{default}}::ApprovedPayment;
 use 0x0::LBR;
-fun main() {
+fun main(account: &signer) {
     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
     let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
-    ApprovedPayment::deposit_to_payee<LBR::T>({{alice2}}, 1000, payment_id, signature);
+    ApprovedPayment::deposit_to_payee<LBR::T>(account, {{alice2}}, 1000, payment_id, signature);
 }
 }
 // check: EXECUTED
@@ -218,11 +222,11 @@ fun main() {
 //! sender: charlie2
 script {
 use {{default}}::ApprovedPayment;
-fun main() {
+fun main(account: &signer) {
     let pubkey = x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
-    ApprovedPayment::publish(pubkey);
+    ApprovedPayment::publish(account, pubkey);
     // rotate to an invalid key
-    ApprovedPayment::rotate_sender_key(x"0000000000000000000000000000000000000000000000000000000000000000");
+    ApprovedPayment::rotate_sender_key(account, x"0000000000000000000000000000000000000000000000000000000000000000");
 }
 }
 // check: ABORTED
@@ -245,9 +249,9 @@ fun main() {
 //! sender: alice3
 script {
 use {{default}}::ApprovedPayment;
-fun main() {
+fun main(account: &signer) {
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
-    ApprovedPayment::publish(pubkey)
+    ApprovedPayment::publish(account, pubkey)
 }
 }
 // check: EXECUTED
@@ -260,10 +264,10 @@ fun main() {
 script {
 use {{default}}::ApprovedPayment;
 use 0x0::LBR;
-fun main() {
+fun main(account: &signer) {
     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
     let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
-    ApprovedPayment::deposit_to_payee<LBR::T>({{alice3}}, 1000, payment_id, signature);
+    ApprovedPayment::deposit_to_payee<LBR::T>(account, {{alice3}}, 1000, payment_id, signature);
 }
 }
 // check: EXECUTED
@@ -275,10 +279,10 @@ fun main() {
 script {
 use {{default}}::ApprovedPayment;
 use 0x0::LBR;
-fun main() {
+fun main(account: &signer) {
     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
     let signature = x"";
-    ApprovedPayment::deposit_to_payee<LBR::T>({{alice}}, 1000, payment_id, signature);
+    ApprovedPayment::deposit_to_payee<LBR::T>(account, {{alice}}, 1000, payment_id, signature);
 }
 }
 
@@ -292,10 +296,10 @@ fun main() {
 script {
 use {{default}}::ApprovedPayment;
 use 0x0::LBR;
-fun main() {
+fun main(account: &signer) {
     let payment_id = x"7";
     let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
-    ApprovedPayment::deposit_to_payee<LBR::T>({{alice3}}, 1000, payment_id, signature);
+    ApprovedPayment::deposit_to_payee<LBR::T>(account, {{alice3}}, 1000, payment_id, signature);
 }
 }
 // check: ABORTED
@@ -306,9 +310,9 @@ fun main() {
 //! sender: charlie3
 script {
 use {{default}}::ApprovedPayment;
-fun main() {
+fun main(account: &signer) {
     let pubkey = x"10000000000000000000000000000000000000000000000000000000000000000";
-    ApprovedPayment::publish(pubkey);
+    ApprovedPayment::publish(account, pubkey);
 }
 }
 // check: ABORTED
@@ -320,9 +324,9 @@ fun main() {
 //! sender: charlie3
 script {
 use {{default}}::ApprovedPayment;
-fun main() {
+fun main(account: &signer) {
     let pubkey = x"100";
-    ApprovedPayment::publish(pubkey);
+    ApprovedPayment::publish(account, pubkey);
 }
 }
 // check: ABORTED
@@ -334,9 +338,9 @@ fun main() {
 //! sender: charlie3
 script {
 use {{default}}::ApprovedPayment;
-fun main() {
+fun main(account: &signer) {
     let pubkey = x"0000000000000000000000000000000000000000000000000000000000000000";
-    ApprovedPayment::publish(pubkey);
+    ApprovedPayment::publish(account, pubkey);
 }
 }
 // check: ABORTED

@@ -14,7 +14,7 @@ use 0x0::Libra;
 use 0x0::LibraAccount;
 fun main(account: &signer) {
     let coin = Libra::mint<Coin1::T>(account, 600);
-    LibraAccount::deposit({{preburner}}, coin);
+    LibraAccount::deposit(account, {{preburner}}, coin);
 }
 }
 
@@ -46,9 +46,9 @@ use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main(account: &signer) {
-    let coin100 = LibraAccount::withdraw_from_sender<Coin1::T>(100);
-    let coin200 = LibraAccount::withdraw_from_sender<Coin1::T>(200);
-    let coin300 = LibraAccount::withdraw_from_sender<Coin1::T>(300);
+    let coin100 = LibraAccount::withdraw_from<Coin1::T>(account, 100);
+    let coin200 = LibraAccount::withdraw_from<Coin1::T>(account, 200);
+    let coin300 = LibraAccount::withdraw_from<Coin1::T>(account, 300);
     Libra::preburn_to<Coin1::T>(account, coin100);
     Libra::preburn_to<Coin1::T>(account, coin200);
     Libra::preburn_to<Coin1::T>(account, coin300);

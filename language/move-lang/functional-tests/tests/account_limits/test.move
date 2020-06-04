@@ -2,13 +2,6 @@
 //! account: bob, 100000000, 0, unhosted
 //! account: alice, 100000000, 0, unhosted
 
-module Holder {
-    resource struct Hold<T> { x: T }
-    public fun hold<T>(x: T) {
-        move_to_sender(Hold<T>{x})
-    }
-}
-
 //! new-transaction
 //! sender: association
 script {
@@ -25,8 +18,8 @@ script {
 script {
     use 0x0::LibraAccount;
     use 0x0::LBR;
-    fun main() {
-        LibraAccount::pay_from_sender<LBR::T>({{alice}}, 1);
+    fun main(account: &signer) {
+        LibraAccount::pay_from<LBR::T>(account, {{alice}}, 1);
     }
 }
 // TODO: fix
@@ -124,8 +117,8 @@ script {
     // Since we directly wrote into this account using fake data store, we
     // don't actually know that the balance is greater than 0 in the
     // account limits code, but it is.
-    fun main() {
-        LibraAccount::pay_from_sender<LBR::T>({{alice}}, 1);
+    fun main(account: &signer) {
+        LibraAccount::pay_from<LBR::T>(account, {{alice}}, 1);
     }
 }
 // check: EXECUTED
@@ -145,8 +138,8 @@ fun main(account: &signer) {
 script {
     use 0x0::LibraAccount;
     use 0x0::LBR;
-    fun main() {
-        LibraAccount::pay_from_sender<LBR::T>({{alice}}, 1);
+    fun main(account: &signer) {
+        LibraAccount::pay_from<LBR::T>(account, {{alice}}, 1);
     }
 }
 // check: EXECUTED
@@ -180,8 +173,8 @@ fun main(account: &signer) {
 script {
     use 0x0::LibraAccount;
     use 0x0::LBR;
-    fun main() {
-        LibraAccount::pay_from_sender<LBR::T>({{alice}}, 1);
+    fun main(account: &signer) {
+        LibraAccount::pay_from<LBR::T>(account, {{alice}}, 1);
     }
 }
 // check: EXECUTED
@@ -203,8 +196,8 @@ script {
 script {
     use 0x0::LibraAccount;
     use 0x0::LBR;
-    fun main() {
-        LibraAccount::pay_from_sender<LBR::T>({{alice}}, 1);
+    fun main(account: &signer) {
+        LibraAccount::pay_from<LBR::T>(account, {{alice}}, 1);
     }
 }
 // TODO: fix
@@ -261,8 +254,8 @@ script {
 script {
     use 0x0::LibraAccount;
     use 0x0::LBR;
-    fun main() {
-        LibraAccount::pay_from_sender<LBR::T>({{alice}}, 101);
+    fun main(account: &signer) {
+        LibraAccount::pay_from<LBR::T>(account, {{alice}}, 101);
     }
 }
 // chec: ABORTED
@@ -285,8 +278,8 @@ script {
 script {
     use 0x0::LibraAccount;
     use 0x0::LBR;
-    fun main() {
-        LibraAccount::pay_from_sender<LBR::T>({{alice}}, 1);
+    fun main(account: &signer) {
+        LibraAccount::pay_from<LBR::T>(account, {{alice}}, 1);
     }
 }
 // TODO: fix

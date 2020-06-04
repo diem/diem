@@ -3,8 +3,9 @@
 import 0x0.LibraAccount;
 import 0x0.LBR;
 import 0x0.Libra;
+import 0x0.Signer;
 
-main() {
+main(account: &signer) {
     let sender_addr: address;
     let recipient_addr: address;
     let sender_original_balance: u64;
@@ -13,12 +14,12 @@ main() {
     let sender_new_balance: u64;
     let recipient_new_balance: u64;
 
-    sender_addr = get_txn_sender();
+    sender_addr = Signer.address_of(copy(account));
     recipient_addr = {{bob}};
     sender_original_balance = LibraAccount.balance<LBR.T>(copy(sender_addr));
     recipient_original_balance = LibraAccount.balance<LBR.T>(copy(recipient_addr));
-    five_coins = LibraAccount.withdraw_from_sender<LBR.T>(5);
-    LibraAccount.deposit<LBR.T>(copy(recipient_addr), move(five_coins));
+    five_coins = LibraAccount.withdraw_from<LBR.T>(copy(account), 5);
+    LibraAccount.deposit<LBR.T>(copy(account), copy(recipient_addr), move(five_coins));
 
     sender_new_balance = LibraAccount.balance<LBR.T>(move(sender_addr));
     recipient_new_balance = LibraAccount.balance<LBR.T>(move(recipient_addr));

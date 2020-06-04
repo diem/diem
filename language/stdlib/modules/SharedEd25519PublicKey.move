@@ -27,7 +27,7 @@ module SharedEd25519PublicKey {
     public fun publish(account: &signer, key: vector<u8>) {
         let t = T {
             key: x"",
-            rotation_cap: LibraAccount::extract_sender_key_rotation_capability()
+            rotation_cap: LibraAccount::extract_key_rotation_capability(account)
         };
         rotate_key_(&mut t, key);
         move_to(account, t);

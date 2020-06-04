@@ -2,7 +2,7 @@
 //! account: alice, 10000LBR
 
 module Holder {
-    use 0x0::Transaction;
+    use 0x0::Signer;
 
     resource struct Hold<T> {
         x: T
@@ -12,9 +12,9 @@ module Holder {
         move_to(account, Hold<T>{x})
     }
 
-    public fun get<T>(): T
+    public fun get<T>(account: &signer): T
     acquires Hold {
-        let Hold {x} = move_from<Hold<T>>(Transaction::sender());
+        let Hold {x} = move_from<Hold<T>>(Signer::address_of(account));
         x
     }
 }
@@ -34,9 +34,9 @@ script {
 script {
     use 0x0::LBR;
     use 0x0::LibraAccount;
-    fun main() {
-        let coins = LibraAccount::withdraw_from_sender<LBR::T>(10);
-        LibraAccount::deposit_to_sender(coins);
+    fun main(account: &signer) {
+        let coins = LibraAccount::withdraw_from<LBR::T>(account, 10);
+        LibraAccount::deposit_to(account, coins);
     }
 }
 // check: EXECUTED
@@ -59,11 +59,11 @@ script {
     fun main(account: &signer) {
         Holder::hold(
             account,
-            LibraAccount::extract_sender_key_rotation_capability()
+            LibraAccount::extract_key_rotation_capability(account)
         );
         Holder::hold(
             account,
-            LibraAccount::extract_sender_key_rotation_capability()
+            LibraAccount::extract_key_rotation_capability(account)
         );
     }
 }
@@ -84,15 +84,21 @@ script {
 //! new-transaction
 script {
     use 0x0::LibraAccount;
+    use 0x0::Signer;
     use 0x0::Transaction;
     fun main(sender: &signer) {
-        let cap = LibraAccount::extract_sender_key_rotation_capability();
-        Transaction::assert(*LibraAccount::key_rotation_capability_address(&cap) == Transaction::sender(), 0);
+        let cap = LibraAccount::extract_key_rotation_capability(sender);
+        Transaction::assert(
+            *LibraAccount::key_rotation_capability_address(&cap) == Signer::address_of(sender), 0
+        );
         LibraAccount::restore_key_rotation_capability(cap);
-        let with_cap = LibraAccount::extract_sender_withdrawal_capability(sender);
+        let with_cap = LibraAccount::extract_withdraw_capability(sender);
 
-        Transaction::assert(*LibraAccount::withdrawal_capability_address(&with_cap) == Transaction::sender(), 0);
-        LibraAccount::restore_withdrawal_capability(with_cap);
+        Transaction::assert(
+            *LibraAccount::withdraw_capability_address(&with_cap) == Signer::address_of(sender),
+            0
+        );
+        LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
 // check: EXECUTED
@@ -127,8 +133,8 @@ script {
 script {
     use 0x0::LibraAccount;
     use 0x0::LBR;
-    fun main() {
-        LibraAccount::pay_from_sender<LBR::T>({{alice}}, 10000);
+    fun main(account: &signer) {
+        LibraAccount::pay_from<LBR::T>(account, {{alice}}, 10000);
     }
 }
 // TODO: what is this testing?

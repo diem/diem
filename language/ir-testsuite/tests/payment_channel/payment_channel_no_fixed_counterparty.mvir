@@ -128,7 +128,7 @@ module PaymentChannel {
         return;
     }
 
-    public close(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: vector<u8>, counterparty_signature: vector<u8>) {
+    public close(account: &signer, this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: vector<u8>, counterparty_signature: vector<u8>) {
         let funder_addr: address;
         let counterparty_addr: address;
 
@@ -152,7 +152,7 @@ module PaymentChannel {
 
         counterparty_capacity_ref = &mut copy(this).counterparty_capacity;
         counterparty_to_withdraw = Libra.withdraw<LBR.T>(move(counterparty_capacity_ref), move(counterparty_balance));
-        LibraAccount.deposit<LBR.T>(move(counterparty_addr), move(counterparty_to_withdraw));
+        LibraAccount.deposit<LBR.T>(copy(account), move(counterparty_addr), move(counterparty_to_withdraw));
 
         ref = freeze(copy(this));
 
@@ -161,7 +161,7 @@ module PaymentChannel {
 
         funder_capacity_ref = &mut move(this).funder_capacity;
         funder_to_withdraw = Libra.withdraw<LBR.T>(move(funder_capacity_ref), move(funder_balance));
-        LibraAccount.deposit<LBR.T>(move(funder_addr), move(funder_to_withdraw));
+        LibraAccount.deposit<LBR.T>(copy(account), move(funder_addr), move(funder_to_withdraw));
 
         return;
     }

@@ -14,7 +14,7 @@ module TransactionFee {
     /// This is used for the collection of the transaction fees since it
     /// must be sent from the account at the `0xB1E55ED` address.
     resource struct TransactionFeeCollection {
-        cap: LibraAccount::WithdrawalCapability,
+        cap: LibraAccount::WithdrawCapability,
     }
 
     /// The `TransactionFeePreburn` holds a preburn resource for each
@@ -33,7 +33,7 @@ module TransactionFee {
     /// transaction fees by the `0xB1E55ED` account.
     public fun initialize(blessed_account: &signer, fee_account: &signer) {
         Transaction::assert(Signer::address_of(blessed_account) == 0xB1E55ED, 0);
-        let cap = LibraAccount::extract_sender_withdrawal_capability(fee_account);
+        let cap = LibraAccount::extract_withdraw_capability(fee_account);
         move_to(blessed_account, TransactionFeeCollection { cap });
         move_to(blessed_account, LBRIdent<LBR>{})
     }
@@ -66,7 +66,7 @@ module TransactionFee {
                 &borrow_global<TransactionFeeCollection>(Signer::address_of(blessed_sender)).cap,
                 amount
             );
-            let (coin1, coin2) = LBR::unpack(coins);
+            let (coin1, coin2) = LBR::unpack(blessed_sender, coins);
             preburn_coin<Coin1>(coin1);
             preburn_coin<Coin2>(coin2)
         } else {

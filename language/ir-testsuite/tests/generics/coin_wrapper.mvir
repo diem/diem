@@ -71,12 +71,12 @@ import 0x0.LibraAccount;
 import 0x0.LBR;
 import 0x0.Libra;
 
-main() {
+main(account: &signer) {
   let coin: Libra.T<LBR.T>;
   let byte: vector<u8>;
 
   byte = h"bac1ac";
-  coin = LibraAccount.withdraw_from_sender<LBR.T>(1000);
+  coin = LibraAccount.withdraw_from<LBR.T>(move(account), 1000);
 
   M.coin_wrapper(move(coin));
   M.inner_wrapper(move(byte));
@@ -105,9 +105,9 @@ import 0x0.LBR;
 import 0x0.Libra;
 import 0x0.LibraAccount;
 
-main() {
+main(account: &signer) {
   let coin: Libra.T<LBR.T>;
   coin = M.destroy();
-  LibraAccount.deposit<LBR.T>(get_txn_sender(), move(coin));
+  LibraAccount.deposit_to<LBR.T>(move(account), move(coin));
   return;
 }

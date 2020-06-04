@@ -259,7 +259,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <b>unpack</b>(coin: <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;<a href="#0x0_LBR_T">LBR::T</a>&gt;): (<a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;<a href="Coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;, <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;<a href="Coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <b>unpack</b>(account: &signer, coin: <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;<a href="#0x0_LBR_T">LBR::T</a>&gt;): (<a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;<a href="Coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;, <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;<a href="Coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;)
 </code></pre>
 
 
@@ -268,11 +268,11 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <b>unpack</b>(coin: <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;<a href="#0x0_LBR_T">T</a>&gt;): (<a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;<a href="Coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;, <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;<a href="Coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <b>unpack</b>(account: &signer, coin: <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;<a href="#0x0_LBR_T">T</a>&gt;): (<a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;<a href="Coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;, <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;<a href="Coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;)
 <b>acquires</b> <a href="#0x0_LBR_Reserve">Reserve</a> {
     <b>let</b> reserve = borrow_global_mut&lt;<a href="#0x0_LBR_Reserve">Reserve</a>&gt;(0xA550C18);
     <b>let</b> ratio_multiplier = <a href="Libra.md#0x0_Libra_value">Libra::value</a>(&coin);
-    <b>let</b> sender = Transaction::sender();
+    <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     <a href="Libra.md#0x0_Libra_preburn_with_resource">Libra::preburn_with_resource</a>(coin, &<b>mut</b> reserve.preburn_cap, sender);
     <a href="Libra.md#0x0_Libra_burn_with_resource_cap">Libra::burn_with_resource_cap</a>(&<b>mut</b> reserve.preburn_cap, sender, &reserve.burn_cap);
     <b>let</b> coin1_amount = <a href="FixedPoint32.md#0x0_FixedPoint32_multiply_u64">FixedPoint32::multiply_u64</a>(ratio_multiplier, *&reserve.coin1.ratio);

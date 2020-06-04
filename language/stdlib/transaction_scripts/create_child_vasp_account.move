@@ -21,7 +21,7 @@ fun main<CoinType>(
     );
     // Give the newly created child `child_initial_balance` coins
     if (child_initial_balance > 0) {
-        LibraAccount::pay_from_sender<CoinType>(child_address, child_initial_balance)
+        LibraAccount::pay_from<CoinType>(parent_vasp, child_address, child_initial_balance)
     };
 }
 }

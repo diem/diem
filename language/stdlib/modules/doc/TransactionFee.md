@@ -42,7 +42,7 @@ must be sent from the account at the
 <dl>
 <dt>
 
-<code>cap: <a href="LibraAccount.md#0x0_LibraAccount_WithdrawalCapability">LibraAccount::WithdrawalCapability</a></code>
+<code>cap: <a href="LibraAccount.md#0x0_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a></code>
 </dt>
 <dd>
 
@@ -141,7 +141,7 @@ transaction fees by the
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_initialize">initialize</a>(blessed_account: &signer, fee_account: &signer) {
     Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(blessed_account) == 0xB1E55ED, 0);
-    <b>let</b> cap = <a href="LibraAccount.md#0x0_LibraAccount_extract_sender_withdrawal_capability">LibraAccount::extract_sender_withdrawal_capability</a>(fee_account);
+    <b>let</b> cap = <a href="LibraAccount.md#0x0_LibraAccount_extract_withdraw_capability">LibraAccount::extract_withdraw_capability</a>(fee_account);
     move_to(blessed_account, <a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a> { cap });
     move_to(blessed_account, <a href="#0x0_TransactionFee_LBRIdent">LBRIdent</a>&lt;<a href="LBR.md#0x0_LBR">LBR</a>&gt;{})
 }
@@ -238,7 +238,7 @@ underlying fiat.
             &borrow_global&lt;<a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(blessed_sender)).cap,
             amount
         );
-        <b>let</b> (coin1, coin2) = <a href="LBR.md#0x0_LBR_unpack">LBR::unpack</a>(coins);
+        <b>let</b> (coin1, coin2) = <a href="LBR.md#0x0_LBR_unpack">LBR::unpack</a>(blessed_sender, coins);
         <a href="#0x0_TransactionFee_preburn_coin">preburn_coin</a>&lt;<a href="Coin1.md#0x0_Coin1">Coin1</a>&gt;(coin1);
         <a href="#0x0_TransactionFee_preburn_coin">preburn_coin</a>&lt;<a href="Coin2.md#0x0_Coin2">Coin2</a>&gt;(coin2)
     } <b>else</b> {

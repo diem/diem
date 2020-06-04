@@ -678,6 +678,7 @@ impl LibraVM {
                 &PROLOGUE_NAME,
                 vec![gas_currency_ty],
                 vec![
+                    Value::transaction_argument_signer_reference(txn_data.sender),
                     Value::u64(txn_sequence_number),
                     Value::vector_u8(txn_public_key),
                     Value::u64(txn_gas_price),
@@ -712,6 +713,7 @@ impl LibraVM {
             &EPILOGUE_NAME,
             vec![gas_currency_ty],
             vec![
+                Value::transaction_argument_signer_reference(txn_data.sender),
                 Value::u64(txn_sequence_number),
                 Value::u64(txn_gas_price),
                 Value::u64(txn_max_gas_units),

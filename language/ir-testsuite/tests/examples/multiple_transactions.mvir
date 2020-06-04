@@ -10,11 +10,11 @@ import 0x0.LibraAccount;
 import 0x0.LBR;
 import 0x0.Libra;
 
-main(receiver: address) {
+main(account: &signer, receiver: address) {
     let coins: Libra.T<LBR.T>;
 
-    coins = LibraAccount.withdraw_from_sender<LBR.T>(200);
-    LibraAccount.deposit<LBR.T>(move(receiver), move(coins));
+    coins = LibraAccount.withdraw_from<LBR.T>(copy(account), 200);
+    LibraAccount.deposit<LBR.T>(move(account), move(receiver), move(coins));
 
     return;
 }

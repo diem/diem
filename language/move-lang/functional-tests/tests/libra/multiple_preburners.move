@@ -16,9 +16,9 @@ use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::LibraAccount;
 fun main(account: &signer) {
-    LibraAccount::deposit({{alice}}, Libra::mint<Coin1::T>(account, 200));
-    LibraAccount::deposit({{bob}}, Libra::mint<Coin1::T>(account, 200));
-    LibraAccount::deposit({{carol}}, Libra::mint<Coin1::T>(account, 200));
+    LibraAccount::deposit(account, {{alice}}, Libra::mint<Coin1::T>(account, 200));
+    LibraAccount::deposit(account, {{bob}}, Libra::mint<Coin1::T>(account, 200));
+    LibraAccount::deposit(account, {{carol}}, Libra::mint<Coin1::T>(account, 200));
 }
 }
 
@@ -52,7 +52,7 @@ use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main(account: &signer) {
-    let coin = LibraAccount::withdraw_from_sender<Coin1::T>(100);
+    let coin = LibraAccount::withdraw_from<Coin1::T>(account, 100);
     Libra::preburn_to<Coin1::T>(account, coin);
     Transaction::assert(Libra::preburn_value<Coin1::T>() == 100, 8001)
 }
@@ -89,7 +89,7 @@ use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main(account: &signer) {
-    let coin = LibraAccount::withdraw_from_sender<Coin1::T>(200);
+    let coin = LibraAccount::withdraw_from<Coin1::T>(account, 200);
     Libra::preburn_to<Coin1::T>(account, coin);
     Transaction::assert(Libra::preburn_value<Coin1::T>() == 300, 8002)
 }
@@ -110,7 +110,7 @@ use 0x0::LibraAccount;
 use 0x0::Coin1;
 use 0x0::Libra;
 fun main(account: &signer) {
-    let coin = LibraAccount::withdraw_from_sender<Coin1::T>(200);
+    let coin = LibraAccount::withdraw_from<Coin1::T>(account, 200);
     Libra::preburn_to<Coin1::T>(account, coin);
 }
 }
@@ -185,7 +185,7 @@ use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main(account: &signer) {
-    let coin = LibraAccount::withdraw_from_sender<Coin1::T>(100);
+    let coin = LibraAccount::withdraw_from<Coin1::T>(account, 100);
     Libra::preburn_to<Coin1::T>(account, coin);
     Transaction::assert(Libra::preburn_value<Coin1::T>() == 100, 8005)
 }
@@ -237,7 +237,7 @@ use 0x0::Libra;
 use 0x0::LibraAccount;
 fun main(account: &signer) {
     Libra::publish_preburn(account, Libra::new_preburn<Coin2::T>());
-    let coin = LibraAccount::withdraw_from_sender<Coin2::T>(100);
+    let coin = LibraAccount::withdraw_from<Coin2::T>(account, 100);
     Libra::preburn_to<Coin2::T>(account, coin);
 }
 }

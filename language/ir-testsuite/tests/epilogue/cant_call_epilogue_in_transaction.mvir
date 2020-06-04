@@ -1,8 +1,8 @@
 import 0x0.LibraAccount;
 import 0x0.Coin1;
 
-main() {
-    LibraAccount.epilogue<Coin1.T>(0, 0, 0, 0);
+main(account: &signer) {
+    LibraAccount.epilogue<Coin1.T>(move(account), 0, 0, 0, 0);
     return;
 }
 

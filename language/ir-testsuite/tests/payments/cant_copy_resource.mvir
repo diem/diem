@@ -2,17 +2,15 @@ import 0x0.LibraAccount;
 import 0x0.LBR;
 import 0x0.Libra;
 
-main() {
+main(account: &signer) {
     let ten_coins: Libra.T<LBR.T>;
     let i_created_money: Libra.T<LBR.T>;
-    let addr: address;
 
-    addr = get_txn_sender();
-    ten_coins = LibraAccount.withdraw_from_sender<LBR.T>(10);
+    ten_coins = LibraAccount.withdraw_from<LBR.T>(copy(account), 10);
     i_created_money = copy(ten_coins);
 
-    LibraAccount.deposit<LBR.T>(copy(addr), move(ten_coins));
-    LibraAccount.deposit<LBR.T>(copy(addr), move(i_created_money));
+    LibraAccount.deposit_to<LBR.T>(copy(account), move(ten_coins));
+    LibraAccount.deposit_to<LBR.T>(copy(account), move(i_created_money));
 
     return;
 }

@@ -5,7 +5,7 @@ module LBR {
     use 0x0::Coin2;
     use 0x0::FixedPoint32;
     use 0x0::Libra;
-    use 0x0::Transaction;
+    use 0x0::Signer;
 
     // The type tag for this coin type.
     resource struct T { }
@@ -101,11 +101,11 @@ module LBR {
 
     // Unpack a LBR coin and return the backing currencies (in the correct
     // amounts).
-    public fun unpack(coin: Libra::T<T>): (Libra::T<Coin1::T>, Libra::T<Coin2::T>)
+    public fun unpack(account: &signer, coin: Libra::T<T>): (Libra::T<Coin1::T>, Libra::T<Coin2::T>)
     acquires Reserve {
         let reserve = borrow_global_mut<Reserve>(0xA550C18);
         let ratio_multiplier = Libra::value(&coin);
-        let sender = Transaction::sender();
+        let sender = Signer::address_of(account);
         Libra::preburn_with_resource(coin, &mut reserve.preburn_cap, sender);
         Libra::burn_with_resource_cap(&mut reserve.preburn_cap, sender, &reserve.burn_cap);
         let coin1_amount = FixedPoint32::multiply_u64(ratio_multiplier, *&reserve.coin1.ratio);
