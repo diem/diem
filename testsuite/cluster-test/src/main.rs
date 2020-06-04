@@ -155,7 +155,8 @@ pub fn main() {
     let mut perf_msg = None;
 
     if args.health_check {
-        runner.run_health_check();
+        let duration = Duration::from_secs(args.duration);
+        runner.run_health_check(duration);
     } else if args.perf_run {
         perf_msg = Some(runner.perf_run());
     } else if args.cleanup {
@@ -777,7 +778,8 @@ impl ClusterTestRunner {
         Ok(())
     }
 
-    fn run_health_check(&mut self) {
+    fn run_health_check(&mut self, duration: Duration) {
+        let health_check_deadline = Instant::now() + duration;
         loop {
             let deadline = Instant::now() + Duration::from_secs(1);
             // Receive all events that arrived to aws log tail within next 1 second
@@ -787,6 +789,10 @@ impl ClusterTestRunner {
             let _ignore =
                 self.health_check_runner
                     .run(&events, &HashSet::new(), PrintFailures::All);
+            let now = Instant::now();
+            if now > health_check_deadline {
+                break;
+            }
         }
     }
 
