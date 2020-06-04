@@ -30,7 +30,7 @@
     metadata: vector&lt;u8&gt;,
     metadata_signature: vector&lt;u8&gt;
 ) {
-  <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_pay_from_sender_with_metadata">LibraAccount::pay_from_sender_with_metadata</a>&lt;Token&gt;(payee, amount, metadata, metadata_signature)
+  <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_pay_from_sender_with_metadata">LibraAccount::pay_from_sender_with_metadata</a>&lt;Token&gt;(payee, amount, metadata, metadata_signature)
 }
 </code></pre>
 

@@ -25,7 +25,7 @@
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, args: vector&lt;u8&gt;) {
-    <a href="../../modules/doc/libra_vm_config.md#0x0_LibraVMConfig_set_publishing_option">LibraVMConfig::set_publishing_option</a>(account, args)
+    <a href="../../modules/doc/LibraVMConfig.md#0x0_LibraVMConfig_set_publishing_option">LibraVMConfig::set_publishing_option</a>(account, args)
 }
 </code></pre>
 

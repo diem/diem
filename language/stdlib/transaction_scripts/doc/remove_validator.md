@@ -25,7 +25,7 @@
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(validator_address: address) {
-    <a href="../../modules/doc/libra_system.md#0x0_LibraSystem_remove_validator">LibraSystem::remove_validator</a>(validator_address);
+    <a href="../../modules/doc/LibraSystem.md#0x0_LibraSystem_remove_validator">LibraSystem::remove_validator</a>(validator_address);
 }
 </code></pre>
 
