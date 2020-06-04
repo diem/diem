@@ -325,7 +325,7 @@ impl LibraSwarm {
             let mut validator_config = NodeConfig::load(&upstream_config_file)?;
             let genesis = validator_config.execution.genesis.as_ref();
             let mut full_node_builder = FullNodeConfig::new();
-            full_node_builder.full_nodes = num_nodes;
+            full_node_builder.num_full_nodes = num_nodes;
             full_node_builder.genesis =
                 Some(genesis.expect("Missing genesis from validator").clone());
             full_node_builder.template(node_config);
