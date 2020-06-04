@@ -65,7 +65,7 @@ mod network_noise_initiator;
 mod network_noise_responder;
 mod signed_transaction;
 mod sparse_merkle_proof;
-mod storage_save_blocks;
+//mod storage_save_blocks;
 mod storage_schema_decode;
 mod vm_value;
 
@@ -81,7 +81,7 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(network_noise_responder::NetworkNoiseResponder::default()),
         Box::new(signed_transaction::SignedTransactionTarget::default()),
         Box::new(sparse_merkle_proof::SparseMerkleProofTarget::default()),
-        Box::new(storage_save_blocks::StorageSaveBlocks::default()),
+        //        Box::new(storage_save_blocks::StorageSaveBlocks::default()),
         Box::new(storage_schema_decode::StorageSchemaDecode::default()),
         Box::new(vm_value::ValueTarget::default()),
     ];
