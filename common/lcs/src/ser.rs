@@ -61,7 +61,10 @@ where
     W: std::io::Write,
     T: ?Sized + Serialize,
 {
-    let serializer = Serializer::new(write);
+    let inner_serializer = Serializer::new(write);
+    // This adapter helps manage potentially unbound recursion depths in the
+    // serialized material.
+    let serializer = serde_stacker::Serializer::new(inner_serializer);
     value.serialize(serializer)
 }
 
@@ -91,6 +94,7 @@ where
 
 pub fn is_human_readable() -> bool {
     let mut output = Vec::new();
+    // This is just probing inner semantics — no serde_stacker wrapping required.
     let serializer = Serializer::new(&mut output);
     ser::Serializer::is_human_readable(&serializer)
 }
@@ -105,6 +109,10 @@ where
     W: std::io::Write,
 {
     /// Creates a new `Serializer` which will emit LCS.
+    ///
+    /// In conditions where the objects being serialized could be large, the
+    /// result of this function should not be returned directly, but rather
+    /// wrapped into a serde_stacker adapter.
     fn new(output: &'a mut W) -> Self {
         Self { output }
     }

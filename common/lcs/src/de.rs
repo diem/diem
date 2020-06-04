@@ -38,9 +38,12 @@ pub fn from_bytes<'a, T>(bytes: &'a [u8]) -> Result<T>
 where
     T: Deserialize<'a>,
 {
-    let mut deserializer = Deserializer::new(bytes);
-    let t = T::deserialize(&mut deserializer)?;
-    deserializer.end().map(move |_| t)
+    let mut inner_deserializer = Deserializer::new(bytes);
+    // This adapter helps manage potentially unbound recursion depths in the
+    // deserialized material.
+    let deserializer = serde_stacker::Deserializer::new(&mut inner_deserializer);
+    let t = T::deserialize(deserializer)?;
+    inner_deserializer.end().map(move |_| t)
 }
 
 /// Perform a stateful deserialization from a `&[u8]` using the provided `seed`.
@@ -48,9 +51,12 @@ pub fn from_bytes_seed<'a, T>(seed: T, bytes: &'a [u8]) -> Result<T::Value>
 where
     T: DeserializeSeed<'a>,
 {
-    let mut deserializer = Deserializer::new(bytes);
-    let t = seed.deserialize(&mut deserializer)?;
-    deserializer.end().map(move |_| t)
+    let mut inner_deserializer = Deserializer::new(bytes);
+    // This adapter helps manage potentially unbound recursion depths in the
+    // deserialized material.
+    let deserializer = serde_stacker::Deserializer::new(&mut inner_deserializer);
+    let t = seed.deserialize(deserializer)?;
+    inner_deserializer.end().map(move |_| t)
 }
 
 /// Deserialization implementation for LCS
@@ -61,6 +67,10 @@ struct Deserializer<'de> {
 impl<'de> Deserializer<'de> {
     /// Creates a new `Deserializer` which will be deserializing the provided
     /// input.
+    ///
+    /// In conditions where the objects being serialized could be large, the
+    /// result of this function should not be returned directly, but rather
+    /// wrapped into a serde_stacker adapter.
     fn new(input: &'de [u8]) -> Self {
         Deserializer { input }
     }
