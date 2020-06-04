@@ -2,20 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Protobuf based interface between OnchainDiscovery and Network layers.
-use crate::types::{OnchainDiscoveryMsg,QueryDiscoverySetRequest, QueryDiscoverySetResponse};
-use channel::{ message_queues::QueueStyle, libra_channel};
-use futures::{channel::mpsc, sink::SinkExt};
+use crate::types::{OnchainDiscoveryMsg, QueryDiscoverySetRequest, QueryDiscoverySetResponse};
+use channel::libra_channel;
+use libra_types::PeerId;
 use network::{
     peer_manager::{
-        ConnectionRequestSender,
+        ConnectionNotification, ConnectionRequestSender, PeerManagerNotification,
         PeerManagerRequestSender,
-        PeerManagerNotification,
-        ConnectionNotification
     },
-    connectivity_manager::ConnectivityRequest,
     protocols::{
-        network::{ NetworkSender},
-        protocols::{network::NetworkSender, rpc::error::RpcError},
+        network::{NetworkSender, NewNetworkEvents, NewNetworkSender},
+        rpc::error::RpcError,
     },
     ProtocolId,
 };
@@ -29,15 +26,17 @@ use std::time::Duration;
 /// around an `channel::Receiver<PeerManagerNotification>`.
 pub struct OnchainDiscoveryNetworkEvents {
     pub peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
-    pub connection_notifs_rx: libra_channel::Receiver<PeerId, ConnectionNotification>
+    pub connection_notifs_rx: libra_channel::Receiver<PeerId, ConnectionNotification>,
 }
 
-impl OnchainDiscoveryNetworkEvents {
-    pub fn new (peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
-                connection_notifs_rx: libra_channel::Receiver<PeerId, ConnectionNotification>) -> Self {
+impl NewNetworkEvents for OnchainDiscoveryNetworkEvents {
+    fn new(
+        peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+        connection_notifs_rx: libra_channel::Receiver<PeerId, ConnectionNotification>,
+    ) -> Self {
         Self {
             peer_mgr_notifs_rx,
-            connection_notifs_rx
+            connection_notifs_rx,
         }
     }
 }
@@ -48,8 +47,8 @@ pub struct OnchainDiscoveryNetworkSender {
     inner: NetworkSender<OnchainDiscoveryMsg>,
 }
 
-impl OnchainDiscoveryNetworkSender {
-    pub fn new(
+impl NewNetworkSender for OnchainDiscoveryNetworkSender {
+    fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         conn_reqs_tx: ConnectionRequestSender,
     ) -> Self {
@@ -57,7 +56,9 @@ impl OnchainDiscoveryNetworkSender {
             inner: NetworkSender::new(peer_mgr_reqs_tx, conn_reqs_tx),
         }
     }
+}
 
+impl OnchainDiscoveryNetworkSender {
     pub async fn query_discovery_set(
         &mut self,
         recipient: PeerId,

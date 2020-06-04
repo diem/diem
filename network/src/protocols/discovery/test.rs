@@ -8,7 +8,7 @@ use crate::{
         self, conn_notifs_channel, ConnectionRequestSender, PeerManagerNotification,
         PeerManagerRequest,
     },
-    protocols::direct_send::Message,
+    protocols::{direct_send::Message, network::NewNetworkEvents},
     ProtocolId,
 };
 use anyhow::anyhow;

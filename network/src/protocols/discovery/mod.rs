@@ -38,7 +38,7 @@ use crate::{
     constants, counters,
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
-    protocols::network::{Event, NetworkEvents, NetworkSender, NewNetEvent, NewNetworkSender},
+    protocols::network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
     ProtocolId,
 };
 use bytes::Bytes;
@@ -54,7 +54,6 @@ use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
-use once_cell::sync::Lazy;
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -88,25 +87,26 @@ pub struct DiscoveryNetworkSender {
     inner: NetworkSender<DiscoveryMsg>,
 }
 
+/// Returns the configuration information for the tx/rx endpoints connected to Discovery.
 pub fn endpoint_config() -> (
     Vec<ProtocolId>,
     Vec<ProtocolId>,
     QueueStyle,
     usize,
-    Option<&'static Lazy<IntCounterVec>>)
- {
+    Option<&'static IntCounterVec>,
+) {
     (
         /* rpc_protocols = */ vec![],
-        /* direct_send_protocols = */ vec![QueueStyle::LIFO],
+        /* direct_send_protocols = */ vec![ProtocolId::DiscoveryDirectSend],
         /* queue_preference = */ QueueStyle::LIFO,
         /* max_queue_size_per_peer = */ constants::NETWORK_CHANNEL_SIZE,
         /* counter = */ Some(&counters::PENDING_DISCOVERY_NETWORK_EVENTS),
     )
 }
 
-impl DiscoveryNetworkSender {
+impl NewNetworkSender for DiscoveryNetworkSender {
     /// Create a new Discovery sender
-    pub fn new(
+    fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         connection_reqs_tx: ConnectionRequestSender,
     ) -> Self {
@@ -114,7 +114,9 @@ impl DiscoveryNetworkSender {
             inner: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
         }
     }
+}
 
+impl DiscoveryNetworkSender {
     /// Send a DiscoveryMsg to a peer.
     pub fn send_to(&mut self, peer: PeerId, msg: DiscoveryMsg) -> Result<(), NetworkError> {
         self.inner

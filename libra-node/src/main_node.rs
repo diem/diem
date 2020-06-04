@@ -25,8 +25,6 @@ use network_simple_onchain_discovery::{
     gen_simple_discovery_reconfig_subscription, ConfigurationChangeListener,
 };
 use onchain_discovery::{client::OnchainDiscovery, service::OnchainDiscoveryService};
-use network::validator_network::network_builder::{AuthenticationMode, NetworkBuilder};
-use network_simple_onchain_discovery::ConfigurationChangeListener;
 use state_synchronizer::StateSynchronizer;
 use std::{boxed::Box, collections::HashMap, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
 use storage_interface::{DbReader, DbReaderWriter};
@@ -137,9 +135,14 @@ pub fn setup_network(
                 .add_gossip_discovery();
         }
         DiscoveryMethod::Onchain => {
+            let (network_tx, discovery_events) = network_builder.add_onchain_discovery_endpoints();
             let discovery_builder =
                 onchain_discovery::discovery_builder::OnchainDiscoveryBuilder::build(
-                    &mut network_builder,
+                    network_builder
+                        .conn_mgr_reqs_tx()
+                        .expect("ConnecitivtyManager not enabled"),
+                    network_tx,
+                    discovery_events,
                     config.peer_id,
                     role,
                     libra_db,
@@ -231,15 +234,20 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                 .spawn(network_config_listener.start(simple_discovery_reconfig_rx));
         };
 
-        let (state_sync_sender, state_sync_events) =
-            state_synchronizer::network::add_to_network(&mut network_builder);
+        // Get the wires to connect StateSync to the Network.
+        let (state_sync_sender, state_sync_events) = network_builder.add_protocol_handler(
+            state_synchronizer::network::endpoint_config()
+        );
+        // Attach the wires to StateSync.
         state_sync_network_handles.push((peer_id, state_sync_sender, state_sync_events));
 
-        let (mempool_sender, mempool_events) = libra_mempool::network::add_to_network(
-            &mut network_builder,
-            node_config.mempool.max_broadcasts_per_peer,
+        // Get the wires to connect to the Network.
+        let (mempool_sender, mempool_events) = network_builder.add_protocol_handler(
+            libra_mempool::network::endpoint_config(node_config.mempool.max_broadcasts_per_peer),
         );
+        // Attach the wires to the Mempool.
         mempool_network_handles.push((peer_id, mempool_sender, mempool_events));
+
         validator_network_provider = Some((peer_id, runtime, network_builder));
     }
 
@@ -253,14 +261,22 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         let peer_id = network_builder.peer_id();
 
         network_runtimes.push(runtime);
-        let (state_sync_sender, state_sync_events) =
-            state_synchronizer::network::add_to_network(&mut network_builder);
-        state_sync_network_handles.push((peer_id, state_sync_sender, state_sync_events));
-        let (mempool_sender, mempool_events) = libra_mempool::network::add_to_network(
-            &mut network_builder,
-            node_config.mempool.max_broadcasts_per_peer,
+
+        // Get the wires to connect StateSync to the Network.
+        let (state_sync_sender, state_sync_events) = network_builder.add_protocol_handler(
+            state_synchronizer::network::endpoint_config()
         );
+        // Attach the wires to StateSync.
+        state_sync_network_handles.push((peer_id, state_sync_sender, state_sync_events));
+
+        // Get the wires to connect to the Network.
+        let (mempool_sender, mempool_events) = network_builder.add_protocol_handler(
+            libra_mempool::network::endpoint_config(node_config.mempool.max_broadcasts_per_peer),
+        );
+        // Attach the wires to the Mempool.
         mempool_network_handles.push((peer_id, mempool_sender, mempool_events));
+
+        validator_network_provider = Some((peer_id, runtime, network_builder));
 
         // Start the network provider.
         let _listen_addr = network_builder.build();

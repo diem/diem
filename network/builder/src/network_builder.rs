@@ -19,7 +19,6 @@ use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use netcore::transport::Transport;
 use network::{
-
     common::NetworkPublicKeys,
     connectivity_manager::{ConnectivityManager, ConnectivityRequest},
     constants, counters,
@@ -30,7 +29,8 @@ use network::{
     protocols::{
         discovery::{Discovery, DiscoveryNetworkEvents, DiscoveryNetworkSender},
         health_checker::{HealthChecker, HealthCheckerNetworkEvents, HealthCheckerNetworkSender},
-        wire::handshake::v1::SupportedProtocols,network::{NewNetworkSender, NewNetEvent}
+        network::{NewNetworkEvents, NewNetworkSender},
+        wire::handshake::v1::SupportedProtocols,
     },
     transport,
     transport::*,
@@ -495,73 +495,42 @@ impl NetworkBuilder {
         listen_addr
     }
 
+    // TODO:  remove
     pub fn add_onchain_discovery_endpoints(
         &mut self,
-    ) -> (
-        OnchainDiscoveryNetworkSender,
-        libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
-        conn_notifs_channel::Receiver,
-    ) {
-        let (network_sender, network_receiver, conn_reqs_tx, conn_notifs_rx) = self
-            .add_protocol_handler(
-                vec![ProtocolId::OnchainDiscoveryRpc],
-                vec![],
-                QueueStyle::LIFO,
-                constants::NETWORK_CHANNEL_SIZE,
-                // Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
-                // TODO(philiphayes): add a counter for onchain discovery
-                None,
-            );
-        (
-            OnchainDiscoveryNetworkSender::new(
-                network_sender,
-                conn_reqs_tx,
-                self.conn_mgr_reqs_tx()
-                    .expect("ConnecitivtyManager not enabled"),
-            ),
-            network_receiver,
-            conn_notifs_rx,
-        )
+    ) -> (OnchainDiscoveryNetworkSender, OnchainDiscoveryNetworkEvents) {
+        self.add_protocol_handler(onchain_discovery::endpoint_config())
     }
 
-    /// Register the discovery sender and event handler with network and return interfaces for those
-    /// actors.
+    // TODO:: remove
     pub fn add_discovery_endpoints(&mut self) -> (DiscoveryNetworkSender, DiscoveryNetworkEvents) {
-        let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = self
-            .add_protocol_handler(network::protocols::discovery::endpoint_config()
-            );
-        (
-            DiscoveryNetworkSender::new(sender, connection_reqs_tx),
-            DiscoveryNetworkEvents::new(receiver, connection_notifs_rx),
-        )
+        self.add_protocol_handler(network::protocols::discovery::endpoint_config())
     }
 
+    // TODO : remove
     pub fn add_health_checker_endpoints(
         &mut self,
     ) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents) {
-        let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = self
-            .add_protocol_handler(
-                network::protocols::health_checker::endpoint_config())
-                    );
-        (
-            HealthCheckerNetworkSender::new(sender, connection_reqs_tx),
-            HealthCheckerNetworkEvents::new(receiver, connection_notifs_rx),
-        )
+        self.add_protocol_handler(network::protocols::health_checker::endpoint_config())
     }
 
-    pub fn add_protocol_handler<SenderT, EventT>(&mut self,
-        (rpc_protocols, direct_send_protocols, queue_preferences, max_queue_size_per_peer): (
+    /// Adds a endpoints for the provided configuration.  Returns NetworkSender and NetworkEvent which
+    /// can be attached to other components.
+    pub fn add_protocol_handler<SenderT, EventT>(
+        &mut self,
+        (rpc_protocols, direct_send_protocols, queue_preference, max_queue_size_per_peer, counter): (
             Vec<ProtocolId>,
             Vec<ProtocolId>,
             QueueStyle,
             usize,
-            Option<&'static Lazy<IntCounterVec>>),
+            Option<&'static IntCounterVec>,
         ),
-    ) -> (SenderT, EventT) where
-        EventT: NewNetworkEvent,
-        SenderT: NewNetworkSende,
+    ) -> (SenderT, EventT)
+    where
+        EventT: NewNetworkEvents,
+        SenderT: NewNetworkSender,
     {
-        let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = self
+        let (peer_mgr_reqs_tx, peer_mgr_reqs_rx, connection_reqs_tx, connection_notifs_rx) = self
             .inner_add_protocol_handler(
                 rpc_protocols,
                 direct_send_protocols,
@@ -570,8 +539,8 @@ impl NetworkBuilder {
                 counter,
             );
         (
-            SenderT::new(sender, connection_reqs_tx),
-            EventT::new(receiver, connection_notifs_rx),
+            SenderT::new(peer_mgr_reqs_tx, connection_reqs_tx),
+            EventT::new(peer_mgr_reqs_rx, connection_notifs_rx),
         )
     }
 }

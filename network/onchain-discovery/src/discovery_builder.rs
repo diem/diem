@@ -1,15 +1,12 @@
 use crate::{
-    client::OnchainDiscovery, network_interface::OnchainDiscoveryNetworkSender,
+    client::OnchainDiscovery,
+    network_interface::{OnchainDiscoveryNetworkEvents, OnchainDiscoveryNetworkSender},
     service::OnchainDiscoveryService,
 };
-use channel::libra_channel;
 use futures::stream::{Fuse, StreamExt};
 use libra_config::config::RoleType;
 use libra_types::{waypoint::Waypoint, PeerId};
-use network::{
-    peer_manager::{conn_notifs_channel, PeerManagerNotification},
-    ProtocolId,
-};
+use network::connectivity_manager::ConnectivityRequest;
 use std::{sync::Arc, time::Duration};
 use storage_interface::DbReader;
 use tokio::{
@@ -27,9 +24,9 @@ impl OnchainDiscoveryBuilder {
     /// Setup OnchainDiscovery to work with the provided tx and rx channels.  Returns a tuple
     /// (OnChainDiscoveryService, OnChainDiscovery) which must be started by the caller.
     pub fn build(
+        conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         network_tx: OnchainDiscoveryNetworkSender,
-        peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
-        conn_notifs_rx: conn_notifs_channel::Receiver,
+        discovery_events: OnchainDiscoveryNetworkEvents,
         peer_id: PeerId,
         role: RoleType,
         libra_db: Arc<dyn DbReader>,
@@ -38,10 +35,12 @@ impl OnchainDiscoveryBuilder {
     ) -> Self {
         let outbound_rpc_timeout = Duration::from_secs(30);
         let max_concurrent_inbound_queries = 8;
+        let (peer_mgr_notifs_rx, conn_notifs_rx) = (
+            discovery_events.peer_mgr_notifs_rx,
+            discovery_events.connection_notifs_rx,
+        );
 
         let onchain_discovery_service = OnchainDiscoveryService::new(
-            // TODO:  Why are we passing a clone of the executor in?  This seems to imply that we are spawning an ever growing pile of executors in the system...
-            // Would it be better to Arc the executor?
             executor.clone(),
             peer_mgr_notifs_rx,
             Arc::clone(&libra_db),
@@ -57,6 +56,7 @@ impl OnchainDiscoveryBuilder {
                 role,
                 waypoint,
                 network_tx,
+                conn_mgr_reqs_tx,
                 conn_notifs_rx,
                 libra_db,
                 peer_query_ticker,
@@ -64,7 +64,6 @@ impl OnchainDiscoveryBuilder {
                 outbound_rpc_timeout,
             )
         });
-
         Self {
             onchain_discovery_service,
             onchain_discovery,

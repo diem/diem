@@ -22,7 +22,7 @@ use crate::{
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::{
-        network::{Event, NetworkEvents, NetworkSender, NewNetEvent, NewNetworkSender},
+        network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
         rpc::error::RpcError,
     },
     ProtocolId,
@@ -37,7 +37,6 @@ use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
-use once_cell::sync::Lazy;
 use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, time::Duration};
@@ -66,12 +65,13 @@ pub struct HealthCheckerNetworkSender {
     inner: NetworkSender<HealthCheckerMsg>,
 }
 
+/// Returns the configuration information for the tx/rx endpoints connected to HealthChecker.
 pub fn endpoint_config() -> (
     Vec<ProtocolId>,
     Vec<ProtocolId>,
     QueueStyle,
     usize,
-    Option<&'static Lazy<IntCounterVec>>
+    Option<&'static IntCounterVec>,
 ) {
     (
         /* rpc_protocols = */ vec![ProtocolId::HealthCheckerRpc],

@@ -11,8 +11,9 @@ use crate::{
 };
 use anyhow::{Context as _, Result};
 use futures::{
-    channel::mpsc, sink::SinkExt,
+    channel::mpsc,
     future::{Future, FutureExt},
+    sink::SinkExt,
     stream::{FusedStream, Stream, StreamExt},
 };
 use libra_config::config::RoleType;

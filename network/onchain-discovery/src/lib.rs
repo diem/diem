@@ -49,8 +49,11 @@
 
 use crate::types::{QueryDiscoverySetRequest, QueryDiscoverySetResponse};
 use anyhow::{Context as AnyhowContext, Result};
+use channel::message_queues::QueueStyle;
 use futures::future::{Future, FutureExt};
+use libra_metrics::IntCounterVec;
 use libra_types::account_config;
+use network::{constants, ProtocolId};
 use std::sync::Arc;
 use storage_interface::DbReader;
 use tokio::task;
@@ -118,4 +121,24 @@ fn storage_query_discovery_set_async(
         // flatten errors
         res.map_err(anyhow::Error::from).and_then(|res| res)
     })
+}
+
+/// Returns the configuration information for the tx/rx endpoints connected to OnchainDiscovery.
+pub fn endpoint_config() -> (
+    Vec<ProtocolId>,
+    Vec<ProtocolId>,
+    QueueStyle,
+    usize,
+    Option<&'static IntCounterVec>,
+) {
+    (
+        /* rpc_protocols = */ vec![ProtocolId::OnchainDiscoveryRpc],
+        /* direct_send_protocols = */ vec![],
+        /* queue_preference = */ QueueStyle::LIFO,
+        /* max_queue_size_per_peer = */ constants::NETWORK_CHANNEL_SIZE,
+        // /* counter = */ Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
+        // TODO(philiphayes): add a counter for onchain discovery
+        /* counter = */
+        None,
+    )
 }

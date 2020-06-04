@@ -5,14 +5,14 @@
 
 use crate::counters;
 use channel::message_queues::QueueStyle;
+use libra_metrics::IntCounterVec;
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
-    protocols::network::{NetworkEvents, NetworkSender},
+    protocols::network::{NetworkEvents, NetworkSender, NewNetworkSender},
     ProtocolId,
 };
-use network_builder::network_builder::NetworkBuilder;
 use serde::{Deserialize, Serialize};
 
 /// Container for exchanging transactions with other Mempools
@@ -56,29 +56,29 @@ pub struct MempoolNetworkSender {
     inner: NetworkSender<MempoolSyncMsg>,
 }
 
-/// Create a new Sender that only sends for the `MEMPOOL_DIRECT_SEND_PROTOCOL` ProtocolId and a
-/// Receiver (Events) that explicitly returns only said ProtocolId.
-pub fn add_to_network(
-    network: &mut NetworkBuilder,
+/// Returns the configuration information for the tx/rx endpoints connected to Mempool.
+pub fn endpoint_config(
     max_broadcasts_per_peer: usize,
-) -> (MempoolNetworkSender, MempoolNetworkEvents) {
-    let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
-        .add_protocol_handler(
-            vec![],
-            vec![ProtocolId::MempoolDirectSend],
-            QueueStyle::KLAST,
-            max_broadcasts_per_peer,
-            Some(&counters::PENDING_MEMPOOL_NETWORK_EVENTS),
-        );
+) -> (
+    Vec<ProtocolId>,
+    Vec<ProtocolId>,
+    QueueStyle,
+    usize,
+    Option<&'static IntCounterVec>,
+) {
     (
-        MempoolNetworkSender::new(sender, connection_reqs_tx),
-        MempoolNetworkEvents::new(receiver, connection_notifs_rx),
+        /* rpc_protocols = */ vec![],
+        /* direct_send_protocols = */ vec![ProtocolId::MempoolDirectSend],
+        /* queue_preference = */ QueueStyle::KLAST,
+        /* max_queue_size_per_peer = */ max_broadcasts_per_peer,
+        /* counter = */ Some(&counters::PENDING_MEMPOOL_NETWORK_EVENTS),
     )
 }
 
-impl MempoolNetworkSender {
+impl NewNetworkSender for MempoolNetworkSender {
+    // TODO:  this comment is misleading.  There is nothing in this constructor that inherently restricts sends to `MEMPOOL_DIRECT_SEND_PROTOCOL'
     /// Returns a Sender that only sends for the `MEMPOOL_DIRECT_SEND_PROTOCOL` ProtocolId.
-    pub fn new(
+    fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         connection_reqs_tx: ConnectionRequestSender,
     ) -> Self {
@@ -86,7 +86,9 @@ impl MempoolNetworkSender {
             inner: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
         }
     }
+}
 
+impl MempoolNetworkSender {
     /// Send a single message to the destination peer using the `MEMPOOL_DIRECT_SEND_PROTOCOL`
     /// ProtocolId.
     pub fn send_to(

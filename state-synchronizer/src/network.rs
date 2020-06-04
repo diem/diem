@@ -5,13 +5,15 @@
 
 use crate::{chunk_request::GetChunkRequest, chunk_response::GetChunkResponse, counters};
 use channel::message_queues::QueueStyle;
+use libra_metrics::IntCounterVec;
 use libra_types::PeerId;
 use network::{
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
-    protocols::network::{NetworkEvents, NetworkSender},
+    protocols::network::{NetworkEvents, NetworkSender, NewNetworkSender},
     ProtocolId,
 };
+use network_builder::network_builder::NetworkBuilder;
 use serde::{Deserialize, Serialize};
 
 /// StateSynchronizer network messages
@@ -45,22 +47,28 @@ pub struct StateSynchronizerSender {
 pub fn add_to_network(
     network: &mut NetworkBuilder,
 ) -> (StateSynchronizerSender, StateSynchronizerEvents) {
-    let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
-        .add_protocol_handler(
-            vec![],
-            vec![ProtocolId::StateSynchronizerDirectSend],
-            QueueStyle::LIFO,
-            1,
-            Some(&counters::PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS),
-        );
+    network.add_protocol_handler(endpoint_config())
+}
+
+/// Returns the configuration information for the tx/rx endpoints connected to StateSynchronizer.
+pub fn endpoint_config() -> (
+    Vec<ProtocolId>,
+    Vec<ProtocolId>,
+    QueueStyle,
+    usize,
+    Option<&'static IntCounterVec>,
+) {
     (
-        StateSynchronizerSender::new(sender, connection_reqs_tx),
-        StateSynchronizerEvents::new(receiver, connection_notifs_rx),
+        /* rpc_protocols = */ vec![],
+        /* direct_send_protocols = */ vec![ProtocolId::StateSynchronizerDirectSend],
+        /* queue_preference = */ QueueStyle::LIFO,
+        /* max_queue_size_per_peer = */ 1,
+        /* counter = */ Some(&counters::PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS),
     )
 }
 
-impl StateSynchronizerSender {
-    pub fn new(
+impl NewNetworkSender for StateSynchronizerSender {
+    fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         connection_reqs_tx: ConnectionRequestSender,
     ) -> Self {
@@ -68,7 +76,8 @@ impl StateSynchronizerSender {
             inner: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
         }
     }
-
+}
+impl StateSynchronizerSender {
     pub fn send_to(
         &mut self,
         recipient: PeerId,
