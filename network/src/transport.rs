@@ -151,7 +151,13 @@ fn identity_pubkey_to_peer_id(
 ) -> io::Result<PeerId> {
     if let Some(trusted_peers) = maybe_trusted_peers {
         // if mutual authentication, try to find peer with this identity pubkey.
-        find_peer_with_pubkey(&trusted_peers.read().unwrap(), remote_pubkey)
+
+        let trusted_peers = trusted_peers.read().unwrap();
+        let maybe_peerid_with_pubkey = trusted_peers
+            .iter()
+            .find(|(_peer_id, public_keys)| &public_keys.identity_public_key == remote_pubkey)
+            .map(|(peer_id, _)| *peer_id);
+        maybe_peerid_with_pubkey
             .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Not a trusted peer"))
             .map_err(|err| {
                 security_log(SecurityEvent::InvalidNetworkPeer)
@@ -174,16 +180,6 @@ fn identity_pubkey_to_peer_id(
         array.copy_from_slice(&pubkey_slice[x25519::PUBLIC_KEY_SIZE - PeerId::LENGTH..]);
         Ok(PeerId::new(array))
     }
-}
-
-fn find_peer_with_pubkey(
-    trusted_peers: &HashMap<PeerId, NetworkPublicKeys>,
-    remote_pubkey: &x25519::PublicKey,
-) -> Option<PeerId> {
-    trusted_peers
-        .iter()
-        .find(|(_peer_id, public_keys)| &public_keys.identity_public_key == remote_pubkey)
-        .map(|(peer_id, _)| *peer_id)
 }
 
 /// Exchange HandshakeMsg's to try negotiating a set of common supported protocols.
