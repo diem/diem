@@ -173,9 +173,6 @@
 <span id="173">173</span>
 <span id="174">174</span>
 <span id="175">175</span>
-<span id="176">176</span>
-<span id="177">177</span>
-<span id="178">178</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -186,7 +183,6 @@
 <span class="kw">use</span> <span class="ident">channel</span>::<span class="ident">message_queues</span>::<span class="ident">QueueStyle</span>;
 <span class="kw">use</span> <span class="ident">consensus_types</span>::{
     <span class="ident">block_retrieval</span>::{<span class="ident">BlockRetrievalRequest</span>, <span class="ident">BlockRetrievalResponse</span>},
-    <span class="ident">common</span>::<span class="ident">Payload</span>,
     <span class="ident">epoch_retrieval</span>::<span class="ident">EpochRetrievalRequest</span>,
     <span class="ident">proposal_msg</span>::<span class="ident">ProposalMsg</span>,
     <span class="ident">sync_info</span>::<span class="ident">SyncInfo</span>,
@@ -211,18 +207,16 @@
 
 <span class="doccomment">/// Network type for consensus</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ConsensusMsg</span> {
     <span class="doccomment">/// RPC to get a chain of block of the given length starting from the given block id.</span>
     <span class="ident">BlockRetrievalRequest</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">BlockRetrievalRequest</span><span class="op">&gt;</span>),
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">bound</span> <span class="op">=</span> <span class="string">&quot;T: Payload&quot;</span>)]</span>
     <span class="doccomment">/// Carries the returned blocks and the retrieval status.</span>
-    <span class="ident">BlockRetrievalResponse</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">BlockRetrievalResponse</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>),
+    <span class="ident">BlockRetrievalResponse</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">BlockRetrievalResponse</span><span class="op">&gt;</span>),
     <span class="doccomment">/// Request to get a EpochChangeProof from current_epoch to target_epoch</span>
     <span class="ident">EpochRetrievalRequest</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">EpochRetrievalRequest</span><span class="op">&gt;</span>),
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">bound</span> <span class="op">=</span> <span class="string">&quot;T: Payload&quot;</span>)]</span>
     <span class="doccomment">/// ProposalMsg contains the required information for the proposer election protocol to make</span>
     <span class="doccomment">/// its choice (typically depends on round and proposer info).</span>
-    <span class="ident">ProposalMsg</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">ProposalMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>),
+    <span class="ident">ProposalMsg</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">ProposalMsg</span><span class="op">&gt;</span>),
     <span class="doccomment">/// This struct describes basic synchronization metadata.</span>
     <span class="ident">SyncInfo</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">SyncInfo</span><span class="op">&gt;</span>),
     <span class="doccomment">/// A vector of LedgerInfo with contiguous increasing epoch numbers to prove a sequence of</span>
@@ -239,7 +233,7 @@
 <span class="doccomment">/// raw `Bytes` direct-send and rpc messages are deserialized into</span>
 <span class="doccomment">/// `ConsensusMessage` types. `ConsensusNetworkEvents` is a thin wrapper around</span>
 <span class="doccomment">/// an `channel::Receiver&lt;PeerManagerNotification&gt;`.</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">ConsensusNetworkEvents</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">NetworkEvents</span><span class="op">&lt;</span><span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">ConsensusNetworkEvents</span> <span class="op">=</span> <span class="ident">NetworkEvents</span><span class="op">&lt;</span><span class="ident">ConsensusMsg</span><span class="op">&gt;</span>;
 
 <span class="doccomment">/// The interface from Consensus to Networking layer.</span>
 <span class="doccomment">///</span>
@@ -250,17 +244,17 @@
 <span class="doccomment">/// makes the most sense to make the rpc call on a separate async task, which</span>
 <span class="doccomment">/// requires the `ConsensusNetworkSender` to be `Clone` and `Send`.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConsensusNetworkSender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="ident">network_sender</span>: <span class="ident">NetworkSender</span><span class="op">&lt;</span><span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConsensusNetworkSender</span> {
+    <span class="ident">network_sender</span>: <span class="ident">NetworkSender</span><span class="op">&lt;</span><span class="ident">ConsensusMsg</span><span class="op">&gt;</span>,
     <span class="ident">conn_mgr_reqs_tx</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">ConnectivityRequest</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// Create a new Sender that only sends for the `CONSENSUS_DIRECT_SEND_PROTOCOL` and</span>
 <span class="doccomment">/// `CONSENSUS_RPC_PROTOCOL` ProtocolId and a Receiver (Events) that explicitly returns only said</span>
 <span class="doccomment">/// ProtocolId.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_to_network</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span>(
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_to_network</span>(
     <span class="ident">network</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">NetworkBuilder</span>,
-) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">ConsensusNetworkSender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">ConsensusNetworkEvents</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) {
+) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">ConsensusNetworkSender</span>, <span class="ident">ConsensusNetworkEvents</span>) {
     <span class="kw">let</span> (<span class="ident">network_sender</span>, <span class="ident">network_receiver</span>, <span class="ident">connection_reqs_tx</span>, <span class="ident">connection_notifs_rx</span>) <span class="op">=</span> <span class="ident">network</span>
         .<span class="ident">add_protocol_handler</span>(
             <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">ProtocolId</span>::<span class="ident">ConsensusRpc</span>],
@@ -281,7 +275,7 @@
     )
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">ConsensusNetworkSender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">ConsensusNetworkSender</span> {
     <span class="doccomment">/// Returns a Sender that only sends for the `CONSENSUS_DIRECT_SEND_PROTOCOL` and</span>
     <span class="doccomment">/// `CONSENSUS_RPC_PROTOCOL` ProtocolId.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
@@ -300,7 +294,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">send_to</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">recipient</span>: <span class="ident">PeerId</span>,
-        <span class="ident">message</span>: <span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+        <span class="ident">message</span>: <span class="ident">ConsensusMsg</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">NetworkError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">protocol</span> <span class="op">=</span> <span class="ident">ProtocolId</span>::<span class="ident">ConsensusDirectSend</span>;
         <span class="self">self</span>.<span class="ident">network_sender</span>.<span class="ident">send_to</span>(<span class="ident">recipient</span>, <span class="ident">protocol</span>, <span class="ident">message</span>)
@@ -311,7 +305,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">send_to_many</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">recipients</span>: <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">PeerId</span><span class="op">&gt;</span>,
-        <span class="ident">message</span>: <span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+        <span class="ident">message</span>: <span class="ident">ConsensusMsg</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">NetworkError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">protocol</span> <span class="op">=</span> <span class="ident">ProtocolId</span>::<span class="ident">ConsensusDirectSend</span>;
         <span class="self">self</span>.<span class="ident">network_sender</span>
@@ -322,9 +316,9 @@
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send_rpc</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">recipient</span>: <span class="ident">PeerId</span>,
-        <span class="ident">message</span>: <span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+        <span class="ident">message</span>: <span class="ident">ConsensusMsg</span>,
         <span class="ident">timeout</span>: <span class="ident">Duration</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">RpcError</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ConsensusMsg</span>, <span class="ident">RpcError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">protocol</span> <span class="op">=</span> <span class="ident">ProtocolId</span>::<span class="ident">ConsensusRpc</span>;
         <span class="self">self</span>.<span class="ident">network_sender</span>
             .<span class="ident">send_rpc</span>(<span class="ident">recipient</span>, <span class="ident">protocol</span>, <span class="ident">message</span>, <span class="ident">timeout</span>)

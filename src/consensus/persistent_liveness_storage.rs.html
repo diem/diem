@@ -413,8 +413,6 @@
 <span id="413">413</span>
 <span id="414">414</span>
 <span id="415">415</span>
-<span id="416">416</span>
-<span id="417">417</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -422,8 +420,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">consensusdb</span>::<span class="ident">ConsensusDB</span>, <span class="ident">epoch_manager</span>::<span class="ident">LivenessStorageData</span>};
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">format_err</span>, <span class="ident">Context</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">consensus_types</span>::{
-    <span class="ident">block</span>::<span class="ident">Block</span>, <span class="ident">common</span>::<span class="ident">Payload</span>, <span class="ident">quorum_cert</span>::<span class="ident">QuorumCert</span>,
-    <span class="ident">timeout_certificate</span>::<span class="ident">TimeoutCertificate</span>, <span class="ident">vote</span>::<span class="ident">Vote</span>,
+    <span class="ident">block</span>::<span class="ident">Block</span>, <span class="ident">quorum_cert</span>::<span class="ident">QuorumCert</span>, <span class="ident">timeout_certificate</span>::<span class="ident">TimeoutCertificate</span>, <span class="ident">vote</span>::<span class="ident">Vote</span>,
 };
 <span class="kw">use</span> <span class="ident">debug_interface</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">executor_types</span>::<span class="ident">ExecutedTrees</span>;
@@ -442,9 +439,9 @@
 <span class="doccomment">/// guaranteed.</span>
 <span class="doccomment">/// Blocks persisted are proposed but not yet committed.  The committed state is persisted</span>
 <span class="doccomment">/// via StateComputer.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">PersistentLivenessStorage</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
     <span class="doccomment">/// Persist the blocks and quorum certs into storage atomically.</span>
-    <span class="kw">fn</span> <span class="ident">save_tree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">quorum_certs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">save_tree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&gt;</span>, <span class="ident">quorum_certs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
 
     <span class="doccomment">/// Delete the corresponding blocks and quorum certs atomically.</span>
     <span class="kw">fn</span> <span class="ident">prune_tree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_ids</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
@@ -456,7 +453,7 @@
     <span class="kw">fn</span> <span class="ident">recover_from_ledger</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">LedgerRecoveryData</span>;
 
     <span class="doccomment">/// Construct necessary data to start consensus.</span>
-    <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">LivenessStorageData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">LivenessStorageData</span>;
 
     <span class="doccomment">/// Persist the highest timeout certificate for improved liveness - proof for other replicas</span>
     <span class="doccomment">/// to jump to this round</span>
@@ -471,7 +468,7 @@
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RootInfo</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw">pub</span> <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="kw">pub</span> <span class="ident">QuorumCert</span>, <span class="kw">pub</span> <span class="ident">QuorumCert</span>);
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RootInfo</span>(<span class="kw">pub</span> <span class="ident">Block</span>, <span class="kw">pub</span> <span class="ident">QuorumCert</span>, <span class="kw">pub</span> <span class="ident">QuorumCert</span>);
 
 <span class="doccomment">/// LedgerRecoveryData is a subset of RecoveryData that we can get solely from ledger info.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
@@ -492,11 +489,11 @@
     <span class="doccomment">/// and the ledger info for the root block, return an error if it can not be found.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// We guarantee that the block corresponding to the storage&#39;s latest ledger info always exists.</span>
-    <span class="kw">fn</span> <span class="ident">find_root</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span>(
+    <span class="kw">fn</span> <span class="ident">find_root</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">blocks</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">blocks</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&gt;</span>,
         <span class="ident">quorum_certs</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RootInfo</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RootInfo</span><span class="op">&gt;</span> {
         <span class="macro">info</span><span class="macro">!</span>(
             <span class="string">&quot;The last committed block id as recorded in storage: {}&quot;</span>,
             <span class="self">self</span>.<span class="ident">storage_ledger</span>
@@ -570,14 +567,14 @@
 
 <span class="doccomment">/// The recovery data constructed from raw consensusdb data, it&#39;ll find the root value and</span>
 <span class="doccomment">/// blocks that need cleanup or return error if the input data is inconsistent.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RecoveryData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RecoveryData</span> {
     <span class="comment">// The last vote message sent by this validator.</span>
     <span class="ident">last_vote</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vote</span><span class="op">&gt;</span>,
-    <span class="ident">root</span>: <span class="ident">RootInfo</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+    <span class="ident">root</span>: <span class="ident">RootInfo</span>,
     <span class="ident">root_metadata</span>: <span class="ident">RootMetadata</span>,
     <span class="comment">// 1. the blocks guarantee the topological ordering - parent &lt;- child.</span>
     <span class="comment">// 2. all blocks are children of the root.</span>
-    <span class="ident">blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&gt;</span>,
     <span class="ident">quorum_certs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>,
     <span class="ident">blocks_to_prune</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 
@@ -585,11 +582,11 @@
     <span class="ident">highest_timeout_certificate</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TimeoutCertificate</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">RecoveryData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">RecoveryData</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">last_vote</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vote</span><span class="op">&gt;</span>,
         <span class="ident">ledger_recovery_data</span>: <span class="ident">LedgerRecoveryData</span>,
-        <span class="kw-2">mut</span> <span class="ident">blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="kw-2">mut</span> <span class="ident">blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&gt;</span>,
         <span class="ident">root_metadata</span>: <span class="ident">RootMetadata</span>,
         <span class="kw-2">mut</span> <span class="ident">quorum_certs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>,
         <span class="ident">highest_timeout_certificate</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TimeoutCertificate</span><span class="op">&gt;</span>,
@@ -638,7 +635,7 @@
         })
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">root_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">root_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Block</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">root</span>.<span class="number">0</span>
     }
 
@@ -646,7 +643,7 @@
         <span class="self">self</span>.<span class="ident">last_vote</span>.<span class="ident">clone</span>()
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">take</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">RootInfo</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">RootMetadata</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">take</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">RootInfo</span>, <span class="ident">RootMetadata</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>) {
         (
             <span class="self">self</span>.<span class="ident">root</span>,
             <span class="self">self</span>.<span class="ident">root_metadata</span>,
@@ -667,7 +664,7 @@
 
     <span class="kw">fn</span> <span class="ident">find_blocks_to_prune</span>(
         <span class="ident">root_id</span>: <span class="ident">HashValue</span>,
-        <span class="ident">blocks</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">blocks</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&gt;</span>,
         <span class="ident">quorum_certs</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span> {
         <span class="comment">// prune all the blocks that don&#39;t have root as ancestor</span>
@@ -702,8 +699,8 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StorageWriteProxy</span> {
-    <span class="kw">fn</span> <span class="ident">save_tree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">quorum_certs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">PersistentLivenessStorage</span> <span class="kw">for</span> <span class="ident">StorageWriteProxy</span> {
+    <span class="kw">fn</span> <span class="ident">save_tree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&gt;</span>, <span class="ident">quorum_certs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">trace_batch</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
         <span class="kw">for</span> <span class="ident">block</span> <span class="kw">in</span> <span class="ident">blocks</span>.<span class="ident">iter</span>() {
             <span class="macro">trace_code_block</span><span class="macro">!</span>(<span class="string">&quot;consensusdb::save_tree&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">block</span>.<span class="ident">id</span>()}, <span class="ident">trace_batch</span>);
@@ -715,8 +712,7 @@
     <span class="kw">fn</span> <span class="ident">prune_tree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_ids</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="op">!</span><span class="ident">block_ids</span>.<span class="ident">is_empty</span>() {
             <span class="comment">// quorum certs that certified the block_ids will get removed</span>
-            <span class="self">self</span>.<span class="ident">db</span>
-                .<span class="ident">delete_blocks_and_quorum_certificates</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">block_ids</span>)<span class="question-mark">?</span>;
+            <span class="self">self</span>.<span class="ident">db</span>.<span class="ident">delete_blocks_and_quorum_certificates</span>(<span class="ident">block_ids</span>)<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(())
     }
@@ -735,7 +731,7 @@
         <span class="ident">LedgerRecoveryData</span>::<span class="ident">new</span>(<span class="ident">startup_info</span>.<span class="ident">latest_ledger_info</span>.<span class="ident">ledger_info</span>().<span class="ident">clone</span>())
     }
 
-    <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">LivenessStorageData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">LivenessStorageData</span> {
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Start consensus recovery.&quot;</span>);
         <span class="kw">let</span> <span class="ident">raw_data</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">db</span>
@@ -791,7 +787,7 @@
             <span class="ident">highest_timeout_certificate</span>,
         ) {
             <span class="prelude-val">Ok</span>(<span class="kw-2">mut</span> <span class="ident">initial_data</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                (<span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>)
+                (<span class="self">self</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span>)
                     .<span class="ident">prune_tree</span>(<span class="ident">initial_data</span>.<span class="ident">take_blocks_to_prune</span>())
                     .<span class="ident">expect</span>(<span class="string">&quot;unable to prune dangling blocks during restart&quot;</span>);
                 <span class="kw">if</span> <span class="ident">initial_data</span>.<span class="ident">last_vote</span>.<span class="ident">is_none</span>() {

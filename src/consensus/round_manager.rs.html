@@ -792,10 +792,6 @@
 <span id="792">792</span>
 <span id="793">793</span>
 <span id="794">794</span>
-<span id="795">795</span>
-<span id="796">796</span>
-<span id="797">797</span>
-<span id="798">798</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -808,7 +804,7 @@
 <span class="kw">use</span> <span class="ident">consensus_types</span>::{
     <span class="ident">block</span>::<span class="ident">Block</span>,
     <span class="ident">block_retrieval</span>::{<span class="ident">BlockRetrievalResponse</span>, <span class="ident">BlockRetrievalStatus</span>},
-    <span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Payload</span>, <span class="ident">Round</span>},
+    <span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Round</span>},
     <span class="ident">proposal_msg</span>::<span class="ident">ProposalMsg</span>,
     <span class="ident">quorum_cert</span>::<span class="ident">QuorumCert</span>,
     <span class="ident">sync_info</span>::<span class="ident">SyncInfo</span>,
@@ -846,14 +842,14 @@
     },
 };
 
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">UnverifiedEvent</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="ident">ProposalMsg</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">ProposalMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>),
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">UnverifiedEvent</span> {
+    <span class="ident">ProposalMsg</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">ProposalMsg</span><span class="op">&gt;</span>),
     <span class="ident">VoteMsg</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">VoteMsg</span><span class="op">&gt;</span>),
     <span class="ident">SyncInfo</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">SyncInfo</span><span class="op">&gt;</span>),
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">UnverifiedEvent</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="self">self</span>, <span class="ident">validator</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorVerifier</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VerifiedEvent</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">UnverifiedEvent</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="self">self</span>, <span class="ident">validator</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorVerifier</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VerifiedEvent</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">UnverifiedEvent</span>::<span class="ident">ProposalMsg</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">p</span>.<span class="ident">verify</span>(<span class="ident">validator</span>)<span class="question-mark">?</span>;
@@ -879,8 +875,8 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">UnverifiedEvent</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ConsensusMsg</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">UnverifiedEvent</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="ident">ConsensusMsg</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">match</span> <span class="ident">value</span> {
             <span class="ident">ConsensusMsg</span>::<span class="ident">ProposalMsg</span>(<span class="ident">m</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">UnverifiedEvent</span>::<span class="ident">ProposalMsg</span>(<span class="ident">m</span>),
             <span class="ident">ConsensusMsg</span>::<span class="ident">VoteMsg</span>(<span class="ident">m</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">UnverifiedEvent</span>::<span class="ident">VoteMsg</span>(<span class="ident">m</span>),
@@ -890,8 +886,8 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">VerifiedEvent</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="ident">ProposalMsg</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">ProposalMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>),
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">VerifiedEvent</span> {
+    <span class="ident">ProposalMsg</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">ProposalMsg</span><span class="op">&gt;</span>),
     <span class="ident">VoteMsg</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">VoteMsg</span><span class="op">&gt;</span>),
     <span class="ident">SyncInfo</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">SyncInfo</span><span class="op">&gt;</span>),
 }
@@ -906,20 +902,20 @@
 
 <span class="doccomment">/// If the node can&#39;t recover corresponding blocks from local storage, RecoveryManager is responsible</span>
 <span class="doccomment">/// for processing the events carrying sync info and use the info to retrieve blocks from peers</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RecoveryManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RecoveryManager</span> {
     <span class="ident">epoch_state</span>: <span class="ident">EpochState</span>,
-    <span class="ident">network</span>: <span class="ident">NetworkSender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">network</span>: <span class="ident">NetworkSender</span>,
+    <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
+    <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&gt;</span>,
     <span class="ident">last_committed_round</span>: <span class="ident">Round</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">RecoveryManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">RecoveryManager</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">epoch_state</span>: <span class="ident">EpochState</span>,
-        <span class="ident">network</span>: <span class="ident">NetworkSender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-        <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">network</span>: <span class="ident">NetworkSender</span>,
+        <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
+        <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&gt;</span>,
         <span class="ident">last_committed_round</span>: <span class="ident">Round</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">RecoveryManager</span> {
@@ -933,20 +929,20 @@
 
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_proposal_msg</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">proposal_msg</span>: <span class="ident">ProposalMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RecoveryData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="ident">proposal_msg</span>: <span class="ident">ProposalMsg</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RecoveryData</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">author</span> <span class="op">=</span> <span class="ident">proposal_msg</span>.<span class="ident">proposer</span>();
         <span class="kw">let</span> <span class="ident">sync_info</span> <span class="op">=</span> <span class="ident">proposal_msg</span>.<span class="ident">sync_info</span>();
         <span class="self">self</span>.<span class="ident">sync_up</span>(<span class="kw-2">&amp;</span><span class="ident">sync_info</span>, <span class="ident">author</span>).<span class="kw">await</span>
     }
 
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">vote_msg</span>: <span class="ident">VoteMsg</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RecoveryData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">vote_msg</span>: <span class="ident">VoteMsg</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RecoveryData</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">author</span> <span class="op">=</span> <span class="ident">vote_msg</span>.<span class="ident">vote</span>().<span class="ident">author</span>();
         <span class="kw">let</span> <span class="ident">sync_info</span> <span class="op">=</span> <span class="ident">vote_msg</span>.<span class="ident">sync_info</span>();
         <span class="self">self</span>.<span class="ident">sync_up</span>(<span class="kw-2">&amp;</span><span class="ident">sync_info</span>, <span class="ident">author</span>).<span class="kw">await</span>
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">sync_up</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">sync_info</span>: <span class="kw-2">&amp;</span><span class="ident">SyncInfo</span>, <span class="ident">peer</span>: <span class="ident">Author</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RecoveryData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">sync_up</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">sync_info</span>: <span class="kw-2">&amp;</span><span class="ident">SyncInfo</span>, <span class="ident">peer</span>: <span class="ident">Author</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RecoveryData</span><span class="op">&gt;</span> {
         <span class="ident">sync_info</span>.<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">epoch_state</span>.<span class="ident">verifier</span>)<span class="question-mark">?</span>;
         <span class="macro">ensure</span><span class="macro">!</span>(
             <span class="ident">sync_info</span>.<span class="ident">highest_round</span>() <span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">last_committed_round</span>,
@@ -978,30 +974,30 @@
 <span class="doccomment">/// etc.). It is exposing the async processing functions for each event type.</span>
 <span class="doccomment">/// The caller is responsible for running the event loops and driving the execution via some</span>
 <span class="doccomment">/// executors.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RoundManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RoundManager</span> {
     <span class="ident">epoch_state</span>: <span class="ident">EpochState</span>,
-    <span class="ident">block_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">block_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&gt;</span>,
     <span class="ident">round_state</span>: <span class="ident">RoundState</span>,
-    <span class="ident">proposer_election</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ProposerElection</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
-    <span class="ident">proposal_generator</span>: <span class="ident">ProposalGenerator</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">safety_rules</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TSafetyRules</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
-    <span class="ident">network</span>: <span class="ident">NetworkSender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">proposer_election</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ProposerElection</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
+    <span class="ident">proposal_generator</span>: <span class="ident">ProposalGenerator</span>,
+    <span class="ident">safety_rules</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TSafetyRules</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
+    <span class="ident">network</span>: <span class="ident">NetworkSender</span>,
+    <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
+    <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
     <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">RoundManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">RoundManager</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">epoch_state</span>: <span class="ident">EpochState</span>,
-        <span class="ident">block_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">block_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&gt;</span>,
         <span class="ident">round_state</span>: <span class="ident">RoundState</span>,
-        <span class="ident">proposer_election</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ProposerElection</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
-        <span class="ident">proposal_generator</span>: <span class="ident">ProposalGenerator</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-        <span class="ident">safety_rules</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TSafetyRules</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
-        <span class="ident">network</span>: <span class="ident">NetworkSender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-        <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">proposer_election</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ProposerElection</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
+        <span class="ident">proposal_generator</span>: <span class="ident">ProposalGenerator</span>,
+        <span class="ident">safety_rules</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TSafetyRules</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
+        <span class="ident">network</span>: <span class="ident">NetworkSender</span>,
+        <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
+        <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
         <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">counters</span>::<span class="ident">BLOCK_RETRIEVAL_COUNT</span>.<span class="ident">get</span>();
@@ -1021,7 +1017,7 @@
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">create_block_retriever</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">author</span>: <span class="ident">Author</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BlockRetriever</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">create_block_retriever</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">author</span>: <span class="ident">Author</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BlockRetriever</span> {
         <span class="ident">BlockRetriever</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">network</span>.<span class="ident">clone</span>(), <span class="ident">author</span>)
     }
 
@@ -1070,7 +1066,7 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">generate_proposal</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">new_round_event</span>: <span class="ident">NewRoundEvent</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ProposalMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ProposalMsg</span><span class="op">&gt;</span> {
         <span class="comment">// Proposal generator will ensure that at most one proposal is generated per round</span>
         <span class="kw">let</span> <span class="ident">proposal</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">proposal_generator</span>
@@ -1080,10 +1076,7 @@
             )
             .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">signed_proposal</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">safety_rules</span>.<span class="ident">sign_proposal</span>(<span class="ident">proposal</span>)<span class="question-mark">?</span>;
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">payload</span>) <span class="op">=</span> <span class="ident">signed_proposal</span>.<span class="ident">payload</span>() {
-            <span class="self">self</span>.<span class="ident">txn_manager</span>
-                .<span class="ident">trace_transactions</span>(<span class="ident">payload</span>, <span class="ident">signed_proposal</span>.<span class="ident">id</span>());
-        }
+        <span class="self">self</span>.<span class="ident">txn_manager</span>.<span class="ident">trace_transactions</span>(<span class="kw-2">&amp;</span><span class="ident">signed_proposal</span>);
         <span class="macro">trace_edge</span><span class="macro">!</span>(<span class="string">&quot;parent_proposal&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">signed_proposal</span>.<span class="ident">parent_id</span>()}, {<span class="string">&quot;block&quot;</span>, <span class="ident">signed_proposal</span>.<span class="ident">id</span>()});
         <span class="macro">trace_event</span><span class="macro">!</span>(<span class="string">&quot;round_manager::generate_proposal&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">signed_proposal</span>.<span class="ident">id</span>()});
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Propose {}&quot;</span>, <span class="ident">signed_proposal</span>);
@@ -1096,10 +1089,7 @@
 
     <span class="doccomment">/// Process a ProposalMsg, pre_process would bring all the dependencies and filter out invalid</span>
     <span class="doccomment">/// proposal, process_proposed_block would execute and decide whether to vote for it.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_proposal_msg</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">proposal_msg</span>: <span class="ident">ProposalMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_proposal_msg</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposal_msg</span>: <span class="ident">ProposalMsg</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">block</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">pre_process_proposal</span>(<span class="ident">proposal_msg</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">process_proposed_block</span>(<span class="ident">block</span>).<span class="kw">await</span>
     }
@@ -1110,7 +1100,7 @@
     <span class="doccomment">/// and fetch all the blocks from the committed state to the HQC</span>
     <span class="doccomment">/// 2. forwarding the proposals to the ProposerElection queue,</span>
     <span class="doccomment">/// which is going to eventually trigger one winning proposal per round</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">pre_process_proposal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposal_msg</span>: <span class="ident">ProposalMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">pre_process_proposal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposal_msg</span>: <span class="ident">ProposalMsg</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&gt;</span> {
         <span class="macro">trace_event</span><span class="macro">!</span>(<span class="string">&quot;round_manager::pre_process_proposal&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">proposal_msg</span>.<span class="ident">proposal</span>().<span class="ident">id</span>()});
         <span class="comment">// RoundState is going to be updated with all the proposal certificates later,</span>
         <span class="comment">// but it&#39;s known that the round_state&#39;s round is not going to decrease so we can already</span>
@@ -1274,7 +1264,7 @@
     <span class="doccomment">/// 2. Try to vote for it following the safety rules.</span>
     <span class="doccomment">/// 3. In case a validator chooses to vote, send the vote to the representatives at the next</span>
     <span class="doccomment">/// position.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_proposed_block</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposal</span>: <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_proposed_block</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposal</span>: <span class="ident">Block</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;RoundManager: process_proposed_block {}&quot;</span>, <span class="ident">proposal</span>);
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">time_to_receival</span>) <span class="op">=</span>
@@ -1371,21 +1361,23 @@
     <span class="doccomment">/// * return a VoteMsg with the LedgerInfo to be committed in case the vote gathers QC.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// This function assumes that it might be called from different tasks concurrently.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">execute_and_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposed_block</span>: <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vote</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">execute_and_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposed_block</span>: <span class="ident">Block</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vote</span><span class="op">&gt;</span> {
         <span class="macro">trace_code_block</span><span class="macro">!</span>(<span class="string">&quot;round_manager::execute_and_vote&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">proposed_block</span>.<span class="ident">id</span>()});
         <span class="kw">let</span> <span class="ident">executed_block</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">block_store</span>
             .<span class="ident">execute_and_insert_block</span>(<span class="ident">proposed_block</span>)
             .<span class="ident">context</span>(<span class="string">&quot;[RoundManager] Failed to execute_and_insert the block&quot;</span>)<span class="question-mark">?</span>;
         <span class="comment">// notify mempool about failed txn</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">payload</span>) <span class="op">=</span> <span class="ident">executed_block</span>.<span class="ident">payload</span>() {
-            <span class="kw">let</span> <span class="ident">compute_result</span> <span class="op">=</span> <span class="ident">executed_block</span>.<span class="ident">compute_result</span>();
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">txn_manager</span>.<span class="ident">commit_txns</span>(<span class="ident">payload</span>, <span class="kw-2">&amp;</span><span class="ident">compute_result</span>).<span class="kw">await</span> {
-                <span class="macro">error</span><span class="macro">!</span>(
-                    <span class="string">&quot;[RoundManager] Failed to notify mempool of rejected txns: {:?}&quot;</span>,
-                    <span class="ident">e</span>
-                );
-            }
+        <span class="kw">let</span> <span class="ident">compute_result</span> <span class="op">=</span> <span class="ident">executed_block</span>.<span class="ident">compute_result</span>();
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">txn_manager</span>
+            .<span class="ident">commit</span>(<span class="ident">executed_block</span>.<span class="ident">block</span>(), <span class="ident">compute_result</span>)
+            .<span class="kw">await</span>
+        {
+            <span class="macro">error</span><span class="macro">!</span>(
+                <span class="string">&quot;[RoundManager] Failed to notify mempool of rejected txns: {:?}&quot;</span>,
+                <span class="ident">e</span>
+            );
         }
         <span class="kw">let</span> <span class="ident">block</span> <span class="op">=</span> <span class="ident">executed_block</span>.<span class="ident">block</span>();
 

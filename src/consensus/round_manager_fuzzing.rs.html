@@ -202,7 +202,7 @@
     <span class="ident">network_interface</span>::<span class="ident">ConsensusNetworkSender</span>,
     <span class="ident">persistent_liveness_storage</span>::{<span class="ident">PersistentLivenessStorage</span>, <span class="ident">RecoveryData</span>},
     <span class="ident">round_manager</span>::<span class="ident">RoundManager</span>,
-    <span class="ident">test_utils</span>::{<span class="ident">EmptyStateComputer</span>, <span class="ident">MockStorage</span>, <span class="ident">MockTransactionManager</span>, <span class="ident">TestPayload</span>},
+    <span class="ident">test_utils</span>::{<span class="ident">EmptyStateComputer</span>, <span class="ident">MockStorage</span>, <span class="ident">MockTransactionManager</span>},
     <span class="ident">util</span>::<span class="ident">mock_time_service</span>::<span class="ident">SimulatedTimeService</span>,
 };
 <span class="kw">use</span> <span class="ident">channel</span>::{<span class="self">self</span>, <span class="ident">libra_channel</span>, <span class="ident">message_queues</span>::<span class="ident">QueueStyle</span>};
@@ -240,9 +240,9 @@
 
 <span class="comment">// helpers</span>
 <span class="kw">fn</span> <span class="ident">build_empty_store</span>(
-    <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">initial_data</span>: <span class="ident">RecoveryData</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
+    <span class="ident">initial_data</span>: <span class="ident">RecoveryData</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&gt;</span> {
     <span class="kw">let</span> (<span class="ident">_commit_cb_sender</span>, <span class="ident">_commit_cb_receiver</span>) <span class="op">=</span> <span class="ident">mpsc</span>::<span class="ident">unbounded</span>::<span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span>();
 
     <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">BlockStore</span>::<span class="ident">new</span>(
@@ -263,7 +263,7 @@
 }
 
 <span class="comment">// Creates an RoundManager for fuzzing</span>
-<span class="kw">fn</span> <span class="ident">create_node_for_fuzzing</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RoundManager</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">create_node_for_fuzzing</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RoundManager</span> {
     <span class="comment">// signer is re-used accross fuzzing runs</span>
     <span class="kw">let</span> <span class="ident">signer</span> <span class="op">=</span> <span class="ident">FUZZING_SIGNER</span>.<span class="ident">clone</span>();
 
@@ -272,7 +272,7 @@
     <span class="kw">let</span> <span class="ident">validator_set</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="ident">validator</span>).<span class="ident">into</span>();
 
     <span class="comment">// TODO: EmptyStorage</span>
-    <span class="kw">let</span> (<span class="ident">initial_data</span>, <span class="ident">storage</span>) <span class="op">=</span> <span class="ident">MockStorage</span>::<span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span>::<span class="ident">start_for_testing</span>(<span class="ident">validator_set</span>);
+    <span class="kw">let</span> (<span class="ident">initial_data</span>, <span class="ident">storage</span>) <span class="op">=</span> <span class="ident">MockStorage</span>::<span class="ident">start_for_testing</span>(<span class="ident">validator_set</span>);
 
     <span class="comment">// TODO: remove</span>
     <span class="kw">let</span> <span class="ident">safety_rules</span> <span class="op">=</span> <span class="ident">SafetyRules</span>::<span class="ident">new</span>(<span class="ident">signer</span>.<span class="ident">author</span>(), <span class="ident">test_utils</span>::<span class="ident">test_storage</span>(<span class="kw-2">&amp;</span><span class="ident">signer</span>));
@@ -342,7 +342,7 @@
     <span class="comment">// create node</span>
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">round_manager</span> <span class="op">=</span> <span class="ident">create_node_for_fuzzing</span>();
 
-    <span class="kw">let</span> <span class="ident">proposal</span>: <span class="ident">ProposalMsg</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">lcs</span>::<span class="ident">from_bytes</span>(<span class="ident">data</span>) {
+    <span class="kw">let</span> <span class="ident">proposal</span>: <span class="ident">ProposalMsg</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">lcs</span>::<span class="ident">from_bytes</span>(<span class="ident">data</span>) {
         <span class="prelude-val">Ok</span>(<span class="ident">xx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">xx</span>,
         <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">test</span>) {

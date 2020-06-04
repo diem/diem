@@ -172,9 +172,6 @@
 <span id="172">172</span>
 <span id="173">173</span>
 <span id="174">174</span>
-<span id="175">175</span>
-<span id="176">176</span>
-<span id="177">177</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -183,7 +180,6 @@
 <span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Round</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">block_metadata</span>::{<span class="ident">new_block_event_key</span>, <span class="ident">NewBlockEvent</span>};
-<span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">export</span>::<span class="ident">PhantomData</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">cmp</span>::<span class="ident">Ordering</span>,
     <span class="ident">collections</span>::<span class="ident">HashSet</span>,
@@ -305,14 +301,13 @@
 
 <span class="doccomment">/// Committed history based proposer election implementation that could help bias towards</span>
 <span class="doccomment">/// successful leaders to help improve performance.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LeaderReputation</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LeaderReputation</span> {
     <span class="ident">proposers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Author</span><span class="op">&gt;</span>,
     <span class="ident">backend</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">MetadataBackend</span><span class="op">&gt;</span>,
     <span class="ident">heuristic</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ReputationHeuristic</span><span class="op">&gt;</span>,
-    <span class="ident">phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">LeaderReputation</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">LeaderReputation</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">proposers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Author</span><span class="op">&gt;</span>,
         <span class="ident">backend</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">MetadataBackend</span><span class="op">&gt;</span>,
@@ -322,12 +317,11 @@
             <span class="ident">proposers</span>,
             <span class="ident">backend</span>,
             <span class="ident">heuristic</span>,
-            <span class="ident">phantom</span>: <span class="ident">PhantomData</span>,
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">ProposerElection</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LeaderReputation</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">ProposerElection</span> <span class="kw">for</span> <span class="ident">LeaderReputation</span> {
     <span class="kw">fn</span> <span class="ident">get_valid_proposer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Author</span> {
         <span class="comment">// TODO: configure the round gap</span>
         <span class="kw">let</span> <span class="ident">target_round</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">round</span> <span class="op">&gt;</span><span class="op">=</span> <span class="number">4</span> { <span class="ident">round</span> <span class="op">-</span> <span class="number">4</span> } <span class="kw">else</span> { <span class="number">0</span> };

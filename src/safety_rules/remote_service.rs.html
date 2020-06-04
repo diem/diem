@@ -61,14 +61,6 @@
 <span id="61">61</span>
 <span id="62">62</span>
 <span id="63">63</span>
-<span id="64">64</span>
-<span id="65">65</span>
-<span id="66">66</span>
-<span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -78,13 +70,13 @@
     <span class="ident">serializer</span>::{<span class="ident">SafetyRulesInput</span>, <span class="ident">SerializerClient</span>, <span class="ident">SerializerService</span>, <span class="ident">TSerializerClient</span>},
     <span class="ident">Error</span>, <span class="ident">SafetyRules</span>,
 };
-<span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Payload</span>};
+<span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">common</span>::<span class="ident">Author</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">warn</span>;
 <span class="kw">use</span> <span class="ident">libra_secure_net</span>::{<span class="ident">NetworkClient</span>, <span class="ident">NetworkServer</span>};
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">marker</span>::<span class="ident">PhantomData</span>, <span class="ident">net</span>::<span class="ident">SocketAddr</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">net</span>::<span class="ident">SocketAddr</span>;
 
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">RemoteService</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SerializerClient</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">RemoteService</span> {
+    <span class="kw">fn</span> <span class="ident">client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SerializerClient</span> {
         <span class="kw">let</span> <span class="ident">network_client</span> <span class="op">=</span> <span class="ident">NetworkClient</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">server_address</span>());
         <span class="kw">let</span> <span class="ident">service</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">RemoteClient</span>::<span class="ident">new</span>(<span class="ident">network_client</span>));
         <span class="ident">SerializerClient</span>::<span class="ident">new_client</span>(<span class="ident">service</span>)
@@ -93,12 +85,8 @@
     <span class="kw">fn</span> <span class="ident">server_address</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SocketAddr</span>;
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span>(
-    <span class="ident">author</span>: <span class="ident">Author</span>,
-    <span class="ident">storage</span>: <span class="ident">PersistentSafetyStorage</span>,
-    <span class="ident">listen_addr</span>: <span class="ident">SocketAddr</span>,
-) {
-    <span class="kw">let</span> <span class="ident">safety_rules</span> <span class="op">=</span> <span class="ident">SafetyRules</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">author</span>, <span class="ident">storage</span>);
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute</span>(<span class="ident">author</span>: <span class="ident">Author</span>, <span class="ident">storage</span>: <span class="ident">PersistentSafetyStorage</span>, <span class="ident">listen_addr</span>: <span class="ident">SocketAddr</span>) {
+    <span class="kw">let</span> <span class="ident">safety_rules</span> <span class="op">=</span> <span class="ident">SafetyRules</span>::<span class="ident">new</span>(<span class="ident">author</span>, <span class="ident">storage</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">serializer_service</span> <span class="op">=</span> <span class="ident">SerializerService</span>::<span class="ident">new</span>(<span class="ident">safety_rules</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">network_server</span> <span class="op">=</span> <span class="ident">NetworkServer</span>::<span class="ident">new</span>(<span class="ident">listen_addr</span>);
 
@@ -109,9 +97,9 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">process_one_message</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span>(
+<span class="kw">fn</span> <span class="ident">process_one_message</span>(
     <span class="ident">network_server</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">NetworkServer</span>,
-    <span class="ident">serializer_service</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SerializerService</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+    <span class="ident">serializer_service</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">SerializerService</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">network_server</span>.<span class="ident">read</span>()<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">serializer_service</span>.<span class="ident">handle_message</span>(<span class="ident">request</span>)<span class="question-mark">?</span>;
@@ -119,22 +107,18 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">struct</span> <span class="ident">RemoteClient</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">struct</span> <span class="ident">RemoteClient</span> {
     <span class="ident">network_client</span>: <span class="ident">NetworkClient</span>,
-    <span class="ident">marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">RemoteClient</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">RemoteClient</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">network_client</span>: <span class="ident">NetworkClient</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">network_client</span>,
-            <span class="ident">marker</span>: <span class="ident">PhantomData</span>,
-        }
+        <span class="self">Self</span> { <span class="ident">network_client</span> }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">TSerializerClient</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RemoteClient</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">request</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">input</span>: <span class="ident">SafetyRulesInput</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">TSerializerClient</span> <span class="kw">for</span> <span class="ident">RemoteClient</span> {
+    <span class="kw">fn</span> <span class="ident">request</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">input</span>: <span class="ident">SafetyRulesInput</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">input_message</span> <span class="op">=</span> <span class="ident">lcs</span>::<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">input</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">network_client</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">input_message</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">network_client</span>.<span class="ident">read</span>()<span class="question-mark">?</span>;

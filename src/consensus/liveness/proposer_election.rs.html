@@ -50,7 +50,7 @@
 <span class="doccomment">/// ProposerElection incorporates the logic of choosing a leader among multiple candidates.</span>
 <span class="doccomment">/// We are open to a possibility for having multiple proposers per round, the ultimate choice</span>
 <span class="doccomment">/// of a proposal is exposed by the election protocol via the stream of proposals.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ProposerElection</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ProposerElection</span> {
     <span class="doccomment">/// If a given author is a valid candidate for being a proposer, generate the info,</span>
     <span class="doccomment">/// otherwise return None.</span>
     <span class="doccomment">/// Note that this function is synchronous.</span>
@@ -63,7 +63,7 @@
     <span class="kw">fn</span> <span class="ident">get_valid_proposer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Author</span>;
 
     <span class="doccomment">/// Return if a given proposed block is valid.</span>
-    <span class="kw">fn</span> <span class="ident">is_valid_proposal</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="kw">fn</span> <span class="ident">is_valid_proposal</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Block</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="ident">block</span>.<span class="ident">author</span>().<span class="ident">map_or</span>(<span class="bool-val">false</span>, <span class="op">|</span><span class="ident">author</span><span class="op">|</span> {
             <span class="self">self</span>.<span class="ident">is_valid_proposer</span>(<span class="ident">author</span>, <span class="ident">block</span>.<span class="ident">round</span>())
         })

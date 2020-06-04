@@ -49,7 +49,7 @@
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">epoch_change</span>::<span class="ident">EpochChangeProof</span>;
 
 <span class="doccomment">/// Interface for SafetyRules</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">TSafetyRules</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">TSafetyRules</span> {
     <span class="doccomment">/// Provides the internal state of SafetyRules for monitoring / debugging purposes. This does</span>
     <span class="doccomment">/// not include sensitive data like private keys.</span>
     <span class="kw">fn</span> <span class="ident">consensus_state</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ConsensusState</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
@@ -65,11 +65,11 @@
     <span class="kw">fn</span> <span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">qc</span>: <span class="kw-2">&amp;</span><span class="ident">QuorumCert</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Attempts to vote for a given proposal following the voting rules.</span>
-    <span class="kw">fn</span> <span class="ident">construct_and_sign_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">vote_proposal</span>: <span class="kw-2">&amp;</span><span class="ident">VoteProposal</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vote</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">construct_and_sign_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">vote_proposal</span>: <span class="kw-2">&amp;</span><span class="ident">VoteProposal</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vote</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// As the holder of the private key, SafetyRules also signs proposals or blocks.</span>
     <span class="doccomment">/// A Block is a signed BlockData along with some additional metadata.</span>
-    <span class="kw">fn</span> <span class="ident">sign_proposal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block_data</span>: <span class="ident">BlockData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">sign_proposal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block_data</span>: <span class="ident">BlockData</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Block</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// As the holder of the private key, SafetyRules also signs what is effectively a</span>
     <span class="doccomment">/// timeout message. This returns the signature for that timeout message.</span>

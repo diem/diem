@@ -74,7 +74,7 @@
         <span class="self">Self</span> { <span class="ident">epoch</span>, <span class="ident">round</span> }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_block</span>(<span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Block</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">epoch</span>: <span class="ident">block</span>.<span class="ident">epoch</span>(),
             <span class="ident">round</span>: <span class="ident">block</span>.<span class="ident">round</span>(),

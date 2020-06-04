@@ -90,12 +90,15 @@
 <span id="90">90</span>
 <span id="91">91</span>
 <span id="92">92</span>
-<span id="93">93</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">block</span>::<span class="ident">Block</span>, <span class="ident">common</span>::<span class="ident">Round</span>, <span class="ident">quorum_cert</span>::<span class="ident">QuorumCert</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">block</span>::<span class="ident">Block</span>,
+    <span class="ident">common</span>::{<span class="ident">Payload</span>, <span class="ident">Round</span>},
+    <span class="ident">quorum_cert</span>::<span class="ident">QuorumCert</span>,
+};
 <span class="kw">use</span> <span class="ident">executor_types</span>::<span class="ident">StateComputeResult</span>;
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">HashValue</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">block_info</span>::<span class="ident">BlockInfo</span>;
@@ -105,30 +108,30 @@
 <span class="doccomment">/// block data, each executed block also has other derived meta data which could be regenerated from</span>
 <span class="doccomment">/// blocks.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ExecutedBlock</span> {
     <span class="doccomment">/// Block data that cannot be regenerated.</span>
-    <span class="ident">block</span>: <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+    <span class="ident">block</span>: <span class="ident">Block</span>,
     <span class="doccomment">/// The state_compute_result is calculated for all the pending blocks prior to insertion to</span>
     <span class="doccomment">/// the tree. The execution results are not persisted: they&#39;re recalculated again for the</span>
     <span class="doccomment">/// pending blocks upon restart.</span>
     <span class="ident">state_compute_result</span>: <span class="ident">StateComputeResult</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Display</span> <span class="kw">for</span> <span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">Display</span> <span class="kw">for</span> <span class="ident">ExecutedBlock</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Formatter</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
         <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.<span class="ident">block</span>())
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">block</span>: <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">state_compute_result</span>: <span class="ident">StateComputeResult</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+<span class="kw">impl</span> <span class="ident">ExecutedBlock</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">block</span>: <span class="ident">Block</span>, <span class="ident">state_compute_result</span>: <span class="ident">StateComputeResult</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">block</span>,
             <span class="ident">state_compute_result</span>,
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Block</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">block</span>
     }
 
@@ -144,7 +147,7 @@
         <span class="self">self</span>.<span class="ident">block</span>().<span class="ident">id</span>()
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">payload</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">payload</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Payload</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">block</span>().<span class="ident">payload</span>()
     }
 
@@ -175,12 +178,7 @@
             <span class="self">self</span>.<span class="ident">compute_result</span>().<span class="ident">epoch_state</span>().<span class="ident">clone</span>(),
         )
     }
-}
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">PartialEq</span>,
-{
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_nil_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">block</span>().<span class="ident">is_nil_block</span>()
     }

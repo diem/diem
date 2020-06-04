@@ -339,8 +339,6 @@
 <span id="339">339</span>
 <span id="340">340</span>
 <span id="341">341</span>
-<span id="342">342</span>
-<span id="343">343</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -350,8 +348,8 @@
 <span class="kw">use</span> <span class="ident">executor</span>::<span class="ident">db_bootstrapper</span>;
 <span class="kw">use</span> <span class="ident">libra_config</span>::{
     <span class="ident">config</span>::{
-        <span class="ident">ConsensusType</span>, <span class="ident">NodeConfig</span>, <span class="ident">OnDiskStorageConfig</span>, <span class="ident">RemoteService</span>, <span class="ident">SafetyRulesService</span>,
-        <span class="ident">SecureBackend</span>, <span class="ident">Token</span>, <span class="ident">VaultConfig</span>,
+        <span class="ident">NodeConfig</span>, <span class="ident">OnDiskStorageConfig</span>, <span class="ident">RemoteService</span>, <span class="ident">SafetyRulesService</span>, <span class="ident">SecureBackend</span>, <span class="ident">Token</span>,
+        <span class="ident">VaultConfig</span>,
     },
     <span class="ident">generator</span>,
 };
@@ -591,10 +589,8 @@
     <span class="kw">fn</span> <span class="ident">build_safety_rules</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">NodeConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">safety_rules_config</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">config</span>.<span class="ident">consensus</span>.<span class="ident">safety_rules</span>;
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">server_address</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">safety_rules_addr</span> {
-            <span class="ident">safety_rules_config</span>.<span class="ident">service</span> <span class="op">=</span> <span class="ident">SafetyRulesService</span>::<span class="ident">Process</span>(<span class="ident">RemoteService</span> {
-                <span class="ident">server_address</span>,
-                <span class="ident">consensus_type</span>: <span class="ident">ConsensusType</span>::<span class="ident">SignedTransactions</span>,
-            })
+            <span class="ident">safety_rules_config</span>.<span class="ident">service</span> <span class="op">=</span>
+                <span class="ident">SafetyRulesService</span>::<span class="ident">Process</span>(<span class="ident">RemoteService</span> { <span class="ident">server_address</span> })
         }
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">backend</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">safety_rules_backend</span> {

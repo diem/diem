@@ -43,7 +43,7 @@
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">liveness</span>::<span class="ident">proposer_election</span>::<span class="ident">ProposerElection</span>;
-<span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Payload</span>, <span class="ident">Round</span>};
+<span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Round</span>};
 
 <span class="doccomment">/// The rotating proposer maps a round to an author according to a round-robin rotation.</span>
 <span class="doccomment">/// A fixed proposer strategy loses liveness when the fixed proposer is down. Rotating proposers</span>
@@ -73,7 +73,7 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">ProposerElection</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RotatingProposer</span> {
+<span class="kw">impl</span> <span class="ident">ProposerElection</span> <span class="kw">for</span> <span class="ident">RotatingProposer</span> {
     <span class="kw">fn</span> <span class="ident">get_valid_proposer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Author</span> {
         <span class="self">self</span>.<span class="ident">proposers</span>
             [((<span class="ident">round</span> <span class="op">/</span> <span class="ident">u64</span>::<span class="ident">from</span>(<span class="self">self</span>.<span class="ident">contiguous_rounds</span>)) <span class="op">%</span> <span class="self">self</span>.<span class="ident">proposers</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>) <span class="kw">as</span> <span class="ident">usize</span>]

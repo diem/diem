@@ -270,12 +270,35 @@
 <span id="270">270</span>
 <span id="271">271</span>
 <span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">block</span>::<span class="ident">Block</span>, <span class="ident">block_data</span>::<span class="ident">BlockData</span>, <span class="ident">common</span>::<span class="ident">Round</span>, <span class="ident">quorum_cert</span>::<span class="ident">QuorumCert</span>,
+    <span class="ident">block</span>::<span class="ident">Block</span>,
+    <span class="ident">block_data</span>::<span class="ident">BlockData</span>,
+    <span class="ident">common</span>::{<span class="ident">Payload</span>, <span class="ident">Round</span>},
+    <span class="ident">quorum_cert</span>::<span class="ident">QuorumCert</span>,
     <span class="ident">vote_data</span>::<span class="ident">VoteData</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::{
@@ -283,8 +306,10 @@
     <span class="ident">hash</span>::{<span class="ident">CryptoHash</span>, <span class="ident">HashValue</span>},
 };
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
+    <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">block_info</span>::<span class="ident">BlockInfo</span>,
     <span class="ident">ledger_info</span>::{<span class="ident">LedgerInfo</span>, <span class="ident">LedgerInfoWithSignatures</span>},
+    <span class="ident">test_helpers</span>::<span class="ident">transaction_test_helpers</span>::<span class="ident">get_test_signed_txn</span>,
     <span class="ident">validator_signer</span>::{<span class="ident">proptests</span>, <span class="ident">ValidatorSigner</span>},
 };
 <span class="kw">use</span> <span class="ident">proptest</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
@@ -293,7 +318,7 @@
     <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>},
 };
 
-<span class="kw">type</span> <span class="ident">LinearizedBlockForest</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">type</span> <span class="ident">LinearizedBlockForest</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&gt;</span>;
 
 <span class="macro">prop_compose</span><span class="macro">!</span> {
     <span class="doccomment">/// This strategy is a swiss-army tool to produce a low-level block</span>
@@ -307,12 +332,11 @@
         <span class="ident">parent_qc</span>: <span class="ident">QuorumCert</span>,
     )(
         <span class="ident">round</span> <span class="kw">in</span> <span class="ident">round_strategy</span>,
-        <span class="ident">payload</span> <span class="kw">in</span> <span class="number">0usize</span>..<span class="number">10usize</span>,
         <span class="ident">signer</span> <span class="kw">in</span> <span class="ident">signer_strategy</span>,
         <span class="ident">parent_qc</span> <span class="kw">in</span> <span class="ident">Just</span>(<span class="ident">parent_qc</span>)
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Block</span> {
         <span class="ident">Block</span>::<span class="ident">new_proposal</span>(
-            <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">payload</span>],
+            <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="ident">round</span>,
             <span class="ident">get_current_timestamp</span>().<span class="ident">as_micros</span>() <span class="kw">as</span> <span class="ident">u64</span>,
             <span class="ident">parent_qc</span>,
@@ -322,7 +346,7 @@
 }
 
 <span class="doccomment">/// This produces the genesis block</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">genesis_strategy</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">genesis_strategy</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">Block</span><span class="op">&gt;</span> {
     <span class="ident">Just</span>(<span class="ident">Block</span>::<span class="ident">make_genesis_block</span>())
 }
 
@@ -337,22 +361,22 @@
             <span class="ident">proptests</span>::<span class="ident">arb_signer</span>(),
             <span class="ident">certificate_for_genesis</span>(),
         )
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Block</span> {
         <span class="ident">block</span>
     }
 }
 
 <span class="doccomment">/// Offers the genesis block.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">leaf_strategy</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">leaf_strategy</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">Block</span><span class="op">&gt;</span> {
     <span class="ident">genesis_strategy</span>().<span class="ident">boxed</span>()
 }
 
 <span class="macro">prop_compose</span><span class="macro">!</span> {
     <span class="doccomment">/// This produces a block with an invalid id (and therefore signature)</span>
     <span class="doccomment">/// given a valid block</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fake_id</span>(<span class="ident">block_strategy</span>: <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>)
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fake_id</span>(<span class="ident">block_strategy</span>: <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">Block</span><span class="op">&gt;</span>)
         (<span class="ident">fake_id</span> <span class="kw">in</span> <span class="ident">HashValue</span>::<span class="ident">arbitrary</span>(),
-         <span class="ident">block</span> <span class="kw">in</span> <span class="ident">block_strategy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+         <span class="ident">block</span> <span class="kw">in</span> <span class="ident">block_strategy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Block</span> {
             <span class="ident">Block</span> {
                 <span class="ident">id</span>: <span class="ident">fake_id</span>,
                 <span class="ident">block_data</span>: <span class="ident">BlockData</span>::<span class="ident">new_proposal</span>(
@@ -391,7 +415,7 @@
     <span class="doccomment">/// QC to always be an ancestor or the parent to always be the highest QC</span>
     <span class="kw">fn</span> <span class="ident">child</span>(
         <span class="ident">signer_strategy</span>: <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">ValidatorSigner</span><span class="op">&gt;</span>,
-        <span class="ident">block_forest_strategy</span>: <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">LinearizedBlockForest</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">block_forest_strategy</span>: <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">LinearizedBlockForest</span><span class="op">&gt;</span>,
     )(
         <span class="ident">signer</span> <span class="kw">in</span> <span class="ident">signer_strategy</span>,
         (<span class="ident">forest_vec</span>, <span class="ident">parent_idx</span>, <span class="ident">qc_idx</span>) <span class="kw">in</span> <span class="ident">block_forest_strategy</span>
@@ -412,7 +436,7 @@
         <span class="comment">// parent_qc</span>
         <span class="ident">forest_vec</span>[<span class="ident">qc_idx</span>].<span class="ident">quorum_cert</span>().<span class="ident">clone</span>(),
     ), <span class="kw-2">mut</span> <span class="ident">forest</span> <span class="kw">in</span> <span class="ident">Just</span>(<span class="ident">forest_vec</span>),
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">LinearizedBlockForest</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">LinearizedBlockForest</span> {
         <span class="ident">forest</span>.<span class="ident">push</span>(<span class="ident">block</span>);
         <span class="ident">forest</span>
     }
@@ -423,7 +447,7 @@
 <span class="kw">fn</span> <span class="ident">block_forest_from_keys</span>(
     <span class="ident">depth</span>: <span class="ident">u32</span>,
     <span class="ident">keypairs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Ed25519PrivateKey</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">LinearizedBlockForest</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">LinearizedBlockForest</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">leaf</span> <span class="op">=</span> <span class="ident">leaf_strategy</span>().<span class="ident">prop_map</span>(<span class="op">|</span><span class="ident">block</span><span class="op">|</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">block</span>]);
     <span class="comment">// Note that having `expected_branch_size` of 1 seems to generate significantly larger trees</span>
     <span class="comment">// than desired (this is my understanding after reading the documentation:</span>
@@ -437,7 +461,7 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">block_forest_and_its_keys</span>(
     <span class="ident">quorum_size</span>: <span class="ident">usize</span>,
     <span class="ident">depth</span>: <span class="ident">u32</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Ed25519PrivateKey</span><span class="op">&gt;</span>, <span class="ident">LinearizedBlockForest</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Ed25519PrivateKey</span><span class="op">&gt;</span>, <span class="ident">LinearizedBlockForest</span>)<span class="op">&gt;</span> {
     <span class="ident">proptest</span>::<span class="ident">collection</span>::<span class="ident">vec</span>(<span class="ident">proptests</span>::<span class="ident">arb_signing_key</span>(), <span class="ident">quorum_size</span>).<span class="ident">prop_flat_map</span>(
         <span class="kw">move</span> <span class="op">|</span><span class="ident">private_key</span><span class="op">|</span> {
             (
@@ -540,8 +564,24 @@
     <span class="kw">let</span> <span class="ident">ledger_info</span> <span class="op">=</span> <span class="ident">LedgerInfo</span>::<span class="ident">mock_genesis</span>(<span class="prelude-val">None</span>);
     <span class="ident">QuorumCert</span>::<span class="ident">certificate_for_genesis_from_ledger_info</span>(
         <span class="kw-2">&amp;</span><span class="ident">ledger_info</span>,
-        <span class="ident">Block</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>::<span class="ident">make_genesis_block_from_ledger_info</span>(<span class="kw-2">&amp;</span><span class="ident">ledger_info</span>).<span class="ident">id</span>(),
+        <span class="ident">Block</span>::<span class="ident">make_genesis_block_from_ledger_info</span>(<span class="kw-2">&amp;</span><span class="ident">ledger_info</span>).<span class="ident">id</span>(),
     )
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">random_payload</span>(<span class="ident">count</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Payload</span> {
+    <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">random</span>();
+    <span class="kw">let</span> <span class="ident">signer</span> <span class="op">=</span> <span class="ident">ValidatorSigner</span>::<span class="ident">random</span>(<span class="prelude-val">None</span>);
+    (<span class="number">0</span>..<span class="ident">count</span>)
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> {
+            <span class="ident">get_test_signed_txn</span>(
+                <span class="ident">address</span>,
+                <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>,
+                <span class="ident">signer</span>.<span class="ident">private_key</span>(),
+                <span class="ident">signer</span>.<span class="ident">public_key</span>(),
+                <span class="prelude-val">None</span>,
+            )
+        })
+        .<span class="ident">collect</span>()
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "consensus_types";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

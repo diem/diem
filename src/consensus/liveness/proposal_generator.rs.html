@@ -248,7 +248,7 @@
 <span class="kw">use</span> <span class="ident">consensus_types</span>::{
     <span class="ident">block</span>::<span class="ident">Block</span>,
     <span class="ident">block_data</span>::<span class="ident">BlockData</span>,
-    <span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Payload</span>, <span class="ident">Round</span>},
+    <span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Round</span>},
     <span class="ident">quorum_cert</span>::<span class="ident">QuorumCert</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
@@ -270,14 +270,14 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// TxnManager should be aware of the pending transactions in the branch that it is extending,</span>
 <span class="doccomment">/// such that it will filter them out to avoid transaction duplication.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ProposalGenerator</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ProposalGenerator</span> {
     <span class="comment">// The account address of this validator</span>
     <span class="ident">author</span>: <span class="ident">Author</span>,
     <span class="comment">// Block store is queried both for finding the branch to extend and for generating the</span>
     <span class="comment">// proposed block.</span>
-    <span class="ident">block_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">BlockReader</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
+    <span class="ident">block_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">BlockReader</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
     <span class="comment">// Transaction manager is delivering the transactions.</span>
-    <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
     <span class="comment">// Time service to generate block timestamps</span>
     <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
     <span class="comment">// Max number of transactions to be added to a proposed block.</span>
@@ -286,11 +286,11 @@
     <span class="ident">last_round_generated</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">Round</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">ProposalGenerator</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">ProposalGenerator</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">author</span>: <span class="ident">Author</span>,
-        <span class="ident">block_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">BlockReader</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
-        <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">block_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">BlockReader</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
+        <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
         <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
         <span class="ident">max_block_size</span>: <span class="ident">u64</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
@@ -309,17 +309,17 @@
     }
 
     <span class="doccomment">/// Creates a NIL block proposal extending the highest certified block from the block store.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate_nil_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate_nil_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">hqc</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ensure_highest_quorum_cert</span>(<span class="ident">round</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">Block</span>::<span class="ident">new_nil</span>(<span class="ident">round</span>, <span class="ident">hqc</span>.<span class="ident">as_ref</span>().<span class="ident">clone</span>()))
     }
 
     <span class="doccomment">/// Reconfiguration rule - we propose empty blocks with parents&#39; timestamp</span>
     <span class="doccomment">/// after reconfiguration until it&#39;s committed</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate_reconfig_empty_suffix</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">BlockData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate_reconfig_empty_suffix</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">BlockData</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">hqc</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ensure_highest_quorum_cert</span>(<span class="ident">round</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">BlockData</span>::<span class="ident">new_proposal</span>(
-            <span class="ident">T</span>::<span class="ident">default</span>(),
+            <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="self">self</span>.<span class="ident">author</span>,
             <span class="ident">round</span>,
             <span class="ident">hqc</span>.<span class="ident">certified_block</span>().<span class="ident">timestamp_usecs</span>(),
@@ -341,7 +341,7 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">round</span>: <span class="ident">Round</span>,
         <span class="ident">round_deadline</span>: <span class="ident">Instant</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">BlockData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">BlockData</span><span class="op">&gt;</span> {
         {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">last_round_generated</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">last_round_generated</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
             <span class="kw">if</span> <span class="kw-2">*</span><span class="ident">last_round_generated</span> <span class="op">&lt;</span> <span class="ident">round</span> {
@@ -367,7 +367,7 @@
 
         <span class="comment">// Exclude all the pending transactions: these are all the ancestors of</span>
         <span class="comment">// parent (including) up to the root (excluding).</span>
-        <span class="kw">let</span> <span class="ident">exclude_payload</span> <span class="op">=</span> <span class="ident">pending_blocks</span>
+        <span class="kw">let</span> <span class="ident">exclude_payload</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">pending_blocks</span>
             .<span class="ident">iter</span>()
             .<span class="ident">flat_map</span>(<span class="op">|</span><span class="ident">block</span><span class="op">|</span> <span class="ident">block</span>.<span class="ident">payload</span>())
             .<span class="ident">collect</span>();

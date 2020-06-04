@@ -145,7 +145,7 @@
     <span class="ident">thread</span>::<span class="ident">ThreadService</span>,
     <span class="ident">SafetyRules</span>, <span class="ident">TSafetyRules</span>,
 };
-<span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Payload</span>};
+<span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">common</span>::<span class="ident">Author</span>;
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="ident">NodeConfig</span>, <span class="ident">SafetyRulesService</span>};
 <span class="kw">use</span> <span class="ident">libra_secure_storage</span>::{<span class="ident">config</span>, <span class="ident">Storage</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -183,19 +183,19 @@
     (<span class="ident">author</span>, <span class="ident">storage</span>)
 }
 
-<span class="kw">enum</span> <span class="ident">SafetyRulesWrapper</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="ident">Local</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">SafetyRules</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>),
-    <span class="ident">Process</span>(<span class="ident">ProcessService</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>),
-    <span class="ident">Serializer</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">SerializerService</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>),
-    <span class="ident">SpawnedProcess</span>(<span class="ident">SpawnedProcess</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>),
-    <span class="ident">Thread</span>(<span class="ident">ThreadService</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>),
+<span class="kw">enum</span> <span class="ident">SafetyRulesWrapper</span> {
+    <span class="ident">Local</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">SafetyRules</span><span class="op">&gt;</span><span class="op">&gt;</span>),
+    <span class="ident">Process</span>(<span class="ident">ProcessService</span>),
+    <span class="ident">Serializer</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">SerializerService</span><span class="op">&gt;</span><span class="op">&gt;</span>),
+    <span class="ident">SpawnedProcess</span>(<span class="ident">SpawnedProcess</span>),
+    <span class="ident">Thread</span>(<span class="ident">ThreadService</span>),
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SafetyRulesManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="ident">internal_safety_rules</span>: <span class="ident">SafetyRulesWrapper</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SafetyRulesManager</span> {
+    <span class="ident">internal_safety_rules</span>: <span class="ident">SafetyRulesWrapper</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">SafetyRulesManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">SafetyRulesManager</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">NodeConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">consensus</span>.<span class="ident">safety_rules</span>.<span class="ident">service</span> {
             <span class="ident">SafetyRulesService</span>::<span class="ident">Process</span>(<span class="ident">conf</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="self">Self</span>::<span class="ident">new_process</span>(<span class="ident">conf</span>.<span class="ident">server_address</span>),
@@ -221,7 +221,7 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_process</span>(<span class="ident">server_addr</span>: <span class="ident">SocketAddr</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">process_service</span> <span class="op">=</span> <span class="ident">ProcessService</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">server_addr</span>);
+        <span class="kw">let</span> <span class="ident">process_service</span> <span class="op">=</span> <span class="ident">ProcessService</span>::<span class="ident">new</span>(<span class="ident">server_addr</span>);
         <span class="self">Self</span> {
             <span class="ident">internal_safety_rules</span>: <span class="ident">SafetyRulesWrapper</span>::<span class="ident">Process</span>(<span class="ident">process_service</span>),
         }
@@ -238,20 +238,20 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_spawned_process</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">NodeConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">process</span> <span class="op">=</span> <span class="ident">SpawnedProcess</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">config</span>);
+        <span class="kw">let</span> <span class="ident">process</span> <span class="op">=</span> <span class="ident">SpawnedProcess</span>::<span class="ident">new</span>(<span class="ident">config</span>);
         <span class="self">Self</span> {
             <span class="ident">internal_safety_rules</span>: <span class="ident">SafetyRulesWrapper</span>::<span class="ident">SpawnedProcess</span>(<span class="ident">process</span>),
         }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_thread</span>(<span class="ident">author</span>: <span class="ident">Author</span>, <span class="ident">storage</span>: <span class="ident">PersistentSafetyStorage</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">thread</span> <span class="op">=</span> <span class="ident">ThreadService</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="ident">author</span>, <span class="ident">storage</span>);
+        <span class="kw">let</span> <span class="ident">thread</span> <span class="op">=</span> <span class="ident">ThreadService</span>::<span class="ident">new</span>(<span class="ident">author</span>, <span class="ident">storage</span>);
         <span class="self">Self</span> {
             <span class="ident">internal_safety_rules</span>: <span class="ident">SafetyRulesWrapper</span>::<span class="ident">Thread</span>(<span class="ident">thread</span>),
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TSafetyRules</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TSafetyRules</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">internal_safety_rules</span> {
             <span class="ident">SafetyRulesWrapper</span>::<span class="ident">Local</span>(<span class="ident">safety_rules</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">LocalClient</span>::<span class="ident">new</span>(<span class="ident">safety_rules</span>.<span class="ident">clone</span>()))

@@ -417,7 +417,7 @@
         <span class="kw">let</span> <span class="ident">new_root_block_id</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">committed_ledger_info</span>.<span class="ident">next_epoch_state</span>().<span class="ident">is_some</span>() {
             <span class="comment">// Update the root block id with reconfig virtual block id, to be consistent</span>
             <span class="comment">// with the logic of Consensus.</span>
-            <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">Block</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>::<span class="ident">make_genesis_block_from_ledger_info</span>(<span class="ident">committed_ledger_info</span>).<span class="ident">id</span>();
+            <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">Block</span>::<span class="ident">make_genesis_block_from_ledger_info</span>(<span class="ident">committed_ledger_info</span>).<span class="ident">id</span>();
             <span class="macro">debug</span><span class="macro">!</span>(
                 <span class="string">&quot;Updated with a new root block {} as a virtual block of reconfiguration block {}&quot;</span>,
                 <span class="ident">id</span>,

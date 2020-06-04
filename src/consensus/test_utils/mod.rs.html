@@ -220,23 +220,6 @@
 <span id="220">220</span>
 <span id="221">221</span>
 <span id="222">222</span>
-<span id="223">223</span>
-<span id="224">224</span>
-<span id="225">225</span>
-<span id="226">226</span>
-<span id="227">227</span>
-<span id="228">228</span>
-<span id="229">229</span>
-<span id="230">230</span>
-<span id="231">231</span>
-<span id="232">232</span>
-<span id="233">233</span>
-<span id="234">234</span>
-<span id="235">235</span>
-<span id="236">236</span>
-<span id="237">237</span>
-<span id="238">238</span>
-<span id="239">239</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -260,7 +243,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
 <span class="kw">mod</span> <span class="ident">mock_txn_manager</span>;
 
-<span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">block</span>::<span class="ident">block_test_utils</span>::<span class="ident">gen_test_certificate</span>;
+<span class="kw">use</span> <span class="ident">consensus_types</span>::{<span class="ident">block</span>::<span class="ident">block_test_utils</span>::<span class="ident">gen_test_certificate</span>, <span class="ident">common</span>::<span class="ident">Payload</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">block_info</span>::<span class="ident">BlockInfo</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">mock_state_computer</span>::{<span class="ident">EmptyStateComputer</span>, <span class="ident">MockStateComputer</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">mock_storage</span>::{<span class="ident">EmptyStorage</span>, <span class="ident">MockSharedStorage</span>, <span class="ident">MockStorage</span>};
@@ -268,12 +251,7 @@
 
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TEST_TIMEOUT</span>: <span class="ident">Duration</span> <span class="op">=</span> <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">60</span>);
 
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">TestPayload</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>;
-
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_simple_tree</span>() <span class="op">-</span><span class="op">&gt;</span> (
-    <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_simple_tree</span>() <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&gt;</span>) {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">inserter</span> <span class="op">=</span> <span class="ident">TreeInserter</span>::<span class="ident">default</span>();
     <span class="kw">let</span> <span class="ident">block_store</span> <span class="op">=</span> <span class="ident">inserter</span>.<span class="ident">block_store</span>();
     <span class="kw">let</span> <span class="ident">genesis</span> <span class="op">=</span> <span class="ident">block_store</span>.<span class="ident">root</span>();
@@ -301,7 +279,7 @@
     (<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">genesis_block</span>, <span class="ident">a1</span>, <span class="ident">a2</span>, <span class="ident">a3</span>, <span class="ident">b1</span>, <span class="ident">b2</span>, <span class="ident">c1</span>], <span class="ident">block_store</span>)
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_chain</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_chain</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">inserter</span> <span class="op">=</span> <span class="ident">TreeInserter</span>::<span class="ident">default</span>();
     <span class="kw">let</span> <span class="ident">block_store</span> <span class="op">=</span> <span class="ident">inserter</span>.<span class="ident">block_store</span>();
     <span class="kw">let</span> <span class="ident">genesis</span> <span class="op">=</span> <span class="ident">block_store</span>.<span class="ident">root</span>();
@@ -315,7 +293,7 @@
     <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">genesis</span>, <span class="ident">a1</span>, <span class="ident">a2</span>, <span class="ident">a3</span>, <span class="ident">a4</span>, <span class="ident">a5</span>, <span class="ident">a6</span>, <span class="ident">a7</span>]
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_empty_tree</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_empty_tree</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&gt;</span> {
     <span class="kw">let</span> (<span class="ident">initial_data</span>, <span class="ident">storage</span>) <span class="op">=</span> <span class="ident">EmptyStorage</span>::<span class="ident">start_for_testing</span>();
     <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">BlockStore</span>::<span class="ident">new</span>(
         <span class="ident">storage</span>,
@@ -327,8 +305,7 @@
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TreeInserter</span> {
     <span class="ident">signer</span>: <span class="ident">ValidatorSigner</span>,
-    <span class="ident">payload_val</span>: <span class="ident">usize</span>,
-    <span class="ident">block_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">block_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">TreeInserter</span> {
@@ -340,18 +317,13 @@
         <span class="kw">let</span> <span class="ident">block_store</span> <span class="op">=</span> <span class="ident">build_empty_tree</span>();
         <span class="self">Self</span> {
             <span class="ident">signer</span>,
-            <span class="ident">payload_val</span>: <span class="number">0</span>,
             <span class="ident">block_store</span>,
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_with_store</span>(
-        <span class="ident">signer</span>: <span class="ident">ValidatorSigner</span>,
-        <span class="ident">block_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_with_store</span>(<span class="ident">signer</span>: <span class="ident">ValidatorSigner</span>, <span class="ident">block_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">signer</span>,
-            <span class="ident">payload_val</span>: <span class="number">0</span>,
             <span class="ident">block_store</span>,
         }
     }
@@ -360,7 +332,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">signer</span>
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">block_store</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">block_store</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">BlockStore</span><span class="op">&gt;</span> {
         <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">block_store</span>)
     }
 
@@ -369,10 +341,10 @@
     <span class="doccomment">/// `insert_block_with_qc`.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_block</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">parent</span>: <span class="kw-2">&amp;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span>,
+        <span class="ident">parent</span>: <span class="kw-2">&amp;</span><span class="ident">ExecutedBlock</span>,
         <span class="ident">round</span>: <span class="ident">Round</span>,
         <span class="ident">committed_block</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">BlockInfo</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span> {
         <span class="comment">// Node must carry a QC to its parent</span>
         <span class="kw">let</span> <span class="ident">parent_qc</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">create_qc_for_block</span>(<span class="ident">parent</span>, <span class="ident">committed_block</span>);
         <span class="self">self</span>.<span class="ident">insert_block_with_qc</span>(<span class="ident">parent_qc</span>, <span class="ident">parent</span>, <span class="ident">round</span>)
@@ -381,23 +353,22 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_block_with_qc</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">parent_qc</span>: <span class="ident">QuorumCert</span>,
-        <span class="ident">parent</span>: <span class="kw-2">&amp;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span>,
+        <span class="ident">parent</span>: <span class="kw-2">&amp;</span><span class="ident">ExecutedBlock</span>,
         <span class="ident">round</span>: <span class="ident">Round</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">payload_val</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">block_store</span>
             .<span class="ident">insert_block_with_qc</span>(<span class="self">self</span>.<span class="ident">create_block_with_qc</span>(
                 <span class="ident">parent_qc</span>,
                 <span class="ident">parent</span>.<span class="ident">timestamp_usecs</span>() <span class="op">+</span> <span class="number">1</span>,
                 <span class="ident">round</span>,
-                <span class="macro">vec</span><span class="macro">!</span>[<span class="self">self</span>.<span class="ident">payload_val</span>],
+                <span class="macro">vec</span><span class="macro">!</span>[],
             ))
             .<span class="ident">unwrap</span>()
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_qc_for_block</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span>,
+        <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">ExecutedBlock</span>,
         <span class="ident">committed_block</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">BlockInfo</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">QuorumCert</span> {
         <span class="ident">gen_test_certificate</span>(
@@ -408,11 +379,7 @@
         )
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_qc_for_block</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span>,
-        <span class="ident">committed_block</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">BlockInfo</span><span class="op">&gt;</span>,
-    ) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_qc_for_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">ExecutedBlock</span>, <span class="ident">committed_block</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">BlockInfo</span><span class="op">&gt;</span>) {
         <span class="self">self</span>.<span class="ident">block_store</span>
             .<span class="ident">insert_single_quorum_cert</span>(<span class="self">self</span>.<span class="ident">create_qc_for_block</span>(<span class="ident">block</span>, <span class="ident">committed_block</span>))
             .<span class="ident">unwrap</span>()
@@ -423,23 +390,22 @@
         <span class="ident">parent_qc</span>: <span class="ident">QuorumCert</span>,
         <span class="ident">timestamp_usecs</span>: <span class="ident">u64</span>,
         <span class="ident">round</span>: <span class="ident">Round</span>,
-        <span class="ident">payload</span>: <span class="ident">TestPayload</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span> {
+        <span class="ident">payload</span>: <span class="ident">Payload</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Block</span> {
         <span class="ident">Block</span>::<span class="ident">new_proposal</span>(<span class="ident">payload</span>, <span class="ident">round</span>, <span class="ident">timestamp_usecs</span>, <span class="ident">parent_qc</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">signer</span>)
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_reconfiguration_block</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">parent</span>: <span class="kw-2">&amp;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span>,
+        <span class="ident">parent</span>: <span class="kw-2">&amp;</span><span class="ident">ExecutedBlock</span>,
         <span class="ident">round</span>: <span class="ident">Round</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">TestPayload</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">payload_val</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">block_store</span>
             .<span class="ident">insert_reconfiguration_block</span>(<span class="self">self</span>.<span class="ident">create_block_with_qc</span>(
                 <span class="self">self</span>.<span class="ident">create_qc_for_block</span>(<span class="ident">parent</span>, <span class="prelude-val">None</span>),
                 <span class="ident">parent</span>.<span class="ident">timestamp_usecs</span>() <span class="op">+</span> <span class="number">1</span>,
                 <span class="ident">round</span>,
-                <span class="macro">vec</span><span class="macro">!</span>[<span class="self">self</span>.<span class="ident">payload_val</span>],
+                <span class="macro">vec</span><span class="macro">!</span>[],
             ))
             .<span class="ident">unwrap</span>()
     }

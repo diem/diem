@@ -383,17 +383,6 @@
 <span id="383">383</span>
 <span id="384">384</span>
 <span id="385">385</span>
-<span id="386">386</span>
-<span id="387">387</span>
-<span id="388">388</span>
-<span id="389">389</span>
-<span id="390">390</span>
-<span id="391">391</span>
-<span id="392">392</span>
-<span id="393">393</span>
-<span id="394">394</span>
-<span id="395">395</span>
-<span id="396">396</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -406,31 +395,29 @@
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">HashValue</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">mirai_annotations</span>::{<span class="ident">checked_verify_eq</span>, <span class="ident">precondition</span>};
-<span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Serialize</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::{<span class="ident">vec_deque</span>::<span class="ident">VecDeque</span>, <span class="ident">HashMap</span>, <span class="ident">HashSet</span>},
-    <span class="ident">fmt</span>::<span class="ident">Debug</span>,
     <span class="ident">sync</span>::<span class="ident">Arc</span>,
 };
 
 <span class="doccomment">/// This structure is a wrapper of [`ExecutedBlock`](crate::consensus_types::block::ExecutedBlock)</span>
 <span class="doccomment">/// that adds `children` field to know the parent-child relationship between blocks.</span>
-<span class="kw">struct</span> <span class="ident">LinkableBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">struct</span> <span class="ident">LinkableBlock</span> {
     <span class="doccomment">/// Executed block that has raw block data and execution output.</span>
-    <span class="ident">executed_block</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">executed_block</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The set of children for cascading pruning. Note: a block may have multiple children.</span>
     <span class="ident">children</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">LinkableBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">block</span>: <span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+<span class="kw">impl</span> <span class="ident">LinkableBlock</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">block</span>: <span class="ident">ExecutedBlock</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">executed_block</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">block</span>),
             <span class="ident">children</span>: <span class="ident">HashSet</span>::<span class="ident">new</span>(),
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">executed_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">executed_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">executed_block</span>
     }
 
@@ -447,10 +434,7 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">LinkableBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">Serialize</span> <span class="op">+</span> <span class="ident">Default</span> <span class="op">+</span> <span class="ident">PartialEq</span>,
-{
+<span class="kw">impl</span> <span class="ident">LinkableBlock</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
         <span class="self">self</span>.<span class="ident">executed_block</span>().<span class="ident">id</span>()
     }
@@ -459,9 +443,9 @@
 <span class="doccomment">/// This structure maintains a consistent block tree of parent and children links. Blocks contain</span>
 <span class="doccomment">/// parent links and are immutable.  For all parent links, a child link exists. This structure</span>
 <span class="doccomment">/// should only be used internally in BlockStore.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BlockTree</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BlockTree</span> {
     <span class="doccomment">/// All the blocks known to this replica (with parent links)</span>
-    <span class="ident">id_to_block</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">HashValue</span>, <span class="ident">LinkableBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">id_to_block</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">HashValue</span>, <span class="ident">LinkableBlock</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Root of the tree.</span>
     <span class="ident">root_id</span>: <span class="ident">HashValue</span>,
     <span class="doccomment">/// A certified block id with highest round</span>
@@ -481,12 +465,9 @@
     <span class="ident">max_pruned_blocks_in_mem</span>: <span class="ident">usize</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">BlockTree</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">Serialize</span> <span class="op">+</span> <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">PartialEq</span>,
-{
+<span class="kw">impl</span> <span class="ident">BlockTree</span> {
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">root</span>: <span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+        <span class="ident">root</span>: <span class="ident">ExecutedBlock</span>,
         <span class="ident">root_quorum_cert</span>: <span class="ident">QuorumCert</span>,
         <span class="ident">root_ledger_info</span>: <span class="ident">QuorumCert</span>,
         <span class="ident">max_pruned_blocks_in_mem</span>: <span class="ident">usize</span>,
@@ -526,17 +507,17 @@
     }
 
     <span class="comment">// This method will only be used in this module.</span>
-    <span class="kw">fn</span> <span class="ident">get_linkable_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_id</span>: <span class="kw-2">&amp;</span><span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">LinkableBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">get_linkable_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_id</span>: <span class="kw-2">&amp;</span><span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">LinkableBlock</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">id_to_block</span>.<span class="ident">get</span>(<span class="ident">block_id</span>)
     }
 
     <span class="comment">// This method will only be used in this module.</span>
-    <span class="kw">fn</span> <span class="ident">get_linkable_block_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block_id</span>: <span class="kw-2">&amp;</span><span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">LinkableBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">get_linkable_block_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block_id</span>: <span class="kw-2">&amp;</span><span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">LinkableBlock</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">id_to_block</span>.<span class="ident">get_mut</span>(<span class="ident">block_id</span>)
     }
 
     <span class="comment">// This method will only be used in this module.</span>
-    <span class="kw">fn</span> <span class="ident">linkable_root</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">LinkableBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">linkable_root</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">LinkableBlock</span> {
         <span class="self">self</span>.<span class="ident">get_linkable_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">root_id</span>)
             .<span class="ident">expect</span>(<span class="string">&quot;Root must exist&quot;</span>)
     }
@@ -551,16 +532,16 @@
         <span class="self">self</span>.<span class="ident">id_to_block</span>.<span class="ident">contains_key</span>(<span class="ident">block_id</span>)
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">get_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_id</span>: <span class="kw-2">&amp;</span><span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">get_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_id</span>: <span class="kw-2">&amp;</span><span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">get_linkable_block</span>(<span class="ident">block_id</span>)
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">lb</span><span class="op">|</span> <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="ident">lb</span>.<span class="ident">executed_block</span>()))
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">root</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">root</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">get_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">root_id</span>).<span class="ident">expect</span>(<span class="string">&quot;Root must exist&quot;</span>)
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">highest_certified_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">highest_certified_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">get_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">highest_certified_block_id</span>)
             .<span class="ident">expect</span>(<span class="string">&quot;Highest cerfified block must exist&quot;</span>)
     }
@@ -591,8 +572,8 @@
 
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">insert_block</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">block</span>: <span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="ident">block</span>: <span class="ident">ExecutedBlock</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">block_id</span> <span class="op">=</span> <span class="ident">block</span>.<span class="ident">id</span>();
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">existing_block</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_block</span>(<span class="kw-2">&amp;</span><span class="ident">block_id</span>) {
             <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Already had block {:?} for id {:?} when trying to add another block {:?} for the same id&quot;</span>,
@@ -725,7 +706,7 @@
     <span class="doccomment">/// a race, in which the root of the tree is propagated forward between retrieving the block</span>
     <span class="doccomment">/// and getting its path from root (e.g., at proposal generator). Hence, we don&#39;t want to panic</span>
     <span class="doccomment">/// and prefer to return None instead.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">path_from_root</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_id</span>: <span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">path_from_root</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_id</span>: <span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_block_id</span> <span class="op">=</span> <span class="ident">block_id</span>;
         <span class="kw">loop</span> {
@@ -759,10 +740,7 @@
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">BlockTree</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">Serialize</span> <span class="op">+</span> <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">PartialEq</span>,
-{
+<span class="kw">impl</span> <span class="ident">BlockTree</span> {
     <span class="doccomment">/// Returns the number of blocks in the tree</span>
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
         <span class="comment">// BFS over the tree to find the number of blocks in the tree.</span>

@@ -516,10 +516,6 @@
 <span id="516">516</span>
 <span id="517">517</span>
 <span id="518">518</span>
-<span id="519">519</span>
-<span id="520">520</span>
-<span id="521">521</span>
-<span id="522">522</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -544,7 +540,7 @@
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">bail</span>, <span class="ident">ensure</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">channel</span>::<span class="ident">libra_channel</span>;
 <span class="kw">use</span> <span class="ident">consensus_types</span>::{
-    <span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Payload</span>, <span class="ident">Round</span>},
+    <span class="ident">common</span>::{<span class="ident">Author</span>, <span class="ident">Round</span>},
     <span class="ident">epoch_retrieval</span>::<span class="ident">EpochRetrievalRequest</span>,
 };
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">select</span>, <span class="ident">StreamExt</span>};
@@ -569,19 +565,19 @@
 <span class="doccomment">/// RoundManager is used for normal event handling.</span>
 <span class="doccomment">/// We suppress clippy warning here because we expect most of the time we will have RoundManager</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">large_enum_variant</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">RoundProcessor</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="ident">Recovery</span>(<span class="ident">RecoveryManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>),
-    <span class="ident">Normal</span>(<span class="ident">RoundManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>),
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">RoundProcessor</span> {
+    <span class="ident">Recovery</span>(<span class="ident">RecoveryManager</span>),
+    <span class="ident">Normal</span>(<span class="ident">RoundManager</span>),
 }
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">large_enum_variant</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">LivenessStorageData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="ident">RecoveryData</span>(<span class="ident">RecoveryData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>),
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">LivenessStorageData</span> {
+    <span class="ident">RecoveryData</span>(<span class="ident">RecoveryData</span>),
     <span class="ident">LedgerRecoveryData</span>(<span class="ident">LedgerRecoveryData</span>),
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">LivenessStorageData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">expect_recovery_data</span>(<span class="self">self</span>, <span class="ident">msg</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RecoveryData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">LivenessStorageData</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">expect_recovery_data</span>(<span class="self">self</span>, <span class="ident">msg</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RecoveryData</span> {
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">LivenessStorageData</span>::<span class="ident">RecoveryData</span>(<span class="ident">data</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">data</span>,
             <span class="ident">LivenessStorageData</span>::<span class="ident">LedgerRecoveryData</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">msg</span>),
@@ -591,30 +587,30 @@
 
 <span class="comment">// Manager the components that shared across epoch and spawn per-epoch RoundManager with</span>
 <span class="comment">// epoch-specific input.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EpochManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EpochManager</span> {
     <span class="ident">author</span>: <span class="ident">Author</span>,
     <span class="ident">config</span>: <span class="ident">ConsensusConfig</span>,
     <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
-    <span class="ident">self_sender</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">network_sender</span>: <span class="ident">ConsensusNetworkSender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+    <span class="ident">self_sender</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">ConsensusMsg</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">network_sender</span>: <span class="ident">ConsensusNetworkSender</span>,
     <span class="ident">timeout_sender</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">Round</span><span class="op">&gt;</span>,
-    <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">safety_rules_manager</span>: <span class="ident">SafetyRulesManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">processor</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">RoundProcessor</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
+    <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&gt;</span>,
+    <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
+    <span class="ident">safety_rules_manager</span>: <span class="ident">SafetyRulesManager</span>,
+    <span class="ident">processor</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">RoundProcessor</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">EpochManager</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">EpochManager</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">node_config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">NodeConfig</span>,
         <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
-        <span class="ident">self_sender</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">network_sender</span>: <span class="ident">ConsensusNetworkSender</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+        <span class="ident">self_sender</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">ConsensusMsg</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">network_sender</span>: <span class="ident">ConsensusNetworkSender</span>,
         <span class="ident">timeout_sender</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">Round</span><span class="op">&gt;</span>,
-        <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
+        <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&gt;</span>,
+        <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">author</span> <span class="op">=</span> <span class="ident">config</span>::<span class="ident">peer_id</span>(<span class="ident">node_config</span>.<span class="ident">validator_network</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>());
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">node_config</span>.<span class="ident">consensus</span>.<span class="ident">clone</span>();
@@ -668,7 +664,7 @@
     <span class="kw">fn</span> <span class="ident">create_proposer_election</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">epoch_state</span>: <span class="kw-2">&amp;</span><span class="ident">EpochState</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ProposerElection</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ProposerElection</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">proposers</span> <span class="op">=</span> <span class="ident">epoch_state</span>
             .<span class="ident">verifier</span>
             .<span class="ident">get_ordered_account_addresses_iter</span>()
@@ -710,7 +706,7 @@
             .<span class="ident">libra_db</span>()
             .<span class="ident">get_epoch_change_ledger_infos</span>(<span class="ident">request</span>.<span class="ident">start_epoch</span>, <span class="ident">request</span>.<span class="ident">end_epoch</span>)
             .<span class="ident">context</span>(<span class="string">&quot;[EpochManager] Failed to get epoch proof&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">ConsensusMsg</span>::<span class="ident">EpochChangeProof</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">proof</span>));
+        <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">ConsensusMsg</span>::<span class="ident">EpochChangeProof</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">proof</span>));
         <span class="self">self</span>.<span class="ident">network_sender</span>.<span class="ident">send_to</span>(<span class="ident">peer_id</span>, <span class="ident">msg</span>).<span class="ident">context</span>(<span class="macro">format</span><span class="macro">!</span>(
             <span class="string">&quot;[EpochManager] Failed to send epoch proof to {}&quot;</span>,
             <span class="ident">peer_id</span>
@@ -740,7 +736,7 @@
                     <span class="ident">start_epoch</span>: <span class="self">self</span>.<span class="ident">epoch</span>(),
                     <span class="ident">end_epoch</span>: <span class="ident">different_epoch</span>,
                 };
-                <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">ConsensusMsg</span>::<span class="ident">EpochRetrievalRequest</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">request</span>));
+                <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">ConsensusMsg</span>::<span class="ident">EpochRetrievalRequest</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">request</span>));
                 <span class="self">self</span>.<span class="ident">network_sender</span>.<span class="ident">send_to</span>(<span class="ident">peer_id</span>, <span class="ident">msg</span>).<span class="ident">context</span>(<span class="macro">format</span><span class="macro">!</span>(
                     <span class="string">&quot;[EpochManager] Failed to send epoch retrieval to {}&quot;</span>,
                     <span class="ident">peer_id</span>
@@ -772,11 +768,7 @@
         <span class="comment">// state_computer notifies reconfiguration in another channel</span>
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start_round_manager</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">recovery_data</span>: <span class="ident">RecoveryData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-        <span class="ident">epoch_state</span>: <span class="ident">EpochState</span>,
-    ) {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start_round_manager</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">recovery_data</span>: <span class="ident">RecoveryData</span>, <span class="ident">epoch_state</span>: <span class="ident">EpochState</span>) {
         <span class="comment">// Release the previous RoundManager, especially the SafetyRule client</span>
         <span class="self">self</span>.<span class="ident">processor</span> <span class="op">=</span> <span class="prelude-val">None</span>;
         <span class="ident">counters</span>::<span class="ident">EPOCH</span>.<span class="ident">set</span>(<span class="ident">epoch_state</span>.<span class="ident">epoch</span> <span class="kw">as</span> <span class="ident">i64</span>);
@@ -902,7 +894,7 @@
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_message</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">peer_id</span>: <span class="ident">AccountAddress</span>,
-        <span class="ident">consensus_msg</span>: <span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+        <span class="ident">consensus_msg</span>: <span class="ident">ConsensusMsg</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">event</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">process_epoch</span>(<span class="ident">peer_id</span>, <span class="ident">consensus_msg</span>).<span class="kw">await</span><span class="question-mark">?</span> {
             <span class="kw">let</span> <span class="ident">verified_event</span> <span class="op">=</span> <span class="ident">event</span>
@@ -916,11 +908,11 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_epoch</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">peer_id</span>: <span class="ident">AccountAddress</span>,
-        <span class="ident">msg</span>: <span class="ident">ConsensusMsg</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">UnverifiedEvent</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="ident">msg</span>: <span class="ident">ConsensusMsg</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">UnverifiedEvent</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="ident">msg</span> {
             <span class="ident">ConsensusMsg</span>::<span class="ident">ProposalMsg</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">ConsensusMsg</span>::<span class="ident">SyncInfo</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">ConsensusMsg</span>::<span class="ident">VoteMsg</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">event</span>: <span class="ident">UnverifiedEvent</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">msg</span>.<span class="ident">into</span>();
+                <span class="kw">let</span> <span class="ident">event</span>: <span class="ident">UnverifiedEvent</span> <span class="op">=</span> <span class="ident">msg</span>.<span class="ident">into</span>();
                 <span class="kw">if</span> <span class="ident">event</span>.<span class="ident">epoch</span>() <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">epoch</span>() {
                     <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">event</span>));
                 } <span class="kw">else</span> {
@@ -952,7 +944,7 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_event</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">peer_id</span>: <span class="ident">AccountAddress</span>,
-        <span class="ident">event</span>: <span class="ident">VerifiedEvent</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+        <span class="ident">event</span>: <span class="ident">VerifiedEvent</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">processor_mut</span>() {
             <span class="ident">RoundProcessor</span>::<span class="ident">Recovery</span>(<span class="ident">p</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -976,7 +968,7 @@
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">processor_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">RoundProcessor</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">processor_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">RoundProcessor</span> {
         <span class="self">self</span>.<span class="ident">processor</span>
             .<span class="ident">as_mut</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;[EpochManager] not started yet&quot;</span>)
@@ -1002,7 +994,7 @@
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start</span>(
         <span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="kw-2">mut</span> <span class="ident">round_timeout_sender_rx</span>: <span class="ident">channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">Round</span><span class="op">&gt;</span>,
-        <span class="kw-2">mut</span> <span class="ident">network_receivers</span>: <span class="ident">NetworkReceivers</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+        <span class="kw-2">mut</span> <span class="ident">network_receivers</span>: <span class="ident">NetworkReceivers</span>,
         <span class="kw-2">mut</span> <span class="ident">reconfig_events</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>(), <span class="ident">OnChainConfigPayload</span><span class="op">&gt;</span>,
     ) {
         <span class="comment">// initial start of the processor</span>

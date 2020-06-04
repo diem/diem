@@ -223,16 +223,16 @@
     <span class="ident">Proof</span>::<span class="ident">new</span>(<span class="macro">vec</span><span class="macro">!</span>[], <span class="number">0</span>, <span class="macro">vec</span><span class="macro">!</span>[])
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_proposal_with_qc_and_proof</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">Payload</span><span class="op">&gt;</span>(
-    <span class="ident">payload</span>: <span class="ident">P</span>,
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_proposal_with_qc_and_proof</span>(
+    <span class="ident">payload</span>: <span class="ident">Payload</span>,
     <span class="ident">round</span>: <span class="ident">Round</span>,
     <span class="ident">proof</span>: <span class="ident">Proof</span>,
     <span class="ident">qc</span>: <span class="ident">QuorumCert</span>,
     <span class="ident">validator_signer</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorSigner</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VoteProposal</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span> {
-    <span class="ident">VoteProposal</span>::<span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span>::<span class="ident">new</span>(
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VoteProposal</span> {
+    <span class="ident">VoteProposal</span>::<span class="ident">new</span>(
         <span class="ident">proof</span>,
-        <span class="ident">Block</span>::<span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span>::<span class="ident">new_proposal</span>(
+        <span class="ident">Block</span>::<span class="ident">new_proposal</span>(
             <span class="ident">payload</span>,
             <span class="ident">round</span>,
             <span class="ident">SystemTime</span>::<span class="ident">now</span>()
@@ -246,22 +246,22 @@
     )
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_proposal_with_qc</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">Payload</span><span class="op">&gt;</span>(
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_proposal_with_qc</span>(
     <span class="ident">round</span>: <span class="ident">Round</span>,
     <span class="ident">qc</span>: <span class="ident">QuorumCert</span>,
     <span class="ident">validator_signer</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorSigner</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VoteProposal</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span> {
-    <span class="ident">make_proposal_with_qc_and_proof</span>(<span class="ident">P</span>::<span class="ident">default</span>(), <span class="ident">round</span>, <span class="ident">empty_proof</span>(), <span class="ident">qc</span>, <span class="ident">validator_signer</span>)
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VoteProposal</span> {
+    <span class="ident">make_proposal_with_qc_and_proof</span>(<span class="macro">vec</span><span class="macro">!</span>[], <span class="ident">round</span>, <span class="ident">empty_proof</span>(), <span class="ident">qc</span>, <span class="ident">validator_signer</span>)
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_proposal_with_parent_and_overrides</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">Payload</span><span class="op">&gt;</span>(
-    <span class="ident">payload</span>: <span class="ident">P</span>,
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_proposal_with_parent_and_overrides</span>(
+    <span class="ident">payload</span>: <span class="ident">Payload</span>,
     <span class="ident">round</span>: <span class="ident">Round</span>,
-    <span class="ident">parent</span>: <span class="kw-2">&amp;</span><span class="ident">VoteProposal</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span>,
-    <span class="ident">committed</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">VoteProposal</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">parent</span>: <span class="kw-2">&amp;</span><span class="ident">VoteProposal</span>,
+    <span class="ident">committed</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">VoteProposal</span><span class="op">&gt;</span>,
     <span class="ident">validator_signer</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorSigner</span>,
     <span class="ident">epoch</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VoteProposal</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VoteProposal</span> {
     <span class="kw">let</span> <span class="ident">block_epoch</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">epoch</span> {
         <span class="prelude-val">Some</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>,
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parent</span>.<span class="ident">block</span>().<span class="ident">epoch</span>(),
@@ -342,13 +342,13 @@
     <span class="ident">make_proposal_with_qc_and_proof</span>(<span class="ident">payload</span>, <span class="ident">round</span>, <span class="ident">proof</span>, <span class="ident">qc</span>, <span class="ident">validator_signer</span>)
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_proposal_with_parent</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">Payload</span><span class="op">&gt;</span>(
-    <span class="ident">payload</span>: <span class="ident">P</span>,
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_proposal_with_parent</span>(
+    <span class="ident">payload</span>: <span class="ident">Payload</span>,
     <span class="ident">round</span>: <span class="ident">Round</span>,
-    <span class="ident">parent</span>: <span class="kw-2">&amp;</span><span class="ident">VoteProposal</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span>,
-    <span class="ident">committed</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">VoteProposal</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">parent</span>: <span class="kw-2">&amp;</span><span class="ident">VoteProposal</span>,
+    <span class="ident">committed</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">VoteProposal</span><span class="op">&gt;</span>,
     <span class="ident">validator_signer</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorSigner</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VoteProposal</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VoteProposal</span> {
     <span class="ident">make_proposal_with_parent_and_overrides</span>(
         <span class="ident">payload</span>,
         <span class="ident">round</span>,

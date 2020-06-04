@@ -324,12 +324,6 @@
 <span id="324">324</span>
 <span id="325">325</span>
 <span id="326">326</span>
-<span id="327">327</span>
-<span id="328">328</span>
-<span id="329">329</span>
-<span id="330">330</span>
-<span id="331">331</span>
-<span id="332">332</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -342,8 +336,7 @@
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">consensus_types</span>::{
-    <span class="ident">block</span>::<span class="ident">Block</span>, <span class="ident">common</span>::<span class="ident">Payload</span>, <span class="ident">quorum_cert</span>::<span class="ident">QuorumCert</span>,
-    <span class="ident">timeout_certificate</span>::<span class="ident">TimeoutCertificate</span>, <span class="ident">vote</span>::<span class="ident">Vote</span>,
+    <span class="ident">block</span>::<span class="ident">Block</span>, <span class="ident">quorum_cert</span>::<span class="ident">QuorumCert</span>, <span class="ident">timeout_certificate</span>::<span class="ident">TimeoutCertificate</span>, <span class="ident">vote</span>::<span class="ident">Vote</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">HashValue</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
@@ -353,14 +346,13 @@
 };
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::{<span class="ident">BTreeMap</span>, <span class="ident">HashMap</span>},
-    <span class="ident">marker</span>::<span class="ident">PhantomData</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>},
 };
 <span class="kw">use</span> <span class="ident">storage_interface</span>::<span class="ident">DbReader</span>;
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MockSharedStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MockSharedStorage</span> {
     <span class="comment">// Safety state</span>
-    <span class="kw">pub</span> <span class="ident">block</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">HashValue</span>, <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">block</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">HashValue</span>, <span class="ident">Block</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">qc</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">HashValue</span>, <span class="ident">QuorumCert</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">lis</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">last_vote</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vote</span><span class="op">&gt;</span><span class="op">&gt;</span>,
@@ -370,7 +362,7 @@
     <span class="kw">pub</span> <span class="ident">validator_set</span>: <span class="ident">ValidatorSet</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">MockSharedStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">MockSharedStorage</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">validator_set</span>: <span class="ident">ValidatorSet</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">MockSharedStorage</span> {
             <span class="ident">block</span>: <span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">HashMap</span>::<span class="ident">new</span>()),
@@ -385,13 +377,13 @@
 
 <span class="doccomment">/// A storage that simulates the operations in-memory, used in the tests that cares about storage</span>
 <span class="doccomment">/// consistency.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MockStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="ident">shared_storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">MockSharedStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MockStorage</span> {
+    <span class="kw">pub</span> <span class="ident">shared_storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">MockSharedStorage</span><span class="op">&gt;</span>,
     <span class="ident">storage_ledger</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">LedgerInfo</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">MockStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">shared_storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">MockSharedStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+<span class="kw">impl</span> <span class="ident">MockStorage</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">shared_storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">MockSharedStorage</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">validator_set</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">shared_storage</span>.<span class="ident">validator_set</span>.<span class="ident">clone</span>());
         <span class="kw">let</span> <span class="ident">li</span> <span class="op">=</span> <span class="ident">LedgerInfo</span>::<span class="ident">mock_genesis</span>(<span class="ident">validator_set</span>);
         <span class="kw">let</span> <span class="ident">lis</span> <span class="op">=</span> <span class="ident">LedgerInfoWithSignatures</span>::<span class="ident">new</span>(<span class="ident">li</span>.<span class="ident">clone</span>(), <span class="ident">BTreeMap</span>::<span class="ident">new</span>());
@@ -407,7 +399,7 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_with_ledger_info</span>(
-        <span class="ident">shared_storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">MockSharedStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">shared_storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">MockSharedStorage</span><span class="op">&gt;</span>,
         <span class="ident">ledger_info</span>: <span class="ident">LedgerInfo</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">li</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">ledger_info</span>.<span class="ident">next_epoch_state</span>().<span class="ident">is_some</span>() {
@@ -448,7 +440,7 @@
         <span class="ident">LedgerRecoveryData</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">storage_ledger</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">clone</span>())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RecoveryData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RecoveryData</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">ledger_recovery_data</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_ledger_recovery_data</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">shared_storage</span>
@@ -487,7 +479,7 @@
         <span class="self">self</span>.<span class="ident">try_start</span>().<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_for_testing</span>(<span class="ident">validator_set</span>: <span class="ident">ValidatorSet</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">RecoveryData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_for_testing</span>(<span class="ident">validator_set</span>: <span class="ident">ValidatorSet</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">RecoveryData</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) {
         <span class="kw">let</span> <span class="ident">shared_storage</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">MockSharedStorage</span> {
             <span class="ident">block</span>: <span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">HashMap</span>::<span class="ident">new</span>()),
             <span class="ident">qc</span>: <span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">HashMap</span>::<span class="ident">new</span>()),
@@ -507,8 +499,8 @@
 }
 
 <span class="comment">// A impl that always start from genesis.</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MockStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">save_tree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">quorum_certs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">PersistentLivenessStorage</span> <span class="kw">for</span> <span class="ident">MockStorage</span> {
+    <span class="kw">fn</span> <span class="ident">save_tree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&gt;</span>, <span class="ident">quorum_certs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="comment">// When the shared storage is empty, we are expected to not able to construct an block tree</span>
         <span class="comment">// from it. During test we will intentionally clear shared_storage to simulate the situation</span>
         <span class="comment">// of restarting from an empty consensusDB</span>
@@ -560,7 +552,7 @@
         <span class="self">self</span>.<span class="ident">get_ledger_recovery_data</span>()
     }
 
-    <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">LivenessStorageData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">LivenessStorageData</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_start</span>() {
             <span class="prelude-val">Ok</span>(<span class="ident">recovery_data</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">LivenessStorageData</span>::<span class="ident">RecoveryData</span>(<span class="ident">recovery_data</span>),
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">LivenessStorageData</span>::<span class="ident">LedgerRecoveryData</span>(<span class="self">self</span>.<span class="ident">recover_from_ledger</span>()),
@@ -597,18 +589,14 @@
 }
 
 <span class="doccomment">/// A storage that ignores any requests, used in the tests that don&#39;t care about the storage.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EmptyStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="ident">_phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-}
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EmptyStorage</span>;
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">EmptyStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">EmptyStorage</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">_phantom</span>: <span class="ident">PhantomData</span>,
-        }
+        <span class="self">Self</span>
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_for_testing</span>() <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">RecoveryData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start_for_testing</span>() <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">RecoveryData</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) {
         <span class="kw">let</span> <span class="ident">storage</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">EmptyStorage</span>::<span class="ident">new</span>());
         <span class="kw">let</span> <span class="ident">recovery_data</span> <span class="op">=</span> <span class="ident">storage</span>
             .<span class="ident">start</span>()
@@ -617,8 +605,8 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EmptyStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">save_tree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="kw">_</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">PersistentLivenessStorage</span> <span class="kw">for</span> <span class="ident">EmptyStorage</span> {
+    <span class="kw">fn</span> <span class="ident">save_tree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&gt;</span>, <span class="kw">_</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -634,7 +622,7 @@
         <span class="ident">LedgerRecoveryData</span>::<span class="ident">new</span>(<span class="ident">LedgerInfo</span>::<span class="ident">mock_genesis</span>(<span class="prelude-val">None</span>))
     }
 
-    <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">LivenessStorageData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">LivenessStorageData</span> {
         <span class="kw">match</span> <span class="ident">RecoveryData</span>::<span class="ident">new</span>(
             <span class="prelude-val">None</span>,
             <span class="self">self</span>.<span class="ident">recover_from_ledger</span>(),

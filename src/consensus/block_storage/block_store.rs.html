@@ -480,14 +480,6 @@
 <span id="480">480</span>
 <span id="481">481</span>
 <span id="482">482</span>
-<span id="483">483</span>
-<span id="484">484</span>
-<span id="485">485</span>
-<span id="486">486</span>
-<span id="487">487</span>
-<span id="488">488</span>
-<span id="489">489</span>
-<span id="490">490</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -503,8 +495,8 @@
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">bail</span>, <span class="ident">ensure</span>, <span class="ident">format_err</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">consensus_types</span>::{
-    <span class="ident">block</span>::<span class="ident">Block</span>, <span class="ident">common</span>::<span class="ident">Payload</span>, <span class="ident">executed_block</span>::<span class="ident">ExecutedBlock</span>, <span class="ident">quorum_cert</span>::<span class="ident">QuorumCert</span>,
-    <span class="ident">sync_info</span>::<span class="ident">SyncInfo</span>, <span class="ident">timeout_certificate</span>::<span class="ident">TimeoutCertificate</span>,
+    <span class="ident">block</span>::<span class="ident">Block</span>, <span class="ident">executed_block</span>::<span class="ident">ExecutedBlock</span>, <span class="ident">quorum_cert</span>::<span class="ident">QuorumCert</span>, <span class="ident">sync_info</span>::<span class="ident">SyncInfo</span>,
+    <span class="ident">timeout_certificate</span>::<span class="ident">TimeoutCertificate</span>,
 };
 <span class="kw">use</span> <span class="ident">debug_interface</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">executor_types</span>::<span class="ident">StateComputeResult</span>;
@@ -527,7 +519,7 @@
 <span class="attribute">#[<span class="ident">path</span> <span class="op">=</span> <span class="string">&quot;sync_manager.rs&quot;</span>]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">sync_manager</span>;
 
-<span class="kw">fn</span> <span class="ident">update_counters_for_committed_blocks</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">blocks_to_commit</span>: <span class="kw-2">&amp;</span>[<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>]) {
+<span class="kw">fn</span> <span class="ident">update_counters_for_committed_blocks</span>(<span class="ident">blocks_to_commit</span>: <span class="kw-2">&amp;</span>[<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span>]) {
     <span class="kw">for</span> <span class="ident">block</span> <span class="kw">in</span> <span class="ident">blocks_to_commit</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">time_to_commit</span>) <span class="op">=</span>
             <span class="ident">duration_since_epoch</span>().<span class="ident">checked_sub</span>(<span class="ident">Duration</span>::<span class="ident">from_micros</span>(<span class="ident">block</span>.<span class="ident">timestamp_usecs</span>()))
@@ -574,19 +566,19 @@
 <span class="doccomment">///             ├--&gt; C1</span>
 <span class="doccomment">///             ├--------&gt; C2</span>
 <span class="doccomment">///             ╰--------------&gt; D3</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BlockStore</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="ident">inner</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">BlockTree</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BlockStore</span> {
+    <span class="ident">inner</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">BlockTree</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The persistent storage backing up the in-memory data structure, every write should go</span>
     <span class="doccomment">/// through this before in-memory tree.</span>
-    <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">BlockStore</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">BlockStore</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">initial_data</span>: <span class="ident">RecoveryData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-        <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
+        <span class="ident">initial_data</span>: <span class="ident">RecoveryData</span>,
+        <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&gt;</span>,
         <span class="ident">max_pruned_blocks_in_mem</span>: <span class="ident">usize</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">highest_tc</span> <span class="op">=</span> <span class="ident">initial_data</span>.<span class="ident">highest_timeout_certificate</span>();
@@ -604,13 +596,13 @@
     }
 
     <span class="kw">fn</span> <span class="ident">build</span>(
-        <span class="ident">root</span>: <span class="ident">RootInfo</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+        <span class="ident">root</span>: <span class="ident">RootInfo</span>,
         <span class="ident">root_metadata</span>: <span class="ident">RootMetadata</span>,
-        <span class="ident">blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&gt;</span>,
         <span class="ident">quorum_certs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>,
         <span class="ident">highest_timeout_cert</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TimeoutCertificate</span><span class="op">&gt;</span>,
-        <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&lt;</span><span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&gt;</span>,
+        <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
         <span class="ident">max_pruned_blocks_in_mem</span>: <span class="ident">usize</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">RootInfo</span>(<span class="ident">root_block</span>, <span class="ident">root_qc</span>, <span class="ident">root_li</span>) <span class="op">=</span> <span class="ident">root</span>;
@@ -711,9 +703,9 @@
 
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">rebuild</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">root</span>: <span class="ident">RootInfo</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+        <span class="ident">root</span>: <span class="ident">RootInfo</span>,
         <span class="ident">root_metadata</span>: <span class="ident">RootMetadata</span>,
-        <span class="ident">blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&gt;</span>,
         <span class="ident">quorum_certs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>,
     ) {
         <span class="kw">let</span> <span class="ident">max_pruned_blocks_in_mem</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>().<span class="ident">max_pruned_blocks_in_mem</span>();
@@ -760,10 +752,7 @@
     <span class="doccomment">/// Duplicate inserts will return the previously inserted block (</span>
     <span class="doccomment">/// note that it is considered a valid non-error case, for example, it can happen if a validator</span>
     <span class="doccomment">/// receives a certificate for a block that is currently being added).</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute_and_insert_block</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">block</span>: <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute_and_insert_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block</span>: <span class="ident">Block</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">existing_block</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_block</span>(<span class="ident">block</span>.<span class="ident">id</span>()) {
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">existing_block</span>);
         }
@@ -774,7 +763,7 @@
         <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>().<span class="ident">insert_block</span>(<span class="ident">executed_block</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">execute_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block</span>: <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">execute_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block</span>: <span class="ident">Block</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span> {
         <span class="macro">trace_code_block</span><span class="macro">!</span>(<span class="string">&quot;block_store::execute_block&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">block</span>.<span class="ident">id</span>()});
         <span class="macro">ensure</span><span class="macro">!</span>(
             <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>().<span class="ident">root</span>().<span class="ident">round</span>() <span class="op">&lt;</span> <span class="ident">block</span>.<span class="ident">round</span>(),
@@ -880,18 +869,16 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">BlockReader</span> <span class="kw">for</span> <span class="ident">BlockStore</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Payload</span> <span class="op">=</span> <span class="ident">T</span>;
-
+<span class="kw">impl</span> <span class="ident">BlockReader</span> <span class="kw">for</span> <span class="ident">BlockStore</span> {
     <span class="kw">fn</span> <span class="ident">block_exists</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_id</span>: <span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>().<span class="ident">block_exists</span>(<span class="kw-2">&amp;</span><span class="ident">block_id</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">get_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_id</span>: <span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">get_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_id</span>: <span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>().<span class="ident">get_block</span>(<span class="kw-2">&amp;</span><span class="ident">block_id</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">root</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">root</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>().<span class="ident">root</span>()
     }
 
@@ -902,11 +889,11 @@
             .<span class="ident">get_quorum_cert_for_block</span>(<span class="kw-2">&amp;</span><span class="ident">block_id</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">path_from_root</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_id</span>: <span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">path_from_root</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_id</span>: <span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>().<span class="ident">path_from_root</span>(<span class="ident">block_id</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">highest_certified_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Payload</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">highest_certified_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>().<span class="ident">highest_certified_block</span>()
     }
 
@@ -932,7 +919,7 @@
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Payload</span><span class="op">&gt;</span> <span class="ident">BlockStore</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">BlockStore</span> {
     <span class="doccomment">/// Returns the number of blocks in the tree</span>
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
         <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>().<span class="ident">len</span>()
@@ -949,16 +936,13 @@
     }
 
     <span class="doccomment">/// Helper function to insert the block with the qc together</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_block_with_qc</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block</span>: <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_block_with_qc</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block</span>: <span class="ident">Block</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">insert_single_quorum_cert</span>(<span class="ident">block</span>.<span class="ident">quorum_cert</span>().<span class="ident">clone</span>())<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">execute_and_insert_block</span>(<span class="ident">block</span>)<span class="question-mark">?</span>)
     }
 
     <span class="doccomment">/// Helper function to insert a reconfiguration block</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_reconfiguration_block</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">block</span>: <span class="ident">Block</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_reconfiguration_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block</span>: <span class="ident">Block</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ExecutedBlock</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">insert_single_quorum_cert</span>(<span class="ident">block</span>.<span class="ident">quorum_cert</span>().<span class="ident">clone</span>())<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">executed_block</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute_block</span>(<span class="ident">block</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">compute_result</span> <span class="op">=</span> <span class="ident">executed_block</span>.<span class="ident">compute_result</span>();
