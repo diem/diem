@@ -48,13 +48,11 @@ pub enum TableType {
     CONSTANT_POOL           = 0x6,
     IDENTIFIERS             = 0x7,
     ADDRESS_IDENTIFIERS     = 0x8,
-    MAIN                    = 0x9,
     STRUCT_DEFS             = 0xA,
     STRUCT_DEF_INST         = 0xB,
     FUNCTION_DEFS           = 0xC,
     FIELD_HANDLE            = 0xD,
     FIELD_INST              = 0xE,
-    MISC                    = 0xF,
 }
 
 /// Constants for signature blob values.
@@ -183,7 +181,7 @@ pub enum Opcodes {
 pub const BINARY_SIZE_LIMIT: usize = usize::max_value();
 
 /// A wrapper for the binary vector
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct BinaryData {
     _binary: Vec<u8>,
 }
@@ -251,6 +249,10 @@ impl From<Vec<u8>> for BinaryData {
     }
 }
 
+pub fn write_u8_as_uleb128(binary: &mut BinaryData, value: u8) -> Result<()> {
+    write_u32_as_uleb128(binary, u32::from(value))
+}
+
 /// Take a `Vec<u8>` and a value to write to that vector and applies LEB128 logic to
 /// compress the u16.
 pub fn write_u16_as_uleb128(binary: &mut BinaryData, value: u16) -> Result<()> {
@@ -292,6 +294,33 @@ pub fn write_u64(binary: &mut BinaryData, value: u64) -> Result<()> {
 /// Write a `u128` in Little Endian format.
 pub fn write_u128(binary: &mut BinaryData, value: u128) -> Result<()> {
     binary.extend(&value.to_le_bytes())
+}
+
+/// Reads a `u8` in ULEB128 format from a `binary`.
+///
+/// Takes a `&mut Cursor<&[u8]>` and returns a pair:
+///
+/// u16 - value read
+///
+/// Return an error on an invalid representation.
+pub fn read_uleb128_as_u8(cursor: &mut Cursor<&[u8]>) -> Result<u8> {
+    let mut value: u16 = 0;
+    let mut shift: u8 = 0;
+    while let Ok(byte) = cursor.read_u8() {
+        let val = byte & 0x7f;
+        value |= u16::from(val) << shift;
+        if val == byte {
+            if (shift > 0 && val == 0) || value > u16::from(std::u8::MAX) {
+                bail!("invalid ULEB128 representation for u8");
+            }
+            return Ok(value as u8);
+        }
+        shift += 7;
+        if shift > 7 {
+            break;
+        }
+    }
+    bail!("invalid ULEB128 representation for u8")
 }
 
 /// Reads a `u16` in ULEB128 format from a `binary`.

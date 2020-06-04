@@ -29,9 +29,23 @@ impl CompiledScriptMut {
         let mut binary_data = BinaryData::from(binary.clone());
         let mut ser = ScriptSerializer::new(1, 0);
         let mut temp = BinaryData::new();
-        ser.serialize(&mut temp, self)?;
-        ser.serialize_header(&mut binary_data)?;
+
+        ser.common.serialize_common_tables(&mut temp, self)?;
+        if temp.len() > u32::max_value() as usize {
+            bail!(
+                "table content size ({}) cannot exceed ({})",
+                temp.len(),
+                u32::max_value()
+            );
+        }
+        ser.common.serialize_header(&mut binary_data)?;
+        ser.common.serialize_table_indices(&mut binary_data)?;
+
+        write_u32_as_uleb128(&mut binary_data, temp.len() as u32)?;
         binary_data.extend(temp.as_inner())?;
+
+        ser.serialize_main(&mut binary_data, self)?;
+
         *binary = binary_data.into_inner();
         Ok(())
     }
@@ -54,9 +68,22 @@ impl CompiledModuleMut {
         let mut binary_data = BinaryData::from(binary.clone());
         let mut ser = ModuleSerializer::new(1, 0);
         let mut temp = BinaryData::new();
-        ser.serialize(&mut temp, self)?;
-        ser.serialize_header(&mut binary_data)?;
+        ser.serialize_tables(&mut temp, self)?;
+        if temp.len() > u32::max_value() as usize {
+            bail!(
+                "table content size ({}) cannot exceed ({})",
+                temp.len(),
+                u32::max_value()
+            );
+        }
+        ser.common.serialize_header(&mut binary_data)?;
+        ser.serialize_table_indices(&mut binary_data)?;
+
+        write_u32_as_uleb128(&mut binary_data, temp.len() as u32)?;
         binary_data.extend(temp.as_inner())?;
+
+        write_u16_as_uleb128(&mut binary_data, self.self_module_handle_idx.0)?;
+
         *binary = binary_data.into_inner();
         Ok(())
     }
@@ -93,14 +120,12 @@ struct ModuleSerializer {
     function_defs: (u32, u32),
     field_handles: (u32, u32),
     field_instantiations: (u32, u32),
-    misc: (u32, u32),
 }
 
 /// Holds data to compute the header of a transaction script binary.
 #[derive(Debug)]
 struct ScriptSerializer {
     common: CommonSerializer,
-    main: (u32, u32),
 }
 
 //
@@ -117,7 +142,7 @@ fn check_index_in_binary(index: usize) -> Result<u32> {
     Ok(index as u32)
 }
 
-fn unchecked_serialize_table(
+fn serialize_table_index(
     binary: &mut BinaryData,
     kind: TableType,
     offset: u32,
@@ -125,27 +150,8 @@ fn unchecked_serialize_table(
 ) -> Result<()> {
     if count != 0 {
         binary.push(kind as u8)?;
-        write_u32(binary, offset)?;
-        write_u32(binary, count)?;
-    }
-    Ok(())
-}
-
-fn checked_serialize_table(
-    binary: &mut BinaryData,
-    kind: TableType,
-    start: u32,
-    offset: u32,
-    length: u32,
-) -> Result<()> {
-    if let Some(start_offset) = start.checked_add(offset) {
-        unchecked_serialize_table(binary, kind, start_offset, length)?;
-    } else {
-        bail!(
-            "binary size ({}) cannot exceed {}",
-            binary.len(),
-            usize::max_value(),
-        );
+        write_u32_as_uleb128(binary, offset)?;
+        write_u32_as_uleb128(binary, count)?;
     }
     Ok(())
 }
@@ -448,7 +454,7 @@ fn serialize_acquires(binary: &mut BinaryData, indices: &[StructDefinitionIndex]
             u8::max_value(),
         )
     }
-    binary.push(len as u8)?;
+    write_u8_as_uleb128(binary, len as u8)?;
     for def_idx in indices {
         write_u16_as_uleb128(binary, def_idx.0)?;
     }
@@ -472,7 +478,7 @@ fn serialize_signature_tokens(binary: &mut BinaryData, tokens: &[SignatureToken]
             u8::max_value(),
         )
     }
-    binary.push(len as u8)?;
+    write_u8_as_uleb128(binary, len as u8)?;
     for token in tokens {
         serialize_signature_token(binary, token)?;
     }
@@ -512,7 +518,7 @@ fn serialize_signature_token(binary: &mut BinaryData, token: &SignatureToken) ->
                         u8::max_value(),
                     )
                 }
-                binary.push(len as u8)?;
+                write_u8_as_uleb128(binary, len as u8)?;
             }
             SignatureToken::Reference(_) => {
                 binary.push(SerializedType::REFERENCE as u8)?;
@@ -579,15 +585,15 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
         Bytecode::Ret => binary.push(Opcodes::RET as u8),
         Bytecode::BrTrue(code_offset) => {
             binary.push(Opcodes::BR_TRUE as u8)?;
-            write_u16(binary, *code_offset)
+            write_u16_as_uleb128(binary, *code_offset)
         }
         Bytecode::BrFalse(code_offset) => {
             binary.push(Opcodes::BR_FALSE as u8)?;
-            write_u16(binary, *code_offset)
+            write_u16_as_uleb128(binary, *code_offset)
         }
         Bytecode::Branch(code_offset) => {
             binary.push(Opcodes::BRANCH as u8)?;
-            write_u16(binary, *code_offset)
+            write_u16_as_uleb128(binary, *code_offset)
         }
         Bytecode::LdU8(value) => {
             binary.push(Opcodes::LD_U8 as u8)?;
@@ -757,7 +763,7 @@ fn serialize_code(binary: &mut BinaryData, code: &[Bytecode]) -> Result<()> {
             u16::max_value(),
         )
     }
-    write_u16(binary, code_size as u16)?;
+    write_u16_as_uleb128(binary, code_size as u16)?;
     for opcode in code {
         serialize_instruction_inner(binary, opcode)?;
     }
@@ -788,97 +794,69 @@ impl CommonSerializer {
         }
     }
 
-    /// Common binary header serialization.
-    fn serialize_header(&mut self, binary: &mut BinaryData) -> Result<u32> {
+    fn serialize_header(&mut self, binary: &mut BinaryData) -> Result<()> {
         serialize_magic(binary)?;
         binary.push(self.major_version)?;
         binary.push(self.minor_version)?;
-        binary.push(self.table_count)?;
+        Ok(())
+    }
 
-        let start_offset;
-        if let Some(table_count_op) = self
-            .table_count
-            .checked_mul(BinaryConstants::TABLE_HEADER_SIZE)
-        {
-            if let Some(checked_start_offset) =
-                check_index_in_binary(binary.len())?.checked_add(u32::from(table_count_op))
-            {
-                start_offset = checked_start_offset;
-            } else {
-                bail!(
-                    "binary size ({}) cannot exceed {}",
-                    binary.len(),
-                    usize::max_value()
-                );
-            }
-        } else {
-            bail!(
-                "binary size ({}) cannot exceed {}",
-                binary.len(),
-                usize::max_value()
-            );
-        }
+    /// Common binary header serialization.
+    fn serialize_table_indices(&mut self, binary: &mut BinaryData) -> Result<()> {
+        write_u8_as_uleb128(binary, self.table_count)?;
 
-        checked_serialize_table(
+        serialize_table_index(
             binary,
             TableType::MODULE_HANDLES,
             self.module_handles.0,
-            start_offset,
             self.module_handles.1,
         )?;
-        checked_serialize_table(
+        serialize_table_index(
             binary,
             TableType::STRUCT_HANDLES,
             self.struct_handles.0,
-            start_offset,
             self.struct_handles.1,
         )?;
-        checked_serialize_table(
+        serialize_table_index(
             binary,
             TableType::FUNCTION_HANDLES,
             self.function_handles.0,
-            start_offset,
             self.function_handles.1,
         )?;
-        checked_serialize_table(
+        serialize_table_index(
             binary,
             TableType::FUNCTION_INST,
             self.function_instantiations.0,
-            start_offset,
             self.function_instantiations.1,
         )?;
-        checked_serialize_table(
+        serialize_table_index(
             binary,
             TableType::SIGNATURES,
             self.signatures.0,
-            start_offset,
             self.signatures.1,
         )?;
-        checked_serialize_table(
+        serialize_table_index(
             binary,
             TableType::IDENTIFIERS,
             self.identifiers.0,
-            start_offset,
             self.identifiers.1,
         )?;
-        checked_serialize_table(
+        serialize_table_index(
             binary,
             TableType::ADDRESS_IDENTIFIERS,
             self.address_identifiers.0,
-            start_offset,
             self.address_identifiers.1,
         )?;
-        checked_serialize_table(
+        serialize_table_index(
             binary,
             TableType::CONSTANT_POOL,
             self.constant_pool.0,
-            start_offset,
             self.constant_pool.1,
         )?;
-        Ok(start_offset)
+        Ok(())
     }
 
-    fn serialize_common<T: CommonTables>(
+    fn serialize_common_tables<T: CommonTables>(
         &mut self,
         binary: &mut BinaryData,
         tables: &T,
@@ -1046,13 +1024,15 @@ impl ModuleSerializer {
             function_defs: (0, 0),
             field_handles: (0, 0),
             field_instantiations: (0, 0),
-            misc: (0, 0),
         }
     }
 
-    fn serialize(&mut self, binary: &mut BinaryData, module: &CompiledModuleMut) -> Result<()> {
-        self.common.serialize_common(binary, module)?;
-        self.serialize_miscellaneous_items(binary, module)?;
+    fn serialize_tables(
+        &mut self,
+        binary: &mut BinaryData,
+        module: &CompiledModuleMut,
+    ) -> Result<()> {
+        self.common.serialize_common_tables(binary, module)?;
         self.serialize_struct_definitions(binary, &module.struct_defs)?;
         self.serialize_struct_def_instantiations(binary, &module.struct_def_instantiations)?;
         self.serialize_function_definitions(binary, &module.function_defs)?;
@@ -1060,63 +1040,38 @@ impl ModuleSerializer {
         self.serialize_field_instantiations(binary, &module.field_instantiations)
     }
 
-    fn serialize_header(&mut self, binary: &mut BinaryData) -> Result<()> {
-        let start_offset = self.common.serialize_header(binary)?;
-        checked_serialize_table(
-            binary,
-            TableType::MISC,
-            self.misc.0,
-            start_offset,
-            self.misc.1,
-        )?;
-        checked_serialize_table(
+    fn serialize_table_indices(&mut self, binary: &mut BinaryData) -> Result<()> {
+        self.common.serialize_table_indices(binary)?;
+        serialize_table_index(
             binary,
             TableType::STRUCT_DEFS,
             self.struct_defs.0,
-            start_offset,
             self.struct_defs.1,
         )?;
-        checked_serialize_table(
+        serialize_table_index(
             binary,
             TableType::STRUCT_DEF_INST,
             self.struct_def_instantiations.0,
-            start_offset,
             self.struct_def_instantiations.1,
         )?;
-        checked_serialize_table(
+        serialize_table_index(
             binary,
             TableType::FUNCTION_DEFS,
             self.function_defs.0,
-            start_offset,
             self.function_defs.1,
         )?;
-        checked_serialize_table(
+        serialize_table_index(
             binary,
             TableType::FIELD_HANDLE,
             self.field_handles.0,
-            start_offset,
             self.field_handles.1,
         )?;
-        checked_serialize_table(
+        serialize_table_index(
             binary,
             TableType::FIELD_INST,
             self.field_instantiations.0,
-            start_offset,
             self.field_instantiations.1,
         )?;
-        Ok(())
-    }
-
-    fn serialize_miscellaneous_items(
-        &mut self,
-        binary: &mut BinaryData,
-        module: &CompiledModuleMut,
-    ) -> Result<()> {
-        self.common.table_count = self.common.table_count.wrapping_add(1); // the count will bound to a small number
-        self.misc.0 = check_index_in_binary(binary.len())?;
-        // self module handle index
-        write_u16_as_uleb128(binary, module.self_module_handle_idx.0)?;
-        self.misc.1 = checked_calculate_table_size(binary, self.misc.0)?;
         Ok(())
     }
 
@@ -1210,25 +1165,7 @@ impl ScriptSerializer {
     fn new(major_version: u8, minor_version: u8) -> ScriptSerializer {
         ScriptSerializer {
             common: CommonSerializer::new(major_version, minor_version),
-            main: (0, 0),
         }
-    }
-
-    fn serialize(&mut self, binary: &mut BinaryData, script: &CompiledScriptMut) -> Result<()> {
-        self.common.serialize_common(binary, script)?;
-        self.serialize_main(binary, &script)
-    }
-
-    fn serialize_header(&mut self, binary: &mut BinaryData) -> Result<()> {
-        let start_offset = self.common.serialize_header(binary)?;
-        checked_serialize_table(
-            binary,
-            TableType::MAIN,
-            self.main.0,
-            start_offset,
-            self.main.1,
-        )?;
-        Ok(())
     }
 
     /// Serializes the main function.
@@ -1237,12 +1174,9 @@ impl ScriptSerializer {
         binary: &mut BinaryData,
         script: &CompiledScriptMut,
     ) -> Result<()> {
-        self.common.table_count += 1;
-        self.main.0 = check_index_in_binary(binary.len())?;
         serialize_kinds(binary, &script.type_parameters)?;
         write_u16_as_uleb128(binary, script.parameters.0)?;
         serialize_code_unit(binary, &script.code)?;
-        self.main.1 = checked_calculate_table_size(binary, self.main.0)?;
         Ok(())
     }
 }
