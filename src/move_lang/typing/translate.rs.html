@@ -1543,6 +1543,9 @@
 <span id="1543">1543</span>
 <span id="1544">1544</span>
 <span id="1545">1545</span>
+<span id="1546">1546</span>
+<span id="1547">1547</span>
+<span id="1548">1548</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2055,7 +2058,7 @@
     <span class="kw">use</span> <span class="ident">N</span>::<span class="ident">Exp_</span> <span class="kw">as</span> <span class="ident">NE</span>;
     <span class="kw">use</span> <span class="ident">T</span>::<span class="ident">UnannotatedExp_</span> <span class="kw">as</span> <span class="ident">TE</span>;
     <span class="kw">let</span> (<span class="ident">ty</span>, <span class="ident">e_</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">ne_</span> {
-        <span class="ident">NE</span>::<span class="ident">Unit</span> <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">Type_</span>::<span class="ident">Unit</span>), <span class="ident">TE</span>::<span class="ident">Unit</span>),
+        <span class="ident">NE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span> } <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">Type_</span>::<span class="ident">Unit</span>), <span class="ident">TE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span> }),
         <span class="ident">NE</span>::<span class="ident">Value</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="ident">vloc</span>, <span class="ident">v</span>)) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">v</span>.<span class="ident">type_</span>(<span class="ident">vloc</span>), <span class="ident">TE</span>::<span class="ident">Value</span>(<span class="ident">sp</span>(<span class="ident">vloc</span>, <span class="ident">v</span>))),
         <span class="ident">NE</span>::<span class="ident">InferredNum</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">core</span>::<span class="ident">make_num_tvar</span>(<span class="ident">context</span>, <span class="ident">eloc</span>), <span class="ident">TE</span>::<span class="ident">InferredNum</span>(<span class="ident">v</span>)),
 
@@ -3049,7 +3052,10 @@
     <span class="kw">let</span> <span class="ident">tys</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">ty</span>.<span class="ident">clone</span>()).<span class="ident">collect</span>();
     <span class="kw">let</span> <span class="ident">tys</span> <span class="op">=</span> <span class="ident">make_arg_types</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">arity</span>, <span class="ident">argloc</span>, <span class="ident">tys</span>);
     <span class="kw">let</span> <span class="ident">arg</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">args</span>.<span class="ident">len</span>() {
-        <span class="number">0</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">sp</span>(<span class="ident">argloc</span>, <span class="ident">Type_</span>::<span class="ident">Unit</span>), <span class="ident">sp</span>(<span class="ident">argloc</span>, <span class="ident">TE</span>::<span class="ident">Unit</span>)),
+        <span class="number">0</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">exp</span>(
+            <span class="ident">sp</span>(<span class="ident">argloc</span>, <span class="ident">Type_</span>::<span class="ident">Unit</span>),
+            <span class="ident">sp</span>(<span class="ident">argloc</span>, <span class="ident">TE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">false</span> }),
+        ),
         <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">args</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>(),
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">Type_</span>::<span class="ident">multiple</span>(<span class="ident">argloc</span>, <span class="ident">tys</span>.<span class="ident">clone</span>());

@@ -7473,7 +7473,7 @@
                 <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">new_node_id_with_type_loc</span>(<span class="kw-2">&amp;</span><span class="ident">ty</span>, <span class="kw-2">&amp;</span><span class="ident">loc</span>);
                 <span class="ident">Exp</span>::<span class="ident">Call</span>(<span class="ident">id</span>, <span class="ident">Operation</span>::<span class="ident">Tuple</span>, <span class="ident">exps</span>)
             }
-            <span class="ident">EA</span>::<span class="ident">Exp_</span>::<span class="ident">Unit</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">EA</span>::<span class="ident">Exp_</span>::<span class="ident">Unit</span> { .. } <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">check_type</span>(
                     <span class="kw-2">&amp;</span><span class="ident">loc</span>,
                     <span class="kw-2">&amp;</span><span class="ident">Type</span>::<span class="ident">Tuple</span>(<span class="macro">vec</span><span class="macro">!</span>[]),

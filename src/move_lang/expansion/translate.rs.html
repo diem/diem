@@ -2672,7 +2672,7 @@
                 <span class="prelude-val">Some</span>(<span class="ident">l</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">l</span>,
                 <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">loc</span>,
             };
-            <span class="ident">sp</span>(<span class="ident">last_semicolon_loc</span>, <span class="ident">E</span>::<span class="ident">Exp_</span>::<span class="ident">Unit</span>)
+            <span class="ident">sp</span>(<span class="ident">last_semicolon_loc</span>, <span class="ident">E</span>::<span class="ident">Exp_</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">true</span> })
         }
         <span class="prelude-val">Some</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>,
     };
@@ -2729,7 +2729,7 @@
     <span class="kw">use</span> <span class="ident">E</span>::<span class="ident">Exp_</span> <span class="kw">as</span> <span class="ident">EE</span>;
     <span class="kw">use</span> <span class="ident">P</span>::<span class="ident">Exp_</span> <span class="kw">as</span> <span class="ident">PE</span>;
     <span class="kw">let</span> <span class="ident">e_</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">pe_</span> {
-        <span class="ident">PE</span>::<span class="ident">Unit</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EE</span>::<span class="ident">Unit</span>,
+        <span class="ident">PE</span>::<span class="ident">Unit</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">false</span> },
         <span class="ident">PE</span>::<span class="ident">Value</span>(<span class="ident">pv</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">value</span>(<span class="ident">context</span>, <span class="ident">pv</span>) {
             <span class="prelude-val">Some</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EE</span>::<span class="ident">Value</span>(<span class="ident">v</span>),
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
@@ -2800,7 +2800,7 @@
             <span class="kw">let</span> <span class="ident">eb</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">pb</span>);
             <span class="kw">let</span> <span class="ident">et</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">pt</span>);
             <span class="kw">let</span> <span class="ident">ef</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">pf_opt</span> {
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">EE</span>::<span class="ident">Unit</span>)),
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">EE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">false</span> })),
                 <span class="prelude-val">Some</span>(<span class="ident">pf</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">pf</span>),
             };
             <span class="ident">EE</span>::<span class="ident">IfElse</span>(<span class="ident">eb</span>, <span class="ident">et</span>, <span class="ident">ef</span>)
@@ -2847,7 +2847,7 @@
         }
         <span class="ident">PE</span>::<span class="ident">Return</span>(<span class="ident">pe_opt</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">ev</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">pe_opt</span> {
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">EE</span>::<span class="ident">Unit</span>)),
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">EE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">false</span> })),
                 <span class="prelude-val">Some</span>(<span class="ident">pe</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">pe</span>),
             };
             <span class="ident">EE</span>::<span class="ident">Return</span>(<span class="ident">ev</span>)
@@ -3117,7 +3117,7 @@
         <span class="op">|</span> <span class="ident">EE</span>::<span class="ident">Continue</span>
         <span class="op">|</span> <span class="ident">EE</span>::<span class="ident">UnresolvedError</span>
         <span class="op">|</span> <span class="ident">EE</span>::<span class="ident">Name</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">E</span>::<span class="ident">ModuleAccess_</span>::<span class="ident">ModuleAccess</span>(..)), <span class="kw">_</span>)
-        <span class="op">|</span> <span class="ident">EE</span>::<span class="ident">Unit</span> <span class="op">=</span><span class="op">&gt;</span> (),
+        <span class="op">|</span> <span class="ident">EE</span>::<span class="ident">Unit</span> { .. } <span class="op">=</span><span class="op">&gt;</span> (),
         <span class="ident">EE</span>::<span class="ident">Copy</span>(<span class="ident">v</span>) <span class="op">|</span> <span class="ident">EE</span>::<span class="ident">Move</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">unbound</span>.<span class="ident">insert</span>(<span class="ident">v</span>.<span class="number">0</span>.<span class="ident">clone</span>());
         }

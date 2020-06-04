@@ -1014,6 +1014,11 @@
 <span id="1014">1014</span>
 <span id="1015">1015</span>
 <span id="1016">1016</span>
+<span id="1017">1017</span>
+<span id="1018">1018</span>
+<span id="1019">1019</span>
+<span id="1020">1020</span>
+<span id="1021">1021</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1242,7 +1247,7 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">UnannotatedExp_</span> {
-    <span class="ident">Unit</span>,
+    <span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="ident">bool</span> },
     <span class="ident">Value</span>(<span class="ident">Value</span>),
     <span class="ident">Move</span> { <span class="ident">from_user</span>: <span class="ident">bool</span>, <span class="ident">var</span>: <span class="ident">Var</span> },
     <span class="ident">Copy</span> { <span class="ident">from_user</span>: <span class="ident">bool</span>, <span class="ident">var</span>: <span class="ident">Var</span> },
@@ -1360,7 +1365,9 @@
 <span class="kw">impl</span> <span class="ident">UnannotatedExp_</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_unit</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">UnannotatedExp_</span>::<span class="ident">Unit</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
+            <span class="ident">UnannotatedExp_</span>::<span class="ident">Unit</span> {
+                <span class="ident">trailing</span>: <span class="ident">_trailing</span>,
+            } <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
         }
     }
@@ -1832,7 +1839,10 @@
     <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
         <span class="kw">use</span> <span class="ident">UnannotatedExp_</span> <span class="kw">as</span> <span class="ident">E</span>;
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">E</span>::<span class="ident">Unit</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;()&quot;</span>),
+            <span class="ident">E</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span> } <span class="kw">if</span> <span class="op">!</span><span class="ident">trailing</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;()&quot;</span>),
+            <span class="ident">E</span>::<span class="ident">Unit</span> {
+                <span class="ident">trailing</span>: <span class="ident">_trailing</span>,
+            } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;/*()*/&quot;</span>),
             <span class="ident">E</span>::<span class="ident">Value</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>),
             <span class="ident">E</span>::<span class="ident">Move</span> {
                 <span class="ident">from_user</span>: <span class="bool-val">false</span>,

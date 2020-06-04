@@ -1713,7 +1713,7 @@
     <span class="kw">match</span> <span class="ident">e_</span> {
         <span class="ident">E</span>::<span class="ident">Unreachable</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;ICE should not compile dead code&quot;</span>),
         <span class="ident">E</span>::<span class="ident">UnresolvedError</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;ICE should not have reached compilation if there are errors&quot;</span>),
-        <span class="ident">E</span>::<span class="ident">Unit</span> <span class="op">=</span><span class="op">&gt;</span> (),
+        <span class="ident">E</span>::<span class="ident">Unit</span> { .. } <span class="op">=</span><span class="op">&gt;</span> (),
         <span class="comment">// remember to switch to orig_name</span>
         <span class="ident">E</span>::<span class="ident">Spec</span>(<span class="ident">id</span>, <span class="ident">used_locals</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">code</span>.<span class="ident">push</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">B</span>::<span class="ident">Nop</span>(<span class="prelude-val">Some</span>(<span class="ident">context</span>.<span class="ident">spec</span>(<span class="ident">id</span>, <span class="ident">used_locals</span>))))),
         <span class="ident">E</span>::<span class="ident">Value</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> {

@@ -462,6 +462,13 @@
 <span id="462">462</span>
 <span id="463">463</span>
 <span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -598,7 +605,7 @@
     <span class="kw">fn</span> <span class="ident">exp</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">parent_e</span>: <span class="kw-2">&amp;</span><span class="ident">Exp</span>) {
         <span class="kw">use</span> <span class="ident">UnannotatedExp_</span> <span class="kw">as</span> <span class="ident">E</span>;
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">parent_e</span>.<span class="ident">exp</span>.<span class="ident">value</span> {
-            <span class="ident">E</span>::<span class="ident">Unit</span> <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Value</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">E</span>::<span class="ident">UnresolvedError</span> <span class="op">=</span><span class="op">&gt;</span> (),
+            <span class="ident">E</span>::<span class="ident">Unit</span> { .. } <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Value</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">E</span>::<span class="ident">UnresolvedError</span> <span class="op">=</span><span class="op">&gt;</span> (),
             <span class="ident">E</span>::<span class="ident">Spec</span>(<span class="kw">_</span>, <span class="ident">used_locals</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">used_locals</span>.<span class="ident">keys</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">var</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">used</span>(<span class="ident">var</span>, <span class="bool-val">false</span>));
             }
@@ -670,7 +677,7 @@
             <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Move</span> { .. }
             <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Borrow</span>(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
 
-            <span class="ident">E</span>::<span class="ident">Unit</span> <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Value</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
+            <span class="ident">E</span>::<span class="ident">Unit</span> { .. } <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Value</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
 
             <span class="ident">E</span>::<span class="ident">Cast</span>(<span class="ident">e</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">can_subst_exp_single</span>(<span class="ident">e</span>),
             <span class="ident">E</span>::<span class="ident">UnaryExp</span>(<span class="ident">op</span>, <span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">can_subst_exp_unary</span>(<span class="ident">op</span>) <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">can_subst_exp_single</span>(<span class="ident">e</span>),
@@ -835,7 +842,11 @@
                 }
             }
 
-            <span class="ident">E</span>::<span class="ident">Unit</span> <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Value</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Spec</span>(<span class="kw">_</span>, <span class="kw">_</span>) <span class="op">|</span> <span class="ident">E</span>::<span class="ident">UnresolvedError</span> <span class="op">|</span> <span class="ident">E</span>::<span class="ident">BorrowLocal</span>(<span class="kw">_</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
+            <span class="ident">E</span>::<span class="ident">Unit</span> { .. }
+            <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Value</span>(<span class="kw">_</span>)
+            <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Spec</span>(<span class="kw">_</span>, <span class="kw">_</span>)
+            <span class="op">|</span> <span class="ident">E</span>::<span class="ident">UnresolvedError</span>
+            <span class="op">|</span> <span class="ident">E</span>::<span class="ident">BorrowLocal</span>(<span class="kw">_</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
 
             <span class="ident">E</span>::<span class="ident">ModuleCall</span>(<span class="ident">mcall</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">mcall</span>.<span class="ident">arguments</span>),
             <span class="ident">E</span>::<span class="ident">Builtin</span>(<span class="kw">_</span>, <span class="ident">e</span>)
@@ -924,7 +935,10 @@
     }
 
     <span class="kw">fn</span> <span class="ident">unit</span>(<span class="ident">loc</span>: <span class="ident">Loc</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Exp</span> {
-        <span class="ident">H</span>::<span class="ident">exp</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">Type_</span>::<span class="ident">Unit</span>), <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">UnannotatedExp_</span>::<span class="ident">Unit</span>))
+        <span class="ident">H</span>::<span class="ident">exp</span>(
+            <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">Type_</span>::<span class="ident">Unit</span>),
+            <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">UnannotatedExp_</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">false</span> }),
+        )
     }
 }
 </pre></div>

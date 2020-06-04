@@ -908,6 +908,7 @@
 <span id="908">908</span>
 <span id="909">909</span>
 <span id="910">910</span>
+<span id="911">911</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1524,7 +1525,7 @@
     <span class="kw">use</span> <span class="ident">N</span>::<span class="ident">Exp_</span> <span class="kw">as</span> <span class="ident">NE</span>;
     <span class="kw">let</span> <span class="macro">sp</span><span class="macro">!</span>(<span class="ident">eloc</span>, <span class="ident">e_</span>) <span class="op">=</span> <span class="ident">e</span>;
     <span class="kw">let</span> <span class="ident">ne_</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">e_</span> {
-        <span class="ident">EE</span>::<span class="ident">Unit</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NE</span>::<span class="ident">Unit</span>,
+        <span class="ident">EE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span> },
         <span class="ident">EE</span>::<span class="ident">InferredNum</span>(<span class="ident">u</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NE</span>::<span class="ident">InferredNum</span>(<span class="ident">u</span>),
         <span class="ident">EE</span>::<span class="ident">Value</span>(<span class="ident">val</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NE</span>::<span class="ident">Value</span>(<span class="ident">val</span>),
         <span class="ident">EE</span>::<span class="ident">Move</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NE</span>::<span class="ident">Move</span>(<span class="ident">v</span>),
@@ -1633,14 +1634,15 @@
             <span class="kw">let</span> <span class="ident">ty_args</span> <span class="op">=</span> <span class="ident">tys_opt</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">tys</span><span class="op">|</span> <span class="ident">types</span>(<span class="ident">context</span>, <span class="ident">tys</span>));
             <span class="kw">let</span> <span class="ident">nes</span> <span class="op">=</span> <span class="ident">call_args</span>(<span class="ident">context</span>, <span class="ident">rhs</span>);
             <span class="kw">match</span> <span class="ident">ma_</span> {
-                <span class="ident">EA</span>::<span class="ident">Name</span>(<span class="ident">n</span>) <span class="kw">if</span> <span class="ident">N</span>::<span class="ident">BuiltinFunction_</span>::<span class="ident">all_names</span>().<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">n</span>.<span class="ident">value</span>.<span class="ident">as_str</span>()) <span class="op">=</span><span class="op">&gt;</span>
-                        <span class="kw">match</span> <span class="ident">resolve_builtin_function</span>(<span class="ident">context</span>, <span class="ident">eloc</span>, <span class="kw-2">&amp;</span><span class="ident">n</span>, <span class="ident">ty_args</span>) {
-                            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
-                                <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">context</span>.<span class="ident">has_errors</span>());
-                                <span class="ident">NE</span>::<span class="ident">UnresolvedError</span>
-                            }
-                            <span class="prelude-val">Some</span>(<span class="ident">f</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NE</span>::<span class="ident">Builtin</span>(<span class="ident">sp</span>(<span class="ident">mloc</span>, <span class="ident">f</span>), <span class="ident">nes</span>),
-                        },
+                <span class="ident">EA</span>::<span class="ident">Name</span>(<span class="ident">n</span>) <span class="kw">if</span> <span class="ident">N</span>::<span class="ident">BuiltinFunction_</span>::<span class="ident">all_names</span>().<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">n</span>.<span class="ident">value</span>.<span class="ident">as_str</span>()) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">match</span> <span class="ident">resolve_builtin_function</span>(<span class="ident">context</span>, <span class="ident">eloc</span>, <span class="kw-2">&amp;</span><span class="ident">n</span>, <span class="ident">ty_args</span>) {
+                        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">context</span>.<span class="ident">has_errors</span>());
+                            <span class="ident">NE</span>::<span class="ident">UnresolvedError</span>
+                        }
+                        <span class="prelude-val">Some</span>(<span class="ident">f</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NE</span>::<span class="ident">Builtin</span>(<span class="ident">sp</span>(<span class="ident">mloc</span>, <span class="ident">f</span>), <span class="ident">nes</span>),
+                    }
+                }
 
                 <span class="ident">EA</span>::<span class="ident">Name</span>(<span class="ident">n</span>) <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(

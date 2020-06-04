@@ -1516,6 +1516,128 @@
 <span id="1516">1516</span>
 <span id="1517">1517</span>
 <span id="1518">1518</span>
+<span id="1519">1519</span>
+<span id="1520">1520</span>
+<span id="1521">1521</span>
+<span id="1522">1522</span>
+<span id="1523">1523</span>
+<span id="1524">1524</span>
+<span id="1525">1525</span>
+<span id="1526">1526</span>
+<span id="1527">1527</span>
+<span id="1528">1528</span>
+<span id="1529">1529</span>
+<span id="1530">1530</span>
+<span id="1531">1531</span>
+<span id="1532">1532</span>
+<span id="1533">1533</span>
+<span id="1534">1534</span>
+<span id="1535">1535</span>
+<span id="1536">1536</span>
+<span id="1537">1537</span>
+<span id="1538">1538</span>
+<span id="1539">1539</span>
+<span id="1540">1540</span>
+<span id="1541">1541</span>
+<span id="1542">1542</span>
+<span id="1543">1543</span>
+<span id="1544">1544</span>
+<span id="1545">1545</span>
+<span id="1546">1546</span>
+<span id="1547">1547</span>
+<span id="1548">1548</span>
+<span id="1549">1549</span>
+<span id="1550">1550</span>
+<span id="1551">1551</span>
+<span id="1552">1552</span>
+<span id="1553">1553</span>
+<span id="1554">1554</span>
+<span id="1555">1555</span>
+<span id="1556">1556</span>
+<span id="1557">1557</span>
+<span id="1558">1558</span>
+<span id="1559">1559</span>
+<span id="1560">1560</span>
+<span id="1561">1561</span>
+<span id="1562">1562</span>
+<span id="1563">1563</span>
+<span id="1564">1564</span>
+<span id="1565">1565</span>
+<span id="1566">1566</span>
+<span id="1567">1567</span>
+<span id="1568">1568</span>
+<span id="1569">1569</span>
+<span id="1570">1570</span>
+<span id="1571">1571</span>
+<span id="1572">1572</span>
+<span id="1573">1573</span>
+<span id="1574">1574</span>
+<span id="1575">1575</span>
+<span id="1576">1576</span>
+<span id="1577">1577</span>
+<span id="1578">1578</span>
+<span id="1579">1579</span>
+<span id="1580">1580</span>
+<span id="1581">1581</span>
+<span id="1582">1582</span>
+<span id="1583">1583</span>
+<span id="1584">1584</span>
+<span id="1585">1585</span>
+<span id="1586">1586</span>
+<span id="1587">1587</span>
+<span id="1588">1588</span>
+<span id="1589">1589</span>
+<span id="1590">1590</span>
+<span id="1591">1591</span>
+<span id="1592">1592</span>
+<span id="1593">1593</span>
+<span id="1594">1594</span>
+<span id="1595">1595</span>
+<span id="1596">1596</span>
+<span id="1597">1597</span>
+<span id="1598">1598</span>
+<span id="1599">1599</span>
+<span id="1600">1600</span>
+<span id="1601">1601</span>
+<span id="1602">1602</span>
+<span id="1603">1603</span>
+<span id="1604">1604</span>
+<span id="1605">1605</span>
+<span id="1606">1606</span>
+<span id="1607">1607</span>
+<span id="1608">1608</span>
+<span id="1609">1609</span>
+<span id="1610">1610</span>
+<span id="1611">1611</span>
+<span id="1612">1612</span>
+<span id="1613">1613</span>
+<span id="1614">1614</span>
+<span id="1615">1615</span>
+<span id="1616">1616</span>
+<span id="1617">1617</span>
+<span id="1618">1618</span>
+<span id="1619">1619</span>
+<span id="1620">1620</span>
+<span id="1621">1621</span>
+<span id="1622">1622</span>
+<span id="1623">1623</span>
+<span id="1624">1624</span>
+<span id="1625">1625</span>
+<span id="1626">1626</span>
+<span id="1627">1627</span>
+<span id="1628">1628</span>
+<span id="1629">1629</span>
+<span id="1630">1630</span>
+<span id="1631">1631</span>
+<span id="1632">1632</span>
+<span id="1633">1633</span>
+<span id="1634">1634</span>
+<span id="1635">1635</span>
+<span id="1636">1636</span>
+<span id="1637">1637</span>
+<span id="1638">1638</span>
+<span id="1639">1639</span>
+<span id="1640">1640</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1802,6 +1924,7 @@
             }
             <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">locals</span>, <span class="ident">used</span>) <span class="op">=</span> <span class="ident">context</span>.<span class="ident">extract_function_locals</span>();
             <span class="kw">let</span> <span class="ident">unused</span> <span class="op">=</span> <span class="ident">check_unused_locals</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">locals</span>, <span class="ident">used</span>);
+            <span class="ident">check_trailing_unit</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">body</span>);
             <span class="ident">remove_unused_bindings</span>(<span class="kw-2">&amp;</span><span class="ident">unused</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">body</span>);
             <span class="ident">context</span>.<span class="ident">signature</span> <span class="op">=</span> <span class="prelude-val">None</span>;
             <span class="ident">context</span>.<span class="ident">has_return_abort</span> <span class="op">=</span> <span class="bool-val">false</span>;
@@ -1941,7 +2064,12 @@
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">H</span>::<span class="ident">Exp</span> {
     <span class="kw">use</span> <span class="ident">T</span>::<span class="ident">SequenceItem_</span> <span class="kw">as</span> <span class="ident">S</span>;
     <span class="kw">let</span> <span class="ident">last</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">seq</span>.<span class="ident">pop_back</span>() {
-        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="ident">H</span>::<span class="ident">exp</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">H</span>::<span class="ident">Type_</span>::<span class="ident">Unit</span>), <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">H</span>::<span class="ident">UnannotatedExp_</span>::<span class="ident">Unit</span>)),
+        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">return</span> <span class="ident">H</span>::<span class="ident">exp</span>(
+                <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">H</span>::<span class="ident">Type_</span>::<span class="ident">Unit</span>),
+                <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">H</span>::<span class="ident">UnannotatedExp_</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">false</span> }),
+            )
+        }
         <span class="prelude-val">Some</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">S</span>::<span class="ident">Seq</span>(<span class="ident">last</span>))) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">last</span>,
         <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;ICE last sequence item should be exp&quot;</span>),
     };
@@ -2264,7 +2392,7 @@
                 <span class="ident">block</span>: <span class="ident">loop_block</span>,
             };
             <span class="ident">result</span>.<span class="ident">push_back</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">s_</span>));
-            <span class="ident">HE</span>::<span class="ident">Unit</span>
+            <span class="ident">HE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">false</span> }
         }
         <span class="ident">TE</span>::<span class="ident">Loop</span> {
             <span class="ident">has_break</span>,
@@ -2281,7 +2409,7 @@
             <span class="kw">if</span> <span class="op">!</span><span class="ident">has_break</span> {
                 <span class="ident">HE</span>::<span class="ident">Unreachable</span>
             } <span class="kw">else</span> {
-                <span class="ident">HE</span>::<span class="ident">Unit</span>
+                <span class="ident">HE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">false</span> }
             }
         }
         <span class="ident">TE</span>::<span class="ident">Block</span>(<span class="ident">seq</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="ident">block</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">eloc</span>, <span class="prelude-val">None</span>, <span class="ident">seq</span>),
@@ -2316,17 +2444,17 @@
             <span class="kw">let</span> <span class="ident">expected_type</span> <span class="op">=</span> <span class="ident">expected_types</span>(<span class="ident">context</span>, <span class="ident">eloc</span>, <span class="ident">lvalue_ty</span>);
             <span class="kw">let</span> <span class="ident">e</span> <span class="op">=</span> <span class="ident">exp_</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">expected_type</span>), <span class="kw-2">*</span><span class="ident">te</span>);
             <span class="ident">assign_command</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">eloc</span>, <span class="ident">assigns</span>, <span class="ident">e</span>);
-            <span class="ident">HE</span>::<span class="ident">Unit</span>
+            <span class="ident">HE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">false</span> }
         }
         <span class="ident">TE</span>::<span class="ident">Mutate</span>(<span class="ident">tl</span>, <span class="ident">tr</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">er</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="prelude-val">None</span>, <span class="kw-2">*</span><span class="ident">tr</span>);
             <span class="kw">let</span> <span class="ident">el</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="prelude-val">None</span>, <span class="kw-2">*</span><span class="ident">tl</span>);
             <span class="kw">let</span> <span class="ident">c</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">C</span>::<span class="ident">Mutate</span>(<span class="ident">el</span>, <span class="ident">er</span>));
             <span class="ident">result</span>.<span class="ident">push_back</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">S</span>::<span class="ident">Command</span>(<span class="ident">c</span>)));
-            <span class="ident">HE</span>::<span class="ident">Unit</span>
+            <span class="ident">HE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">false</span> }
         }
         <span class="comment">// All other expressiosn</span>
-        <span class="ident">TE</span>::<span class="ident">Unit</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">HE</span>::<span class="ident">Unit</span>,
+        <span class="ident">TE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">HE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span> },
         <span class="ident">TE</span>::<span class="ident">Value</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">HE</span>::<span class="ident">Value</span>(<span class="ident">v</span>),
         <span class="ident">TE</span>::<span class="ident">InferredNum</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;ICE unexpanded inferred num&quot;</span>),
         <span class="ident">TE</span>::<span class="ident">Move</span> { <span class="ident">from_user</span>, <span class="ident">var</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">HE</span>::<span class="ident">Move</span> {
@@ -2384,7 +2512,7 @@
                 <span class="kw">let</span> <span class="ident">econd</span> <span class="op">=</span> <span class="ident">mvar</span>(<span class="ident">vcond</span>, <span class="ident">tu64</span>);
                 <span class="kw">let</span> <span class="ident">ecode</span> <span class="op">=</span> <span class="ident">mvar</span>(<span class="ident">vcode</span>, <span class="ident">tbool</span>);
                 <span class="kw">let</span> <span class="ident">eabort</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>.<span class="ident">clone</span>(), <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">TE</span>::<span class="ident">Abort</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">ecode</span>))));
-                <span class="kw">let</span> <span class="ident">eunit</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>.<span class="ident">clone</span>(), <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">TE</span>::<span class="ident">Unit</span>));
+                <span class="kw">let</span> <span class="ident">eunit</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>.<span class="ident">clone</span>(), <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">TE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">false</span> }));
                 <span class="kw">let</span> <span class="ident">inlined_</span> <span class="op">=</span> <span class="ident">TE</span>::<span class="ident">IfElse</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">econd</span>), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">eunit</span>), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">eabort</span>));
                 <span class="kw">let</span> <span class="ident">inlined</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>.<span class="ident">clone</span>(), <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">inlined_</span>));
                 <span class="ident">stmts</span>.<span class="ident">push_back</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">T</span>::<span class="ident">SequenceItem_</span>::<span class="ident">Seq</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">inlined</span>))));
@@ -2669,7 +2797,7 @@
     <span class="kw">if</span> <span class="ident">tmps</span>.<span class="ident">is_empty</span>() {
         <span class="kw">let</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">C</span>::<span class="ident">IgnoreAndPop</span> { <span class="ident">pop_num</span>: <span class="number">0</span>, <span class="ident">exp</span>: <span class="ident">e</span> });
         <span class="ident">result</span>.<span class="ident">push_back</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">S</span>::<span class="ident">Command</span>(<span class="ident">cmd</span>)));
-        <span class="kw">return</span> <span class="ident">E</span>::<span class="ident">Unit</span>;
+        <span class="kw">return</span> <span class="ident">E</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">false</span> };
     }
     <span class="kw">let</span> <span class="ident">lvalues</span> <span class="op">=</span> <span class="ident">tmps</span>
         .<span class="ident">iter</span>()
@@ -2912,7 +3040,7 @@
         <span class="op">|</span> <span class="ident">TE</span>::<span class="ident">TempBorrow</span>(<span class="kw">_</span>, <span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">TE</span>::<span class="ident">BinopExp</span>(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
 
-        <span class="ident">TE</span>::<span class="ident">Unit</span>
+        <span class="ident">TE</span>::<span class="ident">Unit</span> { .. }
         <span class="op">|</span> <span class="ident">TE</span>::<span class="ident">Spec</span>(<span class="kw">_</span>, <span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">TE</span>::<span class="ident">Assign</span>(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">TE</span>::<span class="ident">Mutate</span>(<span class="kw">_</span>, <span class="kw">_</span>)
@@ -2932,6 +3060,122 @@
                 <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;ICE unexpected item in short circuit check: {:?}&quot;</span>, <span class="ident">item</span>)
             }
         }
+}
+
+<span class="comment">//**************************************************************************************************</span>
+<span class="comment">// Trailing semicolon</span>
+<span class="comment">//**************************************************************************************************</span>
+
+<span class="kw">fn</span> <span class="ident">check_trailing_unit</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Block</span>) {
+    <span class="kw">use</span> <span class="ident">H</span>::{<span class="ident">Command_</span> <span class="kw">as</span> <span class="ident">C</span>, <span class="ident">Statement_</span> <span class="kw">as</span> <span class="ident">S</span>, <span class="ident">UnannotatedExp_</span> <span class="kw">as</span> <span class="ident">E</span>};
+    <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">hcmd</span> {
+        (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">loc</span>:<span class="ident">pat</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">cmd</span>:<span class="ident">pat</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">S</span>::<span class="ident">Command</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">loc</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">cmd</span>)))
+        };
+    }
+    <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">hignored</span> {
+        (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">loc</span>:<span class="ident">pat</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>:<span class="ident">pat</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="macro">hcmd</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">C</span>::<span class="ident">IgnoreAndPop</span> { <span class="ident">exp</span>: <span class="ident">H</span>::<span class="ident">Exp</span> { <span class="ident">exp</span>: <span class="macro">sp</span><span class="macro">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">loc</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>), .. }, .. })
+        };
+    }
+    <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">trailing</span> {
+        (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">uloc</span>: <span class="ident">pat</span>) <span class="op">=</span><span class="op">&gt;</span> {
+           <span class="macro">hcmd</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">C</span>::<span class="ident">IgnoreAndPop</span> { <span class="ident">exp</span>: <span class="ident">H</span>::<span class="ident">Exp</span> { <span class="ident">exp</span>: <span class="macro">sp</span><span class="macro">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">uloc</span>, <span class="ident">E</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">true</span> }), .. }, .. })
+        }
+    }
+    <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">trailing_returned</span> {
+        (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">uloc</span>: <span class="ident">pat</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="macro">hcmd</span><span class="macro">!</span>(
+                <span class="kw">_</span>,
+                <span class="ident">C</span>::<span class="ident">Return</span>(<span class="ident">H</span>::<span class="ident">Exp</span> {
+                    <span class="ident">exp</span>: <span class="macro">sp</span><span class="macro">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">uloc</span>, <span class="ident">E</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">true</span> }),
+                    ..
+                })
+            )
+        };
+    }
+    <span class="kw">fn</span> <span class="ident">divergent_block</span>(<span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Block</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+        <span class="macro">matches</span><span class="macro">!</span>(
+            <span class="ident">block</span>.<span class="ident">back</span>(),
+            <span class="prelude-val">Some</span>(<span class="macro">hcmd</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">C</span>::<span class="ident">Break</span>))
+                <span class="op">|</span> <span class="prelude-val">Some</span>(<span class="macro">hcmd</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">C</span>::<span class="ident">Continue</span>))
+                <span class="op">|</span> <span class="prelude-val">Some</span>(<span class="macro">hcmd</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">C</span>::<span class="ident">Abort</span>(<span class="kw">_</span>)))
+                <span class="op">|</span> <span class="prelude-val">Some</span>(<span class="macro">hcmd</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">C</span>::<span class="ident">Return</span>(<span class="kw">_</span>)))
+                <span class="op">|</span> <span class="prelude-val">Some</span>(<span class="macro">hignored</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">E</span>::<span class="ident">Unreachable</span>))
+        )
+    }
+    <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">invalid_trailing_unit</span> {
+        (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">context</span>:<span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">loc</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">uloc</span>:<span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {{
+            <span class="kw">let</span> <span class="ident">semi_msg</span> <span class="op">=</span> <span class="string">&quot;Invalid trailing &#39;;&#39;&quot;</span>;
+            <span class="kw">let</span> <span class="ident">unreachable_msg</span> <span class="op">=</span> <span class="string">&quot;Any code after this expression will not be reached&quot;</span>;
+            <span class="kw">let</span> <span class="ident">info_msg</span> <span class="op">=</span> <span class="string">&quot;A trailing &#39;;&#39; in an expression block implicitly adds a &#39;()&#39; value \
+            after the semicolon. That &#39;()&#39; value will not be reachable&quot;</span>;
+            <span class="macro-nonterminal">$</span><span class="macro-nonterminal">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[
+                (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">uloc</span>, <span class="ident">semi_msg</span>),
+                (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">loc</span>, <span class="ident">unreachable_msg</span>),
+                (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">uloc</span>, <span class="ident">info_msg</span>),
+            ]);
+            <span class="ident">block</span>.<span class="ident">pop_back</span>();
+        }};
+    }
+
+    <span class="ident">block</span>
+        .<span class="ident">iter_mut</span>()
+        .<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">check_trailing_unit_statement</span>(<span class="ident">context</span>, <span class="ident">s</span>));
+    <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">block</span>.<span class="ident">len</span>();
+    <span class="kw">if</span> <span class="ident">len</span> <span class="op">&lt;</span> <span class="number">2</span> {
+        <span class="kw">return</span>;
+    }
+    <span class="kw">match</span> (<span class="kw-2">&amp;</span><span class="ident">block</span>[<span class="ident">len</span> <span class="op">-</span> <span class="number">2</span>], <span class="kw-2">&amp;</span><span class="ident">block</span>[<span class="ident">len</span> <span class="op">-</span> <span class="number">1</span>]) {
+        (<span class="macro">sp</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">S</span>::<span class="ident">IfElse</span> { <span class="ident">if_block</span>, <span class="ident">else_block</span>, ..}), <span class="macro">trailing</span><span class="macro">!</span>(<span class="ident">uloc</span>))
+        <span class="op">|</span> (<span class="macro">sp</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">S</span>::<span class="ident">IfElse</span> { <span class="ident">if_block</span>, <span class="ident">else_block</span>, ..}), <span class="macro">trailing_returned</span><span class="macro">!</span>(<span class="ident">uloc</span>))
+            <span class="kw">if</span> <span class="ident">divergent_block</span>(<span class="ident">if_block</span>) <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">divergent_block</span>(<span class="ident">else_block</span>) <span class="op">=</span><span class="op">&gt;</span>
+        {
+            <span class="macro">invalid_trailing_unit</span><span class="macro">!</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">loc</span>, <span class="kw-2">*</span><span class="ident">uloc</span>)
+        }
+        (<span class="macro">sp</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">S</span>::<span class="ident">Loop</span> { <span class="ident">has_break</span>, ..}), <span class="macro">trailing</span><span class="macro">!</span>(<span class="ident">uloc</span>))
+        <span class="op">|</span> (<span class="macro">sp</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">S</span>::<span class="ident">Loop</span> { <span class="ident">has_break</span>, ..}), <span class="macro">trailing_returned</span><span class="macro">!</span>(<span class="ident">uloc</span>))
+            <span class="kw">if</span> <span class="op">!</span><span class="ident">has_break</span> <span class="op">=</span><span class="op">&gt;</span>
+        {
+            <span class="macro">invalid_trailing_unit</span><span class="macro">!</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">loc</span>, <span class="kw-2">*</span><span class="ident">uloc</span>)
+        }
+        (<span class="macro">hcmd</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">C</span>::<span class="ident">Break</span>), <span class="macro">trailing</span><span class="macro">!</span>(<span class="ident">uloc</span>))
+        <span class="op">|</span> (<span class="macro">hcmd</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">C</span>::<span class="ident">Break</span>), <span class="macro">trailing_returned</span><span class="macro">!</span>(<span class="ident">uloc</span>))
+        <span class="op">|</span> (<span class="macro">hcmd</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">C</span>::<span class="ident">Continue</span>), <span class="macro">trailing</span><span class="macro">!</span>(<span class="ident">uloc</span>))
+        <span class="op">|</span> (<span class="macro">hcmd</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">C</span>::<span class="ident">Continue</span>), <span class="macro">trailing_returned</span><span class="macro">!</span>(<span class="ident">uloc</span>))
+        <span class="op">|</span> (<span class="macro">hcmd</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">C</span>::<span class="ident">Abort</span>(<span class="kw">_</span>)), <span class="macro">trailing</span><span class="macro">!</span>(<span class="ident">uloc</span>))
+        <span class="op">|</span> (<span class="macro">hcmd</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">C</span>::<span class="ident">Abort</span>(<span class="kw">_</span>)), <span class="macro">trailing_returned</span><span class="macro">!</span>(<span class="ident">uloc</span>))
+        <span class="op">|</span> (<span class="macro">hcmd</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">C</span>::<span class="ident">Return</span>(<span class="kw">_</span>)), <span class="macro">trailing</span><span class="macro">!</span>(<span class="ident">uloc</span>))
+        <span class="op">|</span> (<span class="macro">hcmd</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">C</span>::<span class="ident">Return</span>(<span class="kw">_</span>)), <span class="macro">trailing_returned</span><span class="macro">!</span>(<span class="ident">uloc</span>))
+        <span class="op">|</span> (<span class="macro">hignored</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">E</span>::<span class="ident">Unreachable</span>), <span class="macro">trailing</span><span class="macro">!</span>(<span class="ident">uloc</span>))
+        <span class="op">|</span> (<span class="macro">hignored</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">E</span>::<span class="ident">Unreachable</span>), <span class="macro">trailing_returned</span><span class="macro">!</span>(<span class="ident">uloc</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="macro">invalid_trailing_unit</span><span class="macro">!</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">loc</span>, <span class="kw-2">*</span><span class="ident">uloc</span>)
+        }
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> (),
+    };
+}
+
+<span class="kw">fn</span> <span class="ident">check_trailing_unit_statement</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">s_</span>): <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">H</span>::<span class="ident">Statement</span>) {
+    <span class="kw">use</span> <span class="ident">H</span>::<span class="ident">Statement_</span> <span class="kw">as</span> <span class="ident">S</span>;
+    <span class="kw">match</span> <span class="ident">s_</span> {
+        <span class="ident">S</span>::<span class="ident">Command</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
+        <span class="ident">S</span>::<span class="ident">IfElse</span> {
+            <span class="ident">if_block</span>,
+            <span class="ident">else_block</span>,
+            ..
+        } <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">check_trailing_unit</span>(<span class="ident">context</span>, <span class="ident">if_block</span>);
+            <span class="ident">check_trailing_unit</span>(<span class="ident">context</span>, <span class="ident">else_block</span>)
+        }
+        <span class="ident">S</span>::<span class="ident">While</span> {
+            <span class="ident">cond</span>: (<span class="ident">cond_block</span>, <span class="kw">_</span>),
+            <span class="ident">block</span>,
+        } <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">check_trailing_unit</span>(<span class="ident">context</span>, <span class="ident">cond_block</span>);
+            <span class="ident">check_trailing_unit</span>(<span class="ident">context</span>, <span class="ident">block</span>)
+        }
+        <span class="ident">S</span>::<span class="ident">Loop</span> { <span class="ident">block</span>, .. } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">check_trailing_unit</span>(<span class="ident">context</span>, <span class="ident">block</span>),
+    }
 }
 
 <span class="comment">//**************************************************************************************************</span>

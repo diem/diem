@@ -529,7 +529,7 @@
 <span class="kw">fn</span> <span class="ident">exp</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">e_</span>): <span class="kw-2">&amp;</span><span class="ident">N</span>::<span class="ident">Exp</span>) {
     <span class="kw">use</span> <span class="ident">N</span>::<span class="ident">Exp_</span> <span class="kw">as</span> <span class="ident">E</span>;
     <span class="kw">match</span> <span class="ident">e_</span> {
-        <span class="ident">E</span>::<span class="ident">Unit</span>
+        <span class="ident">E</span>::<span class="ident">Unit</span> { .. }
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">UnresolvedError</span>
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Break</span>
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Continue</span>

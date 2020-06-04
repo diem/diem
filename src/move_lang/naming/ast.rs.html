@@ -959,6 +959,11 @@
 <span id="959">959</span>
 <span id="960">960</span>
 <span id="961">961</span>
+<span id="962">962</span>
+<span id="963">963</span>
+<span id="964">964</span>
+<span id="965">965</span>
+<span id="966">966</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1191,7 +1196,9 @@
 
     <span class="ident">Pack</span>(<span class="ident">ModuleIdent</span>, <span class="ident">StructName</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Fields</span><span class="op">&lt;</span><span class="ident">Exp</span><span class="op">&gt;</span>),
     <span class="ident">ExpList</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Exp</span><span class="op">&gt;</span>),
-    <span class="ident">Unit</span>,
+    <span class="ident">Unit</span> {
+        <span class="ident">trailing</span>: <span class="ident">bool</span>,
+    },
 
     <span class="ident">DerefBorrow</span>(<span class="ident">ExpDotted</span>),
     <span class="ident">Borrow</span>(<span class="ident">bool</span>, <span class="ident">ExpDotted</span>),
@@ -1706,7 +1713,10 @@
     <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
         <span class="kw">use</span> <span class="ident">Exp_</span> <span class="kw">as</span> <span class="ident">E</span>;
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">E</span>::<span class="ident">Unit</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;()&quot;</span>),
+            <span class="ident">E</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span> } <span class="kw">if</span> <span class="op">!</span><span class="ident">trailing</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;()&quot;</span>),
+            <span class="ident">E</span>::<span class="ident">Unit</span> {
+                <span class="ident">trailing</span>: <span class="ident">_trailing</span>,
+            } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;/*()*/&quot;</span>),
             <span class="ident">E</span>::<span class="ident">Value</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>),
             <span class="ident">E</span>::<span class="ident">InferredNum</span>(<span class="ident">u</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">u</span>)),
             <span class="ident">E</span>::<span class="ident">Move</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;move {}&quot;</span>, <span class="ident">v</span>)),
