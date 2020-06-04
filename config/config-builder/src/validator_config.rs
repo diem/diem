@@ -7,7 +7,7 @@ use executor::db_bootstrapper;
 use libra_config::{
     config::{
         NodeConfig, OnDiskStorageConfig, RemoteService, SafetyRulesService, SecureBackend, Token,
-        VaultConfig,
+        VaultConfig, WaypointConfig,
     },
     generator,
     network_id::NetworkId,
@@ -109,6 +109,7 @@ impl ValidatorConfig {
             configs[0]
                 .base
                 .waypoint
+                .waypoint_from_config()
                 .ok_or_else(|| format_err!("Waypoint not generated"))?,
         ))
     }
@@ -160,18 +161,17 @@ impl ValidatorConfig {
                 &path, false, /* readonly */
                 None,  /* pruner */
             )?);
-            Some(
-                db_bootstrapper::bootstrap_db_if_empty::<LibraVM>(&db_rw, &genesis)?
-                    .ok_or_else(|| format_err!("Failed to bootstrap empty DB."))?,
-            )
+            let waypoint = db_bootstrapper::bootstrap_db_if_empty::<LibraVM>(&db_rw, &genesis)?
+                .ok_or_else(|| format_err!("Failed to bootstrap empty DB."))?;
+            WaypointConfig::FromConfig { waypoint }
         } else {
-            None
+            WaypointConfig::None
         };
 
         let genesis = Some(genesis);
 
         for node in &mut nodes {
-            node.base.waypoint = waypoint;
+            node.base.waypoint = waypoint.clone();
             node.execution.genesis = genesis.clone();
         }
 

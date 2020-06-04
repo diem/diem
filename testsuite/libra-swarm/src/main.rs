@@ -87,7 +87,11 @@ fn main() {
 
     let faucet_key_file_path = &validator_swarm.config.faucet_key_path;
     let validator_config = NodeConfig::load(&validator_swarm.config.config_files[0]).unwrap();
-    let waypoint = validator_config.base.waypoint.unwrap();
+    let waypoint = validator_config
+        .base
+        .waypoint
+        .waypoint_from_config()
+        .unwrap();
 
     println!("To run the Libra CLI client in a separate process and connect to the validator nodes you just spawned, use this command:");
 

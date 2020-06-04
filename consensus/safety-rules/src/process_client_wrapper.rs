@@ -7,7 +7,7 @@ use consensus_types::{
     vote_proposal::VoteProposal,
 };
 use libra_config::{
-    config::{NodeConfig, RemoteService, SafetyRulesService, SecureBackend},
+    config::{NodeConfig, RemoteService, SafetyRulesService, SecureBackend, WaypointConfig},
     utils,
 };
 use libra_crypto::ed25519::Ed25519Signature;
@@ -46,7 +46,8 @@ impl ProcessClientWrapper {
             .take_private()
             .unwrap();
         let signer = ValidatorSigner::new(author, private_key);
-        config.base.waypoint = Some(test_utils::validator_signers_to_waypoints(&[&signer]));
+        let waypoint = test_utils::validator_signers_to_waypoints(&[&signer]);
+        config.base.waypoint = WaypointConfig::FromConfig { waypoint };
 
         config.consensus.safety_rules.backend = backend;
         config.consensus.safety_rules.service = SafetyRulesService::SpawnedProcess(remote_service);

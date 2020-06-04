@@ -253,12 +253,14 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         gen_consensus_reconfig_subscription();
     reconfig_subscriptions.push(consensus_reconfig_subscription);
 
+    let waypoint = config::waypoint(&node_config.base.waypoint);
+
     if let Some(network) = node_config.validator_network.as_mut() {
         let (runtime, mut network_builder) = setup_network(
             network,
             RoleType::Validator,
             Arc::clone(&db_rw.reader),
-            node_config.base.waypoint.expect("No waypoint in config"),
+            waypoint,
         );
         let peer_id = network_builder.peer_id();
 
@@ -291,7 +293,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             &mut full_node_network,
             RoleType::FullNode,
             Arc::clone(&db_rw.reader),
-            node_config.base.waypoint.expect("No waypoint in config"),
+            waypoint,
         );
         let peer_id = network_builder.peer_id();
 
@@ -322,6 +324,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         Arc::clone(&db_rw.reader),
         chunk_executor,
         &node_config,
+        waypoint,
         reconfig_subscriptions,
     );
     let (mp_client_sender, mp_client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
