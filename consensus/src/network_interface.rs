@@ -12,11 +12,8 @@ use consensus_types::{
     sync_info::SyncInfo,
     vote_msg::VoteMsg,
 };
-use futures::sink::SinkExt;
-use libra_types::{epoch_change::EpochChangeProof, validator_info::ValidatorInfo, PeerId};
+use libra_types::{epoch_change::EpochChangeProof, PeerId};
 use network::{
-    common::NetworkPublicKeys,
-    connectivity_manager::ConnectivityRequest,
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::{
@@ -70,7 +67,6 @@ pub type ConsensusNetworkEvents = NetworkEvents<ConsensusMsg>;
 #[derive(Clone)]
 pub struct ConsensusNetworkSender {
     network_sender: NetworkSender<ConsensusMsg>,
-    conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
 }
 
 /// Create a new Sender that only sends for the `CONSENSUS_DIRECT_SEND_PROTOCOL` and
@@ -88,13 +84,7 @@ pub fn add_to_network(
             Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
         );
     (
-        ConsensusNetworkSender::new(
-            network_sender,
-            connection_reqs_tx,
-            network
-                .conn_mgr_reqs_tx()
-                .expect("ConnecitivtyManager not enabled"),
-        ),
+        ConsensusNetworkSender::new(network_sender, connection_reqs_tx),
         ConsensusNetworkEvents::new(network_receiver, connection_notifs_rx),
     )
 }
@@ -105,11 +95,9 @@ impl ConsensusNetworkSender {
     pub fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         connection_reqs_tx: ConnectionRequestSender,
-        conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     ) -> Self {
         Self {
             network_sender: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
-            conn_mgr_reqs_tx,
         }
     }
 
@@ -147,29 +135,5 @@ impl ConsensusNetworkSender {
         self.network_sender
             .send_rpc(recipient, protocol, message, timeout)
             .await
-    }
-
-    /// Update set of nodes eligible to join the network. In the future, this should be handled by
-    /// the unified reconfiguration event.
-    pub async fn update_eligible_nodes(
-        &mut self,
-        validators: Vec<ValidatorInfo>,
-    ) -> Result<(), NetworkError> {
-        self.conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateEligibleNodes(
-                validators
-                    .into_iter()
-                    .map(|validator| {
-                        (
-                            *validator.account_address(),
-                            NetworkPublicKeys {
-                                identity_public_key: validator.network_identity_public_key(),
-                            },
-                        )
-                    })
-                    .collect(),
-            ))
-            .await?;
-        Ok(())
     }
 }
