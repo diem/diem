@@ -550,25 +550,16 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-
-    use crate::noise_wrapper::handshake::NoiseUpgrader;
+    use crate::noise_wrapper::{HandshakeAuthMode, NoiseUpgrader};
     use futures::{
         executor::block_on,
         future::join,
         io::{AsyncReadExt, AsyncWriteExt},
     };
-    use libra_config::config::NetworkPeerInfo;
-    use libra_crypto::{test_utils::TEST_SEED, x25519};
-    use libra_types::PeerId;
+    use libra_crypto::{test_utils::TEST_SEED, traits::Uniform as _, x25519};
     use memsocket::MemorySocket;
-    use std::{
-        collections::HashMap,
-        io,
-        sync::{Arc, RwLock},
-    };
-
-    use libra_crypto::traits::Uniform as _;
     use rand::SeedableRng as _;
+    use std::io;
 
     /// helper to setup two testing peers
     fn build_peers() -> (
@@ -583,8 +574,8 @@ mod test {
         let server_private = x25519::PrivateKey::generate(&mut rng);
         let server_public = server_private.public_key();
 
-        let client = NoiseUpgrader::new(client_private);
-        let server = NoiseUpgrader::new(server_private);
+        let client = NoiseUpgrader::new(client_private, HandshakeAuthMode::ServerOnly);
+        let server = NoiseUpgrader::new(server_private, HandshakeAuthMode::ServerOnly);
 
         ((client, client_public), (server, server_public))
     }
@@ -594,15 +585,14 @@ mod test {
         client: NoiseUpgrader,
         server_public_key: x25519::PublicKey,
         server: NoiseUpgrader,
-        trusted_peers: Option<&Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>>,
     ) -> io::Result<(NoiseStream<MemorySocket>, NoiseStream<MemorySocket>)> {
         // create an in-memory socket for testing
         let (dialer_socket, listener_socket) = MemorySocket::new_pair();
 
         // perform the handshake
         let (client_session, server_session) = block_on(join(
-            client.upgrade_outbound(dialer_socket, false, server_public_key),
-            server.upgrade_inbound(listener_socket, None, trusted_peers),
+            client.upgrade_outbound(dialer_socket, server_public_key),
+            server.upgrade_inbound(listener_socket),
         ));
 
         //
@@ -613,8 +603,7 @@ mod test {
     fn simple_test() -> io::Result<()> {
         // perform handshake with two testing peers
         let ((client, _client_public), (server, server_public)) = build_peers();
-        let (mut client, mut server) =
-            perform_handshake(client, server_public, server, None).unwrap();
+        let (mut client, mut server) = perform_handshake(client, server_public, server).unwrap();
 
         block_on(client.write_all(b"stormlight"))?;
         block_on(client.write_all(b" "))?;
@@ -634,8 +623,7 @@ mod test {
     fn interleaved_writes() -> io::Result<()> {
         // perform handshake with two testing peers
         let ((client, _client_public), (server, server_public)) = build_peers();
-        let (mut client, mut server) =
-            perform_handshake(client, server_public, server, None).unwrap();
+        let (mut client, mut server) = perform_handshake(client, server_public, server).unwrap();
 
         block_on(client.write_all(b"The Name of the Wind"))?;
         block_on(client.flush())?;
@@ -663,8 +651,7 @@ mod test {
     fn u16_max_writes() -> io::Result<()> {
         // perform handshake with two testing peers
         let ((client, _client_public), (server, server_public)) = build_peers();
-        let (mut client, mut server) =
-            perform_handshake(client, server_public, server, None).unwrap();
+        let (mut client, mut server) = perform_handshake(client, server_public, server).unwrap();
 
         let buf_send = [1; noise::MAX_SIZE_NOISE_MSG];
         block_on(client.write_all(&buf_send))?;

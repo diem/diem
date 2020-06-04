@@ -11,7 +11,10 @@
 //! Usage example:
 //!
 //! ```
-//! use network::{noise_wrapper::{NoiseUpgrader, AntiReplayTimestamps}, NetworkPublicKeys};
+//! use network::{
+//!     noise_wrapper::{HandshakeAuthMode, NoiseUpgrader},
+//!     NetworkPublicKeys,
+//! };
 //! use futures::{executor, future, io::{AsyncReadExt, AsyncWriteExt}};
 //! use memsocket::MemorySocket;
 //! use libra_crypto::{x25519, ed25519, Uniform, PrivateKey, test_utils::TEST_SEED};
@@ -25,11 +28,9 @@
 //! let mut rng = StdRng::from_seed(TEST_SEED);
 //! let client_private = x25519::PrivateKey::generate(&mut rng);
 //! let client_public = client_private.public_key();
-//! let client = NoiseUpgrader::new(client_private);
 //!
 //! let server_private = x25519::PrivateKey::generate(&mut rng);
 //! let server_public = server_private.public_key();
-//! let server = NoiseUpgrader::new(server_private);
 //!
 //! // create list of trusted peers
 //! let mut trusted_peers = Arc::new(RwLock::new(HashMap::new()));
@@ -39,21 +40,23 @@
 //!     });
 //! }
 //!
+//! let client_auth = HandshakeAuthMode::mutual(trusted_peers.clone());
+//! let client = NoiseUpgrader::new(client_private, client_auth);
+//!
+//! let server_auth = HandshakeAuthMode::mutual(trusted_peers);
+//! let server = NoiseUpgrader::new(server_private, server_auth);
+//!
 //! // use an in-memory socket as example
 //! let (dialer_socket, listener_socket) = MemorySocket::new_pair();
 //!
-//! // anti-replay timestamps
-//! let anti_replay_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::default()));
-//!
 //! // perform the handshake
 //! let (client_session, server_session) = executor::block_on(future::join(
-//!    client.upgrade_outbound(dialer_socket, true, server_public),
-//!    server.upgrade_inbound(listener_socket, Some(&anti_replay_timestamps), Some(&trusted_peers)),
+//!    client.upgrade_outbound(dialer_socket, server_public),
+//!    server.upgrade_inbound(listener_socket),
 //! ));
 //!
 //! let mut client_session = client_session?;
 //! let mut server_session = server_session?;
-//!
 //!
 //! // client -> server
 //! executor::block_on(client_session.write_all(b"client hello"))?;
@@ -74,7 +77,7 @@
 //! Ok(())
 //! }
 //!
-//!
+//! example().unwrap();
 //! ```
 //!
 //! [noise]: http://noiseprotocol.org/
@@ -87,4 +90,4 @@ pub mod stream;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod fuzzing;
 
-pub use handshake::{AntiReplayTimestamps, NoiseUpgrader};
+pub use handshake::{AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader};
