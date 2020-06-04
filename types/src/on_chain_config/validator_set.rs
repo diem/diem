@@ -41,10 +41,6 @@ impl ValidatorSet {
         }
     }
 
-    pub fn scheme(&self) -> ConsensusScheme {
-        self.scheme
-    }
-
     pub fn payload(&self) -> &[ValidatorInfo] {
         &self.payload
     }
