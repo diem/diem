@@ -428,8 +428,8 @@ preburn, but not burned). The currency of the funds is given by the
 
 The
 <code><a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;</code> resource stores the various
-pieces of information needed for a currency given by
-<code>CoinType</code> that is
+pieces of information needed for a currency (
+<code>CoinType</code>) that is
 registered on-chain. This resource _must_ be published under the
 address given by
 <code><a href="#0x0_Libra_currency_addr">currency_addr</a>()</code> in order for the registration of
@@ -463,7 +463,7 @@ Unless they are specified otherwise the fields in this resource are immutable.
 <code>preburn_value: u64</code>
 </dt>
 <dd>
- Value of funds that are in the process of being burned
+ Value of funds that are in the process of being burned.  Mutable.
 </dd>
 <dt>
 
@@ -472,7 +472,7 @@ Unless they are specified otherwise the fields in this resource are immutable.
 <dd>
  The (rough) exchange rate from
 <code>CoinType</code> to
-<code><a href="LBR.md#0x0_LBR">LBR</a></code>.
+<code><a href="LBR.md#0x0_LBR">LBR</a></code>. Mutable.
 </dd>
 <dt>
 

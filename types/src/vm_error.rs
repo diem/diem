@@ -399,6 +399,7 @@ pub enum StatusCode {
     BAD_U32 = 3018,
     BAD_U64 = 3019,
     BAD_U128 = 3020,
+    BAD_ULEB_U8 = 3021,
 
     // Errors that can arise at runtime
     // Runtime Errors: 4000-4999
