@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `T`](#0x0_Libra_T)
+-  [Struct `Libra`](#0x0_Libra_Libra)
 -  [Struct `MintCapability`](#0x0_Libra_MintCapability)
 -  [Struct `BurnCapability`](#0x0_Libra_BurnCapability)
 -  [Struct `CurrencyRegistrationCapability`](#0x0_Libra_CurrencyRegistrationCapability)
@@ -61,20 +61,20 @@
 -  [Function `assert_assoc_and_currency`](#0x0_Libra_assert_assoc_and_currency)
 -  [Function `assert_is_coin`](#0x0_Libra_assert_is_coin)
 -  [Specification](#0x0_Libra_Specification)
-    -  [Struct `T`](#0x0_Libra_Specification_T)
+    -  [Struct `Libra`](#0x0_Libra_Specification_Libra)
     -  [Function `register_currency`](#0x0_Libra_Specification_register_currency)
     -  [Function `is_currency`](#0x0_Libra_Specification_is_currency)
     -  [Function `assert_is_coin`](#0x0_Libra_Specification_assert_is_coin)
 
 
 
-<a name="0x0_Libra_T"></a>
+<a name="0x0_Libra_Libra"></a>
 
-## Struct `T`
+## Struct `Libra`
 
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_Libra_T">T</a>&lt;CoinType&gt;
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -373,7 +373,7 @@
 </dd>
 <dt>
 
-<code>to_lbr_exchange_rate: <a href="FixedPoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a></code>
+<code>to_lbr_exchange_rate: <a href="FixedPoint32.md#0x0_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a></code>
 </dt>
 <dd>
 
@@ -464,7 +464,7 @@
 <dl>
 <dt>
 
-<code>requests: vector&lt;<a href="#0x0_Libra_T">Libra::T</a>&lt;Token&gt;&gt;</code>
+<code>requests: vector&lt;<a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;Token&gt;&gt;</code>
 </dt>
 <dd>
 
@@ -619,7 +619,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_mint">mint</a>&lt;Token&gt;(account: &signer, amount: u64): <a href="#0x0_Libra_T">Libra::T</a>&lt;Token&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_mint">mint</a>&lt;Token&gt;(account: &signer, amount: u64): <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;Token&gt;
 </code></pre>
 
 
@@ -628,7 +628,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_mint">mint</a>&lt;Token&gt;(account: &signer, amount: u64): <a href="#0x0_Libra_T">T</a>&lt;Token&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_mint">mint</a>&lt;Token&gt;(account: &signer, amount: u64): <a href="#0x0_Libra">Libra</a>&lt;Token&gt;
 <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x0_Libra_MintCapability">MintCapability</a> {
     <a href="#0x0_Libra_mint_with_capability">mint_with_capability</a>(
         amount,
@@ -677,7 +677,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address): <a href="#0x0_Libra_T">Libra::T</a>&lt;Token&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address): <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;Token&gt;
 </code></pre>
 
 
@@ -689,7 +689,7 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_cancel_burn">cancel_burn</a>&lt;Token&gt;(
     account: &signer,
     preburn_address: address
-): <a href="#0x0_Libra_T">T</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_Libra_BurnCapability">BurnCapability</a>, <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x0_Libra_Preburn">Preburn</a> {
+): <a href="#0x0_Libra">Libra</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_Libra_BurnCapability">BurnCapability</a>, <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x0_Libra_Preburn">Preburn</a> {
     <a href="#0x0_Libra_cancel_burn_with_capability">cancel_burn_with_capability</a>(
         preburn_address,
         borrow_global&lt;<a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;Token&gt;&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account))
@@ -732,7 +732,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_mint_with_capability">mint_with_capability</a>&lt;Token&gt;(value: u64, _capability: &<a href="#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;Token&gt;): <a href="#0x0_Libra_T">Libra::T</a>&lt;Token&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_mint_with_capability">mint_with_capability</a>&lt;Token&gt;(value: u64, _capability: &<a href="#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;Token&gt;): <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;Token&gt;
 </code></pre>
 
 
@@ -744,7 +744,7 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_mint_with_capability">mint_with_capability</a>&lt;Token&gt;(
     value: u64,
     _capability: &<a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;Token&gt;
-): <a href="#0x0_Libra_T">T</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
+): <a href="#0x0_Libra">Libra</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
     <a href="#0x0_Libra_assert_is_coin">assert_is_coin</a>&lt;Token&gt;();
     // TODO: temporary measure for testnet only: limit minting <b>to</b> 1B <a href="#0x0_Libra">Libra</a> at a time.
     // this is <b>to</b> prevent the market cap's total value from hitting u64_max due <b>to</b> excessive
@@ -768,7 +768,7 @@
         );
     };
 
-    <a href="#0x0_Libra_T">T</a>&lt;Token&gt; { value }
+    <a href="#0x0_Libra">Libra</a>&lt;Token&gt; { value }
 }
 </code></pre>
 
@@ -809,7 +809,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_preburn_with_resource">preburn_with_resource</a>&lt;Token&gt;(coin: <a href="#0x0_Libra_T">Libra::T</a>&lt;Token&gt;, preburn: &<b>mut</b> <a href="#0x0_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;, preburn_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_preburn_with_resource">preburn_with_resource</a>&lt;Token&gt;(coin: <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;Token&gt;, preburn: &<b>mut</b> <a href="#0x0_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;, preburn_address: address)
 </code></pre>
 
 
@@ -819,7 +819,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_preburn_with_resource">preburn_with_resource</a>&lt;Token&gt;(
-    coin: <a href="#0x0_Libra_T">T</a>&lt;Token&gt;,
+    coin: <a href="#0x0_Libra">Libra</a>&lt;Token&gt;,
     preburn: &<b>mut</b> <a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt;,
     preburn_address: address,
 ) <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
@@ -887,7 +887,7 @@ Fails if
 <code>account</code> does not have a published Preburn resource
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_preburn_to">preburn_to</a>&lt;Token&gt;(account: &signer, coin: <a href="#0x0_Libra_T">Libra::T</a>&lt;Token&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_preburn_to">preburn_to</a>&lt;Token&gt;(account: &signer, coin: <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;Token&gt;)
 </code></pre>
 
 
@@ -896,7 +896,7 @@ Fails if
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_preburn_to">preburn_to</a>&lt;Token&gt;(account: &signer, coin: <a href="#0x0_Libra_T">T</a>&lt;Token&gt;) <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x0_Libra_Preburn">Preburn</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_preburn_to">preburn_to</a>&lt;Token&gt;(account: &signer, coin: <a href="#0x0_Libra">Libra</a>&lt;Token&gt;) <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x0_Libra_Preburn">Preburn</a> {
     <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     <a href="#0x0_Libra_preburn_with_resource">preburn_with_resource</a>(coin, borrow_global_mut&lt;<a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt;&gt;(sender), sender);
 }
@@ -959,7 +959,7 @@ Fails if
     _capability: &<a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;Token&gt;
 ) <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
     // destroy the coin at the head of the preburn queue
-    <b>let</b> <a href="#0x0_Libra_T">T</a> { value } = <a href="Vector.md#0x0_Vector_remove">Vector::remove</a>(&<b>mut</b> preburn.requests, 0);
+    <b>let</b> <a href="#0x0_Libra">Libra</a> { value } = <a href="Vector.md#0x0_Vector_remove">Vector::remove</a>(&<b>mut</b> preburn.requests, 0);
     // <b>update</b> the market cap
     <b>let</b> currency_code = <a href="#0x0_Libra_currency_code">currency_code</a>&lt;Token&gt;();
     <b>let</b> info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;Token&gt;&gt;(0xA550C18);
@@ -989,7 +989,7 @@ Fails if
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_cancel_burn_with_capability">cancel_burn_with_capability</a>&lt;Token&gt;(preburn_address: address, _capability: &<a href="#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;Token&gt;): <a href="#0x0_Libra_T">Libra::T</a>&lt;Token&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_cancel_burn_with_capability">cancel_burn_with_capability</a>&lt;Token&gt;(preburn_address: address, _capability: &<a href="#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;Token&gt;): <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;Token&gt;
 </code></pre>
 
 
@@ -1001,7 +1001,7 @@ Fails if
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_cancel_burn_with_capability">cancel_burn_with_capability</a>&lt;Token&gt;(
     preburn_address: address,
     _capability: &<a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;Token&gt;
-): <a href="#0x0_Libra_T">T</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x0_Libra_Preburn">Preburn</a> {
+): <a href="#0x0_Libra">Libra</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x0_Libra_Preburn">Preburn</a> {
     // destroy the coin at the head of the preburn queue
     <b>let</b> preburn = borrow_global_mut&lt;<a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt;&gt;(preburn_address);
     <b>let</b> coin = <a href="Vector.md#0x0_Vector_remove">Vector::remove</a>(&<b>mut</b> preburn.requests, 0);
@@ -1184,7 +1184,7 @@ Fails if
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_zero">zero</a>&lt;CoinType&gt;(): <a href="#0x0_Libra_T">Libra::T</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_zero">zero</a>&lt;CoinType&gt;(): <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -1193,9 +1193,9 @@ Fails if
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_zero">zero</a>&lt;CoinType&gt;(): <a href="#0x0_Libra_T">T</a>&lt;CoinType&gt; {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_zero">zero</a>&lt;CoinType&gt;(): <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt; {
     <a href="#0x0_Libra_assert_is_coin">assert_is_coin</a>&lt;CoinType&gt;();
-    <a href="#0x0_Libra_T">T</a>&lt;CoinType&gt; { value: 0 }
+    <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt; { value: 0 }
 }
 </code></pre>
 
@@ -1209,7 +1209,7 @@ Fails if
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_value">value</a>&lt;CoinType&gt;(coin: &<a href="#0x0_Libra_T">Libra::T</a>&lt;CoinType&gt;): u64
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_value">value</a>&lt;CoinType&gt;(coin: &<a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;): u64
 </code></pre>
 
 
@@ -1218,7 +1218,7 @@ Fails if
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_value">value</a>&lt;CoinType&gt;(coin: &<a href="#0x0_Libra_T">T</a>&lt;CoinType&gt;): u64 {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_value">value</a>&lt;CoinType&gt;(coin: &<a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;): u64 {
     coin.value
 }
 </code></pre>
@@ -1233,7 +1233,7 @@ Fails if
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_split">split</a>&lt;CoinType&gt;(coin: <a href="#0x0_Libra_T">Libra::T</a>&lt;CoinType&gt;, amount: u64): (<a href="#0x0_Libra_T">Libra::T</a>&lt;CoinType&gt;, <a href="#0x0_Libra_T">Libra::T</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_split">split</a>&lt;CoinType&gt;(coin: <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;, amount: u64): (<a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;, <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -1242,7 +1242,7 @@ Fails if
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_split">split</a>&lt;CoinType&gt;(coin: <a href="#0x0_Libra_T">T</a>&lt;CoinType&gt;, amount: u64): (<a href="#0x0_Libra_T">T</a>&lt;CoinType&gt;, <a href="#0x0_Libra_T">T</a>&lt;CoinType&gt;) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_split">split</a>&lt;CoinType&gt;(coin: <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;, amount: u64): (<a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;, <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;) {
     <b>let</b> other = <a href="#0x0_Libra_withdraw">withdraw</a>(&<b>mut</b> coin, amount);
     (coin, other)
 }
@@ -1258,7 +1258,7 @@ Fails if
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_withdraw">withdraw</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x0_Libra_T">Libra::T</a>&lt;CoinType&gt;, amount: u64): <a href="#0x0_Libra_T">Libra::T</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_withdraw">withdraw</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;, amount: u64): <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -1267,11 +1267,11 @@ Fails if
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_withdraw">withdraw</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x0_Libra_T">T</a>&lt;CoinType&gt;, amount: u64): <a href="#0x0_Libra_T">T</a>&lt;CoinType&gt; {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_withdraw">withdraw</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;, amount: u64): <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt; {
     // Check that `amount` is less than the coin's value
     Transaction::assert(coin.value &gt;= amount, 10);
     coin.value = coin.value - amount;
-    <a href="#0x0_Libra_T">T</a> { value: amount }
+    <a href="#0x0_Libra">Libra</a> { value: amount }
 }
 </code></pre>
 
@@ -1285,7 +1285,7 @@ Fails if
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_join">join</a>&lt;CoinType&gt;(coin1: <a href="#0x0_Libra_T">Libra::T</a>&lt;CoinType&gt;, coin2: <a href="#0x0_Libra_T">Libra::T</a>&lt;CoinType&gt;): <a href="#0x0_Libra_T">Libra::T</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_join">join</a>&lt;CoinType&gt;(coin1: <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;, coin2: <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;): <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -1294,7 +1294,7 @@ Fails if
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_join">join</a>&lt;CoinType&gt;(coin1: <a href="#0x0_Libra_T">T</a>&lt;CoinType&gt;, coin2: <a href="#0x0_Libra_T">T</a>&lt;CoinType&gt;): <a href="#0x0_Libra_T">T</a>&lt;CoinType&gt;  {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_join">join</a>&lt;CoinType&gt;(coin1: <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;, coin2: <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;): <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;  {
     <a href="#0x0_Libra_deposit">deposit</a>(&<b>mut</b> coin1, coin2);
     coin1
 }
@@ -1310,7 +1310,7 @@ Fails if
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_deposit">deposit</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x0_Libra_T">Libra::T</a>&lt;CoinType&gt;, check: <a href="#0x0_Libra_T">Libra::T</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_deposit">deposit</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;, check: <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -1319,8 +1319,8 @@ Fails if
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_deposit">deposit</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x0_Libra_T">T</a>&lt;CoinType&gt;, check: <a href="#0x0_Libra_T">T</a>&lt;CoinType&gt;) {
-    <b>let</b> <a href="#0x0_Libra_T">T</a> { value } = check;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_deposit">deposit</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;, check: <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;) {
+    <b>let</b> <a href="#0x0_Libra">Libra</a> { value } = check;
     coin.value = coin.value + value;
 }
 </code></pre>
@@ -1335,7 +1335,7 @@ Fails if
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_destroy_zero">destroy_zero</a>&lt;CoinType&gt;(coin: <a href="#0x0_Libra_T">Libra::T</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_destroy_zero">destroy_zero</a>&lt;CoinType&gt;(coin: <a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -1344,8 +1344,8 @@ Fails if
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_destroy_zero">destroy_zero</a>&lt;CoinType&gt;(coin: <a href="#0x0_Libra_T">T</a>&lt;CoinType&gt;) {
-    <b>let</b> <a href="#0x0_Libra_T">T</a> { value } = coin;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_destroy_zero">destroy_zero</a>&lt;CoinType&gt;(coin: <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;) {
+    <b>let</b> <a href="#0x0_Libra">Libra</a> { value } = coin;
     Transaction::assert(value == 0, 5)
 }
 </code></pre>
@@ -1360,7 +1360,7 @@ Fails if
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_register_currency">register_currency</a>&lt;CoinType&gt;(account: &signer, to_lbr_exchange_rate: <a href="FixedPoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a>, is_synthetic: bool, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;): (<a href="#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;, <a href="#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_register_currency">register_currency</a>&lt;CoinType&gt;(account: &signer, to_lbr_exchange_rate: <a href="FixedPoint32.md#0x0_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>, is_synthetic: bool, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;): (<a href="#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;, <a href="#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -1371,7 +1371,7 @@ Fails if
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_register_currency">register_currency</a>&lt;CoinType&gt;(
     account: &signer,
-    to_lbr_exchange_rate: <a href="FixedPoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a>,
+    to_lbr_exchange_rate: <a href="FixedPoint32.md#0x0_FixedPoint32">FixedPoint32</a>,
     is_synthetic: bool,
     scaling_factor: u64,
     fractional_part: u64,
@@ -1467,7 +1467,7 @@ Fails if
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_approx_lbr_for_coin">approx_lbr_for_coin</a>&lt;FromCoinType&gt;(coin: &<a href="#0x0_Libra_T">Libra::T</a>&lt;FromCoinType&gt;): u64
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_approx_lbr_for_coin">approx_lbr_for_coin</a>&lt;FromCoinType&gt;(coin: &<a href="#0x0_Libra_Libra">Libra::Libra</a>&lt;FromCoinType&gt;): u64
 </code></pre>
 
 
@@ -1476,7 +1476,7 @@ Fails if
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_approx_lbr_for_coin">approx_lbr_for_coin</a>&lt;FromCoinType&gt;(coin: &<a href="#0x0_Libra_T">T</a>&lt;FromCoinType&gt;): u64
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_approx_lbr_for_coin">approx_lbr_for_coin</a>&lt;FromCoinType&gt;(coin: &<a href="#0x0_Libra">Libra</a>&lt;FromCoinType&gt;): u64
 <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
     <b>let</b> from_value = <a href="#0x0_Libra_value">value</a>(coin);
     <a href="#0x0_Libra_approx_lbr_for_value">approx_lbr_for_value</a>&lt;FromCoinType&gt;(from_value)
@@ -1619,7 +1619,7 @@ Fails if
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;FromCoinType&gt;(account: &signer, lbr_exchange_rate: <a href="FixedPoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;FromCoinType&gt;(account: &signer, lbr_exchange_rate: <a href="FixedPoint32.md#0x0_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>)
 </code></pre>
 
 
@@ -1630,7 +1630,7 @@ Fails if
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;FromCoinType&gt;(
     account: &signer,
-    lbr_exchange_rate: <a href="FixedPoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a>
+    lbr_exchange_rate: <a href="FixedPoint32.md#0x0_FixedPoint32">FixedPoint32</a>
 ) <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
     <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;FromCoinType&gt;(account);
     <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;FromCoinType&gt;&gt;(<a href="#0x0_Libra_currency_addr">currency_addr</a>());
@@ -1648,7 +1648,7 @@ Fails if
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_lbr_exchange_rate">lbr_exchange_rate</a>&lt;CoinType&gt;(): <a href="FixedPoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_lbr_exchange_rate">lbr_exchange_rate</a>&lt;CoinType&gt;(): <a href="FixedPoint32.md#0x0_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>
 </code></pre>
 
 
@@ -1657,7 +1657,7 @@ Fails if
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_lbr_exchange_rate">lbr_exchange_rate</a>&lt;CoinType&gt;(): <a href="FixedPoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_lbr_exchange_rate">lbr_exchange_rate</a>&lt;CoinType&gt;(): <a href="FixedPoint32.md#0x0_FixedPoint32">FixedPoint32</a>
 <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
     *&borrow_global&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x0_Libra_currency_addr">currency_addr</a>()).to_lbr_exchange_rate
 }
@@ -1791,12 +1791,12 @@ Fails if
 
 
 
-<a name="0x0_Libra_Specification_T"></a>
+<a name="0x0_Libra_Specification_Libra"></a>
 
-### Struct `T`
+### Struct `Libra`
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_Libra_T">T</a>&lt;CoinType&gt;
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -1824,7 +1824,7 @@ Fails if
 ### Function `register_currency`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_register_currency">register_currency</a>&lt;CoinType&gt;(account: &signer, to_lbr_exchange_rate: <a href="FixedPoint32.md#0x0_FixedPoint32_T">FixedPoint32::T</a>, is_synthetic: bool, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;): (<a href="#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;, <a href="#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_register_currency">register_currency</a>&lt;CoinType&gt;(account: &signer, to_lbr_exchange_rate: <a href="FixedPoint32.md#0x0_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>, is_synthetic: bool, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;): (<a href="#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;, <a href="#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
 </code></pre>
 
 

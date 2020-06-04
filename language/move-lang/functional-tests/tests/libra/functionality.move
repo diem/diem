@@ -15,44 +15,44 @@ module BurnCapabilityHolder {
 //! sender: blessed
 script {
 use 0x0::Libra;
-use 0x0::Coin1;
-use 0x0::Coin2;
+use 0x0::Coin1::Coin1;
+use 0x0::Coin2::Coin2;
 use 0x0::Signer;
 use 0x0::Transaction;
 fun main(account: &signer) {
     let sender = Signer::address_of(account);
-    let pre_coin1 = Libra::new_preburn<Coin1::T>();
-    let pre_coin2 = Libra::new_preburn<Coin2::T>();
+    let pre_coin1 = Libra::new_preburn<Coin1>();
+    let pre_coin2 = Libra::new_preburn<Coin2>();
     Libra::publish_preburn(account, pre_coin1);
     Libra::publish_preburn(account, pre_coin2);
-    let coin1 = Libra::mint<Coin1::T>(account, 10000);
-    let coin2 = Libra::mint<Coin2::T>(account, 10000);
-    Transaction::assert(Libra::value<Coin1::T>(&coin1) == 10000, 0);
-    Transaction::assert(Libra::value<Coin2::T>(&coin2) == 10000, 1);
-    Transaction::assert(Libra::value<Coin2::T>(&coin2) == 10000, 1);
+    let coin1 = Libra::mint<Coin1>(account, 10000);
+    let coin2 = Libra::mint<Coin2>(account, 10000);
+    Transaction::assert(Libra::value<Coin1>(&coin1) == 10000, 0);
+    Transaction::assert(Libra::value<Coin2>(&coin2) == 10000, 1);
+    Transaction::assert(Libra::value<Coin2>(&coin2) == 10000, 1);
 
     let (coin11, coin12) = Libra::split(coin1, 5000);
     let (coin21, coin22) = Libra::split(coin2, 5000);
-    Transaction::assert(Libra::value<Coin1::T>(&coin11) == 5000 , 0);
-    Transaction::assert(Libra::value<Coin2::T>(&coin21) == 5000 , 1);
-    Transaction::assert(Libra::value<Coin1::T>(&coin12) == 5000 , 2);
-    Transaction::assert(Libra::value<Coin2::T>(&coin22) == 5000 , 3);
+    Transaction::assert(Libra::value<Coin1>(&coin11) == 5000 , 0);
+    Transaction::assert(Libra::value<Coin2>(&coin21) == 5000 , 1);
+    Transaction::assert(Libra::value<Coin1>(&coin12) == 5000 , 2);
+    Transaction::assert(Libra::value<Coin2>(&coin22) == 5000 , 3);
     let tmp = Libra::withdraw(&mut coin11, 1000);
-    Transaction::assert(Libra::value<Coin1::T>(&coin11) == 4000 , 4);
-    Transaction::assert(Libra::value<Coin1::T>(&tmp) == 1000 , 5);
+    Transaction::assert(Libra::value<Coin1>(&coin11) == 4000 , 4);
+    Transaction::assert(Libra::value<Coin1>(&tmp) == 1000 , 5);
     Libra::deposit(&mut coin11, tmp);
-    Transaction::assert(Libra::value<Coin1::T>(&coin11) == 5000 , 6);
+    Transaction::assert(Libra::value<Coin1>(&coin11) == 5000 , 6);
     let coin1 = Libra::join(coin11, coin12);
     let coin2 = Libra::join(coin21, coin22);
-    Transaction::assert(Libra::value<Coin1::T>(&coin1) == 10000, 7);
-    Transaction::assert(Libra::value<Coin2::T>(&coin2) == 10000, 8);
+    Transaction::assert(Libra::value<Coin1>(&coin1) == 10000, 7);
+    Transaction::assert(Libra::value<Coin2>(&coin2) == 10000, 8);
 
     Libra::preburn_to(account, coin1);
     Libra::preburn_to(account, coin2);
-    Libra::burn<Coin1::T>(account, sender);
-    Libra::burn<Coin2::T>(account, sender);
-    Libra::destroy_zero(Libra::zero<Coin1::T>());
-    Libra::destroy_zero(Libra::zero<Coin2::T>());
+    Libra::burn<Coin1>(account, sender);
+    Libra::burn<Coin2>(account, sender);
+    Libra::destroy_zero(Libra::zero<Coin1>());
+    Libra::destroy_zero(Libra::zero<Coin2>());
 }
 }
 // check: EXECUTED
@@ -61,9 +61,9 @@ fun main(account: &signer) {
 //! sender: blessed
 script {
 use 0x0::Libra;
-use 0x0::Coin1;
+use 0x0::Coin1::Coin1;
 fun main(account: &signer) {
-    Libra::destroy_zero(Libra::mint<Coin1::T>(account, 1));
+    Libra::destroy_zero(Libra::mint<Coin1>(account, 1));
 }
 }
 // check: ABORTED
@@ -74,10 +74,10 @@ fun main(account: &signer) {
 //! gas-currency: Coin1
 script {
     use 0x0::Libra;
-    use 0x0::Coin1;
+    use 0x0::Coin1::Coin1;
     fun main()  {
-        let coins = Libra::zero<Coin1::T>();
-        Libra::approx_lbr_for_coin<Coin1::T>(&coins);
+        let coins = Libra::zero<Coin1>();
+        Libra::approx_lbr_for_coin<Coin1>(&coins);
         Libra::destroy_zero(coins);
     }
 }
@@ -98,12 +98,12 @@ script {
 //! new-transaction
 script {
     use 0x0::Libra;
-    use 0x0::LBR;
-    use 0x0::Coin1;
+    use 0x0::LBR::LBR;
+    use 0x0::Coin1::Coin1;
     use 0x0::Transaction;
     fun main()  {
-        Transaction::assert(!Libra::is_synthetic_currency<Coin1::T>(), 9);
-        Transaction::assert(Libra::is_synthetic_currency<LBR::T>(), 10);
+        Transaction::assert(!Libra::is_synthetic_currency<Coin1>(), 9);
+        Transaction::assert(Libra::is_synthetic_currency<LBR>(), 10);
         Transaction::assert(!Libra::is_synthetic_currency<u64>(), 11);
     }
 }
@@ -124,9 +124,9 @@ script {
 //! sender: blessed
 script {
 use 0x0::LibraAccount;
-use 0x0::Coin1;
+use 0x0::Coin1::Coin1;
 fun main(account: &signer)  {
-    LibraAccount::mint_to_address<Coin1::T>(account, {{bob}}, 1000000000 * 1000000 + 1);
+    LibraAccount::mint_to_address<Coin1>(account, {{bob}}, 1000000000 * 1000000 + 1);
 }
 }
 // check: ABORTED
@@ -136,11 +136,11 @@ fun main(account: &signer)  {
 //! sender: blessed
 script {
     use 0x0::Libra;
-    use 0x0::Coin1;
+    use 0x0::Coin1::Coin1;
     fun main(account: &signer)  {
         Libra::publish_mint_capability(
             account,
-            Libra::remove_mint_capability<Coin1::T>(account)
+            Libra::remove_mint_capability<Coin1>(account)
         );
     }
 }
@@ -150,12 +150,12 @@ script {
 //! sender: blessed
 script {
     use 0x0::Libra;
-    use 0x0::Coin1;
+    use 0x0::Coin1::Coin1;
     use {{default}}::BurnCapabilityHolder;
     fun main(account: &signer)  {
         BurnCapabilityHolder::hold(
             account,
-            Libra::remove_burn_capability<Coin1::T>(account)
+            Libra::remove_burn_capability<Coin1>(account)
         );
     }
 }

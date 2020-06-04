@@ -8,11 +8,11 @@ main(account: &signer) {
     let old_balance: u64;
 
     addr = Signer.address_of(copy(account));
-    old_balance = LibraAccount.balance<LBR.T>(copy(addr));
+    old_balance = LibraAccount.balance<LBR.LBR>(copy(addr));
 
-    LibraAccount.deposit_to<LBR.T>(move(account), Libra.zero<LBR.T>());
+    LibraAccount.deposit_to<LBR.LBR>(move(account), Libra.zero<LBR.LBR>());
 
-    assert(LibraAccount.balance<LBR.T>(copy(addr)) == move(old_balance), 42);
+    assert(LibraAccount.balance<LBR.LBR>(copy(addr)) == move(old_balance), 42);
 
     return;
 }

@@ -8,7 +8,7 @@ module LibraConfig {
     use 0x0::Offer;
 
     // A generic singleton resource that holds a value of a specific type.
-    resource struct T<Config: copyable> { payload: Config }
+    resource struct LibraConfig<Config: copyable> { payload: Config }
 
     struct NewEpochEvent {
         epoch: u64,
@@ -45,17 +45,17 @@ module LibraConfig {
     }
 
     // Get a copy of `Config` value stored under `addr`.
-    public fun get<Config: copyable>(): Config acquires T {
+    public fun get<Config: copyable>(): Config acquires LibraConfig {
         let addr = default_config_address();
-        Transaction::assert(::exists<T<Config>>(addr), 24);
-        *&borrow_global<T<Config>>(addr).payload
+        Transaction::assert(::exists<LibraConfig<Config>>(addr), 24);
+        *&borrow_global<LibraConfig<Config>>(addr).payload
     }
 
     // Set a config item to a new value with the default capability stored under config address and trigger a
     // reconfiguration.
-    public fun set<Config: copyable>(account: &signer, payload: Config) acquires T, Configuration {
+    public fun set<Config: copyable>(account: &signer, payload: Config) acquires LibraConfig, Configuration {
         let addr = default_config_address();
-        Transaction::assert(::exists<T<Config>>(addr), 24);
+        Transaction::assert(::exists<LibraConfig<Config>>(addr), 24);
         let signer_address = Signer::address_of(account);
         Transaction::assert(
             ::exists<ModifyConfigCapability<Config>>(signer_address)
@@ -63,7 +63,7 @@ module LibraConfig {
             24
         );
 
-        let config = borrow_global_mut<T<Config>>(addr);
+        let config = borrow_global_mut<LibraConfig<Config>>(addr);
         config.payload = payload;
 
         reconfigure_();
@@ -73,10 +73,10 @@ module LibraConfig {
     public fun set_with_capability<Config: copyable>(
         _cap: &ModifyConfigCapability<Config>,
         payload: Config
-    ) acquires T, Configuration {
+    ) acquires LibraConfig, Configuration {
         let addr = default_config_address();
-        Transaction::assert(::exists<T<Config>>(addr), 24);
-        let config = borrow_global_mut<T<Config>>(addr);
+        Transaction::assert(::exists<LibraConfig<Config>>(addr), 24);
+        let config = borrow_global_mut<LibraConfig<Config>>(addr);
         config.payload = payload;
 
         reconfigure_();
@@ -84,7 +84,7 @@ module LibraConfig {
 
     // DD -- to ensure initialize only runs once in registered_currencies
     public fun is_published<Config: copyable>(addr: address): bool {
-        exists<T<Config>>(addr)
+        exists<LibraConfig<Config>>(addr)
     }
 
     // Publish a new config item. The caller will use the returned ModifyConfigCapability to specify the access control
@@ -98,7 +98,7 @@ module LibraConfig {
             1
         );
 
-        move_to(config_account, T { payload });
+        move_to(config_account, LibraConfig { payload });
         // We don't trigger reconfiguration here, instead we'll wait for all validators update the binary
         // to register this config into ON_CHAIN_CONFIG_REGISTRY then send another transaction to change
         // the value which triggers the reconfiguration.
@@ -114,7 +114,7 @@ module LibraConfig {
         );
 
         move_to(config_account, ModifyConfigCapability<Config> {});
-        move_to(config_account, T{ payload });
+        move_to(config_account, LibraConfig{ payload });
         // We don't trigger reconfiguration here, instead we'll wait for all validators update the binary
         // to register this config into ON_CHAIN_CONFIG_REGISTRY then send another transaction to change
         // the value which triggers the reconfiguration.
@@ -132,7 +132,7 @@ module LibraConfig {
         );
 
         Offer::create(config_account, ModifyConfigCapability<Config>{}, delegate);
-        move_to(config_account, T { payload });
+        move_to(config_account, LibraConfig { payload });
         // We don't trigger reconfiguration here, instead we'll wait for all validators update the
         // binary to register this config into ON_CHAIN_CONFIG_REGISTRY then send another
         // transaction to change the value which triggers the reconfiguration.
@@ -202,12 +202,12 @@ module LibraConfig {
 
         // spec_get is the spec version of get<Config>
         define spec_get<Config>(): Config {
-            global<T<Config>>(spec_default_config_address()).payload
+            global<LibraConfig<Config>>(spec_default_config_address()).payload
         }
 
         // spec_get is the spec version of get<Config>
         define spec_is_published<Config>(addr: address): bool {
-            exists<T<Config>>(addr)
+            exists<LibraConfig<Config>>(addr)
         }
     }
 

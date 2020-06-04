@@ -4,12 +4,12 @@
 //! sender: bob
 script {
 use 0x0::LibraAccount;
-use 0x0::Coin1;
-use 0x0::Coin2;
+use 0x0::Coin1::Coin1;
+use 0x0::Coin2::Coin2;
 // Setup bob's account as a multi-currency account.
 fun main(account: &signer) {
-    LibraAccount::add_currency<Coin1::T>(account);
-    LibraAccount::add_currency<Coin2::T>(account);
+    LibraAccount::add_currency<Coin1>(account);
+    LibraAccount::add_currency<Coin2>(account);
 }
 }
 // check: EXECUTED
@@ -18,11 +18,11 @@ fun main(account: &signer) {
 //! sender: blessed
 script {
 use 0x0::LibraAccount;
-use 0x0::Coin1;
-use 0x0::Coin2;
+use 0x0::Coin1::Coin1;
+use 0x0::Coin2::Coin2;
 fun main(account: &signer) {
-    LibraAccount::mint_to_address<Coin1::T>(account, {{bob}}, 10000000);
-    LibraAccount::mint_to_address<Coin2::T>(account, {{bob}}, 10000000);
+    LibraAccount::mint_to_address<Coin1>(account, {{bob}}, 10000000);
+    LibraAccount::mint_to_address<Coin2>(account, {{bob}}, 10000000);
 }
 }
 // check: EXECUTED
@@ -32,18 +32,18 @@ fun main(account: &signer) {
 //! sender: bob
 //! gas-price: 0
 script {
-use 0x0::Coin1;
-use 0x0::Coin2;
+use 0x0::Coin1::Coin1;
+use 0x0::Coin2::Coin2;
 use 0x0::LBR;
 use 0x0::LibraAccount;
 use 0x0::Transaction;
 use 0x0::Libra;
 fun main(account: &signer) {
     let amount_lbr = 10;
-    let coin1_balance = LibraAccount::balance<Coin1::T>({{bob}});
-    let coin2_balance = LibraAccount::balance<Coin2::T>({{bob}});
-    let coin1 = LibraAccount::withdraw_from<Coin1::T>(account, coin1_balance);
-    let coin2 = LibraAccount::withdraw_from<Coin2::T>(account, coin2_balance);
+    let coin1_balance = LibraAccount::balance<Coin1>({{bob}});
+    let coin2_balance = LibraAccount::balance<Coin2>({{bob}});
+    let coin1 = LibraAccount::withdraw_from<Coin1>(account, coin1_balance);
+    let coin2 = LibraAccount::withdraw_from<Coin2>(account, coin2_balance);
     let (lbr, coin1, coin2) = LBR::create(amount_lbr, coin1, coin2);
     Transaction::assert(Libra::value(&lbr) == 10, 0);
     Transaction::assert(Libra::value(&coin1) == coin1_balance - 6, 1);
@@ -60,12 +60,12 @@ fun main(account: &signer) {
 //! sender: bob
 //! gas-price: 0
 script {
-use 0x0::LBR;
+use 0x0::LBR::{Self, LBR};
 use 0x0::LibraAccount;
 use 0x0::Transaction;
 use 0x0::Libra;
 fun main(account: &signer) {
-    let lbr = LibraAccount::withdraw_from<LBR::T>(account, 10);
+    let lbr = LibraAccount::withdraw_from<LBR>(account, 10);
     Transaction::assert(Libra::value(&lbr) == 10, 3);
     let (coin1, coin2) = LBR::unpack(account, lbr);
     Transaction::assert(Libra::value(&coin1) == 5, 4);
@@ -83,18 +83,18 @@ fun main(account: &signer) {
 //! sender: bob
 //! gas-price: 0
 script {
-use 0x0::Coin1;
-use 0x0::Coin2;
+use 0x0::Coin1::Coin1;
+use 0x0::Coin2::Coin2;
 use 0x0::LBR;
 use 0x0::LibraAccount;
 use 0x0::Transaction;
 use 0x0::Libra;
 fun main(account: &signer) {
     let amount_lbr = 0;
-    let coin1_balance = LibraAccount::balance<Coin1::T>({{bob}});
-    let coin2_balance = LibraAccount::balance<Coin2::T>({{bob}});
-    let coin1 = LibraAccount::withdraw_from<Coin1::T>(account, coin1_balance);
-    let coin2 = LibraAccount::withdraw_from<Coin2::T>(account, coin2_balance);
+    let coin1_balance = LibraAccount::balance<Coin1>({{bob}});
+    let coin2_balance = LibraAccount::balance<Coin2>({{bob}});
+    let coin1 = LibraAccount::withdraw_from<Coin1>(account, coin1_balance);
+    let coin2 = LibraAccount::withdraw_from<Coin2>(account, coin2_balance);
     let (lbr, coin1, coin2) = LBR::create(amount_lbr, coin1, coin2);
     Transaction::assert(Libra::value(&lbr) == 0, 6);
     Transaction::assert(Libra::value(&coin1) == coin1_balance, 7);

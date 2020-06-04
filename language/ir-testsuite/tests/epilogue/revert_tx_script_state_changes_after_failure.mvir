@@ -7,7 +7,7 @@ import 0x0.LBR;
 import 0x0.Vector;
 
 main(account: &signer) {
-    LibraAccount.pay_from<LBR.T>(move(account), {{bob}}, 514);
+    LibraAccount.pay_from<LBR.LBR>(move(account), {{bob}}, 514);
     assert(false, 42);
     return;
 }
@@ -21,7 +21,7 @@ import 0x0.LibraAccount;
 import 0x0.LBR;
 
 main() {
-    assert(LibraAccount.balance<LBR.T>({{bob}}) == 1000000, 43);
+    assert(LibraAccount.balance<LBR.LBR>({{bob}}) == 1000000, 43);
     return;
 }
 

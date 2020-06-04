@@ -32,10 +32,10 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x0::LBR;
+    use 0x0::LBR::LBR;
     use 0x0::LibraAccount;
     fun main(account: &signer) {
-        let coins = LibraAccount::withdraw_from<LBR::T>(account, 10);
+        let coins = LibraAccount::withdraw_from<LBR>(account, 10);
         LibraAccount::deposit_to(account, coins);
     }
 }
@@ -73,9 +73,9 @@ script {
 //! new-transaction
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
+    use 0x0::LBR::LBR;
     fun main() {
-        LibraAccount::create_unhosted_account<LBR::T>(0xDEADBEEF, x"", false);
+        LibraAccount::create_unhosted_account<LBR>(0xDEADBEEF, x"", false);
     }
 }
 // check: ABORTED
@@ -107,11 +107,11 @@ script {
 //! sender: association
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
+    use 0x0::LBR::LBR;
     use 0x0::Testnet;
     fun main(account: &signer) {
         Testnet::remove_testnet(account);
-        LibraAccount::create_testnet_account<LBR::T>(0xDEADBEEF, x"");
+        LibraAccount::create_testnet_account<LBR>(0xDEADBEEF, x"");
         Testnet::initialize(account);
     }
 }
@@ -132,9 +132,9 @@ script {
 //! sender: bob
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
+    use 0x0::LBR::LBR;
     fun main(account: &signer) {
-        LibraAccount::pay_from<LBR::T>(account, {{alice}}, 10000);
+        LibraAccount::pay_from<LBR>(account, {{alice}}, 10000);
     }
 }
 // TODO: what is this testing?

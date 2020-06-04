@@ -15,7 +15,7 @@ import 0x0.LBR;
 import 0x0.LibraAccount;
 import 0x0.Libra;
 main(blessed: &signer) {
-    LibraAccount.deposit_to<LBR.T>(copy(blessed), LBR.mint(copy(blessed), 50000));
+    LibraAccount.deposit_to<LBR.LBR>(copy(blessed), LBR.mint(copy(blessed), 50000));
     return;
 }
 

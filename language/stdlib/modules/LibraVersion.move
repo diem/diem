@@ -5,30 +5,30 @@ module LibraVersion {
     use 0x0::Signer;
     use 0x0::Transaction;
 
-    struct T {
+    struct LibraVersion {
         major: u64,
     }
 
     public fun initialize(account: &signer) {
         Transaction::assert(Signer::address_of(account) == LibraConfig::default_config_address(), 1);
 
-        LibraConfig::publish_new_config<Self::T>(
+        LibraConfig::publish_new_config<LibraVersion>(
             account,
-            T { major: 1 },
+            LibraVersion { major: 1 },
         );
     }
 
     public fun set(account: &signer, major: u64) {
-        let old_config = LibraConfig::get<Self::T>();
+        let old_config = LibraConfig::get<LibraVersion>();
 
         Transaction::assert(
             old_config.major < major,
             25
         );
 
-        LibraConfig::set<Self::T>(
+        LibraConfig::set<LibraVersion>(
             account,
-            T { major }
+            LibraVersion { major }
         );
     }
 }

@@ -20,12 +20,12 @@ script {
 
 //! new-transaction
 //! sender: blessed
-//! type-args: 0x0::LBR::T
+//! type-args: 0x0::LBR::LBR
 script {
 use 0x0::Libra;
 use 0x0::TransactionFee;
-use 0x0::Coin1::T as Coin1;
-use 0x0::Coin2::T as Coin2;
+use 0x0::Coin1::Coin1 as Coin1;
+use 0x0::Coin2::Coin2 as Coin2;
 fun main<CoinType>(blessed_account: &signer) {
     TransactionFee::preburn_fees<CoinType>(blessed_account);
     if (TransactionFee::is_lbr<CoinType>()) {

@@ -12,13 +12,13 @@
 //! max-gas: 1000000
 //! gas-price: 0
 script {
-use 0x0::Coin1;
+use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 use 0x0::LibraAccount;
 fun main(account: &signer) {
-    LibraAccount::deposit(account, {{alice}}, Libra::mint<Coin1::T>(account, 200));
-    LibraAccount::deposit(account, {{bob}}, Libra::mint<Coin1::T>(account, 200));
-    LibraAccount::deposit(account, {{carol}}, Libra::mint<Coin1::T>(account, 200));
+    LibraAccount::deposit(account, {{alice}}, Libra::mint<Coin1>(account, 200));
+    LibraAccount::deposit(account, {{bob}}, Libra::mint<Coin1>(account, 200));
+    LibraAccount::deposit(account, {{carol}}, Libra::mint<Coin1>(account, 200));
 }
 }
 
@@ -31,10 +31,10 @@ fun main(account: &signer) {
 //! gas-price: 0
 //! gas-currency: Coin1
 script {
-use 0x0::Coin1;
+use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 fun main(account: &signer) {
-    Libra::publish_preburn(account, Libra::new_preburn<Coin1::T>())
+    Libra::publish_preburn(account, Libra::new_preburn<Coin1>())
 }
 }
 
@@ -48,13 +48,13 @@ fun main(account: &signer) {
 //! gas-currency: Coin1
 script {
 use 0x0::LibraAccount;
-use 0x0::Coin1;
+use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main(account: &signer) {
-    let coin = LibraAccount::withdraw_from<Coin1::T>(account, 100);
-    Libra::preburn_to<Coin1::T>(account, coin);
-    Transaction::assert(Libra::preburn_value<Coin1::T>() == 100, 8001)
+    let coin = LibraAccount::withdraw_from<Coin1>(account, 100);
+    Libra::preburn_to<Coin1>(account, coin);
+    Transaction::assert(Libra::preburn_value<Coin1>() == 100, 8001)
 }
 }
 
@@ -68,10 +68,10 @@ fun main(account: &signer) {
 //! gas-price: 0
 //! gas-currency: Coin1
 script {
-use 0x0::Coin1;
+use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 fun main(account: &signer) {
-    Libra::publish_preburn(account, Libra::new_preburn<Coin1::T>())
+    Libra::publish_preburn(account, Libra::new_preburn<Coin1>())
 }
 }
 
@@ -85,13 +85,13 @@ fun main(account: &signer) {
 //! gas-currency: Coin1
 script {
 use 0x0::LibraAccount;
-use 0x0::Coin1;
+use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main(account: &signer) {
-    let coin = LibraAccount::withdraw_from<Coin1::T>(account, 200);
-    Libra::preburn_to<Coin1::T>(account, coin);
-    Transaction::assert(Libra::preburn_value<Coin1::T>() == 300, 8002)
+    let coin = LibraAccount::withdraw_from<Coin1>(account, 200);
+    Libra::preburn_to<Coin1>(account, coin);
+    Transaction::assert(Libra::preburn_value<Coin1>() == 300, 8002)
 }
 }
 
@@ -107,11 +107,11 @@ fun main(account: &signer) {
 //! gas-currency: Coin1
 script {
 use 0x0::LibraAccount;
-use 0x0::Coin1;
+use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 fun main(account: &signer) {
-    let coin = LibraAccount::withdraw_from<Coin1::T>(account, 200);
-    Libra::preburn_to<Coin1::T>(account, coin);
+    let coin = LibraAccount::withdraw_from<Coin1>(account, 200);
+    Libra::preburn_to<Coin1>(account, coin);
 }
 }
 
@@ -126,10 +126,10 @@ fun main(account: &signer) {
 //! gas-price: 0
 //! gas-currency: Coin1
 script {
-use 0x0::Coin1;
+use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 fun main(account: &signer) {
-    Libra::burn<Coin1::T>(account, {{bob}})
+    Libra::burn<Coin1>(account, {{bob}})
 }
 }
 
@@ -143,10 +143,10 @@ fun main(account: &signer) {
 //! gas-price: 0
 //! gas-currency: Coin1
 script {
-use 0x0::Coin1;
+use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 fun main(account: &signer) {
-    Libra::burn<Coin1::T>(account, {{bob}})
+    Libra::burn<Coin1>(account, {{bob}})
 }
 }
 
@@ -159,14 +159,14 @@ fun main(account: &signer) {
 //! max-gas: 1000000
 //! gas-price: 0
 script {
-use 0x0::Coin1;
+use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main(account: &signer) {
-    Libra::burn<Coin1::T>(account, {{bob}});
-    Transaction::assert(Libra::preburn_value<Coin1::T>() == 100, 8003);
-    Libra::burn<Coin1::T>(account, {{alice}});
-    Transaction::assert(Libra::preburn_value<Coin1::T>() == 0, 8004)
+    Libra::burn<Coin1>(account, {{bob}});
+    Transaction::assert(Libra::preburn_value<Coin1>() == 100, 8003);
+    Libra::burn<Coin1>(account, {{alice}});
+    Transaction::assert(Libra::preburn_value<Coin1>() == 0, 8004)
 }
 }
 
@@ -181,13 +181,13 @@ fun main(account: &signer) {
 //! gas-currency: Coin1
 script {
 use 0x0::LibraAccount;
-use 0x0::Coin1;
+use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main(account: &signer) {
-    let coin = LibraAccount::withdraw_from<Coin1::T>(account, 100);
-    Libra::preburn_to<Coin1::T>(account, coin);
-    Transaction::assert(Libra::preburn_value<Coin1::T>() == 100, 8005)
+    let coin = LibraAccount::withdraw_from<Coin1>(account, 100);
+    Libra::preburn_to<Coin1>(account, coin);
+    Transaction::assert(Libra::preburn_value<Coin1>() == 100, 8005)
 }
 }
 
@@ -200,14 +200,14 @@ fun main(account: &signer) {
 //! gas-price: 0
 script {
 use 0x0::LibraAccount;
-use 0x0::Coin1;
+use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main(account: &signer) {
-    let old_balance = LibraAccount::balance<Coin1::T>({{alice}});
-    LibraAccount::cancel_burn<Coin1::T>(account, {{alice}});
-    Transaction::assert(Libra::preburn_value<Coin1::T>() == 0, 8006);
-    Transaction::assert(LibraAccount::balance<Coin1::T>({{alice}}) == old_balance + 100, 8007)
+    let old_balance = LibraAccount::balance<Coin1>({{alice}});
+    LibraAccount::cancel_burn<Coin1>(account, {{alice}});
+    Transaction::assert(Libra::preburn_value<Coin1>() == 0, 8006);
+    Transaction::assert(LibraAccount::balance<Coin1>({{alice}}) == old_balance + 100, 8007)
 }
 }
 
@@ -218,10 +218,10 @@ fun main(account: &signer) {
 //! sender: blessed
 //! max-gas: 1000000
 script {
-use 0x0::Coin2;
+use 0x0::Coin2::Coin2;
 use 0x0::LibraAccount;
 fun main(account: &signer) {
-    LibraAccount::mint_to_address<Coin2::T>(account, {{dawn}}, 200);
+    LibraAccount::mint_to_address<Coin2>(account, {{dawn}}, 200);
 }
 }
 // check: EXECUTED
@@ -232,13 +232,13 @@ fun main(account: &signer) {
 //! max-gas: 1000000
 //! gas-currency: Coin2
 script {
-use 0x0::Coin2;
+use 0x0::Coin2::Coin2;
 use 0x0::Libra;
 use 0x0::LibraAccount;
 fun main(account: &signer) {
-    Libra::publish_preburn(account, Libra::new_preburn<Coin2::T>());
-    let coin = LibraAccount::withdraw_from<Coin2::T>(account, 100);
-    Libra::preburn_to<Coin2::T>(account, coin);
+    Libra::publish_preburn(account, Libra::new_preburn<Coin2>());
+    let coin = LibraAccount::withdraw_from<Coin2>(account, 100);
+    Libra::preburn_to<Coin2>(account, coin);
 }
 }
 
@@ -249,11 +249,11 @@ fun main(account: &signer) {
 //! max-gas: 1000000
 //! gas-currency: Coin2
 script {
-use 0x0::Coin2;
+use 0x0::Coin2::Coin2;
 use 0x0::Libra;
 fun main(account: &signer) {
     Libra::destroy_preburn(
-        Libra::remove_preburn<Coin2::T>(account)
+        Libra::remove_preburn<Coin2>(account)
     );
 }
 }
@@ -264,10 +264,10 @@ fun main(account: &signer) {
 //! sender: blessed
 //! max-gas: 1000000
 script {
-use 0x0::Coin2;
+use 0x0::Coin2::Coin2;
 use 0x0::LibraAccount;
 fun main(account: &signer) {
-    LibraAccount::cancel_burn<Coin2::T>(account, {{dawn}});
+    LibraAccount::cancel_burn<Coin2>(account, {{dawn}});
 }
 }
 // check: EXECUTED
@@ -278,11 +278,11 @@ fun main(account: &signer) {
 //! max-gas: 1000000
 //! gas-currency: Coin2
 script {
-use 0x0::Coin2;
+use 0x0::Coin2::Coin2;
 use 0x0::Libra;
 fun main(account: &signer) {
     Libra::destroy_preburn(
-        Libra::remove_preburn<Coin2::T>(account)
+        Libra::remove_preburn<Coin2>(account)
     );
 }
 }

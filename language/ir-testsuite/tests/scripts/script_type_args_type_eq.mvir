@@ -25,12 +25,12 @@ main<T>() {
 
 
 //! new-transaction
-//! type-args: 0x0::LibraAccount::T
+//! type-args: 0x0::LibraAccount::LibraAccount
 import {{default}}.M;
 import 0x0.LibraAccount;
 
 main<T>() {
-    assert(M.type_eq<T, LibraAccount.T>(), 100);
+    assert(M.type_eq<T, LibraAccount.LibraAccount>(), 100);
     assert(!M.type_eq<T, u8>(), 101);
     return;
 }

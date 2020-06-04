@@ -9,7 +9,7 @@ module Set {
 
     struct T<Elem> { v: vector<Elem> }
 
-    public fun empty<Elem>(): Self::T<Elem> {
+    public fun empty<Elem>(): T<Elem> {
         T { v: Vector::empty() }
     }
 

@@ -3,11 +3,11 @@
 
 //! sender: alice
 script {
-use 0x0::LBR;
+use 0x0::LBR::LBR;
 use 0x0::LibraAccount;
 // send a transaction with metadata and make sure we see it in the PaymentReceivedEvent
 fun main(account: &signer) {
-    LibraAccount::pay_from_with_metadata<LBR::T>(account, {{bob}}, 1000, x"deadbeef", x"");
+    LibraAccount::pay_from_with_metadata<LBR>(account, {{bob}}, 1000, x"deadbeef", x"");
 }
 }
 
@@ -21,13 +21,13 @@ fun main(account: &signer) {
 //! sender: alice
 script {
 use 0x0::LibraAccount;
-use 0x0::LBR;
+use 0x0::LBR::LBR;
 // same thing, but using "deposit_with_metadata" API
 fun main(account: &signer) {
-    LibraAccount::deposit_with_metadata<LBR::T>(
+    LibraAccount::deposit_with_metadata<LBR>(
         account,
         {{bob}},
-        LibraAccount::withdraw_from<LBR::T>(account, 100),
+        LibraAccount::withdraw_from<LBR>(account, 100),
         x"deadbeef",
         x""
     )

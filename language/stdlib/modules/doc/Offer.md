@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `T`](#0x0_Offer_T)
+-  [Struct `Offer`](#0x0_Offer_Offer)
 -  [Function `create`](#0x0_Offer_create)
 -  [Function `redeem`](#0x0_Offer_redeem)
 -  [Function `exists_at`](#0x0_Offer_exists_at)
@@ -13,13 +13,13 @@
 
 
 
-<a name="0x0_Offer_T"></a>
+<a name="0x0_Offer_Offer"></a>
 
-## Struct `T`
+## Struct `Offer`
 
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_Offer_T">T</a>&lt;Offered&gt;
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_Offer">Offer</a>&lt;Offered&gt;
 </code></pre>
 
 
@@ -64,7 +64,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Offer_create">create</a>&lt;Offered&gt;(account: &signer, offered: Offered, for: address) {
-  move_to(account, <a href="#0x0_Offer_T">T</a>&lt;Offered&gt; { offered, for });
+  move_to(account, <a href="#0x0_Offer">Offer</a>&lt;Offered&gt; { offered, for });
 }
 </code></pre>
 
@@ -87,8 +87,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Offer_redeem">redeem</a>&lt;Offered&gt;(account: &signer, offer_address: address): Offered <b>acquires</b> <a href="#0x0_Offer_T">T</a> {
-  <b>let</b> <a href="#0x0_Offer_T">T</a>&lt;Offered&gt; { offered, for } = move_from&lt;<a href="#0x0_Offer_T">T</a>&lt;Offered&gt;&gt;(offer_address);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Offer_redeem">redeem</a>&lt;Offered&gt;(account: &signer, offer_address: address): Offered <b>acquires</b> <a href="#0x0_Offer">Offer</a> {
+  <b>let</b> <a href="#0x0_Offer">Offer</a>&lt;Offered&gt; { offered, for } = move_from&lt;<a href="#0x0_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address);
   <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
   // fail with INSUFFICIENT_PRIVILEGES
   Transaction::assert(sender == for || sender == offer_address, 11);
@@ -116,7 +116,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Offer_exists_at">exists_at</a>&lt;Offered&gt;(offer_address: address): bool {
-  exists&lt;<a href="#0x0_Offer_T">T</a>&lt;Offered&gt;&gt;(offer_address)
+  exists&lt;<a href="#0x0_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address)
 }
 </code></pre>
 
@@ -139,8 +139,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Offer_address_of">address_of</a>&lt;Offered&gt;(offer_address: address): address <b>acquires</b> <a href="#0x0_Offer_T">T</a> {
-  borrow_global&lt;<a href="#0x0_Offer_T">T</a>&lt;Offered&gt;&gt;(offer_address).for
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Offer_address_of">address_of</a>&lt;Offered&gt;(offer_address: address): address <b>acquires</b> <a href="#0x0_Offer">Offer</a> {
+  borrow_global&lt;<a href="#0x0_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address).for
 }
 </code></pre>
 

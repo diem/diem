@@ -4,12 +4,12 @@
 //! sender: association
 script {
 use 0x0::Libra;
-use 0x0::LBR;
+use 0x0::LBR::LBR;
 use 0x0::Transaction;
 fun main() {
-    Transaction::assert(Libra::approx_lbr_for_value<LBR::T>(10) == 10, 1);
-    Transaction::assert(Libra::scaling_factor<LBR::T>() == 1000000, 2);
-    Transaction::assert(Libra::fractional_part<LBR::T>() == 1000, 3);
+    Transaction::assert(Libra::approx_lbr_for_value<LBR>(10) == 10, 1);
+    Transaction::assert(Libra::scaling_factor<LBR>() == 1000000, 2);
+    Transaction::assert(Libra::fractional_part<LBR>() == 1000, 3);
 }
 }
 // check: EXECUTED
@@ -35,10 +35,10 @@ fun main(account: &signer) {
 //! sender: association
 script {
 use 0x0::LibraAccount;
-use 0x0::LBR;
+use 0x0::LBR::LBR;
 use 0x0::Libra;
 fun main(account: &signer) {
-   LibraAccount::deposit_to(account, Libra::mint<LBR::T>(account, 1000));
+   LibraAccount::deposit_to(account, Libra::mint<LBR>(account, 1000));
 }
 }
 // check: MISSING_DATA
@@ -48,11 +48,11 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: association
 script {
-use 0x0::LBR;
+use 0x0::LBR::LBR;
 use 0x0::Libra;
 use 0x0::Offer;
 fun main(account: &signer) {
-   Offer::create(account, Libra::remove_burn_capability<LBR::T>(account), {{alice}});
+   Offer::create(account, Libra::remove_burn_capability<LBR>(account), {{alice}});
 }
 }
 // check: MISSING_DATA

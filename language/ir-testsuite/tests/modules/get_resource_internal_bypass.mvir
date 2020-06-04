@@ -13,9 +13,9 @@ import {{default}}.Token;
 
 main() {
     let sender: address;
-    let struct1: &mut Token.T;
+    let struct1: &mut Token.Token;
 
     sender = get_txn_sender();
-    struct1 = borrow_global_mut<Token.T>(copy(sender));
+    struct1 = borrow_global_mut<Token.Token>(copy(sender));
     return;
 }

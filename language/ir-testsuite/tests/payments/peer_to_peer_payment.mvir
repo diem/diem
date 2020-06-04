@@ -15,12 +15,12 @@ main(sender: &signer) {
 
     sender_addr = Signer.address_of(copy(sender));
     recipient_addr = {{bob}};
-    sender_original_balance = LibraAccount.balance<LBR.T>(copy(sender_addr));
-    recipient_original_balance = LibraAccount.balance<LBR.T>(copy(recipient_addr));
-    LibraAccount.pay_from<LBR.T>(move(sender), copy(recipient_addr), 5);
+    sender_original_balance = LibraAccount.balance<LBR.LBR>(copy(sender_addr));
+    recipient_original_balance = LibraAccount.balance<LBR.LBR>(copy(recipient_addr));
+    LibraAccount.pay_from<LBR.LBR>(move(sender), copy(recipient_addr), 5);
 
-    sender_new_balance = LibraAccount.balance<LBR.T>(move(sender_addr));
-    recipient_new_balance = LibraAccount.balance<LBR.T>(move(recipient_addr));
+    sender_new_balance = LibraAccount.balance<LBR.LBR>(move(sender_addr));
+    recipient_new_balance = LibraAccount.balance<LBR.LBR>(move(recipient_addr));
     assert(copy(sender_new_balance) == copy(sender_original_balance) - 5, 77);
     assert(copy(recipient_new_balance) == copy(recipient_original_balance) + 5, 77);
 

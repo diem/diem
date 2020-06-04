@@ -7,8 +7,8 @@ import 0x0.LBR;
 import 0x0.LibraAccount;
 import 0x0.Libra;
 main(blessed: &signer) {
-    LibraAccount.deposit<LBR.T>(copy(blessed), {{alice}}, LBR.mint(copy(blessed), 10000));
-    LibraAccount.deposit<LBR.T>(copy(blessed), {{bob}}, LBR.mint(move(blessed), 10000));
+    LibraAccount.deposit<LBR.LBR>(copy(blessed), {{alice}}, LBR.mint(copy(blessed), 10000));
+    LibraAccount.deposit<LBR.LBR>(copy(blessed), {{bob}}, LBR.mint(move(blessed), 10000));
     return;
 }
 
@@ -36,6 +36,6 @@ import 0x0.LBR;
 
 main() {
     // Alice did less work than bob so she should pay less gas.
-    assert(LibraAccount.balance<LBR.T>({{bob}}) < LibraAccount.balance<LBR.T>({{alice}}), 42);
+    assert(LibraAccount.balance<LBR.LBR>({{bob}}) < LibraAccount.balance<LBR.LBR>({{alice}}), 42);
     return;
 }

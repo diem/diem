@@ -86,10 +86,10 @@ fun main(account: &signer) {
 //! sender: vasp
 script {
 use 0x0::LibraAccount;
-use 0x0::LBR;
+use 0x0::LBR::LBR;
 fun main(parent_vasp: &signer) {
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
-    LibraAccount::create_child_vasp_account<LBR::T>(parent_vasp, 0xAA, dummy_auth_key_prefix, false);
+    LibraAccount::create_child_vasp_account<LBR>(parent_vasp, 0xAA, dummy_auth_key_prefix, false);
 }
 }
 // check: EXECUTED

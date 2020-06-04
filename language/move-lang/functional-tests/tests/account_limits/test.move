@@ -17,9 +17,9 @@ script {
 //! sender: bob
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
+    use 0x0::LBR::LBR;
     fun main(account: &signer) {
-        LibraAccount::pay_from<LBR::T>(account, {{alice}}, 1);
+        LibraAccount::pay_from<LBR>(account, {{alice}}, 1);
     }
 }
 // TODO: fix
@@ -113,12 +113,12 @@ script {
 //! sender: bob
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
+    use 0x0::LBR::LBR;
     // Since we directly wrote into this account using fake data store, we
     // don't actually know that the balance is greater than 0 in the
     // account limits code, but it is.
     fun main(account: &signer) {
-        LibraAccount::pay_from<LBR::T>(account, {{alice}}, 1);
+        LibraAccount::pay_from<LBR>(account, {{alice}}, 1);
     }
 }
 // check: EXECUTED
@@ -137,9 +137,9 @@ fun main(account: &signer) {
 //! sender: bob
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
+    use 0x0::LBR::LBR;
     fun main(account: &signer) {
-        LibraAccount::pay_from<LBR::T>(account, {{alice}}, 1);
+        LibraAccount::pay_from<LBR>(account, {{alice}}, 1);
     }
 }
 // check: EXECUTED
@@ -172,9 +172,9 @@ fun main(account: &signer) {
 //! sender: bob
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
+    use 0x0::LBR::LBR;
     fun main(account: &signer) {
-        LibraAccount::pay_from<LBR::T>(account, {{alice}}, 1);
+        LibraAccount::pay_from<LBR>(account, {{alice}}, 1);
     }
 }
 // check: EXECUTED
@@ -195,9 +195,9 @@ script {
 //! sender: bob
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
+    use 0x0::LBR::LBR;
     fun main(account: &signer) {
-        LibraAccount::pay_from<LBR::T>(account, {{alice}}, 1);
+        LibraAccount::pay_from<LBR>(account, {{alice}}, 1);
     }
 }
 // TODO: fix
@@ -253,9 +253,9 @@ script {
 //! sender: bob
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
+    use 0x0::LBR::LBR;
     fun main(account: &signer) {
-        LibraAccount::pay_from<LBR::T>(account, {{alice}}, 101);
+        LibraAccount::pay_from<LBR>(account, {{alice}}, 101);
     }
 }
 // chec: ABORTED
@@ -277,9 +277,9 @@ script {
 //! sender: bob
 script {
     use 0x0::LibraAccount;
-    use 0x0::LBR;
+    use 0x0::LBR::LBR;
     fun main(account: &signer) {
-        LibraAccount::pay_from<LBR::T>(account, {{alice}}, 1);
+        LibraAccount::pay_from<LBR>(account, {{alice}}, 1);
     }
 }
 // TODO: fix

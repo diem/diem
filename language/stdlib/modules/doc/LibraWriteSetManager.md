@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `T`](#0x0_LibraWriteSetManager_T)
+-  [Struct `LibraWriteSetManager`](#0x0_LibraWriteSetManager_LibraWriteSetManager)
 -  [Struct `UpgradeEvent`](#0x0_LibraWriteSetManager_UpgradeEvent)
 -  [Function `initialize`](#0x0_LibraWriteSetManager_initialize)
 -  [Function `prologue`](#0x0_LibraWriteSetManager_prologue)
@@ -13,13 +13,13 @@
 
 
 
-<a name="0x0_LibraWriteSetManager_T"></a>
+<a name="0x0_LibraWriteSetManager_LibraWriteSetManager"></a>
 
-## Struct `T`
+## Struct `LibraWriteSetManager`
 
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_LibraWriteSetManager_T">T</a>
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_LibraWriteSetManager">LibraWriteSetManager</a>
 </code></pre>
 
 
@@ -89,7 +89,7 @@
 
     move_to(
         account,
-        <a href="#0x0_LibraWriteSetManager_T">T</a> {
+        <a href="#0x0_LibraWriteSetManager">LibraWriteSetManager</a> {
             upgrade_events: <a href="Event.md#0x0_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x0_LibraWriteSetManager_UpgradeEvent">Self::UpgradeEvent</a>&gt;(account),
         }
     );
@@ -155,8 +155,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraWriteSetManager_epilogue">epilogue</a>(account: &signer, writeset_payload: vector&lt;u8&gt;) <b>acquires</b> <a href="#0x0_LibraWriteSetManager_T">T</a> {
-    <b>let</b> t_ref = borrow_global_mut&lt;<a href="#0x0_LibraWriteSetManager_T">T</a>&gt;(0xA550C18);
+<pre><code><b>fun</b> <a href="#0x0_LibraWriteSetManager_epilogue">epilogue</a>(account: &signer, writeset_payload: vector&lt;u8&gt;) <b>acquires</b> <a href="#0x0_LibraWriteSetManager">LibraWriteSetManager</a> {
+    <b>let</b> t_ref = borrow_global_mut&lt;<a href="#0x0_LibraWriteSetManager">LibraWriteSetManager</a>&gt;(0xA550C18);
 
     <a href="Event.md#0x0_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x0_LibraWriteSetManager_UpgradeEvent">Self::UpgradeEvent</a>&gt;(
         &<b>mut</b> t_ref.upgrade_events,

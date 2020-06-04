@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `T`](#0x0_LibraAccount_T)
+-  [Struct `LibraAccount`](#0x0_LibraAccount_LibraAccount)
 -  [Struct `Role`](#0x0_LibraAccount_Role)
 -  [Struct `Balance`](#0x0_LibraAccount_Balance)
 -  [Struct `WithdrawCapability`](#0x0_LibraAccount_WithdrawCapability)
@@ -95,13 +95,13 @@
 
 
 
-<a name="0x0_LibraAccount_T"></a>
+<a name="0x0_LibraAccount_LibraAccount"></a>
 
-## Struct `T`
+## Struct `LibraAccount`
 
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_LibraAccount_T">T</a>
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_LibraAccount">LibraAccount</a>
 </code></pre>
 
 
@@ -211,7 +211,7 @@
 <dl>
 <dt>
 
-<code>coin: <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;Token&gt;</code>
+<code>coin: <a href="Libra.md#0x0_Libra_Libra">Libra::Libra</a>&lt;Token&gt;</code>
 </dt>
 <dd>
 
@@ -646,7 +646,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_is_unhosted">is_unhosted</a>(addr: address): bool {
-    <a href="#0x0_LibraAccount_is">is</a>&lt;<a href="Unhosted.md#0x0_Unhosted_T">Unhosted::T</a>&gt;(addr)
+    <a href="#0x0_LibraAccount_is">is</a>&lt;<a href="Unhosted.md#0x0_Unhosted">Unhosted</a>&gt;(addr)
 }
 </code></pre>
 
@@ -983,7 +983,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_deposit">deposit</a>&lt;Token&gt;(payer: &signer, payee: address, to_deposit: <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;Token&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_deposit">deposit</a>&lt;Token&gt;(payer: &signer, payee: address, to_deposit: <a href="Libra.md#0x0_Libra_Libra">Libra::Libra</a>&lt;Token&gt;)
 </code></pre>
 
 
@@ -992,8 +992,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_deposit">deposit</a>&lt;Token&gt;(payer: &signer, payee: address, to_deposit: <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;Token&gt;)
-<b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_deposit">deposit</a>&lt;Token&gt;(payer: &signer, payee: address, to_deposit: <a href="Libra.md#0x0_Libra">Libra</a>&lt;Token&gt;)
+<b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
     <a href="#0x0_LibraAccount_deposit_with_metadata">deposit_with_metadata</a>(payer, payee, to_deposit, x"", x"")
 }
 </code></pre>
@@ -1008,7 +1008,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_deposit_to">deposit_to</a>&lt;Token&gt;(account: &signer, to_deposit: <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;Token&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_deposit_to">deposit_to</a>&lt;Token&gt;(account: &signer, to_deposit: <a href="Libra.md#0x0_Libra_Libra">Libra::Libra</a>&lt;Token&gt;)
 </code></pre>
 
 
@@ -1017,8 +1017,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_deposit_to">deposit_to</a>&lt;Token&gt;(account: &signer, to_deposit: <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;Token&gt;)
-<b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_deposit_to">deposit_to</a>&lt;Token&gt;(account: &signer, to_deposit: <a href="Libra.md#0x0_Libra">Libra</a>&lt;Token&gt;)
+<b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
     <a href="#0x0_LibraAccount_deposit">deposit</a>(account, <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account), to_deposit)
 }
 </code></pre>
@@ -1033,7 +1033,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_deposit_with_metadata">deposit_with_metadata</a>&lt;Token&gt;(payer: &signer, payee: address, to_deposit: <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;Token&gt;, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_deposit_with_metadata">deposit_with_metadata</a>&lt;Token&gt;(payer: &signer, payee: address, to_deposit: <a href="Libra.md#0x0_Libra_Libra">Libra::Libra</a>&lt;Token&gt;, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -1045,10 +1045,10 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_deposit_with_metadata">deposit_with_metadata</a>&lt;Token&gt;(
     payer: &signer,
     payee: address,
-    to_deposit: <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;Token&gt;,
+    to_deposit: <a href="Libra.md#0x0_Libra">Libra</a>&lt;Token&gt;,
     metadata: vector&lt;u8&gt;,
     metadata_signature: vector&lt;u8&gt;
-) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
+) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
     <a href="#0x0_LibraAccount_deposit_with_sender_and_metadata">deposit_with_sender_and_metadata</a>(
         payee,
         <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(payer),
@@ -1069,7 +1069,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraAccount_deposit_with_sender_and_metadata">deposit_with_sender_and_metadata</a>&lt;Token&gt;(payee: address, sender: address, to_deposit: <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;Token&gt;, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
+<pre><code><b>fun</b> <a href="#0x0_LibraAccount_deposit_with_sender_and_metadata">deposit_with_sender_and_metadata</a>&lt;Token&gt;(payee: address, sender: address, to_deposit: <a href="Libra.md#0x0_Libra_Libra">Libra::Libra</a>&lt;Token&gt;, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -1081,10 +1081,10 @@
 <pre><code><b>fun</b> <a href="#0x0_LibraAccount_deposit_with_sender_and_metadata">deposit_with_sender_and_metadata</a>&lt;Token&gt;(
     payee: address,
     sender: address,
-    to_deposit: <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;Token&gt;,
+    to_deposit: <a href="Libra.md#0x0_Libra">Libra</a>&lt;Token&gt;,
     metadata: vector&lt;u8&gt;,
     metadata_signature: vector&lt;u8&gt;
-) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
+) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
     // Check that the `to_deposit` coin is non-zero
     <b>let</b> deposit_value = <a href="Libra.md#0x0_Libra_value">Libra::value</a>(&to_deposit);
     Transaction::assert(deposit_value &gt; 0, 7);
@@ -1141,7 +1141,7 @@
     <b>let</b> currency_code = <a href="Libra.md#0x0_Libra_currency_code">Libra::currency_code</a>&lt;Token&gt;();
 
     // Load the sender's account
-    <b>let</b> sender_account_ref = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(sender);
+    <b>let</b> sender_account_ref = borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(sender);
     // Log a sent event
     <a href="Event.md#0x0_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x0_LibraAccount_SentPaymentEvent">SentPaymentEvent</a>&gt;(
         &<b>mut</b> sender_account_ref.sent_events,
@@ -1154,7 +1154,7 @@
     );
 
     // Load the payee's account
-    <b>let</b> payee_account_ref = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(payee);
+    <b>let</b> payee_account_ref = borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(payee);
     <b>let</b> payee_balance = borrow_global_mut&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee);
     // Deposit the `to_deposit` coin
     <a href="Libra.md#0x0_Libra_deposit">Libra::deposit</a>(&<b>mut</b> payee_balance.coin, to_deposit);
@@ -1194,7 +1194,7 @@
     account: &signer,
     payee: address,
     amount: u64
-) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
+) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
     // Mint and deposit the coin
     <a href="#0x0_LibraAccount_deposit">deposit</a>(account, payee, <a href="Libra.md#0x0_Libra_mint">Libra::mint</a>&lt;Token&gt;(account, amount));
 }
@@ -1223,7 +1223,7 @@
     account: &signer,
     payee: address,
     amount: u64
-) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
+) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
     // Mint and deposit the coin
     <a href="#0x0_LibraAccount_deposit">deposit</a>(account, payee, <a href="LBR.md#0x0_LBR_mint">LBR::mint</a>(account, amount));
 }
@@ -1251,7 +1251,7 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_cancel_burn">cancel_burn</a>&lt;Token&gt;(
     account: &signer,
     preburn_address: address,
-) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
+) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
     <b>let</b> to_return = <a href="Libra.md#0x0_Libra_cancel_burn">Libra::cancel_burn</a>&lt;Token&gt;(account, preburn_address);
     <a href="#0x0_LibraAccount_deposit">deposit</a>(account, preburn_address, to_return)
 }
@@ -1267,7 +1267,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraAccount_withdraw_from_balance">withdraw_from_balance</a>&lt;Token&gt;(_addr: address, balance: &<b>mut</b> <a href="#0x0_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Token&gt;, amount: u64): <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;Token&gt;
+<pre><code><b>fun</b> <a href="#0x0_LibraAccount_withdraw_from_balance">withdraw_from_balance</a>&lt;Token&gt;(_addr: address, balance: &<b>mut</b> <a href="#0x0_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Token&gt;, amount: u64): <a href="Libra.md#0x0_Libra_Libra">Libra::Libra</a>&lt;Token&gt;
 </code></pre>
 
 
@@ -1280,7 +1280,7 @@
     _addr: address,
     balance: &<b>mut</b> <a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;,
     amount: u64
-): <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+): <a href="Libra.md#0x0_Libra">Libra</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     // Make sure that this withdrawal is compliant with the limits on
     // the account.
     <b>let</b> _  = borrow_global&lt;<a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(0xA550C18);
@@ -1304,7 +1304,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_withdraw_from">withdraw_from</a>&lt;Token&gt;(account: &signer, amount: u64): <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;Token&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_withdraw_from">withdraw_from</a>&lt;Token&gt;(account: &signer, amount: u64): <a href="Libra.md#0x0_Libra_Libra">Libra::Libra</a>&lt;Token&gt;
 </code></pre>
 
 
@@ -1313,10 +1313,10 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_withdraw_from">withdraw_from</a>&lt;Token&gt;(account: &signer, amount: u64): <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;Token&gt;
-<b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_withdraw_from">withdraw_from</a>&lt;Token&gt;(account: &signer, amount: u64): <a href="Libra.md#0x0_Libra">Libra</a>&lt;Token&gt;
+<b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
-    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(sender);
+    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(sender);
     <b>let</b> sender_balance = borrow_global_mut&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(sender);
     // The sender has delegated the privilege <b>to</b> withdraw from her account elsewhere--<b>abort</b>.
     Transaction::assert(!sender_account.delegated_withdraw_capability, 11);
@@ -1335,7 +1335,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_withdraw_with_capability">withdraw_with_capability</a>&lt;Token&gt;(cap: &<a href="#0x0_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a>, amount: u64): <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;Token&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_withdraw_with_capability">withdraw_with_capability</a>&lt;Token&gt;(cap: &<a href="#0x0_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a>, amount: u64): <a href="Libra.md#0x0_Libra_Libra">Libra::Libra</a>&lt;Token&gt;
 </code></pre>
 
 
@@ -1346,7 +1346,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_withdraw_with_capability">withdraw_with_capability</a>&lt;Token&gt;(
     cap: &<a href="#0x0_LibraAccount_WithdrawCapability">WithdrawCapability</a>, amount: u64
-): <a href="Libra.md#0x0_Libra_T">Libra::T</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+): <a href="Libra.md#0x0_Libra">Libra</a>&lt;Token&gt; <b>acquires</b> <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <b>let</b> balance = borrow_global_mut&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(cap.account_address);
     <a href="#0x0_LibraAccount_withdraw_from_balance">withdraw_from_balance</a>&lt;Token&gt;(cap.account_address, balance , amount)
 }
@@ -1373,9 +1373,9 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_extract_withdraw_capability">extract_withdraw_capability</a>(
     sender: &signer
-): <a href="#0x0_LibraAccount_WithdrawCapability">WithdrawCapability</a> <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
+): <a href="#0x0_LibraAccount_WithdrawCapability">WithdrawCapability</a> <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a> {
     <b>let</b> sender_addr = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(sender);
-    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(sender_addr);
+    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(sender_addr);
 
     // Abort <b>if</b> we already extracted the unique withdraw capability for this account.
     Transaction::assert(!sender_account.delegated_withdraw_capability, 11);
@@ -1405,10 +1405,10 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_restore_withdraw_capability">restore_withdraw_capability</a>(cap: <a href="#0x0_LibraAccount_WithdrawCapability">WithdrawCapability</a>) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_restore_withdraw_capability">restore_withdraw_capability</a>(cap: <a href="#0x0_LibraAccount_WithdrawCapability">WithdrawCapability</a>) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a> {
     // Destroy the capability
     <b>let</b> <a href="#0x0_LibraAccount_WithdrawCapability">WithdrawCapability</a> { account_address } = cap;
-    <b>let</b> account = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(account_address);
+    <b>let</b> account = borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(account_address);
     // Update the flag for `account_address` <b>to</b> indicate that the capability has been restored.
     // The account owner will now be able <b>to</b> call pay_from, withdraw_from, and
     // extract_sender_withdraw_capability again.
@@ -1441,7 +1441,7 @@
     amount: u64,
     metadata: vector&lt;u8&gt;,
     metadata_signature: vector&lt;u8&gt;
-) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
+) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
     <a href="#0x0_LibraAccount_deposit_with_sender_and_metadata">deposit_with_sender_and_metadata</a>&lt;Token&gt;(
         payee,
         *&cap.account_address,
@@ -1461,7 +1461,7 @@
 ## Function `pay_from_with_metadata`
 
 Withdraw
-<code>amount</code> Libra::T<Token> from
+<code>amount</code> Libra<Token> from
 <code>account</code>'s balance and send to the
 <code>payee</code> address
 with the attached
@@ -1484,7 +1484,7 @@ with the attached
     amount: u64,
     metadata: vector&lt;u8&gt;,
     metadata_signature: vector&lt;u8&gt;
-) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
+) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
     <a href="#0x0_LibraAccount_deposit_with_metadata">deposit_with_metadata</a>&lt;Token&gt;(
         payer,
         payee,
@@ -1515,7 +1515,7 @@ with the attached
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_pay_from">pay_from</a>&lt;Token&gt;(payer: &signer, payee: address, amount: u64)
-<b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
+<b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Role">Role</a> {
     <a href="#0x0_LibraAccount_pay_from_with_metadata">pay_from_with_metadata</a>&lt;Token&gt;(payer, payee, amount, x"", x"");
 }
 </code></pre>
@@ -1530,7 +1530,7 @@ with the attached
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraAccount_rotate_authentication_key_for_account">rotate_authentication_key_for_account</a>(account: &<b>mut</b> <a href="#0x0_LibraAccount_T">LibraAccount::T</a>, new_authentication_key: vector&lt;u8&gt;)
+<pre><code><b>fun</b> <a href="#0x0_LibraAccount_rotate_authentication_key_for_account">rotate_authentication_key_for_account</a>(account: &<b>mut</b> <a href="#0x0_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>, new_authentication_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -1539,7 +1539,7 @@ with the attached
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraAccount_rotate_authentication_key_for_account">rotate_authentication_key_for_account</a>(account: &<b>mut</b> <a href="#0x0_LibraAccount_T">T</a>, new_authentication_key: vector&lt;u8&gt;) {
+<pre><code><b>fun</b> <a href="#0x0_LibraAccount_rotate_authentication_key_for_account">rotate_authentication_key_for_account</a>(account: &<b>mut</b> <a href="#0x0_LibraAccount">LibraAccount</a>, new_authentication_key: vector&lt;u8&gt;) {
   // Don't allow rotating <b>to</b> clearly invalid key
   Transaction::assert(<a href="Vector.md#0x0_Vector_length">Vector::length</a>(&new_authentication_key) == 32, 12);
   account.authentication_key = new_authentication_key;
@@ -1567,8 +1567,8 @@ with the attached
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_rotate_authentication_key">rotate_authentication_key</a>(
     sender: &signer, new_authentication_key: vector&lt;u8&gt;
-) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
-    <b>let</b> sender_account_resource = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(sender));
+) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a> {
+    <b>let</b> sender_account_resource = borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(sender));
     // The sender has delegated the privilege <b>to</b> rotate her key elsewhere--<b>abort</b>
     Transaction::assert(!sender_account_resource.delegated_key_rotation_capability, 11);
     // The sender has retained her key rotation privileges--proceed.
@@ -1601,9 +1601,9 @@ with the attached
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_rotate_authentication_key_with_capability">rotate_authentication_key_with_capability</a>(
     cap: &<a href="#0x0_LibraAccount_KeyRotationCapability">KeyRotationCapability</a>,
     new_authentication_key: vector&lt;u8&gt;,
-) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>  {
+) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>  {
     <a href="#0x0_LibraAccount_rotate_authentication_key_for_account">rotate_authentication_key_for_account</a>(
-        borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(*&cap.account_address),
+        borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(*&cap.account_address),
         new_authentication_key
     );
 }
@@ -1628,9 +1628,9 @@ with the attached
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_extract_key_rotation_capability">extract_key_rotation_capability</a>(account: &signer): <a href="#0x0_LibraAccount_KeyRotationCapability">KeyRotationCapability</a> <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_extract_key_rotation_capability">extract_key_rotation_capability</a>(account: &signer): <a href="#0x0_LibraAccount_KeyRotationCapability">KeyRotationCapability</a> <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a> {
     <b>let</b> account_address = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
-    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(account_address);
+    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(account_address);
     // Abort <b>if</b> we already extracted the unique key rotation capability for this account.
     Transaction::assert(!sender_account.delegated_key_rotation_capability, 11);
     // Ensure uniqueness of the capability
@@ -1658,10 +1658,10 @@ with the attached
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_restore_key_rotation_capability">restore_key_rotation_capability</a>(cap: <a href="#0x0_LibraAccount_KeyRotationCapability">KeyRotationCapability</a>) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_restore_key_rotation_capability">restore_key_rotation_capability</a>(cap: <a href="#0x0_LibraAccount_KeyRotationCapability">KeyRotationCapability</a>) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a> {
     // Destroy the capability
     <b>let</b> <a href="#0x0_LibraAccount_KeyRotationCapability">KeyRotationCapability</a> { account_address } = cap;
-    <b>let</b> account = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(account_address);
+    <b>let</b> account = borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(account_address);
     // Update the flag for `account_address` <b>to</b> indicate that the capability has been restored.
     // The account owner will now be able <b>to</b> call rotate_authentication_key and
     // extract_sender_key_rotation_capability again
@@ -1750,7 +1750,7 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
     // cannot create an account at the reserved address 0x0
     Transaction::assert(new_account_addr != 0x0, 0);
 
-    // (1) publish Account::T
+    // (1) publish <a href="#0x0_LibraAccount">LibraAccount</a>
     <b>let</b> authentication_key = auth_key_prefix;
     <a href="Vector.md#0x0_Vector_append">Vector::append</a>(
         &<b>mut</b> authentication_key, <a href="LCS.md#0x0_LCS_to_bytes">LCS::to_bytes</a>(<a href="Signer.md#0x0_Signer_borrow_address">Signer::borrow_address</a>(&new_account))
@@ -1758,7 +1758,7 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
     Transaction::assert(<a href="Vector.md#0x0_Vector_length">Vector::length</a>(&authentication_key) == 32, 12);
     move_to(
         &new_account,
-        <a href="#0x0_LibraAccount_T">T</a> {
+        <a href="#0x0_LibraAccount">LibraAccount</a> {
             authentication_key,
             delegated_key_rotation_capability: <b>false</b>,
             delegated_withdraw_capability: <b>false</b>,
@@ -1774,14 +1774,14 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
     // (3) publish <a href="#0x0_LibraAccount_Balance">Balance</a> <b>resource</b>(s)
     <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;Token&gt;(&new_account);
     <b>if</b> (add_all_currencies) {
-        <b>if</b> (!::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;<a href="Coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;&gt;(new_account_addr)) {
-            <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;<a href="Coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(&new_account);
+        <b>if</b> (!::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;<a href="Coin1.md#0x0_Coin1">Coin1</a>&gt;&gt;(new_account_addr)) {
+            <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;<a href="Coin1.md#0x0_Coin1">Coin1</a>&gt;(&new_account);
         };
-        <b>if</b> (!::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;<a href="Coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;&gt;(new_account_addr)) {
-            <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;<a href="Coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(&new_account);
+        <b>if</b> (!::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;<a href="Coin2.md#0x0_Coin2">Coin2</a>&gt;&gt;(new_account_addr)) {
+            <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;<a href="Coin2.md#0x0_Coin2">Coin2</a>&gt;(&new_account);
         };
-        <b>if</b> (!::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;<a href="LBR.md#0x0_LBR_T">LBR::T</a>&gt;&gt;(new_account_addr)) {
-            <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;<a href="LBR.md#0x0_LBR_T">LBR::T</a>&gt;(&new_account);
+        <b>if</b> (!::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;<a href="LBR.md#0x0_LBR">LBR</a>&gt;&gt;(new_account_addr)) {
+            <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;<a href="LBR.md#0x0_LBR">LBR</a>&gt;(&new_account);
         };
     };
     // (4) TODO: publish account limits?
@@ -1819,7 +1819,7 @@ Create an account with the Empty role at
 ) {
     Transaction::assert(<a href="LibraTimestamp.md#0x0_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
-    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="Empty.md#0x0_Empty_T">Empty::T</a>&gt;(new_account, auth_key_prefix, <a href="Empty.md#0x0_Empty_create">Empty::create</a>(), <b>false</b>)
+    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="Empty.md#0x0_Empty">Empty</a>&gt;(new_account, auth_key_prefix, <a href="Empty.md#0x0_Empty_create">Empty::create</a>(), <b>false</b>)
 }
 </code></pre>
 
@@ -1837,7 +1837,7 @@ Create a treasury/compliance account at
 <code>new_account_address</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_treasury_compliance_account">create_treasury_compliance_account</a>&lt;Token&gt;(association: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, coin1_mint_cap: <a href="Libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="Coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;, coin1_burn_cap: <a href="Libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="Coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;, coin2_mint_cap: <a href="Libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="Coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;, coin2_burn_cap: <a href="Libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="Coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_treasury_compliance_account">create_treasury_compliance_account</a>&lt;Token&gt;(association: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, coin1_mint_cap: <a href="Libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="Coin1.md#0x0_Coin1_Coin1">Coin1::Coin1</a>&gt;, coin1_burn_cap: <a href="Libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="Coin1.md#0x0_Coin1_Coin1">Coin1::Coin1</a>&gt;, coin2_mint_cap: <a href="Libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="Coin2.md#0x0_Coin2_Coin2">Coin2::Coin2</a>&gt;, coin2_burn_cap: <a href="Libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="Coin2.md#0x0_Coin2_Coin2">Coin2::Coin2</a>&gt;)
 </code></pre>
 
 
@@ -1850,23 +1850,23 @@ Create a treasury/compliance account at
     association: &signer,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
-    coin1_mint_cap: <a href="Libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="Coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;,
-    coin1_burn_cap: <a href="Libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="Coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;,
-    coin2_mint_cap: <a href="Libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="Coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;,
-    coin2_burn_cap: <a href="Libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="Coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;,
+    coin1_mint_cap: <a href="Libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="Coin1.md#0x0_Coin1">Coin1</a>&gt;,
+    coin1_burn_cap: <a href="Libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="Coin1.md#0x0_Coin1">Coin1</a>&gt;,
+    coin2_mint_cap: <a href="Libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="Coin2.md#0x0_Coin2">Coin2</a>&gt;,
+    coin2_burn_cap: <a href="Libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="Coin2.md#0x0_Coin2">Coin2</a>&gt;,
 ) {
     <a href="Association.md#0x0_Association_assert_is_root">Association::assert_is_root</a>(association);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Association.md#0x0_Association_grant_association_address">Association::grant_association_address</a>(association, &new_account);
     <a href="Association.md#0x0_Association_grant_privilege">Association::grant_privilege</a>&lt;<a href="#0x0_LibraAccount_FreezingPrivilege">FreezingPrivilege</a>&gt;(association, &new_account);
-    <a href="Libra.md#0x0_Libra_publish_mint_capability">Libra::publish_mint_capability</a>&lt;<a href="Coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(&new_account, coin1_mint_cap);
-    <a href="Libra.md#0x0_Libra_publish_burn_capability">Libra::publish_burn_capability</a>&lt;<a href="Coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(&new_account, coin1_burn_cap);
-    <a href="Libra.md#0x0_Libra_publish_mint_capability">Libra::publish_mint_capability</a>&lt;<a href="Coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(&new_account, coin2_mint_cap);
-    <a href="Libra.md#0x0_Libra_publish_burn_capability">Libra::publish_burn_capability</a>&lt;<a href="Coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(&new_account, coin2_burn_cap);
+    <a href="Libra.md#0x0_Libra_publish_mint_capability">Libra::publish_mint_capability</a>&lt;<a href="Coin1.md#0x0_Coin1">Coin1</a>&gt;(&new_account, coin1_mint_cap);
+    <a href="Libra.md#0x0_Libra_publish_burn_capability">Libra::publish_burn_capability</a>&lt;<a href="Coin1.md#0x0_Coin1">Coin1</a>&gt;(&new_account, coin1_burn_cap);
+    <a href="Libra.md#0x0_Libra_publish_mint_capability">Libra::publish_mint_capability</a>&lt;<a href="Coin2.md#0x0_Coin2">Coin2</a>&gt;(&new_account, coin2_mint_cap);
+    <a href="Libra.md#0x0_Libra_publish_burn_capability">Libra::publish_burn_capability</a>&lt;<a href="Coin2.md#0x0_Coin2">Coin2</a>&gt;(&new_account, coin2_burn_cap);
     <a href="SlidingNonce.md#0x0_SlidingNonce_publish_nonce_resource">SlidingNonce::publish_nonce_resource</a>(association, &new_account);
     // TODO: add <a href="Association.md#0x0_Association">Association</a> or TreasuryCompliance role instead of using <a href="Empty.md#0x0_Empty">Empty</a>?
     <a href="Event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
-    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="Empty.md#0x0_Empty_T">Empty::T</a>&gt;(new_account, auth_key_prefix, <a href="Empty.md#0x0_Empty_create">Empty::create</a>(), <b>false</b>)
+    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="Empty.md#0x0_Empty">Empty</a>&gt;(new_account, auth_key_prefix, <a href="Empty.md#0x0_Empty_create">Empty::create</a>(), <b>false</b>)
 }
 </code></pre>
 
@@ -2013,7 +2013,7 @@ CoinType should match type called with create_designated_dealer
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_mint_to_designated_dealer">mint_to_designated_dealer</a>&lt;CoinType&gt;(
     blessed: &signer, dealer_address: address, amount: u64, tier: u64
-) <b>acquires</b> <a href="#0x0_LibraAccount_Role">Role</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_T">T</a> {
+) <b>acquires</b> <a href="#0x0_LibraAccount_Role">Role</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount">LibraAccount</a> {
     <a href="Association.md#0x0_Association_assert_account_is_blessed">Association::assert_account_is_blessed</a>(blessed);
     // INVALID_MINT_AMOUNT
     Transaction::assert(amount &gt; 0, 6);
@@ -2144,7 +2144,7 @@ also be added. This account will be a child of
     <b>let</b> unhosted = <a href="Unhosted.md#0x0_Unhosted_create">Unhosted::create</a>();
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
-    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="Unhosted.md#0x0_Unhosted_T">Unhosted::T</a>&gt;(new_account, auth_key_prefix, unhosted, add_all_currencies)
+    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="Unhosted.md#0x0_Unhosted">Unhosted</a>&gt;(new_account, auth_key_prefix, unhosted, add_all_currencies)
 }
 </code></pre>
 
@@ -2298,7 +2298,7 @@ also be added. This account will be a child of
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraAccount_sequence_number_for_account">sequence_number_for_account</a>(account: &<a href="#0x0_LibraAccount_T">LibraAccount::T</a>): u64
+<pre><code><b>fun</b> <a href="#0x0_LibraAccount_sequence_number_for_account">sequence_number_for_account</a>(account: &<a href="#0x0_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>): u64
 </code></pre>
 
 
@@ -2307,7 +2307,7 @@ also be added. This account will be a child of
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraAccount_sequence_number_for_account">sequence_number_for_account</a>(account: &<a href="#0x0_LibraAccount_T">T</a>): u64 {
+<pre><code><b>fun</b> <a href="#0x0_LibraAccount_sequence_number_for_account">sequence_number_for_account</a>(account: &<a href="#0x0_LibraAccount">LibraAccount</a>): u64 {
     account.sequence_number
 }
 </code></pre>
@@ -2331,8 +2331,8 @@ also be added. This account will be a child of
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_sequence_number">sequence_number</a>(addr: address): u64 <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
-    <a href="#0x0_LibraAccount_sequence_number_for_account">sequence_number_for_account</a>(borrow_global&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(addr))
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_sequence_number">sequence_number</a>(addr: address): u64 <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a> {
+    <a href="#0x0_LibraAccount_sequence_number_for_account">sequence_number_for_account</a>(borrow_global&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(addr))
 }
 </code></pre>
 
@@ -2355,8 +2355,8 @@ also be added. This account will be a child of
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_authentication_key">authentication_key</a>(addr: address): vector&lt;u8&gt; <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
-    *&borrow_global&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(addr).authentication_key
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_authentication_key">authentication_key</a>(addr: address): vector&lt;u8&gt; <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a> {
+    *&borrow_global&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(addr).authentication_key
 }
 </code></pre>
 
@@ -2379,8 +2379,8 @@ also be added. This account will be a child of
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(addr: address): bool <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
-    borrow_global&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(addr).delegated_key_rotation_capability
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(addr: address): bool <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a> {
+    borrow_global&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(addr).delegated_key_rotation_capability
 }
 </code></pre>
 
@@ -2403,8 +2403,8 @@ also be added. This account will be a child of
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(addr: address): bool <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
-    borrow_global&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(addr).delegated_withdraw_capability
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(addr: address): bool <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a> {
+    borrow_global&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(addr).delegated_withdraw_capability
 }
 </code></pre>
 
@@ -2476,7 +2476,7 @@ also be added. This account will be a child of
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_exists">exists</a>(check_addr: address): bool {
-    ::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(check_addr)
+    ::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(check_addr)
 }
 </code></pre>
 
@@ -2500,12 +2500,12 @@ also be added. This account will be a child of
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_freeze_account">freeze_account</a>(account: &signer, frozen_address: address)
-<b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+<b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <b>let</b> initiator_address = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     <a href="#0x0_LibraAccount_assert_can_freeze">assert_can_freeze</a>(initiator_address);
     // The root association account cannot be frozen
     Transaction::assert(frozen_address != <a href="Association.md#0x0_Association_root_address">Association::root_address</a>(), 14);
-    borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(frozen_address).is_frozen = <b>true</b>;
+    borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(frozen_address).is_frozen = <b>true</b>;
     <a href="Event.md#0x0_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x0_LibraAccount_FreezeAccountEvent">FreezeAccountEvent</a>&gt;(
         &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(0xA550C18).freeze_event_handle,
         <a href="#0x0_LibraAccount_FreezeAccountEvent">FreezeAccountEvent</a> {
@@ -2536,10 +2536,10 @@ also be added. This account will be a child of
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_unfreeze_account">unfreeze_account</a>(account: &signer, unfrozen_address: address)
-<b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+<b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <b>let</b> initiator_address = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     <a href="#0x0_LibraAccount_assert_can_freeze">assert_can_freeze</a>(initiator_address);
-    borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(unfrozen_address).is_frozen = <b>false</b>;
+    borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(unfrozen_address).is_frozen = <b>false</b>;
     <a href="Event.md#0x0_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x0_LibraAccount_UnfreezeAccountEvent">UnfreezeAccountEvent</a>&gt;(
         &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(0xA550C18).unfreeze_event_handle,
         <a href="#0x0_LibraAccount_UnfreezeAccountEvent">UnfreezeAccountEvent</a> {
@@ -2570,8 +2570,8 @@ also be added. This account will be a child of
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_account_is_frozen">account_is_frozen</a>(addr: address): bool
-<b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
-    borrow_global&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(addr).is_frozen
+<b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a> {
+    borrow_global&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(addr).is_frozen
  }
 </code></pre>
 
@@ -2625,7 +2625,7 @@ also be added. This account will be a child of
     txn_gas_price: u64,
     txn_max_gas_units: u64,
     txn_expiration_time: u64,
-) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a> {
+) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_Balance">Balance</a> {
     <b>let</b> transaction_sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(sender);
 
     // FUTURE: Make these error codes sequential
@@ -2635,7 +2635,7 @@ also be added. This account will be a child of
     Transaction::assert(!<a href="#0x0_LibraAccount_account_is_frozen">account_is_frozen</a>(transaction_sender), 0);
 
     // Load the transaction sender's account
-    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(transaction_sender);
+    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(transaction_sender);
 
     // Check that the hash of the transaction's <b>public</b> key matches the account's auth key
     Transaction::assert(
@@ -2678,9 +2678,9 @@ also be added. This account will be a child of
     sender: address,
     transaction_fee_amount: u64,
     txn_sequence_number: u64,
-) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     // Load the transaction sender's account and balance resources
-    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(sender);
+    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(sender);
     <b>let</b> sender_balance = borrow_global_mut&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(sender);
 
     // Bump the sequence number
@@ -2722,7 +2722,7 @@ also be added. This account will be a child of
     txn_gas_price: u64,
     txn_max_gas_units: u64,
     gas_units_remaining: u64
-) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     // Load the transaction sender's account and balance resources
     <b>let</b> sender_balance = borrow_global_mut&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(sender);
@@ -2762,7 +2762,7 @@ also be added. This account will be a child of
     txn_gas_price: u64,
     txn_max_gas_units: u64,
     gas_units_remaining: u64
-) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     // Charge for gas
     <b>let</b> transaction_fee_amount = txn_gas_price * (txn_max_gas_units - gas_units_remaining);
@@ -2790,8 +2790,8 @@ also be added. This account will be a child of
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraAccount_bump_sequence_number">bump_sequence_number</a>(signer: &signer) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a> {
-    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(signer));
+<pre><code><b>fun</b> <a href="#0x0_LibraAccount_bump_sequence_number">bump_sequence_number</a>(signer: &signer) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a> {
+    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(signer));
     sender_account.sequence_number = sender_account.sequence_number + 1;
 }
 </code></pre>
@@ -2900,7 +2900,7 @@ also be added. This account will be a child of
     <a href="Event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
     <a href="ValidatorConfig.md#0x0_ValidatorConfig_publish">ValidatorConfig::publish</a>(creator, &new_account);
     move_to(&new_account, <a href="#0x0_LibraAccount_Role_temp">Role_temp</a>&lt;<a href="#0x0_LibraAccount_ValidatorRole">ValidatorRole</a>&gt; { role_type: <a href="#0x0_LibraAccount_ValidatorRole">ValidatorRole</a> { }, is_certified: <b>true</b> });
-    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="Empty.md#0x0_Empty_T">Empty::T</a>&gt;(new_account, auth_key_prefix, <a href="Empty.md#0x0_Empty_create">Empty::create</a>(), <b>false</b>)
+    <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token, <a href="Empty.md#0x0_Empty">Empty</a>&gt;(new_account, auth_key_prefix, <a href="Empty.md#0x0_Empty_create">Empty::create</a>(), <b>false</b>)
 }
 </code></pre>
 

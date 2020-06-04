@@ -6,7 +6,7 @@ import 0x0.LBR;
 import 0x0.LibraAccount;
 import 0x0.Libra;
 main(blessed: &signer) {
-    LibraAccount.deposit<LBR.T>(copy(blessed), {{default}}, LBR.mint(move(blessed), 100000));
+    LibraAccount.deposit<LBR.LBR>(copy(blessed), {{default}}, LBR.mint(move(blessed), 100000));
     return;
 }
 
@@ -30,7 +30,7 @@ import 0x0.LibraAccount;
 import 0x0.LBR;
 
 main() {
-    assert(LibraAccount.balance<LBR.T>(get_txn_sender()) == 90000, 42);
+    assert(LibraAccount.balance<LBR.LBR>(get_txn_sender()) == 90000, 42);
     return;
 }
 

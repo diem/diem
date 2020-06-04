@@ -4,12 +4,12 @@ address 0x0 {
 module LibraAccount {
     use 0x0::AccountLimits;
     use 0x0::Association;
-    use 0x0::Coin1;
-    use 0x0::Coin2;
-    use 0x0::Empty;
+    use 0x0::Coin1::Coin1;
+    use 0x0::Coin2::Coin2;
+    use 0x0::Empty::{Self, Empty};
     use 0x0::Event;
     use 0x0::Hash;
-    use 0x0::LBR;
+    use 0x0::LBR::{Self, LBR};
     use 0x0::LCS;
     use 0x0::LibraTimestamp;
     use 0x0::LibraTransactionTimeout;
@@ -18,15 +18,15 @@ module LibraAccount {
     use 0x0::SlidingNonce;
     use 0x0::Testnet;
     use 0x0::Transaction;
-    use 0x0::Unhosted;
+    use 0x0::Unhosted::{Self, Unhosted};
     use 0x0::ValidatorConfig;
     use 0x0::VASP;
     use 0x0::Vector;
     use 0x0::DesignatedDealer;
-    use 0x0::Libra;
+    use 0x0::Libra::{Self, Libra};
 
-    // Every Libra account has a LibraAccount::T resource
-    resource struct T {
+    // Every Libra account has a LibraAccount resource
+    resource struct LibraAccount {
         // The current authentication key.
         // This can be different than the key used to create the account
         authentication_key: vector<u8>,
@@ -44,25 +44,25 @@ module LibraAccount {
         is_frozen: bool,
     }
 
-    // TODO: could also do T<AccountType> field inside LibraAccount::T (but makes revocation hard)
+    // TODO: could also do LibraAccount<AccountType> field inside LibraAccount (but makes revocation hard)
     // TODO: can revoking a role just swap it for Empty?
     // TODO: do we need separate scheme for revoking a role, or is freezing sufficient?
     resource struct Role<RoleData: copyable> { role_data: RoleData }
 
     // A resource that holds the coins stored in this account
     resource struct Balance<Token> {
-        coin: Libra::T<Token>,
+        coin: Libra<Token>,
     }
 
     // The holder of WithdrawCapability for account_address can withdraw Libra from
-    // account_address/LibraAccount::T/balance.
+    // account_address/LibraAccount/balance.
     // There is at most one WithdrawCapability in existence for a given address.
     resource struct WithdrawCapability {
         account_address: address,
     }
 
     // The holder of KeyRotationCapability for account_address can rotate the authentication key for
-    // account_address (i.e., write to account_address/LibraAccount::T/authentication_key).
+    // account_address (i.e., write to account_address/LibraAccount/authentication_key).
     // There is at most one KeyRotationCapability in existence for a given address.
     resource struct KeyRotationCapability {
         account_address: address,
@@ -70,7 +70,7 @@ module LibraAccount {
 
     // Message for sent events
     struct SentPaymentEvent {
-        // The amount of Libra::T<Token> sent
+        // The amount of Libra<Token> sent
         amount: u64,
         // The code symbol for the currency that was sent
         currency_code: vector<u8>,
@@ -82,7 +82,7 @@ module LibraAccount {
 
     // Message for received events
     struct ReceivedPaymentEvent {
-        // The amount of Libra::T<Token> received
+        // The amount of Libra<Token> received
         amount: u64,
         // The code symbol for the currency that was received
         currency_code: vector<u8>,
@@ -124,7 +124,7 @@ module LibraAccount {
     }
 
     public fun is_unhosted(addr: address): bool {
-        is<Unhosted::T>(addr)
+        is<Unhosted>(addr)
     }
 
     public fun is_parent_vasp(addr: address): bool {
@@ -212,14 +212,14 @@ module LibraAccount {
     }
 
     // Deposits the `to_deposit` coin into the `payee`'s account balance
-    public fun deposit<Token>(payer: &signer, payee: address, to_deposit: Libra::T<Token>)
-    acquires T, Balance, AccountOperationsCapability, Role {
+    public fun deposit<Token>(payer: &signer, payee: address, to_deposit: Libra<Token>)
+    acquires LibraAccount, Balance, AccountOperationsCapability, Role {
         deposit_with_metadata(payer, payee, to_deposit, x"", x"")
     }
 
     // Deposits the `to_deposit` coin into `account`
-    public fun deposit_to<Token>(account: &signer, to_deposit: Libra::T<Token>)
-    acquires T, Balance, AccountOperationsCapability, Role {
+    public fun deposit_to<Token>(account: &signer, to_deposit: Libra<Token>)
+    acquires LibraAccount, Balance, AccountOperationsCapability, Role {
         deposit(account, Signer::address_of(account), to_deposit)
     }
 
@@ -227,10 +227,10 @@ module LibraAccount {
     public fun deposit_with_metadata<Token>(
         payer: &signer,
         payee: address,
-        to_deposit: Libra::T<Token>,
+        to_deposit: Libra<Token>,
         metadata: vector<u8>,
         metadata_signature: vector<u8>
-    ) acquires T, Balance, AccountOperationsCapability, Role {
+    ) acquires LibraAccount, Balance, AccountOperationsCapability, Role {
         deposit_with_sender_and_metadata(
             payee,
             Signer::address_of(payer),
@@ -245,10 +245,10 @@ module LibraAccount {
     fun deposit_with_sender_and_metadata<Token>(
         payee: address,
         sender: address,
-        to_deposit: Libra::T<Token>,
+        to_deposit: Libra<Token>,
         metadata: vector<u8>,
         metadata_signature: vector<u8>
-    ) acquires T, Balance, AccountOperationsCapability, Role {
+    ) acquires LibraAccount, Balance, AccountOperationsCapability, Role {
         // Check that the `to_deposit` coin is non-zero
         let deposit_value = Libra::value(&to_deposit);
         Transaction::assert(deposit_value > 0, 7);
@@ -305,7 +305,7 @@ module LibraAccount {
         let currency_code = Libra::currency_code<Token>();
 
         // Load the sender's account
-        let sender_account_ref = borrow_global_mut<T>(sender);
+        let sender_account_ref = borrow_global_mut<LibraAccount>(sender);
         // Log a sent event
         Event::emit_event<SentPaymentEvent>(
             &mut sender_account_ref.sent_events,
@@ -318,7 +318,7 @@ module LibraAccount {
         );
 
         // Load the payee's account
-        let payee_account_ref = borrow_global_mut<T>(payee);
+        let payee_account_ref = borrow_global_mut<LibraAccount>(payee);
         let payee_balance = borrow_global_mut<Balance<Token>>(payee);
         // Deposit the `to_deposit` coin
         Libra::deposit(&mut payee_balance.coin, to_deposit);
@@ -341,7 +341,7 @@ module LibraAccount {
         account: &signer,
         payee: address,
         amount: u64
-    ) acquires T, Balance, AccountOperationsCapability, Role {
+    ) acquires LibraAccount, Balance, AccountOperationsCapability, Role {
         // Mint and deposit the coin
         deposit(account, payee, Libra::mint<Token>(account, amount));
     }
@@ -353,7 +353,7 @@ module LibraAccount {
         account: &signer,
         payee: address,
         amount: u64
-    ) acquires T, Balance, AccountOperationsCapability, Role {
+    ) acquires LibraAccount, Balance, AccountOperationsCapability, Role {
         // Mint and deposit the coin
         deposit(account, payee, LBR::mint(account, amount));
     }
@@ -363,17 +363,17 @@ module LibraAccount {
     public fun cancel_burn<Token>(
         account: &signer,
         preburn_address: address,
-    ) acquires T, Balance, AccountOperationsCapability, Role {
+    ) acquires LibraAccount, Balance, AccountOperationsCapability, Role {
         let to_return = Libra::cancel_burn<Token>(account, preburn_address);
         deposit(account, preburn_address, to_return)
     }
 
-    // Helper to withdraw `amount` from the given account balance and return the withdrawn Libra::T<Token>
+    // Helper to withdraw `amount` from the given account balance and return the withdrawn Libra<Token>
     fun withdraw_from_balance<Token>(
         _addr: address,
         balance: &mut Balance<Token>,
         amount: u64
-    ): Libra::T<Token> acquires AccountOperationsCapability {
+    ): Libra<Token> acquires AccountOperationsCapability {
         // Make sure that this withdrawal is compliant with the limits on
         // the account.
         let _  = borrow_global<AccountOperationsCapability>(0xA550C18);
@@ -386,11 +386,11 @@ module LibraAccount {
         Libra::withdraw(&mut balance.coin, amount)
     }
 
-    // Withdraw `amount` Libra::T<Token> from the transaction sender's account balance
-    public fun withdraw_from<Token>(account: &signer, amount: u64): Libra::T<Token>
-    acquires T, Balance, AccountOperationsCapability {
+    // Withdraw `amount` Libra<Token> from the transaction sender's account balance
+    public fun withdraw_from<Token>(account: &signer, amount: u64): Libra<Token>
+    acquires LibraAccount, Balance, AccountOperationsCapability {
         let sender = Signer::address_of(account);
-        let sender_account = borrow_global_mut<T>(sender);
+        let sender_account = borrow_global_mut<LibraAccount>(sender);
         let sender_balance = borrow_global_mut<Balance<Token>>(sender);
         // The sender has delegated the privilege to withdraw from her account elsewhere--abort.
         Transaction::assert(!sender_account.delegated_withdraw_capability, 11);
@@ -398,10 +398,10 @@ module LibraAccount {
         withdraw_from_balance<Token>(sender, sender_balance, amount)
     }
 
-    // Withdraw `amount` Libra::T<Token> from the account under cap.account_address
+    // Withdraw `amount` Libra<Token> from the account under cap.account_address
     public fun withdraw_with_capability<Token>(
         cap: &WithdrawCapability, amount: u64
-    ): Libra::T<Token> acquires Balance, AccountOperationsCapability {
+    ): Libra<Token> acquires Balance, AccountOperationsCapability {
         let balance = borrow_global_mut<Balance<Token>>(cap.account_address);
         withdraw_from_balance<Token>(cap.account_address, balance , amount)
     }
@@ -409,9 +409,9 @@ module LibraAccount {
     // Return a unique capability granting permission to withdraw from the sender's account balance.
     public fun extract_withdraw_capability(
         sender: &signer
-    ): WithdrawCapability acquires T {
+    ): WithdrawCapability acquires LibraAccount {
         let sender_addr = Signer::address_of(sender);
-        let sender_account = borrow_global_mut<T>(sender_addr);
+        let sender_account = borrow_global_mut<LibraAccount>(sender_addr);
 
         // Abort if we already extracted the unique withdraw capability for this account.
         Transaction::assert(!sender_account.delegated_withdraw_capability, 11);
@@ -422,17 +422,17 @@ module LibraAccount {
     }
 
     // Return the withdraw capability to the account it originally came from
-    public fun restore_withdraw_capability(cap: WithdrawCapability) acquires T {
+    public fun restore_withdraw_capability(cap: WithdrawCapability) acquires LibraAccount {
         // Destroy the capability
         let WithdrawCapability { account_address } = cap;
-        let account = borrow_global_mut<T>(account_address);
+        let account = borrow_global_mut<LibraAccount>(account_address);
         // Update the flag for `account_address` to indicate that the capability has been restored.
         // The account owner will now be able to call pay_from, withdraw_from, and
         // extract_sender_withdraw_capability again.
         account.delegated_withdraw_capability = false;
     }
 
-    // Withdraws `amount` Libra::T<Token> using the passed in WithdrawCapability, and deposits it
+    // Withdraws `amount` Libra<Token> using the passed in WithdrawCapability, and deposits it
     // into the `payee`'s account balance. Creates the `payee` account if it doesn't exist.
     public fun pay_from_capability<Token>(
         payee: address,
@@ -440,7 +440,7 @@ module LibraAccount {
         amount: u64,
         metadata: vector<u8>,
         metadata_signature: vector<u8>
-    ) acquires T, Balance, AccountOperationsCapability, Role {
+    ) acquires LibraAccount, Balance, AccountOperationsCapability, Role {
         deposit_with_sender_and_metadata<Token>(
             payee,
             *&cap.account_address,
@@ -450,7 +450,7 @@ module LibraAccount {
         );
     }
 
-    /// Withdraw `amount` Libra::T<Token> from `account`'s balance and send to the `payee` address
+    /// Withdraw `amount` Libra<Token> from `account`'s balance and send to the `payee` address
     /// with the attached `metadata` and `metadata_signature`.
     public fun pay_from_with_metadata<Token>(
         payer: &signer,
@@ -458,7 +458,7 @@ module LibraAccount {
         amount: u64,
         metadata: vector<u8>,
         metadata_signature: vector<u8>
-    ) acquires T, Balance, AccountOperationsCapability, Role {
+    ) acquires LibraAccount, Balance, AccountOperationsCapability, Role {
         deposit_with_metadata<Token>(
             payer,
             payee,
@@ -468,15 +468,15 @@ module LibraAccount {
         );
     }
 
-    // Withdraw `amount` Libra::T<Token> from the transaction sender's
+    // Withdraw `amount` Libra<Token> from the transaction sender's
     // account balance  and send the coin to the `payee` address
     // Creates the `payee` account if it does not exist
     public fun pay_from<Token>(payer: &signer, payee: address, amount: u64)
-    acquires T, Balance, AccountOperationsCapability, Role {
+    acquires LibraAccount, Balance, AccountOperationsCapability, Role {
         pay_from_with_metadata<Token>(payer, payee, amount, x"", x"");
     }
 
-    fun rotate_authentication_key_for_account(account: &mut T, new_authentication_key: vector<u8>) {
+    fun rotate_authentication_key_for_account(account: &mut LibraAccount, new_authentication_key: vector<u8>) {
       // Don't allow rotating to clearly invalid key
       Transaction::assert(Vector::length(&new_authentication_key) == 32, 12);
       account.authentication_key = new_authentication_key;
@@ -486,8 +486,8 @@ module LibraAccount {
     // The new key will be used for signing future transactions
     public fun rotate_authentication_key(
         sender: &signer, new_authentication_key: vector<u8>
-    ) acquires T {
-        let sender_account_resource = borrow_global_mut<T>(Signer::address_of(sender));
+    ) acquires LibraAccount {
+        let sender_account_resource = borrow_global_mut<LibraAccount>(Signer::address_of(sender));
         // The sender has delegated the privilege to rotate her key elsewhere--abort
         Transaction::assert(!sender_account_resource.delegated_key_rotation_capability, 11);
         // The sender has retained her key rotation privileges--proceed.
@@ -501,17 +501,17 @@ module LibraAccount {
     public fun rotate_authentication_key_with_capability(
         cap: &KeyRotationCapability,
         new_authentication_key: vector<u8>,
-    ) acquires T  {
+    ) acquires LibraAccount  {
         rotate_authentication_key_for_account(
-            borrow_global_mut<T>(*&cap.account_address),
+            borrow_global_mut<LibraAccount>(*&cap.account_address),
             new_authentication_key
         );
     }
 
     // Return a unique capability granting permission to rotate the sender's authentication key
-    public fun extract_key_rotation_capability(account: &signer): KeyRotationCapability acquires T {
+    public fun extract_key_rotation_capability(account: &signer): KeyRotationCapability acquires LibraAccount {
         let account_address = Signer::address_of(account);
-        let sender_account = borrow_global_mut<T>(account_address);
+        let sender_account = borrow_global_mut<LibraAccount>(account_address);
         // Abort if we already extracted the unique key rotation capability for this account.
         Transaction::assert(!sender_account.delegated_key_rotation_capability, 11);
         // Ensure uniqueness of the capability
@@ -520,10 +520,10 @@ module LibraAccount {
     }
 
     // Return the key rotation capability to the account it originally came from
-    public fun restore_key_rotation_capability(cap: KeyRotationCapability) acquires T {
+    public fun restore_key_rotation_capability(cap: KeyRotationCapability) acquires LibraAccount {
         // Destroy the capability
         let KeyRotationCapability { account_address } = cap;
-        let account = borrow_global_mut<T>(account_address);
+        let account = borrow_global_mut<LibraAccount>(account_address);
         // Update the flag for `account_address` to indicate that the capability has been restored.
         // The account owner will now be able to call rotate_authentication_key and
         // extract_sender_key_rotation_capability again
@@ -570,7 +570,7 @@ module LibraAccount {
         // cannot create an account at the reserved address 0x0
         Transaction::assert(new_account_addr != 0x0, 0);
 
-        // (1) publish Account::T
+        // (1) publish LibraAccount
         let authentication_key = auth_key_prefix;
         Vector::append(
             &mut authentication_key, LCS::to_bytes(Signer::borrow_address(&new_account))
@@ -578,7 +578,7 @@ module LibraAccount {
         Transaction::assert(Vector::length(&authentication_key) == 32, 12);
         move_to(
             &new_account,
-            T {
+            LibraAccount {
                 authentication_key,
                 delegated_key_rotation_capability: false,
                 delegated_withdraw_capability: false,
@@ -594,14 +594,14 @@ module LibraAccount {
         // (3) publish Balance resource(s)
         add_currency<Token>(&new_account);
         if (add_all_currencies) {
-            if (!::exists<Balance<Coin1::T>>(new_account_addr)) {
-                add_currency<Coin1::T>(&new_account);
+            if (!::exists<Balance<Coin1>>(new_account_addr)) {
+                add_currency<Coin1>(&new_account);
             };
-            if (!::exists<Balance<Coin2::T>>(new_account_addr)) {
-                add_currency<Coin2::T>(&new_account);
+            if (!::exists<Balance<Coin2>>(new_account_addr)) {
+                add_currency<Coin2>(&new_account);
             };
-            if (!::exists<Balance<LBR::T>>(new_account_addr)) {
-                add_currency<LBR::T>(&new_account);
+            if (!::exists<Balance<LBR>>(new_account_addr)) {
+                add_currency<LBR>(&new_account);
             };
         };
         // (4) TODO: publish account limits?
@@ -619,7 +619,7 @@ module LibraAccount {
     ) {
         Transaction::assert(LibraTimestamp::is_genesis(), 0);
         let new_account = create_signer(new_account_address);
-        make_account<Token, Empty::T>(new_account, auth_key_prefix, Empty::create(), false)
+        make_account<Token, Empty>(new_account, auth_key_prefix, Empty::create(), false)
     }
 
     /// Create a treasury/compliance account at `new_account_address` with authentication key
@@ -628,23 +628,23 @@ module LibraAccount {
         association: &signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
-        coin1_mint_cap: Libra::MintCapability<Coin1::T>,
-        coin1_burn_cap: Libra::BurnCapability<Coin1::T>,
-        coin2_mint_cap: Libra::MintCapability<Coin2::T>,
-        coin2_burn_cap: Libra::BurnCapability<Coin2::T>,
+        coin1_mint_cap: Libra::MintCapability<Coin1>,
+        coin1_burn_cap: Libra::BurnCapability<Coin1>,
+        coin2_mint_cap: Libra::MintCapability<Coin2>,
+        coin2_burn_cap: Libra::BurnCapability<Coin2>,
     ) {
         Association::assert_is_root(association);
         let new_account = create_signer(new_account_address);
         Association::grant_association_address(association, &new_account);
         Association::grant_privilege<FreezingPrivilege>(association, &new_account);
-        Libra::publish_mint_capability<Coin1::T>(&new_account, coin1_mint_cap);
-        Libra::publish_burn_capability<Coin1::T>(&new_account, coin1_burn_cap);
-        Libra::publish_mint_capability<Coin2::T>(&new_account, coin2_mint_cap);
-        Libra::publish_burn_capability<Coin2::T>(&new_account, coin2_burn_cap);
+        Libra::publish_mint_capability<Coin1>(&new_account, coin1_mint_cap);
+        Libra::publish_burn_capability<Coin1>(&new_account, coin1_burn_cap);
+        Libra::publish_mint_capability<Coin2>(&new_account, coin2_mint_cap);
+        Libra::publish_burn_capability<Coin2>(&new_account, coin2_burn_cap);
         SlidingNonce::publish_nonce_resource(association, &new_account);
         // TODO: add Association or TreasuryCompliance role instead of using Empty?
         Event::publish_generator(&new_account);
-        make_account<Token, Empty::T>(new_account, auth_key_prefix, Empty::create(), false)
+        make_account<Token, Empty>(new_account, auth_key_prefix, Empty::create(), false)
     }
 
 
@@ -694,7 +694,7 @@ module LibraAccount {
     /// CoinType should match type called with create_designated_dealer
     public fun mint_to_designated_dealer<CoinType>(
         blessed: &signer, dealer_address: address, amount: u64, tier: u64
-    ) acquires Role, AccountOperationsCapability, Balance, T {
+    ) acquires Role, AccountOperationsCapability, Balance, LibraAccount {
         Association::assert_account_is_blessed(blessed);
         // INVALID_MINT_AMOUNT
         Transaction::assert(amount > 0, 6);
@@ -759,7 +759,7 @@ module LibraAccount {
         let unhosted = Unhosted::create();
         let new_account = create_signer(new_account_address);
         Event::publish_generator(&new_account);
-        make_account<Token, Unhosted::T>(new_account, auth_key_prefix, unhosted, add_all_currencies)
+        make_account<Token, Unhosted>(new_account, auth_key_prefix, unhosted, add_all_currencies)
     }
 
     native fun create_signer(addr: address): signer;
@@ -786,28 +786,28 @@ module LibraAccount {
     }
 
     // Helper to return the sequence number field for given `account`
-    fun sequence_number_for_account(account: &T): u64 {
+    fun sequence_number_for_account(account: &LibraAccount): u64 {
         account.sequence_number
     }
 
     // Return the current sequence number at `addr`
-    public fun sequence_number(addr: address): u64 acquires T {
-        sequence_number_for_account(borrow_global<T>(addr))
+    public fun sequence_number(addr: address): u64 acquires LibraAccount {
+        sequence_number_for_account(borrow_global<LibraAccount>(addr))
     }
 
     // Return the authentication key for this account
-    public fun authentication_key(addr: address): vector<u8> acquires T {
-        *&borrow_global<T>(addr).authentication_key
+    public fun authentication_key(addr: address): vector<u8> acquires LibraAccount {
+        *&borrow_global<LibraAccount>(addr).authentication_key
     }
 
     // Return true if the account at `addr` has delegated its key rotation capability
-    public fun delegated_key_rotation_capability(addr: address): bool acquires T {
-        borrow_global<T>(addr).delegated_key_rotation_capability
+    public fun delegated_key_rotation_capability(addr: address): bool acquires LibraAccount {
+        borrow_global<LibraAccount>(addr).delegated_key_rotation_capability
     }
 
     // Return true if the account at `addr` has delegated its withdraw capability
-    public fun delegated_withdraw_capability(addr: address): bool acquires T {
-        borrow_global<T>(addr).delegated_withdraw_capability
+    public fun delegated_withdraw_capability(addr: address): bool acquires LibraAccount {
+        borrow_global<LibraAccount>(addr).delegated_withdraw_capability
     }
 
     // Return a reference to the address associated with the given withdraw capability
@@ -822,7 +822,7 @@ module LibraAccount {
 
     // Checks if an account exists at `check_addr`
     public fun exists(check_addr: address): bool {
-        ::exists<T>(check_addr)
+        ::exists<LibraAccount>(check_addr)
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -831,12 +831,12 @@ module LibraAccount {
 
     // Freeze the account at `addr`.
     public fun freeze_account(account: &signer, frozen_address: address)
-    acquires T, AccountOperationsCapability {
+    acquires LibraAccount, AccountOperationsCapability {
         let initiator_address = Signer::address_of(account);
         assert_can_freeze(initiator_address);
         // The root association account cannot be frozen
         Transaction::assert(frozen_address != Association::root_address(), 14);
-        borrow_global_mut<T>(frozen_address).is_frozen = true;
+        borrow_global_mut<LibraAccount>(frozen_address).is_frozen = true;
         Event::emit_event<FreezeAccountEvent>(
             &mut borrow_global_mut<AccountOperationsCapability>(0xA550C18).freeze_event_handle,
             FreezeAccountEvent {
@@ -848,10 +848,10 @@ module LibraAccount {
 
     // Unfreeze the account at `addr`.
     public fun unfreeze_account(account: &signer, unfrozen_address: address)
-    acquires T, AccountOperationsCapability {
+    acquires LibraAccount, AccountOperationsCapability {
         let initiator_address = Signer::address_of(account);
         assert_can_freeze(initiator_address);
-        borrow_global_mut<T>(unfrozen_address).is_frozen = false;
+        borrow_global_mut<LibraAccount>(unfrozen_address).is_frozen = false;
         Event::emit_event<UnfreezeAccountEvent>(
             &mut borrow_global_mut<AccountOperationsCapability>(0xA550C18).unfreeze_event_handle,
             UnfreezeAccountEvent {
@@ -863,8 +863,8 @@ module LibraAccount {
 
     // Returns if the account at `addr` is frozen.
     public fun account_is_frozen(addr: address): bool
-    acquires T {
-        borrow_global<T>(addr).is_frozen
+    acquires LibraAccount {
+        borrow_global<LibraAccount>(addr).is_frozen
      }
 
     fun assert_can_freeze(addr: address) {
@@ -883,7 +883,7 @@ module LibraAccount {
         txn_gas_price: u64,
         txn_max_gas_units: u64,
         txn_expiration_time: u64,
-    ) acquires T, Balance {
+    ) acquires LibraAccount, Balance {
         let transaction_sender = Signer::address_of(sender);
 
         // FUTURE: Make these error codes sequential
@@ -893,7 +893,7 @@ module LibraAccount {
         Transaction::assert(!account_is_frozen(transaction_sender), 0);
 
         // Load the transaction sender's account
-        let sender_account = borrow_global_mut<T>(transaction_sender);
+        let sender_account = borrow_global_mut<LibraAccount>(transaction_sender);
 
         // Check that the hash of the transaction's public key matches the account's auth key
         Transaction::assert(
@@ -917,9 +917,9 @@ module LibraAccount {
         sender: address,
         transaction_fee_amount: u64,
         txn_sequence_number: u64,
-    ) acquires T, Balance, AccountOperationsCapability {
+    ) acquires LibraAccount, Balance, AccountOperationsCapability {
         // Load the transaction sender's account and balance resources
-        let sender_account = borrow_global_mut<T>(sender);
+        let sender_account = borrow_global_mut<LibraAccount>(sender);
         let sender_balance = borrow_global_mut<Balance<Token>>(sender);
 
         // Bump the sequence number
@@ -942,7 +942,7 @@ module LibraAccount {
         txn_gas_price: u64,
         txn_max_gas_units: u64,
         gas_units_remaining: u64
-    ) acquires T, Balance, AccountOperationsCapability {
+    ) acquires LibraAccount, Balance, AccountOperationsCapability {
         let sender = Signer::address_of(account);
         // Load the transaction sender's account and balance resources
         let sender_balance = borrow_global_mut<Balance<Token>>(sender);
@@ -964,7 +964,7 @@ module LibraAccount {
         txn_gas_price: u64,
         txn_max_gas_units: u64,
         gas_units_remaining: u64
-    ) acquires T, Balance, AccountOperationsCapability {
+    ) acquires LibraAccount, Balance, AccountOperationsCapability {
         let sender = Signer::address_of(account);
         // Charge for gas
         let transaction_fee_amount = txn_gas_price * (txn_max_gas_units - gas_units_remaining);
@@ -974,8 +974,8 @@ module LibraAccount {
 
     // Bump the sequence number of an account. This function should be used only for bumping the sequence number when
     // a writeset transaction is committed.
-    fun bump_sequence_number(signer: &signer) acquires T {
-        let sender_account = borrow_global_mut<T>(Signer::address_of(signer));
+    fun bump_sequence_number(signer: &signer) acquires LibraAccount {
+        let sender_account = borrow_global_mut<LibraAccount>(Signer::address_of(signer));
         sender_account.sequence_number = sender_account.sequence_number + 1;
     }
 
@@ -1023,7 +1023,7 @@ module LibraAccount {
         Event::publish_generator(&new_account);
         ValidatorConfig::publish(creator, &new_account);
         move_to(&new_account, Role_temp<ValidatorRole> { role_type: ValidatorRole { }, is_certified: true });
-        make_account<Token, Empty::T>(new_account, auth_key_prefix, Empty::create(), false)
+        make_account<Token, Empty>(new_account, auth_key_prefix, Empty::create(), false)
     }
 
     ///////////////////////////////////////////////////////////////////////////

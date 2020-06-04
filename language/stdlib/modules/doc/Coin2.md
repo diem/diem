@@ -5,18 +5,18 @@
 
 ### Table of Contents
 
--  [Struct `T`](#0x0_Coin2_T)
+-  [Struct `Coin2`](#0x0_Coin2_Coin2)
 -  [Function `initialize`](#0x0_Coin2_initialize)
 
 
 
-<a name="0x0_Coin2_T"></a>
+<a name="0x0_Coin2_Coin2"></a>
 
-## Struct `T`
+## Struct `Coin2`
 
 
 
-<pre><code><b>struct</b> <a href="#0x0_Coin2_T">T</a>
+<pre><code><b>struct</b> <a href="#0x0_Coin2">Coin2</a>
 </code></pre>
 
 
@@ -44,7 +44,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Coin2_initialize">initialize</a>(account: &signer): (<a href="Libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="#0x0_Coin2_T">Coin2::T</a>&gt;, <a href="Libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="#0x0_Coin2_T">Coin2::T</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Coin2_initialize">initialize</a>(account: &signer): (<a href="Libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="#0x0_Coin2_Coin2">Coin2::Coin2</a>&gt;, <a href="Libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="#0x0_Coin2_Coin2">Coin2::Coin2</a>&gt;)
 </code></pre>
 
 
@@ -53,10 +53,10 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Coin2_initialize">initialize</a>(account: &signer): (<a href="Libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="#0x0_Coin2_T">T</a>&gt;, <a href="Libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="#0x0_Coin2_T">T</a>&gt;) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Coin2_initialize">initialize</a>(account: &signer): (<a href="Libra.md#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="#0x0_Coin2">Coin2</a>&gt;, <a href="Libra.md#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="#0x0_Coin2">Coin2</a>&gt;) {
     <a href="Association.md#0x0_Association_assert_is_association">Association::assert_is_association</a>(account);
     // Register the <a href="#0x0_Coin2">Coin2</a> currency.
-    <a href="Libra.md#0x0_Libra_register_currency">Libra::register_currency</a>&lt;<a href="#0x0_Coin2_T">T</a>&gt;(
+    <a href="Libra.md#0x0_Libra_register_currency">Libra::register_currency</a>&lt;<a href="#0x0_Coin2">Coin2</a>&gt;(
         account,
         <a href="FixedPoint32.md#0x0_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(1, 2), // exchange rate <b>to</b> <a href="LBR.md#0x0_LBR">LBR</a>
         <b>false</b>,   // is_synthetic

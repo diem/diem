@@ -11,10 +11,10 @@ import 0x0.LBR;
 import 0x0.Libra;
 
 main(account: &signer, receiver: address) {
-    let coins: Libra.T<LBR.T>;
+    let coins: Libra.Libra<LBR.LBR>;
 
-    coins = LibraAccount.withdraw_from<LBR.T>(copy(account), 200);
-    LibraAccount.deposit<LBR.T>(move(account), move(receiver), move(coins));
+    coins = LibraAccount.withdraw_from<LBR.LBR>(copy(account), 200);
+    LibraAccount.deposit<LBR.LBR>(move(account), move(receiver), move(coins));
 
     return;
 }
@@ -33,7 +33,7 @@ main() {
     let sender: address;
 
     sender = get_txn_sender();
-    balance = LibraAccount.balance<LBR.T>(move(sender));
+    balance = LibraAccount.balance<LBR.LBR>(move(sender));
     assert(move(balance) <= 999800, 42);
 
     return;
@@ -52,7 +52,7 @@ main() {
     let sender: address;
 
     sender = get_txn_sender();
-    balance = LibraAccount.balance<LBR.T>(move(sender));
+    balance = LibraAccount.balance<LBR.LBR>(move(sender));
     assert(move(balance) == 900200, 42);
 
     return;

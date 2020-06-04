@@ -4,10 +4,10 @@
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x0::Coin1;
+    use 0x0::Coin1::Coin1;
     use 0x0::LibraAccount;
     fun main(account: &signer) {
-        LibraAccount::mint_to_address<Coin1::T>(account, {{bob}}, 10001);
+        LibraAccount::mint_to_address<Coin1>(account, {{bob}}, 10001);
     }
 }
 // TODO: fix account limits
@@ -19,12 +19,12 @@ script {
 //! gas-currency: Coin1
 script {
     use 0x0::LibraAccount;
-    use 0x0::Coin1;
+    use 0x0::Coin1::Coin1;
     fun main(account: &signer) {
         LibraAccount::deposit(
             account,
             {{bob}},
-            LibraAccount::withdraw_from<Coin1::T>(account, 10001)
+            LibraAccount::withdraw_from<Coin1>(account, 10001)
         );
     }
 }

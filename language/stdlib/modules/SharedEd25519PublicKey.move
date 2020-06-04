@@ -12,7 +12,7 @@ module SharedEd25519PublicKey {
 
     // A resource that forces the account associated with `rotation_cap` to use a ed25519
     // authentication key derived from `key`
-    resource struct T {
+    resource struct SharedEd25519PublicKey {
         // 32 byte ed25519 public key
         key: vector<u8>,
         // rotation capability for an account whose authentication key is always derived from `key`
@@ -25,7 +25,7 @@ module SharedEd25519PublicKey {
     // Aborts if the sender already has a `SharedEd25519PublicKey` resource.
     // Aborts if the length of `new_public_key` is not 32.
     public fun publish(account: &signer, key: vector<u8>) {
-        let t = T {
+        let t = SharedEd25519PublicKey {
             key: x"",
             rotation_cap: LibraAccount::extract_key_rotation_capability(account)
         };
@@ -33,7 +33,7 @@ module SharedEd25519PublicKey {
         move_to(account, t);
     }
 
-    fun rotate_key_(shared_key: &mut T, new_public_key: vector<u8>) {
+    fun rotate_key_(shared_key: &mut SharedEd25519PublicKey, new_public_key: vector<u8>) {
         // Cryptographic check of public key validity
         Transaction::assert(
             Signature::ed25519_validate_pubkey(copy new_public_key),
@@ -52,19 +52,19 @@ module SharedEd25519PublicKey {
     // `SharedEd25519PublicKey` to a new value derived from `new_public_key`
     // Aborts if the sender does not have a `SharedEd25519PublicKey` resource.
     // Aborts if the length of `new_public_key` is not 32.
-    public fun rotate_key(account: &signer, new_public_key: vector<u8>) acquires T {
-        rotate_key_(borrow_global_mut<T>(Signer::address_of(account)), new_public_key);
+    public fun rotate_key(account: &signer, new_public_key: vector<u8>) acquires SharedEd25519PublicKey {
+        rotate_key_(borrow_global_mut<SharedEd25519PublicKey>(Signer::address_of(account)), new_public_key);
     }
 
     // Return the public key stored under `addr`.
     // Aborts if `addr` does not hold a `SharedEd25519PublicKey` resource.
-    public fun key(addr: address): vector<u8> acquires T {
-        *&borrow_global<T>(addr).key
+    public fun key(addr: address): vector<u8> acquires SharedEd25519PublicKey {
+        *&borrow_global<SharedEd25519PublicKey>(addr).key
     }
 
     // Returns true if `addr` holds a `SharedEd25519PublicKey` resource.
     public fun exists(addr: address): bool {
-        ::exists<T>(addr)
+        ::exists<SharedEd25519PublicKey>(addr)
     }
 
 }

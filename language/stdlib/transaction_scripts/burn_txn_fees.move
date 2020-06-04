@@ -1,8 +1,8 @@
 script {
 use 0x0::Libra;
 use 0x0::TransactionFee;
-use 0x0::Coin1::T as Coin1;
-use 0x0::Coin2::T as Coin2;
+use 0x0::Coin1::Coin1;
+use 0x0::Coin2::Coin2;
 fun main<CoinType>(blessed_account: &signer) {
     TransactionFee::preburn_fees<CoinType>(blessed_account);
     if (TransactionFee::is_lbr<CoinType>()) {

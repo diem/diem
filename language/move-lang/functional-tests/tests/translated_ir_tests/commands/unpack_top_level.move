@@ -13,7 +13,7 @@ use {{default}}::Test;
 
 fun main() {
     let t = Test::new_t();
-    Test::T { b: _ } = t;
+    Test { b: _ } = t;
 }
 }
 

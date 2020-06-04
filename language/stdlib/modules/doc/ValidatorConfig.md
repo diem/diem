@@ -6,7 +6,7 @@
 ### Table of Contents
 
 -  [Struct `Config`](#0x0_ValidatorConfig_Config)
--  [Struct `T`](#0x0_ValidatorConfig_T)
+-  [Struct `ValidatorConfig`](#0x0_ValidatorConfig_ValidatorConfig)
 -  [Function `publish`](#0x0_ValidatorConfig_publish)
 -  [Function `set_operator`](#0x0_ValidatorConfig_set_operator)
 -  [Function `remove_operator`](#0x0_ValidatorConfig_remove_operator)
@@ -77,13 +77,13 @@
 
 </details>
 
-<a name="0x0_ValidatorConfig_T"></a>
+<a name="0x0_ValidatorConfig_ValidatorConfig"></a>
 
-## Struct `T`
+## Struct `ValidatorConfig`
 
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_ValidatorConfig_T">T</a>
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a>
 </code></pre>
 
 
@@ -95,14 +95,14 @@
 <dl>
 <dt>
 
-<code>config: <a href="Option.md#0x0_Option_T">Option::T</a>&lt;<a href="#0x0_ValidatorConfig_Config">ValidatorConfig::Config</a>&gt;</code>
+<code>config: <a href="Option.md#0x0_Option_Option">Option::Option</a>&lt;<a href="#0x0_ValidatorConfig_Config">ValidatorConfig::Config</a>&gt;</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
 
-<code>operator_account: <a href="Option.md#0x0_Option_T">Option::T</a>&lt;address&gt;</code>
+<code>operator_account: <a href="Option.md#0x0_Option_Option">Option::Option</a>&lt;address&gt;</code>
 </dt>
 <dd>
 
@@ -129,7 +129,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_publish">publish</a>(creator: &signer, account: &signer) {
     Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(creator) == 0xA550C18, 1101);
-    move_to(account, <a href="#0x0_ValidatorConfig_T">T</a> {
+    move_to(account, <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
         config: <a href="Option.md#0x0_Option_none">Option::none</a>(),
         operator_account: <a href="Option.md#0x0_Option_none">Option::none</a>(),
     });
@@ -155,9 +155,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_set_operator">set_operator</a>(account: &signer, operator_account: address) <b>acquires</b> <a href="#0x0_ValidatorConfig_T">T</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_set_operator">set_operator</a>(account: &signer, operator_account: address) <b>acquires</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
     <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
-    (borrow_global_mut&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(sender)).operator_account = <a href="Option.md#0x0_Option_some">Option::some</a>(operator_account);
+    (borrow_global_mut&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(sender)).operator_account = <a href="Option.md#0x0_Option_some">Option::some</a>(operator_account);
 }
 </code></pre>
 
@@ -180,10 +180,10 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_remove_operator">remove_operator</a>(account: &signer) <b>acquires</b> <a href="#0x0_ValidatorConfig_T">T</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_remove_operator">remove_operator</a>(account: &signer) <b>acquires</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
     <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     // <a href="#0x0_ValidatorConfig_Config">Config</a> field remains set
-    (borrow_global_mut&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(sender)).operator_account = <a href="Option.md#0x0_Option_none">Option::none</a>();
+    (borrow_global_mut&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(sender)).operator_account = <a href="Option.md#0x0_Option_none">Option::none</a>();
 }
 </code></pre>
 
@@ -214,14 +214,14 @@
     validator_network_address: vector&lt;u8&gt;,
     full_node_network_identity_pubkey: vector&lt;u8&gt;,
     full_node_network_address: vector&lt;u8&gt;,
-) <b>acquires</b> <a href="#0x0_ValidatorConfig_T">T</a> {
+) <b>acquires</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
     Transaction::assert(
         <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(signer) == <a href="#0x0_ValidatorConfig_get_operator">get_operator</a>(validator_account),
         1101
     );
     // TODO(valerini): verify the validity of new_config.consensus_pubkey and
     // the proof of posession
-    <b>let</b> t_ref = borrow_global_mut&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(validator_account);
+    <b>let</b> t_ref = borrow_global_mut&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(validator_account);
     t_ref.config = <a href="Option.md#0x0_Option_some">Option::some</a>(<a href="#0x0_ValidatorConfig_Config">Config</a> {
         consensus_pubkey,
         validator_network_identity_pubkey,
@@ -255,12 +255,12 @@
     account: &signer,
     validator_account: address,
     consensus_pubkey: vector&lt;u8&gt;,
-) <b>acquires</b> <a href="#0x0_ValidatorConfig_T">T</a> {
+) <b>acquires</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
     Transaction::assert(
         <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="#0x0_ValidatorConfig_get_operator">get_operator</a>(validator_account),
         1101
     );
-    <b>let</b> t_config_ref = <a href="Option.md#0x0_Option_borrow_mut">Option::borrow_mut</a>(&<b>mut</b> borrow_global_mut&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(validator_account).config);
+    <b>let</b> t_config_ref = <a href="Option.md#0x0_Option_borrow_mut">Option::borrow_mut</a>(&<b>mut</b> borrow_global_mut&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(validator_account).config);
     t_config_ref.consensus_pubkey = consensus_pubkey;
 }
 </code></pre>
@@ -284,8 +284,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_is_valid">is_valid</a>(addr: address): bool <b>acquires</b> <a href="#0x0_ValidatorConfig_T">T</a> {
-    exists&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(addr) && <a href="Option.md#0x0_Option_is_some">Option::is_some</a>(&borrow_global&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(addr).config)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_is_valid">is_valid</a>(addr: address): bool <b>acquires</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
+    exists&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr) && <a href="Option.md#0x0_Option_is_some">Option::is_some</a>(&borrow_global&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config)
 }
 </code></pre>
 
@@ -308,9 +308,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_get_config">get_config</a>(addr: address): <a href="#0x0_ValidatorConfig_Config">Config</a> <b>acquires</b> <a href="#0x0_ValidatorConfig_T">T</a> {
-    Transaction::assert(exists&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(addr), 1106);
-    <b>let</b> config = &borrow_global&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(addr).config;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_get_config">get_config</a>(addr: address): <a href="#0x0_ValidatorConfig_Config">Config</a> <b>acquires</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
+    Transaction::assert(exists&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr), 1106);
+    <b>let</b> config = &borrow_global&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config;
     *<a href="Option.md#0x0_Option_borrow">Option::borrow</a>(config)
 }
 </code></pre>
@@ -334,9 +334,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_get_operator">get_operator</a>(addr: address): address <b>acquires</b> <a href="#0x0_ValidatorConfig_T">T</a> {
-    Transaction::assert(exists&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(addr), 1106);
-    <b>let</b> t_ref = borrow_global&lt;<a href="#0x0_ValidatorConfig_T">T</a>&gt;(addr);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_get_operator">get_operator</a>(addr: address): address <b>acquires</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
+    Transaction::assert(exists&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr), 1106);
+    <b>let</b> t_ref = borrow_global&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr);
     *<a href="Option.md#0x0_Option_borrow_with_default">Option::borrow_with_default</a>(&t_ref.operator_account, &addr)
 }
 </code></pre>

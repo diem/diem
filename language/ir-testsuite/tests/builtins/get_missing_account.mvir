@@ -8,7 +8,7 @@ main() {
 
     addr = 0x011111111111111110;
     account_exists = LibraAccount.exists(copy(addr));
-    account_balance = LibraAccount.balance<LBR.T>(move(addr));
+    account_balance = LibraAccount.balance<LBR.LBR>(move(addr));
     return;
 }
 

@@ -4,7 +4,7 @@
 
 //! sender: alice
 module AlicePays {
-    use 0x0::LBR;
+    use 0x0::LBR::LBR;
     use 0x0::LibraAccount;
 
     resource struct T {
@@ -19,7 +19,7 @@ module AlicePays {
 
     public fun pay(payee: address, amount: u64) acquires T {
         let t = borrow_global<T>({{alice}});
-        LibraAccount::pay_from_capability<LBR::T>(
+        LibraAccount::pay_from_capability<LBR>(
             payee,
             &t.cap,
             amount,
@@ -46,16 +46,16 @@ fun main(sender: &signer) {
 //! sender: bob
 script {
 use {{alice}}::AlicePays;
-use 0x0::LBR;
+use 0x0::LBR::LBR;
 use 0x0::LibraAccount;
 use 0x0::Transaction;
 
 fun main() {
-    let carol_prev_balance = LibraAccount::balance<LBR::T>({{carol}});
-    let alice_prev_balance = LibraAccount::balance<LBR::T>({{alice}});
+    let carol_prev_balance = LibraAccount::balance<LBR>({{carol}});
+    let alice_prev_balance = LibraAccount::balance<LBR>({{alice}});
     AlicePays::pay({{carol}}, 10);
-    Transaction::assert(carol_prev_balance + 10 == LibraAccount::balance<LBR::T>({{carol}}), 0);
-    Transaction::assert(alice_prev_balance - 10 == LibraAccount::balance<LBR::T>({{alice}}), 1);
+    Transaction::assert(carol_prev_balance + 10 == LibraAccount::balance<LBR>({{carol}}), 0);
+    Transaction::assert(alice_prev_balance - 10 == LibraAccount::balance<LBR>({{alice}}), 1);
 }
 }
 

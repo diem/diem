@@ -5,19 +5,19 @@
 
 ### Table of Contents
 
--  [Struct `T`](#0x0_LibraVersion_T)
+-  [Struct `LibraVersion`](#0x0_LibraVersion_LibraVersion)
 -  [Function `initialize`](#0x0_LibraVersion_initialize)
 -  [Function `set`](#0x0_LibraVersion_set)
 
 
 
-<a name="0x0_LibraVersion_T"></a>
+<a name="0x0_LibraVersion_LibraVersion"></a>
 
-## Struct `T`
+## Struct `LibraVersion`
 
 
 
-<pre><code><b>struct</b> <a href="#0x0_LibraVersion_T">T</a>
+<pre><code><b>struct</b> <a href="#0x0_LibraVersion">LibraVersion</a>
 </code></pre>
 
 
@@ -57,9 +57,9 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVersion_initialize">initialize</a>(account: &signer) {
     Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="LibraConfig.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>(), 1);
 
-    <a href="LibraConfig.md#0x0_LibraConfig_publish_new_config">LibraConfig::publish_new_config</a>&lt;<a href="#0x0_LibraVersion_T">Self::T</a>&gt;(
+    <a href="LibraConfig.md#0x0_LibraConfig_publish_new_config">LibraConfig::publish_new_config</a>&lt;<a href="#0x0_LibraVersion">LibraVersion</a>&gt;(
         account,
-        <a href="#0x0_LibraVersion_T">T</a> { major: 1 },
+        <a href="#0x0_LibraVersion">LibraVersion</a> { major: 1 },
     );
 }
 </code></pre>
@@ -84,16 +84,16 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVersion_set">set</a>(account: &signer, major: u64) {
-    <b>let</b> old_config = <a href="LibraConfig.md#0x0_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x0_LibraVersion_T">Self::T</a>&gt;();
+    <b>let</b> old_config = <a href="LibraConfig.md#0x0_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x0_LibraVersion">LibraVersion</a>&gt;();
 
     Transaction::assert(
         old_config.major &lt; major,
         25
     );
 
-    <a href="LibraConfig.md#0x0_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x0_LibraVersion_T">Self::T</a>&gt;(
+    <a href="LibraConfig.md#0x0_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x0_LibraVersion">LibraVersion</a>&gt;(
         account,
-        <a href="#0x0_LibraVersion_T">T</a> { major }
+        <a href="#0x0_LibraVersion">LibraVersion</a> { major }
     );
 }
 </code></pre>

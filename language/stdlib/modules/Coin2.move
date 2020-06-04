@@ -5,12 +5,12 @@ module Coin2 {
     use 0x0::FixedPoint32;
     use 0x0::Libra;
 
-    struct T { }
+    struct Coin2 { }
 
-    public fun initialize(account: &signer): (Libra::MintCapability<T>, Libra::BurnCapability<T>) {
+    public fun initialize(account: &signer): (Libra::MintCapability<Coin2>, Libra::BurnCapability<Coin2>) {
         Association::assert_is_association(account);
         // Register the Coin2 currency.
-        Libra::register_currency<T>(
+        Libra::register_currency<Coin2>(
             account,
             FixedPoint32::create_from_rational(1, 2), // exchange rate to LBR
             false,   // is_synthetic

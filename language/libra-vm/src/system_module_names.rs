@@ -95,7 +95,7 @@ static ASSOCIATION_MODULE_NAME: Lazy<Identifier> =
 pub static ASSOCIATION_CAPABILITY_STRUCT_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("PrivilegedCapability").unwrap());
 pub static BASE_ASSOCIATION_CAPABILITY_TYPE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("T").unwrap());
+    Lazy::new(|| Identifier::new("Association").unwrap());
 
 // TODO Move this somewhere else
 pub fn association_capability_struct_tag() -> StructTag {
