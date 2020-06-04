@@ -664,6 +664,8 @@ mod test {
         buf.freeze()
     }
 
+    /// Check that the network address matches the format
+    /// `"/memory/<port>/ln-noise-ik/<pubkey>/ln-handshake/<version>"`
     fn expect_memory_noise_addr(addr: &NetworkAddress) {
         assert!(
             matches!(addr.as_slice(), [Memory(_), NoiseIK(_), Handshake(_)]),
@@ -672,6 +674,8 @@ mod test {
         );
     }
 
+    /// Check that the network address matches the format
+    /// `"/ip4/<ipaddr>/tcp/<port>/ln-noise-ik/<pubkey>/ln-handshake/<version>"`
     fn expect_ip4_tcp_noise_addr(addr: &NetworkAddress) {
         assert!(
             matches!(addr.as_slice(), [Ip4(_), Tcp(_), NoiseIK(_), Handshake(_)]),
@@ -708,14 +712,15 @@ mod test {
         expect_formatted_addr(&listener_addr);
         let supported_protocols_clone = supported_protocols.clone();
 
+        // we accept the dialer's inbound connection, check the connection metadata,
+        // and verify that the upgraded socket actually works (sends and receives
+        // bytes).
         let listener_task = async move {
             // accept one inbound connection from dialer
-
             let (inbound, _dialer_addr) = inbounds.next().await.unwrap().unwrap();
             let mut conn = inbound.await.unwrap();
 
             // check connection metadata
-
             assert_eq!(conn.metadata.peer_id, dialer_peer_id);
             expect_formatted_addr(&conn.metadata.addr);
             assert_eq!(conn.metadata.origin, ConnectionOrigin::Inbound);
@@ -729,16 +734,15 @@ mod test {
             );
 
             // test the socket works
-
             let msg = write_read_msg(&mut conn.socket, b"foobar").await;
             assert_eq!(&msg, b"barbaz".as_ref());
-
             conn.socket.close().await.unwrap();
         };
 
+        // dial the listener, check the connection metadata, and verify that the
+        // upgraded socket actually works (sends and receives bytes).
         let dialer_task = async move {
             // dial listener
-
             let mut conn = dialer_transport
                 .dial(listener_addr.clone())
                 .unwrap()
@@ -746,7 +750,6 @@ mod test {
                 .unwrap();
 
             // check connection metadata
-
             assert_eq!(conn.metadata.peer_id, listener_peer_id);
             assert_eq!(conn.metadata.addr, listener_addr);
             assert_eq!(conn.metadata.origin, ConnectionOrigin::Outbound);
@@ -757,10 +760,8 @@ mod test {
             assert_eq!(conn.metadata.application_protocols, supported_protocols);
 
             // test the socket works
-
             let msg = write_read_msg(&mut conn.socket, b"barbaz").await;
             assert_eq!(&msg, b"foobar".as_ref());
-
             conn.socket.close().await.unwrap();
         };
 
@@ -802,14 +803,18 @@ mod test {
         });
         expect_formatted_addr(&listener_addr);
 
+        // we try to accept one inbound connection from the dialer. however, the
+        // connection upgrade should fail because the dialer is not authenticated
+        // (not in the trusted peers set).
         let listener_task = async move {
-            // accept one inbound connection from dialer
             let (inbound, _dialer_addr) = inbounds.next().await.unwrap().unwrap();
             inbound
                 .await
                 .expect_err("should fail because the dialer is not a trusted peer");
         };
 
+        // we attempt to dial the listener. however, the connection upgrade should
+        // fail because we are not authenticated.
         let dialer_task = async move {
             // dial listener
             let fut_upgrade = dialer_transport.dial(listener_addr.clone()).unwrap();
