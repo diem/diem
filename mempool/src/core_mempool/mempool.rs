@@ -250,7 +250,7 @@ impl Mempool {
         &mut self,
         timeline_id: u64,
         count: usize,
-    ) -> (Vec<SignedTransaction>, u64) {
+    ) -> (Vec<(u64, SignedTransaction)>, u64) {
         self.transactions.read_timeline(timeline_id, count)
     }
 

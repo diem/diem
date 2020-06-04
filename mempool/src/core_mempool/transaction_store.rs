@@ -304,16 +304,18 @@ impl TransactionStore {
         &mut self,
         timeline_id: u64,
         count: usize,
-    ) -> (Vec<SignedTransaction>, u64) {
+    ) -> (Vec<(u64, SignedTransaction)>, u64) {
         let mut batch = vec![];
         let mut last_timeline_id = timeline_id;
-        for (address, sequence_number) in self.timeline_index.read_timeline(timeline_id, count) {
+        for (id, (address, sequence_number)) in
+            self.timeline_index.read_timeline(timeline_id, count)
+        {
             if let Some(txn) = self
                 .transactions
                 .get_mut(&address)
                 .and_then(|txns| txns.get(&sequence_number))
             {
-                batch.push(txn.txn.clone());
+                batch.push((id, txn.txn.clone()));
                 if let TimelineState::Ready(timeline_id) = txn.timeline_state {
                     last_timeline_id = timeline_id;
                 }

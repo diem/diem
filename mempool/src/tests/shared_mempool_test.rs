@@ -642,7 +642,7 @@ fn test_consensus_events_rejected_txns() {
         .expect("[mempool test] failed to acquire mempool lock");
     let (timeline, _) = pool.read_timeline(0, 10);
     assert_eq!(timeline.len(), 1);
-    assert!(timeline.contains(&kept_txn));
+    assert_eq!(timeline.get(0).unwrap().1, kept_txn);
 }
 
 #[test]
@@ -696,7 +696,7 @@ fn test_state_sync_events_committed_txns() {
         .expect("[mempool test] failed to acquire mempool lock");
     let (timeline, _) = pool.read_timeline(0, 10);
     assert_eq!(timeline.len(), 1);
-    assert!(timeline.contains(&kept_txn));
+    assert_eq!(timeline.get(0).unwrap().1, kept_txn);
 }
 
 #[test]

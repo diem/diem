@@ -29,9 +29,9 @@ pub(crate) struct PeerManager {
 #[derive(Clone)]
 pub struct BroadcastInfo {
     // broadcasts that have not been ACK'ed for yet
-    sent_batches: HashMap<String, Vec<u64>>,
+    pub sent_batches: HashMap<String, Vec<u64>>,
     // timeline IDs of all txns that need to be retried and ACKed for
-    total_retry_txns: HashSet<u64>,
+    pub total_retry_txns: HashSet<u64>,
 }
 
 impl BroadcastInfo {
@@ -83,14 +83,40 @@ impl PeerManager {
         }
     }
 
-    pub fn update_peer_broadcast(&self, peer: PeerNetworkId, timeline_id: u64) {
-        self.peer_info
+    pub fn update_peer_broadcast(
+        &self,
+        peer: PeerNetworkId,
+        // ID of broadcast request
+        batch_id: String,
+        // timeline IDs of txns broadcasted
+        batch: Vec<u64>,
+        // the new timeline ID to read from for next broadcast
+        timeline_id: u64,
+        // timeline ID of first txn in timeline, used to remove potentially expired retry_txns
+        earliest_timeline_id: u64,
+    ) {
+        let mut peer_info = self
+            .peer_info
             .lock()
-            .expect("failed to acquire peer_info lock")
-            .entry(peer)
-            .and_modify(|t| {
-                t.timeline_id = timeline_id;
-            });
+            .expect("failed to acquire peer_info lock");
+
+        let sync_state = peer_info.get_mut(&peer).expect("missing peer sync state");
+        sync_state
+            .broadcast_info
+            .sent_batches
+            .insert(batch_id, batch);
+        sync_state.timeline_id = std::cmp::max(sync_state.timeline_id, timeline_id);
+
+        // clean up expired retriable txns
+        let gc_retry_txns = sync_state
+            .broadcast_info
+            .total_retry_txns
+            .iter()
+            .filter(|x| *x >= &earliest_timeline_id)
+            .cloned()
+            .collect::<HashSet<_>>();
+
+        sync_state.broadcast_info.total_retry_txns = gc_retry_txns;
     }
 
     pub fn process_broadcast_ack(
