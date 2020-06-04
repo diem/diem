@@ -311,51 +311,6 @@
 <span id="311">311</span>
 <span id="312">312</span>
 <span id="313">313</span>
-<span id="314">314</span>
-<span id="315">315</span>
-<span id="316">316</span>
-<span id="317">317</span>
-<span id="318">318</span>
-<span id="319">319</span>
-<span id="320">320</span>
-<span id="321">321</span>
-<span id="322">322</span>
-<span id="323">323</span>
-<span id="324">324</span>
-<span id="325">325</span>
-<span id="326">326</span>
-<span id="327">327</span>
-<span id="328">328</span>
-<span id="329">329</span>
-<span id="330">330</span>
-<span id="331">331</span>
-<span id="332">332</span>
-<span id="333">333</span>
-<span id="334">334</span>
-<span id="335">335</span>
-<span id="336">336</span>
-<span id="337">337</span>
-<span id="338">338</span>
-<span id="339">339</span>
-<span id="340">340</span>
-<span id="341">341</span>
-<span id="342">342</span>
-<span id="343">343</span>
-<span id="344">344</span>
-<span id="345">345</span>
-<span id="346">346</span>
-<span id="347">347</span>
-<span id="348">348</span>
-<span id="349">349</span>
-<span id="350">350</span>
-<span id="351">351</span>
-<span id="352">352</span>
-<span id="353">353</span>
-<span id="354">354</span>
-<span id="355">355</span>
-<span id="356">356</span>
-<span id="357">357</span>
-<span id="358">358</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -378,21 +333,21 @@
 };
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FullNodeConfig</span> {
-    <span class="ident">advertised</span>: <span class="ident">NetworkAddress</span>,
-    <span class="ident">bootstrap</span>: <span class="ident">NetworkAddress</span>,
-    <span class="ident">full_node_index</span>: <span class="ident">usize</span>,
-    <span class="ident">full_node_seed</span>: [<span class="ident">u8</span>; <span class="number">32</span>],
-    <span class="ident">full_nodes</span>: <span class="ident">usize</span>,
-    <span class="ident">genesis</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Transaction</span><span class="op">&gt;</span>,
-    <span class="ident">listen</span>: <span class="ident">NetworkAddress</span>,
-    <span class="ident">enable_remote_authentication</span>: <span class="ident">bool</span>,
+    <span class="kw">pub</span> <span class="ident">advertised_address</span>: <span class="ident">NetworkAddress</span>,
+    <span class="kw">pub</span> <span class="ident">bootstrap</span>: <span class="ident">NetworkAddress</span>,
+    <span class="kw">pub</span> <span class="ident">full_node_index</span>: <span class="ident">usize</span>,
+    <span class="kw">pub</span> <span class="ident">full_node_seed</span>: [<span class="ident">u8</span>; <span class="number">32</span>],
+    <span class="kw">pub</span> <span class="ident">num_full_nodes</span>: <span class="ident">usize</span>,
+    <span class="kw">pub</span> <span class="ident">genesis</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Transaction</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">listen_address</span>: <span class="ident">NetworkAddress</span>,
+    <span class="kw">pub</span> <span class="ident">enable_remote_authentication</span>: <span class="ident">bool</span>,
     <span class="ident">template</span>: <span class="ident">NodeConfig</span>,
     <span class="ident">validator_config</span>: <span class="ident">ValidatorConfig</span>,
 }
 
 <span class="kw">const</span> <span class="ident">DEFAULT_SEED</span>: [<span class="ident">u8</span>; <span class="number">32</span>] <span class="op">=</span> [<span class="number">15u8</span>; <span class="number">32</span>];
-<span class="kw">const</span> <span class="ident">DEFAULT_ADVERTISED</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;/ip4/127.0.0.1/tcp/7180&quot;</span>;
-<span class="kw">const</span> <span class="ident">DEFAULT_LISTEN</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;/ip4/0.0.0.0/tcp/7180&quot;</span>;
+<span class="kw">const</span> <span class="ident">DEFAULT_ADVERTISED_ADDRESS</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;/ip4/127.0.0.1/tcp/7180&quot;</span>;
+<span class="kw">const</span> <span class="ident">DEFAULT_LISTEN_ADDRESS</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;/ip4/0.0.0.0/tcp/7180&quot;</span>;
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">FullNodeConfig</span> {
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
@@ -400,13 +355,13 @@
         <span class="ident">template</span>.<span class="ident">base</span>.<span class="ident">role</span> <span class="op">=</span> <span class="ident">RoleType</span>::<span class="ident">FullNode</span>;
 
         <span class="self">Self</span> {
-            <span class="ident">advertised</span>: <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="ident">DEFAULT_ADVERTISED</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">bootstrap</span>: <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="ident">DEFAULT_ADVERTISED</span>).<span class="ident">unwrap</span>(),
+            <span class="ident">advertised_address</span>: <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="ident">DEFAULT_ADVERTISED_ADDRESS</span>).<span class="ident">unwrap</span>(),
+            <span class="ident">bootstrap</span>: <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="ident">DEFAULT_ADVERTISED_ADDRESS</span>).<span class="ident">unwrap</span>(),
             <span class="ident">full_node_index</span>: <span class="number">0</span>,
             <span class="ident">full_node_seed</span>: <span class="ident">DEFAULT_SEED</span>,
-            <span class="ident">full_nodes</span>: <span class="number">1</span>,
+            <span class="ident">num_full_nodes</span>: <span class="number">1</span>,
             <span class="ident">genesis</span>: <span class="prelude-val">None</span>,
-            <span class="ident">listen</span>: <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="ident">DEFAULT_LISTEN</span>).<span class="ident">unwrap</span>(),
+            <span class="ident">listen_address</span>: <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="ident">DEFAULT_LISTEN_ADDRESS</span>).<span class="ident">unwrap</span>(),
             <span class="ident">enable_remote_authentication</span>: <span class="bool-val">true</span>,
             <span class="ident">template</span>,
             <span class="ident">validator_config</span>: <span class="ident">ValidatorConfig</span>::<span class="ident">new</span>(),
@@ -419,58 +374,13 @@
         <span class="self">Self</span>::<span class="ident">default</span>()
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">advertised</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">advertised</span>: <span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">advertised</span> <span class="op">=</span> <span class="ident">advertised</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">num_validator_nodes</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">nodes</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+        <span class="self">self</span>.<span class="ident">validator_config</span>.<span class="ident">num_nodes</span> <span class="op">=</span> <span class="ident">nodes</span>;
         <span class="self">self</span>
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">bootstrap</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">bootstrap</span>: <span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">bootstrap</span> <span class="op">=</span> <span class="ident">bootstrap</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">full_node_index</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">full_node_index</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">full_node_index</span> <span class="op">=</span> <span class="ident">full_node_index</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">full_nodes</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">full_nodes</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">full_nodes</span> <span class="op">=</span> <span class="ident">full_nodes</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">full_node_seed</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">full_node_seed</span>: [<span class="ident">u8</span>; <span class="number">32</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">full_node_seed</span> <span class="op">=</span> <span class="ident">full_node_seed</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">genesis</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">genesis</span>: <span class="ident">Transaction</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">genesis</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">genesis</span>);
-        <span class="self">self</span>
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">listen</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">listen</span>: <span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">listen</span> <span class="op">=</span> <span class="ident">listen</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">validators</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">nodes</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">validator_config</span>.<span class="ident">validators</span>(<span class="ident">nodes</span>);
-        <span class="self">self</span>
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">enable_remote_authentication</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">enable_remote_authentication</span> <span class="op">=</span> <span class="bool-val">true</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">public</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">enable_remote_authentication</span> <span class="op">=</span> <span class="bool-val">false</span>;
-        <span class="self">self</span>
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">seed</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">seed</span>: [<span class="ident">u8</span>; <span class="number">32</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">validator_config</span>.<span class="ident">seed</span>(<span class="ident">seed</span>);
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">validator_seed</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">seed</span>: [<span class="ident">u8</span>; <span class="number">32</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+        <span class="self">self</span>.<span class="ident">validator_config</span>.<span class="ident">seed</span> <span class="op">=</span> <span class="ident">seed</span>;
         <span class="self">self</span>
     }
 
@@ -495,8 +405,8 @@
             .<span class="ident">full_node_networks</span>
             .<span class="ident">last_mut</span>()
             .<span class="ident">ok_or</span>(<span class="ident">Error</span>::<span class="ident">MissingFullNodeNetwork</span>)<span class="question-mark">?</span>;
-        <span class="ident">network</span>.<span class="ident">advertised_address</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">advertised</span>.<span class="ident">clone</span>();
-        <span class="ident">network</span>.<span class="ident">listen_address</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">listen</span>.<span class="ident">clone</span>();
+        <span class="ident">network</span>.<span class="ident">advertised_address</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">advertised_address</span>.<span class="ident">clone</span>();
+        <span class="ident">network</span>.<span class="ident">listen_address</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>();
         <span class="ident">network</span>.<span class="ident">seed_peers</span> <span class="op">=</span> <span class="ident">seed_peers</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">config</span>)
@@ -513,8 +423,8 @@
         <span class="kw">let</span> <span class="ident">seed_peers</span> <span class="op">=</span> <span class="ident">generator</span>::<span class="ident">build_seed_peers</span>(<span class="kw-2">&amp;</span><span class="ident">seed_config</span>, <span class="self">self</span>.<span class="ident">bootstrap</span>.<span class="ident">clone</span>());
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">network</span> <span class="op">=</span> <span class="ident">new_net</span>.<span class="ident">full_node_networks</span>.<span class="ident">swap_remove</span>(<span class="number">0</span>);
-        <span class="ident">network</span>.<span class="ident">advertised_address</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">advertised</span>.<span class="ident">clone</span>();
-        <span class="ident">network</span>.<span class="ident">listen_address</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">listen</span>.<span class="ident">clone</span>();
+        <span class="ident">network</span>.<span class="ident">advertised_address</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">advertised_address</span>.<span class="ident">clone</span>();
+        <span class="ident">network</span>.<span class="ident">listen_address</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>();
         <span class="ident">network</span>.<span class="ident">seed_peers</span> <span class="op">=</span> <span class="ident">seed_peers</span>;
         <span class="ident">config</span>.<span class="ident">full_node_networks</span>.<span class="ident">push</span>(<span class="ident">network</span>);
         <span class="prelude-val">Ok</span>(())
@@ -536,12 +446,12 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">randomize_ports</span>: <span class="ident">bool</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NodeConfig</span><span class="op">&gt;</span>, <span class="ident">Ed25519PrivateKey</span>)<span class="op">&gt;</span> {
-        <span class="macro">ensure</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">full_nodes</span> <span class="op">&gt;</span> <span class="number">0</span>, <span class="ident">Error</span>::<span class="ident">NonZeroNetwork</span>);
+        <span class="macro">ensure</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">num_full_nodes</span> <span class="op">&gt;</span> <span class="number">0</span>, <span class="ident">Error</span>::<span class="ident">NonZeroNetwork</span>);
         <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="self">self</span>.<span class="ident">full_node_index</span> <span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">full_nodes</span>,
+            <span class="self">self</span>.<span class="ident">full_node_index</span> <span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">num_full_nodes</span>,
             <span class="ident">Error</span>::<span class="ident">IndexError</span> {
                 <span class="ident">index</span>: <span class="self">self</span>.<span class="ident">full_node_index</span>,
-                <span class="ident">nodes</span>: <span class="self">self</span>.<span class="ident">full_nodes</span>
+                <span class="ident">nodes</span>: <span class="self">self</span>.<span class="ident">num_full_nodes</span>
             }
         );
 
@@ -561,7 +471,7 @@
 
         <span class="comment">// @TODO The last one is the upstream peer, note at some point we&#39;ll have to support taking</span>
         <span class="comment">// in a genesis instead at which point we may not have an upstream peer config</span>
-        <span class="kw">let</span> <span class="ident">actual_nodes</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">full_nodes</span> <span class="op">+</span> <span class="number">1</span>;
+        <span class="kw">let</span> <span class="ident">actual_nodes</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">num_full_nodes</span> <span class="op">+</span> <span class="number">1</span>;
         <span class="kw">for</span> <span class="ident">_index</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">actual_nodes</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">NodeConfig</span>::<span class="ident">random_with_template</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">template</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">rng</span>);
             <span class="kw">if</span> <span class="ident">randomize_ports</span> {
@@ -656,11 +566,11 @@
 
         <span class="macro">assert_eq</span><span class="macro">!</span>(
             <span class="ident">network</span>.<span class="ident">advertised_address</span>,
-            <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="ident">DEFAULT_ADVERTISED</span>).<span class="ident">unwrap</span>()
+            <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="ident">DEFAULT_ADVERTISED_ADDRESS</span>).<span class="ident">unwrap</span>()
         );
         <span class="macro">assert_eq</span><span class="macro">!</span>(
             <span class="ident">network</span>.<span class="ident">listen_address</span>,
-            <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="ident">DEFAULT_LISTEN</span>).<span class="ident">unwrap</span>()
+            <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="ident">DEFAULT_LISTEN_ADDRESS</span>).<span class="ident">unwrap</span>()
         );
 
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">execution</span>.<span class="ident">genesis</span>.<span class="ident">is_some</span>());
@@ -706,7 +616,7 @@
         <span class="kw">let</span> <span class="ident">config_one</span> <span class="op">=</span> <span class="ident">FullNodeConfig</span>::<span class="ident">new</span>().<span class="ident">build</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config_two</span> <span class="op">=</span> <span class="ident">FullNodeConfig</span>::<span class="ident">new</span>().<span class="ident">build</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">fnc</span> <span class="op">=</span> <span class="ident">FullNodeConfig</span>::<span class="ident">new</span>();
-        <span class="ident">fnc</span>.<span class="ident">full_node_seed</span>([<span class="number">33u8</span>; <span class="number">32</span>]);
+        <span class="ident">fnc</span>.<span class="ident">full_node_seed</span> <span class="op">=</span> [<span class="number">33u8</span>; <span class="number">32</span>];
         <span class="ident">fnc</span>.<span class="ident">extend</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">config_two</span>).<span class="ident">unwrap</span>();
         <span class="macro">assert_eq</span><span class="macro">!</span>(
             <span class="ident">config_one</span>.<span class="ident">full_node_networks</span>[<span class="number">0</span>],
