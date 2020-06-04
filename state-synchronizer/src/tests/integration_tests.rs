@@ -23,9 +23,10 @@ use libra_types::{
     validator_verifier::random_validator_verifier, waypoint::Waypoint,
 };
 use network::{
-    validator_network::network_builder::{AuthenticationMode, NetworkBuilder},
     NetworkPublicKeys,
 };
+use network_builder::network_builder::{AuthenticationMode, NetworkBuilder};
+
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::HashMap,

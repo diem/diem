@@ -23,7 +23,7 @@ use network::{
         conn_notifs_channel, ConnectionRequestSender, PeerManagerNotification, PeerManagerRequest,
         PeerManagerRequestSender,
     },
-    protocols::rpc::InboundRpcRequest,
+    protocols::{network::NewNetworkEvents, rpc::InboundRpcRequest},
     ProtocolId,
 };
 use std::{
