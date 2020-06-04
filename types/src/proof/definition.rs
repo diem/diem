@@ -796,8 +796,4 @@ impl<H: CryptoHasher> AccumulatorExtensionProof<H> {
 
         Ok(original_tree.append(self.leaves.as_slice()))
     }
-
-    pub fn leaves(&self) -> &Vec<HashValue> {
-        &self.leaves
-    }
 }
