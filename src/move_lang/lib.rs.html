@@ -577,6 +577,28 @@
 <span id="577">577</span>
 <span id="578">578</span>
 <span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1014,9 +1036,12 @@
     <span class="kw">const</span> <span class="ident">SLASH</span>: <span class="ident">char</span> <span class="op">=</span> <span class="string">&#39;/&#39;</span>;
     <span class="kw">const</span> <span class="ident">SPACE</span>: <span class="ident">char</span> <span class="op">=</span> <span class="string">&#39; &#39;</span>;
     <span class="kw">const</span> <span class="ident">STAR</span>: <span class="ident">char</span> <span class="op">=</span> <span class="string">&#39;*&#39;</span>;
+    <span class="kw">const</span> <span class="ident">QUOTE</span>: <span class="ident">char</span> <span class="op">=</span> <span class="string">&#39;&quot;&#39;</span>;
+    <span class="kw">const</span> <span class="ident">BACKSLASH</span>: <span class="ident">char</span> <span class="op">=</span> <span class="string">&#39;\\&#39;</span>;
 
     <span class="kw">enum</span> <span class="ident">State</span> {
         <span class="ident">Source</span>,
+        <span class="ident">String</span>,
         <span class="ident">LineComment</span>,
         <span class="ident">BlockComment</span>,
     }
@@ -1044,6 +1069,25 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">char_iter</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">chars</span>().<span class="ident">peekable</span>();
     <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">chr</span>) <span class="op">=</span> <span class="ident">char_iter</span>.<span class="ident">next</span>() {
         <span class="kw">match</span> <span class="ident">state</span> {
+            <span class="comment">// Strings</span>
+            <span class="ident">State</span>::<span class="ident">Source</span> <span class="kw">if</span> <span class="ident">chr</span> <span class="op">=</span><span class="op">=</span> <span class="ident">QUOTE</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">source</span>.<span class="ident">push</span>(<span class="ident">chr</span>);
+                <span class="ident">pos</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+                <span class="ident">state</span> <span class="op">=</span> <span class="ident">State</span>::<span class="ident">String</span>;
+            }
+            <span class="ident">State</span>::<span class="ident">String</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">source</span>.<span class="ident">push</span>(<span class="ident">chr</span>);
+                <span class="ident">pos</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+                <span class="kw">if</span> <span class="ident">chr</span> <span class="op">=</span><span class="op">=</span> <span class="ident">BACKSLASH</span> {
+                    <span class="comment">// Skip over the escaped character (e.g., a quote or another backslash)</span>
+                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">next</span>) <span class="op">=</span> <span class="ident">char_iter</span>.<span class="ident">next</span>() {
+                        <span class="ident">source</span>.<span class="ident">push</span>(<span class="ident">next</span>);
+                        <span class="ident">pos</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+                    }
+                } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">chr</span> <span class="op">=</span><span class="op">=</span> <span class="ident">QUOTE</span> {
+                    <span class="ident">state</span> <span class="op">=</span> <span class="ident">State</span>::<span class="ident">Source</span>;
+                }
+            }
             <span class="comment">// Line comments</span>
             <span class="ident">State</span>::<span class="ident">Source</span> <span class="kw">if</span> <span class="ident">chr</span> <span class="op">=</span><span class="op">=</span> <span class="ident">SLASH</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">next_is</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">char_iter</span>, <span class="ident">SLASH</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="comment">// Starting line comment. We do not capture the `//` in the comment.</span>
@@ -1142,7 +1186,7 @@
                 ),
             ]]);
         }
-        <span class="ident">State</span>::<span class="ident">Source</span> <span class="op">=</span><span class="op">&gt;</span> {}
+        <span class="ident">State</span>::<span class="ident">Source</span> <span class="op">|</span> <span class="ident">State</span>::<span class="ident">String</span> <span class="op">=</span><span class="op">&gt;</span> {}
     }
 
     <span class="prelude-val">Ok</span>((<span class="ident">source</span>, <span class="ident">comment_map</span>))
