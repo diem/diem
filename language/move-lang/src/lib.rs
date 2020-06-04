@@ -434,9 +434,12 @@ fn strip_comments(fname: &'static str, input: &str) -> Result<(String, FileComme
     const SLASH: char = '/';
     const SPACE: char = ' ';
     const STAR: char = '*';
+    const QUOTE: char = '"';
+    const BACKSLASH: char = '\\';
 
     enum State {
         Source,
+        String,
         LineComment,
         BlockComment,
     }
@@ -464,6 +467,25 @@ fn strip_comments(fname: &'static str, input: &str) -> Result<(String, FileComme
     let mut char_iter = input.chars().peekable();
     while let Some(chr) = char_iter.next() {
         match state {
+            // Strings
+            State::Source if chr == QUOTE => {
+                source.push(chr);
+                pos += 1;
+                state = State::String;
+            }
+            State::String => {
+                source.push(chr);
+                pos += 1;
+                if chr == BACKSLASH {
+                    // Skip over the escaped character (e.g., a quote or another backslash)
+                    if let Some(next) = char_iter.next() {
+                        source.push(next);
+                        pos += 1;
+                    }
+                } else if chr == QUOTE {
+                    state = State::Source;
+                }
+            }
             // Line comments
             State::Source if chr == SLASH && next_is(&mut char_iter, SLASH) => {
                 // Starting line comment. We do not capture the `//` in the comment.
@@ -562,7 +584,7 @@ fn strip_comments(fname: &'static str, input: &str) -> Result<(String, FileComme
                 ),
             ]]);
         }
-        State::Source => {}
+        State::Source | State::String => {}
     }
 
     Ok((source, comment_map))
