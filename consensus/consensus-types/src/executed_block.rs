@@ -81,8 +81,4 @@ impl ExecutedBlock {
             self.compute_result().epoch_state().clone(),
         )
     }
-
-    pub fn is_nil_block(&self) -> bool {
-        self.block().is_nil_block()
-    }
 }
