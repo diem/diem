@@ -278,13 +278,13 @@ fn build_full_node(command: FullNodeCommand) {
 
 fn build_full_node_config_builder(args: &FullNodeArgs) -> FullNodeConfig {
     let mut config_builder = FullNodeConfig::new();
-    config_builder.advertised = args.advertised.clone();
+    config_builder.advertised_address = args.advertised.clone();
     config_builder.bootstrap = args.bootstrap.clone();
     config_builder.full_node_index = args.full_node_index;
-    config_builder.full_nodes = args.full_nodes;
-    config_builder.listen = args.listen.clone();
+    config_builder.num_full_nodes = args.full_nodes;
+    config_builder.listen_address = args.listen.clone();
     config_builder
-        .validators(args.validators)
+        .num_validator_nodes(args.validators)
         .template(load_node_template(args.template.as_ref()));
 
     if let Some(fn_seed) = args.full_node_seed.as_ref() {
@@ -296,7 +296,7 @@ fn build_full_node_config_builder(args: &FullNodeArgs) -> FullNodeConfig {
     }
 
     if let Some(seed) = args.seed.as_ref() {
-        config_builder.seed(parse_seed(seed));
+        config_builder.validator_seed(parse_seed(seed));
     }
 
     config_builder

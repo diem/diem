@@ -19,21 +19,21 @@ use std::{
 };
 
 pub struct FullNodeConfig {
-    pub advertised: NetworkAddress,
+    pub advertised_address: NetworkAddress,
     pub bootstrap: NetworkAddress,
     pub full_node_index: usize,
     pub full_node_seed: [u8; 32],
-    pub full_nodes: usize,
+    pub num_full_nodes: usize,
     pub genesis: Option<Transaction>,
-    pub listen: NetworkAddress,
+    pub listen_address: NetworkAddress,
     pub enable_remote_authentication: bool,
     template: NodeConfig,
     validator_config: ValidatorConfig,
 }
 
 const DEFAULT_SEED: [u8; 32] = [15u8; 32];
-const DEFAULT_ADVERTISED: &str = "/ip4/127.0.0.1/tcp/7180";
-const DEFAULT_LISTEN: &str = "/ip4/0.0.0.0/tcp/7180";
+const DEFAULT_ADVERTISED_ADDRESS: &str = "/ip4/127.0.0.1/tcp/7180";
+const DEFAULT_LISTEN_ADDRESS: &str = "/ip4/0.0.0.0/tcp/7180";
 
 impl Default for FullNodeConfig {
     fn default() -> Self {
@@ -41,13 +41,13 @@ impl Default for FullNodeConfig {
         template.base.role = RoleType::FullNode;
 
         Self {
-            advertised: NetworkAddress::from_str(DEFAULT_ADVERTISED).unwrap(),
-            bootstrap: NetworkAddress::from_str(DEFAULT_ADVERTISED).unwrap(),
+            advertised_address: NetworkAddress::from_str(DEFAULT_ADVERTISED_ADDRESS).unwrap(),
+            bootstrap: NetworkAddress::from_str(DEFAULT_ADVERTISED_ADDRESS).unwrap(),
             full_node_index: 0,
             full_node_seed: DEFAULT_SEED,
-            full_nodes: 1,
+            num_full_nodes: 1,
             genesis: None,
-            listen: NetworkAddress::from_str(DEFAULT_LISTEN).unwrap(),
+            listen_address: NetworkAddress::from_str(DEFAULT_LISTEN_ADDRESS).unwrap(),
             enable_remote_authentication: true,
             template,
             validator_config: ValidatorConfig::new(),
@@ -60,12 +60,12 @@ impl FullNodeConfig {
         Self::default()
     }
 
-    pub fn validators(&mut self, nodes: usize) -> &mut Self {
+    pub fn num_validator_nodes(&mut self, nodes: usize) -> &mut Self {
         self.validator_config.num_nodes = nodes;
         self
     }
 
-    pub fn seed(&mut self, seed: [u8; 32]) -> &mut Self {
+    pub fn validator_seed(&mut self, seed: [u8; 32]) -> &mut Self {
         self.validator_config.seed = seed;
         self
     }
@@ -91,8 +91,8 @@ impl FullNodeConfig {
             .full_node_networks
             .last_mut()
             .ok_or(Error::MissingFullNodeNetwork)?;
-        network.advertised_address = self.advertised.clone();
-        network.listen_address = self.listen.clone();
+        network.advertised_address = self.advertised_address.clone();
+        network.listen_address = self.listen_address.clone();
         network.seed_peers = seed_peers;
 
         Ok(config)
@@ -109,8 +109,8 @@ impl FullNodeConfig {
         let seed_peers = generator::build_seed_peers(&seed_config, self.bootstrap.clone());
 
         let mut network = new_net.full_node_networks.swap_remove(0);
-        network.advertised_address = self.advertised.clone();
-        network.listen_address = self.listen.clone();
+        network.advertised_address = self.advertised_address.clone();
+        network.listen_address = self.listen_address.clone();
         network.seed_peers = seed_peers;
         config.full_node_networks.push(network);
         Ok(())
@@ -132,12 +132,12 @@ impl FullNodeConfig {
         &self,
         randomize_ports: bool,
     ) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
-        ensure!(self.full_nodes > 0, Error::NonZeroNetwork);
+        ensure!(self.num_full_nodes > 0, Error::NonZeroNetwork);
         ensure!(
-            self.full_node_index < self.full_nodes,
+            self.full_node_index < self.num_full_nodes,
             Error::IndexError {
                 index: self.full_node_index,
-                nodes: self.full_nodes
+                nodes: self.num_full_nodes
             }
         );
 
@@ -157,7 +157,7 @@ impl FullNodeConfig {
 
         // @TODO The last one is the upstream peer, note at some point we'll have to support taking
         // in a genesis instead at which point we may not have an upstream peer config
-        let actual_nodes = self.full_nodes + 1;
+        let actual_nodes = self.num_full_nodes + 1;
         for _index in 0..actual_nodes {
             let mut config = NodeConfig::random_with_template(&self.template, &mut rng);
             if randomize_ports {
@@ -252,11 +252,11 @@ mod test {
 
         assert_eq!(
             network.advertised_address,
-            NetworkAddress::from_str(DEFAULT_ADVERTISED).unwrap()
+            NetworkAddress::from_str(DEFAULT_ADVERTISED_ADDRESS).unwrap()
         );
         assert_eq!(
             network.listen_address,
-            NetworkAddress::from_str(DEFAULT_LISTEN).unwrap()
+            NetworkAddress::from_str(DEFAULT_LISTEN_ADDRESS).unwrap()
         );
 
         assert!(config.execution.genesis.is_some());
