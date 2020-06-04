@@ -220,7 +220,7 @@ impl LibraInterface for MockLibraInterface {
             .storage
             .get_latest_account_state(account)?
             .ok_or_else(|| Error::DataDoesNotExist("AccountState".into()))?;
-        let account_state = AccountState::try_from(&blob).unwrap();
+        let account_state = AccountState::try_from(&blob)?;
         Ok(account_state
             .get_libra_timestamp_resource()?
             .ok_or_else(|| Error::DataDoesNotExist("LibraTimestampResource".into()))?
@@ -238,7 +238,7 @@ impl LibraInterface for MockLibraInterface {
             .storage
             .get_latest_account_state(account)?
             .ok_or_else(|| Error::DataDoesNotExist("AccountState".into()))?;
-        let account_state = AccountState::try_from(&blob).unwrap();
+        let account_state = AccountState::try_from(&blob)?;
         Ok(account_state
             .get_account_resource()?
             .ok_or_else(|| Error::DataDoesNotExist("AccountResource".into()))?
@@ -254,7 +254,7 @@ impl LibraInterface for MockLibraInterface {
             .storage
             .get_latest_account_state(account)?
             .ok_or_else(|| Error::DataDoesNotExist("AccountState".into()))?;
-        let account_state = AccountState::try_from(&blob).unwrap();
+        let account_state = AccountState::try_from(&blob)?;
         Ok(account_state
             .get_validator_config_resource()?
             .ok_or_else(|| Error::DataDoesNotExist("ValidatorConfigResource".into()))?
