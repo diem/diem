@@ -92,15 +92,6 @@ impl AccountState {
         }
     }
 
-    pub fn get_currency_info_resource(
-        &self,
-        currency_code: Identifier,
-    ) -> Result<Option<BalanceResource>> {
-        // TODO: update this to use BalanceResource::resource_path once that takes type
-        // parameters
-        self.get_resource(&CurrencyInfoResource::access_path_for(currency_code))
-    }
-
     pub fn get_validator_set(&self) -> Result<Option<ValidatorSet>> {
         self.get_resource(&ValidatorSet::CONFIG_ID.access_path().path)
     }
