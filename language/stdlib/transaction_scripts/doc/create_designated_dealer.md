@@ -27,7 +27,7 @@ and 'auth_key_prefix' for nonsynthetic CoinType
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;CoinType&gt;(tc_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;) {
-    <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_create_designated_dealer">LibraAccount::create_designated_dealer</a>&lt;CoinType&gt;(tc_account, new_account_address, auth_key_prefix);
+    <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_create_designated_dealer">LibraAccount::create_designated_dealer</a>&lt;CoinType&gt;(tc_account, new_account_address, auth_key_prefix);
 }
 </code></pre>
 

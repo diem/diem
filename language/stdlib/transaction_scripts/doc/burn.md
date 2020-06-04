@@ -35,8 +35,8 @@ sliding_nonce is a unique nonce for operation, see sliding_nonce.move for detail
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Token&gt;(account: &signer, sliding_nonce: u64, preburn_address: address) {
-    <a href="../../modules/doc/sliding_nonce.md#0x0_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(account, sliding_nonce);
-    <a href="../../modules/doc/libra.md#0x0_Libra_burn">Libra::burn</a>&lt;Token&gt;(account, preburn_address)
+    <a href="../../modules/doc/SlidingNonce.md#0x0_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(account, sliding_nonce);
+    <a href="../../modules/doc/Libra.md#0x0_Libra_burn">Libra::burn</a>&lt;Token&gt;(account, preburn_address)
 }
 </code></pre>
 

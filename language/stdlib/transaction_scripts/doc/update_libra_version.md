@@ -25,7 +25,7 @@
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, major: u64) {
-    <a href="../../modules/doc/libra_version.md#0x0_LibraVersion_set">LibraVersion::set</a>(account, major)
+    <a href="../../modules/doc/LibraVersion.md#0x0_LibraVersion_set">LibraVersion::set</a>(account, major)
 }
 </code></pre>
 

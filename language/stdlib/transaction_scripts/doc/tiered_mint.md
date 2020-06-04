@@ -34,8 +34,8 @@ sliding_nonce is a unique nonce for operation, see sliding_nonce.move for detail
     mint_amount: u64,
     tier_index: u64
 ) {
-    <a href="../../modules/doc/sliding_nonce.md#0x0_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(tc_account, sliding_nonce);
-    <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_mint_to_designated_dealer">LibraAccount::mint_to_designated_dealer</a>&lt;CoinType&gt;(
+    <a href="../../modules/doc/SlidingNonce.md#0x0_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(tc_account, sliding_nonce);
+    <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_mint_to_designated_dealer">LibraAccount::mint_to_designated_dealer</a>&lt;CoinType&gt;(
         tc_account, designated_dealer_address, mint_amount, tier_index
     );
 }

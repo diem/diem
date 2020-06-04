@@ -25,7 +25,7 @@
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Token&gt;(account: &signer) {
-    <a href="../../modules/doc/libra.md#0x0_Libra_publish_preburn">Libra::publish_preburn</a>(account, <a href="../../modules/doc/libra.md#0x0_Libra_new_preburn">Libra::new_preburn</a>&lt;Token&gt;())
+    <a href="../../modules/doc/Libra.md#0x0_Libra_publish_preburn">Libra::publish_preburn</a>(account, <a href="../../modules/doc/Libra.md#0x0_Libra_new_preburn">Libra::new_preburn</a>&lt;Token&gt;())
 }
 </code></pre>
 

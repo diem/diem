@@ -41,7 +41,7 @@ currencies in the system
     add_all_currencies: bool,
     child_initial_balance: u64
 ) {
-    <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_create_child_vasp_account">LibraAccount::create_child_vasp_account</a>&lt;CoinType&gt;(
+    <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_create_child_vasp_account">LibraAccount::create_child_vasp_account</a>&lt;CoinType&gt;(
         parent_vasp,
         child_address,
         auth_key_prefix,
@@ -49,7 +49,7 @@ currencies in the system
     );
     // Give the newly created child `child_initial_balance` coins
     <b>if</b> (child_initial_balance &gt; 0) {
-        <a href="../../modules/doc/libra_account.md#0x0_LibraAccount_pay_from_sender">LibraAccount::pay_from_sender</a>&lt;CoinType&gt;(child_address, child_initial_balance)
+        <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_pay_from_sender">LibraAccount::pay_from_sender</a>&lt;CoinType&gt;(child_address, child_initial_balance)
     };
 }
 </code></pre>
