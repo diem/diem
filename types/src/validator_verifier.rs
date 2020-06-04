@@ -59,10 +59,6 @@ impl ValidatorConsensusInfo {
         }
     }
 
-    pub fn public_key(&self) -> &Ed25519PublicKey {
-        &self.public_key
-    }
-
     pub fn voting_power(&self) -> u64 {
         self.voting_power
     }
