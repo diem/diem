@@ -79,6 +79,9 @@
 <span id="79">79</span>
 <span id="80">80</span>
 <span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -101,6 +104,9 @@
 
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Internal error: {:?}&quot;</span>, <span class="ident">error</span>)]</span>
     <span class="ident">InternalError</span> { <span class="ident">error</span>: <span class="ident">String</span> },
+
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Invalid proposal: {}&quot;</span>, {<span class="number">0</span>})]</span>
+    <span class="ident">InvalidProposal</span>(<span class="ident">String</span>),
 
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Unable to verify that the new tree extneds the parent: {:?}&quot;</span>, <span class="ident">error</span>)]</span>
     <span class="ident">InvalidAccumulatorExtension</span> { <span class="ident">error</span>: <span class="ident">String</span> },

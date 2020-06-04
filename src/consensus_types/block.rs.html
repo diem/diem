@@ -295,6 +295,10 @@
 <span id="295">295</span>
 <span id="296">296</span>
 <span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -416,6 +420,10 @@
             <span class="self">self</span>.<span class="ident">timestamp_usecs</span>(),
             <span class="ident">next_epoch_state</span>,
         )
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">block_data</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">BlockData</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">block_data</span>
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_genesis_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
