@@ -235,9 +235,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         };
 
         // Get the wires to connect StateSync to the Network.
-        let (state_sync_sender, state_sync_events) = network_builder.add_protocol_handler(
-            state_synchronizer::network::endpoint_config()
-        );
+        let (state_sync_sender, state_sync_events) =
+            network_builder.add_protocol_handler(state_synchronizer::network::endpoint_config());
         // Attach the wires to StateSync.
         state_sync_network_handles.push((peer_id, state_sync_sender, state_sync_events));
 
@@ -263,9 +262,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         network_runtimes.push(runtime);
 
         // Get the wires to connect StateSync to the Network.
-        let (state_sync_sender, state_sync_events) = network_builder.add_protocol_handler(
-            state_synchronizer::network::endpoint_config()
-        );
+        let (state_sync_sender, state_sync_events) =
+            network_builder.add_protocol_handler(state_synchronizer::network::endpoint_config());
         // Attach the wires to StateSync.
         state_sync_network_handles.push((peer_id, state_sync_sender, state_sync_events));
 

@@ -14,15 +14,18 @@ use consensus_types::{
 };
 use libra_types::{epoch_change::EpochChangeProof, PeerId};
 use network::{
+    common::NetworkPublicKeys,
+    connectivity_manager::ConnectivityRequest,
+    constants::NETWORK_CHANNEL_SIZE,
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::{
-        network::{NetworkEvents, NetworkSender},
+        network::{NetworkEvents, NetworkSender, NewNetworkSender},
         rpc::error::RpcError,
     },
-    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
     ProtocolId,
 };
+use network_builder::network_builder::NetworkBuilder;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -75,21 +78,32 @@ pub struct ConsensusNetworkSender {
 pub fn add_to_network(
     network: &mut NetworkBuilder,
 ) -> (ConsensusNetworkSender, ConsensusNetworkEvents) {
-    let (network_sender, network_receiver, connection_reqs_tx, connection_notifs_rx) = network
-        .add_protocol_handler(
-            vec![ProtocolId::ConsensusRpc],
-            vec![ProtocolId::ConsensusDirectSend],
-            QueueStyle::LIFO,
-            NETWORK_CHANNEL_SIZE,
-            Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
-        );
-    (
-        ConsensusNetworkSender::new(network_sender, connection_reqs_tx),
-        ConsensusNetworkEvents::new(network_receiver, connection_notifs_rx),
-    )
+    network.add_protocol_handler((
+        vec![ProtocolId::ConsensusRpc],
+        vec![ProtocolId::ConsensusDirectSend],
+        QueueStyle::LIFO,
+        NETWORK_CHANNEL_SIZE,
+        Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
+    ))
+}
+
+impl NewNetworkSender for ConsensusNetworkSender {
+    /// Returns a Sender constructed from the provided PeerManagerRequestSender and ConnectionRequestSender.
+    fn new(
+        peer_mgr_reqs_tx: PeerManagerRequestSender,
+        connection_reqs_tx: ConnectionRequestSender,
+    ) -> Self {
+        Self {
+            network_sender: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
+            conn_mgr_reqs_tx: None,
+        }
+    }
+>>>>>>> e6951a6cb... Incrementally getting consensus on board with consolidated builder
 }
 
 impl ConsensusNetworkSender {
+    // TODO:  this comment is inaccurate as there is nothing here which innately restricts the
+    // Sender to the specified protocols.
     /// Returns a Sender that only sends for the `CONSENSUS_DIRECT_SEND_PROTOCOL` and
     /// `CONSENSUS_RPC_PROTOCOL` ProtocolId.
     pub fn new(
