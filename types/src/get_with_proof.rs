@@ -399,13 +399,4 @@ impl ResponseItem {
             _ => bail!("Not ResponseItem::GetAccountTransactionBySequenceNumber."),
         }
     }
-
-    pub fn into_get_transactions_response(self) -> Result<TransactionListWithProof> {
-        match self {
-            ResponseItem::GetTransactions {
-                txn_list_with_proof,
-            } => Ok(txn_list_with_proof),
-            _ => bail!("Not ResponseItem::GetTransactions."),
-        }
-    }
 }
