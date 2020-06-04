@@ -383,7 +383,7 @@ jobs:
       - build_teardown
   code-coverage:
     description: Run code coverage
-    executor: test-executor
+    executor: build-executor
     environment:
       MESSAGE_PAYLOAD_FILE: "/tmp/message_payload"
     steps:
