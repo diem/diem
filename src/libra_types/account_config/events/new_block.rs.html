@@ -37,19 +37,11 @@
 <span id="37">37</span>
 <span id="38">38</span>
 <span id="39">39</span>
-<span id="40">40</span>
-<span id="41">41</span>
-<span id="42">42</span>
-<span id="43">43</span>
-<span id="44">44</span>
-<span id="45">45</span>
-<span id="46">46</span>
-<span id="47">47</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">event</span>::<span class="ident">EventKey</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>;
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">move_resource</span>::<span class="ident">MoveResource</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
@@ -72,20 +64,12 @@
         <span class="self">self</span>.<span class="ident">proposer</span>
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">previous_block_votes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span>[<span class="ident">AccountAddress</span>] {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">previous_block_votes</span>
-    }
-
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">proposed_time</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
         <span class="self">self</span>.<span class="ident">time_micro_seconds</span>
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_from_bytes</span>(<span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="ident">lcs</span>::<span class="ident">from_bytes</span>(<span class="ident">bytes</span>).<span class="ident">map_err</span>(<span class="ident">Into</span>::<span class="ident">into</span>)
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">event_key</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">EventKey</span> {
-        <span class="kw">crate</span>::<span class="ident">block_metadata</span>::<span class="ident">new_block_event_key</span>()
     }
 }
 

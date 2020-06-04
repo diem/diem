@@ -296,16 +296,6 @@
 <span id="296">296</span>
 <span id="297">297</span>
 <span id="298">298</span>
-<span id="299">299</span>
-<span id="300">300</span>
-<span id="301">301</span>
-<span id="302">302</span>
-<span id="303">303</span>
-<span id="304">304</span>
-<span id="305">305</span>
-<span id="306">306</span>
-<span id="307">307</span>
-<span id="308">308</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -498,11 +488,6 @@
         <span class="ident">array</span>
     }
 
-    <span class="doccomment">/// Return an abbreviated representation of this authentication key</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">short_str</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
-        <span class="ident">hex</span>::<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>[..<span class="number">4</span>])
-    }
-
     <span class="doccomment">/// Construct a vector from this authentication key</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">to_vec</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="number">0</span>.<span class="ident">to_vec</span>()
@@ -540,11 +525,6 @@
     <span class="doccomment">/// Construct a preimage from a MultiEd25519 public key</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">multi_ed25519</span>(<span class="ident">public_key</span>: <span class="kw-2">&amp;</span><span class="ident">MultiEd25519PublicKey</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AuthenticationKeyPreimage</span> {
         <span class="self">Self</span>::<span class="ident">new</span>(<span class="ident">public_key</span>.<span class="ident">to_bytes</span>(), <span class="ident">Scheme</span>::<span class="ident">MultiEd25519</span>)
-    }
-
-    <span class="doccomment">/// Construct a slice from this authentication key</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
     }
 
     <span class="doccomment">/// Construct a vector from this authentication key</span>

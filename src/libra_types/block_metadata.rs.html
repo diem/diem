@@ -131,10 +131,6 @@
 <span id="131">131</span>
 <span id="132">132</span>
 <span id="133">133</span>
-<span id="134">134</span>
-<span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -203,10 +199,6 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">proposer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AccountAddress</span> {
         <span class="self">self</span>.<span class="ident">proposer</span>
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">voters</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">previous_block_votes</span>.<span class="ident">clone</span>()
     }
 }
 

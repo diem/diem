@@ -151,14 +151,6 @@
 <span id="151">151</span>
 <span id="152">152</span>
 <span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -199,13 +191,10 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
-    <span class="ident">account_config</span>::{<span class="ident">AccountResource</span>, <span class="ident">ACCOUNT_RECEIVED_EVENT_PATH</span>, <span class="ident">ACCOUNT_SENT_EVENT_PATH</span>},
+    <span class="ident">account_config</span>::{<span class="ident">ACCOUNT_RECEIVED_EVENT_PATH</span>, <span class="ident">ACCOUNT_SENT_EVENT_PATH</span>},
 };
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::<span class="ident">HashValue</span>;
-<span class="kw">use</span> <span class="ident">move_core_types</span>::{
-    <span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">ResourceKey</span>, <span class="ident">StructTag</span>, <span class="ident">CODE_TAG</span>, <span class="ident">RESOURCE_TAG</span>},
-    <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
-};
+<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">ResourceKey</span>, <span class="ident">StructTag</span>, <span class="ident">CODE_TAG</span>, <span class="ident">RESOURCE_TAG</span>};
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
 <span class="kw">use</span> <span class="ident">proptest_derive</span>::<span class="ident">Arbitrary</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
@@ -224,11 +213,6 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">address</span>: <span class="ident">AccountAddress</span>, <span class="ident">path</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">AccessPath</span> { <span class="ident">address</span>, <span class="ident">path</span> }
-    }
-
-    <span class="doccomment">/// Given an address, returns the corresponding access path that stores the Account resource.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_for_account</span>(<span class="ident">address</span>: <span class="ident">AccountAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span>::<span class="ident">new</span>(<span class="ident">address</span>, <span class="ident">AccountResource</span>::<span class="ident">resource_path</span>())
     }
 
     <span class="doccomment">/// Create an AccessPath to the event for the sender account in a deposit operation.</span>

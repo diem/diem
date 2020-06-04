@@ -197,19 +197,6 @@
 <span id="197">197</span>
 <span id="198">198</span>
 <span id="199">199</span>
-<span id="200">200</span>
-<span id="201">201</span>
-<span id="202">202</span>
-<span id="203">203</span>
-<span id="204">204</span>
-<span id="205">205</span>
-<span id="206">206</span>
-<span id="207">207</span>
-<span id="208">208</span>
-<span id="209">209</span>
-<span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -218,7 +205,7 @@
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">account_config</span>::{
         <span class="ident">type_tag_for_currency_code</span>, <span class="ident">AccountResource</span>, <span class="ident">AccountRole</span>, <span class="ident">BalanceResource</span>, <span class="ident">ChildVASP</span>,
-        <span class="ident">ChildVASPRole</span>, <span class="ident">CurrencyInfoResource</span>, <span class="ident">EmptyRole</span>, <span class="ident">ParentVASP</span>, <span class="ident">ParentVASPRole</span>, <span class="ident">UnhostedRole</span>,
+        <span class="ident">ChildVASPRole</span>, <span class="ident">EmptyRole</span>, <span class="ident">ParentVASP</span>, <span class="ident">ParentVASPRole</span>, <span class="ident">UnhostedRole</span>,
         <span class="ident">ACCOUNT_RECEIVED_EVENT_PATH</span>, <span class="ident">ACCOUNT_SENT_EVENT_PATH</span>,
     },
     <span class="ident">block_metadata</span>::{<span class="ident">LibraBlockResource</span>, <span class="ident">NEW_BLOCK_EVENT_PATH</span>},
@@ -305,15 +292,6 @@
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_currency_info_resource</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">currency_code</span>: <span class="ident">Identifier</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">BalanceResource</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="comment">// TODO: update this to use BalanceResource::resource_path once that takes type</span>
-        <span class="comment">// parameters</span>
-        <span class="self">self</span>.<span class="ident">get_resource</span>(<span class="kw-2">&amp;</span><span class="ident">CurrencyInfoResource</span>::<span class="ident">access_path_for</span>(<span class="ident">currency_code</span>))
-    }
-
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_validator_set</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ValidatorSet</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">get_resource</span>(<span class="kw-2">&amp;</span><span class="ident">ValidatorSet</span>::<span class="ident">CONFIG_ID</span>.<span class="ident">access_path</span>().<span class="ident">path</span>)
     }
@@ -357,10 +335,6 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="number">0</span>.<span class="ident">remove</span>(<span class="ident">key</span>)
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_empty</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">is_empty</span>()
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">iter</span>::<span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
