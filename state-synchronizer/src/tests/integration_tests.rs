@@ -22,9 +22,7 @@ use libra_types::{
     validator_info::ValidatorInfo, validator_signer::ValidatorSigner,
     validator_verifier::random_validator_verifier, waypoint::Waypoint,
 };
-use network::{
-    NetworkPublicKeys,
-};
+use network::NetworkPublicKeys;
 use network_builder::network_builder::{AuthenticationMode, NetworkBuilder};
 
 use rand::{rngs::StdRng, SeedableRng};

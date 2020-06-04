@@ -14,8 +14,6 @@ use consensus_types::{
 };
 use libra_types::{epoch_change::EpochChangeProof, PeerId};
 use network::{
-    common::NetworkPublicKeys,
-    connectivity_manager::ConnectivityRequest,
     constants::NETWORK_CHANNEL_SIZE,
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
@@ -95,10 +93,8 @@ impl NewNetworkSender for ConsensusNetworkSender {
     ) -> Self {
         Self {
             network_sender: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
-            conn_mgr_reqs_tx: None,
         }
     }
->>>>>>> e6951a6cb... Incrementally getting consensus on board with consolidated builder
 }
 
 impl ConsensusNetworkSender {

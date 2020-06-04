@@ -7,7 +7,7 @@ use crate::network_builder::{AuthenticationMode, NetworkBuilder};
 
 use channel::message_queues::QueueStyle;
 use futures::{executor::block_on, StreamExt};
-use libra_config::config::RoleType;
+use libra_config::{config::RoleType, network_id::NetworkId};
 use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
@@ -21,12 +21,6 @@ use network::{
     },
     NetworkPublicKeys, ProtocolId,
 };
-use channel::message_queues::QueueStyle;
-use futures::{executor::block_on, StreamExt};
-use libra_config::{config::RoleType, network_id::NetworkId};
-use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
-use libra_network_address::NetworkAddress;
-use libra_types::PeerId;
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, time::Duration};

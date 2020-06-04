@@ -31,7 +31,10 @@ use network::{
         ConnectionNotification, ConnectionRequestSender, PeerManagerNotification,
         PeerManagerRequest, PeerManagerRequestSender,
     },
-    protocols::{rpc::{InboundRpcRequest, OutboundRpcRequest}, network::NewNetworkSender},
+    protocols::{
+        network::NewNetworkSender,
+        rpc::{InboundRpcRequest, OutboundRpcRequest},
+    },
     ProtocolId,
 };
 use std::{

@@ -11,7 +11,10 @@
 //! long as the latter is in its trusted peers set.
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use futures::stream::StreamExt;
-use libra_config::config::{RoleType, HANDSHAKE_VERSION};
+use libra_config::{
+    config::{RoleType, HANDSHAKE_VERSION},
+    network_id::NetworkId,
+};
 use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
@@ -27,8 +30,8 @@ use network::{
         PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
     },
     protocols::{
-        discovery::{Discovery, DiscoveryNetworkEvents, DiscoveryNetworkSender},
-        health_checker::{HealthChecker, HealthCheckerNetworkEvents, HealthCheckerNetworkSender},
+        discovery::Discovery,
+        health_checker::HealthChecker,
         network::{NewNetworkEvents, NewNetworkSender},
         wire::handshake::v1::SupportedProtocols,
     },
@@ -36,18 +39,6 @@ use network::{
     transport::*,
     ProtocolId,
 };
-use channel::{self, libra_channel, message_queues::QueueStyle};
-use futures::stream::StreamExt;
-use libra_config::{
-    config::{RoleType, HANDSHAKE_VERSION},
-    network_id::NetworkId,
-};
-use libra_crypto::x25519;
-use libra_logger::prelude::*;
-use libra_metrics::IntCounterVec;
-use libra_network_address::NetworkAddress;
-use libra_types::PeerId;
-use netcore::transport::Transport;
 use std::{
     clone::Clone,
     collections::HashMap,
@@ -340,7 +331,8 @@ impl NetworkBuilder {
             .conn_mgr_reqs_tx()
             .expect("ConnectivityManager not enabled");
         // Get handles for network events and sender.
-        let (discovery_network_tx, discovery_network_rx) = self.add_discovery_endpoints();
+        let (discovery_network_tx, discovery_network_rx) =
+            self.add_protocol_handler(network::protocols::discovery::endpoint_config());
 
         // TODO(philiphayes): the current setup for gossip discovery doesn't work
         // when we don't have an `advertised_address` set, since it uses the
@@ -384,7 +376,8 @@ impl NetworkBuilder {
 
     pub fn add_connection_monitoring(&mut self) -> &mut Self {
         // Initialize and start HealthChecker.
-        let (hc_network_tx, hc_network_rx) = self.add_health_checker_endpoints();
+        let (hc_network_tx, hc_network_rx) =
+            self.add_protocol_handler(network::protocols::health_checker::endpoint_config());
         let ping_interval_ms = self.ping_interval_ms;
         let ping_timeout_ms = self.ping_timeout_ms;
         let ping_failures_tolerated = self.ping_failures_tolerated;
@@ -493,25 +486,6 @@ impl NetworkBuilder {
         debug!("Started peer manager");
 
         listen_addr
-    }
-
-    // TODO:  remove
-    pub fn add_onchain_discovery_endpoints(
-        &mut self,
-    ) -> (OnchainDiscoveryNetworkSender, OnchainDiscoveryNetworkEvents) {
-        self.add_protocol_handler(onchain_discovery::endpoint_config())
-    }
-
-    // TODO:: remove
-    pub fn add_discovery_endpoints(&mut self) -> (DiscoveryNetworkSender, DiscoveryNetworkEvents) {
-        self.add_protocol_handler(network::protocols::discovery::endpoint_config())
-    }
-
-    // TODO : remove
-    pub fn add_health_checker_endpoints(
-        &mut self,
-    ) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents) {
-        self.add_protocol_handler(network::protocols::health_checker::endpoint_config())
     }
 
     /// Adds a endpoints for the provided configuration.  Returns NetworkSender and NetworkEvent which
