@@ -19,14 +19,14 @@ use std::{
 };
 
 pub struct FullNodeConfig {
-    advertised: NetworkAddress,
-    bootstrap: NetworkAddress,
-    full_node_index: usize,
-    full_node_seed: [u8; 32],
-    full_nodes: usize,
-    genesis: Option<Transaction>,
-    listen: NetworkAddress,
-    enable_remote_authentication: bool,
+    pub advertised: NetworkAddress,
+    pub bootstrap: NetworkAddress,
+    pub full_node_index: usize,
+    pub full_node_seed: [u8; 32],
+    pub full_nodes: usize,
+    pub genesis: Option<Transaction>,
+    pub listen: NetworkAddress,
+    pub enable_remote_authentication: bool,
     template: NodeConfig,
     validator_config: ValidatorConfig,
 }
@@ -60,53 +60,8 @@ impl FullNodeConfig {
         Self::default()
     }
 
-    pub fn advertised(&mut self, advertised: NetworkAddress) -> &mut Self {
-        self.advertised = advertised;
-        self
-    }
-
-    pub fn bootstrap(&mut self, bootstrap: NetworkAddress) -> &mut Self {
-        self.bootstrap = bootstrap;
-        self
-    }
-
-    pub fn full_node_index(&mut self, full_node_index: usize) -> &mut Self {
-        self.full_node_index = full_node_index;
-        self
-    }
-
-    pub fn full_nodes(&mut self, full_nodes: usize) -> &mut Self {
-        self.full_nodes = full_nodes;
-        self
-    }
-
-    pub fn full_node_seed(&mut self, full_node_seed: [u8; 32]) -> &mut Self {
-        self.full_node_seed = full_node_seed;
-        self
-    }
-
-    pub fn genesis(&mut self, genesis: Transaction) -> &mut Self {
-        self.genesis = Some(genesis);
-        self
-    }
-
-    pub fn listen(&mut self, listen: NetworkAddress) -> &mut Self {
-        self.listen = listen;
-        self
-    }
-
     pub fn validators(&mut self, nodes: usize) -> &mut Self {
         self.validator_config.nodes = nodes;
-        self
-    }
-
-    pub fn enable_remote_authentication(&mut self) -> &mut Self {
-        self.enable_remote_authentication = true;
-        self
-    }
-
-    pub fn public(&mut self) -> &mut Self {
-        self.enable_remote_authentication = false;
         self
     }
 
@@ -347,7 +302,7 @@ mod test {
         let config_one = FullNodeConfig::new().build().unwrap();
         let mut config_two = FullNodeConfig::new().build().unwrap();
         let mut fnc = FullNodeConfig::new();
-        fnc.full_node_seed([33u8; 32]);
+        fnc.full_node_seed = [33u8; 32];
         fnc.extend(&mut config_two).unwrap();
         assert_eq!(
             config_one.full_node_networks[0],
