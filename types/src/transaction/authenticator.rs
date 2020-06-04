@@ -189,11 +189,6 @@ impl AuthenticationKey {
         array
     }
 
-    /// Return an abbreviated representation of this authentication key
-    pub fn short_str(&self) -> String {
-        hex::encode(&self.0[..4])
-    }
-
     /// Construct a vector from this authentication key
     pub fn to_vec(&self) -> Vec<u8> {
         self.0.to_vec()
