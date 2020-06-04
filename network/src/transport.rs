@@ -225,22 +225,6 @@ pub async fn perform_handshake<T: TSocket>(
     }
 }
 
-/// Check that the parsed `handshake_version` from the `NetworkAddress` is supported.
-/// Return `Err` otherwise.
-fn verify_handshake_version_supported(expected_version: u8, version: u8) -> io::Result<()> {
-    if version != expected_version {
-        Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "Attempting to dial remote with unsupported handshake version: {}, expected: {}",
-                version, expected_version,
-            ),
-        ))
-    } else {
-        Ok(())
-    }
-}
-
 /// Convenience function for adding a timeout to a Future that returns an `io::Result`.
 async fn timeout_io<F, T>(duration: Duration, fut: F) -> io::Result<T>
 where
@@ -438,8 +422,18 @@ where
     > {
         // parse libranet protocols
         // TODO(philiphayes): `Transport` trait should include parsing in `dial`?
-        let (base_addr, pubkey, version) = Self::parse_dial_addr(&addr)?;
-        verify_handshake_version_supported(self.ctxt.handshake_version, version)?;
+        let (base_addr, pubkey, handshake_version) = Self::parse_dial_addr(&addr)?;
+
+        // Check that the parsed handshake version from the dial addr is supported.
+        if self.ctxt.handshake_version != handshake_version {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "Attempting to dial remote with unsupported handshake version: {}, expected: {}",
+                    handshake_version, self.ctxt.handshake_version,
+                ),
+            ));
+        }
 
         // try to connect socket
         let fut_socket = self.base_transport.dial(base_addr)?;
