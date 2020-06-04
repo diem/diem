@@ -31,10 +31,6 @@ impl RegisteredCurrencies {
         &self.currency_codes
     }
 
-    pub fn empty() -> Self {
-        Self::new(Vec::new())
-    }
-
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         lcs::from_bytes(bytes).map_err(Into::into)
     }
