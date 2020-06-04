@@ -543,8 +543,8 @@ module LibraAccount {
             VASP::create_parent_vasp_credential(
                 b"testnet",
                 b"https://libra.org",
-                // An empty compliance key
-                x"00000000000000000000000000000000"
+                // A bogus (but valid ed25519) compliance public key
+                x"b7a3c12dc0c8c748ab07525b701122b88bd78f600c76342d27f25e5f92444cde"
             );
         // TODO: refactor so that every attempt to create an existing account hits this check
         // cannot create an account at an address that already has one

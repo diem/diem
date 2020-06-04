@@ -251,53 +251,349 @@ fn create_child_vasp_with_balance() {
 fn dual_attestation_payment() {
     let mut executor = FakeExecutor::from_genesis_file();
     // account that will receive the dual attestation payment
-    let payment_receiver = {
-        let data = AccountData::new_empty();
+    let payment_receiver = Account::new();
+    let payment_sender = Account::new();
+    let sender_child = Account::new();
+    let association = Account::new_association();
+    let unhosted = {
+        let data = AccountData::new_unhosted();
         executor.add_account_data(&data);
         data.into_account()
     };
-    // account that will send the dual attestation payment
-    let payment_sender = {
-        let data = AccountData::new(1_000_000, 0);
+    let unhosted_other = {
+        let data = AccountData::new_unhosted();
         executor.add_account_data(&data);
         data.into_account()
     };
 
     let mut keygen = KeyGen::from_seed([9u8; 32]);
-    let (private_key, _public_key) = keygen.generate_keypair();
+    let (sender_vasp_compliance_private_key, sender_vasp_compliance_public_key) =
+        keygen.generate_keypair();
+    let (receiver_vasp_compliance_private_key, receiver_vasp_compliance_public_key) =
+        keygen.generate_keypair();
 
-    // TODO: this is testing nothing for now. make receiver and sender VASPs + add test that a bad
-    // signature fails
+    executor.execute_and_apply(association.signed_script_txn(
+        encode_create_parent_vasp_account(
+            account_config::lbr_type_tag(),
+            *payment_sender.address(),
+            payment_sender.auth_key_prefix(),
+            vec![],
+            vec![],
+            sender_vasp_compliance_public_key.to_bytes().to_vec(),
+            false,
+        ),
+        1,
+    ));
 
-    // Do the offline protocol: generate a payment id, sign with the receiver's private key, include
-    // in transaction from sender's account
-    let ref_id = lcs::to_bytes(&7777u64).unwrap();
-    // choose an amount above the dual attestation threshold
-    let payment_amount = 1_000_000u64;
-    // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
-    let mut domain_separator = vec![
-        0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45, 0x53,
-        0x54, 0x24, 0x24, 0x40, 0x40,
-    ];
-    let message = {
-        let mut msg = ref_id.clone();
-        msg.append(&mut lcs::to_bytes(&payment_sender.address()).unwrap());
-        msg.append(&mut lcs::to_bytes(&payment_amount).unwrap());
-        msg.append(&mut domain_separator);
-        msg
-    };
-    let signature =
-        <Ed25519PrivateKey as SigningKey>::sign_arbitrary_message(&private_key, &message);
-    executor.execute_and_apply(payment_sender.signed_script_txn(
-        encode_transfer_with_metadata_script(
+    executor.execute_and_apply(association.signed_script_txn(
+        encode_create_parent_vasp_account(
             account_config::lbr_type_tag(),
             *payment_receiver.address(),
-            payment_amount,
-            ref_id,
-            signature.to_bytes().to_vec(),
+            payment_receiver.auth_key_prefix(),
+            vec![],
+            vec![],
+            receiver_vasp_compliance_public_key.to_bytes().to_vec(),
+            false,
+        ),
+        2,
+    ));
+
+    executor.execute_and_apply(association.signed_script_txn(
+        encode_mint_lbr_to_address_script(&payment_sender.address(), vec![], 2_000_000),
+        3,
+    ));
+
+    // create a child VASP with a balance of amount
+    executor.execute_and_apply(payment_sender.signed_script_txn(
+        encode_create_child_vasp_account(
+            account_config::lbr_type_tag(),
+            *sender_child.address(),
+            sender_child.auth_key_prefix(),
+            false,
+            10,
         ),
         0,
     ));
+    {
+        // Transaction >= 1000 threshold goes through signature verification with valid signature, passes
+        // Do the offline protocol: generate a payment id, sign with the receiver's private key, include
+        // in transaction from sender's account
+        let ref_id = lcs::to_bytes(&7777u64).unwrap();
+        // choose an amount above the dual attestation threshold
+        let payment_amount = 1_000_000u64;
+        // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
+        let mut domain_separator = vec![
+            0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45,
+            0x53, 0x54, 0x24, 0x24, 0x40, 0x40,
+        ];
+        let message = {
+            let mut msg = ref_id.clone();
+            msg.append(&mut lcs::to_bytes(&payment_sender.address()).unwrap());
+            msg.append(&mut lcs::to_bytes(&payment_amount).unwrap());
+            msg.append(&mut domain_separator);
+            msg
+        };
+        let signature = <Ed25519PrivateKey as SigningKey>::sign_arbitrary_message(
+            &receiver_vasp_compliance_private_key,
+            &message,
+        );
+        let output = executor.execute_and_apply(payment_sender.signed_script_txn(
+            encode_transfer_with_metadata_script(
+                account_config::lbr_type_tag(),
+                *payment_receiver.address(),
+                payment_amount,
+                ref_id,
+                signature.to_bytes().to_vec(),
+            ),
+            1,
+        ));
+        assert_eq!(
+            output.status().vm_status().major_status,
+            StatusCode::EXECUTED
+        );
+    }
+    {
+        // transaction >= 1000 threshold goes through signature verification but has an
+        // structurally invalid signature. Fails.
+        let ref_id = [0u8; 32].to_vec();
+        let output = executor.execute_transaction(payment_sender.signed_script_txn(
+            encode_transfer_with_metadata_script(
+                account_config::lbr_type_tag(),
+                *payment_receiver.address(),
+                1000,
+                ref_id,
+                b"what a signature".to_vec(),
+            ),
+            2,
+        ));
+        assert_eq!(
+            output.status().vm_status().major_status,
+            StatusCode::ABORTED
+        );
+        assert_eq!(output.status().vm_status().sub_status, Some(9001));
+    }
+
+    {
+        // transaction >= 1000 threshold goes through signature verification with invalid signature, aborts
+        let ref_id = lcs::to_bytes(&9999u64).unwrap();
+        let payment_amount = 1000u64;
+        // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
+        let mut domain_separator = vec![
+            0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45,
+            0x53, 0x54, 0x24, 0x24, 0x40, 0x40,
+        ];
+        let message = {
+            let mut msg = ref_id.clone();
+            msg.append(&mut lcs::to_bytes(&payment_sender.address()).unwrap());
+            msg.append(&mut lcs::to_bytes(&payment_amount).unwrap());
+            msg.append(&mut domain_separator);
+            msg
+        };
+        // Sign with the wrong private key
+        let signature = <Ed25519PrivateKey as SigningKey>::sign_arbitrary_message(
+            &sender_vasp_compliance_private_key,
+            &message,
+        );
+        let output = executor.execute_transaction(payment_sender.signed_script_txn(
+            encode_transfer_with_metadata_script(
+                account_config::lbr_type_tag(),
+                *payment_receiver.address(),
+                payment_amount,
+                ref_id,
+                signature.to_bytes().to_vec(),
+            ),
+            2,
+        ));
+        assert_eq!(
+            output.status().vm_status().major_status,
+            StatusCode::ABORTED
+        );
+        assert_eq!(output.status().vm_status().sub_status, Some(9002));
+    }
+
+    {
+        // similar, but with empty payment ID (make sure signature is still invalid!)
+        let ref_id = vec![];
+        let payment_amount = 1000u64;
+        // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
+        let mut domain_separator = vec![
+            0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45,
+            0x53, 0x54, 0x24, 0x24, 0x40, 0x40,
+        ];
+        let message = {
+            let mut msg = ref_id.clone();
+            msg.append(&mut lcs::to_bytes(&payment_sender.address()).unwrap());
+            msg.append(&mut lcs::to_bytes(&payment_amount).unwrap());
+            msg.append(&mut domain_separator);
+            msg
+        };
+        // Sign with the wrong private key
+        let signature = <Ed25519PrivateKey as SigningKey>::sign_arbitrary_message(
+            &sender_vasp_compliance_private_key,
+            &message,
+        );
+        let output = executor.execute_transaction(payment_sender.signed_script_txn(
+            encode_transfer_with_metadata_script(
+                account_config::lbr_type_tag(),
+                *payment_receiver.address(),
+                payment_amount,
+                ref_id,
+                signature.to_bytes().to_vec(),
+            ),
+            2,
+        ));
+        assert_eq!(
+            output.status().vm_status().major_status,
+            StatusCode::ABORTED
+        );
+        assert_eq!(output.status().vm_status().sub_status, Some(9002));
+    }
+    {
+        // Intra-VASP transaction >= 1000 threshold, should go through with any signature since
+        // checking isn't performed on intra-vasp transfers
+        // parent->child
+        executor.execute_and_apply(payment_sender.signed_script_txn(
+            encode_transfer_with_metadata_script(
+                account_config::lbr_type_tag(),
+                *sender_child.address(),
+                5000,
+                vec![0],
+                b"what a bad signature".to_vec(),
+            ),
+            2,
+        ));
+    }
+    {
+        // Checking isn't performed on intra-vasp transfers
+        // child->parent
+        executor.execute_and_apply(sender_child.signed_script_txn(
+            encode_transfer_with_metadata_script(
+                account_config::lbr_type_tag(),
+                *payment_sender.address(),
+                3000,
+                vec![0],
+                b"what a bad signature".to_vec(),
+            ),
+            0,
+        ));
+    }
+    {
+        // Check that unhosted wallet <-> VASP transactions do not require dual attestation
+        // since checking isn't performed on VASP->UHW transfers.
+        executor.execute_and_apply(payment_sender.signed_script_txn(
+            encode_transfer_with_metadata_script(
+                account_config::lbr_type_tag(),
+                *unhosted.address(),
+                2000,
+                vec![0],
+                b"what a bad signature".to_vec(),
+            ),
+            3,
+        ));
+    }
+    {
+        // Checking isn't performed on VASP->UHW
+        // Check from a child account.
+        executor.execute_and_apply(sender_child.signed_script_txn(
+            encode_transfer_with_metadata_script(
+                account_config::lbr_type_tag(),
+                *unhosted.address(),
+                2000,
+                vec![0],
+                b"what a bad signature".to_vec(),
+            ),
+            1,
+        ));
+    }
+    {
+        // Checking isn't performed on UHW->VASP
+        executor.execute_and_apply(unhosted.signed_script_txn(
+            encode_transfer_with_metadata_script(
+                account_config::lbr_type_tag(),
+                *payment_sender.address(),
+                1000,
+                vec![0],
+                b"what a bad signature".to_vec(),
+            ),
+            0,
+        ));
+    }
+    {
+        // Checking isn't performed on UHW->VASP
+        executor.execute_and_apply(unhosted.signed_script_txn(
+            encode_transfer_with_metadata_script(
+                account_config::lbr_type_tag(),
+                *sender_child.address(),
+                1000,
+                vec![0],
+                b"what a bad signature".to_vec(),
+            ),
+            1,
+        ));
+    }
+    {
+        // Finally, check that unhosted <-> unhosted transactions do not require dual attestation
+        // Checking isn't performed on UHW->UHW
+        executor.execute_and_apply(unhosted.signed_script_txn(
+            encode_transfer_with_metadata_script(
+                account_config::lbr_type_tag(),
+                *unhosted_other.address(),
+                1001,
+                vec![0],
+                b"what a bad signature".to_vec(),
+            ),
+            2,
+        ));
+    }
+    {
+        // Rotate the parent VASP's compliance key
+        let (_, new_compliance_public_key) = keygen.generate_keypair();
+        executor.execute_and_apply(payment_receiver.signed_script_txn(
+            encode_rotate_compliance_public_key_script(
+                new_compliance_public_key.to_bytes().to_vec(),
+            ),
+            0,
+        ));
+    }
+    {
+        // This previously succeeded, but should now fail since their public key has changed
+        // in transaction from sender's account. This tests to make sure their public key was
+        // rotated.
+        let ref_id = lcs::to_bytes(&9999u64).unwrap();
+        // choose an amount above the dual attestation threshold
+        let payment_amount = 1005;
+        // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
+        let mut domain_separator = vec![
+            0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45,
+            0x53, 0x54, 0x24, 0x24, 0x40, 0x40,
+        ];
+        let message = {
+            let mut msg = ref_id.clone();
+            msg.append(&mut lcs::to_bytes(&payment_sender.address()).unwrap());
+            msg.append(&mut lcs::to_bytes(&payment_amount).unwrap());
+            msg.append(&mut domain_separator);
+            msg
+        };
+        let signature = <Ed25519PrivateKey as SigningKey>::sign_arbitrary_message(
+            &receiver_vasp_compliance_private_key,
+            &message,
+        );
+        let output = executor.execute_transaction(payment_sender.signed_script_txn(
+            encode_transfer_with_metadata_script(
+                account_config::lbr_type_tag(),
+                *payment_receiver.address(),
+                payment_amount,
+                ref_id,
+                signature.to_bytes().to_vec(),
+            ),
+            4,
+        ));
+        assert_eq!(
+            output.status().vm_status().major_status,
+            StatusCode::ABORTED
+        );
+        assert_eq!(output.status().vm_status().sub_status, Some(9002));
+    }
 }
 
 #[test]

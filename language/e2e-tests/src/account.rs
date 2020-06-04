@@ -703,6 +703,16 @@ impl AccountData {
         )
     }
 
+    pub fn new_unhosted() -> Self {
+        Self::with_account(
+            Account::new(),
+            0,
+            lbr_currency_code(),
+            0,
+            AccountTypeSpecifier::Unhosted,
+        )
+    }
+
     /// Creates a new `AccountData` with the provided account.
     pub fn with_account(
         account: Account,

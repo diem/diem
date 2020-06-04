@@ -171,8 +171,7 @@
     base_url: vector&lt;u8&gt;,
     compliance_public_key: vector&lt;u8&gt;
 ): <a href="#0x0_VASP_ParentVASP">ParentVASP</a> {
-    // NOTE: Only callable in testnet
-    Transaction::assert(<a href="Testnet.md#0x0_Testnet_is_testnet">Testnet::is_testnet</a>(), 10041);
+    Transaction::assert(<a href="Signature.md#0x0_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> compliance_public_key), 7004);
     <a href="#0x0_VASP_ParentVASP">ParentVASP</a> {
        // For testnet, so it should never expire. So set <b>to</b> u64::MAX
        expiration_date: 18446744073709551615,
@@ -377,7 +376,7 @@ Rotate the compliance public key for
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_VASP_rotate_compliance_public_key">rotate_compliance_public_key</a>(parent_vasp: &<b>mut</b> <a href="#0x0_VASP_ParentVASP">ParentVASP</a>, new_key: vector&lt;u8&gt;) {
-    Transaction::assert(<a href="Vector.md#0x0_Vector_length">Vector::length</a>(&new_key) == 32, 7004);
+    Transaction::assert(<a href="Signature.md#0x0_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> new_key), 7004);
     parent_vasp.compliance_public_key = new_key;
 }
 </code></pre>
