@@ -701,16 +701,6 @@
 <span id="701">701</span>
 <span id="702">702</span>
 <span id="703">703</span>
-<span id="704">704</span>
-<span id="705">705</span>
-<span id="706">706</span>
-<span id="707">707</span>
-<span id="708">708</span>
-<span id="709">709</span>
-<span id="710">710</span>
-<span id="711">711</span>
-<span id="712">712</span>
-<span id="713">713</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1048,11 +1038,6 @@
         <span class="self">self</span>.<span class="ident">children</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">n</span>)
     }
 
-    <span class="doccomment">/// Return the total number of existing children.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">num_children</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
-        <span class="self">self</span>.<span class="ident">children</span>.<span class="ident">len</span>()
-    }
-
     <span class="doccomment">/// Generates `existence_bitmap` and `leaf_bitmap` as a pair of `u16`s: child at index `i`</span>
     <span class="doccomment">/// exists if `existence_bitmap[i]` is set; child at index `i` is leaf node if</span>
     <span class="doccomment">/// `leaf_bitmap[i]` is set.</span>
@@ -1238,11 +1223,6 @@
     <span class="doccomment">/// Gets the account key, the hashed account address.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">account_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
         <span class="self">self</span>.<span class="ident">account_key</span>
-    }
-
-    <span class="doccomment">/// Gets the hash of associated blob.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">blob_hash</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
-        <span class="self">self</span>.<span class="ident">blob_hash</span>
     }
 
     <span class="doccomment">/// Gets the associated blob itself.</span>

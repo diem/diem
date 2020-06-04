@@ -592,16 +592,6 @@
 <span id="592">592</span>
 <span id="593">593</span>
 <span id="594">594</span>
-<span id="595">595</span>
-<span id="596">596</span>
-<span id="597">597</span>
-<span id="598">598</span>
-<span id="599">599</span>
-<span id="600">600</span>
-<span id="601">601</span>
-<span id="602">602</span>
-<span id="603">603</span>
-<span id="604">604</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -935,16 +925,6 @@
     },
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;unknown&quot;</span>)]</span>
     <span class="ident">UnknownTransaction</span> {},
-}
-
-<span class="kw">impl</span> <span class="ident">TransactionView</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_transaction_name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">TransactionDataView</span>::<span class="ident">UserTransaction</span> { <span class="ident">script</span>, .. } <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transaction</span> {
-            <span class="ident">script</span>.<span class="ident">get_name</span>()
-        } <span class="kw">else</span> {
-            <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>()
-        }
-    }
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">PartialEq</span>)]</span>

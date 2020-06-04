@@ -56,10 +56,6 @@
 <span id="56">56</span>
 <span id="57">57</span>
 <span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -75,10 +71,6 @@
 <span class="kw">impl</span> <span class="ident">Policy</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">permissions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Permission</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> { <span class="ident">permissions</span> }
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_default</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="self">Self</span>::<span class="ident">default</span>() <span class="op">=</span><span class="op">=</span> <span class="kw-2">*</span><span class="self">self</span>
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">public</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
