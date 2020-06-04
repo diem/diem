@@ -207,8 +207,7 @@ fn setup_onchain_discovery(
     let (conn_reqs_tx, _) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let conn_reqs_tx = ConnectionRequestSender::new(conn_reqs_tx);
-    let network_reqs_tx =
-        OnchainDiscoveryNetworkSender::new(peer_mgr_reqs_tx, conn_reqs_tx, conn_mgr_reqs_tx);
+    let network_reqs_tx = OnchainDiscoveryNetworkSender::new(peer_mgr_reqs_tx, conn_reqs_tx);
     // let network_notifs_rx = OnchainDiscoveryNetworkEvents::new(peer_mgr_notifs_rx, conn_notifs_rx);
     let (peer_query_ticker_tx, peer_query_ticker_rx) = channel::new_test::<()>(1);
     let (storage_query_ticker_tx, storage_query_ticker_rx) = channel::new_test::<()>(1);
@@ -221,6 +220,7 @@ fn setup_onchain_discovery(
         role,
         waypoint,
         network_reqs_tx,
+        conn_mgr_reqs_tx,
         conn_notifs_rx,
         Arc::clone(&libra_db),
         peer_query_ticker_rx,

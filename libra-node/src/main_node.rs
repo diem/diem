@@ -78,10 +78,14 @@ pub fn setup_onchain_discovery(
     waypoint: Waypoint,
     executor: &Handle,
 ) {
-    let (network_tx, peer_mgr_notifs_rx, conn_notifs_rx) =
+    let (network_tx, discovery_events) =
         onchain_discovery::network_interface::add_to_network(network);
     let outbound_rpc_timeout = Duration::from_secs(30);
     let max_concurrent_inbound_queries = 8;
+    let (peer_mgr_notifs_rx, conn_notifs_rx) = (
+        discovery_events.peer_mgr_notifs_rx,
+        discovery_events.connection_notifs_rx,
+    );
 
     let onchain_discovery_service = OnchainDiscoveryService::new(
         executor.clone(),
@@ -100,6 +104,9 @@ pub fn setup_onchain_discovery(
             role,
             waypoint,
             network_tx,
+            network
+                .conn_mgr_reqs_tx()
+                .expect("ConnecitivtyManager not enabled"),
             conn_notifs_rx,
             libra_db,
             peer_query_ticker,
