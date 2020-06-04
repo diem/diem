@@ -14,4 +14,7 @@ module M {
     public fun byte_string_with_hex(): vector<u8> {
         b"\x00\x01\x02"
     }
+    public fun escaped_backslash_before_quote(): vector<u8> {
+        b"\\"
+    }
 }
