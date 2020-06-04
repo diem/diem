@@ -70,7 +70,7 @@ fn smoke_test() {
         let mut config = NodeConfig::default();
 
         let mut network = NetworkConfig::default();
-        network.discovery_method = DiscoveryMethod::Onchain;
+        network.discovery_method = DiscoveryMethod::None;
         config.validator_network = Some(network);
 
         let mut network = NetworkConfig::default();
