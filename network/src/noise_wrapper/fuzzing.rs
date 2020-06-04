@@ -8,7 +8,7 @@
 // This fuzzes the wrappers we have around our Noise library.
 //
 
-use crate::noise_wrapper::NoiseUpgrader;
+use crate::noise_wrapper::{HandshakeAuthMode, NoiseUpgrader};
 use futures::{
     executor::block_on,
     future::join,
@@ -104,16 +104,16 @@ pub static KEYPAIR: Lazy<(x25519::PrivateKey, x25519::PublicKey)> = Lazy::new(||
 fn generate_first_two_messages() -> (Vec<u8>, Vec<u8>) {
     // build
     let (private_key, public_key) = KEYPAIR.clone();
-    let initiator = NoiseUpgrader::new(private_key.clone());
-    let responder = NoiseUpgrader::new(private_key);
+    let initiator = NoiseUpgrader::new(private_key.clone(), HandshakeAuthMode::ServerOnly);
+    let responder = NoiseUpgrader::new(private_key, HandshakeAuthMode::ServerOnly);
 
     // create exposing socket
     let (dialer_socket, listener_socket) = ExposingSocket::new_pair();
 
     // perform the handshake
     let (client_session, server_session) = block_on(join(
-        initiator.upgrade_outbound(dialer_socket, false, public_key),
-        responder.upgrade_inbound(listener_socket, None, None),
+        initiator.upgrade_outbound(dialer_socket, public_key),
+        responder.upgrade_inbound(listener_socket),
     ));
 
     // take result
@@ -187,25 +187,25 @@ impl<'a> AsyncRead for FakeSocket<'a> {
 pub fn fuzz_initiator(data: &[u8]) {
     // setup initiator
     let (private_key, public_key) = KEYPAIR.clone();
-    let initiator = NoiseUpgrader::new(private_key);
+    let initiator = NoiseUpgrader::new(private_key, HandshakeAuthMode::ServerOnly);
 
     // setup NoiseStream
     let fake_socket = FakeSocket { content: data };
 
     // send a message, then read fuzz data
-    let _ = block_on(initiator.upgrade_outbound(fake_socket, false, public_key));
+    let _ = block_on(initiator.upgrade_outbound(fake_socket, public_key));
 }
 
 pub fn fuzz_responder(data: &[u8]) {
     // setup responder
     let (private_key, _public_key) = KEYPAIR.clone();
-    let responder = NoiseUpgrader::new(private_key);
+    let responder = NoiseUpgrader::new(private_key, HandshakeAuthMode::ServerOnly);
 
     // setup NoiseStream
     let fake_socket = FakeSocket { content: data };
 
     // read fuzz data
-    let _ = block_on(responder.upgrade_inbound(fake_socket, None, None));
+    let _ = block_on(responder.upgrade_inbound(fake_socket));
 }
 
 //

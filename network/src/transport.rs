@@ -3,7 +3,7 @@
 
 use crate::{
     common::NetworkPublicKeys,
-    noise_wrapper::{stream::NoiseStream, AntiReplayTimestamps, NoiseUpgrader},
+    noise_wrapper::{stream::NoiseStream, HandshakeAuthMode, NoiseUpgrader},
     protocols::{
         identity::exchange_handshake,
         wire::handshake::v1::{HandshakeMsg, MessagingProtocolVersion, SupportedProtocols},
@@ -241,7 +241,6 @@ where
 struct UpgradeContext {
     noise: NoiseUpgrader,
     trusted_peers: Option<Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>>,
-    anti_replay_timestamps: Option<Arc<RwLock<AntiReplayTimestamps>>>,
     handshake_version: u8,
     own_handshake: HandshakeMsg,
 }
@@ -260,14 +259,7 @@ async fn upgrade_inbound<T: TSocket>(
     let socket = fut_socket.await?;
 
     // try authenticating via noise handshake
-    let socket = ctxt
-        .noise
-        .upgrade_inbound(
-            socket,
-            ctxt.anti_replay_timestamps.as_ref(),
-            ctxt.trusted_peers.as_ref(),
-        )
-        .await?;
+    let socket = ctxt.noise.upgrade_inbound(socket).await?;
     let remote_pubkey = socket.get_remote_static();
 
     let peer_id = identity_pubkey_to_peer_id(ctxt.trusted_peers.as_ref(), &remote_pubkey)?;
@@ -292,11 +284,7 @@ async fn upgrade_outbound<T: TSocket>(
     let peer_id = identity_pubkey_to_peer_id(ctxt.trusted_peers.as_ref(), &remote_pubkey)?;
 
     // try authenticating via noise handshake
-    let is_mutual_auth = ctxt.trusted_peers.is_some();
-    let socket = ctxt
-        .noise
-        .upgrade_outbound(socket, is_mutual_auth, remote_pubkey)
-        .await?;
+    let socket = ctxt.noise.upgrade_outbound(socket, remote_pubkey).await?;
 
     // sanity check: Noise IK should always guarantee this is true
     debug_assert_eq!(remote_pubkey, socket.get_remote_static());
@@ -343,23 +331,15 @@ where
         own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
         let identity_pubkey = identity_key.public_key();
 
-        // Only use anti replay protection in mutual-auth scenarios. In theory,
-        // this is applicable everywhere; however, we would need to spend some
-        // time making this more sophisticated so it garbage collects old
-        // timestamps and doesn't use unbounded space. These are not problems in
-        // mutual-auth scenarios because we have a bounded set of trusted peers
-        // that rarely changes.
-        let anti_replay_timestamps = if trusted_peers.is_some() {
-            Some(Arc::new(RwLock::new(AntiReplayTimestamps::default())))
-        } else {
-            None
+        let auth_mode = match trusted_peers.as_ref() {
+            Some(trusted_peers) => HandshakeAuthMode::mutual(trusted_peers.clone()),
+            None => HandshakeAuthMode::ServerOnly,
         };
 
         Self {
             ctxt: Arc::new(UpgradeContext {
-                noise: NoiseUpgrader::new(identity_key),
+                noise: NoiseUpgrader::new(identity_key, auth_mode),
                 trusted_peers,
-                anti_replay_timestamps,
                 handshake_version,
                 own_handshake,
             }),
@@ -554,7 +534,6 @@ where
     }
 }
 
-// TODO(philiphayes): remove support for `/ln-peerid-ex` protocol.
 // TODO(philiphayes): move tests into separate file
 
 #[cfg(test)]

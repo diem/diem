@@ -60,6 +60,57 @@ impl AntiReplayTimestamps {
 /// but as we use it to store a duration since UNIX_EPOCH we will never use more than 8 bytes.
 const PAYLOAD_SIZE: usize = 8;
 
+/// Noise handshake authentication mode.
+pub enum HandshakeAuthMode {
+    /// In `Mutual` mode, both sides will authenticate each other with their
+    /// `trusted_peers` set. We also include replay attack mitigation in this mode.
+    ///
+    /// For example, in the Libra validator network, validator peers will only
+    /// allow connections from other validator peers. They will use this mode to
+    /// check that inbound connections authenticate to a network public key
+    /// actually contained in the current validator set.
+    Mutual {
+        // Only use anti replay protection in mutual-auth scenarios. In theory,
+        // this is applicable everywhere; however, we would need to spend some
+        // time making this more sophisticated so it garbage collects old
+        // timestamps and doesn't use unbounded space. These are not problems in
+        // mutual-auth scenarios because we have a bounded set of trusted peers
+        // that rarely changes.
+        anti_replay_timestamps: RwLock<AntiReplayTimestamps>,
+        trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>,
+    },
+    /// In `ServerOnly` mode, the dialer authenticates the server. However, the
+    /// server does not care who connects to them and will allow inbound connections
+    /// from any peer.
+    ServerOnly,
+}
+
+impl HandshakeAuthMode {
+    pub fn mutual(trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>) -> Self {
+        HandshakeAuthMode::Mutual {
+            anti_replay_timestamps: RwLock::new(AntiReplayTimestamps::default()),
+            trusted_peers,
+        }
+    }
+
+    fn anti_replay_timestamps(&self) -> Option<&RwLock<AntiReplayTimestamps>> {
+        match &self {
+            HandshakeAuthMode::Mutual {
+                anti_replay_timestamps,
+                ..
+            } => Some(&anti_replay_timestamps),
+            HandshakeAuthMode::ServerOnly => None,
+        }
+    }
+
+    fn trusted_peers(&self) -> Option<&RwLock<HashMap<PeerId, NetworkPeerInfo>>> {
+        match &self {
+            HandshakeAuthMode::Mutual { trusted_peers, .. } => Some(&trusted_peers),
+            HandshakeAuthMode::ServerOnly => None,
+        }
+    }
+}
+
 // Noise Upgrader
 // --------------
 // Noise by default is not aware of the above or lower protocol layers,
@@ -71,12 +122,20 @@ const PAYLOAD_SIZE: usize = 8;
 //
 
 /// The Noise configuration to be used to perform a protocol upgrade on an underlying socket.
-pub struct NoiseUpgrader(noise::NoiseConfig);
+pub struct NoiseUpgrader {
+    /// Config for executing Noise handshakes. Includes our static private key.
+    noise_config: noise::NoiseConfig,
+    /// Handshake authentication can be either mutual or server-only authentication.
+    auth_mode: HandshakeAuthMode,
+}
 
 impl NoiseUpgrader {
-    /// Create a new NoiseConfig with the provided keypair
-    pub fn new(key: x25519::PrivateKey) -> Self {
-        Self(noise::NoiseConfig::new(key))
+    /// Create a new NoiseConfig with the provided keypair and authentication mode.
+    pub fn new(key: x25519::PrivateKey, auth_mode: HandshakeAuthMode) -> Self {
+        Self {
+            noise_config: noise::NoiseConfig::new(key),
+            auth_mode,
+        }
     }
 
     /// Perform a protocol upgrade on an underlying connection. In addition perform the noise IX
@@ -88,9 +147,7 @@ impl NoiseUpgrader {
         &self,
         socket: TSocket,
         origin: ConnectionOrigin,
-        anti_replay_timestamps: Option<&Arc<RwLock<AntiReplayTimestamps>>>,
         remote_public_key: Option<x25519::PublicKey>,
-        trusted_peers: Option<&Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>>,
     ) -> io::Result<(x25519::PublicKey, NoiseStream<TSocket>)>
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
@@ -108,13 +165,9 @@ impl NoiseUpgrader {
                         ));
                     }
                 };
-                self.upgrade_outbound(socket, anti_replay_timestamps.is_some(), remote_public_key)
-                    .await?
+                self.upgrade_outbound(socket, remote_public_key).await?
             }
-            ConnectionOrigin::Inbound => {
-                self.upgrade_inbound(socket, anti_replay_timestamps, trusted_peers)
-                    .await?
-            }
+            ConnectionOrigin::Inbound => self.upgrade_inbound(socket).await?,
         };
 
         // return remote public key with a socket including the noise stream
@@ -132,30 +185,30 @@ impl NoiseUpgrader {
     pub async fn upgrade_outbound<TSocket>(
         &self,
         mut socket: TSocket,
-        mutual_authentication: bool,
         remote_public_key: x25519::PublicKey,
     ) -> io::Result<NoiseStream<TSocket>>
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
         // in mutual authenticated networks, send a payload of the current timestamp (in milliseconds)
-        let payload = if mutual_authentication {
-            let now: u64 = time::SystemTime::now()
-                .duration_since(time::UNIX_EPOCH)
-                .expect("system clock should work")
-                .as_millis() as u64;
-            // e.g. [157, 126, 253, 97, 114, 1, 0, 0]
-            let now = now.to_le_bytes().to_vec();
-            Some(now)
-        } else {
-            None
+        let payload = match self.auth_mode {
+            HandshakeAuthMode::Mutual { .. } => {
+                let now: u64 = time::SystemTime::now()
+                    .duration_since(time::UNIX_EPOCH)
+                    .expect("system clock should work")
+                    .as_millis() as u64;
+                // e.g. [157, 126, 253, 97, 114, 1, 0, 0]
+                let now = now.to_le_bytes().to_vec();
+                Some(now)
+            }
+            HandshakeAuthMode::ServerOnly => None,
         };
 
         // create first handshake message  (-> e, es, s, ss)
         let mut rng = rand::rngs::OsRng;
         let mut first_message = [0u8; noise::handshake_init_msg_len(PAYLOAD_SIZE)];
         let initiator_state = self
-            .0
+            .noise_config
             .initiate_connection(
                 &mut rng,
                 &[],
@@ -178,7 +231,7 @@ impl NoiseUpgrader {
         // parse the server's response
         // TODO: security logging here? (mimoo)
         let (_, session) = self
-            .0
+            .noise_config
             .finalize_connection(initiator_state, &server_response)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
@@ -197,8 +250,6 @@ impl NoiseUpgrader {
     pub async fn upgrade_inbound<TSocket>(
         &self,
         mut socket: TSocket,
-        anti_replay_timestamps: Option<&Arc<RwLock<AntiReplayTimestamps>>>,
-        trusted_peers: Option<&Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>>,
     ) -> io::Result<NoiseStream<TSocket>>
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
@@ -209,12 +260,12 @@ impl NoiseUpgrader {
 
         // parse it
         let (their_public_key, handshake_state, payload) = self
-            .0
+            .noise_config
             .parse_client_init_message(&[], &client_init_message)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
-        // make sure the public key is a validator before continuing (if we're in the validator network)
-        if let Some(trusted_peers) = trusted_peers {
+        // if mutual auth mode, verify the remote pubkey is in our set of trusted peers
+        if let Some(trusted_peers) = self.auth_mode.trusted_peers() {
             let found = trusted_peers
                 .read()
                 .map_err(|_| {
@@ -237,8 +288,8 @@ impl NoiseUpgrader {
             }
         }
 
-        // if on a mutually authenticated network
-        if let Some(anti_replay_timestamps) = anti_replay_timestamps {
+        // if mutual auth mode, verify this handshake is not a replay
+        if let Some(anti_replay_timestamps) = self.auth_mode.anti_replay_timestamps() {
             // check that the payload received as the client timestamp (in seconds)
             if payload.len() != PAYLOAD_SIZE {
                 // TODO: security logging (mimoo)
@@ -277,7 +328,7 @@ impl NoiseUpgrader {
         let mut rng = rand::rngs::OsRng;
         let mut server_response = [0u8; noise::handshake_resp_msg_len(0)];
         let session = self
-            .0
+            .noise_config
             .respond_to_client(&mut rng, handshake_state, None, &mut server_response)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
@@ -297,21 +348,20 @@ impl NoiseUpgrader {
 #[cfg(test)]
 mod test {
     use super::*;
-
+    use crate::common::NetworkPublicKeys;
     use futures::{executor::block_on, future::join};
-    use libra_crypto::test_utils::TEST_SEED;
+    use libra_crypto::{test_utils::TEST_SEED, traits::Uniform as _};
     use memsocket::MemorySocket;
+    use rand::SeedableRng as _;
     use std::{
-        collections::HashMap,
         io,
         sync::{Arc, RwLock},
     };
 
-    use libra_crypto::traits::Uniform as _;
-    use rand::SeedableRng as _;
-
     /// helper to setup two testing peers
-    fn build_peers() -> (
+    fn build_peers(
+        is_mutual_auth: bool,
+    ) -> (
         (NoiseUpgrader, x25519::PublicKey),
         (NoiseUpgrader, x25519::PublicKey),
     ) {
@@ -323,8 +373,29 @@ mod test {
         let server_private = x25519::PrivateKey::generate(&mut rng);
         let server_public = server_private.public_key();
 
-        let client = NoiseUpgrader::new(client_private);
-        let server = NoiseUpgrader::new(server_private);
+        let (client_auth, server_auth) = if is_mutual_auth {
+            let client_id = PeerId::random();
+            let client_keys = NetworkPublicKeys {
+                identity_public_key: client_public,
+            };
+            let server_id = PeerId::random();
+            let server_keys = NetworkPublicKeys {
+                identity_public_key: server_public,
+            };
+            let trusted_peers = Arc::new(RwLock::new(
+                vec![(client_id, client_keys), (server_id, server_keys)]
+                    .into_iter()
+                    .collect(),
+            ));
+            let client_auth = HandshakeAuthMode::mutual(trusted_peers.clone());
+            let server_auth = HandshakeAuthMode::mutual(trusted_peers);
+            (client_auth, server_auth)
+        } else {
+            (HandshakeAuthMode::ServerOnly, HandshakeAuthMode::ServerOnly)
+        };
+
+        let client = NoiseUpgrader::new(client_private, client_auth);
+        let server = NoiseUpgrader::new(server_private, server_auth);
 
         ((client, client_public), (server, server_public))
     }
@@ -332,35 +403,37 @@ mod test {
     /// helper to perform a noise handshake with two peers
     fn perform_handshake(
         client: NoiseUpgrader,
-        server_public_key: x25519::PublicKey,
         server: NoiseUpgrader,
-        trusted_peers: Option<&Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>>,
+        server_public_key: x25519::PublicKey,
     ) -> io::Result<(NoiseStream<MemorySocket>, NoiseStream<MemorySocket>)> {
         // create an in-memory socket for testing
         let (dialer_socket, listener_socket) = MemorySocket::new_pair();
-        let anti_replay_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::default()));
 
         // perform the handshake
         let (client_session, server_session) = block_on(join(
-            client.upgrade_outbound(dialer_socket, true, server_public_key),
-            server.upgrade_inbound(
-                listener_socket,
-                Some(&anti_replay_timestamps),
-                trusted_peers,
-            ),
+            client.upgrade_outbound(dialer_socket, server_public_key),
+            server.upgrade_inbound(listener_socket),
         ));
 
-        //
         Ok((client_session?, server_session?))
     }
 
-    #[test]
-    fn test_handshake() {
+    fn test_handshake_success(is_mutual_auth: bool) {
         // perform handshake with two testing peers
-        let ((client, client_public), (server, server_public)) = build_peers();
-        let (client, server) = perform_handshake(client, server_public, server, None).unwrap();
+        let ((client, client_public), (server, server_public)) = build_peers(is_mutual_auth);
+        let (client, server) = perform_handshake(client, server, server_public).unwrap();
 
-        assert_eq!(client.get_remote_static(), server_public,);
-        assert_eq!(server.get_remote_static(), client_public,);
+        assert_eq!(client.get_remote_static(), server_public);
+        assert_eq!(server.get_remote_static(), client_public);
+    }
+
+    #[test]
+    fn test_handshake_server_only_auth() {
+        test_handshake_success(false /* is_mutual_auth */);
+    }
+
+    #[test]
+    fn test_handshake_mutual_auth() {
+        test_handshake_success(true /* is_mutual_auth */);
     }
 }
