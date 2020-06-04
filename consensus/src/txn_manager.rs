@@ -7,6 +7,7 @@ use consensus_types::{block::Block, common::Payload};
 use debug_interface::prelude::*;
 use executor_types::StateComputeResult;
 use futures::channel::{mpsc, oneshot};
+use itertools::Itertools;
 use libra_mempool::{
     CommittedTransaction, ConsensusRequest, ConsensusResponse, TransactionExclusion,
 };
@@ -69,7 +70,11 @@ impl TxnManager for MempoolProxy {
             Some(txns) => txns,
             None => return Ok(()),
         };
-        for (txn, status) in txns.iter().zip(compute_results.compute_status().iter()) {
+        // skip the block metadata txn result
+        for (txn, status) in txns
+            .iter()
+            .zip_eq(compute_results.compute_status().iter().skip(1))
+        {
             if let TransactionStatus::Discard(_) = status {
                 rejected_txns.push(CommittedTransaction {
                     sender: txn.sender(),
