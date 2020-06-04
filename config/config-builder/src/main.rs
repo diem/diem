@@ -278,21 +278,21 @@ fn build_full_node(command: FullNodeCommand) {
 
 fn build_full_node_config_builder(args: &FullNodeArgs) -> FullNodeConfig {
     let mut config_builder = FullNodeConfig::new();
+    config_builder.advertised = args.advertised.clone();
+    config_builder.bootstrap = args.bootstrap.clone();
+    config_builder.full_node_index = args.full_node_index;
+    config_builder.full_nodes = args.full_nodes;
+    config_builder.listen = args.listen.clone();
     config_builder
-        .advertised(args.advertised.clone())
-        .bootstrap(args.bootstrap.clone())
-        .full_node_index(args.full_node_index)
-        .full_nodes(args.full_nodes)
-        .listen(args.listen.clone())
         .validators(args.validators)
         .template(load_node_template(args.template.as_ref()));
 
     if let Some(fn_seed) = args.full_node_seed.as_ref() {
-        config_builder.full_node_seed(parse_seed(fn_seed));
+        config_builder.full_node_seed = parse_seed(fn_seed);
     }
 
     if args.public {
-        config_builder.public();
+        config_builder.enable_remote_authentication = false;
     }
 
     if let Some(seed) = args.seed.as_ref() {
