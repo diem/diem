@@ -185,8 +185,6 @@
 <span id="185">185</span>
 <span id="186">186</span>
 <span id="187">187</span>
-<span id="188">188</span>
-<span id="189">189</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -282,11 +280,9 @@
         <span class="ident">libra_channel</span>::<span class="ident">new</span>(<span class="ident">QueueStyle</span>::<span class="ident">FIFO</span>, <span class="ident">NonZeroUsize</span>::<span class="ident">new</span>(<span class="number">8</span>).<span class="ident">unwrap</span>(), <span class="prelude-val">None</span>);
     <span class="kw">let</span> (<span class="ident">connection_reqs_tx</span>, <span class="kw">_</span>) <span class="op">=</span>
         <span class="ident">libra_channel</span>::<span class="ident">new</span>(<span class="ident">QueueStyle</span>::<span class="ident">FIFO</span>, <span class="ident">NonZeroUsize</span>::<span class="ident">new</span>(<span class="number">8</span>).<span class="ident">unwrap</span>(), <span class="prelude-val">None</span>);
-    <span class="kw">let</span> (<span class="ident">conn_mgr_reqs_tx</span>, <span class="ident">_conn_mgr_reqs_rx</span>) <span class="op">=</span> <span class="ident">channel</span>::<span class="ident">new_test</span>(<span class="number">8</span>);
     <span class="kw">let</span> <span class="ident">network_sender</span> <span class="op">=</span> <span class="ident">ConsensusNetworkSender</span>::<span class="ident">new</span>(
         <span class="ident">PeerManagerRequestSender</span>::<span class="ident">new</span>(<span class="ident">network_reqs_tx</span>),
         <span class="ident">ConnectionRequestSender</span>::<span class="ident">new</span>(<span class="ident">connection_reqs_tx</span>),
-        <span class="ident">conn_mgr_reqs_tx</span>,
     );
     <span class="kw">let</span> (<span class="ident">self_sender</span>, <span class="ident">_self_receiver</span>) <span class="op">=</span> <span class="ident">channel</span>::<span class="ident">new_test</span>(<span class="number">8</span>);
 
