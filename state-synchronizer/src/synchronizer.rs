@@ -45,6 +45,7 @@ impl StateSynchronizer {
         storage: Arc<dyn DbReader>,
         executor: Box<dyn ChunkExecutor>,
         config: &NodeConfig,
+        waypoint: Waypoint,
         reconfig_event_subscriptions: Vec<ReconfigSubscription>,
     ) -> Self {
         let runtime = Builder::new()
@@ -60,7 +61,7 @@ impl StateSynchronizer {
             network,
             state_sync_to_mempool_sender,
             config.base.role,
-            config.base.waypoint,
+            Some(waypoint),
             &config.state_sync,
             config.upstream.clone(),
             executor_proxy,

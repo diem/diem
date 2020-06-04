@@ -6,7 +6,7 @@ use config_builder::{BuildSwarm, SwarmConfig};
 use libra_config::{
     config::{
         DiscoveryMethod, Identity, NetworkConfig, NodeConfig, OnDiskStorageConfig, RoleType,
-        SecureBackend,
+        SecureBackend, WaypointConfig,
     },
     network_id::NetworkId,
 };
@@ -127,8 +127,13 @@ fn smoke_test() {
         config.consensus.safety_rules.backend =
             secure_backend(helper.path(), &swarm_path, &ns, "safety-rules");
 
-        // TODO: this should be exclusively acquired via secure storage
-        config.base.waypoint = Some(waypoint);
+        if i == 0 {
+            // This is unfortunate due to the way SwarmConfig works
+            config.base.waypoint = WaypointConfig::FromConfig { waypoint };
+        } else {
+            let backend = secure_backend(helper.path(), &swarm_path, &ns, "waypoint");
+            config.base.waypoint = WaypointConfig::FromStorage { backend };
+        }
         config.execution.genesis = Some(genesis.clone());
     }
 

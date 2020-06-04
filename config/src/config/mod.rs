@@ -94,7 +94,7 @@ pub struct NodeConfig {
 pub struct BaseConfig {
     data_dir: PathBuf,
     pub role: RoleType,
-    pub waypoint: Option<Waypoint>,
+    pub waypoint: WaypointConfig,
 }
 
 impl Default for BaseConfig {
@@ -102,7 +102,25 @@ impl Default for BaseConfig {
         BaseConfig {
             data_dir: PathBuf::from("/opt/libra/data/commmon"),
             role: RoleType::Validator,
-            waypoint: None,
+            waypoint: WaypointConfig::None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case", tag = "type")]
+pub enum WaypointConfig {
+    FromConfig { waypoint: Waypoint },
+    FromStorage { backend: SecureBackend },
+    None,
+}
+
+impl WaypointConfig {
+    pub fn waypoint_from_config(&self) -> Option<Waypoint> {
+        if let WaypointConfig::FromConfig { waypoint } = self {
+            Some(*waypoint)
+        } else {
+            None
         }
     }
 }

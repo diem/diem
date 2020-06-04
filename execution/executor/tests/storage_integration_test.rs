@@ -50,7 +50,7 @@ fn test_genesis() {
     let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
 
-    let trusted_state = TrustedState::from(config.base.waypoint.unwrap());
+    let trusted_state = TrustedState::from(config.base.waypoint.waypoint_from_config().unwrap());
     trusted_state
         .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();
@@ -256,7 +256,8 @@ fn test_change_publishing_option_to_custom() {
 
     let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
-    let mut trusted_state = TrustedState::from(config.base.waypoint.unwrap());
+    let mut trusted_state =
+        TrustedState::from(config.base.waypoint.waypoint_from_config().unwrap());
     match trusted_state.verify_and_ratchet(&li, &epoch_change_proof) {
         Ok(TrustedStateChange::Epoch { new_state, .. }) => trusted_state = new_state,
         _ => panic!("unexpected state change"),
@@ -434,7 +435,8 @@ fn test_extend_whitelist() {
 
     let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
-    let mut trusted_state = TrustedState::from(config.base.waypoint.unwrap());
+    let mut trusted_state =
+        TrustedState::from(config.base.waypoint.waypoint_from_config().unwrap());
     match trusted_state.verify_and_ratchet(&li, &epoch_change_proof) {
         Ok(TrustedStateChange::Epoch { new_state, .. }) => trusted_state = new_state,
         _ => panic!("unexpected state change"),
@@ -668,7 +670,8 @@ fn test_execution_with_storage() {
 
     let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
-    let mut trusted_state = TrustedState::from(config.base.waypoint.unwrap());
+    let mut trusted_state =
+        TrustedState::from(config.base.waypoint.waypoint_from_config().unwrap());
     match trusted_state.verify_and_ratchet(&li, &epoch_change_proof) {
         Ok(TrustedStateChange::Epoch { new_state, .. }) => trusted_state = new_state,
         _ => panic!("unexpected state change"),

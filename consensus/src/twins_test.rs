@@ -17,7 +17,7 @@ use futures::channel::mpsc;
 use libra_config::{
     config::{
         ConsensusProposerType::{self, RotatingProposer},
-        NodeConfig,
+        NodeConfig, WaypointConfig,
     },
     generator::{self, ValidatorSwarm},
 };
@@ -158,7 +158,7 @@ impl SMRNode {
 
             let waypoint = Waypoint::new_epoch_boundary(&storage.get_ledger_info())
                 .expect("Unable to produce waypoint with the provided LedgerInfo");
-            config.base.waypoint = Some(waypoint);
+            config.base.waypoint = WaypointConfig::FromConfig { waypoint };
             config.consensus.proposer_type = proposer_type;
             // Use in memory storage for testing
             // node_config.consensus.safety_rules = SafetyRulesConfig::default();
