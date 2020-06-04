@@ -32,8 +32,8 @@ script {
 use 0x0::LibraAccount;
 use 0x0::Coin2;
 use 0x0::Transaction;
-fun main() {
-    LibraAccount::pay_from_sender<Coin2::T>({{bob}}, 10);
+fun main(account: &signer) {
+    LibraAccount::pay_from<Coin2::T>(account, {{bob}}, 10);
     Transaction::assert(LibraAccount::balance<Coin2::T>({{alice}}) == 0, 0);
     Transaction::assert(LibraAccount::balance<Coin2::T>({{bob}}) == 10, 1);
 }
@@ -48,9 +48,9 @@ use 0x0::LibraAccount;
 use 0x0::Coin2;
 use 0x0::Coin1;
 use 0x0::Transaction;
-fun main() {
-    LibraAccount::pay_from_sender<Coin2::T>({{alice}}, 10);
-    LibraAccount::pay_from_sender<Coin1::T>({{alice}}, 10);
+fun main(account: &signer) {
+    LibraAccount::pay_from<Coin2::T>(account, {{alice}}, 10);
+    LibraAccount::pay_from<Coin1::T>(account, {{alice}}, 10);
     Transaction::assert(LibraAccount::balance<Coin1::T>({{bob}}) == 0, 2);
     Transaction::assert(LibraAccount::balance<Coin2::T>({{bob}}) == 0, 3);
     Transaction::assert(LibraAccount::balance<Coin1::T>({{alice}}) == 10, 4);

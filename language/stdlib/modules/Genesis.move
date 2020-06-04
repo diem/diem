@@ -92,7 +92,10 @@ module Genesis {
         LibraBlock::initialize_block_metadata(association);
         LibraWriteSetManager::initialize(association);
         LibraTimestamp::initialize(association);
-        LibraAccount::rotate_authentication_key(association, genesis_auth_key);
+        LibraAccount::rotate_authentication_key(association, copy genesis_auth_key);
+        LibraAccount::rotate_authentication_key(config_account, copy genesis_auth_key);
+        LibraAccount::rotate_authentication_key(fee_account, copy genesis_auth_key);
+        LibraAccount::rotate_authentication_key(tc_account, genesis_auth_key);
     }
 
 }

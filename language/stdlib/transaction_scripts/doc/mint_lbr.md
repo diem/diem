@@ -28,12 +28,12 @@
     <b>let</b> sender = <a href="../../modules/doc/Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     <b>let</b> coin1_balance = <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_balance">LibraAccount::balance</a>&lt;<a href="../../modules/doc/Coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(sender);
     <b>let</b> coin2_balance = <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_balance">LibraAccount::balance</a>&lt;<a href="../../modules/doc/Coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(sender);
-    <b>let</b> coin1 = <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_withdraw_from_sender">LibraAccount::withdraw_from_sender</a>&lt;<a href="../../modules/doc/Coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(coin1_balance);
-    <b>let</b> coin2 = <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_withdraw_from_sender">LibraAccount::withdraw_from_sender</a>&lt;<a href="../../modules/doc/Coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(coin2_balance);
+    <b>let</b> coin1 = <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_withdraw_from">LibraAccount::withdraw_from</a>&lt;<a href="../../modules/doc/Coin1.md#0x0_Coin1_T">Coin1::T</a>&gt;(account, coin1_balance);
+    <b>let</b> coin2 = <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_withdraw_from">LibraAccount::withdraw_from</a>&lt;<a href="../../modules/doc/Coin2.md#0x0_Coin2_T">Coin2::T</a>&gt;(account, coin2_balance);
     <b>let</b> (lbr, coin1, coin2) = <a href="../../modules/doc/LBR.md#0x0_LBR_create">LBR::create</a>(amount_lbr, coin1, coin2);
-    <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_deposit">LibraAccount::deposit</a>(sender, lbr);
-    <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_deposit">LibraAccount::deposit</a>(sender, coin1);
-    <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_deposit">LibraAccount::deposit</a>(sender, coin2);
+    <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_deposit_to">LibraAccount::deposit_to</a>(account, lbr);
+    <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_deposit_to">LibraAccount::deposit_to</a>(account, coin1);
+    <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_deposit_to">LibraAccount::deposit_to</a>(account, coin2);
 }
 </code></pre>
 

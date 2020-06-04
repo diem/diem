@@ -73,6 +73,7 @@ module ColdWallet {
     import 0x0.Libra;
     import 0x0.LibraAccount;
     import 0x0.Vector;
+    import 0x0.Signer;
     import {{default}}.ApprovalGroup;
 
     resource T {
@@ -125,7 +126,7 @@ module ColdWallet {
     // Note that this implementation moves the fund into the payee's Libra account, without assuming
     // there's a cold wallet module under that account
     public withdraw_from_payer(
-        payer: address,
+        payer_: &signer,
         payee: address,
         amount: u64,
         pk1: vector<u8>,
@@ -134,6 +135,7 @@ module ColdWallet {
         sig2: vector<u8>
     ) acquires T {
 
+        let payer: address;
         let payer_ref: &mut Self.T;
         let transaction_bytes: vector<u8>;
         let prefix: vector<u8>;
@@ -143,6 +145,7 @@ module ColdWallet {
         let has_authority: bool;
         let account_balance: u64;
 
+        payer = Signer.address_of(copy(payer_));
         payer_ref = borrow_global_mut<T>(copy(payer));
         account_balance = Libra.value<LBR.T>(&copy(payer_ref).balance);
         assert(copy(amount) <= move(account_balance), 1001);
@@ -163,7 +166,7 @@ module ColdWallet {
             *(&mut copy(payer_ref).sequence_num) = move(seq) + 1;
 
             withdraw_amount = Libra.withdraw<LBR.T>(&mut copy(payer_ref).balance, move(amount));
-            LibraAccount.deposit<LBR.T>(move(payee), move(withdraw_amount));
+            LibraAccount.deposit<LBR.T>(copy(payer_), move(payee), move(withdraw_amount));
 
         } else {
             // how to handle error?

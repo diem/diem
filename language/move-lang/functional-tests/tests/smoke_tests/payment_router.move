@@ -26,33 +26,33 @@ module PaymentRouter {
         allowed_addresses: vector<address>,
     }
 
-    // Withdrawal capabilities for the added accounts, partitioned by their
+    // Withdraw capabilities for the added accounts, partitioned by their
     // currency type.
     resource struct AccountInfo<Token> {
         child_accounts: vector<address>,
     }
 
-    // A delegated withdrawal capability that is published under the child
+    // A delegated withdraw capability that is published under the child
     // account and that allows the routing account to withdraw from it (and
     // the sender, depending on flags set in `PaymentRouterInfo`).
     resource struct RoutedAccount<Token> {
         router_account_addr: address,
-        withdrawal_cap: LibraAccount::WithdrawalCapability,
+        withdrawal_cap: LibraAccount::WithdrawCapability,
     }
 
     // Initialize the sending account with `exclusive_withdrawals_only`
     // either turned on (true) or off (false).
-    public fun initialize(exclusive_withdrawals_only: bool) {
-        move_to_sender(PaymentRouterInfo {
+    public fun initialize(account:  &signer, exclusive_withdrawals_only: bool) {
+        move_to(account, PaymentRouterInfo {
             exclusive_withdrawals_only,
             allowed_addresses: Vector::empty(),
         })
     }
 
     // Set whether exclusive access is held to the routed accounts
-    public fun set_exclusive_withdrawals(exclusive_withdrawals_only: bool)
+    public fun set_exclusive_withdrawals(account: &signer, exclusive_withdrawals_only: bool)
     acquires PaymentRouterInfo {
-        borrow_global_mut<PaymentRouterInfo>(Transaction::sender())
+        borrow_global_mut<PaymentRouterInfo>(Signer::address_of(account))
             .exclusive_withdrawals_only = exclusive_withdrawals_only
     }
 
@@ -64,17 +64,16 @@ module PaymentRouter {
     }
 
     // Allow the account at `addr` to delegate its withdrawal_capability to us.
-    public fun allow_account_address(addr: address)
+    public fun allow_account_address(account: &signer, addr: address)
     acquires PaymentRouterInfo {
-        let sender = Transaction::sender();
-        let router_info = borrow_global_mut<PaymentRouterInfo>(sender);
+        let router_info = borrow_global_mut<PaymentRouterInfo>(Signer::address_of(account));
         if (!Vector::contains(&router_info.allowed_addresses, &addr))
             Vector::push_back(&mut router_info.allowed_addresses, addr);
     }
 
     // Allow routing of currencies of `Token` type.
-    public fun allow_currency<Token>() {
-        move_to_sender(AccountInfo<Token>{ child_accounts: Vector::empty() })
+    public fun allow_currency<Token>(account: &signer) {
+        move_to(account, AccountInfo<Token>{ child_accounts: Vector::empty() })
     }
 
     // Add the sending account of currency type `Token` to the router at
@@ -94,18 +93,19 @@ module PaymentRouter {
         );
         move_to(sender, RoutedAccount<Token> {
             router_account_addr,
-            withdrawal_cap: LibraAccount::extract_sender_withdrawal_capability(sender)
+            withdrawal_cap: LibraAccount::extract_withdraw_capability(sender)
         })
     }
 
     // Routes deposits to a sub-account that holds currencies of type `Token`.
-    public fun deposit<Token>(router_account_addr: address, coin: Libra::T<Token>)
+    public fun deposit<Token>(sender: &signer, router_account_addr: address, coin: Libra::T<Token>)
     acquires AccountInfo {
         let addrs = &borrow_global<AccountInfo<Token>>(router_account_addr).child_accounts;
         Transaction::assert(!Vector::is_empty(addrs), 1);
         // TODO: policy around how to rotate through different accounts
         let index = 0;
         LibraAccount::deposit(
+            sender,
             *Vector::borrow(addrs, index),
             coin
         );
@@ -114,9 +114,9 @@ module PaymentRouter {
     // Withdraws `amount` of `Token` currency from the sending account
     // using the delegated withdrawal capability in the PaymentRouterInfo
     // at `router_account_addr`.
-    public fun withdraw_through<Token>(amount: u64): Libra::T<Token>
+    public fun withdraw_through<Token>(account: &signer, amount: u64): Libra::T<Token>
     acquires PaymentRouterInfo, RoutedAccount {
-        let routed_info = borrow_global<RoutedAccount<Token>>(Transaction::sender());
+        let routed_info = borrow_global<RoutedAccount<Token>>(Signer::address_of(account));
         let router_info = borrow_global<PaymentRouterInfo>(*&routed_info.router_account_addr);
         Transaction::assert(!router_info.exclusive_withdrawals_only, 2);
         LibraAccount::withdraw_with_capability(
@@ -127,9 +127,9 @@ module PaymentRouter {
 
     // Routes withdrawal requests from the sending account to a sub-account
     // that holds currencies of type `Token`.
-    public fun withdraw<Token>(amount: u64): Libra::T<Token>
+    public fun withdraw<Token>(account: &signer, amount: u64): Libra::T<Token>
     acquires AccountInfo, RoutedAccount {
-        let addrs = &borrow_global<AccountInfo<Token>>(Transaction::sender()).child_accounts;
+        let addrs = &borrow_global<AccountInfo<Token>>(Signer::address_of(account)).child_accounts;
         Transaction::assert(!Vector::is_empty(addrs), 1);
         // TODO: policy around how to rotate through different accounts
         let index = 0;
@@ -168,15 +168,15 @@ use {{default}}::PaymentRouter;
 use 0x0::Coin1;
 use 0x0::Coin2;
 use 0x0::LBR;
-fun main() {
-    PaymentRouter::initialize(true);
-    PaymentRouter::allow_account_address({{bob}});
-    PaymentRouter::allow_account_address({{alice}});
-    PaymentRouter::allow_account_address({{gary}});
-    PaymentRouter::allow_account_address({{vivian}});
-    PaymentRouter::allow_currency<Coin1::T>();
-    PaymentRouter::allow_currency<Coin2::T>();
-    PaymentRouter::allow_currency<LBR::T>();
+fun main(account: &signer) {
+    PaymentRouter::initialize(account, true);
+    PaymentRouter::allow_account_address(account, {{bob}});
+    PaymentRouter::allow_account_address(account, {{alice}});
+    PaymentRouter::allow_account_address(account, {{gary}});
+    PaymentRouter::allow_account_address(account, {{vivian}});
+    PaymentRouter::allow_currency<Coin1::T>(account);
+    PaymentRouter::allow_currency<Coin2::T>(account);
+    PaymentRouter::allow_currency<LBR::T>(account);
 }
 }
 
@@ -187,8 +187,8 @@ fun main() {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::Transaction;
-fun main() {
-    PaymentRouter::allow_account_address({{bob}});
+fun main(account: &signer) {
+    PaymentRouter::allow_account_address(account, {{bob}});
     Transaction::assert(PaymentRouter::exclusive_withdrawals_only({{bob}}), 0);
 }
 }
@@ -258,10 +258,12 @@ use {{default}}::PaymentRouter;
 use 0x0::Coin1;
 use 0x0::Coin2;
 use 0x0::LBR;
-fun main() {
-    let addrs_coin1 = PaymentRouter::addresses_for_currency<Coin1::T>(Transaction::sender());
-    let addrs_coin2 = PaymentRouter::addresses_for_currency<Coin2::T>(Transaction::sender());
-    let addrs_lbr = PaymentRouter::addresses_for_currency<LBR::T>(Transaction::sender());
+use 0x0::Signer;
+fun main(account: &signer) {
+    let sender = Signer::address_of(account);
+    let addrs_coin1 = PaymentRouter::addresses_for_currency<Coin1::T>(sender);
+    let addrs_coin2 = PaymentRouter::addresses_for_currency<Coin2::T>(sender);
+    let addrs_lbr = PaymentRouter::addresses_for_currency<LBR::T>(sender);
 
     Transaction::assert(Vector::length(&addrs_coin1) == 2, 0);
     Transaction::assert(Vector::length(&addrs_coin2) == 1, 1);
@@ -277,12 +279,12 @@ use {{default}}::PaymentRouter;
 use 0x0::Coin1;
 use 0x0::LibraAccount;
 // Withdraw from the router "root" account.
-fun main() {
+fun main(account: &signer) {
     let prev_balance = LibraAccount::balance<Coin1::T>({{alice}});
-    let x_coins = PaymentRouter::withdraw<Coin1::T>(10);
+    let x_coins = PaymentRouter::withdraw<Coin1::T>(account, 10);
     let new_balance = LibraAccount::balance<Coin1::T>({{alice}});
     Transaction::assert(prev_balance - new_balance == 10, 0);
-    PaymentRouter::deposit<Coin1::T>({{bob}}, x_coins);
+    PaymentRouter::deposit<Coin1::T>(account, {{bob}}, x_coins);
     new_balance = LibraAccount::balance<Coin1::T>({{alice}});
     Transaction::assert(prev_balance - new_balance == 0, 1);
 }
@@ -296,9 +298,9 @@ use {{default}}::PaymentRouter;
 use 0x0::Coin1;
 // Try to have alice withdraw through the payment router. But this doesn't
 // work since `exclusive_withdrawals_only` is set to true.
-fun main() {
-    let x_coins = PaymentRouter::withdraw_through<Coin1::T>(10);
-    PaymentRouter::deposit<Coin1::T>({{bob}}, x_coins);
+fun main(account: &signer) {
+    let x_coins = PaymentRouter::withdraw_through<Coin1::T>(account, 10);
+    PaymentRouter::deposit<Coin1::T>(account, {{bob}}, x_coins);
 }
 }
 // check: ABORTED
@@ -311,9 +313,9 @@ use {{default}}::PaymentRouter;
 use 0x0::LBR;
 // Try to have bob withdraw through the payment router owned by bob. But this doesn't
 // work since `exclusive_withdrawals_only` is set to true.
-fun main() {
-    let x_coins = PaymentRouter::withdraw_through<LBR::T>(10);
-    PaymentRouter::deposit<LBR::T>({{bob}}, x_coins);
+fun main(account: &signer) {
+    let x_coins = PaymentRouter::withdraw_through<LBR::T>(account, 10);
+    PaymentRouter::deposit<LBR::T>(account, {{bob}}, x_coins);
 }
 }
 // check: ABORTED
@@ -323,8 +325,8 @@ fun main() {
 //! sender: bob
 script {
 use {{default}}::PaymentRouter;
-fun main() {
-    PaymentRouter::set_exclusive_withdrawals(false);
+fun main(account: &signer) {
+    PaymentRouter::set_exclusive_withdrawals(account, false);
 }
 }
 
@@ -338,12 +340,12 @@ use 0x0::Coin1;
 use 0x0::LibraAccount;
 // Try to have alice withdraw through the payment router. This now succeeds
 // since we set `exclusive_withdrawals_only` to false.
-fun main() {
+fun main(account: &signer) {
     let prev_balance = LibraAccount::balance<Coin1::T>({{alice}});
-    let x_coins = PaymentRouter::withdraw_through<Coin1::T>(10);
+    let x_coins = PaymentRouter::withdraw_through<Coin1::T>(account, 10);
     let new_balance = LibraAccount::balance<Coin1::T>({{alice}});
     Transaction::assert(prev_balance - new_balance == 10, 0);
-    PaymentRouter::deposit<Coin1::T>({{bob}}, x_coins);
+    PaymentRouter::deposit<Coin1::T>(account, {{bob}}, x_coins);
     new_balance = LibraAccount::balance<Coin1::T>({{alice}});
     Transaction::assert(prev_balance - new_balance == 0, 1);
 }
@@ -363,12 +365,12 @@ fun main() {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::Coin1;
-fun main() {
-    PaymentRouter::initialize(true);
-    PaymentRouter::allow_account_address({{bob1}});
-    PaymentRouter::allow_account_address({{gary1}});
-    PaymentRouter::allow_account_address({{nope1}});
-    PaymentRouter::allow_currency<Coin1::T>();
+fun main(account: &signer) {
+    PaymentRouter::initialize(account, true);
+    PaymentRouter::allow_account_address(account, {{bob1}});
+    PaymentRouter::allow_account_address(account, {{gary1}});
+    PaymentRouter::allow_account_address(account, {{nope1}});
+    PaymentRouter::allow_currency<Coin1::T>(account);
 }
 }
 
@@ -378,13 +380,13 @@ fun main() {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::Coin1;
-fun main() {
-    PaymentRouter::initialize(false);
-    PaymentRouter::allow_account_address({{alice1}});
-    PaymentRouter::allow_account_address({{vivian1}});
+fun main(account: &signer) {
+    PaymentRouter::initialize(account, false);
+    PaymentRouter::allow_account_address(account, {{alice1}});
+    PaymentRouter::allow_account_address(account, {{vivian1}});
     // nope1 could be added to both.
-    PaymentRouter::allow_account_address({{nope1}});
-    PaymentRouter::allow_currency<Coin1::T>();
+    PaymentRouter::allow_account_address(account, {{nope1}});
+    PaymentRouter::allow_currency<Coin1::T>(account);
 }
 }
 
@@ -440,9 +442,9 @@ use {{default}}::PaymentRouter;
 use 0x0::Coin1;
 // Try to have gary1 withdraw through bob1's payment router. But this doesn't
 // work since bob1 has set the exclusive_withdrawal_flag to true.
-fun main() {
-    let x_coins = PaymentRouter::withdraw_through<Coin1::T>(10);
-    PaymentRouter::deposit<Coin1::T>({{bob1}}, x_coins);
+fun main(account: &signer) {
+    let x_coins = PaymentRouter::withdraw_through<Coin1::T>(account, 10);
+    PaymentRouter::deposit<Coin1::T>(account, {{bob1}}, x_coins);
 }
 }
 // check: ABORTED
@@ -456,9 +458,9 @@ use {{default}}::PaymentRouter;
 use 0x0::Coin1;
 // vivan can withdraw through alice1's payment router since alice1 has set
 // the exclusive_withdrawal_flag to false.
-fun main() {
-    let x_coins = PaymentRouter::withdraw_through<Coin1::T>(10);
-    PaymentRouter::deposit<Coin1::T>({{alice1}}, x_coins);
+fun main(account: &signer) {
+    let x_coins = PaymentRouter::withdraw_through<Coin1::T>(account, 10);
+    PaymentRouter::deposit<Coin1::T>(account, {{alice1}}, x_coins);
 }
 }
 
@@ -540,13 +542,13 @@ use {{default}}::PaymentRouter;
 use 0x0::Coin1;
 use 0x0::Coin2;
 use 0x0::LBR;
-fun main() {
-    PaymentRouter::initialize(true);
-    PaymentRouter::allow_account_address({{bob2}});
-    PaymentRouter::allow_account_address({{alice2}});
-    PaymentRouter::allow_currency<Coin1::T>();
-    PaymentRouter::allow_currency<Coin2::T>();
-    PaymentRouter::allow_currency<LBR::T>();
+fun main(account: &signer) {
+    PaymentRouter::initialize(account, true);
+    PaymentRouter::allow_account_address(account, {{bob2}});
+    PaymentRouter::allow_account_address(account, {{alice2}});
+    PaymentRouter::allow_currency<Coin1::T>(account);
+    PaymentRouter::allow_currency<Coin2::T>(account);
+    PaymentRouter::allow_currency<LBR::T>(account);
 }
 }
 
@@ -576,9 +578,9 @@ fun main(sender: &signer) {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::Coin2;
-fun main() {
-    let x_coins = PaymentRouter::withdraw<Coin2::T>(10);
-    PaymentRouter::deposit<Coin2::T>({{bob2}}, x_coins);
+fun main(account: &signer) {
+    let x_coins = PaymentRouter::withdraw<Coin2::T>(account, 10);
+    PaymentRouter::deposit<Coin2::T>(account, {{bob2}}, x_coins);
 }
 }
 // check: ABORTED
@@ -591,9 +593,9 @@ script {
 use {{default}}::PaymentRouter;
 use 0x0::Coin2;
 use 0x0::LibraAccount;
-fun main() {
-    let x_coins = LibraAccount::withdraw_from_sender<Coin2::T>(10);
-    PaymentRouter::deposit<Coin2::T>({{bob2}}, x_coins);
+fun main(account: &signer) {
+    let x_coins = LibraAccount::withdraw_from<Coin2::T>(account, 10);
+    PaymentRouter::deposit<Coin2::T>(account, {{bob2}}, x_coins);
 }
 }
 // check: ABORTED

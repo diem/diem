@@ -32,7 +32,7 @@ This will only succeed if
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Token&gt;(account: &signer, amount: u64) {
-    <a href="../../modules/doc/Libra.md#0x0_Libra_preburn_to">Libra::preburn_to</a>&lt;Token&gt;(account, <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_withdraw_from_sender">LibraAccount::withdraw_from_sender</a>(amount))
+    <a href="../../modules/doc/Libra.md#0x0_Libra_preburn_to">Libra::preburn_to</a>&lt;Token&gt;(account, <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_withdraw_from">LibraAccount::withdraw_from</a>(account, amount))
 }
 </code></pre>
 

@@ -5,25 +5,25 @@ import 0x0.Signer;
 
 main(sender: &signer) {
   let sender_addr: address;
-  let cap: LibraAccount.WithdrawalCapability;
+  let cap: LibraAccount.WithdrawCapability;
   let coin: Libra.T<LBR.T>;
 
   sender_addr = Signer.address_of(copy(sender));
 
   // by default, an account has not delegated its withdrawal capability
-  assert(!LibraAccount.delegated_withdrawal_capability(copy(sender_addr)), 50);
+  assert(!LibraAccount.delegated_withdraw_capability(copy(sender_addr)), 50);
 
   // extracting the capability should flip the flag
-  cap = LibraAccount.extract_sender_withdrawal_capability(move(sender));
-  assert(LibraAccount.delegated_withdrawal_capability(copy(sender_addr)), 51);
+  cap = LibraAccount.extract_withdraw_capability(copy(sender));
+  assert(LibraAccount.delegated_withdraw_capability(copy(sender_addr)), 51);
 
   // restoring the capability should flip the flag back
-  LibraAccount.restore_withdrawal_capability(move(cap));
-  assert(!LibraAccount.delegated_withdrawal_capability(copy(sender_addr)), 52);
+  LibraAccount.restore_withdraw_capability(move(cap));
+  assert(!LibraAccount.delegated_withdraw_capability(copy(sender_addr)), 52);
 
   // and the sender should be able to withdraw once again
-  coin = LibraAccount.withdraw_from_sender<LBR.T>(100);
-  LibraAccount.deposit<LBR.T>(move(sender_addr), move(coin));
+  coin = LibraAccount.withdraw_from<LBR.T>(copy(sender), 100);
+  LibraAccount.deposit_to<LBR.T>(move(sender), move(coin));
 
   return;
 }

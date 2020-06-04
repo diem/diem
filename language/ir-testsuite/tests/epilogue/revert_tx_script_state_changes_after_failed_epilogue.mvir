@@ -8,8 +8,8 @@ import 0x0.LBR;
 import 0x0.LibraAccount;
 import 0x0.Libra;
 main(blessed: &signer) {
-    LibraAccount.deposit<LBR.T>({{alice}}, LBR.mint(copy(blessed), 1000000));
-    LibraAccount.deposit<LBR.T>({{bob}}, LBR.mint(move(blessed), 1000000));
+    LibraAccount.deposit<LBR.T>(copy(blessed), {{alice}}, LBR.mint(copy(blessed), 1000000));
+    LibraAccount.deposit<LBR.T>(copy(blessed), {{bob}}, LBR.mint(move(blessed), 1000000));
     return;
 }
 
@@ -26,8 +26,8 @@ import 0x0.LibraAccount;
 import 0x0.LBR;
 import 0x0.Vector;
 
-main(amount: u64) {
-    LibraAccount.pay_from_sender<LBR.T>({{carol}}, move(amount));
+main(account: &signer, amount: u64) {
+    LibraAccount.pay_from<LBR.T>(move(account), {{carol}}, move(amount));
     return;
 }
 
@@ -46,8 +46,8 @@ import 0x0.LibraAccount;
 import 0x0.LBR;
 import 0x0.Vector;
 
-main(amount: u64) {
-    LibraAccount.pay_from_sender<LBR.T>({{carol}}, move(amount));
+main(account: &signer, amount: u64) {
+    LibraAccount.pay_from<LBR.T>(move(account), {{carol}}, move(amount));
     return;
 }
 

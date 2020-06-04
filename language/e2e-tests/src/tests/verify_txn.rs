@@ -321,7 +321,7 @@ fn verify_simple_payment() {
         executor.execute_transaction(txn).status(),
         &TransactionStatus::Keep(
             VMStatus::new(StatusCode::TYPE_MISMATCH)
-                .with_message("argument length mismatch: expected 4 got 2".to_string())
+                .with_message("argument length mismatch: expected 5 got 3".to_string())
         )
     );
 
@@ -340,7 +340,7 @@ fn verify_simple_payment() {
         executor.execute_transaction(txn).status(),
         &TransactionStatus::Keep(
             VMStatus::new(StatusCode::TYPE_MISMATCH)
-                .with_message("argument length mismatch: expected 4 got 0".to_string())
+                .with_message("argument length mismatch: expected 5 got 1".to_string())
         )
     );
 }

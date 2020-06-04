@@ -20,10 +20,11 @@ script {
 script {
     use 0x0::LibraAccount;
     use 0x0::Coin1;
-    fun main() {
+    fun main(account: &signer) {
         LibraAccount::deposit(
+            account,
             {{bob}},
-            LibraAccount::withdraw_from_sender<Coin1::T>(10001)
+            LibraAccount::withdraw_from<Coin1::T>(account, 10001)
         );
     }
 }

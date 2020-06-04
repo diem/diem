@@ -12,7 +12,7 @@ main(account: &signer) {
   assert(!LibraAccount.delegated_key_rotation_capability(copy(sender)), 50);
 
   // extracting the capability should flip the flag
-  cap = LibraAccount.extract_sender_key_rotation_capability();
+  cap = LibraAccount.extract_key_rotation_capability(copy(account));
   assert(LibraAccount.delegated_key_rotation_capability(copy(sender)), 51);
 
   // restoring the capability should flip the flag back
@@ -34,7 +34,7 @@ import 0x0.LibraAccount;
 main(account: &signer) {
   let cap: LibraAccount.KeyRotationCapability;
 
-  cap = LibraAccount.extract_sender_key_rotation_capability();
+  cap = LibraAccount.extract_key_rotation_capability(copy(account));
   // should fail
   LibraAccount.rotate_authentication_key(move(account), h"00");
   LibraAccount.restore_key_rotation_capability(move(cap));

@@ -6,8 +6,8 @@ import 0x0.LibraAccount;
 import 0x0.LBR;
 import 0x0.Vector;
 
-main() {
-    LibraAccount.pay_from_sender<LBR.T>({{bob}}, 514);
+main(account: &signer) {
+    LibraAccount.pay_from<LBR.T>(move(account), {{bob}}, 514);
     assert(false, 42);
     return;
 }

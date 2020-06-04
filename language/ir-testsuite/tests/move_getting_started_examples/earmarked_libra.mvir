@@ -88,20 +88,18 @@ import 0x0.LBR;
 import 0x0.Libra;
 import {{default}}.EarmarkedLibra;
 
-main() {
+main(account: &signer) {
   let recipient_address: address;
   let coin: Libra.T<LBR.T>;
   let earmarked_coin: EarmarkedLibra.T;
-  let sender: address;
 
   recipient_address = 0xb0b;
-  coin = LibraAccount.withdraw_from_sender<LBR.T>(1000);
+  coin = LibraAccount.withdraw_from<LBR.T>(copy(account), 1000);
   EarmarkedLibra.create(move(coin), move(recipient_address));
 
   earmarked_coin = EarmarkedLibra.claim_for_creator();
   coin = EarmarkedLibra.unwrap(move(earmarked_coin));
-  sender = get_txn_sender();
-  LibraAccount.deposit<LBR.T>(move(sender), move(coin));
+  LibraAccount.deposit_to<LBR.T>(copy(account), move(coin));
 
   return;
 }

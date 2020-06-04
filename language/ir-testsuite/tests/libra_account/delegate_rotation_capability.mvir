@@ -17,11 +17,11 @@ module SharedKeyRotation {
 
     // Publish a SharedRotation resource for the account `cap.address` with master key
     // `master_key_address` under the sender's account
-    public publish(cap: LibraAccount.KeyRotationCapability, master_key_address: address) {
+    public publish(account: &signer, cap: LibraAccount.KeyRotationCapability, master_key_address: address) {
         let t: Self.T;
 
         t = T { cap: move(cap), master_key_address: move(master_key_address) };
-        move_to_sender<T>(move(t));
+        move_to<T>(move(account), move(t));
         return;
     }
 
@@ -52,9 +52,9 @@ module SharedKeyRotation {
 import {{alice}}.SharedKeyRotation;
 import 0x0.LibraAccount;
 // create a SharedKeyRotation for Alice's account with Bob's account key as the master key
-main() {
+main(account: &signer) {
     assert(LibraAccount.sequence_number({{alice}}) == 1, 77);
-    SharedKeyRotation.publish(LibraAccount.extract_sender_key_rotation_capability(), {{bob}});
+    SharedKeyRotation.publish(copy(account), LibraAccount.extract_key_rotation_capability(copy(account)), {{bob}});
     return;
 }
 

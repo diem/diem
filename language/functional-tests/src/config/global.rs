@@ -166,11 +166,9 @@ impl Config {
                 .nodes
                 .iter_mut()
                 .map(|c| {
-                    let peer_id = c.validator_network.as_ref().unwrap().peer_id();
                     let account_keypair =
                         c.test.as_mut().unwrap().operator_keypair.as_mut().unwrap();
-                    let privkey = account_keypair.take_private().unwrap();
-                    (peer_id, privkey)
+                    account_keypair.take_private().unwrap()
                 })
                 .collect::<Vec<_>>()
         } else {
@@ -189,7 +187,7 @@ impl Config {
                     let balance = def.balance.as_ref().unwrap_or(&DEFAULT_BALANCE).clone();
                     let account_data = if entry.is_validator() {
                         validator_accounts -= 1;
-                        let privkey = &validator_keys.get(validator_accounts).unwrap().1;
+                        let privkey = &validator_keys.get(validator_accounts).unwrap().clone();
                         AccountData::with_keypair(
                             privkey.clone(),
                             privkey.public_key(),

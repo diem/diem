@@ -7,18 +7,20 @@ module M {
     }
 }
 
+// check: EXECUTED
+
 //! new-transaction
 //! sender: association
 import 0x0.LBR;
 import 0x0.LibraAccount;
 import 0x0.Libra;
 main(blessed: &signer) {
-    LibraAccount.deposit<LBR.T>({{default}}, LBR.mint(move(blessed), 50000));
+    LibraAccount.deposit_to<LBR.T>(copy(blessed), LBR.mint(copy(blessed), 50000));
     return;
 }
 
 //! new-transaction
-//! gas-price: 1
+//! gas-price: 0
 //! max-gas: 5000
 //! sender: default
 import {{default}}.M;
@@ -31,16 +33,3 @@ main() {
 // check: gas_used
 // check: 5000
 // check: OUT_OF_GAS
-
-
-//! new-transaction
-//! sender: default
-import 0x0.LibraAccount;
-import 0x0.LBR;
-
-main() {
-    assert(LibraAccount.balance<LBR.T>(get_txn_sender()) == 45000, 42);
-    return;
-}
-
-// check: EXECUTED

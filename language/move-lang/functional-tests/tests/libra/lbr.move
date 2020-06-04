@@ -21,11 +21,11 @@ script {
 use 0x0::LibraAccount;
 use 0x0::LBR;
 fun main(account: &signer) {
-   LibraAccount::deposit({{alice}}, LBR::mint(account, 1));
-   LibraAccount::deposit({{alice}}, LBR::mint(account,  2));
-   LibraAccount::deposit({{alice}}, LBR::mint(account, 77));
-   LibraAccount::deposit({{alice}}, LBR::mint(account, 100));
-   LibraAccount::deposit({{alice}}, LBR::mint(account, 1589));
+   LibraAccount::deposit(account, {{alice}}, LBR::mint(account, 1));
+   LibraAccount::deposit(account, {{alice}}, LBR::mint(account,  2));
+   LibraAccount::deposit(account, {{alice}}, LBR::mint(account, 77));
+   LibraAccount::deposit(account, {{alice}}, LBR::mint(account, 100));
+   LibraAccount::deposit(account, {{alice}}, LBR::mint(account, 1589));
 }
 }
 // check: EXECUTED
@@ -38,7 +38,7 @@ use 0x0::LibraAccount;
 use 0x0::LBR;
 use 0x0::Libra;
 fun main(account: &signer) {
-   LibraAccount::deposit_to_sender(Libra::mint<LBR::T>(account, 1000));
+   LibraAccount::deposit_to(account, Libra::mint<LBR::T>(account, 1000));
 }
 }
 // check: MISSING_DATA

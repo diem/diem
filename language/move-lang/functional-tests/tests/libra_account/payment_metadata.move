@@ -6,8 +6,8 @@ script {
 use 0x0::LBR;
 use 0x0::LibraAccount;
 // send a transaction with metadata and make sure we see it in the PaymentReceivedEvent
-fun main() {
-    LibraAccount::pay_from_sender_with_metadata<LBR::T>({{bob}}, 1000, x"deadbeef", x"");
+fun main(account: &signer) {
+    LibraAccount::pay_from_with_metadata<LBR::T>(account, {{bob}}, 1000, x"deadbeef", x"");
 }
 }
 
@@ -23,10 +23,11 @@ script {
 use 0x0::LibraAccount;
 use 0x0::LBR;
 // same thing, but using "deposit_with_metadata" API
-fun main() {
+fun main(account: &signer) {
     LibraAccount::deposit_with_metadata<LBR::T>(
+        account,
         {{bob}},
-        LibraAccount::withdraw_from_sender<LBR::T>(100),
+        LibraAccount::withdraw_from<LBR::T>(account, 100),
         x"deadbeef",
         x""
     )

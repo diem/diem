@@ -52,9 +52,9 @@ import 0x0.LibraAccount;
 import 0x0.LBR;
 import 0x0.Libra;
 
-main() {
+main(account: &signer) {
     let coin: Libra.T<LBR.T>;
-    coin = LibraAccount.withdraw_from_sender<LBR.T>(1000);
+    coin = LibraAccount.withdraw_from<LBR.T>(copy(account), 1000);
     M.new();
     M.put_coin(move(coin));
 
@@ -67,11 +67,11 @@ import 0x0.LBR;
 import 0x0.Libra;
 import 0x0.LibraAccount;
 
-main() {
+main(account: &signer) {
     let coin: Libra.T<LBR.T>;
 
     assert(M.get_value(0) == 1000, 4);
-    coin = LibraAccount.withdraw_from_sender<LBR.T>(300);
+    coin = LibraAccount.withdraw_from<LBR.T>(copy(account), 300);
     M.put_coin(move(coin));
 
     return;
@@ -84,12 +84,12 @@ import 0x0.LBR;
 import 0x0.Libra;
 import 0x0.LibraAccount;
 
-main() {
+main(account: &signer) {
     let coin: Libra.T<LBR.T>;
 
     assert(M.get_value(0) == 1000, 4);
     assert(M.get_value(1) == 300, 4);
     coin = M.pop();
-    LibraAccount.deposit<LBR.T>(get_txn_sender(), move(coin));
+    LibraAccount.deposit_to<LBR.T>(copy(account), move(coin));
     return;
 }

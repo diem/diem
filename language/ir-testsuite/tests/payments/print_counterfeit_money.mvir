@@ -26,14 +26,14 @@ module M {
         return Self.fetch<T2>();
     }
 
-    public become_rich() acquires R {
+    public become_rich(account: &signer) acquires R {
         let fake: Self.FakeCoin;
         let real: Libra.T<LBR.T>;
 
         fake = FakeCoin { value: 400000 };
         real = Self.transmute<Self.FakeCoin, Libra.T<LBR.T>>(move(fake));
 
-        LibraAccount.deposit<LBR.T>(get_txn_sender(), move(real));
+        LibraAccount.deposit_to<LBR.T>(move(account), move(real));
 
         return;
     }
@@ -44,8 +44,8 @@ import {{default}}.M;
 import 0x0.LibraAccount;
 import 0x0.LBR;
 
-main() {
-    M.become_rich();
+main(account: &signer) {
+    M.become_rich(move(account));
     assert(LibraAccount.balance<LBR.T>(get_txn_sender()) == 500000, 42);
     return;
 }
