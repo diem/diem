@@ -317,7 +317,7 @@ impl LibraSwarm {
         let config = if role.is_validator() {
             let mut validator_builder = ValidatorConfig::new();
             validator_builder.template = node_config;
-            validator_builder.nodes = num_nodes;
+            validator_builder.num_nodes = num_nodes;
             SwarmConfig::build(&validator_builder, config_path)?
         } else {
             let upstream_config_dir = upstream_config_dir.expect("No upstream node for full nodes");

@@ -164,7 +164,7 @@ fn read_validator_set(libra_db: &Arc<dyn DbReader>) -> ValidatorSet {
 
 fn gen_configs(count: usize) -> Vec<NodeConfig> {
     let mut node_config = config_builder::ValidatorConfig::new();
-    node_config.nodes = count;
+    node_config.num_nodes = count;
     node_config.build_common(false).unwrap().0
 }
 
