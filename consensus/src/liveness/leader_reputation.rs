@@ -5,7 +5,6 @@ use crate::liveness::proposer_election::{next, ProposerElection};
 use consensus_types::common::{Author, Round};
 use libra_logger::prelude::*;
 use libra_types::block_metadata::{new_block_event_key, NewBlockEvent};
-
 use std::{
     cmp::Ordering,
     collections::HashSet,
