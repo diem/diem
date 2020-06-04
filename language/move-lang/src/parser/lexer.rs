@@ -307,17 +307,7 @@ fn find_token(file: &'static str, text: &str, start_offset: usize) -> Result<(To
         'A'..='Z' | 'a'..='z' | '_' => {
             if text.starts_with("x\"") || text.starts_with("b\"") {
                 let line = &text.lines().next().unwrap()[2..];
-
-                let last_quote = line
-                    .chars()
-                    .enumerate()
-                    .filter(|(idx, c)| {
-                        *c == '"' && (*idx == 0 || !line[idx - 1..].starts_with('\\'))
-                    })
-                    .map(|(idx, _)| idx)
-                    .next();
-
-                match last_quote {
+                match get_string_len(line) {
                     Some(last_quote) => (Tok::ByteStringValue, 2 + last_quote + 1),
                     None => {
                         return Err(vec![(
@@ -458,6 +448,24 @@ fn get_hex_digits_len(text: &str) -> usize {
         _ => true,
     })
     .unwrap_or_else(|| text.len())
+}
+
+// Return the length of the quoted string, or None if there is no closing quote.
+fn get_string_len(text: &str) -> Option<usize> {
+    let mut pos = 0;
+    let mut iter = text.chars();
+    while let Some(chr) = iter.next() {
+        if chr == '\\' {
+            // Skip over the escaped character (e.g., a quote or another backslash)
+            if iter.next().is_some() {
+                pos += 1;
+            }
+        } else if chr == '"' {
+            return Some(pos);
+        }
+        pos += 1;
+    }
+    None
 }
 
 fn get_name_token(name: &str) -> Tok {
