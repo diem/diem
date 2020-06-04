@@ -66,10 +66,6 @@ impl BlockMetadata {
     pub fn proposer(&self) -> AccountAddress {
         self.proposer
     }
-
-    pub fn voters(&self) -> Vec<AccountAddress> {
-        self.previous_block_votes.clone()
-    }
 }
 
 pub fn new_block_event_key() -> EventKey {
