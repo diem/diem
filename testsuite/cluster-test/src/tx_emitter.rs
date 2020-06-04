@@ -82,7 +82,7 @@ pub struct TxStatsRate {
     pub committed: u64,
     pub expired: u64,
     pub latency: u64,
-    pub p90_latency: u64,
+    pub p99_latency: u64,
 }
 
 #[derive(Clone)]
@@ -781,7 +781,7 @@ impl TxStats {
             committed: self.committed / window.as_secs(),
             expired: self.expired / window.as_secs(),
             latency: self.latency / self.committed,
-            p90_latency: self.latency_buckets.percentile(9, 10),
+            p99_latency: self.latency_buckets.percentile(99, 100),
         }
     }
 }
@@ -814,8 +814,8 @@ impl fmt::Display for TxStatsRate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "submitted: {} txn/s, committed: {} txn/s, expired: {} txn/s, latency: {} ms, p90 latency: {} ms",
-            self.submitted, self.committed, self.expired, self.latency, self.p90_latency,
+            "submitted: {} txn/s, committed: {} txn/s, expired: {} txn/s, latency: {} ms, p99 latency: {} ms",
+            self.submitted, self.committed, self.expired, self.latency, self.p99_latency,
         )
     }
 }
