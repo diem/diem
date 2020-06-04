@@ -10,12 +10,8 @@ use libra_global_constants::{
 use libra_secure_storage::Storage;
 use libra_temppath::TempPath;
 use libra_types::{
-    account_address::{self, AccountAddress},
-    account_config,
-    account_state::AccountState,
-    on_chain_config::ValidatorSet,
-    validator_config::ValidatorConfig,
-    waypoint::Waypoint,
+    account_address::AccountAddress, account_config, account_state::AccountState,
+    on_chain_config::ValidatorSet, validator_config::ValidatorConfig, waypoint::Waypoint,
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
@@ -74,6 +70,16 @@ impl Verify {
         writeln!(buffer, "Data").unwrap();
         write_break(&mut buffer);
 
+        write_string(
+            storage.as_ref(),
+            &mut buffer,
+            libra_global_constants::OPERATOR_ACCOUNT,
+        );
+        write_string(
+            storage.as_ref(),
+            &mut buffer,
+            libra_global_constants::OWNER_ACCOUNT,
+        );
         write_u64(storage.as_ref(), &mut buffer, libra_global_constants::EPOCH);
         write_u64(
             storage.as_ref(),
@@ -121,6 +127,14 @@ fn write_ed25519_key(storage: &dyn Storage, buffer: &mut String, key: &'static s
 
 fn write_x25519_key(storage: &dyn Storage, buffer: &mut String, key: &'static str) {
     let value = ed25519_from_storage(key, storage).map_or_else(|e| e, |v| v.to_string());
+    writeln!(buffer, "{} - {}", key, value).unwrap();
+}
+
+fn write_string(storage: &dyn Storage, buffer: &mut String, key: &str) {
+    let value = storage
+        .get(key)
+        .and_then(|c| c.value.string())
+        .unwrap_or_else(|e| e.to_string());
     writeln!(buffer, "{} - {}", key, value).unwrap();
 }
 
@@ -256,12 +270,25 @@ fn validator_config(
 }
 
 fn validator_account(storage: &dyn Storage) -> Result<AccountAddress, Error> {
-    let key = storage
-        .get_public_key(libra_global_constants::OPERATOR_KEY)
+    let account = storage
+        .get(libra_global_constants::OPERATOR_ACCOUNT)
         .map_err(|e| {
-            Error::LocalStorageReadError(libra_global_constants::OPERATOR_KEY, e.to_string())
+            Error::LocalStorageReadError(libra_global_constants::OPERATOR_ACCOUNT, e.to_string())
+        })?
+        .value
+        .string()
+        .map_err(|e| {
+            Error::UnexpectedError(format!(
+                "Unable to parse operator account: {}",
+                e.to_string()
+            ))
         })?;
-    Ok(account_address::from_public_key(&key.public_key))
+    AccountAddress::try_from(account).map_err(|e| {
+        Error::UnexpectedError(format!(
+            "Unable to parse operator account: {}",
+            e.to_string()
+        ))
+    })
 }
 
 fn ed25519_from_storage(
