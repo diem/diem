@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{block::Block, common::Round};
+use crate::common::Round;
 use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash};
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_types::validator_signer::ValidatorSigner;
@@ -21,13 +21,6 @@ pub struct Timeout {
 impl Timeout {
     pub fn new(epoch: u64, round: Round) -> Self {
         Self { epoch, round }
-    }
-
-    pub fn from_block(block: &Block) -> Self {
-        Self {
-            epoch: block.epoch(),
-            round: block.round(),
-        }
     }
 
     pub fn epoch(&self) -> u64 {
