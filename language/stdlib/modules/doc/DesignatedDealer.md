@@ -12,9 +12,7 @@
 -  [Function `tiered_mint`](#0x0_DesignatedDealer_tiered_mint)
 -  [Function `is_designated_dealer`](#0x0_DesignatedDealer_is_designated_dealer)
 -  [Function `reset_window`](#0x0_DesignatedDealer_reset_window)
--  [Function `assert_account_is_blessed`](#0x0_DesignatedDealer_assert_account_is_blessed)
 -  [Function `window_length`](#0x0_DesignatedDealer_window_length)
--  [Function `treasury_compliance_account`](#0x0_DesignatedDealer_treasury_compliance_account)
 
 
 
@@ -261,31 +259,6 @@
 
 </details>
 
-<a name="0x0_DesignatedDealer_assert_account_is_blessed"></a>
-
-## Function `assert_account_is_blessed`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_DesignatedDealer_assert_account_is_blessed">assert_account_is_blessed</a>(sender_account: &signer)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_DesignatedDealer_assert_account_is_blessed">assert_account_is_blessed</a>(sender_account: &signer) {
-    // Verify that the sender is treasury compliant account
-    Txn::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(sender_account) == <a href="#0x0_DesignatedDealer_treasury_compliance_account">treasury_compliance_account</a>(), 0)
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x0_DesignatedDealer_window_length"></a>
 
 ## Function `window_length`
@@ -304,30 +277,6 @@
 <pre><code><b>fun</b> <a href="#0x0_DesignatedDealer_window_length">window_length</a>(): u64 {
     // number of microseconds in a day
     86400000000
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x0_DesignatedDealer_treasury_compliance_account"></a>
-
-## Function `treasury_compliance_account`
-
-
-
-<pre><code><b>fun</b> <a href="#0x0_DesignatedDealer_treasury_compliance_account">treasury_compliance_account</a>(): address
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x0_DesignatedDealer_treasury_compliance_account">treasury_compliance_account</a>(): address {
-    0xB1E55ED
 }
 </code></pre>
 

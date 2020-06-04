@@ -262,6 +262,20 @@ module Libra {
         };
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+    // Treasury Compliance specific methods for DDs
+    ///////////////////////////////////////////////////////////////////////////
+
+    // Publish `preburn` under 'account'. Used for bootstrapping designated dealer
+    // as assocation TC account is creating this resource for DD
+    public fun publish_preburn_to_account<Token>(creator: &signer, account: &signer) {
+        Association::assert_account_is_blessed(creator);
+        let preburn = Preburn<Token> { requests: Vector::empty(), is_approved: true };
+        move_to(account, preburn)
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+
     /// Send coin to the preburn holding area for `account`, where it will wait to either be burned
     /// or returned to the balance of `account`.
     /// Fails if `account` does not have a published Preburn resource
@@ -354,6 +368,7 @@ module Libra {
     public fun publish_preburn<Token>(account: &signer, preburn: Preburn<Token>) {
         move_to(account, preburn)
     }
+
 
     // Remove and return the `Preburn` resource under the sender's account
     public fun remove_preburn<Token>(account: &signer): Preburn<Token> acquires Preburn {
