@@ -228,11 +228,6 @@ impl AuthenticationKeyPreimage {
         Self::new(public_key.to_bytes(), Scheme::MultiEd25519)
     }
 
-    /// Construct a slice from this authentication key
-    pub fn to_bytes(&self) -> &[u8] {
-        &self.0
-    }
-
     /// Construct a vector from this authentication key
     pub fn into_vec(self) -> Vec<u8> {
         self.0
