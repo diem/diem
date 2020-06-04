@@ -42,10 +42,6 @@ impl ExecutedBlock {
         &self.block
     }
 
-    pub fn root_hash(&self) -> HashValue {
-        self.state_compute_result.root_hash()
-    }
-
     pub fn epoch(&self) -> u64 {
         self.block().epoch()
     }
