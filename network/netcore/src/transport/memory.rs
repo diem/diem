@@ -12,7 +12,7 @@ use std::{
 };
 
 /// Transport to build in-memory connections
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct MemoryTransport;
 
 impl Transport for MemoryTransport {

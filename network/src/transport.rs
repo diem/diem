@@ -588,54 +588,95 @@ mod test {
         id2: PeerId,
         key2: &x25519::PrivateKey,
     ) -> Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>> {
+        let pubkeys1 = NetworkPublicKeys {
+            identity_public_key: key1.public_key(),
+        };
+        let pubkeys2 = NetworkPublicKeys {
+            identity_public_key: key2.public_key(),
+        };
         Arc::new(RwLock::new(
-            vec![
-                (
-                    id1,
-                    NetworkPublicKeys {
-                        identity_public_key: key1.public_key(),
-                    },
-                ),
-                (
-                    id2,
-                    NetworkPublicKeys {
-                        identity_public_key: key2.public_key(),
-                    },
-                ),
-            ]
-            .into_iter()
-            .collect(),
+            vec![(id1, pubkeys1), (id2, pubkeys2)].into_iter().collect(),
         ))
     }
 
-    fn setup() -> (
+    enum Auth {
+        Mutual,
+        ServerOnly,
+    }
+
+    fn setup<TTransport>(
+        base_transport: TTransport,
+        auth: Auth,
+    ) -> (
         Runtime,
-        (PeerId, x25519::PrivateKey),
-        (PeerId, x25519::PrivateKey),
-        Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
+        (PeerId, LibraNetTransport<TTransport>),
+        (PeerId, LibraNetTransport<TTransport>),
+        Option<Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>>,
         SupportedProtocols,
-    ) {
+    )
+    where
+        TTransport: Transport<Error = io::Error> + Clone,
+        TTransport::Output: TSocket,
+        TTransport::Outbound: Send + 'static,
+        TTransport::Inbound: Send + 'static,
+        TTransport::Listener: Send + 'static,
+    {
         let rt = Runtime::new().unwrap();
 
         let mut rng = StdRng::from_seed(TEST_SEED);
-
-        let listener_peer_id = PeerId::random();
         let listener_key = x25519::PrivateKey::generate(&mut rng);
-
-        let dialer_peer_id = PeerId::random();
         let dialer_key = x25519::PrivateKey::generate(&mut rng);
 
-        let trusted_peers =
-            build_trusted_peers(dialer_peer_id, &dialer_key, listener_peer_id, &listener_key);
+        let (listener_peer_id, dialer_peer_id, trusted_peers) = match auth {
+            Auth::Mutual => {
+                let listener_peer_id = PeerId::random();
+                let dialer_peer_id = PeerId::random();
+
+                let trusted_peers = build_trusted_peers(
+                    dialer_peer_id,
+                    &dialer_key,
+                    listener_peer_id,
+                    &listener_key,
+                );
+
+                (listener_peer_id, dialer_peer_id, Some(trusted_peers))
+            }
+            Auth::ServerOnly => {
+                let listener_peer_id =
+                    identity_pubkey_to_peer_id(None, &listener_key.public_key()).unwrap();
+                let dialer_peer_id =
+                    identity_pubkey_to_peer_id(None, &dialer_key.public_key()).unwrap();
+
+                (listener_peer_id, dialer_peer_id, None)
+            }
+        };
 
         let supported_protocols = SupportedProtocols::from(
             [ProtocolId::ConsensusRpc, ProtocolId::DiscoveryDirectSend].iter(),
         );
 
+        let listener_transport = LibraNetTransport::new(
+            base_transport.clone(),
+            listener_key,
+            trusted_peers.clone(),
+            HANDSHAKE_VERSION,
+            NetworkId::Validator,
+            supported_protocols.clone(),
+        );
+
+        let dialer_transport = LibraNetTransport::new(
+            base_transport,
+            dialer_key,
+            trusted_peers.clone(),
+            HANDSHAKE_VERSION,
+            NetworkId::Validator,
+            supported_protocols.clone(),
+        );
+
         (
             rt,
-            (listener_peer_id, listener_key),
-            (dialer_peer_id, dialer_key),
+            (listener_peer_id, listener_transport),
+            (dialer_peer_id, dialer_transport),
             trusted_peers,
             supported_protocols,
         )
@@ -666,143 +707,32 @@ mod test {
         );
     }
 
-    ////////////////////////////////////////
-    // LibraNetTransport<MemoryTransport> //
-    ////////////////////////////////////////
-
-    #[test]
-    fn test_mutual_auth_memory_transport() {
+    fn test_transport_success<TTransport>(
+        base_transport: TTransport,
+        auth: Auth,
+        listen_addr: &str,
+        expect_formatted_addr: fn(&NetworkAddress),
+    ) where
+        TTransport: Transport<Error = io::Error> + Clone,
+        TTransport::Output: TSocket,
+        TTransport::Outbound: Send + 'static,
+        TTransport::Inbound: Send + 'static,
+        TTransport::Listener: Send + 'static,
+    {
         let (
             mut rt,
-            (listener_peer_id, listener_key),
-            (dialer_peer_id, dialer_key),
-            trusted_peers,
-            supported_protocols,
-        ) = setup();
-
-        let listener_transport = LibraNetTransport::new(
-            memory::MemoryTransport,
-            listener_key,
-            Some(trusted_peers.clone()),
-            HANDSHAKE_VERSION,
-            NetworkId::Validator,
-            supported_protocols.clone(),
-        );
-
-        let dialer_transport = LibraNetTransport::new(
-            memory::MemoryTransport,
-            dialer_key,
-            Some(trusted_peers),
-            HANDSHAKE_VERSION,
-            NetworkId::Validator,
-            supported_protocols.clone(),
-        );
-
-        let (mut inbounds, listener_addr) = rt.enter(|| {
-            listener_transport
-                .listen_on("/memory/0".parse().unwrap())
-                .unwrap()
-        });
-        expect_memory_noise_addr(&listener_addr);
-        let supported_protocols_clone = supported_protocols.clone();
-
-        let listener_task = async move {
-            // accept one inbound connection from dialer
-
-            let (inbound, _dialer_addr) = inbounds.next().await.unwrap().unwrap();
-            let mut conn = inbound.await.unwrap();
-
-            // check connection metadata
-
-            assert_eq!(conn.metadata.peer_id, dialer_peer_id);
-            expect_memory_noise_addr(&conn.metadata.addr);
-            assert_eq!(conn.metadata.origin, ConnectionOrigin::Inbound);
-            assert_eq!(
-                conn.metadata.messaging_protocol,
-                MessagingProtocolVersion::V1
-            );
-            assert_eq!(
-                conn.metadata.application_protocols,
-                supported_protocols_clone,
-            );
-
-            // test the socket works
-
-            let msg = write_read_msg(&mut conn.socket, b"foobar").await;
-            assert_eq!(&msg, b"barbaz".as_ref());
-
-            conn.socket.close().await.unwrap();
-        };
-
-        let dialer_task = async move {
-            // dial listener
-
-            let mut conn = dialer_transport
-                .dial(listener_addr.clone())
-                .unwrap()
-                .await
-                .unwrap();
-
-            // check connection metadata
-
-            assert_eq!(conn.metadata.peer_id, listener_peer_id);
-            assert_eq!(conn.metadata.addr, listener_addr);
-            assert_eq!(conn.metadata.origin, ConnectionOrigin::Outbound);
-            assert_eq!(
-                conn.metadata.messaging_protocol,
-                MessagingProtocolVersion::V1
-            );
-            assert_eq!(conn.metadata.application_protocols, supported_protocols);
-
-            // test the socket works
-
-            let msg = write_read_msg(&mut conn.socket, b"barbaz").await;
-            assert_eq!(&msg, b"foobar".as_ref());
-
-            conn.socket.close().await.unwrap();
-        };
-
-        rt.block_on(future::join(listener_task, dialer_task));
-    }
-
-    #[test]
-    fn test_server_only_auth_memory_transport() {
-        let (
-            mut rt,
-            (_listener_peer_id, listener_key),
-            (_dialer_peer_id, dialer_key),
+            (listener_peer_id, listener_transport),
+            (dialer_peer_id, dialer_transport),
             _trusted_peers,
             supported_protocols,
-        ) = setup();
-
-        let listener_peer_id =
-            identity_pubkey_to_peer_id(None, &listener_key.public_key()).unwrap();
-        let dialer_peer_id = identity_pubkey_to_peer_id(None, &dialer_key.public_key()).unwrap();
-
-        let listener_transport = LibraNetTransport::new(
-            memory::MemoryTransport,
-            listener_key,
-            None,
-            HANDSHAKE_VERSION,
-            NetworkId::Validator,
-            supported_protocols.clone(),
-        );
-
-        let dialer_transport = LibraNetTransport::new(
-            memory::MemoryTransport,
-            dialer_key,
-            None,
-            HANDSHAKE_VERSION,
-            NetworkId::Validator,
-            supported_protocols.clone(),
-        );
+        ) = setup(base_transport, auth);
 
         let (mut inbounds, listener_addr) = rt.enter(|| {
             listener_transport
-                .listen_on("/memory/0".parse().unwrap())
+                .listen_on(listen_addr.parse().unwrap())
                 .unwrap()
         });
-        expect_memory_noise_addr(&listener_addr);
+        expect_formatted_addr(&listener_addr);
         let supported_protocols_clone = supported_protocols.clone();
 
         let listener_task = async move {
@@ -814,7 +744,7 @@ mod test {
             // check connection metadata
 
             assert_eq!(conn.metadata.peer_id, dialer_peer_id);
-            expect_memory_noise_addr(&conn.metadata.addr);
+            expect_formatted_addr(&conn.metadata.addr);
             assert_eq!(conn.metadata.origin, ConnectionOrigin::Inbound);
             assert_eq!(
                 conn.metadata.messaging_protocol,
@@ -864,47 +794,40 @@ mod test {
         rt.block_on(future::join(listener_task, dialer_task));
     }
 
-    #[test]
-    fn test_mutual_auth_fail_dialer_unauthenticated_memory_transport() {
+    fn test_transport_rejects_unauthed_dialer<TTransport>(
+        base_transport: TTransport,
+        listen_addr: &str,
+        expect_formatted_addr: fn(&NetworkAddress),
+    ) where
+        TTransport: Transport<Error = io::Error> + Clone,
+        TTransport::Output: TSocket,
+        TTransport::Outbound: Send + 'static,
+        TTransport::Inbound: Send + 'static,
+        TTransport::Listener: Send + 'static,
+    {
         let (
             mut rt,
-            (_listener_peer_id, listener_key),
-            (dialer_peer_id, dialer_key),
+            (_listener_peer_id, listener_transport),
+            (dialer_peer_id, dialer_transport),
             trusted_peers,
-            supported_protocols,
-        ) = setup();
+            _supported_protocols,
+        ) = setup(base_transport, Auth::Mutual);
 
         // remove dialer from trusted_peers set
         trusted_peers
+            .as_ref()
+            .unwrap()
             .write()
             .unwrap()
             .remove(&dialer_peer_id)
             .unwrap();
 
-        let listener_transport = LibraNetTransport::new(
-            memory::MemoryTransport,
-            listener_key,
-            Some(trusted_peers.clone()),
-            HANDSHAKE_VERSION,
-            NetworkId::Validator,
-            supported_protocols.clone(),
-        );
-
-        let dialer_transport = LibraNetTransport::new(
-            memory::MemoryTransport,
-            dialer_key,
-            Some(trusted_peers),
-            HANDSHAKE_VERSION,
-            NetworkId::Validator,
-            supported_protocols,
-        );
-
         let (mut inbounds, listener_addr) = rt.enter(|| {
             listener_transport
-                .listen_on("/memory/0".parse().unwrap())
+                .listen_on(listen_addr.parse().unwrap())
                 .unwrap()
         });
-        expect_memory_noise_addr(&listener_addr);
+        expect_formatted_addr(&listener_addr);
 
         let listener_task = async move {
             // accept one inbound connection from dialer
@@ -923,6 +846,39 @@ mod test {
         };
 
         rt.block_on(future::join(listener_task, dialer_task));
+    }
+
+    ////////////////////////////////////////
+    // LibraNetTransport<MemoryTransport> //
+    ////////////////////////////////////////
+
+    #[test]
+    fn test_memory_transport_mutual_auth() {
+        test_transport_success(
+            memory::MemoryTransport,
+            Auth::Mutual,
+            "/memory/0",
+            expect_memory_noise_addr,
+        );
+    }
+
+    #[test]
+    fn test_memory_transport_server_only_auth() {
+        test_transport_success(
+            memory::MemoryTransport,
+            Auth::ServerOnly,
+            "/memory/0",
+            expect_memory_noise_addr,
+        );
+    }
+
+    #[test]
+    fn test_memory_transport_rejects_unauthed_dialer() {
+        test_transport_rejects_unauthed_dialer(
+            memory::MemoryTransport,
+            "/memory/0",
+            expect_memory_noise_addr,
+        );
     }
 
     /////////////////////////////////////
@@ -930,259 +886,37 @@ mod test {
     /////////////////////////////////////
 
     #[test]
-    fn test_mutual_auth_tcp_transport() {
-        let (
-            mut rt,
-            (listener_peer_id, listener_key),
-            (dialer_peer_id, dialer_key),
-            trusted_peers,
-            supported_protocols,
-        ) = setup();
-
-        let listener_transport = LibraNetTransport::new(
+    fn test_tcp_transport_mutual_auth() {
+        test_transport_success(
             LIBRA_TCP_TRANSPORT.clone(),
-            listener_key,
-            Some(trusted_peers.clone()),
-            HANDSHAKE_VERSION,
-            NetworkId::Validator,
-            supported_protocols.clone(),
+            Auth::Mutual,
+            "/ip4/127.0.0.1/tcp/0",
+            expect_ip4_tcp_noise_addr,
         );
-
-        let dialer_transport = LibraNetTransport::new(
-            LIBRA_TCP_TRANSPORT.clone(),
-            dialer_key,
-            Some(trusted_peers),
-            HANDSHAKE_VERSION,
-            NetworkId::Validator,
-            supported_protocols.clone(),
-        );
-
-        let (mut inbounds, listener_addr) = rt.enter(|| {
-            listener_transport
-                .listen_on("/ip4/127.0.0.1/tcp/0".parse().unwrap())
-                .unwrap()
-        });
-        expect_ip4_tcp_noise_addr(&listener_addr);
-        let supported_protocols_clone = supported_protocols.clone();
-
-        let listener_task = async move {
-            // accept one inbound connection from dialer
-
-            let (inbound, _dialer_addr) = inbounds.next().await.unwrap().unwrap();
-            let mut conn = inbound.await.unwrap();
-
-            // check connection metadata
-
-            assert_eq!(conn.metadata.peer_id, dialer_peer_id);
-            expect_ip4_tcp_noise_addr(&conn.metadata.addr);
-            assert_eq!(conn.metadata.origin, ConnectionOrigin::Inbound);
-            assert_eq!(
-                conn.metadata.messaging_protocol,
-                MessagingProtocolVersion::V1
-            );
-            assert_eq!(
-                conn.metadata.application_protocols,
-                supported_protocols_clone,
-            );
-
-            // test the socket works
-
-            let msg = write_read_msg(&mut conn.socket, b"foobar").await;
-            assert_eq!(&msg, b"barbaz".as_ref());
-
-            conn.socket.close().await.unwrap();
-        };
-
-        let dialer_task = async move {
-            // dial listener
-
-            let mut conn = dialer_transport
-                .dial(listener_addr.clone())
-                .unwrap()
-                .await
-                .unwrap();
-
-            // check connection metadata
-
-            assert_eq!(conn.metadata.peer_id, listener_peer_id);
-            assert_eq!(conn.metadata.addr, listener_addr);
-            assert_eq!(conn.metadata.origin, ConnectionOrigin::Outbound);
-            assert_eq!(
-                conn.metadata.messaging_protocol,
-                MessagingProtocolVersion::V1
-            );
-            assert_eq!(conn.metadata.application_protocols, supported_protocols);
-
-            // test the socket works
-
-            let msg = write_read_msg(&mut conn.socket, b"barbaz").await;
-            assert_eq!(&msg, b"foobar".as_ref());
-
-            conn.socket.close().await.unwrap();
-        };
-
-        rt.block_on(future::join(listener_task, dialer_task));
     }
 
     #[test]
-    fn test_server_only_auth_tcp_transport() {
-        let (
-            mut rt,
-            (_listener_peer_id, listener_key),
-            (_dialer_peer_id, dialer_key),
-            _trusted_peers,
-            supported_protocols,
-        ) = setup();
-
-        let listener_peer_id =
-            identity_pubkey_to_peer_id(None, &listener_key.public_key()).unwrap();
-        let dialer_peer_id = identity_pubkey_to_peer_id(None, &dialer_key.public_key()).unwrap();
-
-        let listener_transport = LibraNetTransport::new(
+    fn test_tcp_transport_server_only_auth() {
+        test_transport_success(
             LIBRA_TCP_TRANSPORT.clone(),
-            listener_key,
-            None,
-            HANDSHAKE_VERSION,
-            NetworkId::Validator,
-            supported_protocols.clone(),
+            Auth::ServerOnly,
+            "/ip4/127.0.0.1/tcp/0",
+            expect_ip4_tcp_noise_addr,
         );
-
-        let dialer_transport = LibraNetTransport::new(
-            LIBRA_TCP_TRANSPORT.clone(),
-            dialer_key,
-            None,
-            HANDSHAKE_VERSION,
-            NetworkId::Validator,
-            supported_protocols.clone(),
-        );
-
-        let (mut inbounds, listener_addr) = rt.enter(|| {
-            listener_transport
-                .listen_on("/ip4/127.0.0.1/tcp/0".parse().unwrap())
-                .unwrap()
-        });
-        expect_ip4_tcp_noise_addr(&listener_addr);
-        let supported_protocols_clone = supported_protocols.clone();
-
-        let listener_task = async move {
-            // accept one inbound connection from dialer
-
-            let (inbound, _dialer_addr) = inbounds.next().await.unwrap().unwrap();
-            let mut conn = inbound.await.unwrap();
-
-            // check connection metadata
-
-            assert_eq!(conn.metadata.peer_id, dialer_peer_id);
-            expect_ip4_tcp_noise_addr(&conn.metadata.addr);
-            assert_eq!(conn.metadata.origin, ConnectionOrigin::Inbound);
-            assert_eq!(
-                conn.metadata.messaging_protocol,
-                MessagingProtocolVersion::V1
-            );
-            assert_eq!(
-                conn.metadata.application_protocols,
-                supported_protocols_clone,
-            );
-
-            // test the socket works
-
-            let msg = write_read_msg(&mut conn.socket, b"foobar").await;
-            assert_eq!(&msg, b"barbaz".as_ref());
-
-            conn.socket.close().await.unwrap();
-        };
-
-        let dialer_task = async move {
-            // dial listener
-
-            let mut conn = dialer_transport
-                .dial(listener_addr.clone())
-                .unwrap()
-                .await
-                .unwrap();
-
-            // check connection metadata
-
-            assert_eq!(conn.metadata.peer_id, listener_peer_id);
-            assert_eq!(conn.metadata.addr, listener_addr);
-            assert_eq!(conn.metadata.origin, ConnectionOrigin::Outbound);
-            assert_eq!(
-                conn.metadata.messaging_protocol,
-                MessagingProtocolVersion::V1
-            );
-            assert_eq!(conn.metadata.application_protocols, supported_protocols);
-
-            // test the socket works
-
-            let msg = write_read_msg(&mut conn.socket, b"barbaz").await;
-            assert_eq!(&msg, b"foobar".as_ref());
-
-            conn.socket.close().await.unwrap();
-        };
-
-        rt.block_on(future::join(listener_task, dialer_task));
     }
 
     #[test]
-    fn test_mutual_auth_fail_dialer_unauthenticated_tcp_transport() {
-        let (
-            mut rt,
-            (_listener_peer_id, listener_key),
-            (dialer_peer_id, dialer_key),
-            trusted_peers,
-            supported_protocols,
-        ) = setup();
-
-        // remove dialer from trusted_peers set
-        trusted_peers
-            .write()
-            .unwrap()
-            .remove(&dialer_peer_id)
-            .unwrap();
-
-        let listener_transport = LibraNetTransport::new(
+    fn test_tcp_transport_rejects_unauthed_dialer() {
+        test_transport_rejects_unauthed_dialer(
             LIBRA_TCP_TRANSPORT.clone(),
-            listener_key,
-            Some(trusted_peers.clone()),
-            HANDSHAKE_VERSION,
-            NetworkId::Validator,
-            supported_protocols.clone(),
+            "/ip4/127.0.0.1/tcp/0",
+            expect_ip4_tcp_noise_addr,
         );
-
-        let dialer_transport = LibraNetTransport::new(
-            LIBRA_TCP_TRANSPORT.clone(),
-            dialer_key,
-            Some(trusted_peers),
-            HANDSHAKE_VERSION,
-            NetworkId::Validator,
-            supported_protocols,
-        );
-
-        let (mut inbounds, listener_addr) = rt.enter(|| {
-            listener_transport
-                .listen_on("/ip4/127.0.0.1/tcp/0".parse().unwrap())
-                .unwrap()
-        });
-        expect_ip4_tcp_noise_addr(&listener_addr);
-
-        let listener_task = async move {
-            // accept one inbound connection from dialer
-            let (inbound, _dialer_addr) = inbounds.next().await.unwrap().unwrap();
-            inbound
-                .await
-                .expect_err("should fail because the dialer is not a trusted peer");
-        };
-
-        let dialer_task = async move {
-            // dial listener
-            let fut_upgrade = dialer_transport.dial(listener_addr.clone()).unwrap();
-            fut_upgrade
-                .await
-                .expect_err("should fail because listener rejects our unauthed connection");
-        };
-
-        rt.block_on(future::join(listener_task, dialer_task));
     }
+
+    ///////////////////////
+    // perform_handshake //
+    ///////////////////////
 
     #[test]
     fn handshake_network_id_mismatch() {
