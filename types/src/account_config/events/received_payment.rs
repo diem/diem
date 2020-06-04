@@ -31,21 +31,6 @@ pub struct ReceivedPaymentEvent {
 }
 
 impl ReceivedPaymentEvent {
-    // TODO: should only be used for libra client testing and be removed eventually
-    pub fn new(
-        amount: u64,
-        currency_code: Identifier,
-        sender: AccountAddress,
-        metadata: Vec<u8>,
-    ) -> Self {
-        Self {
-            amount,
-            currency_code,
-            sender,
-            metadata,
-        }
-    }
-
     pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         lcs::from_bytes(bytes).map_err(Into::into)
     }
