@@ -5,7 +5,7 @@ use crate::{
     account_address::AccountAddress,
     account_config::{
         type_tag_for_currency_code, AccountResource, AccountRole, BalanceResource, ChildVASP,
-        ChildVASPRole, CurrencyInfoResource, EmptyRole, ParentVASP, ParentVASPRole, UnhostedRole,
+        ChildVASPRole, EmptyRole, ParentVASP, ParentVASPRole, UnhostedRole,
         ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
     },
     block_metadata::{LibraBlockResource, NEW_BLOCK_EVENT_PATH},
@@ -135,10 +135,6 @@ impl AccountState {
 
     pub fn remove(&mut self, key: &[u8]) -> Option<Vec<u8>> {
         self.0.remove(key)
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
     }
 
     pub fn iter(&self) -> impl std::iter::Iterator<Item = (&Vec<u8>, &Vec<u8>)> {
