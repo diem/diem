@@ -32,7 +32,7 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
         &guppy::CrateNamesPaths,
         &guppy::IrrelevantBuildDeps,
         &guppy::WorkspaceHack,
-        &overlay::OverlayFeatures::new(&workspace_config.overlay),
+        &overlay::OverlayFeatures::new(&workspace_config.overlay, &workspace_config.test_only),
         &workspace_classify::DefaultOrTestOnly::new(&workspace_config.test_only),
     ];
 

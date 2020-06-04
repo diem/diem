@@ -10,12 +10,8 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
-vm = { path = "../../vm", version = "0.1.0" }
-libra-types = { path = "../../../types", version = "0.1.0" }
+vm = { path = "../../vm", version = "0.1.0", features = ["fuzzing"] }
+libra-types = { path = "../../../types", version = "0.1.0", features = ["fuzzing"] }
 proptest = "0.10.0"
 libra-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0" }
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-
-[features]
-default = []
-fuzzing = ["libra-types/fuzzing"]

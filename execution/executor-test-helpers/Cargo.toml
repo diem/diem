@@ -10,8 +10,8 @@ publish = false
 edition = "2018"
 
 [dependencies]
-executor-types = { path = "../executor-types", version = "0.1.0" }
-libra-config = { path = "../../config", version = "0.1.0" }
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+executor-types = { path = "../executor-types", version = "0.1.0", features = ["fuzzing"] }
+libra-config = { path = "../../config", version = "0.1.0", features = ["fuzzing"] }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
 libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

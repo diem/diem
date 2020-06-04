@@ -149,3 +149,13 @@ pub enum WorkspaceStatus {
     /// This package ID is not a dependency of the workspace subset.
     Absent,
 }
+
+impl WorkspaceStatus {
+    /// Returns true if this package is a root member or dependency (i.e. not absent).
+    pub fn is_present(self) -> bool {
+        match self {
+            WorkspaceStatus::RootMember | WorkspaceStatus::Dependency => true,
+            WorkspaceStatus::Absent => false,
+        }
+    }
+}
