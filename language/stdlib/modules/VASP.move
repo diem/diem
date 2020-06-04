@@ -9,9 +9,8 @@ address 0x0 {
 module VASP {
     use 0x0::LibraTimestamp;
     use 0x0::Signer;
-    use 0x0::Testnet;
+    use 0x0::Signature;
     use 0x0::Transaction;
-    use 0x0::Vector;
 
     // A ParentVASP is held only by the root VASP account and holds the
     // VASP-related metadata for the account. It is subject to a time
@@ -64,8 +63,7 @@ module VASP {
         base_url: vector<u8>,
         compliance_public_key: vector<u8>
     ): ParentVASP {
-        // NOTE: Only callable in testnet
-        Transaction::assert(Testnet::is_testnet(), 10041);
+        Transaction::assert(Signature::ed25519_validate_pubkey(copy compliance_public_key), 7004);
         ParentVASP {
            // For testnet, so it should never expire. So set to u64::MAX
            expiration_date: 18446744073709551615,
@@ -116,7 +114,7 @@ module VASP {
 
     /// Rotate the compliance public key for `parent_vasp` to `new_key`
     public fun rotate_compliance_public_key(parent_vasp: &mut ParentVASP, new_key: vector<u8>) {
-        Transaction::assert(Vector::length(&new_key) == 32, 7004);
+        Transaction::assert(Signature::ed25519_validate_pubkey(copy new_key), 7004);
         parent_vasp.compliance_public_key = new_key;
     }
 
