@@ -37,13 +37,10 @@
 
 use crate::{
     account_address::AccountAddress,
-    account_config::{AccountResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
+    account_config::{ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
 };
 use libra_crypto::hash::HashValue;
-use move_core_types::{
-    language_storage::{ModuleId, ResourceKey, StructTag, CODE_TAG, RESOURCE_TAG},
-    move_resource::MoveResource,
-};
+use move_core_types::language_storage::{ModuleId, ResourceKey, StructTag, CODE_TAG, RESOURCE_TAG};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -62,11 +59,6 @@ impl AccessPath {
 
     pub fn new(address: AccountAddress, path: Vec<u8>) -> Self {
         AccessPath { address, path }
-    }
-
-    /// Given an address, returns the corresponding access path that stores the Account resource.
-    pub fn new_for_account(address: AccountAddress) -> Self {
-        Self::new(address, AccountResource::resource_path())
     }
 
     /// Create an AccessPath to the event for the sender account in a deposit operation.
