@@ -24,10 +24,6 @@ impl NewBlockEvent {
         self.proposer
     }
 
-    pub fn previous_block_votes(&self) -> &[AccountAddress] {
-        &self.previous_block_votes
-    }
-
     pub fn proposed_time(&self) -> u64 {
         self.time_micro_seconds
     }
