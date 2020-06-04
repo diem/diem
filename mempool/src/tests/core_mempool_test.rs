@@ -261,20 +261,24 @@ fn test_timeline() {
             .collect()
     };
     let (timeline, _) = pool.read_timeline(0, 10);
+    let timeline = timeline.into_iter().map(|(_id, txn)| txn).collect();
     assert_eq!(view(timeline), vec![0, 1]);
 
     // add txn 2 to unblock txn3
     add_txns_to_mempool(&mut pool, vec![TestTransaction::new(1, 2, 1)]);
     let (timeline, _) = pool.read_timeline(0, 10);
+    let timeline = timeline.into_iter().map(|(_id, txn)| txn).collect();
     assert_eq!(view(timeline), vec![0, 1, 2, 3]);
 
     // try different start read position
     let (timeline, _) = pool.read_timeline(2, 10);
+    let timeline = timeline.into_iter().map(|(_id, txn)| txn).collect();
     assert_eq!(view(timeline), vec![2, 3]);
 
     // simulate callback from consensus to unblock txn 5
     pool.remove_transaction(&TestTransaction::get_address(1), 4, false);
     let (timeline, _) = pool.read_timeline(0, 10);
+    let timeline = timeline.into_iter().map(|(_id, txn)| txn).collect();
     assert_eq!(view(timeline), vec![5]);
 }
 
@@ -385,6 +389,10 @@ fn test_gc_ready_transaction() {
     assert_eq!(block[0].sequence_number(), 0);
 
     let (timeline, _) = pool.read_timeline(0, 10);
+    let timeline = timeline
+        .into_iter()
+        .map(|(_id, txn)| txn)
+        .collect::<Vec<_>>();
     assert_eq!(timeline.len(), 1);
     assert_eq!(timeline[0].sequence_number(), 0);
 }
