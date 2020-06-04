@@ -1669,6 +1669,10 @@
 <span id="1669">1669</span>
 <span id="1670">1670</span>
 <span id="1671">1671</span>
+<span id="1672">1672</span>
+<span id="1673">1673</span>
+<span id="1674">1674</span>
+<span id="1675">1675</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1825,7 +1829,11 @@
     <span class="kw">fn</span> <span class="ident">translate_struct_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">struct_env</span>: <span class="kw-2">&amp;</span><span class="ident">StructEnv</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) {
         <span class="comment">// Emit TypeName</span>
         <span class="kw">let</span> <span class="ident">struct_name</span> <span class="op">=</span> <span class="ident">boogie_struct_name</span>(<span class="kw-2">&amp;</span><span class="ident">struct_env</span>);
-        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;const unique {}: $TypeName;&quot;</span>, <span class="ident">struct_name</span>);
+        <span class="comment">// Special treatment of well-known resource LibraAccount_T. The type_name</span>
+        <span class="comment">// is forward-declared in the prelude.</span>
+        <span class="kw">if</span> <span class="ident">struct_name</span> <span class="op">!</span><span class="op">=</span> <span class="string">&quot;$LibraAccount_T&quot;</span> {
+            <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;const unique {}: $TypeName;&quot;</span>, <span class="ident">struct_name</span>);
+        }
 
         <span class="comment">// Emit FieldNames</span>
         <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">field_env</span>) <span class="kw">in</span> <span class="ident">struct_env</span>.<span class="ident">get_fields</span>().<span class="ident">enumerate</span>() {
