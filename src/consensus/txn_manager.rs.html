@@ -107,6 +107,11 @@
 <span id="107">107</span>
 <span id="108">108</span>
 <span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -117,6 +122,7 @@
 <span class="kw">use</span> <span class="ident">debug_interface</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">executor_types</span>::<span class="ident">StateComputeResult</span>;
 <span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">channel</span>::{<span class="ident">mpsc</span>, <span class="ident">oneshot</span>};
+<span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
 <span class="kw">use</span> <span class="ident">libra_mempool</span>::{
     <span class="ident">CommittedTransaction</span>, <span class="ident">ConsensusRequest</span>, <span class="ident">ConsensusResponse</span>, <span class="ident">TransactionExclusion</span>,
 };
@@ -179,7 +185,11 @@
             <span class="prelude-val">Some</span>(<span class="ident">txns</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">txns</span>,
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(()),
         };
-        <span class="kw">for</span> (<span class="ident">txn</span>, <span class="ident">status</span>) <span class="kw">in</span> <span class="ident">txns</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">compute_results</span>.<span class="ident">compute_status</span>().<span class="ident">iter</span>()) {
+        <span class="comment">// skip the block metadata txn result</span>
+        <span class="kw">for</span> (<span class="ident">txn</span>, <span class="ident">status</span>) <span class="kw">in</span> <span class="ident">txns</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">zip_eq</span>(<span class="ident">compute_results</span>.<span class="ident">compute_status</span>().<span class="ident">iter</span>().<span class="ident">skip</span>(<span class="number">1</span>))
+        {
             <span class="kw">if</span> <span class="kw">let</span> <span class="ident">TransactionStatus</span>::<span class="ident">Discard</span>(<span class="kw">_</span>) <span class="op">=</span> <span class="ident">status</span> {
                 <span class="ident">rejected_txns</span>.<span class="ident">push</span>(<span class="ident">CommittedTransaction</span> {
                     <span class="ident">sender</span>: <span class="ident">txn</span>.<span class="ident">sender</span>(),
