@@ -8,6 +8,7 @@ use x_lint::{prelude::*, LintEngineConfig};
 
 mod guppy;
 mod license;
+mod overlay;
 mod toml;
 mod whitespace;
 mod workspace_classify;
@@ -30,8 +31,8 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
         &guppy::EnforcedAttributes::new(&workspace_config.enforced_attributes),
         &guppy::CrateNamesPaths,
         &guppy::IrrelevantBuildDeps,
-        &guppy::OverlayFeatures::new(&workspace_config.overlay),
         &guppy::WorkspaceHack,
+        &overlay::OverlayFeatures::new(&workspace_config.overlay),
         &workspace_classify::DefaultOrTestOnly::new(&workspace_config.test_only),
     ];
 
