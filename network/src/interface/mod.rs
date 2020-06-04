@@ -263,9 +263,7 @@ where
         trace!("RpcNotification::{:?}", notif);
         match notif {
             RpcNotification::RecvRpc(req) => {
-                if let Err(e) =
-                    notifs_tx.push(req.protocol.clone(), NetworkNotification::RecvRpc(req))
-                {
+                if let Err(e) = notifs_tx.push(req.protocol, NetworkNotification::RecvRpc(req)) {
                     warn!("Failed to push RpcNotification to NetworkProvider for peer: {}. Error: {:?}", peer_id.short_str(), e);
                 }
             }
@@ -280,8 +278,7 @@ where
         trace!("DirectSendNotification::{:?}", notif);
         match notif {
             DirectSendNotification::RecvMessage(msg) => {
-                if let Err(e) =
-                    notifs_tx.push(msg.protocol.clone(), NetworkNotification::RecvMessage(msg))
+                if let Err(e) = notifs_tx.push(msg.protocol, NetworkNotification::RecvMessage(msg))
                 {
                     warn!("Failed to push DirectSendNotification to NetworkProvider for peer: {}. Error: {:?}", peer_id.short_str(), e);
                 }

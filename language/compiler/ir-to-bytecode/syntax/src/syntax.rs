@@ -1793,7 +1793,7 @@ fn parse_function_decl<'input>(
             FunctionVisibility::Internal
         },
         args,
-        ret.unwrap_or_else(|| vec![]),
+        ret.unwrap_or_else(Vec::new),
         type_parameters,
         acquires.unwrap_or_else(Vec::new),
         specifications,

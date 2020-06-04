@@ -222,8 +222,8 @@ impl<'a> Config<'a> {
         Ok(Self {
             disabled_stages,
             sender: sender.unwrap_or_else(|| config.accounts.get("default").unwrap().account()),
-            ty_args: ty_args.unwrap_or_else(|| vec![]),
-            args: args.unwrap_or_else(|| vec![]),
+            ty_args: ty_args.unwrap_or_else(Vec::new),
+            args: args.unwrap_or_else(Vec::new),
             max_gas,
             gas_price,
             gas_currency_code,

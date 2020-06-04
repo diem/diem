@@ -131,7 +131,7 @@ fn inbound() {
         let (delivered_tx, delivered_rx) = oneshot::channel();
         network_notifs_tx
             .push_with_feedback(
-                msg_key.clone(),
+                msg_key,
                 PeerManagerNotification::RecvMessage(other_peer_id, get_raw_message(msg)),
                 Some(delivered_tx),
             )

@@ -116,7 +116,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
     fn new_loc_attr(&mut self, code_offset: CodeOffset) -> AttrId {
         let loc = self.func_env.get_bytecode_loc(code_offset);
         let attr = AttrId::new(self.location_table.len());
-        self.location_table.insert(attr.clone(), loc);
+        self.location_table.insert(attr, loc);
         attr
     }
 

@@ -30,7 +30,7 @@ impl Resolver {
     pub fn new(module: &impl ModuleAccess) -> Self {
         let mut address_map = BTreeMap::new();
         for (idx, address) in module.address_identifiers().iter().enumerate() {
-            address_map.insert(address.clone(), AddressIdentifierIndex(idx as u16));
+            address_map.insert(*address, AddressIdentifierIndex(idx as u16));
         }
         let mut identifier_map = BTreeMap::new();
         for (idx, name) in module.identifiers().iter().enumerate() {

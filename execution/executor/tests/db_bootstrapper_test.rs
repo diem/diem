@@ -172,7 +172,7 @@ fn get_transfer_transaction(
 fn get_balance(account: &AccountAddress, db: &DbReaderWriter) -> u64 {
     let account_state_blob = db
         .reader
-        .get_latest_account_state(account.clone())
+        .get_latest_account_state(*account)
         .unwrap()
         .unwrap();
     let account_state = AccountState::try_from(&account_state_blob).unwrap();

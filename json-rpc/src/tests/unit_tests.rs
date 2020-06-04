@@ -84,7 +84,7 @@ fn mock_db() -> MockLibraDB {
 
         // Record all account states.
         for (address, blob) in account_states.into_iter() {
-            all_accounts.insert(address.clone(), blob.clone());
+            all_accounts.insert(address, blob.clone());
         }
 
         // Record all transactions.
@@ -434,7 +434,7 @@ fn test_get_account_transaction() {
         let ar = AccountResource::try_from(blob).unwrap();
         for seq in 1..ar.sequence_number() {
             let mut batch = JsonRpcBatch::default();
-            batch.add_get_account_transaction_request(acc.clone(), seq, true);
+            batch.add_get_account_transaction_request(*acc, seq, true);
 
             let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
             let tx_view = TransactionView::optional_from_response(result)

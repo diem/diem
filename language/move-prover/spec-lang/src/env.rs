@@ -1156,7 +1156,7 @@ impl<'env> ModuleEnv<'env> {
             .instantiation_map
             .get(&node_id)
             .cloned()
-            .unwrap_or_else(|| vec![])
+            .unwrap_or_else(Vec::new)
     }
 }
 

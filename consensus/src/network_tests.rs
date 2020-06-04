@@ -183,7 +183,7 @@ impl NetworkPlayground {
         self.node_consensus_txs
             .lock()
             .unwrap()
-            .insert(twin_id.clone(), consensus_tx);
+            .insert(twin_id, consensus_tx);
         self.drop_config.write().unwrap().add_node(twin_id);
 
         self.extend_author_to_twin_ids(twin_id.author, twin_id);
@@ -382,7 +382,7 @@ impl NetworkPlayground {
 
                 // Deliver and copy message it if it's not dropped
                 if !self.is_message_dropped(&src_twin_id, &dst_twin_id) {
-                    self.deliver_message(src_twin_id.clone(), dst_twin_id.clone(), msg_notif)
+                    self.deliver_message(src_twin_id, *dst_twin_id, msg_notif)
                         .await;
                 }
             }
@@ -394,7 +394,7 @@ struct AuthorToTwinIds(HashMap<Author, Vec<TwinId>>);
 
 impl AuthorToTwinIds {
     pub fn extend_author_to_twin_ids(&mut self, author: Author, twin_id: TwinId) {
-        self.0.entry(author).or_insert_with(|| vec![]);
+        self.0.entry(author).or_insert_with(Vec::new);
 
         self.0.get_mut(&author).unwrap().push(twin_id)
     }

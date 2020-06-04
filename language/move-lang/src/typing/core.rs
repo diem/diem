@@ -962,7 +962,7 @@ fn make_tparam_subst(tps: &[TParam], args: Vec<Type>) -> TParamSubst {
     assert!(tps.len() == args.len());
     let mut subst = TParamSubst::new();
     for (tp, arg) in tps.iter().zip(args) {
-        let old_val = subst.insert(tp.id.clone(), arg);
+        let old_val = subst.insert(tp.id, arg);
         assert!(old_val.is_none())
     }
     subst

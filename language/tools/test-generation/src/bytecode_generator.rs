@@ -606,8 +606,8 @@ impl<'a> BytecodeGenerator<'a> {
         abstract_state_out: AbstractState,
         module: &CompiledModuleMut,
     ) -> Option<(Vec<Bytecode>, AbstractState)> {
-        debug!("Abstract state in: {}", abstract_state_in.clone());
-        debug!("Abstract state out: {}", abstract_state_out.clone());
+        debug!("Abstract state in: {}", abstract_state_in);
+        debug!("Abstract state out: {}", abstract_state_out);
         let mut bytecode: Vec<Bytecode> = Vec::new();
         let mut state = abstract_state_in.clone();
         // Generate block body

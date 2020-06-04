@@ -43,7 +43,7 @@ pub fn display_var(s: &str) -> DisplayVar {
         DisplayVar::Tmp
     } else {
         let mut orig = s.to_owned();
-        orig.split_off(orig.find('#').unwrap_or_else(|| s.len()));
+        orig.truncate(orig.find('#').unwrap_or_else(|| s.len()));
         DisplayVar::Orig(orig)
     }
 }

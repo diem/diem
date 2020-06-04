@@ -200,9 +200,7 @@ fn test_get_events_by_access_path_impl(event_batches: Vec<Vec<ContractEvent>>) {
     let mut events_by_event_key = HashMap::new();
     event_batches.into_iter().for_each(|batch| {
         batch.into_iter().for_each(|e| {
-            let mut events = events_by_event_key
-                .entry(e.key().clone())
-                .or_insert_with(Vec::new);
+            let mut events = events_by_event_key.entry(*e.key()).or_insert_with(Vec::new);
             assert_eq!(events.len() as u64, e.sequence_number());
             events.push(e);
         })

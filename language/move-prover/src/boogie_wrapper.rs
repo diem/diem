@@ -605,7 +605,7 @@ impl Model {
                     let (var, loc, value) = Self::extract_debug_var(wrapper, k)?;
                     tracked_locals
                         .entry(loc)
-                        .or_insert_with(|| vec![])
+                        .or_insert_with(Vec::new)
                         .push((var, value));
                 }
 
@@ -640,7 +640,7 @@ impl Model {
                     let (desc, value) = Self::extract_debug_exp(wrapper, k)?;
                     tracked_exps
                         .entry(desc)
-                        .or_insert_with(|| vec![])
+                        .or_insert_with(Vec::new)
                         .push(value);
                 }
 

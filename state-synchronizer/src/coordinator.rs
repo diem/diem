@@ -925,7 +925,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         self.subscriptions.retain(|peer, request_info| {
             // filter out expired peer requests
             if SystemTime::now()
-                .duration_since(request_info.expiration_time.clone())
+                .duration_since(request_info.expiration_time)
                 .is_ok()
             {
                 return false;

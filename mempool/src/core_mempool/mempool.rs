@@ -65,7 +65,7 @@ impl Mempool {
             sequence_number,
             is_rejected
         );
-        self.log_latency(sender.clone(), sequence_number, "e2e.latency");
+        self.log_latency(*sender, sequence_number, "e2e.latency");
         self.metrics_cache.remove(&(*sender, sequence_number));
         OP_COUNTERS.inc(&format!("remove_transaction.{}", is_rejected));
 
@@ -86,8 +86,7 @@ impl Mempool {
         } else {
             // update current cached sequence number for account
             let new_seq_number = max(current_seq_number, sequence_number + 1);
-            self.sequence_number_cache
-                .insert(sender.clone(), new_seq_number);
+            self.sequence_number_cache.insert(*sender, new_seq_number);
             self.transactions
                 .commit_transaction(&sender, new_seq_number);
         }

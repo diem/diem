@@ -321,13 +321,13 @@ impl Command_ {
             }
             Abort(_) | Return(_) => (),
             Jump(lbl) => {
-                successors.insert(lbl.clone());
+                successors.insert(*lbl);
             }
             JumpIf {
                 if_true, if_false, ..
             } => {
-                successors.insert(if_true.clone());
-                successors.insert(if_false.clone());
+                successors.insert(*if_true);
+                successors.insert(*if_false);
             }
         }
         successors

@@ -125,7 +125,7 @@ where
 
                             tokio::task::spawn(async move {
                                 // Drain all messages from the client.
-                                while let Some(_) = stream.next().await {}
+                                while stream.next().await.is_some() {}
                                 stream.close().await.unwrap();
                             });
                         }
