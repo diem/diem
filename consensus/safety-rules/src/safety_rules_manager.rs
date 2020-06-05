@@ -11,7 +11,11 @@ use crate::{
     thread::ThreadService,
     SafetyRules, TSafetyRules,
 };
-use libra_config::config::{NodeConfig, SafetyRulesService};
+use libra_config::{
+    config::{NodeConfig, SafetyRulesService},
+    keys::KeyPair,
+};
+use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_secure_storage::{KVStorage, Storage};
 use std::{
     convert::TryInto,
@@ -41,17 +45,24 @@ pub fn storage(config: &mut NodeConfig) -> PersistentSafetyStorage {
             .expect("Failed to take Consensus private key, key absent or already read");
         let waypoint = config.base.waypoint.waypoint();
 
-        let execution_public_key = test_config
-            .execution_keypair
-            .as_mut()
-            .expect("Missing execution keypair in test config")
-            .public_key();
+        // Hack because Ed25519PrivateKey does not support clone / copy
+        let bytes = lcs::to_bytes(
+            &test_config
+                .execution_keypair
+                .as_ref()
+                .expect("Missing execution keypair in test config"),
+        )
+        .expect("lcs deserialization cannot fail");
+        let execution_private_key = lcs::from_bytes::<KeyPair<Ed25519PrivateKey>>(&bytes)
+            .expect("lcs serialization cannot fail")
+            .take_private()
+            .expect("Failed to take Execution private key, key absent or already read");
 
         PersistentSafetyStorage::initialize(
             internal_storage,
             author,
             consensus_private_key,
-            Some(execution_public_key),
+            execution_private_key,
             waypoint,
         )
     } else {
@@ -81,16 +92,23 @@ impl SafetyRulesManager {
 
         let storage = storage(config);
         let sr_config = &config.consensus.safety_rules;
+        let verify_vote_proposal_signature =
+            config.consensus.safety_rules.verify_vote_proposal_signature;
         match sr_config.service {
-            SafetyRulesService::Local => Self::new_local(storage),
-            SafetyRulesService::Serializer => Self::new_serializer(storage),
-            SafetyRulesService::Thread => Self::new_thread(storage),
+            SafetyRulesService::Local => Self::new_local(storage, verify_vote_proposal_signature),
+            SafetyRulesService::Serializer => {
+                Self::new_serializer(storage, verify_vote_proposal_signature)
+            }
+            SafetyRulesService::Thread => Self::new_thread(storage, verify_vote_proposal_signature),
             _ => panic!("Unimplemented SafetyRulesService: {:?}", sr_config.service),
         }
     }
 
-    pub fn new_local(storage: PersistentSafetyStorage) -> Self {
-        let safety_rules = SafetyRules::new(storage);
+    pub fn new_local(
+        storage: PersistentSafetyStorage,
+        verify_vote_proposal_signature: bool,
+    ) -> Self {
+        let safety_rules = SafetyRules::new(storage, verify_vote_proposal_signature);
         Self {
             internal_safety_rules: SafetyRulesWrapper::Local(Arc::new(RwLock::new(safety_rules))),
         }
@@ -103,8 +121,11 @@ impl SafetyRulesManager {
         }
     }
 
-    pub fn new_serializer(storage: PersistentSafetyStorage) -> Self {
-        let safety_rules = SafetyRules::new(storage);
+    pub fn new_serializer(
+        storage: PersistentSafetyStorage,
+        verify_vote_proposal_signature: bool,
+    ) -> Self {
+        let safety_rules = SafetyRules::new(storage, verify_vote_proposal_signature);
         let serializer_service = SerializerService::new(safety_rules);
         Self {
             internal_safety_rules: SafetyRulesWrapper::Serializer(Arc::new(RwLock::new(
@@ -120,8 +141,11 @@ impl SafetyRulesManager {
         }
     }
 
-    pub fn new_thread(storage: PersistentSafetyStorage) -> Self {
-        let thread = ThreadService::new(storage);
+    pub fn new_thread(
+        storage: PersistentSafetyStorage,
+        verify_vote_proposal_signature: bool,
+    ) -> Self {
+        let thread = ThreadService::new(storage, verify_vote_proposal_signature);
         Self {
             internal_safety_rules: SafetyRulesWrapper::Thread(thread),
         }

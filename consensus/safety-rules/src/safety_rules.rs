@@ -6,10 +6,20 @@ use crate::{
     persistent_safety_storage::PersistentSafetyStorage, t_safety_rules::TSafetyRules, COUNTERS,
 };
 use consensus_types::{
-    block::Block, block_data::BlockData, common::Author, quorum_cert::QuorumCert, timeout::Timeout,
-    vote::Vote, vote_data::VoteData, vote_proposal::MaybeSignedVoteProposal,
+    block::Block,
+    block_data::BlockData,
+    common::Author,
+    quorum_cert::QuorumCert,
+    timeout::Timeout,
+    vote::Vote,
+    vote_data::VoteData,
+    vote_proposal::{MaybeSignedVoteProposal, VoteProposal},
 };
-use libra_crypto::{ed25519::Ed25519Signature, hash::HashValue};
+use libra_crypto::{
+    ed25519::{Ed25519PublicKey, Ed25519Signature},
+    hash::{CryptoHash, HashValue},
+    traits::Signature,
+};
 use libra_logger::debug;
 use libra_types::{
     block_info::BlockInfo, epoch_change::EpochChangeProof, epoch_state::EpochState,
@@ -25,6 +35,7 @@ use std::cmp::Ordering;
 /// @TODO consider a cache of verified QCs to cut down on verification costs
 pub struct SafetyRules {
     persistent_storage: PersistentSafetyStorage,
+    execution_public_key: Option<Ed25519PublicKey>,
     validator_signer: Option<ValidatorSigner>,
     epoch_state: Option<EpochState>,
 }
@@ -32,9 +43,22 @@ pub struct SafetyRules {
 impl SafetyRules {
     /// Constructs a new instance of SafetyRules with the given persistent storage and the
     /// consensus private keys
-    pub fn new(persistent_storage: PersistentSafetyStorage) -> Self {
+    pub fn new(
+        persistent_storage: PersistentSafetyStorage,
+        verify_vote_proposal_signature: bool,
+    ) -> Self {
+        let execution_public_key = if verify_vote_proposal_signature {
+            Some(
+                persistent_storage
+                    .execution_public_key()
+                    .expect("Unable to retrieve execution public key"),
+            )
+        } else {
+            None
+        };
         Self {
             persistent_storage,
+            execution_public_key,
             validator_signer: None,
             epoch_state: None,
         }
@@ -267,13 +291,18 @@ impl TSafetyRules for SafetyRules {
         &mut self,
         maybe_signed_vote_proposal: &MaybeSignedVoteProposal,
     ) -> Result<Vote, Error> {
-        debug!("Incoming vote proposal to sign.");
-        self.signer()?;
-
-        let (vote_proposal, _execution_signature) = (
+        let (vote_proposal, execution_signature) = (
             &maybe_signed_vote_proposal.vote_proposal,
-            &maybe_signed_vote_proposal.signature,
+            maybe_signed_vote_proposal.signature.as_ref(),
         );
+
+        // Verify the signature from LEC.
+        if let Some(public_key) = self.execution_public_key.as_ref() {
+            execution_signature
+                .ok_or_else(|| Error::SignatureNotFound)?
+                .verify(&vote_proposal.hash(), public_key)?
+        }
+
         let proposed_block = vote_proposal.block();
         self.verify_epoch(proposed_block.epoch())?;
         self.verify_qc(proposed_block.quorum_cert())?;

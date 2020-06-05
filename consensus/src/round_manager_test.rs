@@ -41,7 +41,7 @@ use futures::{
     stream::select,
     Stream, StreamExt, TryStreamExt,
 };
-use libra_crypto::{hash::CryptoHash, HashValue};
+use libra_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, HashValue, Uniform};
 use libra_secure_storage::Storage;
 use libra_types::{
     epoch_state::EpochState,
@@ -104,10 +104,10 @@ impl NodeSetup {
                 Storage::from(libra_secure_storage::InMemoryStorage::new()),
                 signer.author(),
                 signer.private_key().clone(),
-                None,
+                Ed25519PrivateKey::generate_for_testing(),
                 waypoint,
             );
-            let safety_rules_manager = SafetyRulesManager::new_local(safety_storage);
+            let safety_rules_manager = SafetyRulesManager::new_local(safety_storage, false);
 
             nodes.push(Self::new(
                 playground,

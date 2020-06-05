@@ -18,6 +18,7 @@ const GENESIS_DEFAULT: &str = "genesis.blob";
 pub struct ExecutionConfig {
     #[serde(skip)]
     pub genesis: Option<Transaction>,
+    pub sign_vote_proposal: bool,
     pub genesis_file_location: PathBuf,
     pub service: ExecutionCorrectnessService,
     pub backend: SecureBackend,
@@ -33,8 +34,13 @@ impl std::fmt::Debug for ExecutionConfig {
         }
         write!(
             f,
-            ", genesis_file_location: {:?} }}",
+            ", genesis_file_location: {:?} ",
             self.genesis_file_location
+        )?;
+        write!(
+            f,
+            ", sign_vote_proposal: {:?}, service: {:?}, backend: {:?} }}",
+            self.sign_vote_proposal, self.service, self.backend
         )?;
         self.service.fmt(f)
     }
@@ -47,6 +53,7 @@ impl Default for ExecutionConfig {
             genesis_file_location: PathBuf::new(),
             service: ExecutionCorrectnessService::Thread,
             backend: SecureBackend::InMemoryStorage,
+            sign_vote_proposal: true,
         }
     }
 }
@@ -78,6 +85,12 @@ impl ExecutionConfig {
                 .map_err(|e| Error::IO("genesis".into(), e))?;
         }
         Ok(())
+    }
+
+    pub fn set_data_dir(&mut self, data_dir: PathBuf) {
+        if let SecureBackend::OnDiskStorage(backend) = &mut self.backend {
+            backend.set_data_dir(data_dir);
+        }
     }
 }
 

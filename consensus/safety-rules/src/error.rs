@@ -35,6 +35,12 @@ pub enum Error {
     #[error("{0} is not set, SafetyRules is not initialized")]
     NotInitialized(String),
 
+    #[error(
+        "SafetyRules is configured to verify signature but the \
+             vote proposal doesn't carry a signature"
+    )]
+    SignatureNotFound,
+
     /// This proposal's round is less than round of preferred block.
     /// Returns the id of the preferred block.
     #[error(

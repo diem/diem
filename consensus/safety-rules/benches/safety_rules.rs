@@ -4,6 +4,7 @@
 use consensus_types::block::{block_test_utils, block_test_utils::random_payload, Block};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use libra_config::config::{OnDiskStorageConfig, SecureBackend};
+use libra_crypto::{ed25519::Ed25519PrivateKey, Uniform};
 use libra_secure_storage::{InMemoryStorage, OnDiskStorage, Storage};
 use libra_types::validator_signer::ValidatorSigner;
 use safety_rules::{
@@ -22,21 +23,29 @@ fn lsr(mut safety_rules: Box<dyn TSafetyRules>, signer: ValidatorSigner, n: u64)
     let mut round = genesis_block.round();
 
     round += 1;
-    let mut b0 = test_utils::make_proposal_with_qc(round, genesis_qc, &signer);
+    let mut b0 = test_utils::make_proposal_with_qc(round, genesis_qc, &signer, None);
     safety_rules.construct_and_sign_vote(&b0).unwrap();
 
     round += 1;
-    let mut b1 = test_utils::make_proposal_with_parent(data.clone(), round, &b0, None, &signer);
+    let mut b1 =
+        test_utils::make_proposal_with_parent(data.clone(), round, &b0, None, &signer, None);
     safety_rules.construct_and_sign_vote(&b1).unwrap();
 
     round += 1;
-    let mut b2 = test_utils::make_proposal_with_parent(data.clone(), round, &b1, None, &signer);
+    let mut b2 =
+        test_utils::make_proposal_with_parent(data.clone(), round, &b1, None, &signer, None);
     safety_rules.construct_and_sign_vote(&b2).unwrap();
 
     for _i in 0..n {
         round += 1;
-        let b3 =
-            test_utils::make_proposal_with_parent(data.clone(), round, &b2, Some(&b0), &signer);
+        let b3 = test_utils::make_proposal_with_parent(
+            data.clone(),
+            round,
+            &b2,
+            Some(&b0),
+            &signer,
+            None,
+        );
 
         safety_rules.construct_and_sign_vote(&b3).unwrap();
 
@@ -53,10 +62,10 @@ fn in_memory(n: u64) {
         Storage::from(InMemoryStorage::new()),
         signer.author(),
         signer.private_key().clone(),
-        None,
+        Ed25519PrivateKey::generate_for_testing(),
         waypoint,
     );
-    let safety_rules_manager = SafetyRulesManager::new_local(storage);
+    let safety_rules_manager = SafetyRulesManager::new_local(storage, false);
     lsr(safety_rules_manager.client(), signer, n);
 }
 
@@ -68,10 +77,10 @@ fn on_disk(n: u64) {
         Storage::from(OnDiskStorage::new(file_path)),
         signer.author(),
         signer.private_key().clone(),
-        None,
+        Ed25519PrivateKey::generate_for_testing(),
         waypoint,
     );
-    let safety_rules_manager = SafetyRulesManager::new_local(storage);
+    let safety_rules_manager = SafetyRulesManager::new_local(storage, false);
     lsr(safety_rules_manager.client(), signer, n);
 }
 
@@ -83,10 +92,10 @@ fn serializer(n: u64) {
         Storage::from(OnDiskStorage::new(file_path)),
         signer.author(),
         signer.private_key().clone(),
-        None,
+        Ed25519PrivateKey::generate_for_testing(),
         waypoint,
     );
-    let safety_rules_manager = SafetyRulesManager::new_serializer(storage);
+    let safety_rules_manager = SafetyRulesManager::new_serializer(storage, false);
     lsr(safety_rules_manager.client(), signer, n);
 }
 
@@ -98,10 +107,10 @@ fn thread(n: u64) {
         Storage::from(OnDiskStorage::new(file_path)),
         signer.author(),
         signer.private_key().clone(),
-        None,
+        Ed25519PrivateKey::generate_for_testing(),
         waypoint,
     );
-    let safety_rules_manager = SafetyRulesManager::new_thread(storage);
+    let safety_rules_manager = SafetyRulesManager::new_thread(storage, false);
     lsr(safety_rules_manager.client(), signer, n);
 }
 
@@ -110,7 +119,7 @@ fn process(n: u64) {
     let mut config = OnDiskStorageConfig::default();
     config.path = file_path;
     let backend = SecureBackend::OnDiskStorage(config);
-    let client_wrapper = ProcessClientWrapper::new(backend);
+    let client_wrapper = ProcessClientWrapper::new(backend, false);
     let signer = client_wrapper.signer();
 
     lsr(Box::new(client_wrapper), signer, n);

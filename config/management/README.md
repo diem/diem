@@ -28,8 +28,8 @@ The process for starting organization of the planned and current functionality i
 * Validator initialization
   * Each OW will select a OP and submit this as a transaction signed by their
     `owner key` and uploads it to the association drive..
-  * For each validator supported by a OP, the OP will generate network and
-    consensus keys as well as network addresses for full node and validator
+  * For each validator supported by a OP, the OP will generate network, execution
+    and consensus keys as well as network addresses for full node and validator
     endpoints. The OP will generate a transaction containing this data signed
     by their `operator key` and uploads it to the association drive.
 * Genesis

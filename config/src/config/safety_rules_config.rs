@@ -10,6 +10,7 @@ use std::{net::SocketAddr, path::PathBuf};
 pub struct SafetyRulesConfig {
     pub backend: SecureBackend,
     pub service: SafetyRulesService,
+    pub verify_vote_proposal_signature: bool,
 }
 
 impl Default for SafetyRulesConfig {
@@ -17,6 +18,7 @@ impl Default for SafetyRulesConfig {
         Self {
             backend: SecureBackend::InMemoryStorage,
             service: SafetyRulesService::Thread,
+            verify_vote_proposal_signature: true,
         }
     }
 }

@@ -52,6 +52,7 @@ impl TestEnvironment {
         template.state_sync.chunk_limit = 5;
         template.consensus.safety_rules.backend =
             SecureBackend::OnDiskStorage(OnDiskStorageConfig::default());
+        template.execution.backend = SecureBackend::OnDiskStorage(OnDiskStorageConfig::default());
 
         let validator_swarm = LibraSwarm::configure_swarm(
             num_validators,

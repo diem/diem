@@ -155,7 +155,7 @@ impl BlockStore {
             root_metadata.num_leaves, /* num_leaves */
             vec![],                   /* parent_root_hashes */
             0,                        /* parent_num_leaves */
-            None,                     /* validators */
+            None,                     /* epoch_state */
             vec![],                   /* compute_status */
             vec![],                   /* txn_infos */
         );

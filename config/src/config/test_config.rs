@@ -135,10 +135,10 @@ mod test {
         assert_ne!(clone_test_config, test_config);
 
         // Copy keys across configs
+        clone_test_config.auth_key = test_config.auth_key;
+        clone_test_config.execution_keypair = test_config.execution_keypair.clone();
         clone_test_config.operator_keypair = test_config.operator_keypair.clone();
         clone_test_config.consensus_keypair = test_config.consensus_keypair.clone();
-        clone_test_config.execution_keypair = test_config.execution_keypair.clone();
-        clone_test_config.auth_key = test_config.auth_key;
 
         // Verify both configs are identical
         assert_eq!(clone_test_config, test_config);

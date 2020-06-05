@@ -10,7 +10,7 @@ use libra_config::{
     config::{NodeConfig, RemoteService, SafetyRulesService, SecureBackend, WaypointConfig},
     utils,
 };
-use libra_crypto::ed25519::Ed25519Signature;
+use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519Signature};
 use libra_types::{epoch_change::EpochChangeProof, validator_signer::ValidatorSigner};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
@@ -21,10 +21,11 @@ pub struct ProcessClientWrapper {
     signer: ValidatorSigner,
     _safety_rules_manager: SafetyRulesManager,
     safety_rules: Box<dyn TSafetyRules>,
+    execution_private_key: Option<Ed25519PrivateKey>,
 }
 
 impl ProcessClientWrapper {
-    pub fn new(backend: SecureBackend) -> Self {
+    pub fn new(backend: SecureBackend, verify_vote_proposal_signature: bool) -> Self {
         let server_port = utils::get_available_port();
         let server_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
 
@@ -44,6 +45,8 @@ impl ProcessClientWrapper {
         config.base.waypoint = WaypointConfig::FromConfig(waypoint);
 
         config.consensus.safety_rules.backend = backend;
+        config.consensus.safety_rules.verify_vote_proposal_signature =
+            verify_vote_proposal_signature;
         config.consensus.safety_rules.service = SafetyRulesService::SpawnedProcess(remote_service);
 
         let safety_rules_manager = SafetyRulesManager::new(&mut config);
@@ -53,11 +56,20 @@ impl ProcessClientWrapper {
             signer,
             _safety_rules_manager: safety_rules_manager,
             safety_rules,
+            execution_private_key: test_config
+                .execution_keypair
+                .as_mut()
+                .unwrap()
+                .take_private(),
         }
     }
 
     pub fn signer(&self) -> ValidatorSigner {
         self.signer.clone()
+    }
+
+    pub fn execution_private_key(&mut self) -> Ed25519PrivateKey {
+        self.execution_private_key.take().expect("must exist")
     }
 }
 
