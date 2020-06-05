@@ -18,10 +18,9 @@ use std::time::Duration;
 
 /// The interface from Network to OnchainDiscovery layer.
 ///
-/// `OnchainDiscoveryNetworkEvents` is a `Stream` of `PeerManagerNotification` where the
-/// raw `Bytes` rpc messages are deserialized into
-/// `OnchainDiscoveryMsg` types. `OnchainDiscoveryNetworkEvents` is a thin wrapper
-/// around an `channel::Receiver<PeerManagerNotification>`.
+/// `OnchainDiscoveryNetworkEvents` is a wrapper around streams of `PeerManagerNotification` and
+/// `ConnectionNotification` events. Unlike other *NetworkEvents, it is not itself a `Stream` and
+/// serves only as a transient holder of the underlying Streams during setup and initialization.
 pub struct OnchainDiscoveryNetworkEvents {
     pub peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
     pub connection_notifs_rx: libra_channel::Receiver<PeerId, ConnectionNotification>,

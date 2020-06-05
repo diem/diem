@@ -47,26 +47,18 @@
 //! 4. notifies the connectivity_manager with updated network info whenever we
 //!    detect a newer discovery set
 
-use crate::{
-    client::OnchainDiscovery,
-    service::OnchainDiscoveryService,
-    types::{QueryDiscoverySetRequest, QueryDiscoverySetResponse},
-};
+use crate::types::{QueryDiscoverySetRequest, QueryDiscoverySetResponse};
 use anyhow::{Context as AnyhowContext, Result};
-use futures::{
-    future::{Future, FutureExt},
-    stream::StreamExt,
-};
-use libra_config::config::RoleType;
-use libra_types::{account_config, waypoint::Waypoint, PeerId};
-use network::validator_network::network_builder::NetworkBuilder;
-use std::{sync::Arc, time::Duration};
+use futures::future::{Future, FutureExt};
+use libra_types::account_config;
+use std::sync::Arc;
 use storage_interface::DbReader;
-use tokio::{runtime::Handle, task, time::interval};
+use tokio::task;
 
 #[cfg(test)]
 mod test;
 
+pub mod builder;
 pub mod client;
 pub mod network_interface;
 pub mod service;
@@ -126,50 +118,4 @@ fn storage_query_discovery_set_async(
         // flatten errors
         res.map_err(anyhow::Error::from).and_then(|res| res)
     })
-}
-
-pub fn setup_onchain_discovery(
-    network: &mut NetworkBuilder,
-    peer_id: PeerId,
-    role: RoleType,
-    libra_db: Arc<dyn DbReader>,
-    waypoint: Waypoint,
-    executor: &Handle,
-) {
-    let (network_tx, discovery_events) = network_interface::add_to_network(network);
-    let outbound_rpc_timeout = Duration::from_secs(30);
-    let max_concurrent_inbound_queries = 8;
-    let (peer_mgr_notifs_rx, conn_notifs_rx) = (
-        discovery_events.peer_mgr_notifs_rx,
-        discovery_events.connection_notifs_rx,
-    );
-
-    let onchain_discovery_service = OnchainDiscoveryService::new(
-        executor.clone(),
-        peer_mgr_notifs_rx,
-        Arc::clone(&libra_db),
-        max_concurrent_inbound_queries,
-    );
-    executor.spawn(onchain_discovery_service.start());
-
-    let onchain_discovery = executor.enter(move || {
-        let peer_query_ticker = interval(Duration::from_secs(30)).fuse();
-        let storage_query_ticker = interval(Duration::from_secs(30)).fuse();
-
-        OnchainDiscovery::new(
-            peer_id,
-            role,
-            waypoint,
-            network_tx,
-            network
-                .conn_mgr_reqs_tx()
-                .expect("ConnecitivtyManager not enabled"),
-            conn_notifs_rx,
-            libra_db,
-            peer_query_ticker,
-            storage_query_ticker,
-            outbound_rpc_timeout,
-        )
-    });
-    executor.spawn(onchain_discovery.start());
 }
