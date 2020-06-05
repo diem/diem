@@ -9,7 +9,7 @@ use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on};
 use libra_config::{
-    config::{DiscoveryMethod, NetworkConfig, NodeConfig, RoleType},
+    config::{NetworkConfig, NodeConfig, RoleType},
     utils::get_genesis_txn,
 };
 use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
@@ -17,18 +17,16 @@ use libra_logger::prelude::*;
 use libra_mempool::gen_mempool_reconfig_subscription;
 use libra_metrics::metric_server;
 use libra_secure_storage::config;
-use libra_types::waypoint::Waypoint;
 use libra_vm::LibraVM;
 use libradb::LibraDB;
-use network_builder::network_builder::{AuthenticationMode, NetworkBuilder};
 use network_simple_onchain_discovery::{
     gen_simple_discovery_reconfig_subscription, ConfigurationChangeListener,
 };
 use state_synchronizer::StateSynchronizer;
-use std::{boxed::Box, collections::HashMap, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
-use storage_interface::{DbReader, DbReaderWriter};
+use std::{boxed::Box, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
+use storage_interface::DbReaderWriter;
 use storage_service::start_storage_service_with_db;
-use tokio::runtime::{Builder, Runtime};
+use tokio::runtime::Runtime;
 
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 const INTRA_NODE_CHANNEL_BUFFER_SIZE: usize = 1;
@@ -59,101 +57,6 @@ fn setup_debug_interface(config: &NodeConfig) -> NodeDebugService {
     .unwrap();
 
     NodeDebugService::new(addr)
-}
-
-// TODO(abhayb): Move to network crate (similar to consensus).
-pub fn setup_network(
-    config: &mut NetworkConfig,
-    role: RoleType,
-    libra_db: Arc<dyn DbReader>,
-    waypoint: Waypoint,
-) -> (Runtime, NetworkBuilder) {
-    let runtime = Builder::new()
-        .thread_name("network-")
-        .threaded_scheduler()
-        .enable_all()
-        .build()
-        .expect("Failed to start runtime. Won't be able to start networking.");
-
-    let identity_key = config::identity_key(config);
-    let peer_id = config::peer_id(config);
-
-    let mut network_builder = NetworkBuilder::new(
-        runtime.handle().clone(),
-        config.network_id.clone(),
-        peer_id,
-        role,
-        config.listen_address.clone(),
-    );
-    network_builder.add_connection_monitoring();
-
-    if config.enable_remote_authentication {
-        // Sanity check seed peer addresses.
-        config
-            .seed_peers
-            .verify_libranet_addrs()
-            .expect("Seed peer addresses must be well-formed");
-
-        let network_peers = config.network_peers.peers.clone();
-        let seed_peers = config.seed_peers.seed_peers.clone();
-
-        let trusted_peers = if role == RoleType::Validator {
-            // for validators, trusted_peers is empty will be populated from consensus
-            HashMap::new()
-        } else {
-            network_peers
-        };
-
-        info!(
-            "network setup: role: {}, seed_peers: {:?}, trusted_peers: {:?}",
-            role, seed_peers, trusted_peers,
-        );
-
-        network_builder
-            .advertised_address(config.advertised_address.clone())
-            .authentication_mode(AuthenticationMode::Mutual(identity_key))
-            .trusted_peers(trusted_peers)
-            .seed_peers(seed_peers)
-            .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
-            // TODO:  Why is the connectivity manager related to remote_authentication?
-            .add_connectivity_manager();
-    } else {
-        // Even if a network end-point operates without remote authentication, it might want to prove
-        // its identity to another peer it connects to. For this, we use TCP + Noise but without
-        // enforcing a trusted peers set.
-        network_builder
-            .authentication_mode(AuthenticationMode::ServerOnly(identity_key))
-            .advertised_address(config.advertised_address.clone());
-    }
-
-    match config.discovery_method {
-        DiscoveryMethod::Gossip => {
-            network_builder
-                .discovery_interval_ms(config.discovery_interval_ms)
-                .add_gossip_discovery();
-        }
-        DiscoveryMethod::Onchain => {
-            let (network_tx, discovery_events) =
-                network_builder.add_protocol_handler(onchain_discovery::endpoint_config());
-            let discovery_builder =
-                onchain_discovery::discovery_builder::OnchainDiscoveryBuilder::build(
-                    network_builder
-                        .conn_mgr_reqs_tx()
-                        .expect("ConnecitivtyManager not enabled"),
-                    network_tx,
-                    discovery_events,
-                    config::peer_id(config),
-                    role,
-                    libra_db,
-                    waypoint,
-                    runtime.handle(),
-                );
-            discovery_builder.start(runtime.handle());
-        }
-        DiscoveryMethod::None => {}
-    }
-
-    (runtime, network_builder)
 }
 
 pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
@@ -196,10 +99,14 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         "ChunkExecutor setup in {} ms",
         instant.elapsed().as_millis()
     );
+    // Cache runtimes for all full_node networks to keep them in scope.
     let mut network_runtimes = vec![];
+
+    // Persistent information about the validator network
+    let mut validator_network_provider = None;
+
     let mut state_sync_network_handles = vec![];
     let mut mempool_network_handles = vec![];
-    let mut validator_network_provider = None;
     let mut reconfig_subscriptions = vec![];
 
     let (mempool_reconfig_subscription, mempool_reconfig_events) =
@@ -213,7 +120,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let waypoint = config::waypoint(&node_config.base.waypoint);
 
     // Gather all network configs into a single vector.
-    // TODO:  consider explicitly encoding the role in the NetworkConfig
+    // TODO:  consider explicitly encoding the role in the NetworkConfig.
     let mut network_configs: Vec<(RoleType, &mut NetworkConfig)> = node_config
         .full_node_networks
         .iter_mut()
@@ -225,9 +132,9 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
     for (role, network_config) in network_configs {
         // Common Network setup steps
-        let (runtime, mut network_builder) = setup_network(
+        let (runtime, mut network_builder) = network_builder::network_builder::setup_network(
             network_config,
-            role.clone(),
+            role,
             Arc::clone(&db_rw.reader),
             waypoint,
         );
@@ -264,7 +171,12 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                 validator_network_provider = Some((peer_id, runtime, network_builder));
             }
             RoleType::FullNode => {
+                // Cache the runtime so it does not go out of scope immediately.
                 network_runtimes.push(runtime);
+
+                // Start the network provider.  FullNode networks can operate silently.3
+                let _listen_addr = network_builder.build();
+                debug!("Network started for peer_id: {}", peer_id);
             }
         }
     }
