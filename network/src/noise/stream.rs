@@ -6,7 +6,7 @@
 //! functions in this module enables encrypting and decrypting messages from a socket.
 //! Note that since noise is length-unaware, we have to prefix every noise message with its length
 //!
-//! [handshake]: network::noise_wrapper::handshake
+//! [handshake]: network::noise::handshake
 
 use futures::{
     io::{AsyncRead, AsyncWrite},
@@ -550,7 +550,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::noise_wrapper::{HandshakeAuthMode, NoiseUpgrader};
+    use crate::noise::{HandshakeAuthMode, NoiseUpgrader};
     use futures::{
         executor::block_on,
         future::join,

@@ -3,7 +3,7 @@
 
 use crate::{
     common::NetworkPublicKeys,
-    noise_wrapper::{stream::NoiseStream, HandshakeAuthMode, NoiseUpgrader},
+    noise::{stream::NoiseStream, HandshakeAuthMode, NoiseUpgrader},
     protocols::{
         identity::exchange_handshake,
         wire::handshake::v1::{HandshakeMsg, MessagingProtocolVersion, SupportedProtocols},

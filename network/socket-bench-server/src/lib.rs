@@ -21,7 +21,7 @@ use netcore::{
         Transport, TransportExt,
     },
 };
-use network::noise_wrapper::{stream::NoiseStream, HandshakeAuthMode, NoiseUpgrader};
+use network::noise::{stream::NoiseStream, HandshakeAuthMode, NoiseUpgrader};
 use rand::prelude::*;
 use std::{env, ffi::OsString, sync::Arc};
 use tokio::runtime::Handle;
