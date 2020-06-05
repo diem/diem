@@ -246,7 +246,8 @@ SyncInfo:
     - highest_quorum_cert:
         TYPENAME: QuorumCert
     - highest_commit_cert:
-        TYPENAME: QuorumCert
+        OPTION:
+          TYPENAME: QuorumCert
     - highest_timeout_cert:
         OPTION:
           TYPENAME: TimeoutCertificate
