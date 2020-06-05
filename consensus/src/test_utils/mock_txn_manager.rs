@@ -36,7 +36,8 @@ impl MockTransactionManager {
 // mock transaction status on the fly
 fn mock_transaction_status(count: usize) -> Vec<TransactionStatus> {
     let mut statuses = vec![];
-    for _ in 0..count {
+    // generate count + 1 status to mock the block metadata txn in mempool proxy
+    for _ in 0..=count {
         let random_status = match rand::thread_rng().gen_range(0, 2) {
             0 => TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
             1 => TransactionStatus::Discard(VMStatus::new(StatusCode::UNKNOWN_VALIDATION_STATUS)),

@@ -299,7 +299,7 @@ fn new_round_on_quorum_cert() {
             .unwrap();
         let vote_msg = node.next_vote().await;
         // Adding vote to form a QC
-        node.round_manager.process_vote(vote_msg).await.unwrap();
+        node.round_manager.process_vote_msg(vote_msg).await.unwrap();
 
         // round 2 should start
         let proposal_msg = node.next_proposal().await;
@@ -327,10 +327,7 @@ fn vote_on_successful_proposal() {
 
         let proposal = Block::new_proposal(vec![], 1, 1, genesis_qc.clone(), &node.signer);
         let proposal_id = proposal.id();
-        node.round_manager
-            .process_proposed_block(proposal)
-            .await
-            .unwrap();
+        node.round_manager.process_proposal(proposal).await.unwrap();
         let vote_msg = node.next_vote().await;
         assert_eq!(vote_msg.vote().author(), node.signer.author());
         assert_eq!(vote_msg.vote().vote_data().proposed().id(), proposal_id);
@@ -360,11 +357,11 @@ fn no_vote_on_old_proposal() {
         node.next_proposal().await;
 
         node.round_manager
-            .process_proposed_block(new_block)
+            .process_proposal(new_block)
             .await
             .unwrap();
         node.round_manager
-            .process_proposed_block(old_block)
+            .process_proposal(old_block)
             .await
             .unwrap_err();
         let vote_msg = node.next_vote().await;
@@ -396,20 +393,17 @@ fn no_vote_on_mismatch_round() {
         );
         assert!(node
             .round_manager
-            .pre_process_proposal(bad_proposal)
+            .process_proposal_msg(bad_proposal)
             .await
             .is_err());
         let good_proposal = ProposalMsg::new(
             correct_block.clone(),
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         );
-        assert_eq!(
-            node.round_manager
-                .pre_process_proposal(good_proposal.clone())
-                .await
-                .unwrap(),
-            good_proposal.take_proposal()
-        );
+        node.round_manager
+            .process_proposal_msg(good_proposal)
+            .await
+            .unwrap();
     });
 }
 
@@ -478,7 +472,7 @@ fn no_vote_on_invalid_proposer() {
         );
         assert!(node
             .round_manager
-            .pre_process_proposal(bad_proposal)
+            .process_proposal_msg(bad_proposal)
             .await
             .is_err());
         let good_proposal = ProposalMsg::new(
@@ -486,13 +480,10 @@ fn no_vote_on_invalid_proposer() {
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         );
 
-        assert_eq!(
-            node.round_manager
-                .pre_process_proposal(good_proposal.clone())
-                .await
-                .unwrap(),
-            good_proposal.take_proposal(),
-        );
+        node.round_manager
+            .process_proposal_msg(good_proposal.clone())
+            .await
+            .unwrap();
     });
 }
 
@@ -520,20 +511,17 @@ fn new_round_on_timeout_certificate() {
             block_skip_round,
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), Some(tc)),
         );
-        assert_eq!(
-            node.round_manager
-                .pre_process_proposal(skip_round_proposal.clone())
-                .await
-                .unwrap(),
-            skip_round_proposal.take_proposal()
-        );
+        node.round_manager
+            .process_proposal_msg(skip_round_proposal)
+            .await
+            .unwrap();
         let old_good_proposal = ProposalMsg::new(
             correct_block.clone(),
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         );
         assert!(node
             .round_manager
-            .pre_process_proposal(old_good_proposal.clone())
+            .process_proposal_msg(old_good_proposal)
             .await
             .is_err());
     });
@@ -790,7 +778,7 @@ fn sync_info_sent_on_stale_sync_info() {
         // process the stale sync info carried in the vote
         ahead_node
             .round_manager
-            .process_vote(timeout_vote_msg)
+            .process_vote_msg(timeout_vote_msg)
             .await
             .unwrap();
         let sync_info = behind_node.next_sync_info().await;
@@ -817,7 +805,7 @@ fn sync_on_partial_newer_sync_info() {
                 .unwrap();
             let vote_msg = node.next_vote().await;
             // Adding vote to form a QC
-            node.round_manager.process_vote(vote_msg).await.unwrap();
+            node.round_manager.process_vote_msg(vote_msg).await.unwrap();
         }
         let block_4 = node.next_proposal().await;
         node.round_manager
@@ -839,7 +827,12 @@ fn sync_on_partial_newer_sync_info() {
         // Create a sync info with newer quorum cert but older commit cert
         let sync_info = SyncInfo::new(block_4_qc.clone(), certificate_for_genesis(), None);
         node.round_manager
-            .sync_up(&sync_info, node.signer.author(), true)
+            .ensure_round_and_sync_up(
+                sync_info.highest_round() + 1,
+                &sync_info,
+                node.signer.author(),
+                true,
+            )
             .await
             .unwrap();
         // QuorumCert added

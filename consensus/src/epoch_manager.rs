@@ -431,7 +431,7 @@ impl EpochManager {
             RoundProcessor::Recovery(p) => {
                 let recovery_data = match event {
                     VerifiedEvent::ProposalMsg(proposal) => p.process_proposal_msg(*proposal).await,
-                    VerifiedEvent::VoteMsg(vote) => p.process_vote(*vote).await,
+                    VerifiedEvent::VoteMsg(vote) => p.process_vote_msg(*vote).await,
                     _ => Err(anyhow!("Unexpected VerifiedEvent during startup")),
                 }?;
                 let epoch_state = p.epoch_state().clone();
@@ -441,7 +441,7 @@ impl EpochManager {
             }
             RoundProcessor::Normal(p) => match event {
                 VerifiedEvent::ProposalMsg(proposal) => p.process_proposal_msg(*proposal).await,
-                VerifiedEvent::VoteMsg(vote) => p.process_vote(*vote).await,
+                VerifiedEvent::VoteMsg(vote) => p.process_vote_msg(*vote).await,
                 VerifiedEvent::SyncInfo(sync_info) => {
                     p.process_sync_info_msg(*sync_info, peer_id).await
                 }
