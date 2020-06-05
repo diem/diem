@@ -182,6 +182,7 @@
 <span id="182">182</span>
 <span id="183">183</span>
 <span id="184">184</span>
+<span id="185">185</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -327,8 +328,9 @@
                                             ))
                                             .<span class="kw">await</span>;
                                     }
-                                    <span class="ident">MempoolSyncMsg</span>::<span class="ident">BroadcastTransactionsResponse</span>{<span class="ident">request_id</span>} <span class="op">=</span><span class="op">&gt;</span> {
-                                        <span class="ident">tasks</span>::<span class="ident">process_broadcast_ack</span>(<span class="kw-2">&amp;</span><span class="ident">mempool</span>, <span class="ident">request_id</span>, <span class="ident">is_validator</span>);
+                                    <span class="ident">MempoolSyncMsg</span>::<span class="ident">BroadcastTransactionsResponse</span>{<span class="ident">request_id</span>, <span class="ident">retry_txns</span>} <span class="op">=</span><span class="op">&gt;</span> {
+                                        <span class="kw">let</span> <span class="ident">peer</span> <span class="op">=</span> <span class="ident">PeerNetworkId</span>(<span class="ident">network_id</span>, <span class="ident">peer_id</span>);
+                                        <span class="ident">tasks</span>::<span class="ident">process_broadcast_ack</span>(<span class="kw-2">&amp;</span><span class="ident">mempool</span>, <span class="ident">peer</span>, <span class="ident">request_id</span>, <span class="ident">retry_txns</span>, <span class="ident">is_validator</span>, <span class="ident">peer_manager</span>.<span class="ident">clone</span>());
                                         <span class="ident">notify_subscribers</span>(<span class="ident">SharedMempoolNotification</span>::<span class="ident">ACK</span>, <span class="kw-2">&amp;</span><span class="ident">smp</span>.<span class="ident">subscribers</span>);
                                     }
                                 };

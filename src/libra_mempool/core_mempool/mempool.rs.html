@@ -263,8 +263,6 @@
 <span id="263">263</span>
 <span id="264">264</span>
 <span id="265">265</span>
-<span id="266">266</span>
-<span id="267">267</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -518,19 +516,17 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">timeline_id</span>: <span class="ident">u64</span>,
         <span class="ident">count</span>: <span class="ident">usize</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SignedTransaction</span><span class="op">&gt;</span>, <span class="ident">u64</span>) {
+    ) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">u64</span>, <span class="ident">SignedTransaction</span>)<span class="op">&gt;</span>, <span class="ident">u64</span>) {
         <span class="self">self</span>.<span class="ident">transactions</span>.<span class="ident">read_timeline</span>(<span class="ident">timeline_id</span>, <span class="ident">count</span>)
     }
 
-    <span class="doccomment">/// Read transactions from timeline whose timeline id is in range</span>
-    <span class="doccomment">/// `start_timeline_id` (exclusive) to `end_timeline_id` (inclusive)</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">timeline_range</span>(
+    <span class="doccomment">/// Read transactions as (timeline_id, transaction) with timeline IDs in `timeline_ids`</span>
+    <span class="doccomment">/// Note for some requested timeline IDs, the corresponding transaction may not be in the timeline</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">filter_read_timeline</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">start_timeline_id</span>: <span class="ident">u64</span>,
-        <span class="ident">end_timeline_id</span>: <span class="ident">u64</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SignedTransaction</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">transactions</span>
-            .<span class="ident">timeline_range</span>(<span class="ident">start_timeline_id</span>, <span class="ident">end_timeline_id</span>)
+        <span class="ident">timeline_ids</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">u64</span>, <span class="ident">SignedTransaction</span>)<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">transactions</span>.<span class="ident">filter_read_timeline</span>(<span class="ident">timeline_ids</span>)
     }
 }
 </pre></div>

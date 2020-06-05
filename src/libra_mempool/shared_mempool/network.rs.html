@@ -98,6 +98,8 @@
 <span id="98"> 98</span>
 <span id="99"> 99</span>
 <span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -130,6 +132,8 @@
     <span class="ident">BroadcastTransactionsResponse</span> {
         <span class="doccomment">/// unique id of received broadcast request</span>
         <span class="ident">request_id</span>: <span class="ident">String</span>,
+        <span class="doccomment">/// indices of transactions that failed that may succeed on resend</span>
+        <span class="ident">retry_txns</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
     },
 }
 

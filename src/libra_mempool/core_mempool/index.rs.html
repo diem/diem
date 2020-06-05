@@ -293,17 +293,6 @@
 <span id="293">293</span>
 <span id="294">294</span>
 <span id="295">295</span>
-<span id="296">296</span>
-<span id="297">297</span>
-<span id="298">298</span>
-<span id="299">299</span>
-<span id="300">300</span>
-<span id="301">301</span>
-<span id="302">302</span>
-<span id="303">303</span>
-<span id="304">304</span>
-<span id="305">305</span>
-<span id="306">306</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -508,37 +497,26 @@
         }
     }
 
+    <span class="doccomment">/// get transaction at `timeline_id`</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_timeline_entry</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">timeline_id</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">AccountAddress</span>, <span class="ident">u64</span>)<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">timeline</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">timeline_id</span>).<span class="ident">cloned</span>()
+    }
+
     <span class="doccomment">/// read all transactions from timeline since &lt;timeline_id&gt;</span>
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">read_timeline</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">timeline_id</span>: <span class="ident">u64</span>,
         <span class="ident">count</span>: <span class="ident">usize</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">AccountAddress</span>, <span class="ident">u64</span>)<span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">u64</span>, (<span class="ident">AccountAddress</span>, <span class="ident">u64</span>))<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">batch</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-        <span class="kw">for</span> (<span class="kw">_</span>, <span class="kw-2">&amp;</span>(<span class="ident">address</span>, <span class="ident">sequence_number</span>)) <span class="kw">in</span> <span class="self">self</span>
+        <span class="kw">for</span> (<span class="ident">timeline_id</span>, <span class="kw-2">&amp;</span>(<span class="ident">address</span>, <span class="ident">sequence_number</span>)) <span class="kw">in</span> <span class="self">self</span>
             .<span class="ident">timeline</span>
             .<span class="ident">range</span>((<span class="ident">Bound</span>::<span class="ident">Excluded</span>(<span class="ident">timeline_id</span>), <span class="ident">Bound</span>::<span class="ident">Unbounded</span>))
         {
-            <span class="ident">batch</span>.<span class="ident">push</span>((<span class="ident">address</span>, <span class="ident">sequence_number</span>));
+            <span class="ident">batch</span>.<span class="ident">push</span>((<span class="kw-2">*</span><span class="ident">timeline_id</span>, (<span class="ident">address</span>, <span class="ident">sequence_number</span>)));
             <span class="kw">if</span> <span class="ident">batch</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">count</span> {
                 <span class="kw">break</span>;
             }
-        }
-        <span class="ident">batch</span>
-    }
-
-    <span class="doccomment">/// read all transactions from timeline for timeline id in range (`start_timeline_id`, `end_timeline_id`]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">range</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">start_timeline_id</span>: <span class="ident">u64</span>,
-        <span class="ident">end_timeline_id</span>: <span class="ident">u64</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">AccountAddress</span>, <span class="ident">u64</span>)<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">batch</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-        <span class="kw">for</span> (<span class="kw">_</span>, <span class="kw-2">&amp;</span>(<span class="ident">address</span>, <span class="ident">sequence_number</span>)) <span class="kw">in</span> <span class="self">self</span>.<span class="ident">timeline</span>.<span class="ident">range</span>((
-            <span class="ident">Bound</span>::<span class="ident">Excluded</span>(<span class="ident">start_timeline_id</span>),
-            <span class="ident">Bound</span>::<span class="ident">Included</span>(<span class="ident">end_timeline_id</span>),
-        )) {
-            <span class="ident">batch</span>.<span class="ident">push</span>((<span class="ident">address</span>, <span class="ident">sequence_number</span>));
         }
         <span class="ident">batch</span>
     }

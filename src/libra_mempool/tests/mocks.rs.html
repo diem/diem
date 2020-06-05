@@ -140,6 +140,10 @@
 <span id="140">140</span>
 <span id="141">141</span>
 <span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -280,7 +284,11 @@
             .<span class="ident">mempool</span>
             .<span class="ident">lock</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;[mock shared mempool] failed to acquire mempool lock&quot;</span>);
-        <span class="ident">pool</span>.<span class="ident">read_timeline</span>(<span class="ident">timeline_id</span>, <span class="ident">count</span>).<span class="number">0</span>
+        <span class="ident">pool</span>.<span class="ident">read_timeline</span>(<span class="ident">timeline_id</span>, <span class="ident">count</span>)
+            .<span class="number">0</span>
+            .<span class="ident">into_iter</span>()
+            .<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">txn</span>)<span class="op">|</span> <span class="ident">txn</span>)
+            .<span class="ident">collect</span>()
     }
 }
 </pre></div>
