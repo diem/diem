@@ -1014,6 +1014,16 @@
 <span id="1014">1014</span>
 <span id="1015">1015</span>
 <span id="1016">1016</span>
+<span id="1017">1017</span>
+<span id="1018">1018</span>
+<span id="1019">1019</span>
+<span id="1020">1020</span>
+<span id="1021">1021</span>
+<span id="1022">1022</span>
+<span id="1023">1023</span>
+<span id="1024">1024</span>
+<span id="1025">1025</span>
+<span id="1026">1026</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1717,6 +1727,16 @@
             <span class="ident">lbr_currency_code</span>(),
             <span class="number">0</span>,
             <span class="ident">AccountTypeSpecifier</span>::<span class="ident">Empty</span>,
+        )
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_unhosted</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span>::<span class="ident">with_account</span>(
+            <span class="ident">Account</span>::<span class="ident">new</span>(),
+            <span class="number">0</span>,
+            <span class="ident">lbr_currency_code</span>(),
+            <span class="number">0</span>,
+            <span class="ident">AccountTypeSpecifier</span>::<span class="ident">Unhosted</span>,
         )
     }
 
