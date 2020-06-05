@@ -102,20 +102,35 @@ fn main() {
         waypoint,
     );
 
-    let node_address_list = validator_swarm
-        .config
-        .config_files
-        .iter()
-        .map(|config| {
-            let port = NodeConfig::load(config).unwrap().rpc.address.port();
-            format!("localhost:{}", port)
-        })
+    let ports = validator_swarm.config.config_files.iter().map(|config| {
+        let validator_config = NodeConfig::load(config).unwrap();
+        let port = validator_config.rpc.address.port();
+        let debug_interface_port = validator_config
+            .debug_interface
+            .admission_control_node_debug_port;
+        (port, debug_interface_port)
+    });
+
+    let node_address_list = ports
+        .clone()
+        .map(|port| format!("localhost:{}", port.0))
         .collect::<Vec<String>>()
         .join(",");
 
     println!("To run transaction generator run:");
     println!(
         "\tcargo run -p cluster-test -- --mint-file {:?} --swarm --peers {:?} --emit-tx --workers-per-ac 1",
+        faucet_key_file_path, node_address_list,
+    );
+
+    let node_address_list = ports
+        .map(|port| format!("localhost:{}:{}", port.0, port.1))
+        .collect::<Vec<String>>()
+        .join(",");
+
+    println!("To run health check:");
+    println!(
+        "\tcargo run -p cluster-test -- --mint-file {:?} --swarm --peers {:?} --health-check --duration 30",
         faucet_key_file_path, node_address_list,
     );
 

@@ -42,7 +42,11 @@ impl DebugPortLogThread {
         for instance in cluster.all_instances() {
             let (started_sender, started_receiver) = mpsc::channel();
             started_receivers.push(started_receiver);
-            let client = NodeDebugClient::new(instance.ip(), 6191);
+            let debug_interface_port = instance
+                .debug_interface_port()
+                .expect("Debug interface port is not found")
+                as u16;
+            let client = NodeDebugClient::new(instance.ip(), debug_interface_port);
             let debug_port_log_thread = DebugPortLogThread {
                 instance: instance.clone(),
                 client,

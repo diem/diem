@@ -23,7 +23,7 @@ pub struct Cluster {
 }
 
 impl Cluster {
-    pub fn from_host_port(peers: Vec<(String, u32)>, mint_file: &str) -> Self {
+    pub fn from_host_port(peers: Vec<(String, u32, Option<u32>)>, mint_file: &str) -> Self {
         let instances: Vec<Instance> = peers
             .into_iter()
             .map(|host_port| {
@@ -31,6 +31,7 @@ impl Cluster {
                     format!("{}:{}", &host_port.0, host_port.1), /* short_hash */
                     host_port.0,
                     host_port.1,
+                    host_port.2,
                 )
             })
             .collect();
