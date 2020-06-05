@@ -2,7 +2,7 @@ import 0x0.LibraAccount;
 import 0x0.Coin1;
 
 main(account: &signer) {
-    LibraAccount.epilogue<Coin1.T>(move(account), 0, 0, 0, 0);
+    LibraAccount.success_epilogue<Coin1.T>(move(account), 0, 0, 0, 0);
     return;
 }
 

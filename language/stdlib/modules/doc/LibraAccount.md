@@ -85,6 +85,8 @@
 -  [Function `assert_can_freeze`](#0x0_LibraAccount_assert_can_freeze)
 -  [Function `prologue`](#0x0_LibraAccount_prologue)
 -  [Function `epilogue`](#0x0_LibraAccount_epilogue)
+-  [Function `success_epilogue`](#0x0_LibraAccount_success_epilogue)
+-  [Function `failure_epilogue`](#0x0_LibraAccount_failure_epilogue)
 -  [Function `bump_sequence_number`](#0x0_LibraAccount_bump_sequence_number)
 -  [Function `is_certified`](#0x0_LibraAccount_is_certified)
 -  [Function `decertify`](#0x0_LibraAccount_decertify)
@@ -2663,7 +2665,7 @@ also be added. This account will be a child of
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_LibraAccount_epilogue">epilogue</a>&lt;Token&gt;(account: &signer, txn_sequence_number: u64, txn_gas_price: u64, txn_max_gas_units: u64, gas_units_remaining: u64)
+<pre><code><b>fun</b> <a href="#0x0_LibraAccount_epilogue">epilogue</a>&lt;Token&gt;(sender: address, transaction_fee_amount: u64, txn_sequence_number: u64)
 </code></pre>
 
 
@@ -2673,23 +2675,14 @@ also be added. This account will be a child of
 
 
 <pre><code><b>fun</b> <a href="#0x0_LibraAccount_epilogue">epilogue</a>&lt;Token&gt;(
-    account: &signer,
+    sender: address,
+    transaction_fee_amount: u64,
     txn_sequence_number: u64,
-    txn_gas_price: u64,
-    txn_max_gas_units: u64,
-    gas_units_remaining: u64
 ) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
-    <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     // Load the transaction sender's account and balance resources
     <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount_T">T</a>&gt;(sender);
     <b>let</b> sender_balance = borrow_global_mut&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(sender);
 
-    // Charge for gas
-    <b>let</b> transaction_fee_amount = txn_gas_price * (txn_max_gas_units - gas_units_remaining);
-    Transaction::assert(
-        <a href="#0x0_LibraAccount_balance_for">balance_for</a>(sender_balance) &gt;= transaction_fee_amount,
-        6
-    );
     // Bump the sequence number
     sender_account.sequence_number = txn_sequence_number + 1;
 
@@ -2701,6 +2694,80 @@ also be added. This account will be a child of
         );
         <a href="Libra.md#0x0_Libra_deposit">Libra::deposit</a>(&<b>mut</b> borrow_global_mut&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(0xFEE).coin, transaction_fee);
     }
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_LibraAccount_success_epilogue"></a>
+
+## Function `success_epilogue`
+
+
+
+<pre><code><b>fun</b> <a href="#0x0_LibraAccount_success_epilogue">success_epilogue</a>&lt;Token&gt;(account: &signer, txn_sequence_number: u64, txn_gas_price: u64, txn_max_gas_units: u64, gas_units_remaining: u64)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="#0x0_LibraAccount_success_epilogue">success_epilogue</a>&lt;Token&gt;(
+    account: &signer,
+    txn_sequence_number: u64,
+    txn_gas_price: u64,
+    txn_max_gas_units: u64,
+    gas_units_remaining: u64
+) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+    <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
+    // Load the transaction sender's account and balance resources
+    <b>let</b> sender_balance = borrow_global_mut&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(sender);
+
+    // Charge for gas
+    <b>let</b> transaction_fee_amount = txn_gas_price * (txn_max_gas_units - gas_units_remaining);
+    Transaction::assert(
+        <a href="#0x0_LibraAccount_balance_for">balance_for</a>(sender_balance) &gt;= transaction_fee_amount,
+        6
+    );
+    <a href="#0x0_LibraAccount_epilogue">epilogue</a>&lt;Token&gt;(sender, transaction_fee_amount, txn_sequence_number);
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_LibraAccount_failure_epilogue"></a>
+
+## Function `failure_epilogue`
+
+
+
+<pre><code><b>fun</b> <a href="#0x0_LibraAccount_failure_epilogue">failure_epilogue</a>&lt;Token&gt;(account: &signer, txn_sequence_number: u64, txn_gas_price: u64, txn_max_gas_units: u64, gas_units_remaining: u64)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="#0x0_LibraAccount_failure_epilogue">failure_epilogue</a>&lt;Token&gt;(
+    account: &signer,
+    txn_sequence_number: u64,
+    txn_gas_price: u64,
+    txn_max_gas_units: u64,
+    gas_units_remaining: u64
+) <b>acquires</b> <a href="#0x0_LibraAccount_T">T</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+    <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
+    // Charge for gas
+    <b>let</b> transaction_fee_amount = txn_gas_price * (txn_max_gas_units - gas_units_remaining);
+
+    <a href="#0x0_LibraAccount_epilogue">epilogue</a>&lt;Token&gt;(sender, transaction_fee_amount, txn_sequence_number);
 }
 </code></pre>
 

@@ -369,7 +369,7 @@ impl LibraVM {
         .and_then(|_| {
             failed_gas_left = cost_strategy.remaining_gas();
             let mut cost_strategy = CostStrategy::system(gas_schedule, failed_gas_left);
-            self.run_epilogue(
+            self.run_success_epilogue(
                 &mut data_store,
                 &mut cost_strategy,
                 txn_data,
@@ -411,7 +411,7 @@ impl LibraVM {
         let mut data_store = TransactionDataCache::new(remote_cache);
         match TransactionStatus::from(error_code) {
             TransactionStatus::Keep(status) => self
-                .run_epilogue(
+                .run_failure_epilogue(
                     &mut data_store,
                     &mut cost_strategy,
                     txn_data,
@@ -694,7 +694,7 @@ impl LibraVM {
 
     /// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
-    fn run_epilogue(
+    fn run_success_epilogue(
         &self,
         data_store: &mut TransactionDataCache,
         cost_strategy: &mut CostStrategy,
@@ -710,7 +710,40 @@ impl LibraVM {
         let _timer = TXN_EPILOGUE_SECONDS.start_timer();
         self.move_vm.execute_function(
             &account_config::ACCOUNT_MODULE,
-            &EPILOGUE_NAME,
+            &SUCCESS_EPILOGUE_NAME,
+            vec![gas_currency_ty],
+            vec![
+                Value::transaction_argument_signer_reference(txn_data.sender),
+                Value::u64(txn_sequence_number),
+                Value::u64(txn_gas_price),
+                Value::u64(txn_max_gas_units),
+                Value::u64(gas_remaining),
+            ],
+            txn_data.sender(),
+            data_store,
+            cost_strategy,
+        )
+    }
+
+    /// Run the failure epilogue of a transaction by calling into `FAILURE_EPILOGUE_NAME` function
+    /// stored in the `ACCOUNT_MODULE` on chain.
+    fn run_failure_epilogue(
+        &self,
+        data_store: &mut TransactionDataCache,
+        cost_strategy: &mut CostStrategy,
+        txn_data: &TransactionMetadata,
+        account_currency_symbol: &IdentStr,
+    ) -> VMResult<()> {
+        let gas_currency_ty =
+            account_config::type_tag_for_currency_code(account_currency_symbol.to_owned());
+        let txn_sequence_number = txn_data.sequence_number();
+        let txn_gas_price = txn_data.gas_unit_price().get();
+        let txn_max_gas_units = txn_data.max_gas_amount().get();
+        let gas_remaining = cost_strategy.remaining_gas().get();
+        let _timer = TXN_EPILOGUE_SECONDS.start_timer();
+        self.move_vm.execute_function(
+            &account_config::ACCOUNT_MODULE,
+            &FAILURE_EPILOGUE_NAME,
             vec![gas_currency_ty],
             vec![
                 Value::transaction_argument_signer_reference(txn_data.sender),
@@ -754,7 +787,7 @@ impl LibraVM {
             .map_err(|err| convert_prologue_runtime_error(&err, &txn_data.sender))
     }
 
-    /// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored
+    /// Run the epilogue of a transaction by calling into `WRITESET_EPILOGUE_NAME` function stored
     /// in the `WRITESET_MODULE` on chain.
     fn run_writeset_epilogue(
         &self,
@@ -770,7 +803,7 @@ impl LibraVM {
         let _timer = TXN_EPILOGUE_SECONDS.start_timer();
         self.move_vm.execute_function(
             &LIBRA_WRITESET_MANAGER_MODULE,
-            &EPILOGUE_NAME,
+            &WRITESET_EPILOGUE_NAME,
             vec![],
             vec![
                 Value::transaction_argument_signer_reference(txn_data.sender),
