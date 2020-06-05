@@ -53,6 +53,7 @@ fn in_memory(n: u64) {
         Storage::from(InMemoryStorage::new()),
         signer.author(),
         signer.private_key().clone(),
+        None,
         waypoint,
     );
     let safety_rules_manager = SafetyRulesManager::new_local(storage);
@@ -67,6 +68,7 @@ fn on_disk(n: u64) {
         Storage::from(OnDiskStorage::new(file_path)),
         signer.author(),
         signer.private_key().clone(),
+        None,
         waypoint,
     );
     let safety_rules_manager = SafetyRulesManager::new_local(storage);
@@ -81,6 +83,7 @@ fn serializer(n: u64) {
         Storage::from(OnDiskStorage::new(file_path)),
         signer.author(),
         signer.private_key().clone(),
+        None,
         waypoint,
     );
     let safety_rules_manager = SafetyRulesManager::new_serializer(storage);
@@ -95,6 +98,7 @@ fn thread(n: u64) {
         Storage::from(OnDiskStorage::new(file_path)),
         signer.author(),
         signer.private_key().clone(),
+        None,
         waypoint,
     );
     let safety_rules_manager = SafetyRulesManager::new_thread(storage);

@@ -195,6 +195,7 @@ pub fn test_storage(signer: &ValidatorSigner) -> PersistentSafetyStorage {
         storage,
         signer.author(),
         signer.private_key().clone(),
+        None,
         waypoint,
     )
 }

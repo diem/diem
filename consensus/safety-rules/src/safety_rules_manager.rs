@@ -33,7 +33,7 @@ pub fn storage(config: &mut NodeConfig) -> PersistentSafetyStorage {
             .expect("Missing validator network")
             .peer_id();
 
-        let private_key = test_config
+        let consensus_private_key = test_config
             .consensus_keypair
             .as_mut()
             .expect("Missing consensus keypair in test config")
@@ -41,7 +41,19 @@ pub fn storage(config: &mut NodeConfig) -> PersistentSafetyStorage {
             .expect("Failed to take Consensus private key, key absent or already read");
         let waypoint = config.base.waypoint.waypoint();
 
-        PersistentSafetyStorage::initialize(internal_storage, author, private_key, waypoint)
+        let execution_public_key = test_config
+            .execution_keypair
+            .as_mut()
+            .expect("Missing execution keypair in test config")
+            .public_key();
+
+        PersistentSafetyStorage::initialize(
+            internal_storage,
+            author,
+            consensus_private_key,
+            Some(execution_public_key),
+            waypoint,
+        )
     } else {
         PersistentSafetyStorage::new(internal_storage)
     }
