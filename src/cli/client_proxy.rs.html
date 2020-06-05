@@ -1719,6 +1719,30 @@
 <span id="1719">1719</span>
 <span id="1720">1720</span>
 <span id="1721">1721</span>
+<span id="1722">1722</span>
+<span id="1723">1723</span>
+<span id="1724">1724</span>
+<span id="1725">1725</span>
+<span id="1726">1726</span>
+<span id="1727">1727</span>
+<span id="1728">1728</span>
+<span id="1729">1729</span>
+<span id="1730">1730</span>
+<span id="1731">1731</span>
+<span id="1732">1732</span>
+<span id="1733">1733</span>
+<span id="1734">1734</span>
+<span id="1735">1735</span>
+<span id="1736">1736</span>
+<span id="1737">1737</span>
+<span id="1738">1738</span>
+<span id="1739">1739</span>
+<span id="1740">1740</span>
+<span id="1741">1741</span>
+<span id="1742">1742</span>
+<span id="1743">1743</span>
+<span id="1744">1744</span>
+<span id="1745">1745</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1776,7 +1800,7 @@
     <span class="ident">str</span>::{<span class="self">self</span>, <span class="ident">FromStr</span>},
     <span class="ident">thread</span>, <span class="ident">time</span>,
 };
-<span class="kw">use</span> <span class="ident">stdlib</span>::<span class="ident">transaction_scripts</span>::<span class="ident">StdlibScript</span>;
+<span class="kw">use</span> <span class="ident">stdlib</span>::{<span class="ident">transaction_scripts</span>::<span class="ident">StdlibScript</span>, <span class="ident">StdLibOptions</span>};
 <span class="kw">use</span> <span class="ident">transaction_builder</span>::<span class="ident">encode_register_validator_script</span>;
 
 <span class="kw">const</span> <span class="ident">CLIENT_WALLET_MNEMONIC_FILE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;client.mnemonic&quot;</span>;
@@ -2161,7 +2185,10 @@
                         <span class="ident">num_coins</span>,
                     )
                 };
-                <span class="self">self</span>.<span class="ident">association_transaction_with_local_faucet_account</span>(<span class="ident">script</span>, <span class="ident">is_blocking</span>)
+                <span class="self">self</span>.<span class="ident">association_transaction_with_local_faucet_account</span>(
+                    <span class="ident">TransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">script</span>),
+                    <span class="ident">is_blocking</span>,
+                )
             }
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">mint_coins_with_faucet_service</span>(
                 <span class="ident">receiver_auth_key</span>,
@@ -2189,9 +2216,9 @@
         );
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">faucet_account</span> {
             <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">association_transaction_with_local_faucet_account</span>(
-                <span class="ident">transaction_builder</span>::<span class="ident">encode_publishing_option_script</span>(
+                <span class="ident">TransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">transaction_builder</span>::<span class="ident">encode_publishing_option_script</span>(
                     <span class="ident">VMPublishingOption</span>::<span class="ident">CustomScripts</span>,
-                ),
+                )),
                 <span class="ident">is_blocking</span>,
             ),
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unimplemented</span><span class="macro">!</span>(),
@@ -2215,9 +2242,36 @@
         );
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">faucet_account</span> {
             <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">association_transaction_with_local_faucet_account</span>(
-                <span class="ident">transaction_builder</span>::<span class="ident">encode_publishing_option_script</span>(<span class="ident">VMPublishingOption</span>::<span class="ident">Locked</span>(
-                    <span class="ident">StdlibScript</span>::<span class="ident">whitelist</span>(),
+                <span class="ident">TransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">transaction_builder</span>::<span class="ident">encode_publishing_option_script</span>(
+                    <span class="ident">VMPublishingOption</span>::<span class="ident">Locked</span>(<span class="ident">StdlibScript</span>::<span class="ident">whitelist</span>()),
                 )),
+                <span class="ident">is_blocking</span>,
+            ),
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unimplemented</span><span class="macro">!</span>(),
+        }
+    }
+
+    <span class="doccomment">/// Only allow executing predefined script in the Move standard library in the network.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">upgrade_stdlib</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">space_delim_strings</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>],
+        <span class="ident">is_blocking</span>: <span class="ident">bool</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="macro">ensure</span><span class="macro">!</span>(
+            <span class="ident">space_delim_strings</span>[<span class="number">0</span>] <span class="op">=</span><span class="op">=</span> <span class="string">&quot;upgrade_stdlib&quot;</span>,
+            <span class="string">&quot;inconsistent command &#39;{}&#39; for upgrade_stdlib&quot;</span>,
+            <span class="ident">space_delim_strings</span>[<span class="number">0</span>]
+        );
+        <span class="macro">ensure</span><span class="macro">!</span>(
+            <span class="ident">space_delim_strings</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">1</span>,
+            <span class="string">&quot;Invalid number of arguments for upgrading_stdlib_transaction&quot;</span>
+        );
+
+        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">faucet_account</span> {
+            <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">association_transaction_with_local_faucet_account</span>(
+                <span class="ident">TransactionPayload</span>::<span class="ident">WriteSet</span>(
+                    <span class="ident">transaction_builder</span>::<span class="ident">encode_stdlib_upgrade_transaction</span>(<span class="ident">StdLibOptions</span>::<span class="ident">Fresh</span>),
+                ),
                 <span class="ident">is_blocking</span>,
             ),
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unimplemented</span><span class="macro">!</span>(),
@@ -3063,19 +3117,13 @@
 
     <span class="kw">fn</span> <span class="ident">association_transaction_with_local_faucet_account</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">program</span>: <span class="ident">Script</span>,
+        <span class="ident">payload</span>: <span class="ident">TransactionPayload</span>,
         <span class="ident">is_blocking</span>: <span class="ident">bool</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="macro">ensure</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">faucet_account</span>.<span class="ident">is_some</span>(), <span class="string">&quot;No faucet account loaded&quot;</span>);
         <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">faucet_account</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">sender_address</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">address</span>;
-        <span class="kw">let</span> <span class="ident">txn</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">create_txn_to_submit</span>(
-            <span class="ident">TransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">program</span>),
-            <span class="ident">sender</span>,
-            <span class="prelude-val">None</span>,
-            <span class="prelude-val">None</span>,
-            <span class="prelude-val">None</span>,
-        )<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">txn</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">create_txn_to_submit</span>(<span class="ident">payload</span>, <span class="ident">sender</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sender_mut</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">faucet_account</span>.<span class="ident">as_mut</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">submit_transaction</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sender_mut</span>), <span class="ident">txn</span>);
         <span class="kw">if</span> <span class="ident">is_blocking</span> {
