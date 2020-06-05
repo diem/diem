@@ -8,7 +8,7 @@
 // This fuzzes the wrappers we have around our Noise library.
 //
 
-use crate::noise_wrapper::{HandshakeAuthMode, NoiseUpgrader};
+use crate::noise::{HandshakeAuthMode, NoiseUpgrader};
 use futures::{
     executor::block_on,
     future::join,
@@ -53,18 +53,11 @@ impl ExposingSocket {
     }
 }
 impl AsyncWrite for ExposingSocket {
-    //    use AsyncWrite;
     fn poll_write(
         mut self: Pin<&mut Self>,
         context: &mut Context,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
-        // Note: `let bytes_written = ready!(/* .. */)?` is of a shortcut for
-        // let bytes_written = match Pin::new(&mut self.inner).poll_write(context, buf) {
-        //     Poll::Ready(Ok(bytes_written)) => bytes_written,
-        //     Poll::Ready(Err(err)) => return Poll::Ready(Err(err)),
-        //     Poll::Pending => return Poll::Pending,
-        // };
         let bytes_written = ready!(Pin::new(&mut self.inner).poll_write(context, buf))?;
         self.written.extend_from_slice(&buf[..bytes_written]);
         Poll::Ready(Ok(bytes_written))

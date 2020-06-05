@@ -5,11 +5,12 @@
 //! This module also implements additional anti-DoS mitigation,
 //! by including a timestamp in each handshake initialization message.
 //! Refer to the module's documentation for more information.
-//! A successful handshake returns a `NoiseStream` which is defined in [socket] module.
+//! A successful handshake returns a `NoiseStream` which is defined in the
+//! [stream] module.
 //!
-//! [socket]: network::noise_wrapper::socket
+//! [stream]: network::noise::stream
 
-use crate::noise_wrapper::stream::NoiseStream;
+use crate::noise::stream::NoiseStream;
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use libra_config::config::NetworkPeerInfo;
 use libra_crypto::{noise, x25519};

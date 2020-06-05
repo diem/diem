@@ -3,7 +3,7 @@
 
 use crate::FuzzTargetImpl;
 use libra_proptest_helpers::ValueGenerator;
-use network::noise_wrapper::fuzzing::{fuzz_responder, generate_corpus};
+use network::noise::fuzzing::{fuzz_responder, generate_corpus};
 
 #[derive(Clone, Debug, Default)]
 pub struct NetworkNoiseResponder;

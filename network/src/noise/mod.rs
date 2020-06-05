@@ -12,7 +12,7 @@
 //!
 //! ```
 //! use network::{
-//!     noise_wrapper::{HandshakeAuthMode, NoiseUpgrader},
+//!     noise::{HandshakeAuthMode, NoiseUpgrader},
 //!     NetworkPublicKeys,
 //! };
 //! use futures::{executor, future, io::{AsyncReadExt, AsyncWriteExt}};

@@ -24,9 +24,9 @@ mod sink;
 mod transport;
 
 #[cfg(not(any(feature = "testing", feature = "fuzzing")))]
-mod noise_wrapper;
+mod noise;
 #[cfg(any(feature = "testing", feature = "fuzzing"))]
-pub mod noise_wrapper;
+pub mod noise;
 
 pub type DisconnectReason = peer::DisconnectReason;
 pub type ConnectivityRequest = connectivity_manager::ConnectivityRequest;
