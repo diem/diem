@@ -57,7 +57,7 @@ impl SpecBlockId {
 }
 
 /// The kind of an assignment in the bytecode.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum AssignKind {
     /// The assign copies the lhs value.
     Copy,
@@ -313,6 +313,15 @@ impl Bytecode {
             v.swap(0, 1);
         }
         v
+    }
+
+    /// Returns the code offsets at which the code exits(aborts or returns).
+    pub fn get_exits(code: &[Bytecode]) -> Vec<CodeOffset> {
+        code.iter()
+            .enumerate()
+            .filter(|(_, bytecode)| bytecode.is_exit())
+            .map(|(idx, _)| idx as CodeOffset)
+            .collect()
     }
 }
 

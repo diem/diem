@@ -19,9 +19,10 @@ error:  This assertion might not hold.
     │             ^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/specs_in_fun.move:49:5: simple2_incorrect (entry)
-    =     at tests/sources/functional/specs_in_fun.move:51:15: simple2_incorrect
+    =     at tests/sources/functional/specs_in_fun.move:52:9: simple2_incorrect
     =         x = <redacted>,
     =         y = <redacted>
+    =     at tests/sources/functional/specs_in_fun.move:51:15: simple2_incorrect
     =     at tests/sources/functional/specs_in_fun.move:53:13: simple2_incorrect
 
 error:  This assertion might not hold.

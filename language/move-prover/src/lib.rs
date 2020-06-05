@@ -27,6 +27,7 @@ use stackless_bytecode_generator::{
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
     livevar_analysis::LiveVarAnalysisProcessor,
     packref_analysis::PackrefAnalysisProcessor,
+    reaching_def_analysis::ReachingDefProcessor,
     writeback_analysis::WritebackAnalysisProcessor,
 };
 use std::{
@@ -194,6 +195,7 @@ fn create_bytecode_processing_pipeline(_options: &Options) -> FunctionTargetPipe
     let mut res = FunctionTargetPipeline::default();
 
     // Add processors in order they are executed.
+    res.add_processor(ReachingDefProcessor::new());
     res.add_processor(EliminateImmRefsProcessor::new());
     res.add_processor(LiveVarAnalysisProcessor::new());
     res.add_processor(BorrowAnalysisProcessor::new());

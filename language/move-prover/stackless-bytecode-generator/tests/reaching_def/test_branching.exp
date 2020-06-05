@@ -1,0 +1,68 @@
+============ initial translation from Move ================
+
+fun TestBranching::branching(cond: bool): u64 {
+    var $t1: u64
+    var x: u64
+    var $t3: bool
+    var $t4: u64
+    var $t5: u64
+    var $t6: u64
+    var $t7: u64
+    $t3 := copy(cond)
+    if ($t3) goto L0 else goto L1
+    L1:
+    goto L2
+    L0:
+    $t4 := 3
+    $t1 := $t4
+    goto L3
+    L2:
+    $t5 := 4
+    $t1 := $t5
+    goto L3
+    L3:
+    $t6 := move($t1)
+    x := $t6
+    $t7 := copy(x)
+    return $t7
+}
+
+============ after pipeline `reaching_def` ================
+
+fun TestBranching::branching(cond: bool): u64 {
+    var $t1: u64
+    var x: u64
+    var $t3: bool
+    var $t4: u64
+    var $t5: u64
+    var $t6: u64
+    var $t7: u64
+    // reach:
+    if (cond) goto L0 else goto L1
+    // reach: $t3 -> {cond}
+    L1:
+    // reach: $t3 -> {cond}
+    goto L2
+    // reach: $t3 -> {cond}
+    L0:
+    // reach: $t3 -> {cond}
+    $t4 := 3
+    // reach: $t3 -> {cond}
+    $t1 := $t4
+    // reach: $t3 -> {cond}, $t4 -> {3}
+    goto L3
+    // reach: $t1 -> {$t4}, $t3 -> {cond}, $t4 -> {3}
+    L2:
+    // reach: $t3 -> {cond}
+    $t5 := 4
+    // reach: $t3 -> {cond}
+    $t1 := $t5
+    // reach: $t3 -> {cond}, $t5 -> {4}
+    goto L3
+    // reach: $t1 -> {$t5}, $t3 -> {cond}, $t5 -> {4}
+    L3:
+    // reach: $t1 -> {$t4, $t5}, $t3 -> {cond}, $t4 -> {3}, $t5 -> {4}
+    x := $t1
+    // reach: $t1 -> {$t4, $t5}, $t3 -> {cond}, $t4 -> {3}, $t5 -> {4}
+    return x
+}

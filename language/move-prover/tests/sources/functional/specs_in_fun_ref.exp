@@ -7,10 +7,11 @@ error:  This loop invariant might not be maintained by the loop.
      │                 ^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/specs_in_fun_ref.move:108:5: simple7 (entry)
+     =     at tests/sources/functional/specs_in_fun_ref.move:119:9: simple7
+     =         n = <redacted>,
+     =         x = <redacted>,
+     =         x = <redacted>
      =     at tests/sources/functional/specs_in_fun_ref.move:109:13: simple7
-     =         n = <redacted>
      =     at tests/sources/functional/specs_in_fun_ref.move:112:13: simple7
-     =         x = <redacted>
      =     at tests/sources/functional/specs_in_fun_ref.move:111:9: simple7
-     =         x = <redacted>
      =     at tests/sources/functional/specs_in_fun_ref.move:117:19: simple7

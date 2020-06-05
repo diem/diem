@@ -34,21 +34,18 @@ error:  This assertion might not hold.
      │         ^^^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/invariants.move:153:5: lifetime_invalid_S_branching (entry)
-     =     at tests/sources/functional/invariants.move:154:11: lifetime_invalid_S_branching
-     =         cond = <redacted>
-     =     at tests/sources/functional/invariants.move:155:21: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:166:11: lifetime_invalid_S_branching
+     =         cond = <redacted>,
      =         a = <redacted>,
-     =         b = <redacted>
-     =     at tests/sources/functional/invariants.move:156:19: lifetime_invalid_S_branching
-     =         a_ref = <redacted>
-     =     at tests/sources/functional/invariants.move:157:19: lifetime_invalid_S_branching
-     =         b_ref = <redacted>
-     =     at tests/sources/functional/invariants.move:158:19: lifetime_invalid_S_branching
-     =         $t5 = <redacted>,
-     =         x_ref = <redacted>
-     =     at tests/sources/functional/invariants.move:160:7: lifetime_invalid_S_branching
      =         a_ref = <redacted>,
+     =         b = <redacted>,
      =         b_ref = <redacted>,
      =         $t5 = <redacted>,
      =         x_ref = <redacted>
+     =     at tests/sources/functional/invariants.move:154:11: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:155:21: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:156:19: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:157:19: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:158:19: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:160:7: lifetime_invalid_S_branching
      =     at tests/sources/functional/invariants.move:163:11: lifetime_invalid_S_branching

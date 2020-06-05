@@ -62,7 +62,7 @@ error:  A postcondition might not hold on this return path.
      │         ^^^^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/aborts_if.move:144:5: abort_at_2_or_3_spec_incorrect (entry)
-     =     at tests/sources/functional/aborts_if.move:145:13: abort_at_2_or_3_spec_incorrect
+     =     at tests/sources/functional/aborts_if.move:145:38: abort_at_2_or_3_spec_incorrect
      =         x = <redacted>,
      =         $t1 = <redacted>
      =     at tests/sources/functional/aborts_if.move:144:5: abort_at_2_or_3_spec_incorrect (exit)
@@ -77,10 +77,10 @@ error: abort not covered by any of the `aborts_if` clauses
      │ ╰─────^
      ·
  154 │         if (x == 2 || x == 3) abort 1;
-     │             ---------------- abort happened here
+     │                                      - abort happened here
      │
      =     at tests/sources/functional/aborts_if.move:153:5: abort_at_2_or_3_strict_incorrect (entry)
-     =     at tests/sources/functional/aborts_if.move:154:13: abort_at_2_or_3_strict_incorrect (ABORTED)
+     =     at tests/sources/functional/aborts_if.move:154:38: abort_at_2_or_3_strict_incorrect (ABORTED)
      =         x = <redacted>,
      =         $t1 = <redacted>
 
@@ -94,10 +94,10 @@ error: abort not covered by any of the `aborts_if` clauses
      │ ╰─────^
      ·
  136 │         if (x == 2 || x == 3) abort 1;
-     │             ---------------- abort happened here
+     │                                      - abort happened here
      │
      =     at tests/sources/functional/aborts_if.move:135:5: abort_at_2_or_3_total_incorrect (entry)
-     =     at tests/sources/functional/aborts_if.move:136:13: abort_at_2_or_3_total_incorrect (ABORTED)
+     =     at tests/sources/functional/aborts_if.move:136:38: abort_at_2_or_3_total_incorrect (ABORTED)
      =         x = <redacted>,
      =         $t1 = <redacted>
 
@@ -139,8 +139,9 @@ error:  A postcondition might not hold on this return path.
      │         ^^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/aborts_if.move:112:5: multi_abort5_incorrect (entry)
-     =     at tests/sources/functional/aborts_if.move:113:9: multi_abort5_incorrect
+     =     at tests/sources/functional/aborts_if.move:115:10: multi_abort5_incorrect
      =         x = <redacted>
+     =     at tests/sources/functional/aborts_if.move:113:9: multi_abort5_incorrect
      =     at tests/sources/functional/aborts_if.move:112:5: multi_abort5_incorrect (exit)
 
 error: abort not covered by any of the `aborts_if` clauses
@@ -151,9 +152,9 @@ error: abort not covered by any of the `aborts_if` clauses
      │         ^^^^^^^^^^^^^^^^^^^
      ·
  173 │         if (x == 2 || x == 3) abort 1;
-     │             ---------------- abort happened here
+     │                                      - abort happened here
      │
      =     at tests/sources/functional/aborts_if.move:172:5: succeed_incorrect (entry)
-     =     at tests/sources/functional/aborts_if.move:173:13: succeed_incorrect (ABORTED)
+     =     at tests/sources/functional/aborts_if.move:173:38: succeed_incorrect (ABORTED)
      =         x = <redacted>,
      =         $t1 = <redacted>
