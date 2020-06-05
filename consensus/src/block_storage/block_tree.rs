@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::cmp::max;
+use libra_types::block_info::Round;
 use crate::counters;
 use anyhow::bail;
 use consensus_types::{
@@ -82,6 +84,9 @@ pub struct BlockTree<T> {
     pruned_block_ids: VecDeque<HashValue>,
     /// Num pruned blocks to keep in memory.
     max_pruned_blocks_in_mem: usize,
+    
+    /// Blocks that the validator voted for. Only keep the last one for each fork since it is enough to compute the marker
+    voted_blocks: Vec<HashValue>,
 }
 
 impl<T> BlockTree<T>
@@ -115,6 +120,8 @@ where
 
         let pruned_block_ids = VecDeque::with_capacity(max_pruned_blocks_in_mem);
 
+        let voted_blocks = Vec::new();
+
         BlockTree {
             id_to_block,
             root_id,
@@ -125,6 +132,7 @@ where
             id_to_quorum_cert,
             pruned_block_ids,
             max_pruned_blocks_in_mem,
+            voted_blocks,
         }
     }
 
@@ -358,6 +366,120 @@ where
 
     pub(super) fn get_all_block_id(&self) -> Vec<HashValue> {
         self.id_to_block.keys().cloned().collect()
+    }
+
+    // When validator voted for a block, update the voted_block 
+    pub(super) fn record_voted_block(&mut self, block_id: HashValue) -> anyhow::Result<()> {
+        let mut cur_block_id = block_id;
+        loop {
+            // info!("daniel record voted block id {:?}", cur_block_id);
+            match self.get_block(&cur_block_id) {
+                Some(ref block) if block.round() <= self.root().round() => {
+                    break;
+                }
+                Some(block) => {
+                    cur_block_id = block.parent_id();
+                    let mut done = false;
+                    // remove the block from voted_block
+                    for ind in 0..self.voted_blocks.len() {
+                        if self.voted_blocks[ind] == cur_block_id {
+                            self.voted_blocks.remove(ind);
+                            done = true;
+                            break;
+                        }
+                    }
+                    if done { break; }
+                }
+                None => {
+                    info!("record_voted_block: Block {} not found", cur_block_id);
+                    bail!("Block {} not found", cur_block_id);
+                }
+            }
+        }
+        self.voted_blocks.push(block_id);
+
+        Ok(())
+    }
+
+    pub(super) fn compute_marker(&self, block_id: HashValue) -> anyhow::Result<Round> {
+        let mut marker = 0;
+        for voted_block in &self.voted_blocks {
+            // info!("daniel compute marker block id {:?}", voted_block);
+            let result = self.conflict(*voted_block, block_id);
+            match result {
+                Ok(res) => {
+                    if res {
+                        if let Some(existing_block) = self.get_block(&voted_block) {
+                            let round_number = existing_block.block_info().round();
+                            marker = max(marker, round_number);
+                        } else {
+                            info!("compute_marker: Block {} not found", voted_block);
+                            bail!("Block {} not found", voted_block);
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!("Error {:?}", e);
+                }
+            }
+        }
+        Ok(marker)
+    }
+
+    // check whether voted_block and voting_block are from different forks, voting_block always has larger round number due to the voting rule
+    pub fn conflict(&self, voted_block: HashValue, voting_block: HashValue) -> anyhow::Result<bool> {
+        let mut cur_block_id = voting_block;
+        let mut result = true;
+        loop {
+            // info!("daniel record voted block id {:?}", cur_block_id);
+            match self.get_block(&cur_block_id) {
+                Some(ref block) if block.round() <= self.root().round() => {
+                    break;
+                }
+                Some(block) => {
+                    cur_block_id = block.parent_id();
+                    if cur_block_id == voted_block {
+                        result = false;
+                        break;
+                    }
+                }
+                None => {
+                    info!("conflict: Block {} not found", cur_block_id);
+                    bail!("Block {} not found", cur_block_id);
+                }
+            }
+        }
+        return Ok(result);
+    }
+
+    pub fn print_voted(&self) {
+        for ind in 0..self.voted_blocks.len() {
+            let mut res = vec![];
+            let mut cur_block_id = self.voted_blocks[ind];
+            loop {
+                match self.get_block(&cur_block_id) {
+                    Some(ref block) if block.round() <= self.root().round() => {
+                        res.push(cur_block_id);
+                        break;
+                    }
+                    Some(block) => {
+                        res.push(cur_block_id);
+                        cur_block_id = block.parent_id();
+                    }
+                    None => break,
+                }
+            }
+            res.reverse();
+            for block_id in res {
+                if let Some(existing_block) = self.get_block(&block_id) {
+                    let round_number = existing_block.block_info().round();
+                    info!("daniel block round {}, id {:?}", round_number, block_id);
+                } else {
+                    warn!("Block {} not found", block_id);
+                }
+            }
+            info!("****************************************");
+        }
     }
 }
 

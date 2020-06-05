@@ -529,6 +529,7 @@ impl<T: Payload> EventProcessor<T> {
         }
 
         let proposal_round = proposal.round();
+        let proposal_id = proposal.id();
 
         let vote = match self.execute_and_vote(proposal).await {
             Err(e) => {
@@ -538,6 +539,27 @@ impl<T: Payload> EventProcessor<T> {
             Ok(vote) => vote,
         };
 
+        info!("------------------- process_proposal round {} -----------------", proposal_round);
+        let marker = match self.block_store.compute_marker(proposal_id) {
+            Err(e) => {
+                warn!("{:?}", e);
+                return;
+            }
+            Ok(marker) => marker,
+        };
+        info!("daniel marker {}", marker);
+
+        match self.block_store.record_voted_block(proposal_id) {
+            Err(e) => {
+                warn!("{:?}", e);
+                return;
+            }
+            Ok(()) => info!("daniel record voted block successful"),
+        };
+
+        self.block_store.print_voted();
+        info!("----------------------------------------------------------");
+        
         let recipients = self
             .proposer_election
             .get_valid_proposers(proposal_round + 1);

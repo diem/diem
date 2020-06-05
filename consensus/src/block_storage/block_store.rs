@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use libra_types::block_info::Round;
 use crate::{
     block_storage::{block_tree::BlockTree, BlockReader},
     counters,
@@ -393,6 +394,18 @@ impl<T: Payload> BlockStore<T> {
             .unwrap()
             .process_pruned_blocks(next_root_id, id_to_remove.clone());
         id_to_remove
+    }
+
+    pub fn record_voted_block(&self, block_id: HashValue) -> anyhow::Result<()> {
+        self.inner.write().unwrap().record_voted_block(block_id)
+    }
+
+    pub fn compute_marker(&self, block_id: HashValue) -> anyhow::Result<Round> {
+        self.inner.read().unwrap().compute_marker(block_id)
+    }
+
+    pub fn print_voted(&self) {
+        self.inner.read().unwrap().print_voted();
     }
 }
 
