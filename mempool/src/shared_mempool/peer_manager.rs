@@ -3,7 +3,7 @@
 
 use libra_config::config::{PeerNetworkId, UpstreamConfig};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeSet, HashMap, HashSet},
     sync::Mutex,
 };
 
@@ -31,14 +31,14 @@ pub struct BroadcastInfo {
     // broadcasts that have not been ACK'ed for yet
     pub sent_batches: HashMap<String, Vec<u64>>,
     // timeline IDs of all txns that need to be retried and ACKed for
-    pub total_retry_txns: HashSet<u64>,
+    pub total_retry_txns: BTreeSet<u64>,
 }
 
 impl BroadcastInfo {
     fn new() -> Self {
         Self {
             sent_batches: HashMap::new(),
-            total_retry_txns: HashSet::new(),
+            total_retry_txns: BTreeSet::new(),
         }
     }
 }
@@ -114,7 +114,7 @@ impl PeerManager {
             .iter()
             .filter(|x| *x >= &earliest_timeline_id)
             .cloned()
-            .collect::<HashSet<_>>();
+            .collect::<BTreeSet<_>>();
 
         sync_state.broadcast_info.total_retry_txns = gc_retry_txns;
     }

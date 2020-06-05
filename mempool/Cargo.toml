@@ -44,4 +44,4 @@ rand = "0.7.3"
 
 [features]
 default = []
-fuzzing = ["libra-types/fuzzing", "storage-interface/fuzzing"]
+fuzzing = ["libra-types/fuzzing", "storage-interface/fuzzing", "libra-config/fuzzing"]
