@@ -81,11 +81,21 @@ and out of memory might need a `-rss_limit_mb=2560` argumnent to libfuzzer.
 
 See [Google OSS-Fuzz's documentation on reproducing bugs](https://google.github.io/oss-fuzz/advanced-topics/reproducing/) as well.
 
+### Flamegraph
+
+To obtain a flamegraph of a harness test, run the following command:
+
+```sh
+FUZZ_TARGET=compiled_module cargo flamegraph -p libra-fuzzer --bin flamegraph
+```
+
+It is good to first generate some corpus and run the fuzzer over it for a bit (to find new corpus). The larger corpus, the better flamegraph you will obtain.
+
 ### Fuzzing Coverage
 
 To test coverage of our fuzzers you can run the following command with [grcov](https://github.com/mozilla/grcov):
 
-```
+```sh
 RUSTFLAGS='--cfg feature="fuzzing"' CORPUS_PATH=fuzz/corpus cargo xtest --html-cov-dir <some path for html output> -p libra-fuzzer -- coverage
 ```
 
