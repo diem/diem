@@ -7,13 +7,14 @@ error:  A postcondition might not hold on this return path.
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/serialize_model.move:26:5: lcs_test1_incorrect (entry)
-    =     at tests/sources/functional/serialize_model.move:28:23: lcs_test1_incorrect
+    =     at tests/sources/functional/serialize_model.move:30:14: lcs_test1_incorrect
     =         v1 = <redacted>,
     =         v2 = <redacted>,
-    =         s1 = <redacted>
-    =     at tests/sources/functional/serialize_model.move:29:32: lcs_test1_incorrect
-    =         s2 = <redacted>
-    =     at tests/sources/functional/serialize_model.move:30:9: lcs_test1_incorrect
+    =         s1 = <redacted>,
+    =         s2 = <redacted>,
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
+    =     at tests/sources/functional/serialize_model.move:28:23: lcs_test1_incorrect
+    =     at tests/sources/functional/serialize_model.move:29:32: lcs_test1_incorrect
+    =     at tests/sources/functional/serialize_model.move:30:9: lcs_test1_incorrect
     =     at tests/sources/functional/serialize_model.move:26:5: lcs_test1_incorrect (exit)

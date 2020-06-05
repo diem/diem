@@ -19,6 +19,7 @@ error:  A postcondition might not hold on this return path.
     =     at tests/sources/functional/references.move:43:9: mut_b
     =     at tests/sources/functional/references.move:58:5: mut_ref_incorrect
     =         b = <redacted>
+    =     at tests/sources/functional/references.move:63:29: mut_ref_incorrect
     =     at tests/sources/functional/references.move:62:9: mut_ref_incorrect
-    =     at tests/sources/functional/references.move:63:13: mut_ref_incorrect
+    =     at tests/sources/functional/references.move:63:18: mut_ref_incorrect
     =     at tests/sources/functional/references.move:58:5: mut_ref_incorrect (exit)

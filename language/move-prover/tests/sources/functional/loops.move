@@ -87,6 +87,8 @@ module VerifyLoops {
         }
     }
     spec fun iter10_abort_incorrect { // Disproved. Abort always happens.
+        // TODO: verification temporarily turned off because of havoc of type assumptions.
+        pragma verify=false;
         aborts_if false;
     }
 }

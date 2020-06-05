@@ -7,12 +7,13 @@ error:  A postcondition might not hold on this return path.
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/hash_model.move:39:5: hash_test1_incorrect (entry)
-    =     at tests/sources/functional/hash_model.move:41:24: hash_test1_incorrect
+    =     at tests/sources/functional/hash_model.move:42:13: hash_test1_incorrect
     =         v1 = <redacted>,
     =         v2 = <redacted>,
-    =         h1 = <redacted>
-    =     at tests/sources/functional/hash_model.move:42:33: hash_test1_incorrect
+    =         h1 = <redacted>,
     =         h2 = <redacted>
+    =     at tests/sources/functional/hash_model.move:41:24: hash_test1_incorrect
+    =     at tests/sources/functional/hash_model.move:42:24: hash_test1_incorrect
     =     at tests/sources/functional/hash_model.move:43:9: hash_test1_incorrect
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
@@ -26,12 +27,13 @@ error:  A postcondition might not hold on this return path.
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/hash_model.move:82:5: hash_test2_incorrect (entry)
-    =     at tests/sources/functional/hash_model.move:84:24: hash_test2_incorrect
+    =     at tests/sources/functional/hash_model.move:85:13: hash_test2_incorrect
     =         v1 = <redacted>,
     =         v2 = <redacted>,
-    =         h1 = <redacted>
-    =     at tests/sources/functional/hash_model.move:85:33: hash_test2_incorrect
+    =         h1 = <redacted>,
     =         h2 = <redacted>
+    =     at tests/sources/functional/hash_model.move:84:24: hash_test2_incorrect
+    =     at tests/sources/functional/hash_model.move:85:24: hash_test2_incorrect
     =     at tests/sources/functional/hash_model.move:86:9: hash_test2_incorrect
     =         result_1 = <redacted>,
     =         result_2 = <redacted>

@@ -28,9 +28,118 @@ pub struct ReachingDefAnnotation(BTreeMap<CodeOffset, BTreeMap<TempIndex, BTreeS
 
 pub struct ReachingDefProcessor();
 
+type DefMap = BTreeMap<TempIndex, BTreeSet<Def>>;
 impl ReachingDefProcessor {
     pub fn new() -> Box<Self> {
         Box::new(ReachingDefProcessor())
+    }
+
+    /// Union all the reaching definitions of a temp.
+    fn union_defs(one: &mut DefMap, other: &DefMap) {
+        for (temp, defs) in other {
+            one.entry(*temp)
+                .and_modify(|e| {
+                    e.extend(defs.clone());
+                })
+                .or_insert_with(|| defs.clone());
+        }
+    }
+
+    /// Returns Some(temp, def) if temp has a unique reaching definition and None otherwise.
+    fn get_unique_def(temp: TempIndex, defs: BTreeSet<Def>) -> Option<(TempIndex, TempIndex)> {
+        if defs.len() != 1 {
+            return None;
+        }
+        if let Def::Alias(def) = defs.iter().next().unwrap() {
+            return Some((temp, *def));
+        }
+        None
+    }
+
+    fn defs_reaching_exits(
+        exit_offsets: Vec<CodeOffset>,
+        annotations: &BTreeMap<CodeOffset, DefMap>,
+        func_target: FunctionTarget,
+    ) -> BTreeMap<TempIndex, TempIndex> {
+        let mut res = BTreeMap::new();
+        let user_local_count = func_target.get_user_local_count();
+        for offset in exit_offsets {
+            if let Some(defs) = annotations.get(&offset) {
+                Self::union_defs(&mut res, &defs);
+            }
+        }
+        res.into_iter()
+            .filter_map(|(temp, defs)| Self::get_unique_def(temp, defs))
+            .filter(|(t, _)| {
+                *t >= user_local_count && !func_target.get_local_type(*t).is_reference()
+            }) // keeping only newly added temps
+            .collect()
+    }
+
+    fn get_src_local(idx: TempIndex, reaching_defs: &BTreeMap<TempIndex, TempIndex>) -> TempIndex {
+        let mut res = idx;
+        while reaching_defs.contains_key(&res) {
+            res = *reaching_defs.get(&res).unwrap();
+            if res == idx {
+                break;
+            }
+        }
+        res
+    }
+
+    /// Eliminate assignments of temps if they reach the return of a function
+    /// and replace temps accordingly. For example, if assignment 'a=b' reaches
+    /// the end of the function, then it will be eliminated and all appearances
+    /// of a will be replaced by b.
+    pub fn transform_code(
+        code: &[Bytecode],
+        defs: &ReachingDefAnnotation,
+        func_target: FunctionTarget,
+    ) -> Vec<Bytecode> {
+        use Bytecode::*;
+        let exit_offsets = Bytecode::get_exits(code);
+        let user_local_count = func_target.get_user_local_count();
+        let reaching_defs = Self::defs_reaching_exits(exit_offsets, &defs.0, func_target);
+        let mut res = vec![];
+        let transform_local = |local| Self::get_src_local(local, &reaching_defs);
+        for bytecode in code {
+            match bytecode {
+                Assign(attr, dest, src, a_kind) => {
+                    if *dest < user_local_count
+                        || !reaching_defs.contains_key(dest)
+                        || reaching_defs.get(dest).unwrap() != src
+                    {
+                        res.push(Assign(*attr, *dest, transform_local(*src), *a_kind));
+                    }
+                }
+                Call(attr, dests, op, srcs) => {
+                    let transformed_dests = dests.iter().map(|d| transform_local(*d)).collect();
+                    let transformed_srcs = srcs.iter().map(|s| transform_local(*s)).collect();
+                    res.push(Call(*attr, transformed_dests, op.clone(), transformed_srcs));
+                }
+                Ret(attr, rets) => {
+                    let transformed_rets = rets.iter().map(|r| transform_local(*r)).collect();
+                    res.push(Ret(*attr, transformed_rets));
+                }
+
+                Branch(attr, if_label, else_label, cond) => {
+                    res.push(Branch(
+                        *attr,
+                        *if_label,
+                        *else_label,
+                        transform_local(*cond),
+                    ));
+                }
+
+                Abort(attr, cond) => {
+                    res.push(Abort(*attr, transform_local(*cond)));
+                }
+                _ => {
+                    res.push(bytecode.clone());
+                }
+            }
+        }
+        res
     }
 }
 
@@ -68,7 +177,11 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
             }
             res
         };
-        data.annotations.set(ReachingDefAnnotation(defs));
+        let annotations = ReachingDefAnnotation(defs);
+        let func_target = FunctionTarget::new(func_env, &data);
+        let transformed_code = Self::transform_code(&data.code, &annotations, func_target);
+        data.code = transformed_code;
+        data.annotations.set(annotations);
         data
     }
 }
