@@ -197,7 +197,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let mut network_runtimes = vec![];
     let mut state_sync_network_handles = vec![];
     let mut mempool_network_handles = vec![];
-    let mut validator_network_provider = None;
+    let mut consensus_network_handles = None;
     let mut reconfig_subscriptions = vec![];
 
     let (mempool_reconfig_subscription, mempool_reconfig_events) =
@@ -222,7 +222,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     }
 
     let mut validator_count = 0;
-    // Instantiate every network.
+    // Instantiate every network and collect the requisite endpoints for state_sync, mempool, and consensus.
     for (role, network_config) in network_configs {
         // Perform common instantiation steps
         let (runtime, mut network_builder) =
@@ -241,13 +241,14 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         );
         mempool_network_handles.push((peer_id, mempool_sender, mempool_events));
 
-        // Perform actions specific to a particular network type.
         match role {
+            // Perform steps relevant specifically to Validator networks.
             RoleType::Validator => {
                 validator_count += 1;
                 // A valid config is allowed to have exactly one ValidatorNetwork
                 assert_eq!(1, validator_count);
                 // Set up to listen for network configuration changes from StateSync.
+                // TODO:  move this inside network_builder.
                 if let Some(conn_mgr_reqs_tx) = network_builder.conn_mgr_reqs_tx() {
                     let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
                         gen_simple_discovery_reconfig_subscription();
@@ -259,18 +260,19 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                         .spawn(network_config_listener.start(simple_discovery_reconfig_rx));
                 };
 
-                // Cache the network information to be started later.
-                validator_network_provider = Some((peer_id, runtime, network_builder));
+                consensus_network_handles = Some(consensus::network_interface::add_to_network(
+                    &mut network_builder,
+                ));
             }
-            RoleType::FullNode => {
-                // Cache the runtime so it does not go out of scope immediately.
-                network_runtimes.push(runtime);
-
-                // Start the network provider.  FullNode networks can operate silently.3
-                let _listen_addr = network_builder.build();
-                debug!("Network started for peer_id: {}", peer_id);
-            }
+            // Currently no FullNode network specific steps.
+            RoleType::FullNode => (),
         }
+
+        // Start the network and cache the runtime so it does not go out of scope.
+        // TODO:  move all 'start' commands to a second phase at the end of setup_environment.  Target is to have one pass to wire the pieces together and a second pass to start processing in an appropriate order.
+        let _listen_addr = network_builder.build();
+        network_runtimes.push(runtime);
+        debug!("Network started for peer_id: {}", peer_id);
     }
 
     // TODO set up on-chain discovery network based on UpstreamConfig.fallback_network
@@ -307,22 +309,16 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     );
     debug!("Mempool started in {} ms", instant.elapsed().as_millis());
 
-    if let Some((peer_id, runtime, mut network_builder)) = validator_network_provider {
-        // Note: We need to start network provider before consensus, because the consensus
-        // initialization is blocked on state synchronizer to sync to the initial root ledger
-        // info, which in turn cannot make progress before network initialization
-        // because the NewPeer events which state synchronizer uses to know its
-        // peers are delivered by network provider. If we were to start network
-        // provider after consensus, we create a cyclic dependency from
-        // network provider -> consensus -> state synchronizer -> network provider. This deadlock
-        // was observed in GitHub Issue #749. A long term fix might be make
-        // consensus initialization async instead of blocking on state synchronizer.
-        let (consensus_network_sender, consensus_network_events) =
-            consensus::network_interface::add_to_network(&mut network_builder);
-        let _listen_addr = network_builder.build();
-        network_runtimes.push(runtime);
-        debug!("Network started for peer_id: {}", peer_id);
-
+    // Note: We need to start network provider before consensus, because the consensus
+    // initialization is blocked on state synchronizer to sync to the initial root ledger
+    // info, which in turn cannot make progress before network initialization
+    // because the NewPeer events which state synchronizer uses to know its
+    // peers are delivered by network provider. If we were to start network
+    // provider after consensus, we create a cyclic dependency from
+    // network provider -> consensus -> state synchronizer -> network provider. This deadlock
+    // was observed in GitHub Issue #749. A long term fix might be make
+    // consensus initialization async instead of blocking on state synchronizer.
+    if let Some((consensus_network_sender, consensus_network_events)) = consensus_network_handles {
         // Make sure that state synchronizer is caught up at least to its waypoint
         // (in case it's present). There is no sense to start consensus prior to that.
         // TODO: Note that we need the networking layer to be able to discover & connect to the
