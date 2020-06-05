@@ -391,7 +391,7 @@ where
                     if done { break; }
                 }
                 None => {
-                    info!("record_voted_block: Block {} not found", cur_block_id);
+                    info!("record_voted_block: Block {:?} not found", cur_block_id);
                     bail!("Block {} not found", cur_block_id);
                 }
             }
@@ -413,7 +413,7 @@ where
                             let round_number = existing_block.block_info().round();
                             marker = max(marker, round_number);
                         } else {
-                            info!("compute_marker: Block {} not found", voted_block);
+                            info!("compute_marker: Block {:?} not found", voted_block);
                             bail!("Block {} not found", voted_block);
                         }
                     }
@@ -438,13 +438,14 @@ where
                 }
                 Some(block) => {
                     cur_block_id = block.parent_id();
+                    // info!("conflict: round {}", block.round());
                     if cur_block_id == voted_block {
                         result = false;
                         break;
                     }
                 }
                 None => {
-                    info!("conflict: Block {} not found", cur_block_id);
+                    info!("conflict: Block {:?} not found", cur_block_id);
                     bail!("Block {} not found", cur_block_id);
                 }
             }
