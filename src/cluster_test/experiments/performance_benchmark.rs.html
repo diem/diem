@@ -372,7 +372,7 @@
         <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">end</span> <span class="op">-</span> <span class="ident">window</span> <span class="op">+</span> <span class="number">2</span> <span class="op">*</span> <span class="ident">buffer</span>;
         <span class="kw">let</span> <span class="ident">avg_txns_per_block</span> <span class="op">=</span> <span class="ident">stats</span>::<span class="ident">avg_txns_per_block</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">prometheus</span>, <span class="ident">start</span>, <span class="ident">end</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">avg_latency_client</span> <span class="op">=</span> <span class="ident">stats</span>.<span class="ident">latency</span> <span class="op">/</span> <span class="ident">stats</span>.<span class="ident">committed</span>;
-        <span class="kw">let</span> <span class="ident">p90_latency</span> <span class="op">=</span> <span class="ident">stats</span>.<span class="ident">latency_buckets</span>.<span class="ident">percentile</span>(<span class="number">9</span>, <span class="number">10</span>);
+        <span class="kw">let</span> <span class="ident">p99_latency</span> <span class="op">=</span> <span class="ident">stats</span>.<span class="ident">latency_buckets</span>.<span class="ident">percentile</span>(<span class="number">99</span>, <span class="number">100</span>);
         <span class="kw">let</span> <span class="ident">avg_tps</span> <span class="op">=</span> <span class="ident">stats</span>.<span class="ident">committed</span> <span class="op">/</span> <span class="ident">window</span>.<span class="ident">as_secs</span>();
         <span class="macro">info</span><span class="macro">!</span>(
             <span class="string">&quot;Link to dashboard : {}&quot;</span>,
@@ -407,7 +407,7 @@
             .<span class="ident">report_metric</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="string">&quot;avg_latency&quot;</span>, <span class="ident">avg_latency_client</span> <span class="kw">as</span> <span class="ident">f64</span>);
         <span class="ident">context</span>
             .<span class="ident">report</span>
-            .<span class="ident">report_metric</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="string">&quot;p90_latency&quot;</span>, <span class="ident">p90_latency</span> <span class="kw">as</span> <span class="ident">f64</span>);
+            .<span class="ident">report_metric</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="string">&quot;p99_latency&quot;</span>, <span class="ident">p99_latency</span> <span class="kw">as</span> <span class="ident">f64</span>);
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;avg_txns_per_block: {}&quot;</span>, <span class="ident">avg_txns_per_block</span>);
         <span class="kw">let</span> <span class="ident">expired_text</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">expired_txn</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
             <span class="string">&quot;no expired txns&quot;</span>.<span class="ident">to_string</span>()
@@ -415,8 +415,8 @@
             <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;(!) expired {} out of {} txns&quot;</span>, <span class="ident">expired_txn</span>, <span class="ident">submitted_txn</span>)
         };
         <span class="ident">context</span>.<span class="ident">report</span>.<span class="ident">report_text</span>(<span class="macro">format</span><span class="macro">!</span>(
-            <span class="string">&quot;{} : {:.0} TPS, {:.1} ms latency, {:.1} ms p90 latency, {}&quot;</span>,
-            <span class="self">self</span>, <span class="ident">avg_tps</span>, <span class="ident">avg_latency_client</span>, <span class="ident">p90_latency</span>, <span class="ident">expired_text</span>
+            <span class="string">&quot;{} : {:.0} TPS, {:.1} ms latency, {:.1} ms p99 latency, {}&quot;</span>,
+            <span class="self">self</span>, <span class="ident">avg_tps</span>, <span class="ident">avg_latency_client</span>, <span class="ident">p99_latency</span>, <span class="ident">expired_text</span>
         ));
         <span class="prelude-val">Ok</span>(())
     }

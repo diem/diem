@@ -904,7 +904,7 @@
     <span class="kw">pub</span> <span class="ident">committed</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">expired</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">latency</span>: <span class="ident">u64</span>,
-    <span class="kw">pub</span> <span class="ident">p90_latency</span>: <span class="ident">u64</span>,
+    <span class="kw">pub</span> <span class="ident">p99_latency</span>: <span class="ident">u64</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
@@ -1603,7 +1603,7 @@
             <span class="ident">committed</span>: <span class="self">self</span>.<span class="ident">committed</span> <span class="op">/</span> <span class="ident">window</span>.<span class="ident">as_secs</span>(),
             <span class="ident">expired</span>: <span class="self">self</span>.<span class="ident">expired</span> <span class="op">/</span> <span class="ident">window</span>.<span class="ident">as_secs</span>(),
             <span class="ident">latency</span>: <span class="self">self</span>.<span class="ident">latency</span> <span class="op">/</span> <span class="self">self</span>.<span class="ident">committed</span>,
-            <span class="ident">p90_latency</span>: <span class="self">self</span>.<span class="ident">latency_buckets</span>.<span class="ident">percentile</span>(<span class="number">9</span>, <span class="number">10</span>),
+            <span class="ident">p99_latency</span>: <span class="self">self</span>.<span class="ident">latency_buckets</span>.<span class="ident">percentile</span>(<span class="number">99</span>, <span class="number">100</span>),
         }
     }
 }
@@ -1636,8 +1636,8 @@
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
         <span class="macro">write</span><span class="macro">!</span>(
             <span class="ident">f</span>,
-            <span class="string">&quot;submitted: {} txn/s, committed: {} txn/s, expired: {} txn/s, latency: {} ms, p90 latency: {} ms&quot;</span>,
-            <span class="self">self</span>.<span class="ident">submitted</span>, <span class="self">self</span>.<span class="ident">committed</span>, <span class="self">self</span>.<span class="ident">expired</span>, <span class="self">self</span>.<span class="ident">latency</span>, <span class="self">self</span>.<span class="ident">p90_latency</span>,
+            <span class="string">&quot;submitted: {} txn/s, committed: {} txn/s, expired: {} txn/s, latency: {} ms, p99 latency: {} ms&quot;</span>,
+            <span class="self">self</span>.<span class="ident">submitted</span>, <span class="self">self</span>.<span class="ident">committed</span>, <span class="self">self</span>.<span class="ident">expired</span>, <span class="self">self</span>.<span class="ident">latency</span>, <span class="self">self</span>.<span class="ident">p99_latency</span>,
         )
     }
 }
