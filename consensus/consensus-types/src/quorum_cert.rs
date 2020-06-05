@@ -92,7 +92,7 @@ impl QuorumCert {
 
         QuorumCert::new(
             vote_data,
-            LedgerInfoWithSignatures::new(li, BTreeMap::new()),
+            LedgerInfoWithSignatures::new(li, BTreeMap::new(), BTreeMap::new()),
         )
     }
 

@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use consensus_types::common::Round;
 use crate::{ConsensusState, Error, SafetyRules, TSafetyRules};
 use consensus_types::{
     block::Block, block_data::BlockData, common::Payload, quorum_cert::QuorumCert,
@@ -18,6 +19,8 @@ pub enum SafetyRulesInput<T> {
     Update(Box<QuorumCert>),
     #[serde(bound = "T: Payload")]
     ConstructAndSignVote(Box<VoteProposal<T>>),
+    #[serde(bound = "T: Payload")]
+    ConstructAndSignStrongVote(Box<VoteProposal<T>>, Round),
     #[serde(bound = "T: Payload")]
     SignProposal(Box<BlockData<T>>),
     SignTimeout(Box<Timeout>),
@@ -41,6 +44,9 @@ impl<T: Payload> SerializerService<T> {
             SafetyRulesInput::Update(qc) => lcs::to_bytes(&self.internal.update(&qc)),
             SafetyRulesInput::ConstructAndSignVote(vote_proposal) => {
                 lcs::to_bytes(&self.internal.construct_and_sign_vote(&vote_proposal))
+            }
+            SafetyRulesInput::ConstructAndSignStrongVote(vote_proposal, marker) => {
+                lcs::to_bytes(&self.internal.construct_and_sign_strong_vote(&vote_proposal, marker))
             }
             SafetyRulesInput::SignProposal(block_data) => {
                 lcs::to_bytes(&self.internal.sign_proposal(*block_data))
@@ -93,6 +99,13 @@ impl<T: Payload> TSafetyRules<T> for SerializerClient<T> {
         let response = self.request(SafetyRulesInput::ConstructAndSignVote(Box::new(
             vote_proposal.clone(),
         )))?;
+        lcs::from_bytes(&response)?
+    }
+
+    fn construct_and_sign_strong_vote(&mut self, vote_proposal: &VoteProposal<T>, marker: Round) -> Result<Vote, Error> {
+        let response = self.request(SafetyRulesInput::ConstructAndSignStrongVote(Box::new(
+            vote_proposal.clone(),
+        ), marker))?;
         lcs::from_bytes(&response)?
     }
 

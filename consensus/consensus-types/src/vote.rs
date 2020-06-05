@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use libra_types::block_info::Round;
 use crate::{common::Author, timeout::Timeout, vote_data::VoteData};
 use anyhow::{ensure, Context};
 use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash};
@@ -27,17 +28,21 @@ pub struct Vote {
     signature: Ed25519Signature,
     /// The round signatures can be aggregated into a timeout certificate if present.
     timeout_signature: Option<Ed25519Signature>,
+    
+    /// The marker equals the largest round number of any conflicting block that the validator voted for
+    marker: Round,
 }
 
 impl Display for Vote {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(
             f,
-            "Vote: [vote data: {}, author: {}, is_timeout: {}, {}]",
+            "Vote: [vote data: {}, author: {}, is_timeout: {}, ledger_info: {}, marker: {}]",
             self.vote_data,
             self.author.short_str(),
             self.is_timeout(),
-            self.ledger_info
+            self.ledger_info,
+            self.marker
         )
     }
 }
@@ -59,6 +64,27 @@ impl Vote {
             ledger_info: ledger_info_placeholder,
             signature: li_sig,
             timeout_signature: None,
+            marker: 0,
+        }
+    }
+
+    /// new_strong for constructing a strong vote with a marker
+    pub fn new_strong(
+        vote_data: VoteData,
+        author: Author,
+        mut ledger_info_placeholder: LedgerInfo,
+        validator_signer: &ValidatorSigner,
+        marker: Round,
+    ) -> Self {
+        ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
+        let li_sig = validator_signer.sign_message(ledger_info_placeholder.hash());
+        Self {
+            vote_data,
+            author,
+            ledger_info: ledger_info_placeholder,
+            signature: li_sig,
+            timeout_signature: None,
+            marker,
         }
     }
 
@@ -114,6 +140,10 @@ impl Vote {
     /// round, which can then be used for aggregating it to the TimeoutCertificate.
     pub fn is_timeout(&self) -> bool {
         self.timeout_signature.is_some()
+    }
+
+    pub fn marker(&self) -> Round {
+        self.marker
     }
 
     /// Verifies that the consensus data hash of LedgerInfo corresponds to the vote info,

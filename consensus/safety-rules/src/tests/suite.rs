@@ -29,7 +29,7 @@ fn make_genesis<T: Payload>(signer: &ValidatorSigner) -> (EpochChangeProof, Quor
     let li = LedgerInfo::mock_genesis(Some(validator_set));
     let block = Block::<T>::make_genesis_block_from_ledger_info(&li);
     let qc = QuorumCert::certificate_for_genesis_from_ledger_info(&li, block.id());
-    let lis = LedgerInfoWithSignatures::new(li, BTreeMap::new());
+    let lis = LedgerInfoWithSignatures::new(li, BTreeMap::new(), BTreeMap::new());
     let proof = EpochChangeProof::new(vec![lis], false);
     (proof, qc)
 }

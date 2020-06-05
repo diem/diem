@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use consensus_types::common::Round;
 use crate::{
     consensus_state::ConsensusState, error::Error,
     persistent_safety_storage::PersistentSafetyStorage, t_safety_rules::TSafetyRules, COUNTERS,
@@ -227,6 +228,69 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
             self.validator_signer.author(),
             self.construct_ledger_info(proposed_block),
             &self.validator_signer,
+        ))
+    }
+
+    /// @TODO verify signature on vote proposal
+    /// @TODO verify QC correctness
+    /// construct a strong vote which contains a marker
+    fn construct_and_sign_strong_vote(&mut self, vote_proposal: &VoteProposal<T>, marker: Round) -> Result<Vote, Error> {
+        debug!("Incoming vote proposal to sign.");
+        let proposed_block = vote_proposal.block();
+
+        self.verify_epoch(proposed_block.epoch())?;
+
+        let last_voted_round = self.persistent_storage.last_voted_round()?;
+        if proposed_block.round() <= last_voted_round {
+            debug!(
+                "Vote proposal is old {} <= {}",
+                proposed_block.round(),
+                last_voted_round
+            );
+            return Err(Error::OldProposal {
+                proposal_round: proposed_block.round(),
+                last_voted_round: self.persistent_storage.last_voted_round()?,
+            });
+        }
+
+        let preferred_round = self.persistent_storage.preferred_round()?;
+        if proposed_block.quorum_cert().certified_block().round() < preferred_round {
+            debug!(
+                "Vote proposal certified round is lower than preferred round, {} < {}",
+                proposed_block.quorum_cert().certified_block().round(),
+                preferred_round,
+            );
+            return Err(Error::ProposalRoundLowerThenPreferredBlock { preferred_round });
+        }
+
+        let new_tree = vote_proposal
+            .accumulator_extension_proof()
+            .verify(
+                proposed_block
+                    .quorum_cert()
+                    .certified_block()
+                    .executed_state_id(),
+            )
+            .map_err(|e| Error::InvalidAccumulatorExtension {
+                error: format!("{}", e),
+            })?;
+
+        self.persistent_storage
+            .set_last_voted_round(proposed_block.round())?;
+
+        Ok(Vote::new_strong(
+            VoteData::new(
+                proposed_block.gen_block_info(
+                    new_tree.root_hash(),
+                    new_tree.version(),
+                    vote_proposal.next_epoch_info().cloned(),
+                ),
+                proposed_block.quorum_cert().certified_block().clone(),
+            ),
+            self.validator_signer.author(),
+            self.construct_ledger_info(proposed_block),
+            &self.validator_signer,
+            marker,
         ))
     }
 

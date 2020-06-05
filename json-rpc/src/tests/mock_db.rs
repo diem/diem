@@ -61,6 +61,7 @@ impl DbReader for MockLibraDB {
                 HashValue::zero(),
             ),
             BTreeMap::new(),
+            BTreeMap::new(),
         ))
     }
 
@@ -190,7 +191,7 @@ impl DbReader for MockLibraDB {
         let li = self.get_latest_ledger_info()?;
         let proofs = self.get_state_proof_with_ledger_info(known_version, li.clone())?;
         Ok((
-            LedgerInfoWithSignatures::new(li.ledger_info().clone(), BTreeMap::new()),
+            LedgerInfoWithSignatures::new(li.ledger_info().clone(), BTreeMap::new(), BTreeMap::new()),
             proofs.0,
             proofs.1,
         ))

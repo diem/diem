@@ -44,7 +44,11 @@ pub fn gen_ledger_info_with_sigs(
         .iter()
         .map(|s| (s.author(), s.sign_message(ledger_info.hash())))
         .collect();
-    LedgerInfoWithSignatures::new(ledger_info, signatures)
+    let markers = signer
+        .iter()
+        .map(|s| (s.author(), 0))
+        .collect();
+    LedgerInfoWithSignatures::new(ledger_info, signatures, markers)
 }
 
 pub fn extract_signer(config: &mut NodeConfig) -> ValidatorSigner {
