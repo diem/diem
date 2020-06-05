@@ -709,10 +709,27 @@ pub fn parse_ip_tcp(protos: &[Protocol]) -> Option<((IpAddr, u16), &[Protocol])>
     }
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum IpFilter {
+    Any,
+    OnlyIp4,
+    OnlyIp6,
+}
+
+impl IpFilter {
+    pub fn matches(&self, ipaddr: IpAddr) -> bool {
+        match self {
+            IpFilter::Any => true,
+            IpFilter::OnlyIp4 => ipaddr.is_ipv4(),
+            IpFilter::OnlyIp6 => ipaddr.is_ipv6(),
+        }
+    }
+}
+
 /// parse the `&[Protocol]` into the `"/dns/<domain>/tcp/<port>"`,
 /// `"/dns4/<domain>/tcp/<port>"`, or `"/dns6/<domain>/tcp/<port>"` prefix and
 /// unparsed `&[Protocol]` suffix.
-pub fn parse_dns_tcp(protos: &[Protocol]) -> Option<((&DnsName, u16), &[Protocol])> {
+pub fn parse_dns_tcp(protos: &[Protocol]) -> Option<((IpFilter, &DnsName, u16), &[Protocol])> {
     use Protocol::*;
 
     if protos.len() < 2 {
@@ -721,9 +738,9 @@ pub fn parse_dns_tcp(protos: &[Protocol]) -> Option<((&DnsName, u16), &[Protocol
 
     let (prefix, suffix) = protos.split_at(2);
     match prefix {
-        [Dns(name), Tcp(port)] => Some(((name, *port), suffix)),
-        [Dns4(name), Tcp(port)] => Some(((name, *port), suffix)),
-        [Dns6(name), Tcp(port)] => Some(((name, *port), suffix)),
+        [Dns(name), Tcp(port)] => Some(((IpFilter::Any, name, *port), suffix)),
+        [Dns4(name), Tcp(port)] => Some(((IpFilter::OnlyIp4, name, *port), suffix)),
+        [Dns6(name), Tcp(port)] => Some(((IpFilter::OnlyIp6, name, *port), suffix)),
         _ => None,
     }
 }
@@ -943,28 +960,28 @@ mod test {
         let expected_suffix: &[Protocol] = &[];
         assert_eq!(
             parse_dns_tcp(addr.as_slice()).unwrap(),
-            ((&dns_name, 123), expected_suffix)
+            ((IpFilter::Any, &dns_name, 123), expected_suffix)
         );
 
         let addr = NetworkAddress::from_str("/dns4/example.com/tcp/123").unwrap();
         let expected_suffix: &[Protocol] = &[];
         assert_eq!(
             parse_dns_tcp(addr.as_slice()).unwrap(),
-            ((&dns_name, 123), expected_suffix)
+            ((IpFilter::OnlyIp4, &dns_name, 123), expected_suffix)
         );
 
         let addr = NetworkAddress::from_str("/dns6/example.com/tcp/123").unwrap();
         let expected_suffix: &[Protocol] = &[];
         assert_eq!(
             parse_dns_tcp(addr.as_slice()).unwrap(),
-            ((&dns_name, 123), expected_suffix)
+            ((IpFilter::OnlyIp6, &dns_name, 123), expected_suffix)
         );
 
         let addr = NetworkAddress::from_str("/dns/example.com/tcp/123/memory/44").unwrap();
         let expected_suffix: &[Protocol] = &[Protocol::Memory(44)];
         assert_eq!(
             parse_dns_tcp(addr.as_slice()).unwrap(),
-            ((&dns_name, 123), expected_suffix)
+            ((IpFilter::Any, &dns_name, 123), expected_suffix)
         );
 
         let addr = NetworkAddress::from_str("/tcp/999/memory/123").unwrap();

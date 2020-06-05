@@ -9,16 +9,17 @@ use futures::{
     ready,
     stream::Stream,
 };
-use libra_network_address::{parse_dns_tcp, parse_ip_tcp, NetworkAddress, Protocol};
+use libra_network_address::{parse_dns_tcp, parse_ip_tcp, IpFilter, NetworkAddress};
 use std::{
     convert::TryFrom,
     fmt::Debug,
     io,
+    net::SocketAddr,
     pin::Pin,
     task::{Context, Poll},
     time::Duration,
 };
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::{lookup_host, TcpListener, TcpStream};
 
 /// Transport to build TCP connections
 #[derive(Debug, Clone, Default)]
@@ -93,20 +94,81 @@ impl Transport for TcpTransport {
     }
 
     fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
-        let (addr_string, _addr_suffix) =
-            parse_addr_and_port(addr.as_slice()).ok_or_else(|| invalid_addr_error(&addr))?;
+        let protos = addr.as_slice();
+
+        // ensure addr is well formed to save some work before potentially
+        // spawning a dial task that will fail anyway.
         // TODO(philiphayes): base tcp transport should not allow trailing protocols
-        // TODO(philiphayes): use `tokio::net::lookup_host()` then filter the results
-        // so e.g. `Protocol::Dns4` only returns `SocketAddrV4`s and `Protocol::Dns6`
-        // only returns `SocketAddrV6`.
+        parse_ip_tcp(protos)
+            .map(|_| ())
+            .or_else(|| parse_dns_tcp(protos).map(|_| ()))
+            .ok_or_else(|| invalid_addr_error(&addr))?;
+
         let f: Pin<Box<dyn Future<Output = io::Result<TcpStream>> + Send + 'static>> =
-            Box::pin(TcpStream::connect(addr_string));
+            Box::pin(resolve_and_connect(addr));
 
         Ok(TcpOutbound {
             inner: f,
             config: self.clone(),
         })
     }
+}
+
+/// Try to lookup the dns name, then filter addrs according to the `IpFilter`.
+fn resolve_with_filter<'a>(
+    ip_filter: IpFilter,
+    dns_name: &'a str,
+    port: u16,
+) -> impl Future<Output = io::Result<impl Iterator<Item = SocketAddr> + 'a>> + 'a {
+    async move {
+        Ok(lookup_host((dns_name, port))
+            .await?
+            .filter(move |socketaddr| ip_filter.matches(socketaddr.ip())))
+    }
+}
+
+/// Note: we need to take ownership of this `NetworkAddress` (instead of just
+/// borrowing the `&[Protocol]` slice) so this future can be `Send + 'static`.
+async fn resolve_and_connect(addr: NetworkAddress) -> io::Result<TcpStream> {
+    let protos = addr.as_slice();
+
+    if let Some(((ipaddr, port), _addr_suffix)) = parse_ip_tcp(protos) {
+        // this is an /ip4 or /ip6 address, so we can just connect without any
+        // extra resolving or filtering.
+        TcpStream::connect((ipaddr, port)).await
+    } else if let Some(((ip_filter, dns_name, port), _addr_suffix)) = parse_dns_tcp(protos) {
+        // resolve dns name and filter
+        let socketaddr_iter = resolve_with_filter(ip_filter, dns_name.as_ref(), port).await?;
+        let mut last_err = None;
+
+        // try to connect until the first succeeds
+        for socketaddr in socketaddr_iter {
+            match TcpStream::connect(socketaddr).await {
+                Ok(stream) => return Ok(stream),
+                Err(err) => last_err = Some(err),
+            }
+        }
+
+        Err(last_err.unwrap_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!(
+                    "could not resolve dns name to any address: name: {}, ip filter: {:?}",
+                    dns_name.as_ref(),
+                    ip_filter,
+                ),
+            )
+        }))
+    } else {
+        Err(invalid_addr_error(&addr))
+    }
+}
+
+fn invalid_addr_error(addr: &NetworkAddress) -> io::Error {
+    io::Error::new(
+        io::ErrorKind::InvalidInput,
+        format!("Invalid NetworkAddress: '{}'", addr),
+    )
 }
 
 #[must_use = "streams do nothing unless polled"]
@@ -204,30 +266,16 @@ impl AsyncWrite for TcpSocket {
     }
 }
 
-fn invalid_addr_error(addr: &NetworkAddress) -> io::Error {
-    io::Error::new(
-        io::ErrorKind::InvalidInput,
-        format!("Invalid NetworkAddress: '{}'", addr),
-    )
-}
-
-fn parse_addr_and_port(protos: &[Protocol]) -> Option<(String, &[Protocol])> {
-    parse_ip_tcp(protos)
-        .map(|((ip, port), suffix)| (format!("{}:{}", ip, port), suffix))
-        .or_else(|| {
-            parse_dns_tcp(protos)
-                .map(|((dnsname, port), suffix)| (format!("{}:{}", dnsname, port), suffix))
-        })
-}
-
 #[cfg(test)]
 mod test {
-    use crate::transport::{tcp::TcpTransport, ConnectionOrigin, Transport, TransportExt};
+    use super::*;
+    use crate::transport::{ConnectionOrigin, Transport, TransportExt};
     use futures::{
         future::{join, FutureExt},
         io::{AsyncReadExt, AsyncWriteExt},
         stream::StreamExt,
     };
+    use tokio::runtime::Runtime;
 
     #[tokio::test]
     async fn simple_listen_and_dial() -> Result<(), ::std::io::Error> {
@@ -271,5 +319,38 @@ mod test {
 
         let result = t.dial("/memory/22".parse().unwrap());
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_resolve_with_filter() {
+        let mut rt = Runtime::new().unwrap();
+
+        // note: we only lookup "localhost", which is not really a DNS name, but
+        // should always resolve to something and keep this test from being flaky.
+
+        let f = async move {
+            // this should always return something
+            let addrs = resolve_with_filter(IpFilter::Any, "localhost", 1234)
+                .await
+                .unwrap()
+                .collect::<Vec<_>>();
+            assert!(!addrs.is_empty(), "addrs: {:?}", addrs);
+
+            // we should only get Ip4 addrs
+            let addrs = resolve_with_filter(IpFilter::OnlyIp4, "localhost", 1234)
+                .await
+                .unwrap()
+                .collect::<Vec<_>>();
+            assert!(addrs.iter().all(SocketAddr::is_ipv4), "addrs: {:?}", addrs);
+
+            // we should only get Ip6 addrs
+            let addrs = resolve_with_filter(IpFilter::OnlyIp6, "localhost", 1234)
+                .await
+                .unwrap()
+                .collect::<Vec<_>>();
+            assert!(addrs.iter().all(SocketAddr::is_ipv6), "addrs: {:?}", addrs);
+        };
+
+        rt.block_on(f);
     }
 }
