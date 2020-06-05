@@ -21,7 +21,7 @@ RUN cargo build --release -p libra-node -p cli -p config-builder -p safety-rules
 RUN strip target/release/cli
 
 ### Production Image ###
-FROM debian:buster AS prod
+FROM debian:buster-slim AS prod
 
 RUN mkdir -p /opt/libra/bin /opt/libra/etc
 COPY --from=builder /libra/target/release/cli /opt/libra/bin/libra_client
