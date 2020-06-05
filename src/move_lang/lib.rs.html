@@ -580,25 +580,6 @@
 <span id="580">580</span>
 <span id="581">581</span>
 <span id="582">582</span>
-<span id="583">583</span>
-<span id="584">584</span>
-<span id="585">585</span>
-<span id="586">586</span>
-<span id="587">587</span>
-<span id="588">588</span>
-<span id="589">589</span>
-<span id="590">590</span>
-<span id="591">591</span>
-<span id="592">592</span>
-<span id="593">593</span>
-<span id="594">594</span>
-<span id="595">595</span>
-<span id="596">596</span>
-<span id="597">597</span>
-<span id="598">598</span>
-<span id="599">599</span>
-<span id="600">600</span>
-<span id="601">601</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -792,25 +773,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/{}/{}&quot;</span>, <span class="ident">out_dir</span>, <span class="ident">SCRIPT_SUB_DIR</span>, <span class="ident">unit</span>.<span class="ident">name</span>()));
         <span class="macro">emit_unit</span><span class="macro">!</span>(<span class="ident">path</span>, <span class="ident">unit</span>);
     }
-    <span class="comment">// let script_map = {</span>
-    <span class="comment">//     let mut m: BTreeMap&lt;String, Vec&lt;CompiledUnit&gt;&gt; = BTreeMap::new();</span>
-    <span class="comment">//     for u in scripts {</span>
-    <span class="comment">//         m.entry(u.name()).or_insert_with(Vec::new).push(u)</span>
-    <span class="comment">//     }</span>
-    <span class="comment">//     m</span>
-    <span class="comment">// };</span>
-    <span class="comment">// for (n, units) in script_map {</span>
-    <span class="comment">//     let num_units = units.len();</span>
-    <span class="comment">//     for (idx, unit) in units.into_iter().enumerate() {</span>
-    <span class="comment">//         let file_name = if num_units == 1 {</span>
-    <span class="comment">//             format!(&quot;{}&quot;, n)</span>
-    <span class="comment">//         } else {</span>
-    <span class="comment">//             format!(&quot;{}_{}&quot;, n, idx)</span>
-    <span class="comment">//         };</span>
-    <span class="comment">//         let mut path = PathBuf::from(format!(&quot;{}/{}/{}&quot;, out_dir, SCRIPT_SUB_DIR, file_name));</span>
-    <span class="comment">//         emit_unit!(path, unit);</span>
-    <span class="comment">//     }</span>
-    <span class="comment">// }</span>
+
     <span class="kw">if</span> <span class="op">!</span><span class="ident">ice_errors</span>.<span class="ident">is_empty</span>() {
         <span class="ident">errors</span>::<span class="ident">report_errors</span>(<span class="ident">files</span>, <span class="ident">ice_errors</span>)
     }
@@ -1007,9 +970,8 @@
             <span class="kw">let</span> <span class="ident">span</span> <span class="op">=</span> <span class="ident">Span</span>::<span class="ident">new</span>(<span class="ident">ByteIndex</span>(<span class="ident">idx</span> <span class="kw">as</span> <span class="ident">u32</span>), <span class="ident">ByteIndex</span>(<span class="ident">idx</span> <span class="kw">as</span> <span class="ident">u32</span>));
             <span class="kw">let</span> <span class="ident">loc</span> <span class="op">=</span> <span class="ident">Loc</span>::<span class="ident">new</span>(<span class="ident">fname</span>, <span class="ident">span</span>);
             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;Invalid character &#39;{}&#39; found when reading file. \
-                 Only ASCII printable characters, tabs (\\t), and line endings (\\n) \
-                 are permitted.&quot;</span>,
+                <span class="string">&quot;Invalid character &#39;{}&#39; found when reading file. Only ASCII printable characters, \
+                 tabs (\\t), and line endings (\\n) are permitted.&quot;</span>,
                 <span class="ident">chr</span>
             );
             <span class="prelude-val">Err</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">loc</span>, <span class="ident">msg</span>)]])

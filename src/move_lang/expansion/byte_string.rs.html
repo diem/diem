@@ -246,8 +246,8 @@
                             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
                         };
                         <span class="kw">let</span> <span class="ident">err_text</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                            <span class="string">&quot;Invalid escape: &#39;\\x{}&#39;. Hex literals are represented by two symbols: \
-                            [\\x00-\\xFF].&quot;</span>,
+                            <span class="string">&quot;Invalid escape: &#39;\\x{}&#39;. Hex literals are represented by two \
+                             symbols: [\\x00-\\xFF].&quot;</span>,
                             <span class="ident">h</span>
                         );
                         <span class="ident">context</span>.<span class="ident">error</span>(<span class="ident">cur</span>, <span class="ident">len</span>, <span class="ident">err_text</span>);

@@ -579,8 +579,8 @@
 {
     <span class="kw">if</span> <span class="op">!</span><span class="ident">annotated_acquires</span>.<span class="ident">contains_key</span>(<span class="ident">global_type_name</span>) {
         <span class="kw">let</span> <span class="ident">tmsg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-            <span class="string">&quot;The call acquires &#39;{}::{}&#39;, but the &#39;acquires&#39; list for the current function does not \
-            contain this type. It must be present in the calling context&#39;s acquires list&quot;</span>,
+            <span class="string">&quot;The call acquires &#39;{}::{}&#39;, but the &#39;acquires&#39; list for the current function does \
+             not contain this type. It must be present in the calling context&#39;s acquires list&quot;</span>,
             <span class="ident">context</span>.<span class="ident">current_module</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>(),
             <span class="ident">global_type_name</span>
         );

@@ -1638,6 +1638,11 @@
 <span id="1638">1638</span>
 <span id="1639">1639</span>
 <span id="1640">1640</span>
+<span id="1641">1641</span>
+<span id="1642">1642</span>
+<span id="1643">1643</span>
+<span id="1644">1644</span>
+<span id="1645">1645</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -3080,11 +3085,16 @@
     }
     <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">trailing</span> {
         (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">uloc</span>: <span class="ident">pat</span>) <span class="op">=</span><span class="op">&gt;</span> {
-           <span class="macro">hcmd</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">C</span>::<span class="ident">IgnoreAndPop</span> { <span class="ident">exp</span>: <span class="ident">H</span>::<span class="ident">Exp</span> { <span class="ident">exp</span>: <span class="macro">sp</span><span class="macro">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">uloc</span>, <span class="ident">E</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">true</span> }), .. }, .. })
+           <span class="macro">hcmd</span><span class="macro">!</span>(
+               <span class="kw">_</span>,
+               <span class="ident">C</span>::<span class="ident">IgnoreAndPop</span> {
+                    <span class="ident">exp</span>: <span class="ident">H</span>::<span class="ident">Exp</span> { <span class="ident">exp</span>: <span class="macro">sp</span><span class="macro">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">uloc</span>, <span class="ident">E</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">true</span> }), .. }, ..
+                }
+            )
         }
     }
     <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">trailing_returned</span> {
-        (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">uloc</span>: <span class="ident">pat</span>) <span class="op">=</span><span class="op">&gt;</span> {
+        (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">uloc</span>:<span class="ident">pat</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="macro">hcmd</span><span class="macro">!</span>(
                 <span class="kw">_</span>,
                 <span class="ident">C</span>::<span class="ident">Return</span>(<span class="ident">H</span>::<span class="ident">Exp</span> {
@@ -3109,7 +3119,7 @@
             <span class="kw">let</span> <span class="ident">semi_msg</span> <span class="op">=</span> <span class="string">&quot;Invalid trailing &#39;;&#39;&quot;</span>;
             <span class="kw">let</span> <span class="ident">unreachable_msg</span> <span class="op">=</span> <span class="string">&quot;Any code after this expression will not be reached&quot;</span>;
             <span class="kw">let</span> <span class="ident">info_msg</span> <span class="op">=</span> <span class="string">&quot;A trailing &#39;;&#39; in an expression block implicitly adds a &#39;()&#39; value \
-            after the semicolon. That &#39;()&#39; value will not be reachable&quot;</span>;
+                        after the semicolon. That &#39;()&#39; value will not be reachable&quot;</span>;
             <span class="macro-nonterminal">$</span><span class="macro-nonterminal">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[
                 (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">uloc</span>, <span class="ident">semi_msg</span>),
                 (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">loc</span>, <span class="ident">unreachable_msg</span>),

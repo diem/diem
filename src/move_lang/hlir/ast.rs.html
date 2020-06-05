@@ -1397,8 +1397,8 @@
             <span class="ident">BaseType_</span>::<span class="ident">Apply</span>(<span class="ident">k</span>, <span class="kw">_</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">k</span>.<span class="ident">clone</span>(),
             <span class="ident">BaseType_</span>::<span class="ident">Param</span>(<span class="ident">TParam</span> { <span class="ident">kind</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">kind</span>.<span class="ident">clone</span>(),
             <span class="ident">BaseType_</span>::<span class="ident">Unreachable</span> <span class="op">|</span> <span class="ident">BaseType_</span>::<span class="ident">UnresolvedError</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(
-                <span class="string">&quot;ICE unreachable/unresolved error has no kind. \
-                 Should only exist in dead code that should not be analyzed&quot;</span>
+                <span class="string">&quot;ICE unreachable/unresolved error has no kind. Should only exist in dead code \
+                 that should not be analyzed&quot;</span>
             ),
         }
     }

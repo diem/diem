@@ -1747,11 +1747,11 @@
 
     <span class="kw">fn</span> <span class="ident">restricted_self_error</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">case</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">Name</span>) {
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-            <span class="string">&quot;Invalid {case} name &#39;{name}&#39;. &#39;{self_ident}&#39; is restricted and cannot be used to name \
-            a {case}&quot;</span>,
-            <span class="ident">case</span><span class="op">=</span><span class="ident">case</span>,
-            <span class="ident">name</span><span class="op">=</span><span class="ident">name</span>,
-            <span class="ident">self_ident</span><span class="op">=</span><span class="ident">ModuleName</span>::<span class="ident">SELF_NAME</span>,
+            <span class="string">&quot;Invalid {case} name &#39;{name}&#39;. &#39;{self_ident}&#39; is restricted and cannot be used to \
+             name a {case}&quot;</span>,
+            <span class="ident">case</span> <span class="op">=</span> <span class="ident">case</span>,
+            <span class="ident">name</span> <span class="op">=</span> <span class="ident">name</span>,
+            <span class="ident">self_ident</span> <span class="op">=</span> <span class="ident">ModuleName</span>::<span class="ident">SELF_NAME</span>,
         );
         <span class="self">self</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">name</span>.<span class="ident">loc</span>, <span class="ident">msg</span>)])
     }
@@ -2629,8 +2629,8 @@
         (<span class="ident">Access</span>::<span class="ident">Term</span>, <span class="ident">PN</span>::<span class="ident">Name</span>(<span class="ident">n</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EN</span>::<span class="ident">Name</span>(<span class="ident">n</span>),
         (<span class="kw">_</span>, <span class="ident">PN</span>::<span class="ident">Global</span>(<span class="ident">n</span>)) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;Invalid use of global name &#39;::{}&#39;. \
-                Global names can only be used in function calls&quot;</span>,
+                <span class="string">&quot;Invalid use of global name &#39;::{}&#39;. Global names can only be used in function \
+                 calls&quot;</span>,
                 <span class="ident">n</span>
             );
             <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">loc</span>, <span class="ident">msg</span>)]);
@@ -2746,7 +2746,7 @@
             <span class="kw">if</span> <span class="op">!</span><span class="ident">context</span>.<span class="ident">require_spec_context</span>(
                 <span class="ident">loc</span>,
                 <span class="string">&quot;Expected name to be followed by a brace-enclosed list of field expressions or a \
-              parenthesized list of arguments for a function call&quot;</span>,
+                 parenthesized list of arguments for a function call&quot;</span>,
             ) <span class="op">=</span><span class="op">&gt;</span>
         {
             <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">context</span>.<span class="ident">has_errors</span>());

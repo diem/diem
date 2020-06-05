@@ -2273,8 +2273,8 @@
                     <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Invalid arguments to &#39;{}&#39;&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">bop</span>);
                     <span class="ident">context</span>.<span class="ident">add_single_type_constraint</span>(<span class="ident">eloc</span>, <span class="ident">msg</span>, <span class="ident">ty</span>.<span class="ident">clone</span>());
                     <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                        <span class="string">&quot;Cannot use &#39;{}&#39; on resource values. This would destroy the resource. \
-                         Try borrowing the values with &#39;&amp;&#39; first.&#39;&quot;</span>,
+                        <span class="string">&quot;Cannot use &#39;{}&#39; on resource values. This would destroy the resource. Try \
+                         borrowing the values with &#39;&amp;&#39; first.&#39;&quot;</span>,
                         <span class="kw-2">&amp;</span><span class="ident">bop</span>
                     );
                     <span class="ident">context</span>.<span class="ident">add_copyable_constraint</span>(<span class="ident">eloc</span>, <span class="ident">msg</span>, <span class="ident">ty</span>.<span class="ident">clone</span>());
@@ -2335,8 +2335,8 @@
             });
             <span class="kw">if</span> <span class="op">!</span><span class="ident">context</span>.<span class="ident">is_current_module</span>(<span class="kw-2">&amp;</span><span class="ident">m</span>) {
                 <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                    <span class="string">&quot;Invalid instantiation of &#39;{}::{}&#39;.\n\
-                     All structs can only be constructed in the module in which they are declared&quot;</span>,
+                    <span class="string">&quot;Invalid instantiation of &#39;{}::{}&#39;.\nAll structs can only be constructed in \
+                     the module in which they are declared&quot;</span>,
                     <span class="kw-2">&amp;</span><span class="ident">m</span>, <span class="kw-2">&amp;</span><span class="ident">n</span>,
                 );
                 <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">eloc</span>, <span class="ident">msg</span>)])
@@ -2650,8 +2650,8 @@
             });
             <span class="kw">if</span> <span class="op">!</span><span class="ident">context</span>.<span class="ident">is_current_module</span>(<span class="kw-2">&amp;</span><span class="ident">m</span>) {
                 <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                    <span class="string">&quot;Invalid deconstruction {} of &#39;{}::{}&#39;.\n All \
-                     structs can only be deconstructed in the module in which they are declared&quot;</span>,
+                    <span class="string">&quot;Invalid deconstruction {} of &#39;{}::{}&#39;.\n All structs can only be \
+                     deconstructed in the module in which they are declared&quot;</span>,
                     <span class="ident">verb</span>, <span class="kw-2">&amp;</span><span class="ident">m</span>, <span class="kw-2">&amp;</span><span class="ident">n</span>,
                 );
                 <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">loc</span>, <span class="ident">msg</span>)])
@@ -2710,8 +2710,8 @@
         <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">Apply</span>(<span class="kw">_</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">ModuleType</span>(<span class="ident">m</span>, <span class="ident">n</span>)), <span class="ident">targs</span>)) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">if</span> <span class="op">!</span><span class="ident">context</span>.<span class="ident">is_current_module</span>(<span class="kw-2">&amp;</span><span class="ident">m</span>) {
                 <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                    <span class="string">&quot;Invalid access of field &#39;{}&#39; on &#39;{}::{}&#39;. \
-                     Fields can only be accessed inside the struct&#39;s module&quot;</span>,
+                    <span class="string">&quot;Invalid access of field &#39;{}&#39; on &#39;{}::{}&#39;. Fields can only be accessed inside \
+                     the struct&#39;s module&quot;</span>,
                     <span class="ident">field</span>, <span class="kw-2">&amp;</span><span class="ident">m</span>, <span class="kw-2">&amp;</span><span class="ident">n</span>
                 );
                 <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">loc</span>, <span class="ident">msg</span>)])
@@ -2748,8 +2748,8 @@
         <span class="ident">N</span>::<span class="ident">StructFields</span>::<span class="ident">Defined</span>(<span class="ident">m</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">m</span>,
         <span class="ident">N</span>::<span class="ident">StructFields</span>::<span class="ident">Native</span>(<span class="ident">nloc</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;Invalid {} usage for native struct &#39;{}::{}&#39;. Native structs cannot \
-                 be directly constructed/deconstructd, and their fields cannot be dirctly accessed&quot;</span>,
+                <span class="string">&quot;Invalid {} usage for native struct &#39;{}::{}&#39;. Native structs cannot be directly \
+                 constructed/deconstructd, and their fields cannot be dirctly accessed&quot;</span>,
                 <span class="ident">verb</span>, <span class="ident">m</span>, <span class="ident">n</span>
             );
             <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">loc</span>, <span class="ident">msg</span>), (<span class="ident">nloc</span>, <span class="string">&quot;Declared &#39;native&#39; here&quot;</span>.<span class="ident">into</span>())]);

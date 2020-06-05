@@ -908,7 +908,6 @@
 <span id="908">908</span>
 <span id="909">909</span>
 <span id="910">910</span>
-<span id="911">911</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1290,8 +1289,8 @@
     };
     <span class="kw">if</span> <span class="op">!</span><span class="ident">declared_in_current</span> {
         <span class="kw">let</span> <span class="ident">tmsg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-            <span class="string">&quot;The struct &#39;{}&#39; was not declared in the current module. Global \
-             storage access is internal to the module&#39;&quot;</span>,
+            <span class="string">&quot;The struct &#39;{}&#39; was not declared in the current module. Global storage access is \
+             internal to the module&#39;&quot;</span>,
             <span class="ident">n</span>
         );
         <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">loc</span>, <span class="string">&quot;Invalid acquires item&quot;</span>.<span class="ident">into</span>()), (<span class="ident">n</span>.<span class="ident">loc</span>(), <span class="ident">tmsg</span>)]);
@@ -1351,8 +1350,8 @@
     <span class="kw">match</span> <span class="ident">ty_</span> {
         <span class="ident">T</span>::<span class="ident">Apply</span>(<span class="prelude-val">Some</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="ident">kloc</span>, <span class="ident">Kind_</span>::<span class="ident">Resource</span>)), <span class="kw">_</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">field_msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;Invalid resource field &#39;{}&#39; for struct &#39;{}&#39;. Structs cannot \
-                 contain resource types, except through type parameters&quot;</span>,
+                <span class="string">&quot;Invalid resource field &#39;{}&#39; for struct &#39;{}&#39;. Structs cannot contain resource \
+                 types, except through type parameters&quot;</span>,
                 <span class="ident">field</span>, <span class="ident">s</span>
             );
             <span class="kw">let</span> <span class="ident">tmsg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
@@ -1669,9 +1668,8 @@
             <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">context</span>.<span class="ident">has_errors</span>());
             <span class="ident">NE</span>::<span class="ident">UnresolvedError</span>
         }
-        <span class="ident">EE</span>::<span class="ident">Index</span>(..) <span class="op">|</span> <span class="ident">EE</span>::<span class="ident">Lambda</span>(..) <span class="op">|</span>
-        <span class="comment">// matches name variants only allowed in specs (we handle the allowed ones above)</span>
-        <span class="ident">EE</span>::<span class="ident">Name</span>(..) <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="comment">// `Name` matches name variants only allowed in specs (we handle the allowed ones above)</span>
+        <span class="ident">EE</span>::<span class="ident">Index</span>(..) <span class="op">|</span> <span class="ident">EE</span>::<span class="ident">Lambda</span>(..) <span class="op">|</span> <span class="ident">EE</span>::<span class="ident">Name</span>(..) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;ICE unexpected specification construct&quot;</span>)
         }
     };

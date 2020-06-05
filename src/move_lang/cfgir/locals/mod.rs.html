@@ -286,6 +286,7 @@
 <span id="286">286</span>
 <span id="287">287</span>
 <span id="288">288</span>
+<span id="289">289</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -440,7 +441,8 @@
                                         <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;The parameter &#39;{}&#39; {} a resource value&quot;</span>, <span class="ident">l</span>, <span class="ident">verb</span>)
                                     } <span class="kw">else</span> {
                                         <span class="macro">format</span><span class="macro">!</span>(
-                                            <span class="string">&quot;The local &#39;{}&#39; {} a resource value due to this assignment&quot;</span>,
+                                            <span class="string">&quot;The local &#39;{}&#39; {} a resource value due to this \
+                                             assignment&quot;</span>,
                                             <span class="ident">l</span>, <span class="ident">verb</span>
                                         )
                                     }
@@ -490,8 +492,8 @@
                             <span class="ident">DisplayVar</span>::<span class="ident">Orig</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>,
                         };
                         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                            <span class="string">&quot;The local {} a resource value due to this assignment. The \
-                             resource must be used before you assign to this local again&quot;</span>,
+                            <span class="string">&quot;The local {} a resource value due to this assignment. The resource \
+                             must be used before you assign to this local again&quot;</span>,
                             <span class="ident">verb</span>
                         );
                         <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[
@@ -564,8 +566,8 @@
                 <span class="ident">DisplayVar</span>::<span class="ident">Orig</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>,
             };
             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;The local {} not have a value due to this position. The local must be assigned \
-                 a value before being used&quot;</span>,
+                <span class="string">&quot;The local {} not have a value due to this position. The local must be assigned a \
+                 value before being used&quot;</span>,
                 <span class="ident">verb</span>
             );
             <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[

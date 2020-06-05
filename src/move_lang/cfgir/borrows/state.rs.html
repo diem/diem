@@ -929,8 +929,8 @@
                 <span class="kw">let</span> <span class="ident">field</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">field_lbl</span> {
                     <span class="ident">Label</span>::<span class="ident">Field</span>(<span class="ident">f</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>,
                     <span class="ident">Label</span>::<span class="ident">Local</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">Label</span>::<span class="ident">Resource</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(
-                        <span class="string">&quot;ICE local/resource should not be field borrows \
-                         as they only exist from the virtual &#39;root&#39; reference&quot;</span>
+                        <span class="string">&quot;ICE local/resource should not be field borrows as they only exist from \
+                         the virtual &#39;root&#39; reference&quot;</span>
                     ),
                 };
                 <span class="ident">error</span>.<span class="ident">push</span>((

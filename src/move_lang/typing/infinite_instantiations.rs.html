@@ -722,8 +722,8 @@
     };
     <span class="kw">let</span> <span class="ident">tparam_msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
         <span class="string">&quot;The type parameter &#39;{param_n}::{param_t}&#39; was instantiated with the type {ty}, which \
-        contains the type parameter &#39;{arg_n}::{arg_t}&#39;. {case} causes the instantiation to recurse \
-        infinitely&quot;</span>,
+         contains the type parameter &#39;{arg_n}::{arg_t}&#39;. {case} causes the instantiation to \
+         recurse infinitely&quot;</span>,
         <span class="ident">param_n</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">param_info</span>.<span class="ident">name</span>,
         <span class="ident">param_t</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">critical_head</span>.<span class="ident">user_specified_name</span>,
         <span class="ident">ty</span> <span class="op">=</span> <span class="ident">ty_str</span>,

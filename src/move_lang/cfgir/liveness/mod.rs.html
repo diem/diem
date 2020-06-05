@@ -795,8 +795,8 @@
                         <span class="ident">DisplayVar</span>::<span class="ident">Tmp</span> <span class="op">=</span><span class="op">&gt;</span> (),
                         <span class="ident">DisplayVar</span>::<span class="ident">Orig</span>(<span class="ident">v_str</span>) <span class="op">=</span><span class="op">&gt;</span> {
                             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                                <span class="string">&quot;Unused assignment or binding for local &#39;{}&#39;. Consider \
-                                 removing or replacing it with &#39;_&#39;&quot;</span>,
+                                <span class="string">&quot;Unused assignment or binding for local &#39;{}&#39;. Consider removing \
+                                 or replacing it with &#39;_&#39;&quot;</span>,
                                 <span class="ident">v_str</span>
                             );
                             <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">l</span>.<span class="ident">loc</span>, <span class="ident">msg</span>)]);

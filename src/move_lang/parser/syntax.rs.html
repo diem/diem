@@ -2028,6 +2028,8 @@
 <span id="2028">2028</span>
 <span id="2029">2029</span>
 <span id="2030">2030</span>
+<span id="2031">2031</span>
+<span id="2032">2032</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2542,7 +2544,7 @@
             <span class="kw">let</span> <span class="ident">end_loc</span> <span class="op">=</span> <span class="ident">start_loc</span> <span class="op">+</span> <span class="ident">tokens</span>.<span class="ident">content</span>().<span class="ident">len</span>();
             <span class="kw">let</span> <span class="ident">loc</span> <span class="op">=</span> <span class="ident">make_loc</span>(<span class="ident">tokens</span>.<span class="ident">file_name</span>(), <span class="ident">start_loc</span>, <span class="ident">end_loc</span>);
             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="string">&quot;Invalid number literal. The given literal is too large to fit into the \
-                         largest number type &#39;u128&#39;&quot;</span>;
+                       largest number type &#39;u128&#39;&quot;</span>;
             <span class="prelude-val">Err</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">loc</span>, <span class="ident">msg</span>.<span class="ident">to_owned</span>())])
         }
     };
@@ -3667,14 +3669,15 @@
         },
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">unexpected_token_error</span>(
             <span class="ident">tokens</span>,
-            <span class="string">&quot;one of `assert`, `assume`, `decreases`, `aborts_if`, `ensures`,\
-                 `requires`, `include`, `apply`, `pragma`, `global`, or a name&quot;</span>,
+            <span class="string">&quot;one of `assert`, `assume`, `decreases`, `aborts_if`, `ensures`, `requires`, \
+             `include`, `apply`, `pragma`, `global`, or a name&quot;</span>,
         )),
     }
 }
 
 <span class="comment">// Parse a specification condition:</span>
-<span class="comment">//    SpecCondition = (&quot;assert&quot; | &quot;assume&quot; | &quot;decreases&quot; | &quot;aborts_if&quot; | &quot;ensures&quot; | &quot;requires&quot; ) &lt;Exp&gt; &quot;;&quot;</span>
+<span class="comment">//    SpecCondition =</span>
+<span class="comment">//        (&quot;assert&quot; | &quot;assume&quot; | &quot;decreases&quot; | &quot;aborts_if&quot; | &quot;ensures&quot; | &quot;requires&quot; ) &lt;Exp&gt; &quot;;&quot;</span>
 <span class="kw">fn</span> <span class="ident">parse_condition</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>(<span class="ident">tokens</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Lexer</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SpecBlockMember</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">start_loc</span> <span class="op">=</span> <span class="ident">tokens</span>.<span class="ident">start_loc</span>();
     <span class="kw">let</span> <span class="ident">kind</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">tokens</span>.<span class="ident">content</span>() {
@@ -3750,7 +3753,8 @@
 <span class="comment">// Parse a specification function.</span>
 <span class="comment">//     SpecFunction = &quot;define&quot; &lt;SpecFunctionSignature&gt; &quot;{&quot; &lt;Sequence&gt; &quot;}&quot;</span>
 <span class="comment">//                  | &quot;native&quot; &quot;define&quot; &lt;SpecFunctionSignature&gt; &quot;;&quot;</span>
-<span class="comment">//     SpecFunctionSignature = &lt;Identifier&gt; &lt;OptionalTypeParameters&gt; &quot;(&quot; Comma&lt;Parameter&gt; &quot;)&quot; &quot;:&quot; &lt;Type&gt;</span>
+<span class="comment">//     SpecFunctionSignature =</span>
+<span class="comment">//         &lt;Identifier&gt; &lt;OptionalTypeParameters&gt; &quot;(&quot; Comma&lt;Parameter&gt; &quot;)&quot; &quot;:&quot; &lt;Type&gt;</span>
 <span class="kw">fn</span> <span class="ident">parse_spec_function</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>(<span class="ident">tokens</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Lexer</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SpecBlockMember</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">start_loc</span> <span class="op">=</span> <span class="ident">tokens</span>.<span class="ident">start_loc</span>();
     <span class="kw">let</span> <span class="ident">native_opt</span> <span class="op">=</span> <span class="ident">consume_optional_token_with_loc</span>(<span class="ident">tokens</span>, <span class="ident">Tok</span>::<span class="ident">Native</span>)<span class="question-mark">?</span>;

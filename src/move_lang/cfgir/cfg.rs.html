@@ -530,12 +530,12 @@
 }
 
 <span class="kw">const</span> <span class="ident">DEAD_ERR_CMD</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;Unreachable code. This statement (and any following statements) will \
-     not be executed. In some cases, this will result in unused resource values.&quot;</span>;
+                            not be executed. In some cases, this will result in unused resource \
+                            values.&quot;</span>;
 
-<span class="kw">const</span> <span class="ident">DEAD_ERR_EXP</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span>
-    <span class="string">&quot;Invalid use of a divergent expression. The code following the evaluation of this \
-     expression will be dead and should be removed. In some cases, this is necessary to prevent \
-     unused resource values.&quot;</span>;
+<span class="kw">const</span> <span class="ident">DEAD_ERR_EXP</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;Invalid use of a divergent expression. The code following the \
+                            evaluation of this expression will be dead and should be removed. In \
+                            some cases, this is necessary to prevent unused resource values.&quot;</span>;
 
 <span class="kw">fn</span> <span class="ident">dead_code_error</span>(<span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">BasicBlock</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Error</span> {
     <span class="kw">let</span> <span class="ident">first_command</span> <span class="op">=</span> <span class="ident">block</span>.<span class="ident">front</span>().<span class="ident">unwrap</span>();

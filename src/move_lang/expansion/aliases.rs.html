@@ -198,6 +198,8 @@
 <span id="198">198</span>
 <span id="199">199</span>
 <span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -371,14 +373,16 @@
         <span class="comment">// propagate uses of aliases</span>
         <span class="ident">used_modules</span>
             .<span class="ident">iter</span>()
-            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="comment">/* remove newly declared aliaes */</span> <span class="op">!</span><span class="ident">inner_scope_modules</span>.<span class="ident">contains</span>(<span class="ident">a</span>))
+            <span class="comment">// remove newly declared aliaes</span>
+            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="op">!</span><span class="ident">inner_scope_modules</span>.<span class="ident">contains</span>(<span class="ident">a</span>))
             .<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> {
                 <span class="comment">// get the module alias to mark it as used</span>
                 <span class="ident">outer_scope</span>.<span class="ident">module_alias_get</span>(<span class="ident">a</span>);
             });
         <span class="ident">used_members</span>
             .<span class="ident">iter</span>()
-            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="comment">/* remove newly declared aliaes */</span> <span class="op">!</span><span class="ident">inner_scope_members</span>.<span class="ident">contains</span>(<span class="ident">a</span>))
+            <span class="comment">// remove newly declared aliaes</span>
+            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="op">!</span><span class="ident">inner_scope_members</span>.<span class="ident">contains</span>(<span class="ident">a</span>))
             .<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> {
                 <span class="comment">// get the member alias to mark it as used</span>
                 <span class="ident">outer_scope</span>.<span class="ident">member_alias_get</span>(<span class="ident">a</span>);
