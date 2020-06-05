@@ -629,3 +629,119 @@ fn publish_rotate_shared_ed25519_public_key() {
         2,
     ));
 }
+
+#[test]
+fn recovery_address() {
+    let mut executor = FakeExecutor::from_genesis_file();
+    let association = Account::new_association();
+    let parent = Account::new();
+    let mut child = Account::new();
+    let other_vasp = Account::new();
+
+    let mut keygen = KeyGen::from_seed([9u8; 32]);
+    let (_vasp_compliance_private_key, vasp_compliance_public_key) = keygen.generate_keypair();
+
+    // create a parent VASP
+    let add_all_currencies = false;
+    executor.execute_and_apply(association.signed_script_txn(
+        encode_create_parent_vasp_account(
+            account_config::lbr_type_tag(),
+            *parent.address(),
+            parent.auth_key_prefix(),
+            vec![],
+            vec![],
+            vasp_compliance_public_key.to_bytes().to_vec(),
+            add_all_currencies,
+        ),
+        1,
+    ));
+
+    // create a child VASP with a zero balance
+    executor.execute_and_apply(parent.signed_script_txn(
+        encode_create_child_vasp_account(
+            account_config::lbr_type_tag(),
+            *child.address(),
+            child.auth_key_prefix(),
+            add_all_currencies,
+            0,
+        ),
+        0,
+    ));
+
+    // publish a recovery address under the parent
+    executor.execute_and_apply(parent.signed_script_txn(encode_create_recovery_address(), 1));
+
+    // delegate authentication key of the child
+    executor.execute_and_apply(child.signed_script_txn(
+        encode_add_recovery_rotation_capability(*parent.address()),
+        0,
+    ));
+
+    // rotate authentication key from the parent
+    let (privkey1, pubkey1) = keygen.generate_keypair();
+    let new_authentication_key1 = AuthenticationKey::ed25519(&pubkey1).to_vec();
+    executor.execute_and_apply(parent.signed_script_txn(
+        encode_rotate_authentication_key_with_recovery_address_script(
+            *parent.address(),
+            *child.address(),
+            new_authentication_key1,
+        ),
+        2,
+    ));
+
+    // rotate authentication key from the child
+    let (_, pubkey2) = keygen.generate_keypair();
+    let new_authentication_key2 = AuthenticationKey::ed25519(&pubkey2).to_vec();
+    child.rotate_key(privkey1, pubkey1);
+    executor.execute_and_apply(child.signed_script_txn(
+        encode_rotate_authentication_key_with_recovery_address_script(
+            *parent.address(),
+            *child.address(),
+            new_authentication_key2,
+        ),
+        1,
+    ));
+
+    // create another VASP unrelated to parent/child
+    let add_all_currencies = false;
+    executor.execute_and_apply(association.signed_script_txn(
+        encode_create_parent_vasp_account(
+            account_config::lbr_type_tag(),
+            *other_vasp.address(),
+            other_vasp.auth_key_prefix(),
+            vec![],
+            vec![],
+            vasp_compliance_public_key.to_bytes().to_vec(),
+            add_all_currencies,
+        ),
+        2,
+    ));
+
+    // try to delegate other_vasp's rotation cap to child--should abort
+    let output = executor.execute_transaction(other_vasp.signed_script_txn(
+        encode_add_recovery_rotation_capability(*parent.address()),
+        0,
+    ));
+    assert_eq!(
+        output.status().vm_status().major_status,
+        StatusCode::ABORTED
+    );
+    assert_eq!(output.status().vm_status().sub_status, Some(444));
+
+    // try to rotate child's key from other_vasp--should abort
+    let (_, pubkey3) = keygen.generate_keypair();
+    let new_authentication_key3 = AuthenticationKey::ed25519(&pubkey3).to_vec();
+    let output = executor.execute_transaction(other_vasp.signed_script_txn(
+        encode_rotate_authentication_key_with_recovery_address_script(
+            *parent.address(),
+            *child.address(),
+            new_authentication_key3,
+        ),
+        0,
+    ));
+    assert_eq!(
+        output.status().vm_status().major_status,
+        StatusCode::ABORTED
+    );
+    assert_eq!(output.status().vm_status().sub_status, Some(3333));
+}

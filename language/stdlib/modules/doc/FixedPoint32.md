@@ -11,6 +11,12 @@
 -  [Function `create_from_rational`](#0x0_FixedPoint32_create_from_rational)
 -  [Function `create_from_raw_value`](#0x0_FixedPoint32_create_from_raw_value)
 -  [Function `get_raw_value`](#0x0_FixedPoint32_get_raw_value)
+-  [Specification](#0x0_FixedPoint32_Specification)
+    -  [Function `multiply_u64`](#0x0_FixedPoint32_Specification_multiply_u64)
+    -  [Function `divide_u64`](#0x0_FixedPoint32_Specification_divide_u64)
+    -  [Function `create_from_rational`](#0x0_FixedPoint32_Specification_create_from_rational)
+    -  [Function `create_from_raw_value`](#0x0_FixedPoint32_Specification_create_from_raw_value)
+    -  [Function `get_raw_value`](#0x0_FixedPoint32_Specification_get_raw_value)
 
 
 
@@ -194,3 +200,73 @@
 
 
 </details>
+
+<a name="0x0_FixedPoint32_Specification"></a>
+
+## Specification
+
+
+<a name="0x0_FixedPoint32_Specification_multiply_u64"></a>
+
+### Function `multiply_u64`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_multiply_u64">multiply_u64</a>(num: u64, multiplier: <a href="#0x0_FixedPoint32_T">FixedPoint32::T</a>): u64
+</code></pre>
+
+
+
+
+<a name="0x0_FixedPoint32_Specification_divide_u64"></a>
+
+### Function `divide_u64`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_divide_u64">divide_u64</a>(num: u64, divisor: <a href="#0x0_FixedPoint32_T">FixedPoint32::T</a>): u64
+</code></pre>
+
+
+
+
+<a name="0x0_FixedPoint32_Specification_create_from_rational"></a>
+
+### Function `create_from_rational`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_create_from_rational">create_from_rational</a>(numerator: u64, denominator: u64): <a href="#0x0_FixedPoint32_T">FixedPoint32::T</a>
+</code></pre>
+
+
+
+
+<a name="0x0_FixedPoint32_Specification_create_from_raw_value"></a>
+
+### Function `create_from_raw_value`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_create_from_raw_value">create_from_raw_value</a>(value: u64): <a href="#0x0_FixedPoint32_T">FixedPoint32::T</a>
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="#0x0_FixedPoint32_T">T</a> { value };
+</code></pre>
+
+
+
+<a name="0x0_FixedPoint32_Specification_get_raw_value"></a>
+
+### Function `get_raw_value`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_FixedPoint32_get_raw_value">get_raw_value</a>(num: <a href="#0x0_FixedPoint32_T">FixedPoint32::T</a>): u64
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == num.value;
+</code></pre>
