@@ -1043,67 +1043,6 @@
 <span id="1043">1043</span>
 <span id="1044">1044</span>
 <span id="1045">1045</span>
-<span id="1046">1046</span>
-<span id="1047">1047</span>
-<span id="1048">1048</span>
-<span id="1049">1049</span>
-<span id="1050">1050</span>
-<span id="1051">1051</span>
-<span id="1052">1052</span>
-<span id="1053">1053</span>
-<span id="1054">1054</span>
-<span id="1055">1055</span>
-<span id="1056">1056</span>
-<span id="1057">1057</span>
-<span id="1058">1058</span>
-<span id="1059">1059</span>
-<span id="1060">1060</span>
-<span id="1061">1061</span>
-<span id="1062">1062</span>
-<span id="1063">1063</span>
-<span id="1064">1064</span>
-<span id="1065">1065</span>
-<span id="1066">1066</span>
-<span id="1067">1067</span>
-<span id="1068">1068</span>
-<span id="1069">1069</span>
-<span id="1070">1070</span>
-<span id="1071">1071</span>
-<span id="1072">1072</span>
-<span id="1073">1073</span>
-<span id="1074">1074</span>
-<span id="1075">1075</span>
-<span id="1076">1076</span>
-<span id="1077">1077</span>
-<span id="1078">1078</span>
-<span id="1079">1079</span>
-<span id="1080">1080</span>
-<span id="1081">1081</span>
-<span id="1082">1082</span>
-<span id="1083">1083</span>
-<span id="1084">1084</span>
-<span id="1085">1085</span>
-<span id="1086">1086</span>
-<span id="1087">1087</span>
-<span id="1088">1088</span>
-<span id="1089">1089</span>
-<span id="1090">1090</span>
-<span id="1091">1091</span>
-<span id="1092">1092</span>
-<span id="1093">1093</span>
-<span id="1094">1094</span>
-<span id="1095">1095</span>
-<span id="1096">1096</span>
-<span id="1097">1097</span>
-<span id="1098">1098</span>
-<span id="1099">1099</span>
-<span id="1100">1100</span>
-<span id="1101">1101</span>
-<span id="1102">1102</span>
-<span id="1103">1103</span>
-<span id="1104">1104</span>
-<span id="1105">1105</span>
-<span id="1106">1106</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1246,9 +1185,6 @@
     <span class="comment">// probably need to move network wire into its own crate to avoid circular</span>
     <span class="comment">// dependency b/w network and types.</span>
     <span class="ident">Handshake</span>(<span class="ident">u8</span>),
-    <span class="comment">// TODO(philiphayes): gate behind cfg(test), should not even parse in prod.</span>
-    <span class="comment">// testing only, unauthenticated peer id exchange</span>
-    <span class="ident">PeerIdExchange</span>,
 }
 
 <span class="doccomment">/// A minimally parsed DNS name. We don&#39;t really do any checking other than</span>
@@ -1422,26 +1358,6 @@
             .<span class="ident">push</span>(<span class="ident">Protocol</span>::<span class="ident">Handshake</span>(<span class="ident">handshake_version</span>))
     }
 
-    <span class="doccomment">/// Given a base `NetworkAddress`, append production protocols and</span>
-    <span class="doccomment">/// return the modified `NetworkAddress`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// ### Example</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// ```rust</span>
-    <span class="doccomment">/// use libra_network_address::NetworkAddress;</span>
-    <span class="doccomment">/// use std::str::FromStr;</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// let addr = NetworkAddress::from_str(&quot;/memory/123&quot;).unwrap();</span>
-    <span class="doccomment">/// let addr = addr.append_test_protos(0);</span>
-    <span class="doccomment">/// assert_eq!(addr.to_string(), &quot;/memory/123/ln-peerid-ex/ln-handshake/0&quot;);</span>
-    <span class="doccomment">/// ```</span>
-    <span class="comment">// TODO(philiphayes): gate with cfg(test)</span>
-    <span class="comment">// TODO(philiphayes): use handshake version enum</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">append_test_protos</span>(<span class="self">self</span>, <span class="ident">handshake_version</span>: <span class="ident">u8</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">push</span>(<span class="ident">Protocol</span>::<span class="ident">PeerIdExchange</span>)
-            .<span class="ident">push</span>(<span class="ident">Protocol</span>::<span class="ident">Handshake</span>(<span class="ident">handshake_version</span>))
-    }
-
     <span class="doccomment">/// Check that a `NetworkAddress` looks like a typical LibraNet address with</span>
     <span class="doccomment">/// associated protocols.</span>
     <span class="doccomment">///</span>
@@ -1456,8 +1372,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// followed by transport upgrade handshake protocols:</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// `&quot;/ln-noise-ik/&lt;pubkey&gt;/ln-handshake/&lt;version&gt;&quot;` or</span>
-    <span class="doccomment">/// cfg!(test) `&quot;/ln-peerid-ex/ln-handshake/&lt;version&gt;&quot;`</span>
+    <span class="doccomment">/// `&quot;/ln-noise-ik/&lt;pubkey&gt;/ln-handshake/&lt;version&gt;&quot;`</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ### Example</span>
     <span class="doccomment">///</span>
@@ -1638,11 +1553,8 @@
         <span class="ident">any</span>::<span class="op">&lt;</span>(<span class="ident">DnsName</span>, <span class="ident">u16</span>)<span class="op">&gt;</span>()
             .<span class="ident">prop_map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="ident">port</span>)<span class="op">|</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Protocol</span>::<span class="ident">Dns6</span>(<span class="ident">name</span>), <span class="ident">Protocol</span>::<span class="ident">Tcp</span>(<span class="ident">port</span>)]),
     ];
-    <span class="kw">let</span> <span class="ident">arb_libranet_protos</span> <span class="op">=</span> <span class="macro">prop_oneof</span><span class="macro">!</span>[
-        <span class="ident">any</span>::<span class="op">&lt;</span>(<span class="ident">x25519</span>::<span class="ident">PublicKey</span>, <span class="ident">u8</span>)<span class="op">&gt;</span>()
-            .<span class="ident">prop_map</span>(<span class="op">|</span>(<span class="ident">pubkey</span>, <span class="ident">hs</span>)<span class="op">|</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Protocol</span>::<span class="ident">NoiseIK</span>(<span class="ident">pubkey</span>), <span class="ident">Protocol</span>::<span class="ident">Handshake</span>(<span class="ident">hs</span>)]),
-        <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="op">|</span><span class="ident">hs</span><span class="op">|</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Protocol</span>::<span class="ident">PeerIdExchange</span>, <span class="ident">Protocol</span>::<span class="ident">Handshake</span>(<span class="ident">hs</span>)]),
-    ];
+    <span class="kw">let</span> <span class="ident">arb_libranet_protos</span> <span class="op">=</span> <span class="ident">any</span>::<span class="op">&lt;</span>(<span class="ident">x25519</span>::<span class="ident">PublicKey</span>, <span class="ident">u8</span>)<span class="op">&gt;</span>()
+        .<span class="ident">prop_map</span>(<span class="op">|</span>(<span class="ident">pubkey</span>, <span class="ident">hs</span>)<span class="op">|</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Protocol</span>::<span class="ident">NoiseIK</span>(<span class="ident">pubkey</span>), <span class="ident">Protocol</span>::<span class="ident">Handshake</span>(<span class="ident">hs</span>)]);
 
     (<span class="ident">arb_transport_protos</span>, <span class="ident">arb_libranet_protos</span>).<span class="ident">prop_map</span>(
         <span class="op">|</span>(<span class="kw-2">mut</span> <span class="ident">transport_protos</span>, <span class="kw-2">mut</span> <span class="ident">libranet_protos</span>)<span class="op">|</span> {
@@ -1675,7 +1587,6 @@
                     .<span class="ident">expect</span>(<span class="string">&quot;ValidCryptoMaterialStringExt::to_encoded_string is infallible&quot;</span>)
             ),
             <span class="ident">Handshake</span>(<span class="ident">version</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;/ln-handshake/{}&quot;</span>, <span class="ident">version</span>),
-            <span class="ident">PeerIdExchange</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;/ln-peerid-ex&quot;</span>),
         }
     }
 }
@@ -1706,7 +1617,6 @@
                 <span class="ident">args</span>.<span class="ident">next</span>().<span class="ident">ok_or</span>(<span class="ident">ParseError</span>::<span class="ident">UnexpectedEnd</span>)<span class="question-mark">?</span>,
             )<span class="question-mark">?</span>),
             <span class="string">&quot;ln-handshake&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Protocol</span>::<span class="ident">Handshake</span>(<span class="ident">parse_one</span>(<span class="ident">args</span>)<span class="question-mark">?</span>),
-            <span class="string">&quot;ln-peerid-ex&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Protocol</span>::<span class="ident">PeerIdExchange</span>,
             <span class="ident">unknown</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">UnknownProtocolType</span>(<span class="ident">unknown</span>.<span class="ident">to_string</span>())),
         };
         <span class="prelude-val">Ok</span>(<span class="ident">protocol</span>)
@@ -1873,15 +1783,6 @@
     }
 }
 
-<span class="doccomment">/// parse the `&amp;[Protocol]` into the `&quot;/ln-peerid-ex&quot;` prefix and unparsed</span>
-<span class="doccomment">/// `&amp;[Protocol]` suffix.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse_peerid_ex</span>(<span class="ident">protos</span>: <span class="kw-2">&amp;</span>[<span class="ident">Protocol</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">Protocol</span>]<span class="op">&gt;</span> {
-    <span class="kw">match</span> <span class="ident">protos</span>.<span class="ident">split_first</span>() {
-        <span class="prelude-val">Some</span>((<span class="ident">Protocol</span>::<span class="ident">PeerIdExchange</span>, <span class="ident">suffix</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">suffix</span>),
-        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-    }
-}
-
 <span class="doccomment">/// parse the `&amp;[Protocol]` into the `&quot;/ln-handshake/&lt;version&gt;&quot;` prefix and</span>
 <span class="doccomment">/// unparsed `&amp;[Protocol]` suffix.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse_handshake</span>(<span class="ident">protos</span>: <span class="kw-2">&amp;</span>[<span class="ident">Protocol</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">u8</span>, <span class="kw-2">&amp;</span>[<span class="ident">Protocol</span>])<span class="op">&gt;</span> {
@@ -1915,17 +1816,8 @@
     <span class="comment">// parse authentication layer</span>
     <span class="comment">// ---</span>
     <span class="comment">// parse_noise_ik</span>
-    <span class="comment">// &lt;or&gt; cfg!(test) parse_peerid_ex</span>
 
-    <span class="kw">let</span> <span class="ident">auth_suffix</span> <span class="op">=</span> <span class="prelude-val">None</span>
-        .<span class="ident">or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">parse_noise_ik</span>(<span class="ident">transport_suffix</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="number">1</span>))
-        .<span class="ident">or_else</span>(<span class="op">|</span><span class="op">|</span> {
-            <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">test</span>) {
-                <span class="ident">parse_peerid_ex</span>(<span class="ident">transport_suffix</span>)
-            } <span class="kw">else</span> {
-                <span class="prelude-val">None</span>
-            }
-        })<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">auth_suffix</span> <span class="op">=</span> <span class="ident">parse_noise_ik</span>(<span class="ident">transport_suffix</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="number">1</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// parse handshake layer</span>
 
@@ -2114,8 +2006,8 @@
             ((<span class="kw-2">&amp;</span><span class="ident">dns_name</span>, <span class="number">123</span>), <span class="ident">expected_suffix</span>)
         );
 
-        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="string">&quot;/dns/example.com/tcp/123/ln-peerid-ex&quot;</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">expected_suffix</span>: <span class="kw-2">&amp;</span>[<span class="ident">Protocol</span>] <span class="op">=</span> <span class="kw-2">&amp;</span>[<span class="ident">Protocol</span>::<span class="ident">PeerIdExchange</span>];
+        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="string">&quot;/dns/example.com/tcp/123/memory/44&quot;</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">expected_suffix</span>: <span class="kw-2">&amp;</span>[<span class="ident">Protocol</span>] <span class="op">=</span> <span class="kw-2">&amp;</span>[<span class="ident">Protocol</span>::<span class="ident">Memory</span>(<span class="number">44</span>)];
         <span class="macro">assert_eq</span><span class="macro">!</span>(
             <span class="ident">parse_dns_tcp</span>(<span class="ident">addr</span>.<span class="ident">as_slice</span>()).<span class="ident">unwrap</span>(),
             ((<span class="kw-2">&amp;</span><span class="ident">dns_name</span>, <span class="number">123</span>), <span class="ident">expected_suffix</span>)
@@ -2146,20 +2038,6 @@
 
         <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="string">&quot;/tcp/999/memory/123&quot;</span>).<span class="ident">unwrap</span>();
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="prelude-val">None</span>, <span class="ident">parse_noise_ik</span>(<span class="ident">addr</span>.<span class="ident">as_slice</span>()));
-    }
-
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_parse_peerid_ex</span>() {
-        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="string">&quot;/ln-peerid-ex&quot;</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">expected_suffix</span>: <span class="kw-2">&amp;</span>[<span class="ident">Protocol</span>] <span class="op">=</span> <span class="kw-2">&amp;</span>[];
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">parse_peerid_ex</span>(<span class="ident">addr</span>.<span class="ident">as_slice</span>()).<span class="ident">unwrap</span>(), <span class="ident">expected_suffix</span>);
-
-        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="string">&quot;/ln-peerid-ex/tcp/999&quot;</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">expected_suffix</span>: <span class="kw-2">&amp;</span>[<span class="ident">Protocol</span>] <span class="op">=</span> <span class="kw-2">&amp;</span>[<span class="ident">Protocol</span>::<span class="ident">Tcp</span>(<span class="number">999</span>)];
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">parse_peerid_ex</span>(<span class="ident">addr</span>.<span class="ident">as_slice</span>()).<span class="ident">unwrap</span>(), <span class="ident">expected_suffix</span>);
-
-        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">NetworkAddress</span>::<span class="ident">from_str</span>(<span class="string">&quot;/tcp/999/memory/123&quot;</span>).<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="prelude-val">None</span>, <span class="ident">parse_peerid_ex</span>(<span class="ident">addr</span>.<span class="ident">as_slice</span>()));
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>

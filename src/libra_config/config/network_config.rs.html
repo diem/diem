@@ -433,6 +433,8 @@
 <span id="433">433</span>
 <span id="434">434</span>
 <span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -477,6 +479,8 @@
     <span class="kw">pub</span> <span class="ident">connectivity_check_interval_ms</span>: <span class="ident">u64</span>,
     <span class="comment">// If the network uses remote authentication, only trusted peers are allowed to connect.</span>
     <span class="comment">// Otherwise, any node can connect.</span>
+    <span class="comment">// TODO(philiphayes): rename this flag. should reflect `AuthenticationMode` in</span>
+    <span class="comment">// `NetworkBuilder`, i.e., `Mutual` vs `ServerOnly` authentication.</span>
     <span class="kw">pub</span> <span class="ident">enable_remote_authentication</span>: <span class="ident">bool</span>,
     <span class="comment">// Enable this network to use either gossip discovery or onchain discovery.</span>
     <span class="kw">pub</span> <span class="ident">discovery_method</span>: <span class="ident">DiscoveryMethod</span>,

@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["exchange_handshake","The Handshake exchange protocol."],["exchange_peerid","The PeerId exchange protocol."]]});
+initSidebarItems({"fn":[["exchange_handshake","The Handshake exchange protocol."]]});

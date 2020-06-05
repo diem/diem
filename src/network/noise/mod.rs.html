@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `network/src/noise_wrapper/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../network/index.html'><div class='logo-container'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1"> 1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `network/src/noise/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../network/index.html'><div class='logo-container'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1"> 1</span>
 <span id="2"> 2</span>
 <span id="3"> 3</span>
 <span id="4"> 4</span>
@@ -88,6 +88,9 @@
 <span id="88">88</span>
 <span id="89">89</span>
 <span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -102,7 +105,10 @@
 <span class="doccomment">//! Usage example:</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```</span>
-<span class="doccomment">//! use network::{noise_wrapper::{NoiseWrapper, AntiReplayTimestamps}, NetworkPublicKeys};</span>
+<span class="doccomment">//! use network::{</span>
+<span class="doccomment">//!     noise::{HandshakeAuthMode, NoiseUpgrader},</span>
+<span class="doccomment">//!     NetworkPublicKeys,</span>
+<span class="doccomment">//! };</span>
 <span class="doccomment">//! use futures::{executor, future, io::{AsyncReadExt, AsyncWriteExt}};</span>
 <span class="doccomment">//! use memsocket::MemorySocket;</span>
 <span class="doccomment">//! use libra_crypto::{x25519, ed25519, Uniform, PrivateKey, test_utils::TEST_SEED};</span>
@@ -112,15 +118,13 @@
 <span class="doccomment">//! use std::{collections::HashMap, sync::{Arc, RwLock}};</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! fn example() -&gt; std::io::Result&lt;()&gt; {</span>
-<span class="doccomment">//! // create client and server NoiseWrapper</span>
+<span class="doccomment">//! // create client and server NoiseUpgrader</span>
 <span class="doccomment">//! let mut rng = StdRng::from_seed(TEST_SEED);</span>
 <span class="doccomment">//! let client_private = x25519::PrivateKey::generate(&amp;mut rng);</span>
 <span class="doccomment">//! let client_public = client_private.public_key();</span>
-<span class="doccomment">//! let client = NoiseWrapper::new(client_private);</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! let server_private = x25519::PrivateKey::generate(&amp;mut rng);</span>
 <span class="doccomment">//! let server_public = server_private.public_key();</span>
-<span class="doccomment">//! let server = NoiseWrapper::new(server_private);</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! // create list of trusted peers</span>
 <span class="doccomment">//! let mut trusted_peers = Arc::new(RwLock::new(HashMap::new()));</span>
@@ -130,21 +134,23 @@
 <span class="doccomment">//!     });</span>
 <span class="doccomment">//! }</span>
 <span class="doccomment">//!</span>
+<span class="doccomment">//! let client_auth = HandshakeAuthMode::mutual(trusted_peers.clone());</span>
+<span class="doccomment">//! let client = NoiseUpgrader::new(client_private, client_auth);</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! let server_auth = HandshakeAuthMode::mutual(trusted_peers);</span>
+<span class="doccomment">//! let server = NoiseUpgrader::new(server_private, server_auth);</span>
+<span class="doccomment">//!</span>
 <span class="doccomment">//! // use an in-memory socket as example</span>
 <span class="doccomment">//! let (dialer_socket, listener_socket) = MemorySocket::new_pair();</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! // anti-replay timestamps</span>
-<span class="doccomment">//! let anti_replay_timestamps = Arc::new(RwLock::new(AntiReplayTimestamps::default()));</span>
-<span class="doccomment">//!</span>
 <span class="doccomment">//! // perform the handshake</span>
 <span class="doccomment">//! let (client_session, server_session) = executor::block_on(future::join(</span>
-<span class="doccomment">//!    client.dial(dialer_socket, true, server_public),</span>
-<span class="doccomment">//!    server.accept(listener_socket, Some(anti_replay_timestamps), Some(&amp;trusted_peers)),</span>
+<span class="doccomment">//!    client.upgrade_outbound(dialer_socket, server_public),</span>
+<span class="doccomment">//!    server.upgrade_inbound(listener_socket),</span>
 <span class="doccomment">//! ));</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! let mut client_session = client_session?;</span>
 <span class="doccomment">//! let mut server_session = server_session?;</span>
-<span class="doccomment">//!</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! // client -&gt; server</span>
 <span class="doccomment">//! executor::block_on(client_session.write_all(b&quot;client hello&quot;))?;</span>
@@ -165,7 +171,7 @@
 <span class="doccomment">//! Ok(())</span>
 <span class="doccomment">//! }</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//!</span>
+<span class="doccomment">//! example().unwrap();</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! [noise]: http://noiseprotocol.org/</span>
@@ -178,6 +184,6 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">fuzzing</span>;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">handshake</span>::{<span class="ident">AntiReplayTimestamps</span>, <span class="ident">NoiseWrapper</span>};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">handshake</span>::{<span class="ident">AntiReplayTimestamps</span>, <span class="ident">HandshakeAuthMode</span>, <span class="ident">NoiseUpgrader</span>};
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "network";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>
