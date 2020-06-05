@@ -8,7 +8,7 @@ use crate::{
         PersistentLivenessStorage, RecoveryData, RootInfo, RootMetadata,
     },
     state_replication::StateComputer,
-    util::time_service::duration_since_epoch,
+    util::time_service::{duration_since_epoch, TimeService},
 };
 use anyhow::{bail, ensure, format_err, Context};
 use consensus_types::{
@@ -17,6 +17,7 @@ use consensus_types::{
 };
 use debug_interface::prelude::*;
 use executor_types::StateComputeResult;
+
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -89,6 +90,8 @@ pub struct BlockStore {
     /// The persistent storage backing up the in-memory data structure, every write should go
     /// through this before in-memory tree.
     storage: Arc<dyn PersistentLivenessStorage>,
+    /// Used to ensure that any block stored will have a timestamp < the local time
+    time_service: Arc<dyn TimeService>,
 }
 
 impl BlockStore {
@@ -97,6 +100,7 @@ impl BlockStore {
         initial_data: RecoveryData,
         state_computer: Arc<dyn StateComputer>,
         max_pruned_blocks_in_mem: usize,
+        time_service: Arc<dyn TimeService>,
     ) -> Self {
         let highest_tc = initial_data.highest_timeout_certificate();
         let (root, root_metadata, blocks, quorum_certs) = initial_data.take();
@@ -109,6 +113,7 @@ impl BlockStore {
             state_computer,
             storage,
             max_pruned_blocks_in_mem,
+            time_service,
         )
     }
 
@@ -121,6 +126,7 @@ impl BlockStore {
         state_computer: Arc<dyn StateComputer>,
         storage: Arc<dyn PersistentLivenessStorage>,
         max_pruned_blocks_in_mem: usize,
+        time_service: Arc<dyn TimeService>,
     ) -> Self {
         let RootInfo(root_block, root_qc, root_li) = root;
         //verify root is correct
@@ -162,6 +168,7 @@ impl BlockStore {
             inner: Arc::new(RwLock::new(tree)),
             state_computer,
             storage,
+            time_service,
         };
         for block in blocks {
             block_store
@@ -237,6 +244,7 @@ impl BlockStore {
             Arc::clone(&self.state_computer),
             Arc::clone(&self.storage),
             max_pruned_blocks_in_mem,
+            Arc::clone(&self.time_service),
         );
         let to_remove = self.inner.read().unwrap().get_all_block_id();
         if let Err(e) = self.storage.prune_tree(to_remove) {
@@ -274,6 +282,9 @@ impl BlockStore {
             return Ok(existing_block);
         }
         let executed_block = self.execute_block(block)?;
+        // ensure local time past the block time
+        let block_time = Duration::from_micros(executed_block.timestamp_usecs());
+        self.time_service.wait_until(block_time);
         self.storage
             .save_tree(vec![executed_block.block().clone()], vec![])
             .context("Insert block failed when saving block")?;

@@ -42,9 +42,7 @@ use crate::{
     network_interface::ConsensusMsg,
     persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
     state_replication::{StateComputer, TxnManager},
-    util::time_service::{
-        duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
-    },
+    util::time_service::duration_since_epoch,
 };
 
 pub enum UnverifiedEvent {
@@ -189,7 +187,6 @@ pub struct RoundManager {
     network: NetworkSender,
     txn_manager: Box<dyn TxnManager>,
     storage: Arc<dyn PersistentLivenessStorage>,
-    time_service: Arc<dyn TimeService>,
 }
 
 impl RoundManager {
@@ -203,7 +200,6 @@ impl RoundManager {
         network: NetworkSender,
         txn_manager: Box<dyn TxnManager>,
         storage: Arc<dyn PersistentLivenessStorage>,
-        time_service: Arc<dyn TimeService>,
     ) -> Self {
         counters::BLOCK_RETRIEVAL_COUNT.get();
         counters::STATE_SYNC_COUNT.get();
@@ -218,7 +214,6 @@ impl RoundManager {
             txn_manager,
             network,
             storage,
-            time_service,
         }
     }
 
@@ -275,10 +270,7 @@ impl RoundManager {
         // Proposal generator will ensure that at most one proposal is generated per round
         let proposal = self
             .proposal_generator
-            .generate_proposal(
-                new_round_event.round,
-                self.round_state.current_round_deadline(),
-            )
+            .generate_proposal(new_round_event.round)
             .await?;
         let signed_proposal = self.safety_rules.sign_proposal(proposal)?;
         self.txn_manager.trace_transactions(&signed_proposal);
@@ -472,11 +464,19 @@ impl RoundManager {
             proposal,
         );
 
+        let block_time_since_epoch = Duration::from_micros(proposal.timestamp_usecs());
+
+        ensure!(
+            block_time_since_epoch < self.round_state.current_round_deadline(),
+            "[RoundManager] Waiting until proposal block timestamp usecs {:?} \
+            would exceed the round duration {:?}, hence will not vote for this round",
+            block_time_since_epoch,
+            self.round_state.current_round_deadline(),
+        );
+
         debug!("RoundManager: process_proposed_block {}", proposal);
 
-        if let Some(time_to_receival) =
-            duration_since_epoch().checked_sub(Duration::from_micros(proposal.timestamp_usecs()))
-        {
+        if let Some(time_to_receival) = duration_since_epoch().checked_sub(block_time_since_epoch) {
             counters::CREATION_TO_RECEIVAL_S.observe_duration(time_to_receival);
         }
 
@@ -495,69 +495,6 @@ impl RoundManager {
         self.round_state.record_vote(vote.clone());
         let vote_msg = VoteMsg::new(vote, self.block_store.sync_info());
         self.network.send_vote(vote_msg, vec![recipients]).await;
-        Ok(())
-    }
-
-    async fn wait_before_vote_if_needed(
-        &self,
-        block_timestamp_us: u64,
-    ) -> Result<(), WaitingError> {
-        let current_round_deadline = self.round_state.current_round_deadline();
-        match wait_if_possible(
-            self.time_service.as_ref(),
-            Duration::from_micros(block_timestamp_us),
-            current_round_deadline,
-        )
-        .await
-        {
-            Ok(waiting_success) => {
-                debug!("Success with {:?} for being able to vote", waiting_success);
-
-                match waiting_success {
-                    WaitingSuccess::WaitWasRequired { wait_duration, .. } => {
-                        counters::VOTE_SUCCESS_WAIT_S.observe_duration(wait_duration);
-                        counters::VOTES_COUNT
-                            .with_label_values(&["wait_was_required"])
-                            .inc();
-                    }
-                    WaitingSuccess::NoWaitRequired { .. } => {
-                        counters::VOTE_SUCCESS_WAIT_S.observe_duration(Duration::new(0, 0));
-                        counters::VOTES_COUNT
-                            .with_label_values(&["no_wait_required"])
-                            .inc();
-                    }
-                }
-            }
-            Err(waiting_error) => {
-                match waiting_error {
-                    WaitingError::MaxWaitExceeded => {
-                        error!(
-                                "Waiting until proposal block timestamp usecs {:?} would exceed the round duration {:?}, hence will not vote for this round",
-                                block_timestamp_us,
-                                current_round_deadline);
-                        counters::VOTE_FAILURE_WAIT_S.observe_duration(Duration::new(0, 0));
-                        counters::VOTES_COUNT
-                            .with_label_values(&["max_wait_exceeded"])
-                            .inc();
-                    }
-                    WaitingError::WaitFailed {
-                        current_duration_since_epoch,
-                        wait_duration,
-                    } => {
-                        error!(
-                                "Even after waiting for {:?}, proposal block timestamp usecs {:?} >= current timestamp usecs {:?}, will not vote for this round",
-                                wait_duration,
-                                block_timestamp_us,
-                                current_duration_since_epoch);
-                        counters::VOTE_FAILURE_WAIT_S.observe_duration(wait_duration);
-                        counters::VOTES_COUNT
-                            .with_label_values(&["wait_failed"])
-                            .inc();
-                    }
-                };
-                return Err(waiting_error);
-            }
-        }
         Ok(())
     }
 
@@ -597,9 +534,6 @@ impl RoundManager {
             .block_store
             .get_block(executed_block.parent_id())
             .expect("[RoundManager] Parent block not found after execution");
-
-        self.wait_before_vote_if_needed(block.timestamp_usecs())
-            .await?;
 
         let vote_proposal = VoteProposal::new(
             AccumulatorExtensionProof::<TransactionAccumulatorHasher>::new(

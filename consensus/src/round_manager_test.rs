@@ -177,15 +177,15 @@ impl NodeSetup {
             commit_cb_sender,
             Arc::clone(&storage),
         ));
+        let time_service = Arc::new(ClockTimeService::new(executor));
 
         let block_store = Arc::new(BlockStore::new(
             storage.clone(),
             initial_data,
             state_computer,
             10, // max pruned blocks in mem
+            time_service.clone(),
         ));
-
-        let time_service = Arc::new(ClockTimeService::new(executor));
 
         let proposal_generator = ProposalGenerator::new(
             author,
@@ -195,7 +195,7 @@ impl NodeSetup {
             1,
         );
 
-        let round_state = Self::create_round_state(time_service.clone());
+        let round_state = Self::create_round_state(time_service);
         let proposer_election = Self::create_proposer_election(proposer_author);
         let mut safety_rules = safety_rules_manager.client();
         let proof = storage.retrieve_epoch_change_proof(0).unwrap();
@@ -211,7 +211,6 @@ impl NodeSetup {
             network,
             Box::new(MockTransactionManager::new(None)),
             storage.clone(),
-            time_service,
         );
         block_on(round_manager.start(last_vote_sent));
         Self {

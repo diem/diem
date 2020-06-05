@@ -12,14 +12,7 @@ use consensus_types::block::{
     Block,
 };
 use libra_types::validator_signer::ValidatorSigner;
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
-
-fn minute_from_now() -> Instant {
-    Instant::now() + Duration::new(60, 0)
-}
+use std::sync::Arc;
 
 #[tokio::test]
 async fn test_proposal_generation_empty_tree() {
@@ -35,20 +28,14 @@ async fn test_proposal_generation_empty_tree() {
     let genesis = block_store.root();
 
     // Generate proposals for an empty tree.
-    let proposal_data = proposal_generator
-        .generate_proposal(1, minute_from_now())
-        .await
-        .unwrap();
+    let proposal_data = proposal_generator.generate_proposal(1).await.unwrap();
     let proposal = Block::new_proposal_from_block_data(proposal_data, &signer);
     assert_eq!(proposal.parent_id(), genesis.id());
     assert_eq!(proposal.round(), 1);
     assert_eq!(proposal.quorum_cert().certified_block().id(), genesis.id());
 
     // Duplicate proposals on the same round are not allowed
-    let proposal_err = proposal_generator
-        .generate_proposal(1, minute_from_now())
-        .await
-        .err();
+    let proposal_err = proposal_generator.generate_proposal(1).await.err();
     assert!(proposal_err.is_some());
 }
 
@@ -71,7 +58,7 @@ async fn test_proposal_generation_parent() {
     // generate proposals for an empty tree.
     assert_eq!(
         proposal_generator
-            .generate_proposal(10, minute_from_now())
+            .generate_proposal(10)
             .await
             .unwrap()
             .parent_id(),
@@ -80,20 +67,14 @@ async fn test_proposal_generation_parent() {
 
     // Once a1 is certified, it should be the one to choose from
     inserter.insert_qc_for_block(a1.as_ref(), None);
-    let a1_child_res = proposal_generator
-        .generate_proposal(11, minute_from_now())
-        .await
-        .unwrap();
+    let a1_child_res = proposal_generator.generate_proposal(11).await.unwrap();
     assert_eq!(a1_child_res.parent_id(), a1.id());
     assert_eq!(a1_child_res.round(), 11);
     assert_eq!(a1_child_res.quorum_cert().certified_block().id(), a1.id());
 
     // Once b1 is certified, it should be the one to choose from
     inserter.insert_qc_for_block(b1.as_ref(), None);
-    let b1_child_res = proposal_generator
-        .generate_proposal(12, minute_from_now())
-        .await
-        .unwrap();
+    let b1_child_res = proposal_generator.generate_proposal(12).await.unwrap();
     assert_eq!(b1_child_res.parent_id(), b1.id());
     assert_eq!(b1_child_res.round(), 12);
     assert_eq!(b1_child_res.quorum_cert().certified_block().id(), b1.id());
@@ -114,10 +95,7 @@ async fn test_old_proposal_generation() {
     let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     inserter.insert_qc_for_block(a1.as_ref(), None);
 
-    let proposal_err = proposal_generator
-        .generate_proposal(1, minute_from_now())
-        .await
-        .err();
+    let proposal_err = proposal_generator.generate_proposal(1).await.err();
     assert!(proposal_err.is_some());
 }
 
@@ -135,18 +113,12 @@ async fn test_empty_proposal_after_reconfiguration() {
     let genesis = block_store.root();
     let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     // Normal proposal is not empty
-    let normal_proposal_1 = proposal_generator
-        .generate_proposal(42, minute_from_now())
-        .await
-        .unwrap();
+    let normal_proposal_1 = proposal_generator.generate_proposal(42).await.unwrap();
     assert!(!normal_proposal_1.payload().unwrap().is_empty());
     let a2 = inserter.insert_reconfiguration_block(&a1, 2);
     inserter.insert_qc_for_block(a2.as_ref(), None);
     // The direct child is empty
-    let empty_proposal_1 = proposal_generator
-        .generate_proposal(43, minute_from_now())
-        .await
-        .unwrap();
+    let empty_proposal_1 = proposal_generator.generate_proposal(43).await.unwrap();
     assert!(empty_proposal_1.payload().unwrap().is_empty());
     // insert one more block after reconfiguration
     let a3 = inserter.create_block_with_qc(
@@ -158,10 +130,7 @@ async fn test_empty_proposal_after_reconfiguration() {
     let a3 = block_store.execute_and_insert_block(a3).unwrap();
     inserter.insert_qc_for_block(a3.as_ref(), None);
     // Indirect child is empty too
-    let empty_proposal_2 = proposal_generator
-        .generate_proposal(44, minute_from_now())
-        .await
-        .unwrap();
+    let empty_proposal_2 = proposal_generator.generate_proposal(44).await.unwrap();
     assert!(empty_proposal_2.payload().unwrap().is_empty());
     // if reconfiguration is committed, not allow to generate proposal
     let a4 = inserter.create_block_with_qc(
@@ -178,8 +147,6 @@ async fn test_empty_proposal_after_reconfiguration() {
         Some(a2.block_info()),
     );
     block_store.insert_single_quorum_cert(li).unwrap();
-    let err_proposal = proposal_generator
-        .generate_proposal(45, minute_from_now())
-        .await;
+    let err_proposal = proposal_generator.generate_proposal(45).await;
     assert!(err_proposal.is_err());
 }

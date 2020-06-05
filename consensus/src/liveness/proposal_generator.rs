@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    block_storage::BlockReader,
-    counters,
-    state_replication::TxnManager,
-    util::time_service::{wait_if_possible, TimeService, WaitingError, WaitingSuccess},
+    block_storage::BlockReader, state_replication::TxnManager, util::time_service::TimeService,
 };
 use anyhow::{bail, ensure, format_err, Context};
 use consensus_types::{
@@ -14,11 +11,8 @@ use consensus_types::{
     common::{Author, Round},
     quorum_cert::QuorumCert,
 };
-use libra_logger::prelude::*;
-use std::{
-    sync::{Arc, Mutex},
-    time::{Duration, Instant},
-};
+
+use std::sync::{Arc, Mutex};
 
 #[cfg(test)]
 #[path = "proposal_generator_test.rs"]
@@ -100,11 +94,7 @@ impl ProposalGenerator {
     /// 2. The round is provided by the caller.
     /// 3. In case a given round is not greater than the calculated parent, return an OldRound
     /// error.
-    pub async fn generate_proposal(
-        &mut self,
-        round: Round,
-        round_deadline: Instant,
-    ) -> anyhow::Result<BlockData> {
+    pub async fn generate_proposal(&mut self, round: Round) -> anyhow::Result<BlockData> {
         {
             let mut last_round_generated = self.last_round_generated.lock().unwrap();
             if *last_round_generated < round {
@@ -135,73 +125,10 @@ impl ProposalGenerator {
             .flat_map(|block| block.payload())
             .collect();
 
-        let block_timestamp = {
-            match wait_if_possible(
-                self.time_service.as_ref(),
-                Duration::from_micros(hqc.certified_block().timestamp_usecs()),
-                round_deadline,
-            )
-            .await
-            {
-                Ok(waiting_success) => {
-                    debug!(
-                        "Success with {:?} for getting a valid timestamp for the next proposal",
-                        waiting_success
-                    );
-
-                    match waiting_success {
-                        WaitingSuccess::WaitWasRequired {
-                            current_duration_since_epoch,
-                            wait_duration,
-                        } => {
-                            counters::PROPOSAL_SUCCESS_WAIT_S.observe_duration(wait_duration);
-                            counters::PROPOSALS_GENERATED_COUNT
-                                .with_label_values(&["wait_was_required"])
-                                .inc();
-                            current_duration_since_epoch
-                        }
-                        WaitingSuccess::NoWaitRequired {
-                            current_duration_since_epoch,
-                            ..
-                        } => {
-                            counters::PROPOSAL_SUCCESS_WAIT_S.observe_duration(Duration::new(0, 0));
-                            counters::PROPOSALS_GENERATED_COUNT
-                                .with_label_values(&["no_wait_required"])
-                                .inc();
-                            current_duration_since_epoch
-                        }
-                    }
-                }
-                Err(waiting_error) => {
-                    match waiting_error {
-                        WaitingError::MaxWaitExceeded => {
-                            counters::PROPOSAL_FAILURE_WAIT_S.observe_duration(Duration::new(0, 0));
-                            counters::PROPOSALS_GENERATED_COUNT
-                                .with_label_values(&["max_wait_exceeded"])
-                                .inc();
-                            bail!(
-                                "Waiting until parent block timestamp usecs {:?} would exceed the round duration {:?}, hence will not create a proposal for this round",
-                                hqc.certified_block().timestamp_usecs(),
-                                round_deadline);
-                        }
-                        WaitingError::WaitFailed {
-                            current_duration_since_epoch,
-                            wait_duration,
-                        } => {
-                            counters::PROPOSAL_FAILURE_WAIT_S.observe_duration(wait_duration);
-                            counters::PROPOSALS_GENERATED_COUNT
-                                .with_label_values(&["wait_failed"])
-                                .inc();
-                            bail!(
-                                "Even after waiting for {:?}, parent block timestamp usecs {:?} >= current timestamp usecs {:?}, will not create a proposal for this round",
-                                wait_duration,
-                                hqc.certified_block().timestamp_usecs(),
-                                current_duration_since_epoch);
-                        }
-                    };
-                }
-            }
-        };
+        // All proposed blocks in a branch are guaranteed to have increasing timestamps
+        // since their predecessor block will not be added to the BlockStore until
+        // the local time exceeds it.
+        let block_timestamp = self.time_service.get_current_timestamp();
 
         let txns = self
             .txn_manager

@@ -269,6 +269,7 @@ impl EpochManager {
             recovery_data,
             Arc::clone(&self.state_computer),
             self.config.max_pruned_blocks_in_mem,
+            Arc::clone(&self.time_service),
         ));
 
         info!("Update SafetyRules");
@@ -321,7 +322,6 @@ impl EpochManager {
             network_sender,
             self.txn_manager.clone(),
             self.storage.clone(),
-            self.time_service.clone(),
         );
         processor.start(last_vote).await;
         self.processor = Some(RoundProcessor::Normal(processor));

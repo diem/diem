@@ -350,57 +350,10 @@ pub static CREATION_TO_RECEIVAL_S: Lazy<DurationHistogram> = Lazy::new(|| {
     DurationHistogram::new(register_histogram!("libra_consensus_creation_to_receival_s", "Duration between block generation time until the moment it is received and ready for execution.").unwrap())
 });
 
-////////////////////////////////////
-// PROPSOSAL/VOTE TIMESTAMP COUNTERS
-////////////////////////////////////
-
-/// Total count of the proposals generated. state can be:
-/// no_wait_required: Count of the proposals that passed the timestamp rules and did not have to wait
-/// wait_was_required: Count of the proposals where passing the timestamp rules required waiting
-/// max_wait_exceeded: Count of the proposals that were not made due to the waiting period exceeding the maximum allowed duration, breaking timestamp rules
-/// wait_failed: Count of the proposals that were not made due to waiting to ensure the current time exceeds min_duration_since_epoch failed, breaking timestamp rules
-pub static PROPOSALS_GENERATED_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
-    register_int_counter_vec!(
-        "libra_consensus_proposals_generated_count",
-        "Count of all the proposals generated",
-        &["state"]
-    )
-    .unwrap()
-});
-
-/// Histogram of time waited for successfully proposing a proposal (both those that waited and didn't wait) after following timestamp rules
-pub static PROPOSAL_SUCCESS_WAIT_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(register_histogram!("libra_consensus_proposal_success_wait_s", "Histogram of time waited for successfully proposing a proposal (both those that waited and didn't wait) after following timestamp rules").unwrap())
-});
-
-/// Histogram of time waited for failing to propose a proposal (both those that waited and didn't wait) while trying to follow timestamp rules
-pub static PROPOSAL_FAILURE_WAIT_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(register_histogram!("libra_consensus_proposal_failure_wait_s", "Histogram of time waited for failing to propose a proposal (both those that waited and didn't wait) while trying to follow timestamp rules").unwrap())
-});
-
-/// Total count of the votes. state can be:
-/// no_wait_required: Count of the votes that passed the timestamp rules and did not have to wait
-/// wait_was_required: Count of the votes where passing the timestamp rules required waiting
-/// max_wait_exceeded: Count of the votes that were not made due to the waiting period exceeding the maximum allowed duration, breaking timestamp rules
-/// wait_failed: Count of the votes that were not made due to waiting to ensure the current time exceeds min_duration_since_epoch failed, breaking timestamp rules
-pub static VOTES_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
-    register_int_counter_vec!(
-        "libra_consensus_votes_count",
-        "Count of all the votes",
-        &["state"]
-    )
-    .unwrap()
-});
-
-/// Histogram of time waited for successfully having the ability to vote (both those that waited and didn't wait) after following timestamp rules.
-/// A success only means that a replica has an opportunity to vote.  It may not vote if it doesn't pass the voting rules.
-pub static VOTE_SUCCESS_WAIT_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(register_histogram!("libra_consensus_vote_success_wait_s", "Histogram of time waited for successfully having the ability to vote (both those that waited and didn't wait) after following timestamp rules.").unwrap())
-});
-
-/// Histogram of time waited for failing to have the ability to vote (both those that waited and didn't wait) while trying to follow timestamp rules
-pub static VOTE_FAILURE_WAIT_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(register_histogram!("libra_consensus_vote_failure_wait_s", "Histogram of time waited for failing to have the ability to vote (both those that waited and didn't wait) while trying to follow timestamp rules").unwrap())
+/// Histogram of the time it requires to wait before inserting blocks into block store.
+/// Measured as the block's timestamp minus local timestamp.
+pub static WAIT_DURATION_MS: Lazy<DurationHistogram> = Lazy::new(|| {
+    DurationHistogram::new(register_histogram!("libra_consensus_wait_duration_ms", "Histogram of the time it requires to wait before inserting blocks into block store. Measured as the block's timestamp minus the local timestamp.").unwrap())
 });
 
 ///////////////////

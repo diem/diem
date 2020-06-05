@@ -13,7 +13,7 @@ use crate::{
     persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
     round_manager::RoundManager,
     test_utils::{EmptyStateComputer, MockStorage, MockTransactionManager},
-    util::mock_time_service::SimulatedTimeService,
+    util::{mock_time_service::SimulatedTimeService, time_service::TimeService},
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::proposal_msg::ProposalMsg;
@@ -30,7 +30,7 @@ use libra_types::{
 use network::peer_manager::{ConnectionRequestSender, PeerManagerRequestSender};
 use once_cell::sync::Lazy;
 use safety_rules::{test_utils, SafetyRules, TSafetyRules};
-use std::{collections::BTreeMap, num::NonZeroUsize, sync::Arc};
+use std::{collections::BTreeMap, num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Runtime;
 
 // This generates a proposal for round 1
@@ -65,6 +65,7 @@ fn build_empty_store(
         initial_data,
         Arc::new(EmptyStateComputer),
         10, // max pruned blocks in mem
+        Arc::new(SimulatedTimeService::new()),
     ))
 }
 
@@ -131,13 +132,14 @@ fn create_node_for_fuzzing() -> RoundManager {
 
     // TODO: remove
     let time_service = Arc::new(SimulatedTimeService::new());
+    time_service.sleep(Duration::from_millis(1));
 
     // TODO: remove
     let proposal_generator = ProposalGenerator::new(
         signer.author(),
         block_store.clone(),
         Box::new(MockTransactionManager::new(None)),
-        time_service.clone(),
+        time_service,
         1,
     );
 
@@ -158,7 +160,6 @@ fn create_node_for_fuzzing() -> RoundManager {
         network,
         Box::new(MockTransactionManager::new(None)),
         storage,
-        time_service,
     )
 }
 
@@ -179,7 +180,8 @@ pub fn fuzz_proposal(data: &[u8]) {
 
     let proposal = match proposal.verify_well_formed() {
         Ok(_) => proposal,
-        Err(_) => {
+        Err(e) => {
+            println!("{:?}", e);
             if cfg!(test) {
                 panic!();
             }
