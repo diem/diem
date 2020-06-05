@@ -147,8 +147,9 @@ impl LedgerInfoWithSignatures {
     pub fn new(
         ledger_info: LedgerInfo,
         signatures: BTreeMap<AccountAddress, Ed25519Signature>,
+        markers: BTreeMap<AccountAddress, Round>,
     ) -> Self {
-        LedgerInfoWithSignatures::V0(LedgerInfoWithV0::new(ledger_info, signatures))
+        LedgerInfoWithSignatures::V0(LedgerInfoWithV0::new(ledger_info, signatures, markers))
     }
 
     pub fn genesis(genesis_state_root_hash: HashValue, validator_set: ValidatorSet) -> Self {
@@ -190,6 +191,7 @@ pub struct LedgerInfoWithV0 {
     /// The validator is identified by its account address: in order to verify a signature
     /// one needs to retrieve the public key of the validator for the given epoch.
     signatures: BTreeMap<AccountAddress, Ed25519Signature>,
+    markers: BTreeMap<AccountAddress, Round>,
 }
 
 impl Display for LedgerInfoWithV0 {
@@ -202,10 +204,12 @@ impl LedgerInfoWithV0 {
     pub fn new(
         ledger_info: LedgerInfo,
         signatures: BTreeMap<AccountAddress, Ed25519Signature>,
+        markers: BTreeMap<AccountAddress, Round>,
     ) -> Self {
         LedgerInfoWithV0 {
             ledger_info,
             signatures,
+            markers,
         }
     }
 
@@ -219,6 +223,7 @@ impl LedgerInfoWithV0 {
     pub fn genesis(genesis_state_root_hash: HashValue, validator_set: ValidatorSet) -> Self {
         Self::new(
             LedgerInfo::genesis(genesis_state_root_hash, validator_set),
+            BTreeMap::new(),
             BTreeMap::new(),
         )
     }
@@ -237,6 +242,18 @@ impl LedgerInfoWithV0 {
 
     pub fn signatures(&self) -> &BTreeMap<AccountAddress, Ed25519Signature> {
         &self.signatures
+    }
+
+    pub fn add_marker(&mut self, validator: AccountAddress, marker: Round) {
+        self.markers.entry(validator).or_insert(marker);
+    }
+
+    pub fn remove_marker(&mut self, validator: AccountAddress) {
+        self.markers.remove(&validator);
+    }
+
+    pub fn markers(&self) -> &BTreeMap<AccountAddress, Round> {
+        &self.markers
     }
 
     pub fn verify_signatures(
@@ -258,18 +275,22 @@ mod tests {
         let ledger_info = LedgerInfo::new(BlockInfo::empty(), HashValue::zero());
 
         let random_hash = HashValue::random();
+
         const NUM_SIGNERS: u8 = 7;
         // Generate NUM_SIGNERS random signers.
         let validator_signers: Vec<ValidatorSigner> = (0..NUM_SIGNERS)
             .map(|i| ValidatorSigner::random([i; 32]))
             .collect();
         let mut author_to_signature_map = BTreeMap::new();
+        let mut author_to_marker_map = BTreeMap::new();
+
         for validator in validator_signers.iter() {
             author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
+            author_to_marker_map.insert(validator.author(), 0);
         }
 
         let ledger_info_with_signatures =
-            LedgerInfoWithV0::new(ledger_info.clone(), author_to_signature_map);
+            LedgerInfoWithV0::new(ledger_info.clone(), author_to_signature_map, author_to_marker_map);
 
         // Add the signatures in reverse order and ensure the serialization matches
         let mut author_to_signature_map = BTreeMap::new();
@@ -278,7 +299,7 @@ mod tests {
         }
 
         let ledger_info_with_signatures_reversed =
-            LedgerInfoWithV0::new(ledger_info, author_to_signature_map);
+            LedgerInfoWithV0::new(ledger_info, author_to_signature_map, author_to_marker_map);
 
         let ledger_info_with_signatures_bytes =
             lcs::to_bytes(&ledger_info_with_signatures).expect("block serialization failed");

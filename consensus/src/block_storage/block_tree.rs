@@ -1,6 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use libra_types::account_address::AccountAddress;
+use std::cmp::max;
+use libra_types::block_info::Round;
 use crate::counters;
 use anyhow::bail;
 use consensus_types::{
@@ -82,6 +85,13 @@ pub struct BlockTree<T> {
     pruned_block_ids: VecDeque<HashValue>,
     /// Num pruned blocks to keep in memory.
     max_pruned_blocks_in_mem: usize,
+
+    /// Blocks that the validator voted for. Only keep the last one for each fork since it is enough to compute the marker
+    voted_blocks: Vec<HashValue>,
+    // The set of endorsers of a block
+    id_to_endorsers: HashMap<HashValue, HashSet<AccountAddress>>,
+    // genesis id, used for computing strong commit
+    genesis_id: HashValue,
 }
 
 impl<T> BlockTree<T>
@@ -115,6 +125,10 @@ where
 
         let pruned_block_ids = VecDeque::with_capacity(max_pruned_blocks_in_mem);
 
+        let voted_blocks = Vec::new();
+        let id_to_endorsers = HashMap::new();
+        let genesis_id = root_id.clone();
+
         BlockTree {
             id_to_block,
             root_id,
@@ -125,6 +139,9 @@ where
             id_to_quorum_cert,
             pruned_block_ids,
             max_pruned_blocks_in_mem,
+            voted_blocks,
+            id_to_endorsers,
+            genesis_id,
         }
     }
 
@@ -144,10 +161,11 @@ where
             .expect("Root must exist")
     }
 
+    // Daniel: in order to compute strong commit, for now we don't remove any block or QC from the storage, even the blocks are committed
     fn remove_block(&mut self, block_id: HashValue) {
         // Remove the block from the store
-        self.id_to_block.remove(&block_id);
-        self.id_to_quorum_cert.remove(&block_id);
+        // self.id_to_block.remove(&block_id);
+        // self.id_to_quorum_cert.remove(&block_id);
     }
 
     pub(super) fn block_exists(&self, block_id: &HashValue) -> bool {
@@ -161,6 +179,10 @@ where
 
     pub(super) fn root(&self) -> Arc<ExecutedBlock<T>> {
         self.get_block(&self.root_id).expect("Root must exist")
+    }
+
+    pub(super) fn genesis(&self) -> Arc<ExecutedBlock<T>> {
+        self.get_block(&self.genesis_id).expect("Genesis must exist")
     }
 
     pub(super) fn highest_certified_block(&self) -> Arc<ExecutedBlock<T>> {
@@ -192,6 +214,17 @@ where
         self.id_to_quorum_cert.get(block_id).cloned()
     }
 
+    pub(super) fn get_endorsers_for_block(&self, block_id: &HashValue) -> Option<HashSet<AccountAddress>> {
+        self.id_to_endorsers.get(block_id).cloned()
+    }
+
+    pub(super) fn add_endorser(&mut self, block_id: HashValue, account: AccountAddress) {
+        let endorser = self.id_to_endorsers
+            .entry(block_id)
+            .or_insert(HashSet::new());
+        endorser.insert(account);
+    }
+
     pub(super) fn insert_block(
         &mut self,
         block: ExecutedBlock<T>,
@@ -217,9 +250,9 @@ where
         }
     }
 
-    pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> anyhow::Result<()> {
-        let block_id = qc.certified_block().id();
-        let qc = Arc::new(qc);
+    pub(super) fn insert_quorum_cert(&mut self, quorumcert: QuorumCert) -> anyhow::Result<()> {
+        let block_id = quorumcert.certified_block().id();
+        let qc = Arc::new(quorumcert.clone());
 
         // Safety invariant: For any two quorum certificates qc1, qc2 in the block store,
         // qc1 == qc2 || qc1.round != qc2.round
@@ -252,7 +285,9 @@ where
             self.highest_commit_cert = qc;
         }
 
-        Ok(())
+        // update the endorsers of all previous blocks.
+        self.update_endorsers(quorumcert)
+
     }
 
     /// Find the blocks to prune up to next_root_id (keep next_root_id's block). Any branches not
@@ -358,6 +393,215 @@ where
 
     pub(super) fn get_all_block_id(&self) -> Vec<HashValue> {
         self.id_to_block.keys().cloned().collect()
+    }
+
+    // When validator voted for a block, update the voted_block
+    pub(super) fn record_voted_block(&mut self, block_id: HashValue) -> anyhow::Result<()> {
+        let mut cur_block_id = block_id;
+        loop {
+            // info!("daniel record voted block id {:?}", cur_block_id);
+            match self.get_block(&cur_block_id) {
+                Some(ref block) if block.round() <= self.root().round() => {
+                    break;
+                }
+                Some(block) => {
+                    cur_block_id = block.parent_id();
+                    let mut done = false;
+                    // remove the block from voted_block
+                    for ind in 0..self.voted_blocks.len() {
+                        if self.voted_blocks[ind] == cur_block_id {
+                            self.voted_blocks.remove(ind);
+                            done = true;
+                            break;
+                        }
+                    }
+                    if done { break; }
+                }
+                None => {
+                    info!("record_voted_block: Block {:?} not found", cur_block_id);
+                    bail!("Block {} not found", cur_block_id);
+                }
+            }
+        }
+        self.voted_blocks.push(block_id);
+
+        Ok(())
+    }
+
+    pub(super) fn compute_marker(&self, block_id: HashValue) -> anyhow::Result<Round> {
+        let mut marker = 0;
+        for voted_block in &self.voted_blocks {
+            // info!("daniel compute marker block id {:?}", voted_block);
+            let result = self.conflict(*voted_block, block_id);
+            match result {
+                Ok(res) => {
+                    if res {
+                        if let Some(existing_block) = self.get_block(&voted_block) {
+                            let round_number = existing_block.block_info().round();
+                            marker = max(marker, round_number);
+                        } else {
+                            info!("compute_marker: Block {:?} not found", voted_block);
+                            bail!("Block {} not found", voted_block);
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!("Error {:?}", e);
+                }
+            }
+        }
+        Ok(marker)
+    }
+
+    // check whether voted_block and voting_block are from different forks, voting_block always has larger round number due to the voting rule
+    pub fn conflict(&self, voted_block: HashValue, voting_block: HashValue) -> anyhow::Result<bool> {
+        let mut cur_block_id = voting_block;
+        let mut result = true;
+        loop {
+            // info!("daniel record voted block id {:?}", cur_block_id);
+            match self.get_block(&cur_block_id) {
+                Some(ref block) if block.round() <= self.root().round() => {
+                    break;
+                }
+                Some(block) => {
+                    cur_block_id = block.parent_id();
+                    // info!("conflict: round {}", block.round());
+                    if cur_block_id == voted_block {
+                        result = false;
+                        break;
+                    }
+                }
+                None => {
+                    info!("conflict: Block {:?} not found", cur_block_id);
+                    bail!("Block {} not found", cur_block_id);
+                }
+            }
+        }
+        return Ok(result);
+    }
+
+    // print voted blocks
+    pub fn print_voted(&self) {
+        for ind in 0..self.voted_blocks.len() {
+            let mut res = vec![];
+            let mut cur_block_id = self.voted_blocks[ind];
+            loop {
+                match self.get_block(&cur_block_id) {
+                    Some(ref block) if block.round() <= self.root().round() => {
+                        res.push(cur_block_id);
+                        break;
+                    }
+                    Some(block) => {
+                        res.push(cur_block_id);
+                        cur_block_id = block.parent_id();
+                    }
+                    None => break,
+                }
+            }
+            res.reverse();
+            for block_id in res {
+                if let Some(existing_block) = self.get_block(&block_id) {
+                    let round_number = existing_block.block_info().round();
+                    info!("daniel block round {}, id {:?}", round_number, block_id);
+                } else {
+                    warn!("Block {} not found", block_id);
+                }
+            }
+            info!("****************************************");
+        }
+    }
+
+    // Returns the blocks from the genesis to the current block id
+    // include the current block but exclude the genesis
+    // used to compute strong commit
+    pub fn path_from_genesis(&self, block_id: HashValue) -> Option<Vec<Arc<ExecutedBlock<T>>>> {
+        let mut res = vec![];
+        let mut cur_block_id = block_id;
+        loop {
+            match self.get_block(&cur_block_id) {
+                Some(ref block) if block.round() <= self.genesis().round() => {
+                    break;
+                }
+                Some(block) => {
+                    cur_block_id = block.parent_id();
+                    res.push(block);
+                }
+                None => return None,
+            }
+        }
+        if cur_block_id != self.genesis_id {
+            return None;
+        }
+        // Called `.reverse()` to get the chronically increased order.
+        res.reverse();
+        Some(res)
+    }
+
+    pub fn last_k_blocks(&self, block_id: HashValue, k: u64) -> Option<Vec<Arc<ExecutedBlock<T>>>> {
+        let mut res = vec![];
+        let mut cur_block_id = block_id;
+        let mut counter = k;
+        loop {
+            if counter == 0 {
+                break;
+            }
+            counter -= 1;
+            match self.get_block(&cur_block_id) {
+                Some(ref block) if block.round() <= self.genesis().round() => {
+                    break;
+                }
+                Some(block) => {
+                    cur_block_id = block.parent_id();
+                    res.push(block);
+                }
+                None => return None,
+            }
+        }
+
+        // Called `.reverse()` to get the chronically increased order.
+        res.reverse();
+        Some(res)
+    }
+
+    pub(super) fn update_endorsers(&mut self, qc: QuorumCert) -> anyhow::Result<()> {
+        // if qc.vote_data().proposed().round()==0 {
+        //     return Ok(());
+        // }
+        let signatures = qc.ledger_info().signatures();
+        let markers = qc.ledger_info().markers();
+        let blocks_from_genesis_to_highest_certified = self
+            .path_from_genesis(self.highest_certified_block_id)
+            .unwrap_or_else(Vec::new);
+        // info!("daniel signatures {:?}, markers {:?}", signatures, markers);
+        for (account_address, _) in signatures {
+            let marker = markers.get(account_address).unwrap();
+            for block in &blocks_from_genesis_to_highest_certified {
+                // vote endorse a block if marker<block.round
+                // info!("account {:?}, marker {:?}, round {:?}", account_address, *marker, block.round());
+                if block.round() > *marker {
+                    self.add_endorser(block.id(), *account_address);
+                }
+            }
+        }
+        self.print_endorsers();
+
+        Ok(())
+    }
+
+    // print the round numbers and number of endorsers of blocks from genesis to current highest certified
+    pub fn print_endorsers(&self) {
+        info!("-------------------------print endorsers start-------------------------");
+        // let blocks_from_genesis_to_highest_certified = self
+        //     .path_from_genesis(self.highest_certified_block_id)
+        //     .unwrap_or_else(Vec::new);
+        let last_k_blocks = self.last_k_blocks(self.highest_certified_block_id, 10).unwrap_or_else(Vec::new);
+        for block in last_k_blocks {
+            let id = block.id();
+            let round = block.round();
+            let endorsers = self.get_endorsers_for_block(&id).unwrap();
+            info!("block round {}, number of endorsers {:?}", round, endorsers.len());
+        }
+        info!("-------------------------print endorsers end-------------------------");
     }
 }
 

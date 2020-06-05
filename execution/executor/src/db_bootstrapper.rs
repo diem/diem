@@ -133,6 +133,7 @@ pub fn calculate_genesis<V: VMExecutor>(
             HashValue::zero(), /* consensus_data_hash */
         ),
         BTreeMap::default(), /* signatures */
+        BTreeMap::default(), /* markers */
     );
 
     let committer = GenesisCommitter::new(executor, ledger_info_with_sigs)?;

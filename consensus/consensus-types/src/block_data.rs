@@ -148,6 +148,7 @@ where
             LedgerInfoWithSignatures::new(
                 LedgerInfo::new(ancestor, HashValue::zero()),
                 BTreeMap::new(),
+                BTreeMap::new(),
             ),
         );
 

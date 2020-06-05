@@ -556,6 +556,7 @@ mod test {
                     HashValue::zero(),
                 ),
                 BTreeMap::new(),
+                BTreeMap::new(),
             ))
         }
 

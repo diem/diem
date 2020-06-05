@@ -85,6 +85,15 @@ fn sign_ledger_info(
         .collect()
 }
 
+fn marker_info(
+    signers: &[ValidatorSigner],
+) -> BTreeMap<AccountAddress, Round> {
+    signers
+        .iter()
+        .map(|s| (s.author(), 0))
+        .collect()
+}
+
 fn new_mock_ledger_info(
     epoch: u64,
     version: Version,
@@ -194,11 +203,12 @@ fn arb_update_proof(
                         let next_vset = into_epoch_info(epoch + 1, next_vset);
                         let ledger_info = new_mock_ledger_info(epoch, version, Some(next_vset));
                         let signatures = sign_ledger_info(&curr_vset[..], &ledger_info);
+                        let markers = marker_info(&curr_vset[..]);
 
                         epoch += 1;
                         version += version_delta as u64;
 
-                        LedgerInfoWithSignatures::new(ledger_info, signatures)
+                        LedgerInfoWithSignatures::new(ledger_info, signatures, markers)
                     })
                     .collect::<Vec<_>>();
 
@@ -207,8 +217,9 @@ fn arb_update_proof(
                 let last_vset = vsets.last().unwrap();
                 let latest_ledger_info = new_mock_ledger_info(epoch, version, None);
                 let signatures = sign_ledger_info(&last_vset[..], &latest_ledger_info);
+                let markers = marker_info(&last_vset[..]);
                 let latest_ledger_info_with_sigs =
-                    LedgerInfoWithSignatures::new(latest_ledger_info, signatures);
+                    LedgerInfoWithSignatures::new(latest_ledger_info, signatures, 0);
                 (vsets, ledger_infos_with_sigs, latest_ledger_info_with_sigs)
             })
     })
@@ -381,6 +392,7 @@ proptest! {
         let bad_li_with_sigs = LedgerInfoWithSignatures::new(
             li_with_sigs.ledger_info().clone(),
             BTreeMap::new(), /* empty signatures */
+            BTreeMap::new(),
         );
         ::std::mem::replace(bad_li_idx.get_mut(&mut lis_with_sigs), bad_li_with_sigs);
 
@@ -423,16 +435,17 @@ proptest! {
                     HashValue::zero(),
                 ),
                 BTreeMap::new(),
+                BTreeMap::new(),
             );
 
             trusted_state.verify_and_ratchet(&bad_li, &change_proof)
                 .expect_err("Should always return Err with a invalid latest li");
 
             // Verifying a latest ledger info with the same data should be a NoChange.
-            let no_sig = LedgerInfoWithSignatures::new(good_li.clone(), BTreeMap::new());
+            let no_sig = LedgerInfoWithSignatures::new(good_li.clone(), BTreeMap::new(), BTreeMap::new());
             assert!(matches!(trusted_state.verify_and_ratchet(&no_sig, &change_proof), Ok(TrustedStateChange::NoChange)));
         } else {
-            let no_sig = LedgerInfoWithSignatures::new(good_li.clone(), BTreeMap::new());
+            let no_sig = LedgerInfoWithSignatures::new(good_li.clone(), BTreeMap::new(), BTreeMap::new());
             trusted_state.verify_and_ratchet(&no_sig, &change_proof)
                 .expect_err("Should always return Err with a invalid latest li");
         }

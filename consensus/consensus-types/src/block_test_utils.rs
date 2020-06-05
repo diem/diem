@@ -204,14 +204,16 @@ pub fn gen_test_certificate(
     };
 
     let mut signatures = BTreeMap::new();
+    let mut markers = BTreeMap::new();
     for signer in signers {
         let li_sig = signer.sign_message(ledger_info.hash());
         signatures.insert(signer.author(), li_sig);
+        markers.insert(signer.author(), 0);
     }
 
     QuorumCert::new(
         vote_data,
-        LedgerInfoWithSignatures::new(ledger_info, signatures),
+        LedgerInfoWithSignatures::new(ledger_info, signatures, markers),
     )
 }
 
@@ -252,14 +254,17 @@ pub fn placeholder_certificate_for_block(
     ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
 
     let mut signatures = BTreeMap::new();
+    let mut markers = BTreeMap::new();
+
     for signer in signers {
         let li_sig = signer.sign_message(ledger_info_placeholder.hash());
         signatures.insert(signer.author(), li_sig);
+        markers.insert(signer.author(), 0);
     }
 
     QuorumCert::new(
         vote_data,
-        LedgerInfoWithSignatures::new(ledger_info_placeholder, signatures),
+        LedgerInfoWithSignatures::new(ledger_info_placeholder, signatures, markers),
     )
 }
 

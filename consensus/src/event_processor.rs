@@ -529,14 +529,30 @@ impl<T: Payload> EventProcessor<T> {
         }
 
         let proposal_round = proposal.round();
+        let proposal_id = proposal.id();
 
-        let vote = match self.execute_and_vote(proposal).await {
+
+
+
+        let vote = match self.execute_and_strong_vote(proposal).await {
             Err(e) => {
                 warn!("{:?}", e);
                 return;
             }
             Ok(vote) => vote,
         };
+
+        // record the voted block for future marker computation
+        match self.block_store.record_voted_block(proposal_id) {
+            Err(e) => {
+                warn!("{:?}", e);
+                return;
+            }
+            Ok(()) => debug!("daniel record voted block successful"),
+        };
+
+        // self.block_store.print_voted();
+        // debug!("-------------------daniel round {} done -----------------", proposal_round);
 
         let recipients = self
             .proposer_election
@@ -693,6 +709,92 @@ impl<T: Payload> EventProcessor<T> {
 
         Ok(vote)
     }
+
+    /// changes to strong vote
+    /// The function generates a VoteMsg for a given proposed_block:
+    /// * first execute the block and add it to the block store
+    /// * then verify the voting rules
+    /// * save the updated state to consensus DB
+    /// * return a VoteMsg with the LedgerInfo to be committed in case the vote gathers QC.
+    ///
+    /// This function assumes that it might be called from different tasks concurrently.
+    async fn execute_and_strong_vote(&mut self, proposed_block: Block<T>) -> anyhow::Result<Vote> {
+        let proposal_id = proposed_block.id();
+        let proposal_round = proposed_block.round();
+
+        trace_code_block!("event_processor::execute_and_strong_vote", {"block", proposed_block.id()});
+        let executed_block = self
+            .block_store
+            .execute_and_insert_block(proposed_block)
+            .context("Failed to execute_and_strong_vote the block")?;
+        // notify mempool about failed txn
+        if let Some(payload) = executed_block.payload() {
+            let compute_result = executed_block.compute_result();
+            if let Err(e) = self.txn_manager.commit_txns(payload, &compute_result).await {
+                error!("Failed to notify mempool of rejected txns: {:?}", e);
+            }
+        }
+        let block = executed_block.block();
+
+        // Checking pacemaker round again, because multiple proposed_block can now race
+        // during async block retrieval
+        ensure!(
+            block.round() == self.pacemaker.current_round(),
+            "Proposal {} rejected because round is incorrect. Pacemaker: {}, proposed_block: {}",
+            block,
+            self.pacemaker.current_round(),
+            block.round(),
+        );
+
+        let parent_block = self
+            .block_store
+            .get_block(executed_block.parent_id())
+            .ok_or_else(|| format_err!("Parent block not found in block store"))?;
+
+        self.wait_before_vote_if_needed(block.timestamp_usecs())
+            .await?;
+
+
+
+        // compute the marker
+        debug!("-------------------daniel execute_and_strong_vote round {} -----------------", proposal_round);
+        let marker = match self.block_store.compute_marker(proposal_id) {
+            Err(e) => {
+                warn!("{:?}", e);
+                return Err(e);
+            }
+            Ok(marker) => marker,
+        };
+        debug!("daniel marker {}", marker);
+
+
+        let vote_proposal = VoteProposal::new(
+            AccumulatorExtensionProof::<TransactionAccumulatorHasher>::new(
+                parent_block.compute_result().frozen_subtree_roots().clone(),
+                parent_block.compute_result().num_leaves(),
+                executed_block
+                    .compute_result()
+                    .transaction_info_hashes()
+                    .clone(),
+            ),
+            block.clone(),
+            executed_block.compute_result().epoch_info().clone(),
+        );
+
+        let vote = self
+            .safety_rules
+            .construct_and_sign_strong_vote(&vote_proposal, marker)
+            .with_context(|| format!("{}Rejected{} {}", Fg(Red), Fg(Reset), block))?;
+
+        let consensus_state = self.safety_rules.consensus_state()?;
+        counters::LAST_VOTE_ROUND.set(consensus_state.last_voted_round() as i64);
+        self.storage
+            .save_vote(&vote)
+            .context("Fail to persist last vote")?;
+
+        Ok(vote)
+    }
+
 
     /// Upon new vote:
     /// 1. Filter out votes for rounds that should not be processed by this validator (to avoid
