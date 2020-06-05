@@ -1312,7 +1312,7 @@
             );
             <span class="ident">msg</span> <span class="op">=</span> <span class="string">&quot;state sync failed to send commit notif to shared mempool&quot;</span>;
         }
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">timeout</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">1</span>), <span class="ident">callback_rcv</span>).<span class="kw">await</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">timeout</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">5</span>), <span class="ident">callback_rcv</span>).<span class="kw">await</span> {
             <span class="macro">error</span><span class="macro">!</span>(
                 <span class="string">&quot;[state sync] did not receive ACK for commit notification sent to mempool: {:?}&quot;</span>,
                 <span class="ident">e</span>
