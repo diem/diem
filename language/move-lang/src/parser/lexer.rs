@@ -77,6 +77,7 @@ pub enum Tok {
     RBrace,
     Fun,
     Script,
+    Const,
 }
 
 impl fmt::Display for Tok {
@@ -152,6 +153,7 @@ impl fmt::Display for Tok {
             RBrace => "}",
             Fun => "fun",
             Script => "script",
+            Const => "const",
         };
         fmt::Display::fmt(s, formatter)
     }
@@ -486,6 +488,7 @@ fn get_name_token(name: &str) -> Tok {
         "acquires" => Tok::Acquires,
         "as" => Tok::As,
         "break" => Tok::Break,
+        "const" => Tok::Const,
         "continue" => Tok::Continue,
         "copy" => Tok::Copy,
         "copyable" => Tok::Copyable,

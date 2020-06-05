@@ -3267,6 +3267,7 @@ dependencies = [
  "libra-canonical-serialization 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
+ "move-core-types 0.1.0",
  "move-ir-types 0.1.0",
  "petgraph 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.3.9 (registry+https://github.com/rust-lang/crates.io-index)",

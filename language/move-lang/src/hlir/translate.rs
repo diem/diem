@@ -6,7 +6,7 @@ use crate::{
     expansion::ast::{Fields, Value_},
     hlir::ast::{self as H, Block},
     naming::ast as N,
-    parser::ast::{BinOp_, Field, FunctionName, Kind_, ModuleIdent, StructName, Var},
+    parser::ast::{BinOp_, ConstantName, Field, FunctionName, Kind_, ModuleIdent, StructName, Var},
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
 };
@@ -178,17 +178,19 @@ fn module(
     let dependency_order = mdef.dependency_order;
 
     let structs = mdef.structs.map(|name, s| struct_def(context, name, s));
-
     context.add_struct_fields(&structs);
-    let functions = mdef.functions.map(|name, f| function(context, name, f));
-    context.structs = UniqueMap::new();
 
+    let constants = mdef.constants.map(|name, c| constant(context, name, c));
+    let functions = mdef.functions.map(|name, f| function(context, name, f));
+
+    context.structs = UniqueMap::new();
     (
         module_ident,
         H::ModuleDefinition {
             is_source_module,
             dependency_order,
             structs,
+            constants,
             functions,
         },
     )
@@ -207,12 +209,15 @@ fn scripts(
 fn script(context: &mut Context, tscript: T::Script) -> H::Script {
     let T::Script {
         loc,
+        constants: tconstants,
         function_name,
         function: tfunction,
     } = tscript;
+    let constants = tconstants.map(|name, c| constant(context, name, c));
     let function = function(context, function_name.clone(), tfunction);
     H::Script {
         loc,
+        constants,
         function_name,
         function,
     }
@@ -268,29 +273,69 @@ fn function_body(
             HB::Native
         }
         TB::Defined(seq) => {
-            let mut body = VecDeque::new();
-            context.signature = Some(sig.clone());
-            assert!(!context.has_return_abort);
-            let final_exp = block(context, &mut body, loc, Some(&sig.return_type), seq);
-            match &final_exp.exp.value {
-                H::UnannotatedExp_::Unreachable => (),
-                _ => {
-                    use H::{Command_ as C, Statement_ as S};
-                    let eloc = final_exp.exp.loc;
-                    let ret = sp(eloc, C::Return(final_exp));
-                    body.push_back(sp(eloc, S::Command(ret)))
-                }
-            }
-            let (mut locals, used) = context.extract_function_locals();
-            let unused = check_unused_locals(context, &mut locals, used);
-            check_trailing_unit(context, &mut body);
-            remove_unused_bindings(&unused, &mut body);
-            context.signature = None;
-            context.has_return_abort = false;
+            let (locals, body) = function_body_defined(context, sig, loc, seq);
             HB::Defined { locals, body }
         }
     };
     sp(loc, b_)
+}
+
+fn function_body_defined(
+    context: &mut Context,
+    signature: &H::FunctionSignature,
+    loc: Loc,
+    seq: T::Sequence,
+) -> (UniqueMap<Var, H::SingleType>, Block) {
+    let mut body = VecDeque::new();
+    context.signature = Some(signature.clone());
+    assert!(!context.has_return_abort);
+    let final_exp = block(context, &mut body, loc, Some(&signature.return_type), seq);
+    match &final_exp.exp.value {
+        H::UnannotatedExp_::Unreachable => (),
+        _ => {
+            use H::{Command_ as C, Statement_ as S};
+            let eloc = final_exp.exp.loc;
+            let ret = sp(eloc, C::Return(final_exp));
+            body.push_back(sp(eloc, S::Command(ret)))
+        }
+    }
+    let (mut locals, used) = context.extract_function_locals();
+    let unused = check_unused_locals(context, &mut locals, used);
+    check_trailing_unit(context, &mut body);
+    remove_unused_bindings(&unused, &mut body);
+    context.signature = None;
+    context.has_return_abort = false;
+    (locals, body)
+}
+
+//**************************************************************************************************
+// Constants
+//**************************************************************************************************
+
+fn constant(context: &mut Context, _name: ConstantName, cdef: T::Constant) -> H::Constant {
+    let T::Constant {
+        loc,
+        signature: tsignature,
+        value: tvalue,
+    } = cdef;
+    let signature = base_type(context, tsignature);
+    let eloc = tvalue.exp.loc;
+    let tseq = {
+        let mut v = T::Sequence::new();
+        v.push_back(sp(eloc, T::SequenceItem_::Seq(Box::new(tvalue))));
+        v
+    };
+    let function_signature = H::FunctionSignature {
+        type_parameters: vec![],
+        parameters: vec![],
+        return_type: H::Type_::base(signature.clone()),
+    };
+    let (locals, body) = function_body_defined(context, &function_signature, eloc, tseq);
+    H::Constant {
+        loc,
+        signature,
+        value: (locals, body),
+    }
 }
 
 //**************************************************************************************************
@@ -815,6 +860,10 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
         // All other expressiosn
         TE::Unit { trailing } => HE::Unit { trailing },
         TE::Value(v) => HE::Value(v),
+        TE::Constant(_m, c) => {
+            // Currently only private constants exist
+            HE::Constant(c)
+        }
         TE::InferredNum(_) => panic!("ICE unexpanded inferred num"),
         TE::Move { from_user, var } => HE::Move {
             from_user,
@@ -1372,7 +1421,11 @@ fn bind_for_short_circuit(e: &T::Exp) -> bool {
     use T::UnannotatedExp_ as TE;
     match &e.exp.value {
         TE::Use(_) | TE::InferredNum(_) => panic!("ICE should have been expanded"),
-        TE::Value(_) | TE::Move { .. } | TE::Copy { .. } | TE::UnresolvedError => false,
+        TE::Value(_)
+        | TE::Constant(_, _)
+        | TE::Move { .. }
+        | TE::Copy { .. }
+        | TE::UnresolvedError => false,
 
         // TODO might want to case ModuleCall for fake natives
         TE::ModuleCall(_) => true,

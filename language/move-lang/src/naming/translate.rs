@@ -3,9 +3,9 @@
 
 use crate::{
     errors::*,
-    expansion::ast as E,
+    expansion::{ast as E, translate::is_valid_struct_constant_or_schema_name as is_constant_name},
     naming::ast as N,
-    parser::ast::{Field, FunctionName, Kind, Kind_, ModuleIdent, StructName, Var},
+    parser::ast::{ConstantName, Field, FunctionName, Kind, Kind_, ModuleIdent, StructName, Var},
     shared::{unique_map::UniqueMap, *},
     typing::core::{self, Subst},
 };
@@ -40,6 +40,8 @@ struct Context {
     scoped_types: BTreeMap<ModuleIdent, BTreeMap<String, (Loc, ModuleIdent, Option<Kind>)>>,
     unscoped_types: BTreeMap<String, ResolvedType>,
     scoped_functions: BTreeMap<ModuleIdent, BTreeMap<String, Loc>>,
+    unscoped_constants: BTreeMap<String, Loc>,
+    scoped_constants: BTreeMap<ModuleIdent, BTreeMap<String, Loc>>,
 }
 
 impl Context {
@@ -72,6 +74,18 @@ impl Context {
                 (mident, mems)
             })
             .collect();
+        let scoped_constants = prog
+            .modules
+            .iter()
+            .map(|(mident, mdef)| {
+                let mems = mdef
+                    .constants
+                    .iter()
+                    .map(|(n, _)| (n.value().to_string(), n.loc()))
+                    .collect();
+                (mident, mems)
+            })
+            .collect();
         let unscoped_types = N::BuiltinTypeName_::all_names()
             .into_iter()
             .map(|s| (s.to_string(), RT::BuiltinType))
@@ -81,7 +95,9 @@ impl Context {
             current_module: None,
             scoped_types,
             scoped_functions,
+            scoped_constants,
             unscoped_types,
+            unscoped_constants: BTreeMap::new(),
         }
     }
 
@@ -132,14 +148,14 @@ impl Context {
         m: &ModuleIdent,
         n: &Name,
     ) -> Option<FunctionName> {
-        let types = match self.scoped_functions.get(m) {
+        let functions = match self.scoped_functions.get(m) {
             None => {
                 self.error(vec![(loc, format!("Unbound module '{}'", m,))]);
                 return None;
             }
             Some(members) => members,
         };
-        match types.get(&n.value).cloned() {
+        match functions.get(&n.value).cloned() {
             None => {
                 self.error(vec![(
                     loc,
@@ -151,6 +167,34 @@ impl Context {
                 None
             }
             Some(_) => Some(FunctionName(n.clone())),
+        }
+    }
+
+    fn resolve_module_constant(
+        &mut self,
+        loc: Loc,
+        m: &ModuleIdent,
+        n: Name,
+    ) -> Option<ConstantName> {
+        let constants = match self.scoped_constants.get(m) {
+            None => {
+                self.error(vec![(loc, format!("Unbound module '{}'", m,))]);
+                return None;
+            }
+            Some(members) => members,
+        };
+        match constants.get(&n.value).cloned() {
+            None => {
+                self.error(vec![(
+                    loc,
+                    format!(
+                        "Invalid module access. Unbound constant '{}' in module '{}'",
+                        n, m
+                    ),
+                )]);
+                None
+            }
+            Some(_) => Some(ConstantName(n)),
         }
     }
 
@@ -197,16 +241,47 @@ impl Context {
         }
     }
 
+    fn resolve_constant(
+        &mut self,
+        sp!(loc, ma_): E::ModuleAccess,
+    ) -> Option<(Option<ModuleIdent>, ConstantName)> {
+        use E::ModuleAccess_ as EA;
+        match ma_ {
+            EA::Name(n) => match self.unscoped_constants.get(&n.value) {
+                None => {
+                    self.error(vec![(loc, format!("Unbound constant '{}'", n))]);
+                    None
+                }
+                Some(_) => Some((None, ConstantName(n))),
+            },
+            EA::ModuleAccess(m, n) => match self.resolve_module_constant(loc, &m, n) {
+                None => {
+                    assert!(self.has_errors());
+                    None
+                }
+                Some(cname) => Some((Some(m), cname)),
+            },
+        }
+    }
+
     fn bind_type(&mut self, s: String, rt: ResolvedType) {
         self.unscoped_types.insert(s, rt);
     }
 
-    fn save_unscoped(&self) -> BTreeMap<String, ResolvedType> {
-        self.unscoped_types.clone()
+    fn bind_constant(&mut self, s: String, loc: Loc) {
+        self.unscoped_constants.insert(s, loc);
     }
 
-    fn restore_unscoped(&mut self, types: BTreeMap<String, ResolvedType>) {
+    fn save_unscoped(&self) -> (BTreeMap<String, ResolvedType>, BTreeMap<String, Loc>) {
+        (self.unscoped_types.clone(), self.unscoped_constants.clone())
+    }
+
+    fn restore_unscoped(
+        &mut self,
+        (types, constants): (BTreeMap<String, ResolvedType>, BTreeMap<String, Loc>),
+    ) {
         self.unscoped_types = types;
+        self.unscoped_constants = constants;
     }
 }
 
@@ -245,12 +320,17 @@ fn module(
         context.restore_unscoped(unscoped.clone());
         function(context, name, f)
     });
+    let constants = mdef.constants.map(|name, c| {
+        context.restore_unscoped(unscoped.clone());
+        constant(context, name, c)
+    });
     context.restore_unscoped(unscoped);
     N::ModuleDefinition {
         is_source_module,
         dependency_order: 0,
         structs,
         functions,
+        constants,
     }
 }
 
@@ -267,13 +347,27 @@ fn scripts(
 fn script(context: &mut Context, escript: E::Script) -> N::Script {
     let E::Script {
         loc,
+        constants: econstants,
         function_name,
         function: efunction,
         specs: _specs,
     } = escript;
+    let outer_unscoped = context.save_unscoped();
+    for (n, _) in &econstants {
+        let sp!(loc, s) = n.0;
+        context.bind_constant(s, loc)
+    }
+    let inner_unscoped = context.save_unscoped();
+    let constants = econstants.map(|name, c| {
+        context.restore_unscoped(inner_unscoped.clone());
+        constant(context, name, c)
+    });
+    context.restore_unscoped(inner_unscoped);
     let function = function(context, function_name.clone(), efunction);
+    context.restore_unscoped(outer_unscoped);
     N::Script {
         loc,
+        constants,
         function_name,
         function,
     }
@@ -467,6 +561,25 @@ fn check_no_nominal_resources(context: &mut Context, s: &StructName, field: &Fie
 }
 
 //**************************************************************************************************
+// Constants
+//**************************************************************************************************
+
+fn constant(context: &mut Context, _name: ConstantName, econstant: E::Constant) -> N::Constant {
+    let E::Constant {
+        loc,
+        signature: esignature,
+        value: evalue,
+    } = econstant;
+    let signature = type_(context, esignature);
+    let value = exp_(context, evalue);
+    N::Constant {
+        loc,
+        signature,
+        value,
+    }
+}
+
+//**************************************************************************************************
 // Types
 //**************************************************************************************************
 
@@ -618,7 +731,14 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
         EE::Value(val) => NE::Value(val),
         EE::Move(v) => NE::Move(v),
         EE::Copy(v) => NE::Copy(v),
-        EE::Name(sp!(_, E::ModuleAccess_::Name(v)), None) => NE::Use(Var(v)),
+        EE::Name(sp!(aloc, E::ModuleAccess_::Name(v)), None) => {
+            if is_constant_name(&v.value) {
+                access_constant(context, sp(aloc, E::ModuleAccess_::Name(v)))
+            } else {
+                NE::Use(Var(v))
+            }
+        }
+        EE::Name(ma, None) => access_constant(context, ma),
 
         EE::IfElse(eb, et, ef) => {
             NE::IfElse(exp(context, *eb), exp(context, *et), exp(context, *ef))
@@ -747,11 +867,21 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
             NE::UnresolvedError
         }
         // `Name` matches name variants only allowed in specs (we handle the allowed ones above)
-        EE::Index(..) | EE::Lambda(..) | EE::Name(..) => {
+        EE::Index(..) | EE::Lambda(..) | EE::Name(_, Some(_)) => {
             panic!("ICE unexpected specification construct")
         }
     };
     sp(eloc, ne_)
+}
+
+fn access_constant(context: &mut Context, ma: E::ModuleAccess) -> N::Exp_ {
+    match context.resolve_constant(ma) {
+        None => {
+            assert!(context.has_errors());
+            N::Exp_::UnresolvedError
+        }
+        Some((m, c)) => N::Exp_::Constant(m, c),
+    }
 }
 
 fn dotted(context: &mut Context, edot: E::ExpDotted) -> Option<N::ExpDotted> {

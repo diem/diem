@@ -5,8 +5,8 @@ use crate::{
     expansion::ast::{SpecId, Value},
     naming::ast::{BuiltinTypeName, BuiltinTypeName_, TParam},
     parser::ast::{
-        BinOp, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent, ResourceLoc,
-        StructName, UnaryOp, Var,
+        BinOp, ConstantName, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent,
+        ResourceLoc, StructName, UnaryOp, Var,
     },
     shared::{ast_debug::*, unique_map::UniqueMap},
 };
@@ -32,6 +32,7 @@ pub struct Program {
 #[derive(Debug)]
 pub struct Script {
     pub loc: Loc,
+    pub constants: UniqueMap<ConstantName, Constant>,
     pub function_name: FunctionName,
     pub function: Function,
 }
@@ -46,6 +47,7 @@ pub struct ModuleDefinition {
     /// `dependency_order` is the topological order/rank in the dependency graph.
     pub dependency_order: usize,
     pub structs: UniqueMap<StructName, StructDefinition>,
+    pub constants: UniqueMap<ConstantName, Constant>,
     pub functions: UniqueMap<FunctionName, Function>,
 }
 
@@ -64,6 +66,17 @@ pub struct StructDefinition {
 pub enum StructFields {
     Defined(Vec<(Field, BaseType)>),
     Native(Loc),
+}
+
+//**************************************************************************************************
+// Constants
+//**************************************************************************************************
+
+#[derive(PartialEq, Debug)]
+pub struct Constant {
+    pub loc: Loc,
+    pub signature: BaseType,
+    pub value: (UniqueMap<Var, SingleType>, Block),
 }
 
 //**************************************************************************************************
@@ -229,6 +242,7 @@ pub enum UnannotatedExp_ {
     Value(Value),
     Move { from_user: bool, var: Var },
     Copy { from_user: bool, var: Var },
+    Constant(ConstantName),
 
     ModuleCall(Box<ModuleCall>),
     Builtin(Box<BuiltinFunction>, Box<Exp>),
@@ -533,9 +547,14 @@ impl AstDebug for Script {
     fn ast_debug(&self, w: &mut AstWriter) {
         let Script {
             loc: _loc,
+            constants,
             function_name,
             function,
         } = self;
+        for cdef in constants {
+            cdef.ast_debug(w);
+            w.new_line();
+        }
         (function_name.clone(), function).ast_debug(w);
     }
 }
@@ -546,6 +565,7 @@ impl AstDebug for ModuleDefinition {
             is_source_module,
             dependency_order,
             structs,
+            constants,
             functions,
         } = self;
         if *is_source_module {
@@ -556,6 +576,10 @@ impl AstDebug for ModuleDefinition {
         w.writeln(&format!("dependency order #{}", dependency_order));
         for sdef in structs {
             sdef.ast_debug(w);
+            w.new_line();
+        }
+        for cdef in constants {
+            cdef.ast_debug(w);
             w.new_line();
         }
         for fdef in functions {
@@ -610,7 +634,7 @@ impl AstDebug for (FunctionName, &Function) {
         if let FunctionBody_::Native = &body.value {
             w.write("native ");
         }
-        w.write(&format!("{}", name));
+        w.write(&format!("fun {}", name));
         signature.ast_debug(w);
         if !acquires.is_empty() {
             w.write(" acquires ");
@@ -618,20 +642,32 @@ impl AstDebug for (FunctionName, &Function) {
             w.write(" ");
         }
         match &body.value {
-            FunctionBody_::Defined { locals, body } => w.block(|w| {
-                w.write("locals:");
-                w.indent(4, |w| {
-                    w.list(locals, ",", |w, (v, st)| {
-                        w.write(&format!("{}: ", v));
-                        st.ast_debug(w);
-                        true
-                    })
-                });
-                w.new_line();
-                body.ast_debug(w);
-            }),
+            FunctionBody_::Defined { locals, body } => w.block(|w| (locals, body).ast_debug(w)),
             FunctionBody_::Native => w.writeln(";"),
         }
+    }
+}
+
+impl AstDebug for (UniqueMap<Var, SingleType>, Block) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let (locals, body) = self;
+        (locals, body).ast_debug(w)
+    }
+}
+
+impl AstDebug for (&UniqueMap<Var, SingleType>, &Block) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let (locals, body) = self;
+        w.write("locals:");
+        w.indent(4, |w| {
+            w.list(*locals, ",", |w, (v, st)| {
+                w.write(&format!("{}: ", v));
+                st.ast_debug(w);
+                true
+            })
+        });
+        w.new_line();
+        body.ast_debug(w);
     }
 }
 
@@ -650,6 +686,24 @@ impl AstDebug for FunctionSignature {
         });
         w.write("): ");
         return_type.ast_debug(w)
+    }
+}
+
+impl AstDebug for (ConstantName, &Constant) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let (
+            name,
+            Constant {
+                loc: _loc,
+                signature,
+                value,
+            },
+        ) = self;
+        w.write(&format!("const {}:", name));
+        signature.ast_debug(w);
+        w.write(" = ");
+        w.block(|w| value.ast_debug(w));
+        w.write(";");
     }
 }
 
@@ -732,6 +786,21 @@ impl AstDebug for VecDeque<Statement> {
     }
 }
 
+impl AstDebug for (Block, Box<Exp>) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let (block, exp) = self;
+        if block.is_empty() {
+            exp.ast_debug(w);
+        } else {
+            w.block(|w| {
+                block.ast_debug(w);
+                w.writeln(";");
+                exp.ast_debug(w);
+            })
+        }
+    }
+}
+
 impl AstDebug for Statement_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         use Statement_ as S;
@@ -749,20 +818,9 @@ impl AstDebug for Statement_ {
                 w.write(" else ");
                 w.block(|w| else_block.ast_debug(w));
             }
-            S::While {
-                cond: (cond_block, cond_exp),
-                block,
-            } => {
+            S::While { cond, block } => {
                 w.write("while (");
-                if cond_block.is_empty() {
-                    cond_exp.ast_debug(w);
-                } else {
-                    w.block(|w| {
-                        cond_block.ast_debug(w);
-                        w.writeln(";");
-                        cond_exp.ast_debug(w);
-                    })
-                }
+                cond.ast_debug(w);
                 w.write(")");
                 w.block(|w| block.ast_debug(w))
             }
@@ -862,6 +920,7 @@ impl AstDebug for UnannotatedExp_ {
                 from_user: true,
                 var: v,
             } => w.write(&format!("copy@{}", v)),
+            E::Constant(c) => w.write(&format!("{}", c)),
             E::ModuleCall(mcall) => {
                 mcall.ast_debug(w);
             }

@@ -13,8 +13,8 @@ use crate::{
     },
     naming::ast::{BuiltinTypeName_, TParam},
     parser::ast::{
-        BinOp, BinOp_, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent,
-        StructName, UnaryOp, UnaryOp_, Var,
+        BinOp, BinOp_, ConstantName, Field, FunctionName, FunctionVisibility, Kind, Kind_,
+        ModuleIdent, StructName, UnaryOp, UnaryOp_, Var,
     },
     shared::{unique_map::UniqueMap, *},
 };
@@ -82,10 +82,19 @@ pub fn program(prog: G::Program) -> Result<Vec<CompiledUnit>, Errors> {
     for (key, s) in prog.scripts {
         let G::Script {
             loc: _,
+            constants,
             function_name,
             function,
         } = s;
-        match script(key, function_name, function, &orderings, &sdecls, &fdecls) {
+        match script(
+            key,
+            constants,
+            function_name,
+            function,
+            &orderings,
+            &sdecls,
+            &fdecls,
+        ) {
             Ok(unit) => units.push(unit),
             Err(err) => errors.push(err),
         }
@@ -109,6 +118,11 @@ fn module(
         .structs
         .into_iter()
         .map(|(s, sdef)| struct_def(&mut context, &ident, s, sdef))
+        .collect();
+    let constants = mdef
+        .constants
+        .into_iter()
+        .map(|(n, c)| constant(&mut context, Some(&ident), n, c))
         .collect();
 
     let mut collected_function_infos = UniqueMap::new();
@@ -134,6 +148,7 @@ fn module(
         imports,
         explicit_dependency_declarations,
         structs,
+        constants,
         functions,
         synthetics: vec![],
     };
@@ -151,6 +166,7 @@ fn module(
 
 fn script(
     key: String,
+    constants: UniqueMap<ConstantName, G::Constant>,
     name: FunctionName,
     fdef: G::Function,
     dependency_orderings: &HashMap<ModuleIdent, usize>,
@@ -163,6 +179,11 @@ fn script(
     let loc = name.loc();
     let mut context = Context::new(None);
 
+    let constants = constants
+        .into_iter()
+        .map(|(n, c)| constant(&mut context, None, n, c))
+        .collect();
+
     let ((_, main), info) = function(&mut context, None, name, fdef);
 
     let (imports, explicit_dependency_declarations) = context.materialize(
@@ -173,6 +194,7 @@ fn script(
     let ir_script = IR::Script {
         imports,
         explicit_dependency_declarations,
+        constants,
         main,
     };
     let deps: Vec<&F::CompiledModule> = vec![];
@@ -349,6 +371,26 @@ fn struct_fields(
                 .collect();
             IRF::Move { fields }
         }
+    }
+}
+
+//**************************************************************************************************
+// Structs
+//**************************************************************************************************
+
+fn constant(
+    context: &mut Context,
+    m: Option<&ModuleIdent>,
+    n: ConstantName,
+    c: G::Constant,
+) -> IR::Constant {
+    let name = context.constant_definition_name(m, n);
+    let signature = base_type(context, c.signature);
+    let value = c.value.unwrap();
+    IR::Constant {
+        name,
+        signature,
+        value,
     }
 }
 
@@ -763,6 +805,8 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
             code.push(sp(loc, B::MoveLoc(var(v))));
         }
         E::Copy { var: v, .. } => code.push(sp(loc, B::CopyLoc(var(v)))),
+
+        E::Constant(c) => code.push(sp(loc, B::LdConst(context.constant_name(c)))),
 
         E::ModuleCall(mcall) => {
             exp(context, code, mcall.arguments);

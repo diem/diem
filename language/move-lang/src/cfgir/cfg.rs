@@ -191,6 +191,7 @@ fn unreachable_loc_exp(parent_e: &Exp) -> Option<Loc> {
         E::Unreachable => Some(parent_e.exp.loc),
         E::Unit { .. }
         | E::Value(_)
+        | E::Constant(_)
         | E::Spec(_, _)
         | E::UnresolvedError
         | E::BorrowLocal(_, _)

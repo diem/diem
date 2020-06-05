@@ -8,9 +8,81 @@ error:
 
 error: 
 
+   ┌── tests/move_check/expansion/invalid_struct_name.move:3:19 ───
+   │
+ 3 │     struct X { f: no }
+   │                   ^^ Unbound type 'no' in current scope
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/invalid_struct_name.move:5:15 ───
+   │
+ 5 │     fun mk(x: no): no {
+   │               ^^ Unbound type 'no' in current scope
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/invalid_struct_name.move:5:20 ───
+   │
+ 5 │     fun mk(x: no): no {
+   │                    ^^ Unbound type 'no' in current scope
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/invalid_struct_name.move:6:9 ───
+   │
+ 6 │         no {}
+   │         ^^ Unbound type 'no' in current scope
+   │
+
+error: 
+
    ┌── tests/move_check/expansion/invalid_struct_name.move:9:21 ───
    │
  9 │     resource struct no2 {}
    │                     ^^^ Invalid struct name 'no2'. Struct names must start with 'A'..'Z'
    │
+
+error: 
+
+    ┌── tests/move_check/expansion/invalid_struct_name.move:10:28 ───
+    │
+ 10 │     resource struct Y { f: no }
+    │                            ^^ Unbound type 'no' in current scope
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/invalid_struct_name.move:12:16 ───
+    │
+ 12 │     fun mk2(x: no2): no2 {
+    │                ^^^ Unbound type 'no2' in current scope
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/invalid_struct_name.move:12:22 ───
+    │
+ 12 │     fun mk2(x: no2): no2 {
+    │                      ^^^ Unbound type 'no2' in current scope
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/invalid_struct_name.move:13:13 ───
+    │
+ 13 │         let no2 {} = x;
+    │             ^^^ Unbound type 'no2' in current scope
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/invalid_struct_name.move:14:9 ───
+    │
+ 14 │         no2 {}
+    │         ^^^ Unbound type 'no2' in current scope
+    │
 

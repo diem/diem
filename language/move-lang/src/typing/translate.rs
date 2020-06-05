@@ -9,7 +9,9 @@ use crate::{
     errors::Errors,
     expansion::ast::Fields,
     naming::ast::{self as N, Type, TypeName_, Type_},
-    parser::ast::{BinOp_, Field, FunctionName, ModuleIdent, StructName, UnaryOp_, Var},
+    parser::ast::{
+        BinOp_, ConstantName, Field, FunctionName, ModuleIdent, StructName, UnaryOp_, Var,
+    },
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
 };
@@ -44,17 +46,19 @@ fn module(
     ident: ModuleIdent,
     mdef: N::ModuleDefinition,
 ) -> T::ModuleDefinition {
+    assert!(context.current_script_constants.is_none());
     context.current_module = Some(ident);
     let N::ModuleDefinition {
         is_source_module,
         dependency_order,
         mut structs,
         functions: n_functions,
-        ..
+        constants: nconstants,
     } = mdef;
     structs
         .iter_mut()
         .for_each(|(name, s)| struct_def(context, name, s));
+    let constants = nconstants.map(|name, c| constant(context, name, c));
     let functions = n_functions.map(|name, f| function(context, name, f, false));
     assert!(context.constraints.is_empty());
     T::ModuleDefinition {
@@ -62,6 +66,7 @@ fn module(
         dependency_order,
         structs,
         functions,
+        constants,
     }
 }
 
@@ -76,17 +81,23 @@ fn scripts(
 }
 
 fn script(context: &mut Context, nscript: N::Script) -> T::Script {
+    assert!(context.current_script_constants.is_none());
     context.current_module = None;
     let N::Script {
         loc,
+        constants: nconstants,
         function_name,
         function: nfunction,
     } = nscript;
+    context.bind_script_constants(&nconstants);
+    let constants = nconstants.map(|name, c| constant(context, name, c));
     let function = function(context, function_name.clone(), nfunction, true);
+    context.current_script_constants = None;
     T::Script {
         loc,
         function_name,
         function,
+        constants,
     }
 }
 
@@ -103,10 +114,10 @@ fn check_primitive_script_arg(context: &mut Context, mloc: Loc, idx: usize, ty: 
         Type_::vector(loc, Type_::u8(loc)),
         signer_ref.clone(),
     ];
-    let ty_is_an_acceptable_type = acceptable_types.iter().all(|acceptable_type| {
+    let ty_is_unacceptable = acceptable_types.iter().all(|acceptable_type| {
         subtype_no_report(context, ty.clone(), acceptable_type.clone()).is_err()
     });
-    if ty_is_an_acceptable_type {
+    if ty_is_unacceptable {
         let mmsg = format!(
             "Invalid parameter for script function '{}'",
             context.current_function.as_ref().unwrap()
@@ -148,7 +159,6 @@ fn function(
     is_script: bool,
 ) -> T::Function {
     let loc = name.loc();
-    context.current_function = Some(name);
     let N::Function {
         visibility,
         mut signature,
@@ -157,6 +167,7 @@ fn function(
     } = f;
     assert!(context.constraints.is_empty());
     context.reset_for_module_item();
+    context.current_function = Some(name);
 
     function_signature(context, &signature);
     if is_script {
@@ -237,6 +248,254 @@ fn function_body(
     globals::function_body_(context, &acquires, &b_);
     // freeze::function_body_(context, &mut b_);
     sp(loc, b_)
+}
+
+//**************************************************************************************************
+// Constants
+//**************************************************************************************************
+
+fn constant(context: &mut Context, _name: ConstantName, nconstant: N::Constant) -> T::Constant {
+    assert!(context.constraints.is_empty());
+    context.reset_for_module_item();
+
+    let N::Constant {
+        loc,
+        signature,
+        value: nvalue,
+    } = nconstant;
+
+    // Don't need to add base type constraint, as it is checked in `check_valid_constant::signature`
+    let mut signature = core::instantiate(context, signature);
+    check_valid_constant::signature(context, signature.loc, &signature);
+    context.return_type = Some(signature.clone());
+
+    let mut value = exp_(context, nvalue);
+
+    subtype(
+        context,
+        signature.loc,
+        || "Invalid constant signature",
+        value.ty.clone(),
+        signature.clone(),
+    );
+    core::solve_constraints(context);
+
+    expand::type_(context, &mut signature);
+    expand::exp(context, &mut value);
+
+    check_valid_constant::exp(context, &value);
+
+    T::Constant {
+        loc,
+        signature,
+        value,
+    }
+}
+
+mod check_valid_constant {
+    use super::subtype_no_report;
+    use crate::{
+        naming::ast::{Type, Type_},
+        shared::*,
+        typing::{
+            ast as T,
+            core::{self, Context, Subst},
+        },
+    };
+    use move_ir_types::location::*;
+
+    pub fn signature(context: &mut Context, sloc: Loc, ty: &Type) {
+        let loc = ty.loc;
+
+        let mut acceptable_types = vec![
+            Type_::u8(loc),
+            Type_::u64(loc),
+            Type_::u128(loc),
+            Type_::bool(loc),
+            Type_::address(loc),
+        ];
+        let ty_is_an_acceptable_type = acceptable_types.iter().any(|acceptable_type| {
+            let old_subst = context.subst.clone();
+            let result = subtype_no_report(context, ty.clone(), acceptable_type.clone());
+            context.subst = old_subst;
+            result.is_ok()
+        });
+        if ty_is_an_acceptable_type {
+            return;
+        }
+
+        let inner_tvar = core::make_tvar(context, sloc);
+        let vec_ty = Type_::vector(sloc, inner_tvar.clone());
+        let old_subst = context.subst.clone();
+        let is_vec = subtype_no_report(context, ty.clone(), vec_ty.clone()).is_ok();
+        let inner = core::ready_tvars(&context.subst, inner_tvar);
+        context.subst = old_subst;
+        if is_vec {
+            signature(context, sloc, &inner);
+            return;
+        }
+
+        let smsg = "Unpermitted constant type";
+
+        acceptable_types.push(vec_ty);
+        let tys = acceptable_types
+            .iter()
+            .map(|t| core::error_format(t, &Subst::empty()));
+        let tmsg = format!(
+            "Found: {}. But expected one of: {}",
+            core::error_format(ty, &Subst::empty()),
+            format_comma(tys),
+        );
+        context.error(vec![(sloc, smsg.into()), (loc, tmsg)]);
+    }
+
+    pub fn exp(context: &mut Context, e: &T::Exp) {
+        exp_(context, &e.exp)
+    }
+
+    fn exp_(context: &mut Context, sp!(loc, e_): &T::UnannotatedExp) {
+        use T::UnannotatedExp_ as E;
+        const REFERENCE_CASE: &str = "References (and reference operations) are";
+        let s;
+        let error_case = match e_ {
+            //*****************************************
+            // Error cases handled elsewhere
+            //*****************************************
+            E::Use(_) | E::InferredNum(_) | E::Continue | E::Break | E::UnresolvedError => return,
+
+            //*****************************************
+            // Valid cases
+            //*****************************************
+            E::Unit { .. } | E::Value(_) | E::Move { .. } | E::Copy { .. } => return,
+            E::Block(seq) => {
+                sequence(context, seq);
+                return;
+            }
+            E::UnaryExp(_, er) => {
+                exp(context, er);
+                return;
+            }
+            E::BinopExp(el, _, _, er) => {
+                exp(context, el);
+                exp(context, er);
+                return;
+            }
+            E::Cast(el, _) | E::Annotate(el, _) => {
+                exp(context, el);
+                return;
+            }
+
+            //*****************************************
+            // Invalid cases
+            //*****************************************
+            E::Spec(_, _) => "Spec blocks are",
+            E::BorrowLocal(_, _) => REFERENCE_CASE,
+            E::ModuleCall(call) => {
+                exp(context, &call.arguments);
+                "Module calls are"
+            }
+            E::Builtin(b, args) => {
+                exp(context, args);
+                s = format!("'{}' is", b);
+                &s
+            }
+            E::IfElse(eb, et, ef) => {
+                exp(context, eb);
+                exp(context, et);
+                exp(context, ef);
+                "'if' expressions are"
+            }
+            E::While(eb, eloop) => {
+                exp(context, eb);
+                exp(context, eloop);
+                "'while' expressions are"
+            }
+            E::Loop { body: eloop, .. } => {
+                exp(context, eloop);
+                "'loop' expressions are"
+            }
+            E::Assign(_assigns, _tys, er) => {
+                exp(context, er);
+                "Assignments are"
+            }
+            E::Return(er) => {
+                exp(context, er);
+                "'return' expressions are"
+            }
+            E::Abort(er) => {
+                exp(context, er);
+                "'abort' expressions are"
+            }
+            E::Dereference(er) | E::Borrow(_, er, _) | E::TempBorrow(_, er) => {
+                exp(context, er);
+                REFERENCE_CASE
+            }
+            E::Mutate(el, er) => {
+                exp(context, el);
+                exp(context, er);
+                REFERENCE_CASE
+            }
+            E::Pack(_, _, _, fields) => {
+                for (_, (_, (_, fe))) in fields {
+                    exp(context, fe)
+                }
+                "Structs are"
+            }
+            E::ExpList(el) => {
+                exp_list(context, el);
+                "Expression lists are"
+            }
+            E::Constant(_, _) => "Other constants are",
+        };
+        context.error(vec![(
+            *loc,
+            format!("{} not supported in constants", error_case),
+        )])
+    }
+
+    fn exp_list(context: &mut Context, items: &[T::ExpListItem]) {
+        for item in items {
+            exp_list_item(context, item)
+        }
+    }
+
+    fn exp_list_item(context: &mut Context, item: &T::ExpListItem) {
+        use T::ExpListItem as I;
+        match item {
+            I::Single(e, _st) => {
+                exp(context, e);
+            }
+            I::Splat(_, e, _ss) => {
+                exp(context, e);
+            }
+        }
+    }
+
+    fn sequence(context: &mut Context, seq: &T::Sequence) {
+        for item in seq {
+            sequence_item(context, item)
+        }
+    }
+
+    fn sequence_item(context: &mut Context, sp!(loc, item_): &T::SequenceItem) {
+        use T::SequenceItem_ as S;
+        let error_case = match &item_ {
+            S::Seq(te) => {
+                exp(context, te);
+                return;
+            }
+
+            S::Declare(_) => "'let' declarations",
+            S::Bind(_, _, te) => {
+                exp(context, te);
+                "'let' declarations"
+            }
+        };
+        context.error(vec![(
+            *loc,
+            format!("{} are not supported in constants", error_case),
+        )])
+    }
 }
 
 //**************************************************************************************************
@@ -512,6 +771,11 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         NE::Unit { trailing } => (sp(eloc, Type_::Unit), TE::Unit { trailing }),
         NE::Value(sp!(vloc, v)) => (v.type_(vloc), TE::Value(sp(vloc, v))),
         NE::InferredNum(v) => (core::make_num_tvar(context, eloc), TE::InferredNum(v)),
+
+        NE::Constant(m, c) => {
+            let ty = core::make_constant_type(context, eloc, &m, &c);
+            (ty, TE::Constant(m, c))
+        }
 
         NE::Move(var) => {
             let ty = context.get_local(eloc, "move", &var);

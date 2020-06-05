@@ -7,8 +7,8 @@ use libra_types::account_address::AccountAddress;
 use move_core_types::identifier::{IdentStr, Identifier};
 use move_ir_types::{
     ast::{
-        BlockLabel, Field_, FunctionName, ModuleName, QualifiedModuleIdent, QualifiedStructIdent,
-        StructName,
+        BlockLabel, ConstantName, Field_, FunctionName, ModuleName, QualifiedModuleIdent,
+        QualifiedStructIdent, StructName,
     },
     location::*,
 };
@@ -193,6 +193,7 @@ pub struct Context<'a> {
     modules: HashMap<ModuleName, (QualifiedModuleIdent, ModuleHandle)>,
     structs: HashMap<QualifiedStructIdent, StructHandle>,
     struct_defs: HashMap<StructName, TableIndex>,
+    named_constants: HashMap<ConstantName, TableIndex>,
     labels: HashMap<BlockLabel, u16>,
 
     // queryable pools
@@ -245,6 +246,7 @@ impl<'a> Context<'a> {
             modules: HashMap::new(),
             structs: HashMap::new(),
             struct_defs: HashMap::new(),
+            named_constants: HashMap::new(),
             labels: HashMap::new(),
             fields: HashMap::new(),
             function_handles: HashMap::new(),
@@ -447,6 +449,13 @@ impl<'a> Context<'a> {
         )?))
     }
 
+    pub fn named_constant_index(&mut self, constant: &ConstantName) -> Result<ConstantPoolIndex> {
+        match self.named_constants.get(constant) {
+            None => bail!("Missing constant definition for {}", constant),
+            Some(idx) => Ok(ConstantPoolIndex(*idx)),
+        }
+    }
+
     /// Get the field index, fails if it is not bound.
     pub fn field(
         &self,
@@ -592,6 +601,13 @@ impl<'a> Context<'a> {
         let handle_index = FunctionHandleIndex(hidx as TableIndex);
         self.function_handles.insert(m_f, (handle, handle_index));
 
+        Ok(())
+    }
+
+    /// Given a named constant, adds it to the pool
+    pub fn declare_constant(&mut self, name: ConstantName, constant: Constant) -> Result<()> {
+        let idx = self.constant_index(constant)?;
+        self.named_constants.insert(name, idx.0);
         Ok(())
     }
 

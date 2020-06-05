@@ -66,6 +66,7 @@ pub enum Definition {
 pub struct Script {
     pub loc: Loc,
     pub uses: Vec<Use>,
+    pub constants: Vec<Constant>,
     pub function: Function,
     pub specs: Vec<SpecBlock>,
 }
@@ -103,6 +104,7 @@ pub enum ModuleMember {
     Struct(StructDefinition),
     Spec(SpecBlock),
     Use(Use),
+    Constant(Constant),
 }
 
 //**************************************************************************************************
@@ -167,6 +169,20 @@ pub struct Function {
     pub acquires: Vec<ModuleAccess>,
     pub name: FunctionName,
     pub body: FunctionBody,
+}
+
+//**************************************************************************************************
+// Constants
+//**************************************************************************************************
+
+new_name!(ConstantName);
+
+#[derive(PartialEq, Debug)]
+pub struct Constant {
+    pub loc: Loc,
+    pub signature: Type,
+    pub name: ConstantName,
+    pub value: Exp,
 }
 
 //**************************************************************************************************
@@ -735,11 +751,17 @@ impl AstDebug for Script {
         let Script {
             loc: _loc,
             uses,
+            constants,
             function,
             specs,
         } = self;
         for u in uses {
             u.ast_debug(w);
+            w.new_line();
+        }
+        w.new_line();
+        for cdef in constants {
+            cdef.ast_debug(w);
             w.new_line();
         }
         w.new_line();
@@ -774,6 +796,7 @@ impl AstDebug for ModuleMember {
             ModuleMember::Struct(s) => s.ast_debug(w),
             ModuleMember::Spec(s) => s.ast_debug(w),
             ModuleMember::Use(u) => u.ast_debug(w),
+            ModuleMember::Constant(c) => c.ast_debug(w),
         }
     }
 }
@@ -1005,7 +1028,7 @@ impl AstDebug for Function {
         if let FunctionBody_::Native = &body.value {
             w.write("native ");
         }
-        w.write(&format!("{}", name));
+        w.write(&format!("fun {}", name));
         signature.ast_debug(w);
         if !acquires.is_empty() {
             w.write(" acquires ");
@@ -1044,6 +1067,22 @@ impl AstDebug for FunctionSignature {
         w.write(")");
         w.write(": ");
         return_type.ast_debug(w)
+    }
+}
+
+impl AstDebug for Constant {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let Constant {
+            loc: _loc,
+            name,
+            signature,
+            value,
+        } = self;
+        w.write(&format!("const {}:", name));
+        signature.ast_debug(w);
+        w.write(" = ");
+        value.ast_debug(w);
+        w.write(";");
     }
 }
 

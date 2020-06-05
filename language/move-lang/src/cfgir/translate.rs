@@ -8,10 +8,13 @@ use crate::{
         cfg::BlockCFG,
     },
     errors::Errors,
+    expansion::ast::{Value, Value_},
     hlir::ast::{self as H, Label},
-    parser::ast::{FunctionName, ModuleIdent, StructName},
+    parser::ast::{ConstantName, FunctionName, ModuleIdent, StructName, Var},
     shared::unique_map::UniqueMap,
 };
+use libra_types::account_address::AccountAddress as LibraAddress;
+use move_core_types::value::MoveValue;
 use move_ir_types::location::*;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -124,6 +127,7 @@ fn module(
     let is_source_module = mdef.is_source_module;
     let dependency_order = mdef.dependency_order;
     let structs = mdef.structs;
+    let constants = mdef.constants.map(|name, c| constant(context, name, c));
     let functions = mdef.functions.map(|name, f| function(context, name, f));
     (
         module_ident,
@@ -131,6 +135,7 @@ fn module(
             is_source_module,
             dependency_order,
             structs,
+            constants,
             functions,
         },
     )
@@ -149,14 +154,131 @@ fn scripts(
 fn script(context: &mut Context, hscript: H::Script) -> G::Script {
     let H::Script {
         loc,
+        constants: hconstants,
         function_name,
         function: hfunction,
     } = hscript;
+    let constants = hconstants.map(|name, c| constant(context, name, c));
     let function = function(context, function_name.clone(), hfunction);
     G::Script {
         loc,
+        constants,
         function_name,
         function,
+    }
+}
+
+//**************************************************************************************************
+// Functions
+//**************************************************************************************************
+
+fn constant(context: &mut Context, _name: ConstantName, c: H::Constant) -> G::Constant {
+    let H::Constant {
+        loc,
+        signature,
+        value: (locals, block),
+    } = c;
+
+    let final_value = constant_(context, loc, signature.clone(), locals, block);
+    let value = final_value.and_then(move_value_from_exp);
+
+    G::Constant {
+        loc,
+        signature,
+        value,
+    }
+}
+
+const CANNOT_FOLD: &str =
+    "Invalid expression in 'const'. This expression could not be evaluated to a value";
+
+fn constant_(
+    context: &mut Context,
+    full_loc: Loc,
+    signature: H::BaseType,
+    locals: UniqueMap<Var, H::SingleType>,
+    block: H::Block,
+) -> Option<H::Exp> {
+    use H::Command_ as C;
+    const ICE_MSG: &str = "ICE invalid constant should have been blocked in typing";
+
+    initial_block(context, block);
+    let (start, mut blocks, infinite_loop_starts) = context.finish_blocks();
+    assert!(infinite_loop_starts.is_empty(), ICE_MSG);
+
+    let (mut cfg, errors) = BlockCFG::new(start, &mut blocks);
+    assert!(errors.is_empty(), ICE_MSG);
+
+    let mut fake_errors = vec![];
+    let fake_signature = H::FunctionSignature {
+        type_parameters: vec![],
+        parameters: vec![],
+        return_type: H::Type_::base(signature),
+    };
+    let fake_acquires = BTreeMap::new();
+    let fake_infinite_loop_starts = BTreeSet::new();
+    cfgir::refine_inference_and_verify(
+        &mut fake_errors,
+        &fake_signature,
+        &fake_acquires,
+        &locals,
+        &mut cfg,
+        &fake_infinite_loop_starts,
+    );
+    assert!(fake_errors.is_empty(), ICE_MSG);
+    cfgir::optimize(&fake_signature, &locals, &mut cfg);
+
+    if blocks.len() != 1 {
+        context.error(vec![(full_loc, CANNOT_FOLD)]);
+        return None;
+    }
+    let mut optimized_block = blocks.remove(&start).unwrap();
+    let return_cmd = optimized_block.pop_back().unwrap();
+    for sp!(cloc, cmd_) in &optimized_block {
+        let e = match cmd_ {
+            C::IgnoreAndPop { exp, .. } => exp,
+            _ => {
+                context.error(vec![(*cloc, CANNOT_FOLD)]);
+                continue;
+            }
+        };
+        check_constant_value(context, e)
+    }
+
+    let result = match return_cmd.value {
+        C::Return(e) => e,
+        _ => unreachable!(),
+    };
+    check_constant_value(context, &result);
+    Some(result)
+}
+
+fn check_constant_value(context: &mut Context, e: &H::Exp) {
+    use H::UnannotatedExp_ as E;
+    match &e.exp.value {
+        E::Value(_) => (),
+        _ => context.error(vec![(e.exp.loc, CANNOT_FOLD)]),
+    }
+}
+
+fn move_value_from_exp(e: H::Exp) -> Option<MoveValue> {
+    use H::UnannotatedExp_ as E;
+    match e.exp.value {
+        E::Value(v) => Some(move_value_from_value(v)),
+        _ => None,
+    }
+}
+
+fn move_value_from_value(sp!(_, v_): Value) -> MoveValue {
+    use MoveValue as MV;
+    use Value_ as V;
+    match v_ {
+        V::Address(a) => MV::Address(LibraAddress::new(a.to_u8())),
+        V::U8(u) => MV::U8(u),
+        V::U64(u) => MV::U64(u),
+        V::U128(u) => MV::U128(u),
+        V::Bool(b) => MV::Bool(b),
+        V::Bytearray(v) => MV::Vector(v.into_iter().map(MV::U8).collect()),
     }
 }
 
@@ -195,7 +317,7 @@ fn function_body(
     let b_ = match tb_ {
         HB::Native => GB::Native,
         HB::Defined { locals, body } => {
-            function_block(context, body);
+            initial_block(context, body);
             let (start, mut blocks, infinite_loop_starts) = context.finish_blocks();
 
             let (mut cfg, errors) = BlockCFG::new(start, &mut blocks);
@@ -229,7 +351,7 @@ fn function_body(
 // Statements
 //**************************************************************************************************
 
-fn function_block(context: &mut Context, blocks: H::Block) {
+fn initial_block(context: &mut Context, blocks: H::Block) {
     let start = context.new_label();
     context.start = Some(start);
     block(context, start, blocks)

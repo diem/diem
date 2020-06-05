@@ -4,8 +4,8 @@
 use crate::{
     expansion::ast::{Fields, SpecId, Value, Value_},
     parser::ast::{
-        BinOp, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent, ResourceLoc,
-        StructName, UnaryOp, Var,
+        BinOp, ConstantName, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent,
+        ResourceLoc, StructName, UnaryOp, Var,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
@@ -32,6 +32,7 @@ pub struct Program {
 #[derive(Debug)]
 pub struct Script {
     pub loc: Loc,
+    pub constants: UniqueMap<ConstantName, Constant>,
     pub function_name: FunctionName,
     pub function: Function,
 }
@@ -47,6 +48,7 @@ pub struct ModuleDefinition {
     /// `dependency_order` is initialized at `0` and set in the uses pass
     pub dependency_order: usize,
     pub structs: UniqueMap<StructName, StructDefinition>,
+    pub constants: UniqueMap<ConstantName, Constant>,
     pub functions: UniqueMap<FunctionName, Function>,
 }
 
@@ -91,6 +93,17 @@ pub struct Function {
     pub signature: FunctionSignature,
     pub acquires: BTreeMap<StructName, Loc>,
     pub body: FunctionBody,
+}
+
+//**************************************************************************************************
+// Constants
+//**************************************************************************************************
+
+#[derive(PartialEq, Debug)]
+pub struct Constant {
+    pub loc: Loc,
+    pub signature: Type,
+    pub value: Exp,
 }
 
 //**************************************************************************************************
@@ -193,6 +206,7 @@ pub enum Exp_ {
     Move(Var),
     Copy(Var),
     Use(Var),
+    Constant(Option<ModuleIdent>, ConstantName),
 
     ModuleCall(
         ModuleIdent,
@@ -367,6 +381,20 @@ impl BuiltinFunction_ {
             _ => None,
         }
     }
+
+    pub fn display_name(&self) -> &'static str {
+        use BuiltinFunction_ as BF;
+        match self {
+            BF::MoveToSender(_) => BF::MOVE_TO_SENDER,
+            BF::MoveTo(_) => BF::MOVE_TO,
+            BF::MoveFrom(_) => BF::MOVE_FROM,
+            BF::BorrowGlobal(false, _) => BF::BORROW_GLOBAL,
+            BF::BorrowGlobal(true, _) => BF::BORROW_GLOBAL_MUT,
+            BF::Exists(_) => BF::EXISTS,
+            BF::Freeze(_) => BF::FREEZE,
+            BF::Assert => BF::ASSERT,
+        }
+    }
 }
 
 impl Type_ {
@@ -507,9 +535,14 @@ impl AstDebug for Script {
     fn ast_debug(&self, w: &mut AstWriter) {
         let Script {
             loc: _loc,
+            constants,
             function_name,
             function,
         } = self;
+        for cdef in constants {
+            cdef.ast_debug(w);
+            w.new_line();
+        }
         (function_name.clone(), function).ast_debug(w);
     }
 }
@@ -520,6 +553,7 @@ impl AstDebug for ModuleDefinition {
             is_source_module,
             dependency_order,
             structs,
+            constants,
             functions,
         } = self;
         if *is_source_module {
@@ -530,6 +564,10 @@ impl AstDebug for ModuleDefinition {
         w.writeln(&format!("dependency order #{}", dependency_order));
         for sdef in structs {
             sdef.ast_debug(w);
+            w.new_line();
+        }
+        for cdef in constants {
+            cdef.ast_debug(w);
             w.new_line();
         }
         for fdef in functions {
@@ -585,7 +623,7 @@ impl AstDebug for (FunctionName, &Function) {
         if let FunctionBody_::Native = &body.value {
             w.write("native ");
         }
-        w.write(&format!("{}", name));
+        w.write(&format!("fun {}", name));
         signature.ast_debug(w);
         if !acquires.is_empty() {
             w.write(" acquires ");
@@ -624,6 +662,24 @@ impl AstDebug for Vec<TParam> {
             w.comma(self, |w, tp| tp.ast_debug(w));
             w.write(">")
         }
+    }
+}
+
+impl AstDebug for (ConstantName, &Constant) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let (
+            name,
+            Constant {
+                loc: _loc,
+                signature,
+                value,
+            },
+        ) = self;
+        w.write(&format!("const {}:", name));
+        signature.ast_debug(w);
+        w.write(" = ");
+        value.ast_debug(w);
+        w.write(";");
     }
 }
 
@@ -751,6 +807,8 @@ impl AstDebug for Exp_ {
             E::Move(v) => w.write(&format!("move {}", v)),
             E::Copy(v) => w.write(&format!("copy {}", v)),
             E::Use(v) => w.write(&format!("{}", v)),
+            E::Constant(None, c) => w.write(&format!("{}", c)),
+            E::Constant(Some(m), c) => w.write(&format!("{}::{}", m, c)),
             E::ModuleCall(m, f, tys_opt, sp!(_, rhs)) => {
                 w.write(&format!("{}::{}", m, f));
                 if let Some(ss) = tys_opt {
