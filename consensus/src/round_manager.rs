@@ -141,7 +141,7 @@ impl RecoveryManager {
         self.sync_up(&sync_info, author).await
     }
 
-    pub async fn process_vote(&mut self, vote_msg: VoteMsg) -> Result<RecoveryData> {
+    pub async fn process_vote_msg(&mut self, vote_msg: VoteMsg) -> Result<RecoveryData> {
         let author = vote_msg.vote().author();
         let sync_info = vote_msg.sync_info();
         self.sync_up(&sync_info, author).await
@@ -292,56 +292,25 @@ impl RoundManager {
         ))
     }
 
-    /// Process a ProposalMsg, pre_process would bring all the dependencies and filter out invalid
-    /// proposal, process_proposed_block would execute and decide whether to vote for it.
+    /// Process the proposal message:
+    /// 1. ensure after processing sync info, we're at the same round as the proposal
+    /// 2. execute and decide whether to vode for the proposal
     pub async fn process_proposal_msg(&mut self, proposal_msg: ProposalMsg) -> anyhow::Result<()> {
-        let block = self.pre_process_proposal(proposal_msg).await?;
-        self.process_proposed_block(block).await
-    }
-
-    /// The function is responsible for processing the incoming proposals and the Quorum
-    /// Certificate.
-    /// 1. sync up to the SyncInfo including committing to the committed state the HCC carries
-    /// and fetch all the blocks from the committed state to the HQC
-    /// 2. forwarding the proposals to the ProposerElection queue,
-    /// which is going to eventually trigger one winning proposal per round
-    async fn pre_process_proposal(&mut self, proposal_msg: ProposalMsg) -> Result<Block> {
         trace_event!("round_manager::pre_process_proposal", {"block", proposal_msg.proposal().id()});
-        // RoundState is going to be updated with all the proposal certificates later,
-        // but it's known that the round_state's round is not going to decrease so we can already
-        // filter out the proposals from old rounds.
-        let current_round = self.round_state.current_round();
-        ensure!(
-            proposal_msg.round() >= current_round,
-            "[RoundManager] Proposal round {} is less than current round {}",
-            proposal_msg.round(),
-            current_round,
-        );
-        ensure!(
-            self.proposer_election
-                .is_valid_proposal(proposal_msg.proposal()),
-            "[RoundManager] Proposer {} for block {} is not a valid proposer for this round",
+        self.ensure_round_and_sync_up(
+            proposal_msg.proposal().round(),
+            proposal_msg.sync_info(),
             proposal_msg.proposer(),
-            proposal_msg.proposal()
-        );
-        self.sync_up(proposal_msg.sync_info(), proposal_msg.proposer(), true)
-            .await
-            .context("[RoundManager] Process proposal")?;
-
-        // round_state may catch up with the SyncInfo, check again
-        let current_round = self.round_state.current_round();
-        ensure!(
-            proposal_msg.round() == current_round,
-            "[RoundManager] Proposal round doesn't match current round after sync"
-        );
-        Ok(proposal_msg.take_proposal())
+            true,
+        )
+        .await
+        .context("[RoundManager] Process proposal")?;
+        self.process_proposal(proposal_msg.take_proposal()).await
     }
 
-    /// The function makes sure that it brings the missing dependencies from the QC and LedgerInfo
-    /// of the given sync info and update the round_state with the certificates if succeed.
-    /// Returns Error in case sync mgr failed to bring the missing dependencies.
-    /// We'll try to help the remote if the SyncInfo lags behind and the flag is set.
-    pub async fn sync_up(
+    /// Sync to the sync info sending from peer if it has newer certificates, if we have newer certificates
+    /// and help_remote is set, send it back the local sync info.
+    async fn sync_up(
         &mut self,
         sync_info: &SyncInfo,
         author: Author,
@@ -378,15 +347,39 @@ impl RoundManager {
                 })?;
             self.block_store
                 .add_certs(&sync_info, self.create_block_retriever(author))
-                .await
-                .map_err(|e| {
-                    warn!("Fail to sync up to {}: {:?}", sync_info, e);
-                    e
-                })?;
+                .await?;
 
             // Update safety rules and round_state and potentially start a new round.
             self.process_certificates().await?;
         }
+        Ok(())
+    }
+
+    /// The function makes sure that it ensures the message_round equal to what we have locally,
+    /// brings the missing dependencies from the QC and LedgerInfo of the given sync info and
+    /// update the round_state with the certificates if succeed.
+    /// Returns Error in case sync mgr failed to bring the missing dependencies.
+    /// We'll try to help the remote if the SyncInfo lags behind and the flag is set.
+    pub async fn ensure_round_and_sync_up(
+        &mut self,
+        message_round: Round,
+        sync_info: &SyncInfo,
+        author: Author,
+        help_remote: bool,
+    ) -> anyhow::Result<()> {
+        ensure!(
+            message_round >= self.round_state.current_round(),
+            "round {} is stale than local {}",
+            message_round,
+            self.round_state.current_round()
+        );
+        self.sync_up(sync_info, author, help_remote).await?;
+        ensure!(
+            message_round == self.round_state.current_round(),
+            "After sync, round {} doesn't match local {}",
+            message_round,
+            self.round_state.current_round()
+        );
         Ok(())
     }
 
@@ -399,7 +392,7 @@ impl RoundManager {
         debug!("Received a sync info msg: {}", sync_info);
         counters::SYNC_INFO_MSGS_RECEIVED_COUNT.inc();
         // To avoid a ping-pong cycle between two peers that move forward together.
-        self.sync_up(&sync_info, peer, false)
+        self.ensure_round_and_sync_up(sync_info.highest_round() + 1, &sync_info, peer, false)
             .await
             .context("[RoundManager] Failed to process sync info msg")
     }
@@ -407,10 +400,9 @@ impl RoundManager {
     /// The replica broadcasts a "timeout vote message", which includes the round signature, which
     /// can be aggregated to a TimeoutCertificate.
     /// The timeout vote message can be one of the following three options:
-    /// 1) In case a validator has previously voted in this round, it repeats the same vote.
-    /// 2) In case a validator didn't vote yet but has a secondary proposal, it executes this
-    /// proposal and votes.
-    /// 3) If neither primary nor secondary proposals are available, vote for a NIL block.
+    /// 1) In case a validator has previously voted in this round, it repeats the same vote and sign
+    /// a timeout.
+    /// 2) Otherwise vote for a NIL block and sign a timeout.
     pub async fn process_local_timeout(&mut self, round: Round) -> anyhow::Result<()> {
         ensure!(
             self.round_state.process_local_timeout(round),
@@ -464,12 +456,22 @@ impl RoundManager {
         Ok(())
     }
 
-    /// This function processes a proposal that was chosen as a representative of its round:
-    /// 1. Add it to a block store.
-    /// 2. Try to vote for it following the safety rules.
-    /// 3. In case a validator chooses to vote, send the vote to the representatives at the next
-    /// position.
-    async fn process_proposed_block(&mut self, proposal: Block) -> Result<()> {
+    /// This function processes a proposal for the current round:
+    /// 1. Filter if it's proposed by valid proposer.
+    /// 2. Execute and add it to a block store.
+    /// 3. Try to vote for it following the safety rules.
+    /// 4. In case a validator chooses to vote, send the vote to the representatives at the next
+    /// round.
+    async fn process_proposal(&mut self, proposal: Block) -> Result<()> {
+        ensure!(
+            self.proposer_election.is_valid_proposal(&proposal),
+            "[RoundManager] Proposer {} for block {} is not a valid proposer for this round",
+            proposal
+                .author()
+                .expect("Proposal should be verified having an author"),
+            proposal,
+        );
+
         debug!("RoundManager: process_proposed_block {}", proposal);
 
         if let Some(time_to_receival) =
@@ -564,8 +566,6 @@ impl RoundManager {
     /// * then verify the voting rules
     /// * save the updated state to consensus DB
     /// * return a VoteMsg with the LedgerInfo to be committed in case the vote gathers QC.
-    ///
-    /// This function assumes that it might be called from different tasks concurrently.
     async fn execute_and_vote(&mut self, proposed_block: Block) -> anyhow::Result<Vote> {
         trace_code_block!("round_manager::execute_and_vote", {"block", proposed_block.id()});
         let executed_block = self
@@ -585,16 +585,6 @@ impl RoundManager {
             );
         }
         let block = executed_block.block();
-
-        // Checking round_state round again, because multiple proposed_block can now race
-        // during async block retrieval
-        ensure!(
-            block.round() == self.round_state.current_round(),
-            "[RoundManager] Proposal {} rejected because round is incorrect. RoundState: {}, proposed_block: {}",
-            block,
-            self.round_state.current_round(),
-            block.round(),
-        );
 
         // Short circuit if already voted.
         ensure!(
@@ -644,28 +634,23 @@ impl RoundManager {
     }
 
     /// Upon new vote:
-    /// 1. Filter out votes for rounds that should not be processed by this validator (to avoid
+    /// 1. Ensures we're processing the vote from the same round as local round
+    /// 2. Filter out votes for rounds that should not be processed by this validator (to avoid
     /// potential attacks).
-    /// 2. Add the vote to the store and check whether it finishes a QC.
-    /// 3. Once the QC successfully formed, notify the RoundState.
-    pub async fn process_vote(&mut self, vote_msg: VoteMsg) -> anyhow::Result<()> {
+    /// 2. Add the vote to the pending votes and check whether it finishes a QC.
+    /// 3. Once the QC/TC successfully formed, notify the RoundState.
+    pub async fn process_vote_msg(&mut self, vote_msg: VoteMsg) -> anyhow::Result<()> {
         trace_code_block!("round_manager::process_vote", {"block", vote_msg.proposed_block_id()});
         // Check whether this validator is a valid recipient of the vote.
-        if !vote_msg.vote().is_timeout() {
-            // Unlike timeout votes regular votes are sent to the leaders of the next round only.
-            let next_round = vote_msg.vote().vote_data().proposed().round() + 1;
-            ensure!(
-                self.proposer_election
-                    .is_valid_proposer(self.proposal_generator.author(), next_round),
-                "[RoundManager] Received {}, but I am not a valid proposer for round {}, ignore.",
-                vote_msg,
-                next_round
-            );
-        }
-        self.sync_up(vote_msg.sync_info(), vote_msg.vote().author(), true)
-            .await
-            .context("[RoundManager] Stop processing vote")?;
-        self.add_vote(vote_msg.vote())
+        self.ensure_round_and_sync_up(
+            vote_msg.vote().vote_data().proposed().round(),
+            vote_msg.sync_info(),
+            vote_msg.vote().author(),
+            true,
+        )
+        .await
+        .context("[RoundManager] Stop processing vote")?;
+        self.process_vote(vote_msg.vote())
             .await
             .context("[RoundManager] Add a new vote")
     }
@@ -674,7 +659,18 @@ impl RoundManager {
     /// If a new QC / TC is formed then
     /// 1) fetch missing dependencies if required, and then
     /// 2) call process_certificates(), which will start a new round in return.
-    async fn add_vote(&mut self, vote: &Vote) -> anyhow::Result<()> {
+    async fn process_vote(&mut self, vote: &Vote) -> anyhow::Result<()> {
+        if !vote.is_timeout() {
+            // Unlike timeout votes regular votes are sent to the leaders of the next round only.
+            let next_round = vote.vote_data().proposed().round() + 1;
+            ensure!(
+                self.proposer_election
+                    .is_valid_proposer(self.proposal_generator.author(), next_round),
+                "[RoundManager] Received {}, but I am not a valid proposer for round {}, ignore.",
+                vote,
+                next_round
+            );
+        }
         debug!("Add vote: {}", vote);
         let block_id = vote.vote_data().proposed().id();
         // Check if the block already had a QC
