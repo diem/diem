@@ -210,61 +210,67 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
     let waypoint = config::waypoint(&node_config.base.waypoint);
 
-    if let Some(network) = node_config.validator_network.as_mut() {
-        let (runtime, mut network_builder) = setup_network(
-            network,
-            RoleType::Validator,
-            Arc::clone(&db_rw.reader),
-            waypoint,
-        );
-        let peer_id = network_builder.peer_id();
-
-        // Set up to listen for network configuration changes from StateSync.
-        if let Some(conn_mgr_reqs_tx) = network_builder.conn_mgr_reqs_tx() {
-            let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
-                gen_simple_discovery_reconfig_subscription();
-            reconfig_subscriptions.push(simple_discovery_reconfig_subscription);
-            let network_config_listener =
-                ConfigurationChangeListener::new(conn_mgr_reqs_tx, RoleType::Validator);
-            runtime
-                .handle()
-                .spawn(network_config_listener.start(simple_discovery_reconfig_rx));
-        };
-
-        let (state_sync_sender, state_sync_events) =
-            state_synchronizer::network::add_to_network(&mut network_builder);
-        state_sync_network_handles.push((peer_id, state_sync_sender, state_sync_events));
-
-        let (mempool_sender, mempool_events) = libra_mempool::network::add_to_network(
-            &mut network_builder,
-            node_config.mempool.max_broadcasts_per_peer,
-        );
-        mempool_network_handles.push((peer_id, mempool_sender, mempool_events));
-        validator_network_provider = Some((peer_id, runtime, network_builder));
+    // Gather all network configs into a single vector.
+    // TODO:  consider explicitly encoding the role in the NetworkConfig
+    let mut network_configs: Vec<(RoleType, &mut NetworkConfig)> = node_config
+        .full_node_networks
+        .iter_mut()
+        .map(|network_config| (RoleType::FullNode, network_config))
+        .collect();
+    if let Some(network_config) = node_config.validator_network.as_mut() {
+        network_configs.push((RoleType::Validator, network_config));
     }
 
-    for mut full_node_network in node_config.full_node_networks.iter_mut() {
-        let (runtime, mut network_builder) = setup_network(
-            &mut full_node_network,
-            RoleType::FullNode,
-            Arc::clone(&db_rw.reader),
-            waypoint,
-        );
+    let mut validator_count = 0;
+    // Instantiate every network.
+    for (role, network_config) in network_configs {
+        // Perform common instantiation steps
+        let (runtime, mut network_builder) =
+            setup_network(network_config, role, Arc::clone(&db_rw.reader), waypoint);
         let peer_id = network_builder.peer_id();
 
-        network_runtimes.push(runtime);
+        // Create the endpoints to connect the Network to StateSynchronizer.
         let (state_sync_sender, state_sync_events) =
             state_synchronizer::network::add_to_network(&mut network_builder);
         state_sync_network_handles.push((peer_id, state_sync_sender, state_sync_events));
+
+        // Create the endpoints to connect the network to MemPool.
         let (mempool_sender, mempool_events) = libra_mempool::network::add_to_network(
             &mut network_builder,
             node_config.mempool.max_broadcasts_per_peer,
         );
         mempool_network_handles.push((peer_id, mempool_sender, mempool_events));
 
-        // Start the network provider.
-        let _listen_addr = network_builder.build();
-        debug!("Network started for peer_id: {}", peer_id);
+        // Perform actions specific to a particular network type.
+        match role {
+            RoleType::Validator => {
+                validator_count += 1;
+                // A valid config is allowed to have exactly one ValidatorNetwork
+                assert_eq!(1, validator_count);
+                // Set up to listen for network configuration changes from StateSync.
+                if let Some(conn_mgr_reqs_tx) = network_builder.conn_mgr_reqs_tx() {
+                    let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
+                        gen_simple_discovery_reconfig_subscription();
+                    reconfig_subscriptions.push(simple_discovery_reconfig_subscription);
+                    let network_config_listener =
+                        ConfigurationChangeListener::new(conn_mgr_reqs_tx, RoleType::Validator);
+                    runtime
+                        .handle()
+                        .spawn(network_config_listener.start(simple_discovery_reconfig_rx));
+                };
+
+                // Cache the network information to be started later.
+                validator_network_provider = Some((peer_id, runtime, network_builder));
+            }
+            RoleType::FullNode => {
+                // Cache the runtime so it does not go out of scope immediately.
+                network_runtimes.push(runtime);
+
+                // Start the network provider.  FullNode networks can operate silently.3
+                let _listen_addr = network_builder.build();
+                debug!("Network started for peer_id: {}", peer_id);
+            }
+        }
     }
 
     // TODO set up on-chain discovery network based on UpstreamConfig.fallback_network
