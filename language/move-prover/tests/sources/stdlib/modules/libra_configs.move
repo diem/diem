@@ -18,7 +18,7 @@ module LibraConfig {
         // Only callable by the Association address for now.
         Transaction::assert(sender == 0xA550C18, 1);
 
-        Transaction::assert(::exists<T<Config>>(sender), 24);
+        Transaction::assert(exists<T<Config>>(sender), 24);
         let config = borrow_global_mut<T<Config>>(sender);
         config.payload = payload;
 

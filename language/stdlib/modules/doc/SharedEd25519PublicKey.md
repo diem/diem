@@ -10,7 +10,7 @@
 -  [Function `rotate_key_`](#0x0_SharedEd25519PublicKey_rotate_key_)
 -  [Function `rotate_key`](#0x0_SharedEd25519PublicKey_rotate_key)
 -  [Function `key`](#0x0_SharedEd25519PublicKey_key)
--  [Function `exists`](#0x0_SharedEd25519PublicKey_exists)
+-  [Function `exists_at`](#0x0_SharedEd25519PublicKey_exists_at)
 
 
 
@@ -159,13 +159,13 @@
 
 </details>
 
-<a name="0x0_SharedEd25519PublicKey_exists"></a>
+<a name="0x0_SharedEd25519PublicKey_exists_at"></a>
 
-## Function `exists`
+## Function `exists_at`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_exists">exists</a>(addr: address): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_exists_at">exists_at</a>(addr: address): bool
 </code></pre>
 
 
@@ -174,8 +174,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_exists">exists</a>(addr: address): bool {
-    ::<a href="#0x0_SharedEd25519PublicKey_exists">exists</a>&lt;<a href="#0x0_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SharedEd25519PublicKey_exists_at">exists_at</a>(addr: address): bool {
+    exists&lt;<a href="#0x0_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr)
 }
 </code></pre>
 

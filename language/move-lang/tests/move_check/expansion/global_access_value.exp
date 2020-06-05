@@ -1,8 +1,0 @@
-error: 
-
-   ┌── tests/move_check/expansion/global_access_value.move:3:13 ───
-   │
- 3 │         1 + ::global_value
-   │             ^^^^^^^^^^^^^^ Invalid use of global name '::global_value'. Global names can only be used in function calls
-   │
-

@@ -1,0 +1,11 @@
+error: 
+
+    ┌── tests/move_check/parser/global_access.move:13:24 ───
+    │
+ 13 │         let _ : bool = ::exists<Self::R>(0x0);
+    │                        ^^ Unexpected '::'
+    ·
+ 13 │         let _ : bool = ::exists<Self::R>(0x0);
+    │                        -- Expected an expression term
+    │
+

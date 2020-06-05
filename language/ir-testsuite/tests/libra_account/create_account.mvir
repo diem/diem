@@ -7,7 +7,7 @@ main(account: &signer) {
     let addr: address;
 
     addr = 0x111101;
-    assert(!LibraAccount.exists(copy(addr)), 83);
+    assert(!LibraAccount.exists_at(copy(addr)), 83);
     LibraAccount.create_testnet_account<LBR.LBR>(copy(account), copy(addr), LCS.to_bytes<address>(&addr));
     return;
 }
@@ -33,7 +33,7 @@ main(account: &signer) {
     LibraAccount.restore_withdraw_capability(move(with_cap));
     LibraAccount.deposit<LBR.LBR>(copy(account), copy(addr), move(ten_coins));
 
-    account_exists_now = LibraAccount.exists(copy(addr));
+    account_exists_now = LibraAccount.exists_at(copy(addr));
     assert(move(account_exists_now), 84);
     account2_balance = LibraAccount.balance<LBR.LBR>(copy(addr));
     assert(move(account2_balance) == 10, 84);

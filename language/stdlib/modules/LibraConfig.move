@@ -47,7 +47,7 @@ module LibraConfig {
     // Get a copy of `Config` value stored under `addr`.
     public fun get<Config: copyable>(): Config acquires LibraConfig {
         let addr = default_config_address();
-        Transaction::assert(::exists<LibraConfig<Config>>(addr), 24);
+        Transaction::assert(exists<LibraConfig<Config>>(addr), 24);
         *&borrow_global<LibraConfig<Config>>(addr).payload
     }
 
@@ -55,10 +55,10 @@ module LibraConfig {
     // reconfiguration.
     public fun set<Config: copyable>(account: &signer, payload: Config) acquires LibraConfig, Configuration {
         let addr = default_config_address();
-        Transaction::assert(::exists<LibraConfig<Config>>(addr), 24);
+        Transaction::assert(exists<LibraConfig<Config>>(addr), 24);
         let signer_address = Signer::address_of(account);
         Transaction::assert(
-            ::exists<ModifyConfigCapability<Config>>(signer_address)
+            exists<ModifyConfigCapability<Config>>(signer_address)
              || signer_address == Association::root_address(),
             24
         );
@@ -75,7 +75,7 @@ module LibraConfig {
         payload: Config
     ) acquires LibraConfig, Configuration {
         let addr = default_config_address();
-        Transaction::assert(::exists<LibraConfig<Config>>(addr), 24);
+        Transaction::assert(exists<LibraConfig<Config>>(addr), 24);
         let config = borrow_global_mut<LibraConfig<Config>>(addr);
         config.payload = payload;
 

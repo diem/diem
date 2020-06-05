@@ -221,7 +221,6 @@ pub enum Exp_ {
     Copy(Var),
 
     Name(ModuleAccess, Option<Vec<Type>>),
-    GlobalCall(Name, Option<Vec<Type>>, Spanned<Vec<Exp>>),
     Call(ModuleAccess, Option<Vec<Type>>, Spanned<Vec<Exp>>),
     Pack(ModuleAccess, Option<Vec<Type>>, Fields<Exp>),
 
@@ -681,17 +680,6 @@ impl AstDebug for Exp_ {
                     ss.ast_debug(w);
                     w.write(">");
                 }
-            }
-            E::GlobalCall(n, tys_opt, sp!(_, rhs)) => {
-                w.write(&format!("::{}", n));
-                if let Some(ss) = tys_opt {
-                    w.write("<");
-                    ss.ast_debug(w);
-                    w.write(">");
-                }
-                w.write("(");
-                w.comma(rhs, |w, e| e.ast_debug(w));
-                w.write(")");
             }
             E::Call(ma, tys_opt, sp!(_, rhs)) => {
                 ma.ast_debug(w);

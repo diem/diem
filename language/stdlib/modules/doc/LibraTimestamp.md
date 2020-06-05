@@ -149,7 +149,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTimestamp_is_genesis">is_genesis</a>(): bool <b>acquires</b> <a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
-    !::exists&lt;<a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(0xA550C18) || <a href="#0x0_LibraTimestamp_now_microseconds">now_microseconds</a>() == 0
+    !exists&lt;<a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(0xA550C18) || <a href="#0x0_LibraTimestamp_now_microseconds">now_microseconds</a>() == 0
 }
 </code></pre>
 

@@ -141,7 +141,7 @@ module LibraAccount {
         base_url: vector<u8>,
         compliance_public_key: vector<u8>,
     ) {
-        Transaction::assert(exists(addr), 0);
+        Transaction::assert(exists_at(addr), 0);
         Transaction::assert(Signer::address_of(association) == 0xA550C18, 0);
         let account = create_signer(addr);
         VASP::publish_parent_vasp_credential(
@@ -435,7 +435,7 @@ module LibraAccount {
         Transaction::assert(Testnet::is_testnet(), 10042);
         // TODO: refactor so that every attempt to create an existing account hits this check
         // cannot create an account at an address that already has one
-        Transaction::assert(!exists(new_account_address), 777777);
+        Transaction::assert(!exists_at(new_account_address), 777777);
         let new_account = create_signer(new_account_address);
         VASP::publish_parent_vasp_credential(
             association,
@@ -494,13 +494,13 @@ module LibraAccount {
         // (2) publish Balance resource(s)
         add_currency<Token>(&new_account);
         if (add_all_currencies) {
-            if (!::exists<Balance<Coin1>>(new_account_addr)) {
+            if (!exists<Balance<Coin1>>(new_account_addr)) {
                 add_currency<Coin1>(&new_account);
             };
-            if (!::exists<Balance<Coin2>>(new_account_addr)) {
+            if (!exists<Balance<Coin2>>(new_account_addr)) {
                 add_currency<Coin2>(&new_account);
             };
-            if (!::exists<Balance<LBR>>(new_account_addr)) {
+            if (!exists<Balance<LBR>>(new_account_addr)) {
                 add_currency<LBR>(&new_account);
             };
         };
@@ -618,7 +618,7 @@ module LibraAccount {
         add_all_currencies: bool
     ) {
         Transaction::assert(Testnet::is_testnet(), 10042);
-        Transaction::assert(!exists(new_account_address), 777777);
+        Transaction::assert(!exists_at(new_account_address), 777777);
         let new_account = create_signer(new_account_address);
         Event::publish_generator(&new_account);
         let role_id = 7;
@@ -645,7 +645,7 @@ module LibraAccount {
 
     // Return whether the account at `addr` accepts `Token` type coins
     public fun accepts_currency<Token>(addr: address): bool {
-        ::exists<Balance<Token>>(addr)
+        exists<Balance<Token>>(addr)
     }
 
     // Helper to return the sequence number field for given `account`
@@ -686,8 +686,8 @@ module LibraAccount {
     }
 
     // Checks if an account exists at `check_addr`
-    public fun exists(check_addr: address): bool {
-        ::exists<LibraAccount>(check_addr)
+    public fun exists_at(check_addr: address): bool {
+        exists<LibraAccount>(check_addr)
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -753,7 +753,7 @@ module LibraAccount {
 
         // FUTURE: Make these error codes sequential
         // Verify that the transaction sender's account exists
-        Transaction::assert(exists(transaction_sender), 5);
+        Transaction::assert(exists_at(transaction_sender), 5);
 
         Transaction::assert(!account_is_frozen(transaction_sender), 0);
 

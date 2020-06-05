@@ -1,0 +1,112 @@
+error: 
+
+   ┌── tests/move_check/expansion/restricted_function_names.move:2:9 ───
+   │
+ 2 │     fun address() { abort 0 }
+   │         ^^^^^^^ Invalid module member name 'address'. 'address' is restricted and cannot be used to name a module member
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/restricted_function_names.move:3:9 ───
+   │
+ 3 │     fun signer() { abort 0 }
+   │         ^^^^^^ Invalid module member name 'signer'. 'signer' is restricted and cannot be used to name a module member
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/restricted_function_names.move:4:9 ───
+   │
+ 4 │     fun u8() { abort 0 }
+   │         ^^ Invalid module member name 'u8'. 'u8' is restricted and cannot be used to name a module member
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/restricted_function_names.move:5:9 ───
+   │
+ 5 │     fun u64() { abort 0 }
+   │         ^^^ Invalid module member name 'u64'. 'u64' is restricted and cannot be used to name a module member
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/restricted_function_names.move:6:9 ───
+   │
+ 6 │     fun u128() { abort 0 }
+   │         ^^^^ Invalid module member name 'u128'. 'u128' is restricted and cannot be used to name a module member
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/restricted_function_names.move:7:9 ───
+   │
+ 7 │     fun vector<T>() { abort 0 }
+   │         ^^^^^^ Invalid module member name 'vector'. 'vector' is restricted and cannot be used to name a module member
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/restricted_function_names.move:8:9 ───
+   │
+ 8 │     fun move_to_sender() { abort 0 }
+   │         ^^^^^^^^^^^^^^ Invalid module member name 'move_to_sender'. 'move_to_sender' is restricted and cannot be used to name a module member
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/restricted_function_names.move:9:9 ───
+   │
+ 9 │     fun move_to() { abort 0 }
+   │         ^^^^^^^ Invalid module member name 'move_to'. 'move_to' is restricted and cannot be used to name a module member
+   │
+
+error: 
+
+    ┌── tests/move_check/expansion/restricted_function_names.move:10:9 ───
+    │
+ 10 │     fun move_from() { abort 0 }
+    │         ^^^^^^^^^ Invalid module member name 'move_from'. 'move_from' is restricted and cannot be used to name a module member
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/restricted_function_names.move:11:9 ───
+    │
+ 11 │     fun borrow_global() { abort 0 }
+    │         ^^^^^^^^^^^^^ Invalid module member name 'borrow_global'. 'borrow_global' is restricted and cannot be used to name a module member
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/restricted_function_names.move:12:9 ───
+    │
+ 12 │     fun borrow_global_mut() { abort 0 }
+    │         ^^^^^^^^^^^^^^^^^ Invalid module member name 'borrow_global_mut'. 'borrow_global_mut' is restricted and cannot be used to name a module member
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/restricted_function_names.move:13:9 ───
+    │
+ 13 │     fun exists() { abort 0 }
+    │         ^^^^^^ Invalid module member name 'exists'. 'exists' is restricted and cannot be used to name a module member
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/restricted_function_names.move:14:9 ───
+    │
+ 14 │     fun freeze() { abort 0 }
+    │         ^^^^^^ Invalid module member name 'freeze'. 'freeze' is restricted and cannot be used to name a module member
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/restricted_function_names.move:15:9 ───
+    │
+ 15 │     fun Self() { abort 0}
+    │         ^^^^ Invalid module member name 'Self'. 'Self' is restricted and cannot be used to name a module member
+    │
+
