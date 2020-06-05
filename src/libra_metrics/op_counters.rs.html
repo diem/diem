@@ -209,7 +209,7 @@
             .<span class="ident">unwrap</span>(),
             <span class="ident">gauges</span>: <span class="ident">IntGaugeVec</span>::<span class="ident">new</span>(
                 <span class="ident">Opts</span>::<span class="ident">new</span>(
-                    <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}_gauge&quot;</span>, <span class="ident">name_str</span>.<span class="ident">clone</span>()),
+                    <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}_gauge&quot;</span>, <span class="ident">name_str</span>),
                     <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Gauges for {}&quot;</span>, <span class="ident">name_str</span>),
                 ),
                 <span class="kw-2">&amp;</span>[<span class="string">&quot;op&quot;</span>],
@@ -217,7 +217,7 @@
             .<span class="ident">unwrap</span>(),
             <span class="ident">peer_gauges</span>: <span class="ident">IntGaugeVec</span>::<span class="ident">new</span>(
                 <span class="ident">Opts</span>::<span class="ident">new</span>(
-                    <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}_peer_gauge&quot;</span>, <span class="ident">name_str</span>.<span class="ident">clone</span>()),
+                    <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}_peer_gauge&quot;</span>, <span class="ident">name_str</span>),
                     <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Gauges of each remote peer for {}&quot;</span>, <span class="ident">name_str</span>),
                 ),
                 <span class="kw-2">&amp;</span>[<span class="string">&quot;op&quot;</span>, <span class="string">&quot;remote_peer_id&quot;</span>],
@@ -225,7 +225,7 @@
             .<span class="ident">unwrap</span>(),
             <span class="ident">duration_histograms</span>: <span class="ident">HistogramVec</span>::<span class="ident">new</span>(
                 <span class="ident">HistogramOpts</span>::<span class="ident">new</span>(
-                    <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}_duration&quot;</span>, <span class="ident">name_str</span>.<span class="ident">clone</span>()),
+                    <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}_duration&quot;</span>, <span class="ident">name_str</span>),
                     <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Histogram values for {}&quot;</span>, <span class="ident">name_str</span>),
                 ),
                 <span class="kw-2">&amp;</span>[<span class="string">&quot;op&quot;</span>],

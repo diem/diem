@@ -1343,13 +1343,13 @@
             }
             <span class="ident">Abort</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">Return</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
             <span class="ident">Jump</span>(<span class="ident">lbl</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">successors</span>.<span class="ident">insert</span>(<span class="ident">lbl</span>.<span class="ident">clone</span>());
+                <span class="ident">successors</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">lbl</span>);
             }
             <span class="ident">JumpIf</span> {
                 <span class="ident">if_true</span>, <span class="ident">if_false</span>, ..
             } <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">successors</span>.<span class="ident">insert</span>(<span class="ident">if_true</span>.<span class="ident">clone</span>());
-                <span class="ident">successors</span>.<span class="ident">insert</span>(<span class="ident">if_false</span>.<span class="ident">clone</span>());
+                <span class="ident">successors</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">if_true</span>);
+                <span class="ident">successors</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">if_false</span>);
             }
         }
         <span class="ident">successors</span>

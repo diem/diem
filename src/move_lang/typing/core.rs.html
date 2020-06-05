@@ -2353,7 +2353,7 @@
     <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">tps</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">args</span>.<span class="ident">len</span>());
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">subst</span> <span class="op">=</span> <span class="ident">TParamSubst</span>::<span class="ident">new</span>();
     <span class="kw">for</span> (<span class="ident">tp</span>, <span class="ident">arg</span>) <span class="kw">in</span> <span class="ident">tps</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">args</span>) {
-        <span class="kw">let</span> <span class="ident">old_val</span> <span class="op">=</span> <span class="ident">subst</span>.<span class="ident">insert</span>(<span class="ident">tp</span>.<span class="ident">id</span>.<span class="ident">clone</span>(), <span class="ident">arg</span>);
+        <span class="kw">let</span> <span class="ident">old_val</span> <span class="op">=</span> <span class="ident">subst</span>.<span class="ident">insert</span>(<span class="ident">tp</span>.<span class="ident">id</span>, <span class="ident">arg</span>);
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">old_val</span>.<span class="ident">is_none</span>())
     }
     <span class="ident">subst</span>

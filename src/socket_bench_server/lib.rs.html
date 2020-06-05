@@ -282,7 +282,7 @@
 
                             <span class="ident">tokio</span>::<span class="ident">task</span>::<span class="ident">spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
                                 <span class="comment">// Drain all messages from the client.</span>
-                                <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span> <span class="ident">stream</span>.<span class="ident">next</span>().<span class="kw">await</span> {}
+                                <span class="kw">while</span> <span class="ident">stream</span>.<span class="ident">next</span>().<span class="kw">await</span>.<span class="ident">is_some</span>() {}
                                 <span class="ident">stream</span>.<span class="ident">close</span>().<span class="kw">await</span>.<span class="ident">unwrap</span>();
                             });
                         }

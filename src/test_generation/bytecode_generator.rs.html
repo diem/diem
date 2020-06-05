@@ -1551,8 +1551,8 @@
         <span class="ident">abstract_state_out</span>: <span class="ident">AbstractState</span>,
         <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledModuleMut</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Bytecode</span><span class="op">&gt;</span>, <span class="ident">AbstractState</span>)<span class="op">&gt;</span> {
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Abstract state in: {}&quot;</span>, <span class="ident">abstract_state_in</span>.<span class="ident">clone</span>());
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Abstract state out: {}&quot;</span>, <span class="ident">abstract_state_out</span>.<span class="ident">clone</span>());
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Abstract state in: {}&quot;</span>, <span class="ident">abstract_state_in</span>);
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Abstract state out: {}&quot;</span>, <span class="ident">abstract_state_out</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bytecode</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Bytecode</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">abstract_state_in</span>.<span class="ident">clone</span>();
         <span class="comment">// Generate block body</span>

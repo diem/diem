@@ -1873,7 +1873,7 @@
         <span class="self">self</span>.<span class="ident">subscriptions</span>.<span class="ident">retain</span>(<span class="op">|</span><span class="ident">peer</span>, <span class="ident">request_info</span><span class="op">|</span> {
             <span class="comment">// filter out expired peer requests</span>
             <span class="kw">if</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>()
-                .<span class="ident">duration_since</span>(<span class="ident">request_info</span>.<span class="ident">expiration_time</span>.<span class="ident">clone</span>())
+                .<span class="ident">duration_since</span>(<span class="ident">request_info</span>.<span class="ident">expiration_time</span>)
                 .<span class="ident">is_ok</span>()
             {
                 <span class="kw">return</span> <span class="bool-val">false</span>;

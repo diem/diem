@@ -693,7 +693,7 @@
 
         <span class="kw">let</span> <span class="ident">results</span> <span class="op">=</span> <span class="ident">addresses</span>
             .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">addr</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">get_account_state_with_proof</span>(<span class="ident">addr</span>.<span class="ident">clone</span>(), <span class="ident">version</span>, <span class="ident">version</span>))
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">addr</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">get_account_state_with_proof</span>(<span class="kw-2">*</span><span class="ident">addr</span>, <span class="ident">version</span>, <span class="ident">version</span>))
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
 
         <span class="comment">// Account address --&gt; AccountState</span>

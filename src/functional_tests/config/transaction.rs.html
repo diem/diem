@@ -462,8 +462,8 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">disabled_stages</span>,
             <span class="ident">sender</span>: <span class="ident">sender</span>.<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">config</span>.<span class="ident">accounts</span>.<span class="ident">get</span>(<span class="string">&quot;default&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">account</span>()),
-            <span class="ident">ty_args</span>: <span class="ident">ty_args</span>.<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">vec</span><span class="macro">!</span>[]),
-            <span class="ident">args</span>: <span class="ident">args</span>.<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">vec</span><span class="macro">!</span>[]),
+            <span class="ident">ty_args</span>: <span class="ident">ty_args</span>.<span class="ident">unwrap_or_else</span>(<span class="ident">Vec</span>::<span class="ident">new</span>),
+            <span class="ident">args</span>: <span class="ident">args</span>.<span class="ident">unwrap_or_else</span>(<span class="ident">Vec</span>::<span class="ident">new</span>),
             <span class="ident">max_gas</span>,
             <span class="ident">gas_price</span>,
             <span class="ident">gas_currency_code</span>,

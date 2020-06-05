@@ -3918,7 +3918,7 @@
             <span class="ident">FunctionVisibility</span>::<span class="ident">Internal</span>
         },
         <span class="ident">args</span>,
-        <span class="ident">ret</span>.<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">vec</span><span class="macro">!</span>[]),
+        <span class="ident">ret</span>.<span class="ident">unwrap_or_else</span>(<span class="ident">Vec</span>::<span class="ident">new</span>),
         <span class="ident">type_parameters</span>,
         <span class="ident">acquires</span>.<span class="ident">unwrap_or_else</span>(<span class="ident">Vec</span>::<span class="ident">new</span>),
         <span class="ident">specifications</span>,

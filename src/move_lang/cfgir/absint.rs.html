@@ -245,7 +245,7 @@
         <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">cfg</span>.<span class="ident">start_block</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">work_list</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">start</span>];
         <span class="ident">inv_map</span>.<span class="ident">insert</span>(
-            <span class="ident">start</span>.<span class="ident">clone</span>(),
+            <span class="ident">start</span>,
             <span class="ident">BlockInvariant</span> {
                 <span class="ident">pre</span>: <span class="ident">initial_state</span>,
                 <span class="ident">post</span>: <span class="ident">BlockPostcondition</span>::<span class="ident">Unprocessed</span>,
@@ -276,7 +276,7 @@
                             }
                             <span class="ident">JoinResult</span>::<span class="ident">Changed</span> <span class="op">=</span><span class="op">&gt;</span> {
                                 <span class="comment">// The pre changed. Schedule the next block.</span>
-                                <span class="ident">work_list</span>.<span class="ident">push</span>(<span class="ident">next_lbl</span>.<span class="ident">clone</span>());
+                                <span class="ident">work_list</span>.<span class="ident">push</span>(<span class="kw-2">*</span><span class="ident">next_lbl</span>);
                             }
                         }
                     }
@@ -284,13 +284,13 @@
                         <span class="comment">// Haven&#39;t visited the next block yet. Use the post of the current block as</span>
                         <span class="comment">// its pre and schedule it.</span>
                         <span class="ident">inv_map</span>.<span class="ident">insert</span>(
-                            <span class="ident">next_lbl</span>.<span class="ident">clone</span>(),
+                            <span class="kw-2">*</span><span class="ident">next_lbl</span>,
                             <span class="ident">BlockInvariant</span> {
                                 <span class="ident">pre</span>: <span class="ident">post_state</span>.<span class="ident">clone</span>(),
                                 <span class="ident">post</span>: <span class="ident">BlockPostcondition</span>::<span class="ident">Unprocessed</span>,
                             },
                         );
-                        <span class="ident">work_list</span>.<span class="ident">push</span>(<span class="ident">next_lbl</span>.<span class="ident">clone</span>());
+                        <span class="ident">work_list</span>.<span class="ident">push</span>(<span class="kw-2">*</span><span class="ident">next_lbl</span>);
                     }
                 }
             }

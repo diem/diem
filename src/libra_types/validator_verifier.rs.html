@@ -889,7 +889,7 @@
             <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
             <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">map</span>, <span class="ident">validator</span><span class="op">|</span> {
                 <span class="ident">map</span>.<span class="ident">insert</span>(
-                    <span class="ident">validator</span>.<span class="ident">account_address</span>().<span class="ident">clone</span>(),
+                    <span class="kw-2">*</span><span class="ident">validator</span>.<span class="ident">account_address</span>(),
                     <span class="ident">ValidatorConsensusInfo</span>::<span class="ident">new</span>(
                         <span class="ident">validator</span>.<span class="ident">consensus_public_key</span>().<span class="ident">clone</span>(),
                         <span class="ident">validator</span>.<span class="ident">consensus_voting_power</span>(),

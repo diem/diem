@@ -550,7 +550,7 @@
         {
             <span class="ident">mutation_map</span>
                 .<span class="ident">entry</span>((<span class="ident">mutation</span>.<span class="ident">src_kind</span>, <span class="ident">mutation</span>.<span class="ident">dst_kind</span>))
-                .<span class="ident">or_insert_with</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">vec</span><span class="macro">!</span>[])
+                .<span class="ident">or_insert_with</span>(<span class="ident">Vec</span>::<span class="ident">new</span>)
                 .<span class="ident">push</span>(<span class="ident">mutation</span>);
         }
 

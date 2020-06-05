@@ -783,11 +783,11 @@
         <span class="kw">for</span> (<span class="ident">address</span>, <span class="ident">account_blob</span>) <span class="kw">in</span> <span class="ident">txn</span>.<span class="ident">account_states</span>().<span class="ident">iter</span>() {
             <span class="kw">let</span> <span class="ident">account</span> <span class="op">=</span> <span class="ident">AccountResource</span>::<span class="ident">try_from</span>(<span class="ident">account_blob</span>).<span class="ident">unwrap</span>();
             <span class="ident">event_key_to_query_path</span>.<span class="ident">insert</span>(
-                <span class="ident">account</span>.<span class="ident">sent_events</span>().<span class="ident">key</span>().<span class="ident">clone</span>(),
+                <span class="kw-2">*</span><span class="ident">account</span>.<span class="ident">sent_events</span>().<span class="ident">key</span>(),
                 <span class="ident">AccessPath</span>::<span class="ident">new_for_sent_event</span>(<span class="kw-2">*</span><span class="ident">address</span>),
             );
             <span class="ident">event_key_to_query_path</span>.<span class="ident">insert</span>(
-                <span class="ident">account</span>.<span class="ident">received_events</span>().<span class="ident">key</span>().<span class="ident">clone</span>(),
+                <span class="kw-2">*</span><span class="ident">account</span>.<span class="ident">received_events</span>().<span class="ident">key</span>(),
                 <span class="ident">AccessPath</span>::<span class="ident">new_for_received_event</span>(<span class="kw-2">*</span><span class="ident">address</span>),
             );
         }

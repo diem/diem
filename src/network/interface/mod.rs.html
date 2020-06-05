@@ -307,9 +307,6 @@
 <span id="307">307</span>
 <span id="308">308</span>
 <span id="309">309</span>
-<span id="310">310</span>
-<span id="311">311</span>
-<span id="312">312</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -576,9 +573,7 @@
         <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;RpcNotification::{:?}&quot;</span>, <span class="ident">notif</span>);
         <span class="kw">match</span> <span class="ident">notif</span> {
             <span class="ident">RpcNotification</span>::<span class="ident">RecvRpc</span>(<span class="ident">req</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span>
-                    <span class="ident">notifs_tx</span>.<span class="ident">push</span>(<span class="ident">req</span>.<span class="ident">protocol</span>.<span class="ident">clone</span>(), <span class="ident">NetworkNotification</span>::<span class="ident">RecvRpc</span>(<span class="ident">req</span>))
-                {
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">notifs_tx</span>.<span class="ident">push</span>(<span class="ident">req</span>.<span class="ident">protocol</span>, <span class="ident">NetworkNotification</span>::<span class="ident">RecvRpc</span>(<span class="ident">req</span>)) {
                     <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Failed to push RpcNotification to NetworkProvider for peer: {}. Error: {:?}&quot;</span>, <span class="ident">peer_id</span>.<span class="ident">short_str</span>(), <span class="ident">e</span>);
                 }
             }
@@ -593,8 +588,7 @@
         <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;DirectSendNotification::{:?}&quot;</span>, <span class="ident">notif</span>);
         <span class="kw">match</span> <span class="ident">notif</span> {
             <span class="ident">DirectSendNotification</span>::<span class="ident">RecvMessage</span>(<span class="ident">msg</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span>
-                    <span class="ident">notifs_tx</span>.<span class="ident">push</span>(<span class="ident">msg</span>.<span class="ident">protocol</span>.<span class="ident">clone</span>(), <span class="ident">NetworkNotification</span>::<span class="ident">RecvMessage</span>(<span class="ident">msg</span>))
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">notifs_tx</span>.<span class="ident">push</span>(<span class="ident">msg</span>.<span class="ident">protocol</span>, <span class="ident">NetworkNotification</span>::<span class="ident">RecvMessage</span>(<span class="ident">msg</span>))
                 {
                     <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Failed to push DirectSendNotification to NetworkProvider for peer: {}. Error: {:?}&quot;</span>, <span class="ident">peer_id</span>.<span class="ident">short_str</span>(), <span class="ident">e</span>);
                 }
