@@ -6,7 +6,7 @@ use consensus::{consensus_provider::start_consensus, gen_consensus_reconfig_subs
 use debug_interface::node_debug_service::NodeDebugService;
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_types::ChunkExecutor;
-use futures::{channel::mpsc::channel, executor::block_on, stream::StreamExt};
+use futures::{channel::mpsc::channel, executor::block_on};
 use libra_config::{
     config::{DiscoveryMethod, NetworkConfig, NodeConfig, RoleType},
     utils::get_genesis_txn,
@@ -16,29 +16,18 @@ use libra_logger::prelude::*;
 use libra_mempool::gen_mempool_reconfig_subscription;
 use libra_metrics::metric_server;
 use libra_secure_storage::config;
-use libra_types::{waypoint::Waypoint, PeerId};
+use libra_types::waypoint::Waypoint;
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use network::validator_network::network_builder::{AuthenticationMode, NetworkBuilder};
 use network_simple_onchain_discovery::{
     gen_simple_discovery_reconfig_subscription, ConfigurationChangeListener,
 };
-use onchain_discovery::{client::OnchainDiscovery, service::OnchainDiscoveryService};
 use state_synchronizer::StateSynchronizer;
-use std::{
-    boxed::Box,
-    collections::HashMap,
-    net::ToSocketAddrs,
-    sync::Arc,
-    thread,
-    time::{Duration, Instant},
-};
+use std::{boxed::Box, collections::HashMap, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
 use storage_interface::{DbReader, DbReaderWriter};
 use storage_service::start_storage_service_with_db;
-use tokio::{
-    runtime::{Builder, Handle, Runtime},
-    time::interval,
-};
+use tokio::runtime::{Builder, Runtime};
 
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 const INTRA_NODE_CHANNEL_BUFFER_SIZE: usize = 1;
@@ -68,53 +57,6 @@ fn setup_debug_interface(config: &NodeConfig) -> NodeDebugService {
     .unwrap();
 
     NodeDebugService::new(addr)
-}
-
-pub fn setup_onchain_discovery(
-    network: &mut NetworkBuilder,
-    peer_id: PeerId,
-    role: RoleType,
-    libra_db: Arc<dyn DbReader>,
-    waypoint: Waypoint,
-    executor: &Handle,
-) {
-    let (network_tx, discovery_events) =
-        onchain_discovery::network_interface::add_to_network(network);
-    let outbound_rpc_timeout = Duration::from_secs(30);
-    let max_concurrent_inbound_queries = 8;
-    let (peer_mgr_notifs_rx, conn_notifs_rx) = (
-        discovery_events.peer_mgr_notifs_rx,
-        discovery_events.connection_notifs_rx,
-    );
-
-    let onchain_discovery_service = OnchainDiscoveryService::new(
-        executor.clone(),
-        peer_mgr_notifs_rx,
-        Arc::clone(&libra_db),
-        max_concurrent_inbound_queries,
-    );
-    executor.spawn(onchain_discovery_service.start());
-
-    let onchain_discovery = executor.enter(move || {
-        let peer_query_ticker = interval(Duration::from_secs(30)).fuse();
-        let storage_query_ticker = interval(Duration::from_secs(30)).fuse();
-
-        OnchainDiscovery::new(
-            peer_id,
-            role,
-            waypoint,
-            network_tx,
-            network
-                .conn_mgr_reqs_tx()
-                .expect("ConnecitivtyManager not enabled"),
-            conn_notifs_rx,
-            libra_db,
-            peer_query_ticker,
-            storage_query_ticker,
-            outbound_rpc_timeout,
-        )
-    });
-    executor.spawn(onchain_discovery.start());
 }
 
 // TODO(abhayb): Move to network crate (similar to consensus).
@@ -189,7 +131,7 @@ pub fn setup_network(
                 .add_gossip_discovery();
         }
         DiscoveryMethod::Onchain => {
-            setup_onchain_discovery(
+            onchain_discovery::setup_onchain_discovery(
                 &mut network_builder,
                 peer_id,
                 role,
