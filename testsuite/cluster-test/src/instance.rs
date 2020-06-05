@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use anyhow::{ensure, format_err, Result};
+use libra_config::config::NodeConfig;
 use libra_json_rpc_client::{JsonRpcAsyncClient, JsonRpcBatch};
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -46,16 +47,23 @@ pub struct Instance {
     ac_port: u32,
     k8s_node: Option<String>,
     instance_config: Option<InstanceConfig>,
+    debug_interface_port: Option<u32>,
 }
 
 impl Instance {
-    pub fn new(peer_name: String, ip: String, ac_port: u32) -> Instance {
+    pub fn new(
+        peer_name: String,
+        ip: String,
+        ac_port: u32,
+        debug_interface_port: Option<u32>,
+    ) -> Instance {
         Instance {
             peer_name,
             ip,
             ac_port,
             k8s_node: None,
             instance_config: None,
+            debug_interface_port,
         }
     }
 
@@ -72,6 +80,11 @@ impl Instance {
             ac_port,
             k8s_node,
             instance_config: Some(instance_config),
+            debug_interface_port: Some(
+                NodeConfig::default()
+                    .debug_interface
+                    .admission_control_node_debug_port as u32,
+            ),
         }
     }
 
@@ -211,6 +224,10 @@ impl Instance {
 
     pub fn instance_config(&self) -> Option<&InstanceConfig> {
         self.instance_config.as_ref()
+    }
+
+    pub fn debug_interface_port(&self) -> Option<u32> {
+        self.debug_interface_port
     }
 }
 

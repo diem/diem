@@ -111,8 +111,8 @@ pub fn main() {
 
     let args = Args::from_args();
 
-    if args.swarm && !(args.emit_tx || args.diag) {
-        panic!("Can only use --emit-tx or --diag in --swarm mode");
+    if args.swarm && !(args.emit_tx || args.diag || args.health_check) {
+        panic!("Can only use --emit-tx or --diag or --health-check in --swarm mode");
     }
 
     if args.diag {
@@ -148,6 +148,13 @@ pub fn main() {
             ));
             return;
         }
+    } else if args.health_check && args.swarm {
+        let util = BasicSwarmUtil::setup(&args);
+        let logs = DebugPortLogThread::spawn_new(&util.cluster).0;
+        let mut health_check_runner = HealthCheckRunner::new_all(util.cluster);
+        let duration = Duration::from_secs(args.duration);
+        exit_on_error(run_health_check(&logs, &mut health_check_runner, duration));
+        return;
     }
 
     let mut runner = ClusterTestRunner::setup(&args);
@@ -156,7 +163,11 @@ pub fn main() {
 
     if args.health_check {
         let duration = Duration::from_secs(args.duration);
-        exit_on_error(runner.run_health_check(duration));
+        exit_on_error(run_health_check(
+            &runner.logs,
+            &mut runner.health_check_runner,
+            duration,
+        ));
     } else if args.perf_run {
         perf_msg = Some(runner.perf_run());
     } else if args.cleanup {
@@ -246,18 +257,25 @@ struct ClusterTestRunner {
     cluster_swarm: ClusterSwarmKube,
 }
 
-fn parse_host_port(s: &str) -> Result<(String, u32)> {
+fn parse_host_port(s: &str) -> Result<(String, u32, Option<u32>)> {
     let v = s.split(':').collect::<Vec<&str>>();
     if v.len() == 1 {
         let default_port = DEFAULT_JSON_RPC_PORT as u32;
-        return Ok((v[0].to_string(), default_port));
+        return Ok((v[0].to_string(), default_port, None));
     }
-    if v.len() != 2 {
-        return Err(format_err!("Failed to parse {:?} in host:port format", s));
+    if v.len() != 2 && v.len() != 3 {
+        return Err(format_err!(
+            "Failed to parse {:?} in host:port or host:port:debug_interface_port format",
+            s
+        ));
     }
     let host = v[0].to_string();
     let port = v[1].parse::<u32>()?;
-    Ok((host, port))
+    if v.len() == 3 {
+        let debug_interface_port = v[2].parse::<u32>()?;
+        return Ok((host, port, Some(debug_interface_port)));
+    }
+    Ok((host, port, None))
 }
 
 pub async fn emit_tx(
@@ -292,6 +310,26 @@ pub async fn emit_tx(
     println!("Average rate: {}", stats.rate(duration));
 }
 
+fn run_health_check(
+    logs: &LogTail,
+    health_check_runner: &mut HealthCheckRunner,
+    duration: Duration,
+) -> Result<()> {
+    let health_check_deadline = Instant::now() + duration;
+    loop {
+        let deadline = Instant::now() + Duration::from_secs(1);
+        // Receive all events that arrived to log tail within next 1 second
+        // This assumes so far that event propagation time is << 1s, this need to be refined
+        // in future to account for actual event propagation delay
+        let events = logs.recv_all_until_deadline(deadline);
+        let result = health_check_runner.run(&events, &HashSet::new(), PrintFailures::All);
+        let now = Instant::now();
+        if now > health_check_deadline {
+            return result.map(|_| ());
+        }
+    }
+}
+
 impl BasicSwarmUtil {
     pub fn setup(args: &Args) -> Self {
         if args.peers.is_empty() {
@@ -302,9 +340,9 @@ impl BasicSwarmUtil {
             .iter()
             .map(|peer| parse_host_port(peer).unwrap())
             .collect();
-        Self {
-            cluster: Cluster::from_host_port(parsed_peers, &args.mint_file),
-        }
+
+        let cluster = Cluster::from_host_port(parsed_peers, &args.mint_file);
+        Self { cluster }
     }
 
     pub async fn diag(&self) -> Result<()> {
@@ -737,24 +775,6 @@ impl ClusterTestRunner {
 
         info!("Experiment completed");
         Ok(())
-    }
-
-    fn run_health_check(&mut self, duration: Duration) -> Result<()> {
-        let health_check_deadline = Instant::now() + duration;
-        loop {
-            let deadline = Instant::now() + Duration::from_secs(1);
-            // Receive all events that arrived to aws log tail within next 1 second
-            // This assumes so far that event propagation time is << 1s, this need to be refined
-            // in future to account for actual event propagation delay
-            let events = self.logs.recv_all_until_deadline(deadline);
-            let result = self
-                .health_check_runner
-                .run(&events, &HashSet::new(), PrintFailures::All);
-            let now = Instant::now();
-            if now > health_check_deadline {
-                return result.map(|_| ());
-            }
-        }
     }
 
     fn wait_until_all_healthy(&mut self) -> Result<()> {
