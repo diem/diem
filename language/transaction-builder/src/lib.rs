@@ -99,6 +99,17 @@ pub fn encode_stdlib_script(
 }
 
 encode_txn_script! {
+    name: encode_add_recovery_rotation_capability,
+    args: [recovery_address: Address],
+    script: AddRecoveryRotationCapability,
+    doc: "Add the `KeyRotationCapability` for `to_recover_account` to the `RecoveryAddress`\
+          resource under `recovery_address`. Aborts if `to_recovery_account` and\
+          `to_recovery_address belong to different VASPs, if `recovery_address` does not have a\
+          `RecoveryAddress` resource, or if `to_recover_account` has already extracted its\
+          `KeyRotationCapability`."
+}
+
+encode_txn_script! {
     name: encode_add_validator_script,
     args: [new_validator: Address],
     script: AddValidator,
@@ -133,6 +144,17 @@ encode_txn_script! {
     script: CancelBurn,
     doc: "Cancel the oldest burn request from `preburn_address` and return the funds to\
           `preburn_address`.  Fails if the sender does not have a published `MintCapability`."
+}
+
+encode_txn_script! {
+    name: encode_create_recovery_address,
+    args: [],
+    script: CreateRecoveryAddress,
+    doc: "Extract the `KeyRotationCapability` for `recovery_account` and publish it in a\
+          `RecoveryAddress` resource under  `recovery_account`. Aborts if `recovery_account` has\
+           delegated its `KeyRotationCapability`, already has a`RecoveryAddress` resource, or is\
+           not a VASP. Cancel the oldest burn request from `preburn_address` and return the funds\
+           to `preburn_address`.  Fails if the sender does not have a published `MintCapability`."
 }
 
 encode_txn_script! {
@@ -236,6 +258,15 @@ encode_txn_script! {
     script: RotateAuthenticationKey,
     doc: "Encode a program that rotates the sender's authentication key to `new_key`. `new_key`\
           should be a 256 bit sha3 hash of an ed25519 public key."
+}
+
+encode_txn_script! {
+    name: encode_rotate_authentication_key_with_recovery_address_script,
+    args: [recovery_address: Address, to_recover: Address, new_key: Bytes],
+    script: RotateAuthenticationKeyWithRecoveryAddress,
+    doc: "Rotate the authentication key of `to_recover` to `new_key`. Can be invoked by either\
+          `recovery_address` or `to_recover`. Aborts if `recovery_address` does not have the\
+          `KeyRotationCapability` for `to_recover`."
 }
 
 encode_txn_script! {
