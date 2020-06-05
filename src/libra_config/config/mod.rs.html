@@ -496,6 +496,24 @@
 <span id="496">496</span>
 <span id="497">497</span>
 <span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -593,7 +611,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BaseConfig</span> {
     <span class="ident">data_dir</span>: <span class="ident">PathBuf</span>,
     <span class="kw">pub</span> <span class="ident">role</span>: <span class="ident">RoleType</span>,
-    <span class="kw">pub</span> <span class="ident">waypoint</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Waypoint</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">waypoint</span>: <span class="ident">WaypointConfig</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">BaseConfig</span> {
@@ -601,7 +619,25 @@
         <span class="ident">BaseConfig</span> {
             <span class="ident">data_dir</span>: <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="string">&quot;/opt/libra/data/commmon&quot;</span>),
             <span class="ident">role</span>: <span class="ident">RoleType</span>::<span class="ident">Validator</span>,
-            <span class="ident">waypoint</span>: <span class="prelude-val">None</span>,
+            <span class="ident">waypoint</span>: <span class="ident">WaypointConfig</span>::<span class="prelude-val">None</span>,
+        }
+    }
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;snake_case&quot;</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;type&quot;</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">WaypointConfig</span> {
+    <span class="ident">FromConfig</span> { <span class="ident">waypoint</span>: <span class="ident">Waypoint</span> },
+    <span class="ident">FromStorage</span> { <span class="ident">backend</span>: <span class="ident">SecureBackend</span> },
+    <span class="prelude-val">None</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">WaypointConfig</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">waypoint_from_config</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Waypoint</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">WaypointConfig</span>::<span class="ident">FromConfig</span> { <span class="ident">waypoint</span> } <span class="op">=</span> <span class="self">self</span> {
+            <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">waypoint</span>)
+        } <span class="kw">else</span> {
+            <span class="prelude-val">None</span>
         }
     }
 }

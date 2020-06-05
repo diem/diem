@@ -489,7 +489,7 @@
             } <span class="kw">else</span> {
                 <span class="ident">validator_config</span>.<span class="ident">execution</span>.<span class="ident">genesis</span>.<span class="ident">clone</span>()
             };
-            <span class="ident">config</span>.<span class="ident">base</span>.<span class="ident">waypoint</span> <span class="op">=</span> <span class="ident">validator_config</span>.<span class="ident">base</span>.<span class="ident">waypoint</span>;
+            <span class="ident">config</span>.<span class="ident">base</span>.<span class="ident">waypoint</span> <span class="op">=</span> <span class="ident">validator_config</span>.<span class="ident">base</span>.<span class="ident">waypoint</span>.<span class="ident">clone</span>();
 
             <span class="kw">let</span> <span class="ident">network</span> <span class="op">=</span> <span class="ident">config</span>
                 .<span class="ident">full_node_networks</span>

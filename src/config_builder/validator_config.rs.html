@@ -288,7 +288,7 @@
 <span class="kw">use</span> <span class="ident">libra_config</span>::{
     <span class="ident">config</span>::{
         <span class="ident">NodeConfig</span>, <span class="ident">OnDiskStorageConfig</span>, <span class="ident">RemoteService</span>, <span class="ident">SafetyRulesService</span>, <span class="ident">SecureBackend</span>, <span class="ident">Token</span>,
-        <span class="ident">VaultConfig</span>,
+        <span class="ident">VaultConfig</span>, <span class="ident">WaypointConfig</span>,
     },
     <span class="ident">generator</span>,
     <span class="ident">network_id</span>::<span class="ident">NetworkId</span>,
@@ -390,6 +390,7 @@
             <span class="ident">configs</span>[<span class="number">0</span>]
                 .<span class="ident">base</span>
                 .<span class="ident">waypoint</span>
+                .<span class="ident">waypoint_from_config</span>()
                 .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Waypoint not generated&quot;</span>))<span class="question-mark">?</span>,
         ))
     }
@@ -441,18 +442,17 @@
                 <span class="kw-2">&amp;</span><span class="ident">path</span>, <span class="bool-val">false</span>, <span class="comment">/* readonly */</span>
                 <span class="prelude-val">None</span>,  <span class="comment">/* pruner */</span>
             )<span class="question-mark">?</span>);
-            <span class="prelude-val">Some</span>(
-                <span class="ident">db_bootstrapper</span>::<span class="ident">bootstrap_db_if_empty</span>::<span class="op">&lt;</span><span class="ident">LibraVM</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">db_rw</span>, <span class="kw-2">&amp;</span><span class="ident">genesis</span>)<span class="question-mark">?</span>
-                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Failed to bootstrap empty DB.&quot;</span>))<span class="question-mark">?</span>,
-            )
+            <span class="kw">let</span> <span class="ident">waypoint</span> <span class="op">=</span> <span class="ident">db_bootstrapper</span>::<span class="ident">bootstrap_db_if_empty</span>::<span class="op">&lt;</span><span class="ident">LibraVM</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">db_rw</span>, <span class="kw-2">&amp;</span><span class="ident">genesis</span>)<span class="question-mark">?</span>
+                .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Failed to bootstrap empty DB.&quot;</span>))<span class="question-mark">?</span>;
+            <span class="ident">WaypointConfig</span>::<span class="ident">FromConfig</span> { <span class="ident">waypoint</span> }
         } <span class="kw">else</span> {
-            <span class="prelude-val">None</span>
+            <span class="ident">WaypointConfig</span>::<span class="prelude-val">None</span>
         };
 
         <span class="kw">let</span> <span class="ident">genesis</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">genesis</span>);
 
         <span class="kw">for</span> <span class="ident">node</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">nodes</span> {
-            <span class="ident">node</span>.<span class="ident">base</span>.<span class="ident">waypoint</span> <span class="op">=</span> <span class="ident">waypoint</span>;
+            <span class="ident">node</span>.<span class="ident">base</span>.<span class="ident">waypoint</span> <span class="op">=</span> <span class="ident">waypoint</span>.<span class="ident">clone</span>();
             <span class="ident">node</span>.<span class="ident">execution</span>.<span class="ident">genesis</span> <span class="op">=</span> <span class="ident">genesis</span>.<span class="ident">clone</span>();
         }
 

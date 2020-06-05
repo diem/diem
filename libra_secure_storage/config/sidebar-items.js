@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["identity_key",""],["peer_id",""]]});
+initSidebarItems({"fn":[["identity_key",""],["peer_id",""],["waypoint",""]]});
