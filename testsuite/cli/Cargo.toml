@@ -14,7 +14,7 @@ anyhow = "1.0.31"
 chrono = "0.4.11"
 hex = "0.4.2"
 proptest = { version = "0.10.0", optional = true }
-rustyline = "6.1.2"
+rustyline = "6.2.0"
 rust_decimal = "1.6.0"
 num-traits = "0.2.11"
 reqwest = { version = "0.10.6", features = ["blocking", "json", "rustls-tls"], default-features = false }
