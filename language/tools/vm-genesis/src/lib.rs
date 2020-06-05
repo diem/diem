@@ -155,7 +155,7 @@ fn create_and_initialize_main_accounts(
     // number 0
     context.exec(
         "LibraAccount",
-        "epilogue",
+        "success_epilogue",
         vec![lbr_ty.clone()],
         vec![
             Value::transaction_argument_signer_reference(root_association_address),

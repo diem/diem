@@ -912,26 +912,16 @@ module LibraAccount {
         Transaction::assert(LibraTransactionTimeout::is_valid_transaction_timestamp(txn_expiration_time), 7);
     }
 
-    // The epilogue is invoked at the end of transactions.
-    // It collects gas and bumps the sequence number
+    //  Collects gas and bumps the sequence number for executing a transaction
     fun epilogue<Token>(
-        account: &signer,
+        sender: address,
+        transaction_fee_amount: u64,
         txn_sequence_number: u64,
-        txn_gas_price: u64,
-        txn_max_gas_units: u64,
-        gas_units_remaining: u64
     ) acquires T, Balance, AccountOperationsCapability {
-        let sender = Signer::address_of(account);
         // Load the transaction sender's account and balance resources
         let sender_account = borrow_global_mut<T>(sender);
         let sender_balance = borrow_global_mut<Balance<Token>>(sender);
 
-        // Charge for gas
-        let transaction_fee_amount = txn_gas_price * (txn_max_gas_units - gas_units_remaining);
-        Transaction::assert(
-            balance_for(sender_balance) >= transaction_fee_amount,
-            6
-        );
         // Bump the sequence number
         sender_account.sequence_number = txn_sequence_number + 1;
 
@@ -943,6 +933,43 @@ module LibraAccount {
             );
             Libra::deposit(&mut borrow_global_mut<Balance<Token>>(0xFEE).coin, transaction_fee);
         }
+    }
+
+    // The success_epilogue is invoked at the end of successfully executed transactions.
+    fun success_epilogue<Token>(
+        account: &signer,
+        txn_sequence_number: u64,
+        txn_gas_price: u64,
+        txn_max_gas_units: u64,
+        gas_units_remaining: u64
+    ) acquires T, Balance, AccountOperationsCapability {
+        let sender = Signer::address_of(account);
+        // Load the transaction sender's account and balance resources
+        let sender_balance = borrow_global_mut<Balance<Token>>(sender);
+
+        // Charge for gas
+        let transaction_fee_amount = txn_gas_price * (txn_max_gas_units - gas_units_remaining);
+        Transaction::assert(
+            balance_for(sender_balance) >= transaction_fee_amount,
+            6
+        );
+        epilogue<Token>(sender, transaction_fee_amount, txn_sequence_number);
+    }
+
+    // The failure_epilogue is invoked at the end of transactions when the transaction is aborted during execution or
+    // during `success_epilogue`.
+    fun failure_epilogue<Token>(
+        account: &signer,
+        txn_sequence_number: u64,
+        txn_gas_price: u64,
+        txn_max_gas_units: u64,
+        gas_units_remaining: u64
+    ) acquires T, Balance, AccountOperationsCapability {
+        let sender = Signer::address_of(account);
+        // Charge for gas
+        let transaction_fee_amount = txn_gas_price * (txn_max_gas_units - gas_units_remaining);
+
+        epilogue<Token>(sender, transaction_fee_amount, txn_sequence_number);
     }
 
     // Bump the sequence number of an account. This function should be used only for bumping the sequence number when
