@@ -20,8 +20,12 @@ pub trait RemoteService {
     fn server_address(&self) -> SocketAddr;
 }
 
-pub fn execute(storage: PersistentSafetyStorage, listen_addr: SocketAddr) {
-    let safety_rules = SafetyRules::new(storage);
+pub fn execute(
+    storage: PersistentSafetyStorage,
+    listen_addr: SocketAddr,
+    verify_vote_proposal_signature: bool,
+) {
+    let safety_rules = SafetyRules::new(storage, verify_vote_proposal_signature);
     let mut serializer_service = SerializerService::new(safety_rules);
     let mut network_server = NetworkServer::new(listen_addr);
 

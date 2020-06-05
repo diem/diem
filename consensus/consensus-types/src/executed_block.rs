@@ -5,6 +5,7 @@ use crate::{
     block::Block,
     common::{Payload, Round},
     quorum_cert::QuorumCert,
+    vote_proposal::{MaybeSignedVoteProposal, VoteProposal},
 };
 use executor_types::StateComputeResult;
 use libra_crypto::hash::HashValue;
@@ -76,5 +77,16 @@ impl ExecutedBlock {
             self.compute_result().version(),
             self.compute_result().epoch_state().clone(),
         )
+    }
+
+    pub fn maybe_signed_vote_proposal(&self) -> MaybeSignedVoteProposal {
+        MaybeSignedVoteProposal {
+            vote_proposal: VoteProposal::new(
+                self.compute_result().extension_proof(),
+                self.block.clone(),
+                self.compute_result().epoch_state().clone(),
+            ),
+            signature: self.compute_result().signature().clone(),
+        }
     }
 }

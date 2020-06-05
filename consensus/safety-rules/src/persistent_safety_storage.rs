@@ -19,20 +19,19 @@ use std::str::FromStr;
 /// @TODO add retrieval of private key based upon public key to persistent store
 pub struct PersistentSafetyStorage {
     internal_store: Storage,
-    execution_public_key: Option<Ed25519PublicKey>,
 }
 
 impl PersistentSafetyStorage {
     pub fn in_memory(
         consensus_private_key: Ed25519PrivateKey,
-        execution_public_key: Option<Ed25519PublicKey>,
+        execution_private_key: Ed25519PrivateKey,
     ) -> Self {
         let storage = Storage::from(InMemoryStorage::new());
         Self::initialize(
             storage,
             Author::random(),
             consensus_private_key,
-            execution_public_key,
+            execution_private_key,
             Waypoint::default(),
         )
     }
@@ -43,24 +42,29 @@ impl PersistentSafetyStorage {
         mut internal_store: Storage,
         author: Author,
         consensus_private_key: Ed25519PrivateKey,
-        execution_public_key: Option<Ed25519PublicKey>,
+        execution_private_key: Ed25519PrivateKey,
         waypoint: Waypoint,
     ) -> Self {
-        Self::initialize_(&mut internal_store, author, consensus_private_key, waypoint)
-            .expect("Unable to initialize backend storage");
-        Self {
-            internal_store,
-            execution_public_key,
-        }
+        Self::initialize_(
+            &mut internal_store,
+            author,
+            consensus_private_key,
+            execution_private_key,
+            waypoint,
+        )
+        .expect("Unable to initialize backend storage");
+        Self { internal_store }
     }
 
     fn initialize_(
         internal_store: &mut Storage,
         author: Author,
         consensus_private_key: Ed25519PrivateKey,
+        execution_private_key: Ed25519PrivateKey,
         waypoint: Waypoint,
     ) -> Result<()> {
         internal_store.import_private_key(CONSENSUS_KEY, consensus_private_key)?;
+        internal_store.import_private_key(EXECUTION_KEY, execution_private_key)?;
         internal_store.set(EPOCH, Value::U64(1))?;
         internal_store.set(LAST_VOTED_ROUND, Value::U64(0))?;
         internal_store.set(OPERATOR_ACCOUNT, Value::String(author.to_string()))?;
@@ -72,10 +76,7 @@ impl PersistentSafetyStorage {
     /// Use this to instantiate a PersistentStorage with an existing data store. This is intended
     /// for constructed environments.
     pub fn new(internal_store: Storage) -> Self {
-        Self {
-            internal_store,
-            execution_public_key: None,
-        }
+        Self { internal_store }
     }
 
     pub fn author(&self) -> Result<Author> {
@@ -94,13 +95,10 @@ impl PersistentSafetyStorage {
     }
 
     pub fn execution_public_key(&self) -> Result<Ed25519PublicKey> {
-        Ok(if let Some(key) = self.execution_public_key.as_ref() {
-            key.clone()
-        } else {
-            self.internal_store
-                .get_public_key(EXECUTION_KEY)
-                .map(|r| r.public_key)?
-        })
+        Ok(self
+            .internal_store
+            .get_public_key(EXECUTION_KEY)
+            .map(|r| r.public_key)?)
     }
 
     pub fn epoch(&self) -> Result<u64> {
@@ -162,12 +160,16 @@ impl PersistentSafetyStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use libra_crypto::Uniform;
     use libra_types::validator_signer::ValidatorSigner;
 
     #[test]
     fn test() {
         let private_key = ValidatorSigner::from_int(0).private_key().clone();
-        let mut storage = PersistentSafetyStorage::in_memory(private_key, None);
+        let mut storage = PersistentSafetyStorage::in_memory(
+            private_key,
+            Ed25519PrivateKey::generate_for_testing(),
+        );
         assert_eq!(storage.epoch().unwrap(), 1);
         assert_eq!(storage.last_voted_round().unwrap(), 0);
         assert_eq!(storage.preferred_round().unwrap(), 0);

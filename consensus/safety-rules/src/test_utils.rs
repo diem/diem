@@ -11,7 +11,12 @@ use consensus_types::{
     vote_data::VoteData,
     vote_proposal::{MaybeSignedVoteProposal, VoteProposal},
 };
-use libra_crypto::hash::{CryptoHash, TransactionAccumulatorHasher};
+use libra_crypto::{
+    ed25519::Ed25519PrivateKey,
+    hash::{CryptoHash, TransactionAccumulatorHasher},
+    traits::SigningKey,
+    Uniform,
+};
 use libra_secure_storage::{InMemoryStorage, Storage};
 use libra_types::{
     block_info::BlockInfo,
@@ -40,23 +45,26 @@ pub fn make_proposal_with_qc_and_proof(
     proof: Proof,
     qc: QuorumCert,
     validator_signer: &ValidatorSigner,
+    exec_key: Option<&Ed25519PrivateKey>,
 ) -> MaybeSignedVoteProposal {
-    MaybeSignedVoteProposal {
-        vote_proposal: VoteProposal::new(
-            proof,
-            Block::new_proposal(
-                payload,
-                round,
-                SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs(),
-                qc,
-                validator_signer,
-            ),
-            None,
+    let vote_proposal = VoteProposal::new(
+        proof,
+        Block::new_proposal(
+            payload,
+            round,
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            qc,
+            validator_signer,
         ),
-        signature: None,
+        None,
+    );
+    let signature = exec_key.map(|key| key.sign_message(&vote_proposal.hash()));
+    MaybeSignedVoteProposal {
+        vote_proposal,
+        signature,
     }
 }
 
@@ -64,8 +72,9 @@ pub fn make_proposal_with_qc(
     round: Round,
     qc: QuorumCert,
     validator_signer: &ValidatorSigner,
+    exec_key: Option<&Ed25519PrivateKey>,
 ) -> MaybeSignedVoteProposal {
-    make_proposal_with_qc_and_proof(vec![], round, empty_proof(), qc, validator_signer)
+    make_proposal_with_qc_and_proof(vec![], round, empty_proof(), qc, validator_signer, exec_key)
 }
 
 pub fn make_proposal_with_parent_and_overrides(
@@ -76,6 +85,7 @@ pub fn make_proposal_with_parent_and_overrides(
     validator_signer: &ValidatorSigner,
     epoch: Option<u64>,
     next_epoch_state: Option<EpochState>,
+    exec_key: Option<&Ed25519PrivateKey>,
 ) -> MaybeSignedVoteProposal {
     let block_epoch = match epoch {
         Some(e) => e,
@@ -154,7 +164,7 @@ pub fn make_proposal_with_parent_and_overrides(
 
     let qc = QuorumCert::new(vote_data, ledger_info_with_signatures);
 
-    make_proposal_with_qc_and_proof(payload, round, proof, qc, validator_signer)
+    make_proposal_with_qc_and_proof(payload, round, proof, qc, validator_signer, exec_key)
 }
 
 pub fn make_proposal_with_parent(
@@ -163,6 +173,7 @@ pub fn make_proposal_with_parent(
     parent: &MaybeSignedVoteProposal,
     committed: Option<&MaybeSignedVoteProposal>,
     validator_signer: &ValidatorSigner,
+    exec_key: Option<&Ed25519PrivateKey>,
 ) -> MaybeSignedVoteProposal {
     make_proposal_with_parent_and_overrides(
         payload,
@@ -172,6 +183,7 @@ pub fn make_proposal_with_parent(
         validator_signer,
         None,
         None,
+        exec_key,
     )
 }
 
@@ -195,7 +207,7 @@ pub fn test_storage(signer: &ValidatorSigner) -> PersistentSafetyStorage {
         storage,
         signer.author(),
         signer.private_key().clone(),
-        None,
+        Ed25519PrivateKey::generate_for_testing(),
         waypoint,
     )
 }

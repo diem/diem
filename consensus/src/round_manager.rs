@@ -27,16 +27,11 @@ use consensus_types::{
     timeout_certificate::TimeoutCertificate,
     vote::Vote,
     vote_msg::VoteMsg,
-    vote_proposal::{MaybeSignedVoteProposal, VoteProposal},
 };
 use debug_interface::prelude::*;
-use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
-use libra_types::{
-    epoch_state::EpochState, proof::AccumulatorExtensionProof,
-    validator_verifier::ValidatorVerifier,
-};
+use libra_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier};
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
@@ -509,7 +504,6 @@ impl RoundManager {
                 e
             );
         }
-        let block = executed_block.block();
 
         // Short circuit if already voted.
         ensure!(
@@ -518,35 +512,15 @@ impl RoundManager {
             self.round_state.current_round()
         );
 
-        let parent_block = self
-            .block_store
-            .get_block(executed_block.parent_id())
-            .expect("[RoundManager] Parent block not found after execution");
-
-        let vote_proposal = MaybeSignedVoteProposal {
-            signature: None,
-            vote_proposal: VoteProposal::new(
-                AccumulatorExtensionProof::<TransactionAccumulatorHasher>::new(
-                    parent_block.compute_result().frozen_subtree_roots().clone(),
-                    parent_block.compute_result().num_leaves(),
-                    executed_block
-                        .compute_result()
-                        .transaction_info_hashes()
-                        .clone(),
-                ),
-                block.clone(),
-                executed_block.compute_result().epoch_state().clone(),
-            ),
-        };
-
+        let maybe_signed_vote_proposal = executed_block.maybe_signed_vote_proposal();
         let vote = self
             .safety_rules
-            .construct_and_sign_vote(&vote_proposal)
+            .construct_and_sign_vote(&maybe_signed_vote_proposal)
             .context(format!(
                 "[RoundManager] SafetyRules {}Rejected{} {}",
                 Fg(Red),
                 Fg(Reset),
-                block
+                executed_block.block()
             ))?;
 
         let consensus_state = self.safety_rules.consensus_state()?;

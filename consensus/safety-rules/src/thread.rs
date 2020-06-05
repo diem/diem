@@ -25,12 +25,14 @@ pub struct ThreadService {
 }
 
 impl ThreadService {
-    pub fn new(storage: PersistentSafetyStorage) -> Self {
+    pub fn new(storage: PersistentSafetyStorage, verify_vote_proposal_signature: bool) -> Self {
         let listen_port = utils::get_available_port();
         let listen_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), listen_port);
         let server_addr = listen_addr;
 
-        let child = thread::spawn(move || remote_service::execute(storage, listen_addr));
+        let child = thread::spawn(move || {
+            remote_service::execute(storage, listen_addr, verify_vote_proposal_signature)
+        });
 
         Self {
             _child: child,
