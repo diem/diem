@@ -281,6 +281,33 @@
 <span id="281">281</span>
 <span id="282">282</span>
 <span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -294,12 +321,8 @@
 <span class="kw">use</span> <span class="ident">libra_secure_storage</span>::<span class="ident">Storage</span>;
 <span class="kw">use</span> <span class="ident">libra_temppath</span>::<span class="ident">TempPath</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">account_address</span>::{<span class="self">self</span>, <span class="ident">AccountAddress</span>},
-    <span class="ident">account_config</span>,
-    <span class="ident">account_state</span>::<span class="ident">AccountState</span>,
-    <span class="ident">on_chain_config</span>::<span class="ident">ValidatorSet</span>,
-    <span class="ident">validator_config</span>::<span class="ident">ValidatorConfig</span>,
-    <span class="ident">waypoint</span>::<span class="ident">Waypoint</span>,
+    <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">account_config</span>, <span class="ident">account_state</span>::<span class="ident">AccountState</span>,
+    <span class="ident">on_chain_config</span>::<span class="ident">ValidatorSet</span>, <span class="ident">validator_config</span>::<span class="ident">ValidatorConfig</span>, <span class="ident">waypoint</span>::<span class="ident">Waypoint</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_vm</span>::<span class="ident">LibraVM</span>;
 <span class="kw">use</span> <span class="ident">libradb</span>::<span class="ident">LibraDB</span>;
@@ -358,6 +381,16 @@
         <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">buffer</span>, <span class="string">&quot;Data&quot;</span>).<span class="ident">unwrap</span>();
         <span class="ident">write_break</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buffer</span>);
 
+        <span class="ident">write_string</span>(
+            <span class="ident">storage</span>.<span class="ident">as_ref</span>(),
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buffer</span>,
+            <span class="ident">libra_global_constants</span>::<span class="ident">OPERATOR_ACCOUNT</span>,
+        );
+        <span class="ident">write_string</span>(
+            <span class="ident">storage</span>.<span class="ident">as_ref</span>(),
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buffer</span>,
+            <span class="ident">libra_global_constants</span>::<span class="ident">OWNER_ACCOUNT</span>,
+        );
         <span class="ident">write_u64</span>(<span class="ident">storage</span>.<span class="ident">as_ref</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buffer</span>, <span class="ident">libra_global_constants</span>::<span class="ident">EPOCH</span>);
         <span class="ident">write_u64</span>(
             <span class="ident">storage</span>.<span class="ident">as_ref</span>(),
@@ -405,6 +438,14 @@
 
 <span class="kw">fn</span> <span class="ident">write_x25519_key</span>(<span class="ident">storage</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">Storage</span>, <span class="ident">buffer</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">String</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>) {
     <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">ed25519_from_storage</span>(<span class="ident">key</span>, <span class="ident">storage</span>).<span class="ident">map_or_else</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>, <span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">to_string</span>());
+    <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">buffer</span>, <span class="string">&quot;{} - {}&quot;</span>, <span class="ident">key</span>, <span class="ident">value</span>).<span class="ident">unwrap</span>();
+}
+
+<span class="kw">fn</span> <span class="ident">write_string</span>(<span class="ident">storage</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">Storage</span>, <span class="ident">buffer</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">String</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
+    <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">storage</span>
+        .<span class="ident">get</span>(<span class="ident">key</span>)
+        .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span>.<span class="ident">value</span>.<span class="ident">string</span>())
+        .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">to_string</span>());
     <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">buffer</span>, <span class="string">&quot;{} - {}&quot;</span>, <span class="ident">key</span>, <span class="ident">value</span>).<span class="ident">unwrap</span>();
 }
 
@@ -540,12 +581,25 @@
 }
 
 <span class="kw">fn</span> <span class="ident">validator_account</span>(<span class="ident">storage</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">Storage</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AccountAddress</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">storage</span>
-        .<span class="ident">get_public_key</span>(<span class="ident">libra_global_constants</span>::<span class="ident">OPERATOR_KEY</span>)
+    <span class="kw">let</span> <span class="ident">account</span> <span class="op">=</span> <span class="ident">storage</span>
+        .<span class="ident">get</span>(<span class="ident">libra_global_constants</span>::<span class="ident">OPERATOR_ACCOUNT</span>)
         .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
-            <span class="ident">Error</span>::<span class="ident">LocalStorageReadError</span>(<span class="ident">libra_global_constants</span>::<span class="ident">OPERATOR_KEY</span>, <span class="ident">e</span>.<span class="ident">to_string</span>())
+            <span class="ident">Error</span>::<span class="ident">LocalStorageReadError</span>(<span class="ident">libra_global_constants</span>::<span class="ident">OPERATOR_ACCOUNT</span>, <span class="ident">e</span>.<span class="ident">to_string</span>())
+        })<span class="question-mark">?</span>
+        .<span class="ident">value</span>
+        .<span class="ident">string</span>()
+        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
+            <span class="ident">Error</span>::<span class="ident">UnexpectedError</span>(<span class="macro">format</span><span class="macro">!</span>(
+                <span class="string">&quot;Unable to parse operator account: {}&quot;</span>,
+                <span class="ident">e</span>.<span class="ident">to_string</span>()
+            ))
         })<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(<span class="ident">account_address</span>::<span class="ident">from_public_key</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>.<span class="ident">public_key</span>))
+    <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="ident">account</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
+        <span class="ident">Error</span>::<span class="ident">UnexpectedError</span>(<span class="macro">format</span><span class="macro">!</span>(
+            <span class="string">&quot;Unable to parse operator account: {}&quot;</span>,
+            <span class="ident">e</span>.<span class="ident">to_string</span>()
+        ))
+    })
 }
 
 <span class="kw">fn</span> <span class="ident">ed25519_from_storage</span>(

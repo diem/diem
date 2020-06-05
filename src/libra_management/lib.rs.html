@@ -451,6 +451,8 @@
 <span id="451">451</span>
 <span id="452">452</span>
 <span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -853,7 +855,8 @@
             .<span class="ident">unwrap</span>()
             .<span class="ident">split</span>(<span class="string">&quot;Key not set&quot;</span>)
             .<span class="ident">count</span>();
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">output</span>, <span class="number">10</span>); <span class="comment">// 9 KeyNotSet results in 9 splits</span>
+        <span class="comment">// 11 KeyNotSet results in 12 splits</span>
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">output</span>, <span class="number">12</span>);
 
         <span class="ident">helper</span>.<span class="ident">initialize</span>(<span class="ident">namespace</span>.<span class="ident">into</span>());
 
@@ -862,7 +865,8 @@
             .<span class="ident">unwrap</span>()
             .<span class="ident">split</span>(<span class="string">&quot;Key not set&quot;</span>)
             .<span class="ident">count</span>();
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">output</span>, <span class="number">1</span>); <span class="comment">// 0 KeyNotSet results in 1 split</span>
+        <span class="comment">// 2 KeyNotSet results in 3 split (the accounts aren&#39;t initialized via initialize)</span>
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">output</span>, <span class="number">3</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
