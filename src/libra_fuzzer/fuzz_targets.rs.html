@@ -179,7 +179,7 @@
 <span class="kw">mod</span> <span class="ident">network_noise_responder</span>;
 <span class="kw">mod</span> <span class="ident">signed_transaction</span>;
 <span class="kw">mod</span> <span class="ident">sparse_merkle_proof</span>;
-<span class="kw">mod</span> <span class="ident">storage_save_blocks</span>;
+<span class="comment">//mod storage_save_blocks;</span>
 <span class="kw">mod</span> <span class="ident">storage_schema_decode</span>;
 <span class="kw">mod</span> <span class="ident">vm_value</span>;
 
@@ -195,7 +195,7 @@
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">network_noise_responder</span>::<span class="ident">NetworkNoiseResponder</span>::<span class="ident">default</span>()),
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">signed_transaction</span>::<span class="ident">SignedTransactionTarget</span>::<span class="ident">default</span>()),
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">sparse_merkle_proof</span>::<span class="ident">SparseMerkleProofTarget</span>::<span class="ident">default</span>()),
-        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">storage_save_blocks</span>::<span class="ident">StorageSaveBlocks</span>::<span class="ident">default</span>()),
+        <span class="comment">//        Box::new(storage_save_blocks::StorageSaveBlocks::default()),</span>
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">storage_schema_decode</span>::<span class="ident">StorageSchemaDecode</span>::<span class="ident">default</span>()),
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">vm_value</span>::<span class="ident">ValueTarget</span>::<span class="ident">default</span>()),
     ];
