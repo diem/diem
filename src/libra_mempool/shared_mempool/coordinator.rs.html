@@ -208,7 +208,7 @@
     <span class="ident">stream</span>::{<span class="ident">select_all</span>, <span class="ident">FuturesUnordered</span>},
     <span class="ident">StreamExt</span>,
 };
-<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="ident">NetworkId</span>, <span class="ident">NodeConfig</span>, <span class="ident">PeerNetworkId</span>};
+<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="ident">NodeConfig</span>, <span class="ident">PeerNetworkId</span>, <span class="ident">UpstreamNetworkId</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_security_logger</span>::{<span class="ident">security_log</span>, <span class="ident">SecurityEvent</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">on_chain_config</span>::<span class="ident">OnChainConfigPayload</span>, <span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>};
@@ -224,7 +224,7 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">coordinator</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>(
     <span class="kw-2">mut</span> <span class="ident">smp</span>: <span class="ident">SharedMempool</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>,
     <span class="ident">executor</span>: <span class="ident">Handle</span>,
-    <span class="ident">network_events</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">NetworkId</span>, <span class="ident">MempoolNetworkEvents</span>)<span class="op">&gt;</span>,
+    <span class="ident">network_events</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">UpstreamNetworkId</span>, <span class="ident">MempoolNetworkEvents</span>)<span class="op">&gt;</span>,
     <span class="kw-2">mut</span> <span class="ident">client_events</span>: <span class="ident">mpsc</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>(
         <span class="ident">SignedTransaction</span>,
         <span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SubmissionStatus</span><span class="op">&gt;</span><span class="op">&gt;</span>,

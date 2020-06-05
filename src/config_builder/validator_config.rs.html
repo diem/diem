@@ -276,6 +276,8 @@
 <span id="276">276</span>
 <span id="277">277</span>
 <span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -289,6 +291,7 @@
         <span class="ident">VaultConfig</span>,
     },
     <span class="ident">generator</span>,
+    <span class="ident">network_id</span>::<span class="ident">NetworkId</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::{<span class="ident">ed25519</span>::<span class="ident">Ed25519PrivateKey</span>, <span class="ident">PrivateKey</span>, <span class="ident">Uniform</span>};
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
@@ -365,6 +368,7 @@
             .<span class="ident">validator_network</span>
             .<span class="ident">as_mut</span>()
             .<span class="ident">ok_or</span>(<span class="ident">Error</span>::<span class="ident">MissingValidatorNetwork</span>)<span class="question-mark">?</span>;
+        <span class="ident">validator_network</span>.<span class="ident">network_id</span> <span class="op">=</span> <span class="ident">NetworkId</span>::<span class="ident">Validator</span>;
         <span class="ident">validator_network</span>.<span class="ident">listen_address</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>();
         <span class="ident">validator_network</span>.<span class="ident">advertised_address</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">advertised_address</span>.<span class="ident">clone</span>();
         <span class="ident">validator_network</span>.<span class="ident">seed_peers</span> <span class="op">=</span> <span class="ident">seed_peers</span>;

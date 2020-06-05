@@ -147,6 +147,11 @@
 <span id="147">147</span>
 <span id="148">148</span>
 <span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -160,6 +165,7 @@
 <span class="doccomment">//! supported over that messaging protocol. On receipt, both ends will determine the highest</span>
 <span class="doccomment">//! intersecting messaging protocol version and use that for the remainder of the session.</span>
 
+<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">network_id</span>::<span class="ident">NetworkId</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">BTreeMap</span>, <span class="ident">convert</span>::<span class="ident">TryInto</span>, <span class="ident">fmt</span>, <span class="ident">iter</span>::<span class="ident">Iterator</span>};
 
@@ -211,6 +217,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">HandshakeMsg</span> {
     <span class="kw">pub</span> <span class="ident">supported_protocols</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">MessagingProtocolVersion</span>, <span class="ident">SupportedProtocols</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">network_id</span>: <span class="ident">NetworkId</span>,
 }
 
 <span class="doccomment">/// Enum representing different versions of the Libra network protocol. These should be listed from</span>
@@ -254,8 +261,11 @@
 }
 
 <span class="kw">impl</span> <span class="ident">HandshakeMsg</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span>::<span class="ident">default</span>()
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">network_id</span>: <span class="ident">NetworkId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">supported_protocols</span>: <span class="ident">Default</span>::<span class="ident">default</span>(),
+            <span class="ident">network_id</span>,
+        }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add</span>(

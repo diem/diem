@@ -945,6 +945,8 @@
 <span id="945">945</span>
 <span id="946">946</span>
 <span id="947">947</span>
+<span id="948">948</span>
+<span id="949">949</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -964,7 +966,9 @@
     <span class="ident">stream</span>::<span class="ident">select_all</span>,
     <span class="ident">StreamExt</span>,
 };
-<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="ident">NetworkId</span>, <span class="ident">PeerNetworkId</span>, <span class="ident">RoleType</span>, <span class="ident">StateSyncConfig</span>, <span class="ident">UpstreamConfig</span>};
+<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{
+    <span class="ident">PeerNetworkId</span>, <span class="ident">RoleType</span>, <span class="ident">StateSyncConfig</span>, <span class="ident">UpstreamConfig</span>, <span class="ident">UpstreamNetworkId</span>,
+};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_mempool</span>::{<span class="ident">CommitNotification</span>, <span class="ident">CommitResponse</span>, <span class="ident">CommittedTransaction</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
@@ -1042,7 +1046,7 @@
     <span class="comment">// waypoint a node is not going to be abl</span>
     <span class="ident">waypoint</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Waypoint</span><span class="op">&gt;</span>,
     <span class="comment">// network senders - (k, v) = (network ID, network sender)</span>
-    <span class="ident">network_senders</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">NetworkId</span>, <span class="ident">StateSynchronizerSender</span><span class="op">&gt;</span>,
+    <span class="ident">network_senders</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">UpstreamNetworkId</span>, <span class="ident">StateSynchronizerSender</span><span class="op">&gt;</span>,
     <span class="comment">// peers used for synchronization</span>
     <span class="ident">peer_manager</span>: <span class="ident">PeerManager</span>,
     <span class="comment">// Optional sync request to be called when the target sync is reached</span>
@@ -1060,7 +1064,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">client_events</span>: <span class="ident">mpsc</span>::<span class="ident">UnboundedReceiver</span><span class="op">&lt;</span><span class="ident">CoordinatorMessage</span><span class="op">&gt;</span>,
         <span class="ident">state_sync_to_mempool_sender</span>: <span class="ident">mpsc</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">CommitNotification</span><span class="op">&gt;</span>,
-        <span class="ident">network_senders</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">NetworkId</span>, <span class="ident">StateSynchronizerSender</span><span class="op">&gt;</span>,
+        <span class="ident">network_senders</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">UpstreamNetworkId</span>, <span class="ident">StateSynchronizerSender</span><span class="op">&gt;</span>,
         <span class="ident">role</span>: <span class="ident">RoleType</span>,
         <span class="ident">waypoint</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Waypoint</span><span class="op">&gt;</span>,
         <span class="ident">config</span>: <span class="ident">StateSyncConfig</span>,

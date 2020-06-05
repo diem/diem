@@ -78,7 +78,6 @@
 <span id="78">78</span>
 <span id="79">79</span>
 <span id="80">80</span>
-<span id="81">81</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -100,7 +99,6 @@
         <span class="ident">config_path</span>.<span class="ident">persist</span>();
         <span class="ident">config_path</span>.<span class="ident">create_as_file</span>().<span class="ident">unwrap</span>();
         <span class="ident">config</span>.<span class="ident">save_config</span>(<span class="kw-2">&amp;</span><span class="ident">config_path</span>).<span class="ident">unwrap</span>();
-
         <span class="kw">let</span> <span class="ident">service</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">execution</span>.<span class="ident">service</span>;
         <span class="kw">let</span> <span class="ident">server_addr</span> <span class="op">=</span>
             <span class="kw">if</span> <span class="kw">let</span> <span class="ident">ExecutionCorrectnessService</span>::<span class="ident">SpawnedProcess</span>(<span class="ident">remote_service</span>) <span class="op">=</span> <span class="ident">service</span> {

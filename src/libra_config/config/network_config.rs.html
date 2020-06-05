@@ -423,6 +423,16 @@
 <span id="423">423</span>
 <span id="424">424</span>
 <span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -430,6 +440,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">config</span>::{<span class="ident">PersistableConfig</span>, <span class="ident">RoleType</span>, <span class="ident">RootPath</span>, <span class="ident">SecureBackend</span>},
     <span class="ident">keys</span>::<span class="ident">KeyPair</span>,
+    <span class="ident">network_id</span>::<span class="ident">NetworkId</span>,
     <span class="ident">utils</span>,
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="ident">ensure</span>, <span class="prelude-ty">Result</span>};
@@ -479,11 +490,19 @@
     <span class="kw">pub</span> <span class="ident">seed_peers</span>: <span class="ident">SeedPeersConfig</span>,
     <span class="kw">pub</span> <span class="ident">seed_peers_file</span>: <span class="ident">PathBuf</span>,
     <span class="kw">pub</span> <span class="ident">identity</span>: <span class="ident">Identity</span>,
+    <span class="kw">pub</span> <span class="ident">network_id</span>: <span class="ident">NetworkId</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">NetworkConfig</span> {
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">NetworkConfig</span>::<span class="ident">network_with_id</span>(<span class="ident">NetworkId</span>::<span class="ident">default</span>())
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">NetworkConfig</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">network_with_id</span>(<span class="ident">network_id</span>: <span class="ident">NetworkId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NetworkConfig</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">Self</span> {
+            <span class="ident">network_id</span>,
             <span class="ident">listen_address</span>: <span class="string">&quot;/ip4/0.0.0.0/tcp/6180&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
             <span class="ident">advertised_address</span>: <span class="string">&quot;/ip4/127.0.0.1/tcp/6180&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
             <span class="ident">discovery_interval_ms</span>: <span class="number">1000</span>,
@@ -506,6 +525,7 @@
     <span class="doccomment">/// template for another config.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">clone_for_template</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
+            <span class="ident">network_id</span>: <span class="self">self</span>.<span class="ident">network_id</span>.<span class="ident">clone</span>(),
             <span class="ident">listen_address</span>: <span class="self">self</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>(),
             <span class="ident">advertised_address</span>: <span class="self">self</span>.<span class="ident">advertised_address</span>.<span class="ident">clone</span>(),
             <span class="ident">discovery_interval_ms</span>: <span class="self">self</span>.<span class="ident">discovery_interval_ms</span>,
@@ -820,6 +840,7 @@
             <span class="ident">config</span>.<span class="ident">seed_peers_file</span>,
             <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="ident">config</span>.<span class="ident">default_path</span>(<span class="ident">SEED_PEERS_DEFAULT</span>))
         );
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">new_config</span>.<span class="ident">network_id</span>, <span class="ident">config</span>.<span class="ident">network_id</span>)
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
@@ -844,8 +865,7 @@
     <span class="kw">fn</span> <span class="ident">generate_config</span>() <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">NetworkConfig</span>, <span class="ident">TempPath</span>) {
         <span class="kw">let</span> <span class="ident">temp_dir</span> <span class="op">=</span> <span class="ident">TempPath</span>::<span class="ident">new</span>();
         <span class="ident">temp_dir</span>.<span class="ident">create_as_dir</span>().<span class="ident">expect</span>(<span class="string">&quot;error creating tempdir&quot;</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">NetworkConfig</span>::<span class="ident">default</span>();
-        <span class="ident">config</span>.<span class="ident">network_peers</span> <span class="op">=</span> <span class="ident">NetworkPeersConfig</span>::<span class="ident">default</span>();
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">NetworkConfig</span>::<span class="ident">default</span>();
         (<span class="ident">config</span>, <span class="ident">temp_dir</span>)
     }
 }

@@ -60,19 +60,19 @@
 
 <span class="doccomment">/// In general, a network ID is a PeerId that this node uses to uniquely identify a network it belongs to.</span>
 <span class="doccomment">/// This is equivalent to the `peer_id` field in the NetworkConfig of this NodeConfig</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">NetworkId</span> <span class="op">=</span> <span class="ident">PeerId</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">UpstreamNetworkId</span> <span class="op">=</span> <span class="ident">PeerId</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UpstreamConfig</span> {
     <span class="comment">// primary upstream network ids. All peers in such network are used as upstream for this node</span>
-    <span class="kw">pub</span> <span class="ident">primary_networks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkId</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">primary_networks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">UpstreamNetworkId</span><span class="op">&gt;</span>,
     <span class="comment">// All upstream peers of this node, across all the networks that are statically defined in this node&#39;s config</span>
     <span class="comment">// this is mostly meaningful in VFN networks, where there is a strict hierarchy in a network</span>
     <span class="kw">pub</span> <span class="ident">upstream_peers</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">PeerNetworkId</span><span class="op">&gt;</span>,
     <span class="comment">// optional fallback network id. Used to as a failover if preferred upstream peers are not available</span>
     <span class="comment">// TODO replace PeerId with `NetworkConfig` to contain actual info needed to build fallback_network</span>
-    <span class="kw">pub</span> <span class="ident">fallback_networks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkId</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">fallback_networks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">UpstreamNetworkId</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">UpstreamConfig</span> {
@@ -88,10 +88,10 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="doccomment">/// Identifier of a node, represented as (network_id, peer_id)</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PeerNetworkId</span>(<span class="kw">pub</span> <span class="ident">NetworkId</span>, <span class="kw">pub</span> <span class="ident">PeerId</span>);
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PeerNetworkId</span>(<span class="kw">pub</span> <span class="ident">UpstreamNetworkId</span>, <span class="kw">pub</span> <span class="ident">PeerId</span>);
 
 <span class="kw">impl</span> <span class="ident">PeerNetworkId</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">network_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NetworkId</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">network_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">UpstreamNetworkId</span> {
         <span class="self">self</span>.<span class="number">0</span>
     }
 
@@ -100,7 +100,7 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">random</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span>(<span class="ident">NetworkId</span>::<span class="ident">random</span>(), <span class="ident">PeerId</span>::<span class="ident">random</span>())
+        <span class="self">Self</span>(<span class="ident">UpstreamNetworkId</span>::<span class="ident">random</span>(), <span class="ident">PeerId</span>::<span class="ident">random</span>())
     }
 }
 </pre></div>

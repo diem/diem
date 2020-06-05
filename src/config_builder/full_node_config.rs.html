@@ -311,6 +311,10 @@
 <span id="311">311</span>
 <span id="312">312</span>
 <span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -321,7 +325,9 @@
     <span class="ident">config</span>::{
         <span class="ident">NetworkPeerInfo</span>, <span class="ident">NetworkPeersConfig</span>, <span class="ident">NodeConfig</span>, <span class="ident">PeerNetworkId</span>, <span class="ident">RoleType</span>, <span class="ident">UpstreamConfig</span>,
     },
-    <span class="ident">generator</span>, <span class="ident">utils</span>,
+    <span class="ident">generator</span>,
+    <span class="ident">network_id</span>::<span class="ident">NetworkId</span>,
+    <span class="ident">utils</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">ed25519</span>::<span class="ident">Ed25519PrivateKey</span>;
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
@@ -489,6 +495,7 @@
                 .<span class="ident">full_node_networks</span>
                 .<span class="ident">get_mut</span>(<span class="number">0</span>)
                 .<span class="ident">ok_or</span>(<span class="ident">Error</span>::<span class="ident">MissingFullNodeNetwork</span>)<span class="question-mark">?</span>;
+            <span class="ident">network</span>.<span class="ident">network_id</span> <span class="op">=</span> <span class="ident">NetworkId</span>::<span class="ident">vfn_network</span>();
             <span class="ident">network</span>.<span class="ident">listen_address</span> <span class="op">=</span> <span class="ident">utils</span>::<span class="ident">get_available_port_in_multiaddr</span>(<span class="bool-val">true</span>);
             <span class="ident">network</span>.<span class="ident">advertised_address</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>();
             <span class="ident">network</span>.<span class="ident">enable_remote_authentication</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">enable_remote_authentication</span>;
@@ -522,6 +529,7 @@
                 .<span class="ident">full_node_networks</span>
                 .<span class="ident">last_mut</span>()
                 .<span class="ident">ok_or</span>(<span class="ident">Error</span>::<span class="ident">MissingFullNodeNetwork</span>)<span class="question-mark">?</span>;
+            <span class="ident">network</span>.<span class="ident">network_id</span> <span class="op">=</span> <span class="ident">NetworkId</span>::<span class="ident">Public</span>;
             <span class="ident">network</span>.<span class="ident">network_peers</span> <span class="op">=</span> <span class="ident">network_peers</span>.<span class="ident">clone</span>();
             <span class="ident">network</span>.<span class="ident">seed_peers</span> <span class="op">=</span> <span class="ident">seed_peers</span>.<span class="ident">clone</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">upstream</span> <span class="op">=</span> <span class="ident">UpstreamConfig</span>::<span class="ident">default</span>();
