@@ -87,7 +87,7 @@ impl TryInto<config::SecureBackend> for SecureBackend {
                 let repository = self
                     .parameters
                     .remove("repository")
-                    .ok_or_else(|| Error::BackendParsingError("missing reository".into()))?;
+                    .ok_or_else(|| Error::BackendParsingError("missing repository".into()))?;
                 let token = self
                     .parameters
                     .remove("token")
