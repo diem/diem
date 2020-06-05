@@ -20,6 +20,7 @@ mod mock_storage;
 #[cfg(any(test, feature = "fuzzing"))]
 mod mock_txn_manager;
 
+use crate::util::mock_time_service::SimulatedTimeService;
 use consensus_types::{block::block_test_utils::gen_test_certificate, common::Payload};
 use libra_types::block_info::BlockInfo;
 pub use mock_state_computer::{EmptyStateComputer, MockStateComputer};
@@ -77,6 +78,7 @@ pub fn build_empty_tree() -> Arc<BlockStore> {
         initial_data,
         Arc::new(EmptyStateComputer),
         10, // max pruned blocks in mem
+        Arc::new(SimulatedTimeService::new()),
     ))
 }
 

@@ -5,9 +5,11 @@ use futures::{Future, FutureExt, SinkExt};
 use libra_logger::prelude::*;
 use std::{
     pin::Pin,
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    thread,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use thiserror::Error;
+
+use crate::counters;
 use tokio::{runtime::Handle, time::delay_for};
 
 /// Time service is an abstraction for operations that depend on time
@@ -31,7 +33,22 @@ pub trait TimeService: Send + Sync {
     /// time_service::sleep(Y).await;
     /// Z = time_service::get_current_timestamp();
     /// assert(Z >= X + Y)
-    fn sleep(&self, t: Duration) -> Pin<Box<dyn Future<Output = ()> + Send>>;
+    fn sleep(&self, t: Duration);
+
+    /// Wait until the Duration t since UNIX_EPOCH pass at least 1ms.
+    fn wait_until(&self, t: Duration) {
+        while let Some(mut wait_duration) = t.checked_sub(self.get_current_timestamp()) {
+            wait_duration += Duration::from_millis(1);
+            if wait_duration > Duration::from_secs(10) {
+                error!(
+                    "[TimeService] long wait time {} seconds required",
+                    wait_duration.as_secs()
+                );
+            }
+            counters::WAIT_DURATION_MS.observe_duration(wait_duration);
+            self.sleep(wait_duration);
+        }
+    }
 }
 
 /// This trait represents abstract task that can be submitted to TimeService::run_after
@@ -105,8 +122,8 @@ impl TimeService for ClockTimeService {
         duration_since_epoch()
     }
 
-    fn sleep(&self, t: Duration) -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        async move { delay_for(t).await }.boxed()
+    fn sleep(&self, t: Duration) {
+        thread::sleep(t)
     }
 }
 
@@ -115,85 +132,4 @@ pub fn duration_since_epoch() -> Duration {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("Timestamp generated is before the UNIX_EPOCH!")
-}
-
-/// Success states for wait_if_possible
-#[derive(Debug, PartialEq, Eq)]
-pub enum WaitingSuccess {
-    /// No waiting to complete and includes the current duration since epoch and the difference
-    /// between the current duration since epoch and min_duration_since_epoch
-    NoWaitRequired {
-        current_duration_since_epoch: Duration,
-        early_duration: Duration,
-    },
-    /// Waiting was required and includes the current duration since epoch and the duration
-    /// slept to finish waiting
-    WaitWasRequired {
-        current_duration_since_epoch: Duration,
-        wait_duration: Duration,
-    },
-}
-
-/// Error states for wait_if_possible
-#[derive(Debug, PartialEq, Eq, Error)]
-#[error("{:?}", self)]
-pub enum WaitingError {
-    /// The waiting period exceeds the maximum allowed duration, returning immediately
-    MaxWaitExceeded,
-    /// Waiting to ensure the current time exceeds min_duration_since_epoch failed
-    WaitFailed {
-        current_duration_since_epoch: Duration,
-        wait_duration: Duration,
-    },
-}
-
-/// Attempt to wait until the current time exceeds the min_duration_since_epoch if possible
-///
-/// If the waiting time exceeds max_instant then fail immediately.
-/// There are 4 potential outcomes, 2 successful and 2 errors, each represented by
-/// WaitingSuccess and WaitingError.
-pub async fn wait_if_possible(
-    time_service: &dyn TimeService,
-    min_duration_since_epoch: Duration,
-    max_instant: Instant,
-) -> Result<WaitingSuccess, WaitingError> {
-    // Fail early if waiting for min_duration_since_epoch would exceed max_instant
-    // Ideally, comparing min_duration_since_epoch and max_instant would be straightforward, but
-    // min_duration_since_epoch is relative to UNIX_EPOCH and Instant is not comparable.  Therefore,
-    // we use relative differences to do the comparison.
-    let current_instant = Instant::now();
-    let current_duration_since_epoch = time_service.get_current_timestamp();
-    if current_instant <= max_instant {
-        let duration_to_max_time = max_instant.duration_since(current_instant);
-        if current_duration_since_epoch <= min_duration_since_epoch {
-            let duration_to_min_time = min_duration_since_epoch - current_duration_since_epoch;
-            if duration_to_max_time < duration_to_min_time {
-                return Err(WaitingError::MaxWaitExceeded);
-            }
-        }
-    }
-
-    if current_duration_since_epoch <= min_duration_since_epoch {
-        // Delay has millisecond granularity, add 1 millisecond to ensure a higher timestamp
-        let sleep_duration =
-            min_duration_since_epoch - current_duration_since_epoch + Duration::from_millis(1);
-        time_service.sleep(sleep_duration).await;
-        let waited_duration_since_epoch = time_service.get_current_timestamp();
-        if waited_duration_since_epoch > min_duration_since_epoch {
-            Ok(WaitingSuccess::WaitWasRequired {
-                current_duration_since_epoch: waited_duration_since_epoch,
-                wait_duration: sleep_duration,
-            })
-        } else {
-            Err(WaitingError::WaitFailed {
-                current_duration_since_epoch: waited_duration_since_epoch,
-                wait_duration: sleep_duration,
-            })
-        }
-    } else {
-        Ok(WaitingSuccess::NoWaitRequired {
-            current_duration_since_epoch,
-            early_duration: current_duration_since_epoch - min_duration_since_epoch,
-        })
-    }
 }
