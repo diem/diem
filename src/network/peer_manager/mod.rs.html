@@ -905,8 +905,6 @@
 <span id="905">905</span>
 <span id="906">906</span>
 <span id="907">907</span>
-<span id="908">908</span>
-<span id="909">909</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1081,12 +1079,10 @@
             <span class="ident">res_tx</span>,
             <span class="ident">timeout</span>,
         };
-        <span class="self">self</span>.<span class="ident">inner</span>
-            .<span class="ident">push</span>(
-                (<span class="ident">peer_id</span>, <span class="ident">protocol</span>),
-                <span class="ident">PeerManagerRequest</span>::<span class="ident">SendRpc</span>(<span class="ident">peer_id</span>, <span class="ident">request</span>),
-            )
-            .<span class="ident">unwrap</span>();
+        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">push</span>(
+            (<span class="ident">peer_id</span>, <span class="ident">protocol</span>),
+            <span class="ident">PeerManagerRequest</span>::<span class="ident">SendRpc</span>(<span class="ident">peer_id</span>, <span class="ident">request</span>),
+        )<span class="question-mark">?</span>;
         <span class="ident">res_rx</span>.<span class="kw">await</span><span class="question-mark">?</span>
     }
 }

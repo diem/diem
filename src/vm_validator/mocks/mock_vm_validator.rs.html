@@ -79,8 +79,6 @@
 <span id="79">79</span>
 <span id="80">80</span>
 <span id="81">81</span>
-<span id="82">82</span>
-<span id="83">83</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -125,20 +123,18 @@
         };
 
         <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="ident">txn</span>.<span class="ident">sender</span>();
-        <span class="kw">let</span> <span class="ident">account_dne_test_add</span> <span class="op">=</span>
-            <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span>[<span class="number">0</span> <span class="kw">as</span> <span class="ident">u8</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>]).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">invalid_sig_test_add</span> <span class="op">=</span>
-            <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span>[<span class="number">1</span> <span class="kw">as</span> <span class="ident">u8</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>]).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">account_dne_test_add</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span>[<span class="number">0</span> <span class="kw">as</span> <span class="ident">u8</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>])<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">invalid_sig_test_add</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span>[<span class="number">1</span> <span class="kw">as</span> <span class="ident">u8</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>])<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">insufficient_balance_test_add</span> <span class="op">=</span>
-            <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span>[<span class="number">2</span> <span class="kw">as</span> <span class="ident">u8</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>]).<span class="ident">unwrap</span>();
+            <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span>[<span class="number">2</span> <span class="kw">as</span> <span class="ident">u8</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>])<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">seq_number_too_new_test_add</span> <span class="op">=</span>
-            <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span>[<span class="number">3</span> <span class="kw">as</span> <span class="ident">u8</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>]).<span class="ident">unwrap</span>();
+            <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span>[<span class="number">3</span> <span class="kw">as</span> <span class="ident">u8</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>])<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">seq_number_too_old_test_add</span> <span class="op">=</span>
-            <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span>[<span class="number">4</span> <span class="kw">as</span> <span class="ident">u8</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>]).<span class="ident">unwrap</span>();
+            <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span>[<span class="number">4</span> <span class="kw">as</span> <span class="ident">u8</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>])<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">txn_expiration_time_test_add</span> <span class="op">=</span>
-            <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span>[<span class="number">5</span> <span class="kw">as</span> <span class="ident">u8</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>]).<span class="ident">unwrap</span>();
+            <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span>[<span class="number">5</span> <span class="kw">as</span> <span class="ident">u8</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>])<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">invalid_auth_key_test_add</span> <span class="op">=</span>
-            <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span>[<span class="number">6</span> <span class="kw">as</span> <span class="ident">u8</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>]).<span class="ident">unwrap</span>();
+            <span class="ident">AccountAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span>[<span class="number">6</span> <span class="kw">as</span> <span class="ident">u8</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>])<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">sender</span> <span class="op">=</span><span class="op">=</span> <span class="ident">account_dne_test_add</span> {
             <span class="prelude-val">Some</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">SENDING_ACCOUNT_DOES_NOT_EXIST</span>))
         } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">sender</span> <span class="op">=</span><span class="op">=</span> <span class="ident">invalid_sig_test_add</span> {
