@@ -23,6 +23,7 @@ use network::validator_network::network_builder::{AuthenticationMode, NetworkBui
 use network_simple_onchain_discovery::{
     gen_simple_discovery_reconfig_subscription, ConfigurationChangeListener,
 };
+use onchain_discovery::builder::OnchainDiscoveryBuilder;
 use state_synchronizer::StateSynchronizer;
 use std::{boxed::Box, collections::HashMap, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
 use storage_interface::{DbReader, DbReaderWriter};
@@ -131,14 +132,21 @@ pub fn setup_network(
                 .add_gossip_discovery();
         }
         DiscoveryMethod::Onchain => {
-            onchain_discovery::setup_onchain_discovery(
-                &mut network_builder,
+            let (network_tx, discovery_events) =
+                onchain_discovery::network_interface::add_to_network(&mut network_builder);
+            let onchain_discovery_builder = OnchainDiscoveryBuilder::build(
+                network_builder
+                    .conn_mgr_reqs_tx()
+                    .expect("ConnectivityManager must be installed"),
+                network_tx,
+                discovery_events,
                 peer_id,
                 role,
                 libra_db,
                 waypoint,
                 runtime.handle(),
             );
+            onchain_discovery_builder.start(runtime.handle());
         }
         DiscoveryMethod::None => {}
     }
