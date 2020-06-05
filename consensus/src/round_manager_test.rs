@@ -104,6 +104,7 @@ impl NodeSetup {
                 Storage::from(libra_secure_storage::InMemoryStorage::new()),
                 signer.author(),
                 signer.private_key().clone(),
+                None,
                 waypoint,
             );
             let safety_rules_manager = SafetyRulesManager::new_local(safety_storage);

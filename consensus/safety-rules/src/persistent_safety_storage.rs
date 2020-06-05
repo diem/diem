@@ -5,7 +5,8 @@ use anyhow::Result;
 use consensus_types::common::{Author, Round};
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use libra_global_constants::{
-    CONSENSUS_KEY, EPOCH, LAST_VOTED_ROUND, OPERATOR_ACCOUNT, PREFERRED_ROUND, WAYPOINT,
+    CONSENSUS_KEY, EPOCH, EXECUTION_KEY, LAST_VOTED_ROUND, OPERATOR_ACCOUNT, PREFERRED_ROUND,
+    WAYPOINT,
 };
 use libra_secure_storage::{CryptoStorage, InMemoryStorage, KVStorage, Storage, Value};
 use libra_types::waypoint::Waypoint;
@@ -18,12 +19,22 @@ use std::str::FromStr;
 /// @TODO add retrieval of private key based upon public key to persistent store
 pub struct PersistentSafetyStorage {
     internal_store: Storage,
+    execution_public_key: Option<Ed25519PublicKey>,
 }
 
 impl PersistentSafetyStorage {
-    pub fn in_memory(private_key: Ed25519PrivateKey) -> Self {
+    pub fn in_memory(
+        consensus_private_key: Ed25519PrivateKey,
+        execution_public_key: Option<Ed25519PublicKey>,
+    ) -> Self {
         let storage = Storage::from(InMemoryStorage::new());
-        Self::initialize(storage, Author::random(), private_key, Waypoint::default())
+        Self::initialize(
+            storage,
+            Author::random(),
+            consensus_private_key,
+            execution_public_key,
+            Waypoint::default(),
+        )
     }
 
     /// Use this to instantiate a PersistentStorage for a new data store, one that has no
@@ -31,21 +42,25 @@ impl PersistentSafetyStorage {
     pub fn initialize(
         mut internal_store: Storage,
         author: Author,
-        private_key: Ed25519PrivateKey,
+        consensus_private_key: Ed25519PrivateKey,
+        execution_public_key: Option<Ed25519PublicKey>,
         waypoint: Waypoint,
     ) -> Self {
-        Self::initialize_(&mut internal_store, author, private_key, waypoint)
+        Self::initialize_(&mut internal_store, author, consensus_private_key, waypoint)
             .expect("Unable to initialize backend storage");
-        Self { internal_store }
+        Self {
+            internal_store,
+            execution_public_key,
+        }
     }
 
     fn initialize_(
         internal_store: &mut Storage,
         author: Author,
-        private_key: Ed25519PrivateKey,
+        consensus_private_key: Ed25519PrivateKey,
         waypoint: Waypoint,
     ) -> Result<()> {
-        internal_store.import_private_key(CONSENSUS_KEY, private_key)?;
+        internal_store.import_private_key(CONSENSUS_KEY, consensus_private_key)?;
         internal_store.set(EPOCH, Value::U64(1))?;
         internal_store.set(LAST_VOTED_ROUND, Value::U64(0))?;
         internal_store.set(OPERATOR_ACCOUNT, Value::String(author.to_string()))?;
@@ -57,7 +72,10 @@ impl PersistentSafetyStorage {
     /// Use this to instantiate a PersistentStorage with an existing data store. This is intended
     /// for constructed environments.
     pub fn new(internal_store: Storage) -> Self {
-        Self { internal_store }
+        Self {
+            internal_store,
+            execution_public_key: None,
+        }
     }
 
     pub fn author(&self) -> Result<Author> {
@@ -73,6 +91,16 @@ impl PersistentSafetyStorage {
         self.internal_store
             .export_private_key_for_version(CONSENSUS_KEY, version)
             .map_err(|e| e.into())
+    }
+
+    pub fn execution_public_key(&self) -> Result<Ed25519PublicKey> {
+        Ok(if let Some(key) = self.execution_public_key.as_ref() {
+            key.clone()
+        } else {
+            self.internal_store
+                .get_public_key(EXECUTION_KEY)
+                .map(|r| r.public_key)?
+        })
     }
 
     pub fn epoch(&self) -> Result<u64> {
@@ -139,7 +167,7 @@ mod tests {
     #[test]
     fn test() {
         let private_key = ValidatorSigner::from_int(0).private_key().clone();
-        let mut storage = PersistentSafetyStorage::in_memory(private_key);
+        let mut storage = PersistentSafetyStorage::in_memory(private_key, None);
         assert_eq!(storage.epoch().unwrap(), 1);
         assert_eq!(storage.last_voted_round().unwrap(), 0);
         assert_eq!(storage.preferred_round().unwrap(), 0);

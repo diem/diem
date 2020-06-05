@@ -26,6 +26,7 @@ fn safety_rules() -> (Box<dyn TSafetyRules>, ValidatorSigner) {
         storage,
         signer.author(),
         signer.private_key().clone(),
+        None,
         waypoint,
     );
     let safety_rules_manager = SafetyRulesManager::new_local(storage);
