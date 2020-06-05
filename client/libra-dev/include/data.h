@@ -114,6 +114,24 @@ struct LibraEvent {
 enum LibraStatus libra_LibraAccountResource_from(const uint8_t *buf, size_t len, struct LibraAccountResource *out);
 
 /*!
+ *  Get serialized signed transaction from a list of transaction parameters
+ *
+ * To get the serialized transaction in a memory safe manner, the client needs to pass in a pointer to a pointer to the allocated memory in rust
+ * and call free on the memory address with `libra_free_bytes_buffer`.
+ * @param[in] sender_private_key is sender's private key
+ * @param[in] sequence is the sequence number of this transaction corresponding to sender's account.
+ * @param[in] max_gas_amount is the maximal total gas specified by wallet to spend for this transaction.
+ * @param[in] gas_unit_price is the maximal price can be paid per gas.
+ * @param[in] gas_identifier is the identifier of the coin to be used as gas.
+ * @param[in] expiration_time_secs is the time this TX remain valid, the format is unix timestamp.
+ * @param[in] script_bytes is the script bytes for given transaction.
+ * @param[in] script_len is the length of script_bytes array.
+ * @param[out] ptr_buf is the pointer that will be filled with the memory address of the transaction allocated in rust. User takes ownership of pointer returned by *buf, which needs to be freed using libra_free_bytes_buffer
+ * @param[out] ptr_len is the length of the signed transaction memory buffer.
+*/
+enum LibraStatus libra_SignedTransactionBytes_from(const uint8_t sender_private_key[LIBRA_PRIVKEY_SIZE], uint64_t sequence, uint64_t max_gas_amount, uint64_t gas_unit_price, const char* gas_identifier, uint64_t expiration_time_secs, const uint8_t *script_bytes, size_t script_len, uint8_t **ptr_buf, size_t *ptr_len);
+
+/*!
  *  Get script bytes for a P2P transaction
  *
  * To get the serialized script in a memory safe manner, the client needs to pass in a pointer to a pointer to the allocated memory in rust
