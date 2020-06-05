@@ -9,8 +9,8 @@ use crate::{
         byte_string, hex_string,
     },
     parser::ast::{
-        self as P, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, ModuleIdent_,
-        ModuleName, StructName, Var,
+        self as P, ConstantName, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent,
+        ModuleIdent_, ModuleName, StructName, Var,
     },
     shared::{unique_map::UniqueMap, *},
 };
@@ -24,26 +24,9 @@ use std::{
 // Context
 //**************************************************************************************************
 
-struct ModuleMembers {
-    loc: Loc,
-    members: BTreeMap<Name, ModuleMemberKind>,
-}
-
-impl ModuleMembers {
-    fn new(loc: Loc) -> Self {
-        ModuleMembers {
-            loc,
-            members: BTreeMap::new(),
-        }
-    }
-
-    fn member_kind(&self, name: &Name) -> Option<ModuleMemberKind> {
-        self.members.get(name).cloned()
-    }
-}
-
+type ModuleMembers = BTreeMap<Name, ModuleMemberKind>;
 struct Context {
-    module_members: BTreeMap<ModuleIdent, ModuleMembers>,
+    module_members: UniqueMap<ModuleIdent, ModuleMembers>,
     errors: Errors,
     address: Option<Address>,
     aliases: AliasMap,
@@ -52,7 +35,7 @@ struct Context {
     exp_specs: BTreeMap<SpecId, E::SpecBlock>,
 }
 impl Context {
-    fn new(module_members: BTreeMap<ModuleIdent, ModuleMembers>) -> Self {
+    fn new(module_members: UniqueMap<ModuleIdent, ModuleMembers>) -> Self {
         Self {
             module_members,
             errors: vec![],
@@ -133,7 +116,7 @@ impl Context {
 
 pub fn program(prog: P::Program, sender: Option<Address>) -> (E::Program, Errors) {
     let module_members = {
-        let mut members = BTreeMap::new();
+        let mut members = UniqueMap::new();
         all_module_members(&mut members, sender, &prog.lib_definitions);
         all_module_members(&mut members, sender, &prog.source_definitions);
         members
@@ -263,6 +246,7 @@ fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E:
     );
 
     let mut functions = UniqueMap::new();
+    let mut constants = UniqueMap::new();
     let mut structs = UniqueMap::new();
     let mut specs = vec![];
     for member in members {
@@ -274,6 +258,7 @@ fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E:
                 }
                 function(context, &mut functions, f)
             }
+            P::ModuleMember::Constant(c) => constant(context, &mut constants, c),
             P::ModuleMember::Struct(mut s) => {
                 if !context.is_source_module {
                     s.fields = P::StructFields::Native(s.loc)
@@ -289,6 +274,7 @@ fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E:
         loc,
         is_source_module: context.is_source_module,
         structs,
+        constants,
         functions,
         specs,
     };
@@ -306,6 +292,7 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
     let P::Script {
         loc,
         uses,
+        constants: pconstants,
         function: pfunction,
         specs: pspecs,
     } = pscript;
@@ -319,6 +306,11 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
         old_aliases.is_empty(),
         "ICE there should be no aliases entering a script"
     );
+
+    let mut constants = UniqueMap::new();
+    for c in pconstants {
+        constant(context, &mut constants, c);
+    }
 
     let (function_name, function) = function_(context, pfunction);
     if let FunctionVisibility::Public(loc) = &function.visibility {
@@ -337,6 +329,7 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
 
     E::Script {
         loc,
+        constants,
         function_name,
         function,
         specs,
@@ -348,7 +341,7 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
 //**************************************************************************************************
 
 fn all_module_members(
-    members: &mut BTreeMap<ModuleIdent, ModuleMembers>,
+    members: &mut UniqueMap<ModuleIdent, ModuleMembers>,
     sender: Option<Address>,
     defs: &[P::Definition],
 ) {
@@ -366,7 +359,7 @@ fn all_module_members(
 }
 
 fn module_members(
-    members: &mut BTreeMap<ModuleIdent, ModuleMembers>,
+    members: &mut UniqueMap<ModuleIdent, ModuleMembers>,
     address: Address,
     m: &P::ModuleDefinition,
 ) {
@@ -375,34 +368,27 @@ fn module_members(
         name: m.name.clone(),
     };
     let mident = ModuleIdent(sp(m.name.loc(), mident_));
-    let cur_members = members
-        .entry(mident)
-        .or_insert_with(|| ModuleMembers::new(m.name.loc()));
+    let mut cur_members = members.remove(&mident).unwrap_or_else(ModuleMembers::new);
     for mem in &m.members {
         use P::{SpecBlockMember_ as SBM, SpecBlockTarget_ as SBT, SpecBlock_ as SB};
         match mem {
             P::ModuleMember::Function(f) => {
-                cur_members
-                    .members
-                    .insert(f.name.0.clone(), ModuleMemberKind::Function);
+                cur_members.insert(f.name.0.clone(), ModuleMemberKind::Function);
+            }
+            P::ModuleMember::Constant(c) => {
+                cur_members.insert(c.name.0.clone(), ModuleMemberKind::Constant);
             }
             P::ModuleMember::Struct(s) => {
-                cur_members
-                    .members
-                    .insert(s.name.0.clone(), ModuleMemberKind::Struct);
+                cur_members.insert(s.name.0.clone(), ModuleMemberKind::Struct);
             }
             P::ModuleMember::Spec(sp!(_, SB { target, members, .. })) => match &target.value {
                 SBT::Schema(n, _) => {
-                    cur_members
-                        .members
-                        .insert(n.clone(), ModuleMemberKind::Schema);
+                    cur_members.insert(n.clone(), ModuleMemberKind::Schema);
                 }
                 SBT::Module => {
                     for sp!(_, smember_) in members {
                         if let SBM::Function { name, .. } = smember_ {
-                            cur_members
-                                .members
-                                .insert(name.0.clone(), ModuleMemberKind::Function);
+                            cur_members.insert(name.0.clone(), ModuleMemberKind::Function);
                         }
                     }
                 }
@@ -411,6 +397,7 @@ fn module_members(
             P::ModuleMember::Use(_) => (),
         };
     }
+    members.add(mident, cur_members).unwrap();
 }
 
 fn module_self_aliases(acc: &mut AliasMap, current_module: &ModuleIdent) {
@@ -426,6 +413,18 @@ fn aliases_from_member(
     member: P::ModuleMember,
 ) -> Option<P::ModuleMember> {
     use P::{SpecBlockMember_ as SBM, SpecBlockTarget_ as SBT, SpecBlock_ as SB};
+    macro_rules! check_name_and_add_implicit_alias {
+        ($kind:expr, $name:expr) => {{
+            if let Some(n) = check_valid_module_member_name(context, $kind, $name) {
+                if let Err(loc) =
+                    acc.add_implicit_member_alias(n.clone(), current_module.clone(), n.clone())
+                {
+                    duplicate_module_member(context, loc, n)
+                }
+            }
+        }};
+    }
+
     match member {
         P::ModuleMember::Use(u) => {
             use_(context, acc, u);
@@ -433,43 +432,30 @@ fn aliases_from_member(
         }
         P::ModuleMember::Function(f) => {
             let n = f.name.0.clone();
-            if let Err(loc) =
-                acc.add_implicit_member_alias(n.clone(), current_module.clone(), n.clone())
-            {
-                duplicate_module_member(context, loc, n)
-            }
+            check_name_and_add_implicit_alias!(ModuleMemberKind::Function, n);
             Some(P::ModuleMember::Function(f))
+        }
+        P::ModuleMember::Constant(c) => {
+            let n = c.name.0.clone();
+            check_name_and_add_implicit_alias!(ModuleMemberKind::Constant, n);
+            Some(P::ModuleMember::Constant(c))
         }
         P::ModuleMember::Struct(s) => {
             let n = s.name.0.clone();
-            if let Err(loc) =
-                acc.add_implicit_member_alias(n.clone(), current_module.clone(), n.clone())
-            {
-                duplicate_module_member(context, loc, n)
-            }
+            check_name_and_add_implicit_alias!(ModuleMemberKind::Struct, n);
             Some(P::ModuleMember::Struct(s))
         }
         P::ModuleMember::Spec(s) => {
             let sp!(_, SB { target, members, .. }) = &s;
             match &target.value {
                 SBT::Schema(n, _) => {
-                    if let Err(loc) =
-                        acc.add_implicit_member_alias(n.clone(), current_module.clone(), n.clone())
-                    {
-                        duplicate_module_member(context, loc, n.clone())
-                    }
+                    check_name_and_add_implicit_alias!(ModuleMemberKind::Schema, n.clone());
                 }
                 SBT::Module => {
                     for sp!(_, smember_) in members {
                         if let SBM::Function { name, .. } = smember_ {
                             let n = name.0.clone();
-                            if let Err(loc) = acc.add_implicit_member_alias(
-                                n.clone(),
-                                current_module.clone(),
-                                n.clone(),
-                            ) {
-                                duplicate_module_member(context, loc, n)
-                            }
+                            check_name_and_add_implicit_alias!(ModuleMemberKind::Function, n);
                         }
                     }
                 }
@@ -508,21 +494,31 @@ fn use_(context: &mut Context, acc: &mut AliasMap, u: P::Use) {
             add_module_alias!(mident, alias_opt.map(|m| m.0))
         }
         P::Use::Members(mident, sub_uses) => {
-            if !context.module_members.contains_key(&mident) {
-                context.error(unbound_module(&mident));
-                return;
+            let members = match context.module_members.get(&mident) {
+                Some(members) => members,
+                None => {
+                    context.error(unbound_module(&mident));
+                    return;
+                }
             };
+            let mloc = context.module_members.get_loc(&mident).unwrap().0;
+            let sub_uses_kinds = sub_uses
+                .into_iter()
+                .map(|(member, alia_opt)| {
+                    let kind = members.get(&member).cloned();
+                    (member, alia_opt, kind)
+                })
+                .collect::<Vec<_>>();
 
-            for (member, alias_opt) in sub_uses {
+            for (member, alias_opt, member_kind_opt) in sub_uses_kinds {
                 if member.value == ModuleName::SELF_NAME {
                     add_module_alias!(mident.clone(), alias_opt);
                     continue;
                 }
 
                 // check is member
-                let members = &context.module_members[&mident];
-                let mloc = members.loc;
-                let member_kind = match members.member_kind(&member) {
+
+                let member_kind = match member_kind_opt {
                     None => {
                         let msg = format!(
                             "Invalid 'use'. Unbound member '{}' in module '{}'",
@@ -619,7 +615,6 @@ fn struct_def_(
         type_parameters,
         fields,
     };
-    check_valid_module_member_name(context, ModuleMemberKind::Struct, &name.0);
     context.set_to_outer_scope(old_aliases);
     (name, sdef)
 }
@@ -653,6 +648,40 @@ fn struct_fields(
 }
 
 //**************************************************************************************************
+// Constants
+//**************************************************************************************************
+
+fn constant(
+    context: &mut Context,
+    constants: &mut UniqueMap<ConstantName, E::Constant>,
+    pconstant: P::Constant,
+) {
+    let (name, constant) = constant_(context, pconstant);
+    if let Err(_old_loc) = constants.add(name, constant) {
+        assert!(context.has_errors())
+    }
+}
+
+fn constant_(context: &mut Context, pconstant: P::Constant) -> (ConstantName, E::Constant) {
+    assert!(context.exp_specs.is_empty());
+    let P::Constant {
+        loc,
+        name,
+        signature: psignature,
+        value: pvalue,
+    } = pconstant;
+    let signature = type_(context, psignature);
+    let value = exp_(context, pvalue);
+    let _specs = context.extract_exp_specs();
+    let constant = E::Constant {
+        loc,
+        signature,
+        value,
+    };
+    (name, constant)
+}
+
+//**************************************************************************************************
 // Functions
 //**************************************************************************************************
 
@@ -677,7 +706,6 @@ fn function_(context: &mut Context, pfunction: P::Function) -> (FunctionName, E:
         acquires,
     } = pfunction;
     assert!(context.exp_specs.is_empty());
-    check_valid_module_member_name(context, ModuleMemberKind::Function, &name.0);
     let old_aliases = context.new_alias_scope(AliasMap::new());
     let signature = function_signature(context, psignature);
     let acquires = acquires
@@ -748,10 +776,6 @@ fn spec(context: &mut Context, sp!(loc, pspec): P::SpecBlock) -> E::SpecBlock {
         uses,
         members: pmembers,
     } = pspec;
-
-    if let sp!(_, P::SpecBlockTarget_::Schema(n, _)) = &target {
-        check_valid_module_member_name(context, ModuleMemberKind::Schema, n)
-    }
 
     context.in_spec_context = true;
     let mut new_scope = AliasMap::new();
@@ -1050,9 +1074,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::InferredNum(u) => EE::InferredNum(u),
         PE::Move(v) => EE::Move(v),
         PE::Copy(v) => EE::Copy(v),
-        PE::Name(sp!(_, P::ModuleAccess_::ModuleAccess(..)), _)
-        | PE::Name(sp!(_, P::ModuleAccess_::QualifiedModuleAccess(..)), _)
-        | PE::Name(_, Some(_))
+        PE::Name(_, Some(_))
             if !context.require_spec_context(
                 loc,
                 "Expected name to be followed by a brace-enclosed list of field expressions or a \
@@ -1568,6 +1590,7 @@ fn check_valid_local_name(context: &mut Context, v: &Var) {
 
 #[derive(Copy, Clone, Debug)]
 enum ModuleMemberKind {
+    Constant,
     Function,
     Struct,
     Schema,
@@ -1577,15 +1600,22 @@ impl ModuleMemberKind {
     pub fn case(&self) -> &'static str {
         match self {
             ModuleMemberKind::Function => "function",
-            // ModuleMember::Constant => "constant",
+            ModuleMemberKind::Constant => "constant",
             ModuleMemberKind::Struct => "struct",
             ModuleMemberKind::Schema => "schema",
         }
     }
 }
 
-fn check_valid_module_member_name(context: &mut Context, member: ModuleMemberKind, name: &Name) {
-    let _ = check_valid_module_member_name_impl(context, member, &name, member.case());
+fn check_valid_module_member_name(
+    context: &mut Context,
+    member: ModuleMemberKind,
+    name: Name,
+) -> Option<Name> {
+    match check_valid_module_member_name_impl(context, member, &name, member.case()) {
+        Err(()) => None,
+        Ok(()) => Some(name),
+    }
 }
 
 fn check_valid_module_member_alias(
@@ -1622,8 +1652,7 @@ fn check_valid_module_member_name_impl(
     let ucase = &upper_first_letter(case);
     match member {
         M::Function => (),
-        // M::Constant |
-        M::Struct | M::Schema => {
+        M::Constant | M::Struct | M::Schema => {
             if !is_valid_struct_constant_or_schema_name(&n.value) {
                 let msg = format!(
                     "Invalid {} name '{}'. {} names must start with 'A'..'Z'",
@@ -1650,7 +1679,7 @@ fn check_valid_module_member_name_impl(
     Ok(())
 }
 
-fn is_valid_struct_constant_or_schema_name(s: &str) -> bool {
+pub fn is_valid_struct_constant_or_schema_name(s: &str) -> bool {
     s.starts_with(|c| matches!(c, 'A'..='Z'))
 }
 

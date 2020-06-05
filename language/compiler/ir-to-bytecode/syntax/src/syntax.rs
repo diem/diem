@@ -1863,7 +1863,7 @@ fn parse_script<'input>(
         FunctionBody::Move { locals, code: body },
     );
     let main = spanned(tokens.file_name(), start_loc, end_loc, main);
-    Ok(Script::new(imports, vec![], main))
+    Ok(Script::new(imports, vec![], vec![], main))
 }
 
 // StructKind: bool = {
@@ -2065,6 +2065,7 @@ fn parse_module<'input>(
         imports,
         vec![],
         structs,
+        vec![],
         functions,
         synthetics,
     )?)

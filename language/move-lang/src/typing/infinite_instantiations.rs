@@ -209,6 +209,7 @@ fn exp(context: &mut Context, e: &T::Exp) {
 
         E::Unit { .. }
         | E::Value(_)
+        | E::Constant(_, _)
         | E::Move { .. }
         | E::Copy { .. }
         | E::BorrowLocal(_, _)

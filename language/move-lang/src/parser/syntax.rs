@@ -1473,6 +1473,32 @@ fn parse_field_annot<'input>(tokens: &mut Lexer<'input>) -> Result<(Field, Type)
 }
 
 //**************************************************************************************************
+// Constants
+//**************************************************************************************************
+
+// Parse a constant:
+//      ConstantDecl = "const" <Identifier> ":" <Type> "=" <Exp> ";"
+fn parse_constant<'input>(tokens: &mut Lexer<'input>) -> Result<Constant, Error> {
+    tokens.match_doc_comments();
+    let start_loc = tokens.start_loc();
+
+    consume_token(tokens, Tok::Const)?;
+    let name = ConstantName(parse_identifier(tokens)?);
+    consume_token(tokens, Tok::Colon)?;
+    let signature = parse_type(tokens)?;
+    consume_token(tokens, Tok::Equal)?;
+    let value = parse_exp(tokens)?;
+    consume_token(tokens, Tok::Semicolon)?;
+    let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
+    Ok(Constant {
+        loc,
+        name,
+        signature,
+        value,
+    })
+}
+
+//**************************************************************************************************
 // AddressBlock
 //**************************************************************************************************
 
@@ -1584,7 +1610,7 @@ fn is_struct_definition<'input>(tokens: &mut Lexer<'input>) -> Result<bool, Erro
 //      Module =
 //          <DocComments> "module" <ModuleName> "{"
 //              <UseDecl>*
-//              ( <StructDefinition> | <FunctionDecl> | <Spec> )*
+//              ( <ConstantDecl> | <StructDefinition> | <FunctionDecl> | <Spec> )*
 //          "}"
 fn parse_module<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleDefinition, Error> {
     tokens.match_doc_comments();
@@ -1599,6 +1625,7 @@ fn parse_module<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleDefinition, 
         members.push(match tokens.peek() {
             Tok::Spec => ModuleMember::Spec(parse_spec_block(tokens)?),
             Tok::Use => ModuleMember::Use(parse_use_decl(tokens)?),
+            Tok::Const => ModuleMember::Constant(parse_constant(tokens)?),
             // TODO rework parsing modifiers
             _ if is_struct_definition(tokens)? => {
                 ModuleMember::Struct(parse_struct_definition(tokens)?)
@@ -1620,6 +1647,7 @@ fn parse_module<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleDefinition, 
 //      Script =
 //          "script" "{"
 //              <UseDecl>*
+//              <ConstantDecl>*
 //              <MoveFunctionDecl>
 //          "}"
 fn parse_script<'input>(tokens: &mut Lexer<'input>) -> Result<Script, Error> {
@@ -1631,6 +1659,10 @@ fn parse_script<'input>(tokens: &mut Lexer<'input>) -> Result<Script, Error> {
     let mut uses = vec![];
     while tokens.peek() == Tok::Use {
         uses.push(parse_use_decl(tokens)?);
+    }
+    let mut constants = vec![];
+    while tokens.peek() == Tok::Const {
+        constants.push(parse_constant(tokens)?);
     }
     let function = parse_function_decl(tokens, /* allow_native */ false)?;
     let mut specs = vec![];
@@ -1651,6 +1683,7 @@ fn parse_script<'input>(tokens: &mut Lexer<'input>) -> Result<Script, Error> {
     Ok(Script {
         loc,
         uses,
+        constants,
         function,
         specs,
     })

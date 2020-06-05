@@ -8,6 +8,14 @@ error:
 
 error: 
 
+   ┌── tests/move_check/expansion/invalid_local_name.move:5:9 ───
+   │
+ 5 │         No;
+   │         ^^ Unbound constant 'No'
+   │
+
+error: 
+
    ┌── tests/move_check/expansion/invalid_local_name.move:9:13 ───
    │
  9 │         let No;
@@ -20,5 +28,13 @@ error:
     │
  14 │         let No = 100;
     │             ^^ Invalid local name 'No'. Local names must start with 'a'..'z' (or '_')
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/invalid_local_name.move:15:13 ───
+    │
+ 15 │         F { No };
+    │             ^^ Unbound constant 'No'
     │
 

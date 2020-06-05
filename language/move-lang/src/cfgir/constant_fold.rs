@@ -53,6 +53,7 @@ fn optimize_exp(e: &mut Exp) -> bool {
         //************************************
         E::Unit { .. }
         | E::Value(_)
+        | E::Constant(_)
         | E::UnresolvedError
         | E::Spec(_, _)
         | E::BorrowLocal(_, _)

@@ -229,10 +229,12 @@ fn exp(context: &mut Context, sp!(loc, e_): &N::Exp) {
         | E::Spec(_, _)
         | E::InferredNum(_)
         | E::Value(_)
+        | E::Constant(None, _)
         | E::Move(_)
         | E::Copy(_)
         | E::Use(_) => (),
 
+        E::Constant(Some(m), _c) => context.add_usage(m, *loc),
         E::ModuleCall(m, _, bs_opt, sp!(_, es_)) => {
             context.add_usage(m, *loc);
             types_opt(context, bs_opt);

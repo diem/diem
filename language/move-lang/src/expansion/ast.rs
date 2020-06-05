@@ -3,8 +3,9 @@
 
 use crate::{
     parser::ast::{
-        BinOp, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, ResourceLoc,
-        SpecApplyPattern, SpecBlockTarget, SpecConditionKind, StructName, UnaryOp, Var,
+        BinOp, ConstantName, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent,
+        ResourceLoc, SpecApplyPattern, SpecBlockTarget, SpecConditionKind, StructName, UnaryOp,
+        Var,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
@@ -31,6 +32,7 @@ pub struct Program {
 #[derive(Debug)]
 pub struct Script {
     pub loc: Loc,
+    pub constants: UniqueMap<ConstantName, Constant>,
     pub function_name: FunctionName,
     pub function: Function,
     pub specs: Vec<SpecBlock>,
@@ -46,6 +48,7 @@ pub struct ModuleDefinition {
     pub is_source_module: bool,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub functions: UniqueMap<FunctionName, Function>,
+    pub constants: UniqueMap<ConstantName, Constant>,
     pub specs: Vec<SpecBlock>,
 }
 
@@ -99,6 +102,17 @@ pub struct Function {
     pub acquires: Vec<ModuleAccess>,
     pub body: FunctionBody,
     pub specs: BTreeMap<SpecId, SpecBlock>,
+}
+
+//**************************************************************************************************
+// Constants
+//**************************************************************************************************
+
+#[derive(PartialEq, Debug)]
+pub struct Constant {
+    pub loc: Loc,
+    pub signature: Type,
+    pub value: Exp,
 }
 
 //**************************************************************************************************
@@ -353,10 +367,15 @@ impl AstDebug for Script {
     fn ast_debug(&self, w: &mut AstWriter) {
         let Script {
             loc: _loc,
+            constants,
             function_name,
             function,
             specs,
         } = self;
+        for cdef in constants {
+            cdef.ast_debug(w);
+            w.new_line();
+        }
         (function_name.clone(), function).ast_debug(w);
         for spec in specs {
             spec.ast_debug(w);
@@ -372,6 +391,7 @@ impl AstDebug for ModuleDefinition {
             is_source_module,
             structs,
             functions,
+            constants,
             specs,
         } = self;
         w.writeln(if *is_source_module {
@@ -381,6 +401,10 @@ impl AstDebug for ModuleDefinition {
         });
         for sdef in structs {
             sdef.ast_debug(w);
+            w.new_line();
+        }
+        for cdef in constants {
+            cdef.ast_debug(w);
             w.new_line();
         }
         for fdef in functions {
@@ -451,8 +475,7 @@ impl AstDebug for SpecBlockMember_ {
                 if let FunctionBody_::Native = &body.value {
                     w.write("native ");
                 }
-                w.write("define ");
-                w.write(&format!("{}", name));
+                w.write(&format!("define {}", name));
                 signature.ast_debug(w);
                 match &body.value {
                     FunctionBody_::Defined(body) => w.block(|w| body.ast_debug(w)),
@@ -537,7 +560,7 @@ impl AstDebug for (FunctionName, &Function) {
         if let FunctionBody_::Native = &body.value {
             w.write("native ");
         }
-        w.write(&format!("{}", name));
+        w.write(&format!("fun {}", name));
         signature.ast_debug(w);
         if !acquires.is_empty() {
             w.write(" acquires ");
@@ -566,6 +589,24 @@ impl AstDebug for FunctionSignature {
         });
         w.write("): ");
         return_type.ast_debug(w)
+    }
+}
+
+impl AstDebug for (ConstantName, &Constant) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let (
+            name,
+            Constant {
+                loc: _loc,
+                signature,
+                value,
+            },
+        ) = self;
+        w.write(&format!("const {}:", name));
+        signature.ast_debug(w);
+        w.write(" = ");
+        value.ast_debug(w);
+        w.write(";");
     }
 }
 

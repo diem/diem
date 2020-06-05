@@ -143,6 +143,7 @@ fn run_spec_checker(
                     let move_lang::expansion::ast::Script {
                         loc,
                         function_name,
+                        constants,
                         function,
                         specs,
                     } = match eprog.scripts.remove(&key) {
@@ -182,6 +183,7 @@ fn run_spec_checker(
                         loc,
                         is_source_module: true,
                         structs: UniqueMap::new(),
+                        constants,
                         functions,
                         specs,
                     };

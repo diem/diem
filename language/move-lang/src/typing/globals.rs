@@ -84,6 +84,7 @@ fn exp(
 
         E::Unit { .. }
         | E::Value(_)
+        | E::Constant(_, _)
         | E::Move { .. }
         | E::Copy { .. }
         | E::BorrowLocal(_, _)
@@ -187,42 +188,24 @@ fn builtin_function(
     annotated_acquires: &BTreeMap<StructName, Loc>,
     seen: &mut Seen,
     loc: &Loc,
-    b: &T::BuiltinFunction,
+    sp!(_, b_): &T::BuiltinFunction,
 ) {
     use T::BuiltinFunction_ as B;
     let mk_msg = |s| move || format!("Invalid call to {}.", s);
-    match &b.value {
-        B::MoveFrom(bt) => {
-            let msg = mk_msg(N::BuiltinFunction_::MOVE_FROM);
+    match b_ {
+        B::MoveFrom(bt) | B::BorrowGlobal(_, bt) => {
+            let msg = mk_msg(b_.display_name());
             if let Some(sn) = check_global_access(context, loc, msg, bt) {
                 check_acquire_listed(context, annotated_acquires, *loc, msg, sn, bt.loc);
                 seen.insert(sn.clone(), bt.loc);
             }
         }
-        B::BorrowGlobal(mut_, bt) => {
-            let name = if *mut_ {
-                N::BuiltinFunction_::BORROW_GLOBAL_MUT
-            } else {
-                N::BuiltinFunction_::BORROW_GLOBAL
-            };
-            let msg = mk_msg(name);
-            if let Some(sn) = check_global_access(context, loc, msg, bt) {
-                check_acquire_listed(context, annotated_acquires, *loc, msg, sn, bt.loc);
-                seen.insert(sn.clone(), bt.loc);
-            }
-        }
-        B::MoveToSender(bt) => {
-            let msg = mk_msg(N::BuiltinFunction_::MOVE_TO_SENDER);
+
+        B::MoveToSender(bt) | B::MoveTo(bt) | B::Exists(bt) => {
+            let msg = mk_msg(b_.display_name());
             check_global_access(context, loc, msg, bt);
         }
-        B::MoveTo(bt) => {
-            let msg = mk_msg(N::BuiltinFunction_::MOVE_TO);
-            check_global_access(context, loc, msg, bt);
-        }
-        B::Exists(bt) => {
-            let msg = mk_msg(N::BuiltinFunction_::EXISTS);
-            check_global_access(context, loc, msg, bt);
-        }
+
         B::Freeze(_) | B::Assert => (),
     }
 }
