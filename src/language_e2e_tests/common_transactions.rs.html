@@ -219,6 +219,7 @@
 <span id="219">219</span>
 <span id="220">220</span>
 <span id="221">221</span>
+<span id="222">222</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -241,12 +242,13 @@
     import 0x0.Libra;
     import 0x0.LibraAccount;
 
-    main&lt;Token&gt;(fresh_address: address, auth_key_prefix: vector&lt;u8&gt;, initial_amount: u64) {
+    main&lt;Token&gt;(account: &amp;signer, fresh_address: address, auth_key_prefix: vector&lt;u8&gt;, initial_amount: u64) {
       LibraAccount.create_testnet_account&lt;Token&gt;(copy(fresh_address), move(auth_key_prefix));
       if (copy(initial_amount) &gt; 0) {
          LibraAccount.deposit&lt;Token&gt;(
+           copy(account),
            move(fresh_address),
-           LibraAccount.withdraw_from_sender&lt;Token&gt;(move(initial_amount))
+           LibraAccount.withdraw_from&lt;Token&gt;(copy(account), move(initial_amount))
          );
       }
       return;
