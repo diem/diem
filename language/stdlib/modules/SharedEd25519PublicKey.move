@@ -63,8 +63,8 @@ module SharedEd25519PublicKey {
     }
 
     // Returns true if `addr` holds a `SharedEd25519PublicKey` resource.
-    public fun exists(addr: address): bool {
-        ::exists<SharedEd25519PublicKey>(addr)
+    public fun exists_at(addr: address): bool {
+        exists<SharedEd25519PublicKey>(addr)
     }
 
 }

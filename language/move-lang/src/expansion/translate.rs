@@ -26,35 +26,19 @@ use std::{
 
 struct ModuleMembers {
     loc: Loc,
-    structs: BTreeSet<Name>,
-    functions: BTreeSet<Name>,
-    schemas: BTreeSet<Name>,
+    members: BTreeMap<Name, ModuleMemberKind>,
 }
 
 impl ModuleMembers {
     fn new(loc: Loc) -> Self {
         ModuleMembers {
             loc,
-            structs: BTreeSet::new(),
-            functions: BTreeSet::new(),
-            schemas: BTreeSet::new(),
+            members: BTreeMap::new(),
         }
     }
 
-    fn is_member(&self, name: &Name) -> bool {
-        self.is_struct(name) || self.is_function(name) || self.is_schema(name)
-    }
-
-    fn is_struct(&self, name: &Name) -> bool {
-        self.structs.contains(name)
-    }
-
-    fn is_function(&self, name: &Name) -> bool {
-        self.functions.contains(name)
-    }
-
-    fn is_schema(&self, name: &Name) -> bool {
-        self.schemas.contains(name)
+    fn member_kind(&self, name: &Name) -> Option<ModuleMemberKind> {
+        self.members.get(name).cloned()
     }
 }
 
@@ -95,17 +79,6 @@ impl Context {
 
     fn cur_address(&self) -> Address {
         self.address.unwrap()
-    }
-
-    fn restricted_self_error(&mut self, case: &str, name: &Name) {
-        let msg = format!(
-            "Invalid {case} name '{name}'. '{self_ident}' is restricted and cannot be used to \
-             name a {case}",
-            case = case,
-            name = name,
-            self_ident = ModuleName::SELF_NAME,
-        );
-        self.error(vec![(name.loc, msg)])
     }
 
     /// Adds all of the new items in the new inner scope as shadowing the outer one.
@@ -265,11 +238,9 @@ fn set_sender_address(context: &mut Context, loc: Loc, sender: Option<Address>) 
 
 fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E::ModuleDefinition) {
     let P::ModuleDefinition { loc, name, members } = mdef;
-    let name_loc = name.loc();
-    if name.value() == ModuleName::SELF_NAME {
-        context.restricted_self_error("module", &name.0);
-    }
+    let _ = check_restricted_self_name(context, "module", &name.0);
 
+    let name_loc = name.loc();
     let mident_ = ModuleIdent_ {
         address: context.cur_address(),
         name,
@@ -411,19 +382,27 @@ fn module_members(
         use P::{SpecBlockMember_ as SBM, SpecBlockTarget_ as SBT, SpecBlock_ as SB};
         match mem {
             P::ModuleMember::Function(f) => {
-                cur_members.functions.insert(f.name.0.clone());
+                cur_members
+                    .members
+                    .insert(f.name.0.clone(), ModuleMemberKind::Function);
             }
             P::ModuleMember::Struct(s) => {
-                cur_members.structs.insert(s.name.0.clone());
+                cur_members
+                    .members
+                    .insert(s.name.0.clone(), ModuleMemberKind::Struct);
             }
             P::ModuleMember::Spec(sp!(_, SB { target, members, .. })) => match &target.value {
                 SBT::Schema(n, _) => {
-                    cur_members.schemas.insert(n.clone());
+                    cur_members
+                        .members
+                        .insert(n.clone(), ModuleMemberKind::Schema);
                 }
                 SBT::Module => {
                     for sp!(_, smember_) in members {
                         if let SBM::Function { name, .. } = smember_ {
-                            cur_members.functions.insert(name.0.clone());
+                            cur_members
+                                .members
+                                .insert(name.0.clone(), ModuleMemberKind::Function);
                         }
                     }
                 }
@@ -511,8 +490,7 @@ fn use_(context: &mut Context, acc: &mut AliasMap, u: P::Use) {
     macro_rules! add_module_alias {
         ($ident:expr, $alias_opt:expr) => {{
             let alias: Name = $alias_opt.unwrap_or_else(|| $ident.0.value.name.0.clone());
-            if &alias.value == ModuleName::SELF_NAME {
-                context.restricted_self_error("module alias", &alias);
+            if let Err(()) = check_restricted_self_name(context, "module alias", &alias) {
                 return;
             }
 
@@ -544,46 +522,27 @@ fn use_(context: &mut Context, acc: &mut AliasMap, u: P::Use) {
                 // check is member
                 let members = &context.module_members[&mident];
                 let mloc = members.loc;
-                let is_member = members.is_member(&member);
-                let is_struct = members.is_struct(&member);
-                let is_schema = members.is_schema(&member);
-                let is_function = members.is_function(&member);
-                if !is_member {
-                    let msg = format!(
-                        "Invalid 'use'. Unbound member '{}' in module '{}'",
-                        member, mident
-                    );
-                    context.error(vec![
-                        (member.loc, msg),
-                        (mloc, format!("Module '{}' declared here", mident)),
-                    ]);
-                    continue;
-                }
-
-                // if struct member, check valid struct name
-                match alias_opt.as_ref() {
-                    // No explicit alias so nothing to check
-                    None => (),
-                    // Function alias, nothing to check
-                    Some(_) if is_function => (),
-                    // Not a struct, nothing to check
-                    Some(alias) => {
-                        let (lcase, mcase) = match alias {
-                            _ if is_struct => ("struct alias", "Struct alias"),
-                            _ if is_schema => ("schema alias", "Schema alias"),
-                            _ => unreachable!("handled above"),
-                        };
-                        if let Err(e) =
-                            check_valid_struct_constant_or_schema_name(alias, lcase, mcase)
-                        {
-                            // TODO point to struct declaration
-                            context.error(e);
-                            continue;
-                        }
+                let member_kind = match members.member_kind(&member) {
+                    None => {
+                        let msg = format!(
+                            "Invalid 'use'. Unbound member '{}' in module '{}'",
+                            member, mident
+                        );
+                        context.error(vec![
+                            (member.loc, msg),
+                            (mloc, format!("Module '{}' declared here", mident)),
+                        ]);
+                        continue;
                     }
-                }
+                    Some(m) => m,
+                };
 
                 let alias = alias_opt.unwrap_or_else(|| member.clone());
+
+                let alias = match check_valid_module_member_alias(context, member_kind, alias) {
+                    None => continue,
+                    Some(alias) => alias,
+                };
                 if let Err(old_loc) = acc.add_member_alias(alias.clone(), mident.clone(), member) {
                     duplicate_module_member(context, old_loc, alias)
                 }
@@ -660,7 +619,7 @@ fn struct_def_(
         type_parameters,
         fields,
     };
-    check_valid_struct_name(context, &name);
+    check_valid_module_member_name(context, ModuleMemberKind::Struct, &name.0);
     context.set_to_outer_scope(old_aliases);
     (name, sdef)
 }
@@ -718,6 +677,7 @@ fn function_(context: &mut Context, pfunction: P::Function) -> (FunctionName, E:
         acquires,
     } = pfunction;
     assert!(context.exp_specs.is_empty());
+    check_valid_module_member_name(context, ModuleMemberKind::Function, &name.0);
     let old_aliases = context.new_alias_scope(AliasMap::new());
     let signature = function_signature(context, psignature);
     let acquires = acquires
@@ -790,7 +750,7 @@ fn spec(context: &mut Context, sp!(loc, pspec): P::SpecBlock) -> E::SpecBlock {
     } = pspec;
 
     if let sp!(_, P::SpecBlockTarget_::Schema(n, _)) = &target {
-        check_valid_schema_name(context, n)
+        check_valid_module_member_name(context, ModuleMemberKind::Schema, n)
     }
 
     context.in_spec_context = true;
@@ -972,22 +932,13 @@ fn module_access(
             Some((mident, mem)) => EN::ModuleAccess(mident.clone(), mem.clone()),
             None => EN::Name(n),
         },
-        (Access::Term, PN::Name(n)) if is_valid_struct_cosntant_or_schema_name(&n.value) => {
+        (Access::Term, PN::Name(n)) if is_valid_struct_constant_or_schema_name(&n.value) => {
             match context.aliases.member_alias_get(&n) {
                 Some((mident, mem)) => EN::ModuleAccess(mident.clone(), mem.clone()),
                 None => EN::Name(n),
             }
         }
         (Access::Term, PN::Name(n)) => EN::Name(n),
-        (_, PN::Global(n)) => {
-            let msg = format!(
-                "Invalid use of global name '::{}'. Global names can only be used in function \
-                 calls",
-                n
-            );
-            context.error(vec![(loc, msg)]);
-            return None;
-        }
         (_, PN::ModuleAccess(mname, n)) => {
             match context.aliases.module_alias_get(&mname.0).cloned() {
                 None => {
@@ -1118,17 +1069,12 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::Call(pn, ptys_opt, sp!(rloc, prs)) => {
             let tys_opt = optional_types(context, ptys_opt);
             let ers = sp(rloc, exps(context, prs));
-            match pn {
-                sp!(_, P::ModuleAccess_::Global(n)) => EE::GlobalCall(n, tys_opt, ers),
-                _ => {
-                    let en_opt = module_access(context, Access::ApplyPositional, pn);
-                    match en_opt {
-                        Some(en) => EE::Call(en, tys_opt, ers),
-                        None => {
-                            assert!(context.has_errors());
-                            EE::UnresolvedError
-                        }
-                    }
+            let en_opt = module_access(context, Access::ApplyPositional, pn);
+            match en_opt {
+                Some(en) => EE::Call(en, tys_opt, ers),
+                None => {
+                    assert!(context.has_errors());
+                    EE::UnresolvedError
                 }
             }
         }
@@ -1473,9 +1419,7 @@ fn unbound_names_exp(unbound: &mut BTreeSet<Name>, sp!(_, e_): &E::Exp) {
         EE::Name(sp!(_, E::ModuleAccess_::Name(n)), _) => {
             unbound.insert(n.clone());
         }
-        EE::GlobalCall(_, _, sp!(_, es_)) | EE::Call(_, _, sp!(_, es_)) => {
-            unbound_names_exps(unbound, es_)
-        }
+        EE::Call(_, _, sp!(_, es_)) => unbound_names_exps(unbound, es_),
         EE::Pack(_, _, es) => unbound_names_exps(unbound, es.iter().map(|(_, (_, e))| e)),
         EE::IfElse(econd, et, ef) => {
             unbound_names_exp(unbound, ef);
@@ -1598,6 +1542,10 @@ fn unbound_names_dotted(unbound: &mut BTreeSet<Name>, sp!(_, edot_): &E::ExpDott
     }
 }
 
+//**************************************************************************************************
+// Valid names
+//**************************************************************************************************
+
 fn check_valid_local_name(context: &mut Context, v: &Var) {
     fn is_valid(s: &str) -> bool {
         s.starts_with('_') || s.starts_with(|c| matches!(c, 'a'..='z'))
@@ -1611,34 +1559,113 @@ fn check_valid_local_name(context: &mut Context, v: &Var) {
     }
 }
 
-fn check_valid_struct_name(context: &mut Context, n: &StructName) {
-    if let Err(e) = check_valid_struct_constant_or_schema_name(&n.0, "struct", "Struct") {
-        context.error(e)
+#[derive(Copy, Clone, Debug)]
+enum ModuleMemberKind {
+    Function,
+    Struct,
+    Schema,
+}
+
+impl ModuleMemberKind {
+    pub fn case(&self) -> &'static str {
+        match self {
+            ModuleMemberKind::Function => "function",
+            // ModuleMember::Constant => "constant",
+            ModuleMemberKind::Struct => "struct",
+            ModuleMemberKind::Schema => "schema",
+        }
     }
 }
 
-fn check_valid_schema_name(context: &mut Context, n: &Name) {
-    if let Err(e) = check_valid_struct_constant_or_schema_name(n, "schema", "Schema") {
-        context.error(e)
+fn check_valid_module_member_name(context: &mut Context, member: ModuleMemberKind, name: &Name) {
+    let _ = check_valid_module_member_name_impl(context, member, &name, member.case());
+}
+
+fn check_valid_module_member_alias(
+    context: &mut Context,
+    member: ModuleMemberKind,
+    alias: Name,
+) -> Option<Name> {
+    match check_valid_module_member_name_impl(
+        context,
+        member,
+        &alias,
+        &format!("{} alias", member.case()),
+    ) {
+        Err(()) => None,
+        Ok(()) => Some(alias),
     }
 }
 
-fn is_valid_struct_cosntant_or_schema_name(s: &str) -> bool {
+fn check_valid_module_member_name_impl(
+    context: &mut Context,
+    member: ModuleMemberKind,
+    n: &Name,
+    case: &str,
+) -> Result<(), ()> {
+    use ModuleMemberKind as M;
+    fn upper_first_letter(s: &str) -> String {
+        let mut chars = s.chars();
+        match chars.next() {
+            None => String::new(),
+            Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
+        }
+    }
+    let lcase = case;
+    let ucase = &upper_first_letter(case);
+    match member {
+        M::Function => (),
+        // M::Constant |
+        M::Struct | M::Schema => {
+            if !is_valid_struct_constant_or_schema_name(&n.value) {
+                let msg = format!(
+                    "Invalid {} name '{}'. {} names must start with 'A'..'Z'",
+                    lcase, n, ucase,
+                );
+                context.error(vec![(n.loc, msg)]);
+                return Err(());
+            }
+        }
+    }
+
+    // TODO move these names to a more central place?
+    for restricted in crate::naming::ast::BuiltinFunction_::all_names() {
+        check_restricted_name(context, "module member", n, restricted)?;
+    }
+    for restricted in crate::naming::ast::BuiltinTypeName_::all_names() {
+        check_restricted_name(context, "module member", n, restricted)?;
+    }
+
+    // Restricting Self for now in the case where we ever have impls
+    // Otherwise, we could allow it
+    check_restricted_self_name(context, "module member", n)?;
+
+    Ok(())
+}
+
+fn is_valid_struct_constant_or_schema_name(s: &str) -> bool {
     s.starts_with(|c| matches!(c, 'A'..='Z'))
 }
 
-fn check_valid_struct_constant_or_schema_name(
-    n: &Name,
-    lcase: &str,
-    ucase: &str,
-) -> Result<(), Error> {
-    if !is_valid_struct_cosntant_or_schema_name(&n.value) {
-        let msg = format!(
-            "Invalid {} name '{}'. {} names must start with 'A'..'Z'",
-            lcase, n, ucase,
-        );
-        Err(vec![(n.loc, msg)])
-    } else {
-        Ok(())
+fn check_restricted_self_name(context: &mut Context, case: &str, n: &Name) -> Result<(), ()> {
+    check_restricted_name(context, case, n, ModuleName::SELF_NAME)
+}
+
+fn check_restricted_name(
+    context: &mut Context,
+    case: &str,
+    sp!(loc, n_): &Name,
+    restricted: &str,
+) -> Result<(), ()> {
+    if n_ != restricted {
+        return Ok(());
     }
+    let msg = format!(
+        "Invalid {case} name '{restricted}'. '{restricted}' is restricted and cannot be used to \
+         name a {case}",
+        case = case,
+        restricted = restricted,
+    );
+    context.error(vec![(*loc, msg)]);
+    Err(())
 }

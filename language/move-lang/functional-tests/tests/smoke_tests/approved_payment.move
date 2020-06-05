@@ -107,8 +107,8 @@ module ApprovedPayment {
     }
 
     // Return true if an ApprovedPayment resource exists under `addr`
-    public fun exists(addr: address): bool {
-        ::exists<T>(addr)
+    public fun exists_at(addr: address): bool {
+        exists<T>(addr)
     }
 
 }
@@ -171,12 +171,12 @@ script {
 use {{default}}::ApprovedPayment;
 use 0x0::Transaction;
 fun main(account: &signer) {
-    Transaction::assert(!ApprovedPayment::exists({{alice1}}), 6001);
+    Transaction::assert(!ApprovedPayment::exists_at({{alice1}}), 6001);
     let pubkey = x"aa306695ca5ade60240c67b9b886fe240a6f009b03e43e45838334eddeae49fe";
     ApprovedPayment::publish(account, pubkey);
-    Transaction::assert(ApprovedPayment::exists({{alice1}}), 6002);
+    Transaction::assert(ApprovedPayment::exists_at({{alice1}}), 6002);
     ApprovedPayment::unpublish_from_sender(account);
-    Transaction::assert(!ApprovedPayment::exists({{alice1}}), 6003);
+    Transaction::assert(!ApprovedPayment::exists_at({{alice1}}), 6003);
 }
 }
 // check: EXECUTED

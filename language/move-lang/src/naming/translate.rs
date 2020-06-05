@@ -706,17 +706,6 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
         EE::Cast(e, t) => NE::Cast(exp(context, *e), type_(context, t)),
         EE::Annotate(e, t) => NE::Annotate(exp(context, *e), type_(context, t)),
 
-        EE::GlobalCall(n, tys_opt, rhs) => {
-            let ty_args = tys_opt.map(|tys| types(context, tys));
-            let nes = call_args(context, rhs);
-            match resolve_builtin_function(context, eloc, &n, ty_args) {
-                None => {
-                    assert!(context.has_errors());
-                    NE::UnresolvedError
-                }
-                Some(b) => NE::Builtin(sp(n.loc, b), nes),
-            }
-        }
         EE::Call(sp!(mloc, ma_), tys_opt, rhs) => {
             use E::ModuleAccess_ as EA;
             let ty_args = tys_opt.map(|tys| types(context, tys));

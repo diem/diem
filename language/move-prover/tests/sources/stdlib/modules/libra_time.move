@@ -58,7 +58,7 @@ module LibraTimestamp {
 
     // Helper function to determine if the blockchain is at genesis state.
     public fun is_genesis(): bool {
-        !::exists<Self::CurrentTimeMicroseconds>(0xA550C18)
+        !exists<Self::CurrentTimeMicroseconds>(0xA550C18)
     }
     spec fun is_genesis {
         aborts_if false;

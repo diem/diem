@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/global_access_value.move:3:13 ───
+   │
+ 3 │         1 + ::global_value
+   │             ^^ Unexpected '::'
+   ·
+ 3 │         1 + ::global_value
+   │             -- Expected an expression term
+   │
+

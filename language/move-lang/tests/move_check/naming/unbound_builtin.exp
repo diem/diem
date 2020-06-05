@@ -1,24 +1,24 @@
 error: 
 
-   ┌── tests/move_check/naming/unbound_builtin.move:3:11 ───
+   ┌── tests/move_check/naming/unbound_builtin.move:3:9 ───
    │
- 3 │         ::global_borrow();
-   │           ^^^^^^^^^^^^^ Unbound function: 'global_borrow'
-   │
-
-error: 
-
-   ┌── tests/move_check/naming/unbound_builtin.move:4:11 ───
-   │
- 4 │         ::release<u64>();
-   │           ^^^^^^^ Unbound function: 'release'
+ 3 │         global_borrow();
+   │         ^^^^^^^^^^^^^ Unbound function 'global_borrow' in current scope
    │
 
 error: 
 
-   ┌── tests/move_check/naming/unbound_builtin.move:5:11 ───
+   ┌── tests/move_check/naming/unbound_builtin.move:4:9 ───
    │
- 5 │         ::sudo(false);
-   │           ^^^^ Unbound function: 'sudo'
+ 4 │         release<u64>();
+   │         ^^^^^^^ Unbound function 'release' in current scope
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/unbound_builtin.move:5:9 ───
+   │
+ 5 │         sudo(false);
+   │         ^^^^ Unbound function 'sudo' in current scope
    │
 

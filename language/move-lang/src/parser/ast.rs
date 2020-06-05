@@ -291,8 +291,6 @@ pub enum InvariantKind {
 pub enum ModuleAccess_ {
     // N
     Name(Name),
-    // ::N
-    Global(Name),
     // M.S
     ModuleAccess(ModuleName, Name),
     // OxADDR.M.S
@@ -1129,7 +1127,6 @@ impl AstDebug for ModuleAccess_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         w.write(&match self {
             ModuleAccess_::Name(n) => format!("{}", n),
-            ModuleAccess_::Global(n) => format!("::{}", n),
             ModuleAccess_::ModuleAccess(m, n) => format!("{}::{}", m, n),
             ModuleAccess_::QualifiedModuleAccess(m, n) => format!("{}::{}", m, n),
         })

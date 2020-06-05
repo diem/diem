@@ -54,7 +54,7 @@
 -  [Function `delegated_withdraw_capability`](#0x0_LibraAccount_delegated_withdraw_capability)
 -  [Function `withdraw_capability_address`](#0x0_LibraAccount_withdraw_capability_address)
 -  [Function `key_rotation_capability_address`](#0x0_LibraAccount_key_rotation_capability_address)
--  [Function `exists`](#0x0_LibraAccount_exists)
+-  [Function `exists_at`](#0x0_LibraAccount_exists_at)
 -  [Function `freeze_account`](#0x0_LibraAccount_freeze_account)
 -  [Function `unfreeze_account`](#0x0_LibraAccount_unfreeze_account)
 -  [Function `account_is_frozen`](#0x0_LibraAccount_account_is_frozen)
@@ -497,7 +497,7 @@
     base_url: vector&lt;u8&gt;,
     compliance_public_key: vector&lt;u8&gt;,
 ) {
-    Transaction::assert(<a href="#0x0_LibraAccount_exists">exists</a>(addr), 0);
+    Transaction::assert(<a href="#0x0_LibraAccount_exists_at">exists_at</a>(addr), 0);
     Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == 0xA550C18, 0);
     <b>let</b> account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(addr);
     <a href="VASP.md#0x0_VASP_publish_parent_vasp_credential">VASP::publish_parent_vasp_credential</a>(
@@ -1116,7 +1116,7 @@
     Transaction::assert(<a href="Testnet.md#0x0_Testnet_is_testnet">Testnet::is_testnet</a>(), 10042);
     // TODO: refactor so that every attempt <b>to</b> create an existing account hits this check
     // cannot create an account at an address that already has one
-    Transaction::assert(!<a href="#0x0_LibraAccount_exists">exists</a>(new_account_address), 777777);
+    Transaction::assert(!<a href="#0x0_LibraAccount_exists_at">exists_at</a>(new_account_address), 777777);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="VASP.md#0x0_VASP_publish_parent_vasp_credential">VASP::publish_parent_vasp_credential</a>(
         association,
@@ -1201,13 +1201,13 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
     // (2) publish <a href="#0x0_LibraAccount_Balance">Balance</a> <b>resource</b>(s)
     <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;Token&gt;(&new_account);
     <b>if</b> (add_all_currencies) {
-        <b>if</b> (!::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;<a href="Coin1.md#0x0_Coin1">Coin1</a>&gt;&gt;(new_account_addr)) {
+        <b>if</b> (!exists&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;<a href="Coin1.md#0x0_Coin1">Coin1</a>&gt;&gt;(new_account_addr)) {
             <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;<a href="Coin1.md#0x0_Coin1">Coin1</a>&gt;(&new_account);
         };
-        <b>if</b> (!::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;<a href="Coin2.md#0x0_Coin2">Coin2</a>&gt;&gt;(new_account_addr)) {
+        <b>if</b> (!exists&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;<a href="Coin2.md#0x0_Coin2">Coin2</a>&gt;&gt;(new_account_addr)) {
             <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;<a href="Coin2.md#0x0_Coin2">Coin2</a>&gt;(&new_account);
         };
-        <b>if</b> (!::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;<a href="LBR.md#0x0_LBR">LBR</a>&gt;&gt;(new_account_addr)) {
+        <b>if</b> (!exists&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;<a href="LBR.md#0x0_LBR">LBR</a>&gt;&gt;(new_account_addr)) {
             <a href="#0x0_LibraAccount_add_currency">add_currency</a>&lt;<a href="LBR.md#0x0_LBR">LBR</a>&gt;(&new_account);
         };
     };
@@ -1450,7 +1450,7 @@ also be added. This account will be a child of
     add_all_currencies: bool
 ) {
     Transaction::assert(<a href="Testnet.md#0x0_Testnet_is_testnet">Testnet::is_testnet</a>(), 10042);
-    Transaction::assert(!<a href="#0x0_LibraAccount_exists">exists</a>(new_account_address), 777777);
+    Transaction::assert(!<a href="#0x0_LibraAccount_exists_at">exists_at</a>(new_account_address), 777777);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
     <b>let</b> role_id = 7;
@@ -1594,7 +1594,7 @@ also be added. This account will be a child of
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_accepts_currency">accepts_currency</a>&lt;Token&gt;(addr: address): bool {
-    ::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr)
+    exists&lt;<a href="#0x0_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr)
 }
 </code></pre>
 
@@ -1772,13 +1772,13 @@ also be added. This account will be a child of
 
 </details>
 
-<a name="0x0_LibraAccount_exists"></a>
+<a name="0x0_LibraAccount_exists_at"></a>
 
-## Function `exists`
+## Function `exists_at`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_exists">exists</a>(check_addr: address): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_exists_at">exists_at</a>(check_addr: address): bool
 </code></pre>
 
 
@@ -1787,8 +1787,8 @@ also be added. This account will be a child of
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_exists">exists</a>(check_addr: address): bool {
-    ::<a href="#0x0_LibraAccount_exists">exists</a>&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(check_addr)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_exists_at">exists_at</a>(check_addr: address): bool {
+    exists&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(check_addr)
 }
 </code></pre>
 
@@ -1942,7 +1942,7 @@ also be added. This account will be a child of
 
     // FUTURE: Make these error codes sequential
     // Verify that the transaction sender's account exists
-    Transaction::assert(<a href="#0x0_LibraAccount_exists">exists</a>(transaction_sender), 5);
+    Transaction::assert(<a href="#0x0_LibraAccount_exists_at">exists_at</a>(transaction_sender), 5);
 
     Transaction::assert(!<a href="#0x0_LibraAccount_account_is_frozen">account_is_frozen</a>(transaction_sender), 0);
 

@@ -273,7 +273,6 @@ fn parse_module_ident<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleIdent,
 // Parse a module access (a variable, struct type, or function):
 //      ModuleAccess =
 //          <Identifier>
-//          | "::" <Identifier>
 //          | <ModuleName> "::" <Identifier>
 //          | <ModuleIdent> "::" <Identifier>
 fn parse_module_access<'input, F: FnOnce() -> String>(
@@ -291,12 +290,6 @@ fn parse_module_access<'input, F: FnOnce() -> String>(
             } else {
                 ModuleAccess_::Name(m)
             }
-        }
-
-        Tok::ColonColon => {
-            tokens.advance()?;
-            let n = parse_identifier(tokens)?;
-            ModuleAccess_::Global(n)
         }
 
         Tok::AddressValue => {
@@ -611,7 +604,7 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             Exp_::Continue
         }
 
-        Tok::ColonColon | Tok::IdentifierValue => parse_name_exp(tokens)?,
+        Tok::IdentifierValue => parse_name_exp(tokens)?,
 
         Tok::AddressValue => {
             // Check if this is a ModuleIdent (in a ModuleAccess).
@@ -1152,7 +1145,7 @@ fn parse_quant_body<'input>(is_forall: bool, tokens: &mut Lexer<'input>) -> Resu
 }
 
 fn make_builtin_call(loc: Loc, name: &str, type_args: Option<Vec<Type>>, args: Vec<Exp>) -> Exp {
-    let maccess = sp(loc, ModuleAccess_::Global(sp(loc, name.to_string())));
+    let maccess = sp(loc, ModuleAccess_::Name(sp(loc, name.to_string())));
     sp(loc, Exp_::Call(maccess, type_args, sp(loc, args)))
 }
 
@@ -1758,8 +1751,8 @@ fn parse_spec_block_member<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlo
         },
         _ => Err(unexpected_token_error(
             tokens,
-            "one of `assert`, `assume`, `decreases`, `aborts_if`, `succeeds_if`, \
-             `ensures`, `requires`, `include`, `apply`, `pragma`, `global`, or a name",
+            "one of `assert`, `assume`, `decreases`, `aborts_if`, `succeeds_if`, `ensures`, \
+             `requires`, `include`, `apply`, `pragma`, `global`, or a name",
         )),
     }
 }

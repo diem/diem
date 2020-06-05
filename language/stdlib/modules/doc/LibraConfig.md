@@ -235,7 +235,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_get">get</a>&lt;Config: <b>copyable</b>&gt;(): Config <b>acquires</b> <a href="#0x0_LibraConfig">LibraConfig</a> {
     <b>let</b> addr = <a href="#0x0_LibraConfig_default_config_address">default_config_address</a>();
-    Transaction::assert(::exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
+    Transaction::assert(exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
     *&borrow_global&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr).payload
 }
 </code></pre>
@@ -261,10 +261,10 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_set">set</a>&lt;Config: <b>copyable</b>&gt;(account: &signer, payload: Config) <b>acquires</b> <a href="#0x0_LibraConfig">LibraConfig</a>, <a href="#0x0_LibraConfig_Configuration">Configuration</a> {
     <b>let</b> addr = <a href="#0x0_LibraConfig_default_config_address">default_config_address</a>();
-    Transaction::assert(::exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
+    Transaction::assert(exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
     <b>let</b> signer_address = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     Transaction::assert(
-        ::exists&lt;<a href="#0x0_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(signer_address)
+        exists&lt;<a href="#0x0_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(signer_address)
          || signer_address == <a href="Association.md#0x0_Association_root_address">Association::root_address</a>(),
         24
     );
@@ -300,7 +300,7 @@
     payload: Config
 ) <b>acquires</b> <a href="#0x0_LibraConfig">LibraConfig</a>, <a href="#0x0_LibraConfig_Configuration">Configuration</a> {
     <b>let</b> addr = <a href="#0x0_LibraConfig_default_config_address">default_config_address</a>();
-    Transaction::assert(::exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
+    Transaction::assert(exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
     <b>let</b> config = borrow_global_mut&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr);
     config.payload = payload;
 

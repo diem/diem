@@ -1,0 +1,112 @@
+error: 
+
+   ┌── tests/move_check/expansion/restricted_struct_names.move:2:12 ───
+   │
+ 2 │     struct address {}
+   │            ^^^^^^^ Invalid struct name 'address'. Struct names must start with 'A'..'Z'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/restricted_struct_names.move:3:21 ───
+   │
+ 3 │     resource struct signer {}
+   │                     ^^^^^^ Invalid struct name 'signer'. Struct names must start with 'A'..'Z'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/restricted_struct_names.move:4:12 ───
+   │
+ 4 │     struct u8 {}
+   │            ^^ Invalid struct name 'u8'. Struct names must start with 'A'..'Z'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/restricted_struct_names.move:5:12 ───
+   │
+ 5 │     struct u64 {}
+   │            ^^^ Invalid struct name 'u64'. Struct names must start with 'A'..'Z'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/restricted_struct_names.move:6:12 ───
+   │
+ 6 │     struct u128 {}
+   │            ^^^^ Invalid struct name 'u128'. Struct names must start with 'A'..'Z'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/restricted_struct_names.move:7:12 ───
+   │
+ 7 │     struct vector<T> {}
+   │            ^^^^^^ Invalid struct name 'vector'. Struct names must start with 'A'..'Z'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/restricted_struct_names.move:9:12 ───
+   │
+ 9 │     struct move_to_sender {}
+   │            ^^^^^^^^^^^^^^ Invalid struct name 'move_to_sender'. Struct names must start with 'A'..'Z'
+   │
+
+error: 
+
+    ┌── tests/move_check/expansion/restricted_struct_names.move:10:12 ───
+    │
+ 10 │     struct move_to {}
+    │            ^^^^^^^ Invalid struct name 'move_to'. Struct names must start with 'A'..'Z'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/restricted_struct_names.move:11:12 ───
+    │
+ 11 │     struct move_from {}
+    │            ^^^^^^^^^ Invalid struct name 'move_from'. Struct names must start with 'A'..'Z'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/restricted_struct_names.move:12:12 ───
+    │
+ 12 │     struct borrow_global {}
+    │            ^^^^^^^^^^^^^ Invalid struct name 'borrow_global'. Struct names must start with 'A'..'Z'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/restricted_struct_names.move:13:12 ───
+    │
+ 13 │     struct borrow_global_mut {}
+    │            ^^^^^^^^^^^^^^^^^ Invalid struct name 'borrow_global_mut'. Struct names must start with 'A'..'Z'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/restricted_struct_names.move:14:12 ───
+    │
+ 14 │     struct exists {}
+    │            ^^^^^^ Invalid struct name 'exists'. Struct names must start with 'A'..'Z'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/restricted_struct_names.move:15:12 ───
+    │
+ 15 │     struct freeze {}
+    │            ^^^^^^ Invalid struct name 'freeze'. Struct names must start with 'A'..'Z'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/restricted_struct_names.move:16:12 ───
+    │
+ 16 │     struct Self {}
+    │            ^^^^ Invalid module member name 'Self'. 'Self' is restricted and cannot be used to name a module member
+    │
+

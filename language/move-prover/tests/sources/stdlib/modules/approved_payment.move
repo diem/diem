@@ -101,8 +101,8 @@ module ApprovedPayment {
     }
 
     // Return true if an ApprovedPayment::T resource exists under `addr`
-    public fun exists(addr: address): bool {
-        ::exists<T>(addr)
+    public fun exists_at(addr: address): bool {
+        exists<T>(addr)
     }
 
 }

@@ -16,7 +16,7 @@ fun main(account: &signer) {
     let new_auth_key = LibraAccount::authentication_key({{default}});
 
     // check that publishing worked
-    Transaction::assert(SharedEd25519PublicKey::exists({{default}}), 3000);
+    Transaction::assert(SharedEd25519PublicKey::exists_at({{default}}), 3000);
     Transaction::assert(SharedEd25519PublicKey::key({{default}}) == pubkey1, 3001);
 
     // publishing should extract the sender's key rotation capability
