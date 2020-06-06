@@ -97,22 +97,129 @@ module VerifyVector {
         ensures result[0] == e;
     }
 
+    spec module {
+        /// Ghost variable `old_v` used to store the old value of the array v
+        global old_v<Element>: vector<Element>;
+    }
+
     // Reverses the order of the elements in the vector in place.
     fun verify_reverse<Element>(v: &mut vector<Element>) {
         let len = Vector::length(v);
         if (len == 0) return ();
 
-//        let front_index = 0;
-//        let back_index = len -1;
-//        while (front_index < back_index) {
-//            Vector::swap(v, front_index, back_index);
-//            front_index = front_index + 1;
-//            back_index = back_index - 1;
-//        }
+        spec {
+            /// Initialize the old vector `old_v` ghost variable
+            assume (all(0..len, |k| old_v<Element>[k] == v[k]));
+        };
+
+        let front_index = 0;
+        let back_index = len -1;
+        while ({
+            spec {
+                assert front_index + back_index == len - 1;
+                assert (all(0..front_index, |i| v[i] == old_v<Element>[len-1-i]));
+                assert (all(0..front_index, |i| v[len-1-i] == old_v<Element>[i]));
+                assert (all(front_index..back_index+1, |j| v[j] == old_v<Element>[j]));
+                // assert false;
+            };
+            (front_index < back_index)
+        }) {
+            Vector::swap(v, front_index, back_index);
+            front_index = front_index + 1;
+            back_index = back_index - 1;
+        };
+        spec {
+            // NOTE: Commenting out the following line reveals a bug in aliasing len(v).
+            // By renaming the local variable len to vlen (refer to the function below named
+            // verify_reverse_mod_len_alias), the issue goes away.
+            // assert len == len(v);
+            // FIXME: Post condition for reverse (using len(v)) fails.
+            // Commenting out the previous assertion raises an error for refering to len(v).
+            // assert all(0..len(v), |i| v[i] == old_v<Element>[len(v)-1-i]);
+            // Post condition for reverse (using len local variable). Verification succeeds.
+            assert all(0..len, |i| v[i] == old_v<Element>[len-1-i]);
+            // assert false;
+        };
     }
     spec fun verify_reverse { // TODO: cannot verify loop
-//        aborts_if false;
-//        ensures all(0..len(v), |i| old(v[i]) == v[len(v)-1-i]);
+        // aborts_if false;
+        // FIXME: Post condition currently fails.
+        // ensures all(0..len(v), |i| old(v)[i] == v[len(v)-1-i]);
+    }
+
+    // Reverses the order of the elements in the vector in place.
+    fun verify_reverse_mod_len_alias<Element>(v: &mut vector<Element>) {
+        let vlen = Vector::length(v);
+        if (vlen == 0) return ();
+
+        spec {
+            /// Initialize the old vector `old_v` ghost variable
+            assume (all(0..vlen, |k| old_v<Element>[k] == v[k]));
+        };
+
+        let front_index = 0;
+        let back_index = vlen -1;
+        while ({
+            spec {
+                assert front_index + back_index == vlen - 1;
+                assert (all(0..front_index, |i| v[i] == old_v<Element>[vlen-1-i]));
+                assert (all(0..front_index, |i| v[vlen-1-i] == old_v<Element>[i]));
+                assert (all(front_index..back_index+1, |j| v[j] == old_v<Element>[j]));
+                assert (vlen == len(v));
+                // assert false;
+            };
+            (front_index < back_index)
+        }) {
+            Vector::swap(v, front_index, back_index);
+            front_index = front_index + 1;
+            back_index = back_index - 1;
+        };
+        spec {
+            assert all(0..len(v), |i| v[i] == old_v<Element>[len(v)-1-i]);
+            // false;
+        };
+    }
+    spec fun verify_reverse_mod_len_alias { // TODO: cannot verify loop
+        // aborts_if false;
+        ensures all(0..len(v), |i| old(v)[i] == v[len(v)-1-i]);
+    }
+
+    // Reverses the order of the elements in the vector in place.
+    /// Verifies reverse where the arguement has a non-reference type vector<Element>
+    fun verify_modified_reverse<Element>(v: vector<Element>): vector<Element> {
+        let len = Vector::length(&v);
+        if (len == 0) return v;
+
+        spec {
+            /// Initialize the old vector `old_v` ghost variable
+            assume (all(0..len, |k| old_v<Element>[k] == v[k]));
+        };
+
+        let front_index = 0;
+        let back_index = len -1;
+        while ({
+            spec {
+                assert front_index + back_index == len - 1;
+                assert (all(0..front_index, |i| v[i] == old_v<Element>[len-1-i]));
+                assert (all(0..front_index, |i| v[len-1-i] == old_v<Element>[i]));
+                assert (all(front_index..back_index+1, |j| v[j] == old_v<Element>[j]));
+                // assert false;
+            };
+            (front_index < back_index)
+        }) {
+           Vector::swap(&mut v, front_index, back_index);
+           front_index = front_index + 1;
+           back_index = back_index - 1;
+        };
+        // spec {
+            // assert false;
+        // };
+        v
+    }
+    spec fun verify_modified_reverse { // TODO: cannot verify loop (with &mut vector<Element>)
+        // aborts_if false;  // Cannot refer to abort flag in specification
+        ensures all(0..len(v), |i| old(v[i]) == result[len(v)-1-i]);
+        // ensures false;
     }
 
     // Reverses the order of the elements in the vector in place.
