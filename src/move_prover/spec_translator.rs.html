@@ -1398,6 +1398,15 @@
 <span id="1398">1398</span>
 <span id="1399">1399</span>
 <span id="1400">1400</span>
+<span id="1401">1401</span>
+<span id="1402">1402</span>
+<span id="1403">1403</span>
+<span id="1404">1404</span>
+<span id="1405">1405</span>
+<span id="1406">1406</span>
+<span id="1407">1407</span>
+<span id="1408">1408</span>
+<span id="1409">1409</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2383,22 +2392,31 @@
             <span class="op">|</span><span class="op">|</span> {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ty</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module_env</span>().<span class="ident">get_node_type</span>(<span class="ident">node_id</span>);
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">var_name</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">module_env</span>().<span class="ident">symbol_pool</span>().<span class="ident">string</span>(<span class="ident">name</span>);
-                <span class="comment">// overwrite ty if func_target provides a binding for name</span>
                 <span class="kw">if</span> <span class="kw">let</span> <span class="ident">SpecEnv</span>::<span class="ident">Function</span>(<span class="ident">func_target</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">spec_env</span> {
+                    <span class="comment">// overwrite ty and var_name if func_target provides a binding for name</span>
                     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">local_index</span>) <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_index</span>(<span class="ident">name</span>) {
-                        <span class="ident">ty</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_type</span>(<span class="kw-2">*</span><span class="ident">local_index</span>);
-                        <span class="comment">// The following sequence of if tests are mutually disjoint.</span>
-                        <span class="kw">if</span> <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_ensures</span>.<span class="ident">borrow</span>() <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_old</span>.<span class="ident">borrow</span>() {
-                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">return_index</span>) <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_return_index</span>(<span class="kw-2">*</span><span class="ident">local_index</span>) {
-                                <span class="ident">var_name</span> <span class="op">=</span> <span class="ident">Rc</span>::<span class="ident">new</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$ret{}&quot;</span>, <span class="ident">return_index</span>));
-                            }
-                        }
                         <span class="kw">if</span> <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_assert_or_assume</span>.<span class="ident">borrow</span>() {
-                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">proxy_index</span>) <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_proxy_index</span>(<span class="kw-2">*</span><span class="ident">local_index</span>) {
+                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">proxy_index</span>) <span class="op">=</span> <span class="kw">if</span> <span class="ident">ty</span>.<span class="ident">is_reference</span>() {
+                                <span class="ident">func_target</span>.<span class="ident">get_ref_proxy_index</span>(<span class="kw-2">*</span><span class="ident">local_index</span>)
+                            } <span class="kw">else</span> {
+                                <span class="ident">func_target</span>.<span class="ident">get_proxy_index</span>(<span class="kw-2">*</span><span class="ident">local_index</span>)
+                            } {
                                 <span class="ident">var_name</span> <span class="op">=</span> <span class="ident">func_target</span>
                                     .<span class="ident">symbol_pool</span>()
                                     .<span class="ident">string</span>(<span class="ident">func_target</span>.<span class="ident">get_local_name</span>(<span class="kw-2">*</span><span class="ident">proxy_index</span>));
+                                <span class="ident">ty</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_type</span>(<span class="kw-2">*</span><span class="ident">proxy_index</span>);
+                            } <span class="kw">else</span> {
+                                <span class="ident">ty</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_type</span>(<span class="kw-2">*</span><span class="ident">local_index</span>);
                             }
+                        } <span class="kw">else</span> <span class="kw">if</span> <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_ensures</span>.<span class="ident">borrow</span>() <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_old</span>.<span class="ident">borrow</span>() {
+                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">return_index</span>) <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_return_index</span>(<span class="kw-2">*</span><span class="ident">local_index</span>) {
+                                <span class="ident">var_name</span> <span class="op">=</span> <span class="ident">Rc</span>::<span class="ident">new</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$ret{}&quot;</span>, <span class="ident">return_index</span>));
+                                <span class="ident">ty</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_return_type</span>(<span class="kw-2">*</span><span class="ident">return_index</span>);
+                            } <span class="kw">else</span> {
+                                <span class="ident">ty</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_type</span>(<span class="kw-2">*</span><span class="ident">local_index</span>);
+                            }
+                        } <span class="kw">else</span> {
+                            <span class="ident">ty</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_type</span>(<span class="kw-2">*</span><span class="ident">local_index</span>);
                         }
                     }
                 };
