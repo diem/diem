@@ -103,6 +103,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             local_types: self.local_types,
             return_types: self.func_env.get_return_types(),
             param_proxy_map: BTreeMap::new(),
+            ref_param_proxy_map: BTreeMap::new(),
             ref_param_return_map: BTreeMap::new(),
             acquires_global_resources: self.func_env.get_acquires_global_resources(),
             locations: self.location_table,

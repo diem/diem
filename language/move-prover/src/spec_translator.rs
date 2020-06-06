@@ -982,22 +982,31 @@ impl<'env> SpecTranslator<'env> {
             || {
                 let mut ty = &self.module_env().get_node_type(node_id);
                 let mut var_name = self.module_env().symbol_pool().string(name);
-                // overwrite ty if func_target provides a binding for name
                 if let SpecEnv::Function(func_target) = &self.spec_env {
+                    // overwrite ty and var_name if func_target provides a binding for name
                     if let Some(local_index) = func_target.get_local_index(name) {
-                        ty = func_target.get_local_type(*local_index);
-                        // The following sequence of if tests are mutually disjoint.
-                        if *self.in_ensures.borrow() && !*self.in_old.borrow() {
-                            if let Some(return_index) = func_target.get_return_index(*local_index) {
-                                var_name = Rc::new(format!("$ret{}", return_index));
-                            }
-                        }
                         if *self.in_assert_or_assume.borrow() {
-                            if let Some(proxy_index) = func_target.get_proxy_index(*local_index) {
+                            if let Some(proxy_index) = if ty.is_reference() {
+                                func_target.get_ref_proxy_index(*local_index)
+                            } else {
+                                func_target.get_proxy_index(*local_index)
+                            } {
                                 var_name = func_target
                                     .symbol_pool()
                                     .string(func_target.get_local_name(*proxy_index));
+                                ty = func_target.get_local_type(*proxy_index);
+                            } else {
+                                ty = func_target.get_local_type(*local_index);
                             }
+                        } else if *self.in_ensures.borrow() && !*self.in_old.borrow() {
+                            if let Some(return_index) = func_target.get_return_index(*local_index) {
+                                var_name = Rc::new(format!("$ret{}", return_index));
+                                ty = func_target.get_return_type(*return_index);
+                            } else {
+                                ty = func_target.get_local_type(*local_index);
+                            }
+                        } else {
+                            ty = func_target.get_local_type(*local_index);
                         }
                     }
                 };

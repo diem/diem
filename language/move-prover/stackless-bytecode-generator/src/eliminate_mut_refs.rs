@@ -53,6 +53,7 @@ impl FunctionTargetProcessor for EliminateMutRefsProcessor {
             }
         }
         data.param_proxy_map = param_proxy_map.clone();
+        data.ref_param_proxy_map = ref_param_proxy_map.clone();
 
         let mut max_ref_params_per_type = BTreeMap::new();
         for bytecode in &data.code {
