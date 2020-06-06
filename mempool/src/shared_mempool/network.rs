@@ -9,7 +9,7 @@ use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
-    protocols::network::{NetworkEvents, NetworkSender},
+    protocols::network::{NetworkEvents, NetworkSender, NewNetworkSender},
     validator_network::network_builder::NetworkBuilder,
     ProtocolId,
 };
@@ -66,23 +66,18 @@ pub fn add_to_network(
     network: &mut NetworkBuilder,
     max_broadcasts_per_peer: usize,
 ) -> (MempoolNetworkSender, MempoolNetworkEvents) {
-    let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
-        .add_protocol_handler(
-            vec![],
-            vec![ProtocolId::MempoolDirectSend],
-            QueueStyle::KLAST,
-            max_broadcasts_per_peer,
-            Some(&counters::PENDING_MEMPOOL_NETWORK_EVENTS),
-        );
-    (
-        MempoolNetworkSender::new(sender, connection_reqs_tx),
-        MempoolNetworkEvents::new(receiver, connection_notifs_rx),
-    )
+    network.add_protocol_handler((
+        vec![],
+        vec![ProtocolId::MempoolDirectSend],
+        QueueStyle::KLAST,
+        max_broadcasts_per_peer,
+        Some(&counters::PENDING_MEMPOOL_NETWORK_EVENTS),
+    ))
 }
 
-impl MempoolNetworkSender {
+impl NewNetworkSender for MempoolNetworkSender {
     /// Returns a Sender that only sends for the `MEMPOOL_DIRECT_SEND_PROTOCOL` ProtocolId.
-    pub fn new(
+    fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         connection_reqs_tx: ConnectionRequestSender,
     ) -> Self {
@@ -90,7 +85,9 @@ impl MempoolNetworkSender {
             inner: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
         }
     }
+}
 
+impl MempoolNetworkSender {
     /// Send a single message to the destination peer using the `MEMPOOL_DIRECT_SEND_PROTOCOL`
     /// ProtocolId.
     pub fn send_to(
