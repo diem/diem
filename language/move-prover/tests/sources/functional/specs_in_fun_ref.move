@@ -25,10 +25,7 @@ module TestAssertWithReferences {
         };
     }
 
-    // This function fails.
-    // Feature: Updates to y span the spec block.  The partial update before
-    // the spec block is written back only when y dies at the end of the function.
-    // Hence, the first assert fails but the second verifies.
+    // This function verifies.
     fun simple3(x: &mut u64, y: &mut u64) {
         *y = *x;
         spec {
@@ -41,9 +38,6 @@ module TestAssertWithReferences {
     }
 
     // This function verifies.
-    // Feature: Updates to y span the spec block.  To work around the problem of
-    // delayed writeback, either read y or freeze y and use the resulting value
-    // in the spec block.
     fun simple4(x: &mut u64, y: &mut u64) {
         let z;
         *y = *x;

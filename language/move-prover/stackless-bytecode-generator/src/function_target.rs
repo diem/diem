@@ -51,6 +51,7 @@ pub struct FunctionTargetData {
     pub local_types: Vec<Type>,
     pub return_types: Vec<Type>,
     pub param_proxy_map: BTreeMap<usize, usize>,
+    pub ref_param_proxy_map: BTreeMap<usize, usize>,
     pub ref_param_return_map: BTreeMap<usize, usize>,
     pub acquires_global_resources: Vec<StructId>,
     pub locations: BTreeMap<AttrId, Loc>,
@@ -238,6 +239,11 @@ impl<'env> FunctionTarget<'env> {
     /// Gets index of mutable proxy variable for an input parameter
     pub fn get_proxy_index(&self, idx: usize) -> Option<&usize> {
         self.data.param_proxy_map.get(&idx)
+    }
+
+    /// Gets index of mutable proxy variable for an input ref parameter
+    pub fn get_ref_proxy_index(&self, idx: usize) -> Option<&usize> {
+        self.data.ref_param_proxy_map.get(&idx)
     }
 
     /// Returns whether a call to this function ends lifetime of input references
