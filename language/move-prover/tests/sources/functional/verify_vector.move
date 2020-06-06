@@ -97,22 +97,47 @@ module VerifyVector {
         ensures result[0] == e;
     }
 
-    // Reverses the order of the elements in the vector in place.
-    fun verify_reverse<Element>(v: &mut vector<Element>) {
-        let len = Vector::length(v);
-        if (len == 0) return ();
 
-//        let front_index = 0;
-//        let back_index = len -1;
-//        while (front_index < back_index) {
-//            Vector::swap(v, front_index, back_index);
-//            front_index = front_index + 1;
-//            back_index = back_index - 1;
-//        }
+    spec module {
+        /// Ghost variable `old_v` used to store the old value of the array v
+        global old_v<Element>: vector<Element>;
     }
-    spec fun verify_reverse { // TODO: cannot verify loop
-//        aborts_if false;
-//        ensures all(0..len(v), |i| old(v[i]) == v[len(v)-1-i]);
+    // Reverses the order of the elements in the vector in place.
+    /// TODO: Verify reverse where the arguement has type &mut vector<Element>
+    fun verify_reverse<Element>(v: vector<Element>): vector<Element> {
+        let len = Vector::length(&v);
+        if (len == 0) return v;
+
+        spec {
+            /// Initialize the old vector `old_v` ghost variable
+            assume (all(0..len, |k| old_v<Element>[k] == v[k]));
+        };
+
+        let front_index = 0;
+        let back_index = len -1;
+        while ({
+            spec {
+                assert front_index + back_index == len - 1;
+                assert (all(0..front_index, |i| v[i] == old_v<Element>[len-1-i]));
+                assert (all(0..front_index, |i| v[len-1-i] == old_v<Element>[i]));
+                assert (all(front_index..back_index+1, |j| v[j] == old_v<Element>[j]));
+                // assert false;
+            };
+            (front_index < back_index)
+        }) {
+           Vector::swap(&mut v, front_index, back_index);
+           front_index = front_index + 1;
+           back_index = back_index - 1;
+        };
+        // spec {
+            // assert false;
+        // };
+        v
+    }
+    spec fun verify_reverse { // TODO: cannot verify loop (with &mut vector<Element>)
+        // aborts_if false;  // Cannot refer to abort flag in specification
+        ensures all(0..len(v), |i| old(v[i]) == result[len(v)-1-i]);
+        // ensures false;
     }
 
     // Reverses the order of the elements in the vector in place.
