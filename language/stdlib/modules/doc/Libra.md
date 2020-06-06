@@ -469,13 +469,6 @@
 <dd>
 
 </dd>
-<dt>
-
-<code>is_approved: bool</code>
-</dt>
-<dd>
-
-</dd>
 </dl>
 
 
@@ -718,7 +711,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_new_preburn">new_preburn</a>&lt;Token&gt;(): <a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt; {
     <a href="#0x0_Libra_assert_is_coin">assert_is_coin</a>&lt;Token&gt;();
-    <a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt; { requests: <a href="Vector.md#0x0_Vector_empty">Vector::empty</a>(), is_approved: <b>false</b>, }
+    <a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt; { requests: <a href="Vector.md#0x0_Vector_empty">Vector::empty</a>() }
 }
 </code></pre>
 
@@ -795,7 +788,7 @@
     _capability: &<a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;Token&gt;
 ): <a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt; {
     <a href="#0x0_Libra_assert_is_coin">assert_is_coin</a>&lt;Token&gt;();
-    <a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt; { requests: <a href="Vector.md#0x0_Vector_empty">Vector::empty</a>(), is_approved: <b>true</b> }
+    <a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt; { requests: <a href="Vector.md#0x0_Vector_empty">Vector::empty</a>() }
 }
 </code></pre>
 
@@ -866,8 +859,8 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_preburn_to_account">publish_preburn_to_account</a>&lt;Token&gt;(creator: &signer, account: &signer) {
     <a href="Association.md#0x0_Association_assert_account_is_blessed">Association::assert_account_is_blessed</a>(creator);
-    <b>let</b> preburn = <a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt; { requests: <a href="Vector.md#0x0_Vector_empty">Vector::empty</a>(), is_approved: <b>true</b> };
-    move_to(account, preburn)
+    <b>let</b> preburn = <a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt; { requests: <a href="Vector.md#0x0_Vector_empty">Vector::empty</a>() };
+    <a href="#0x0_Libra_publish_preburn">publish_preburn</a>&lt;Token&gt;(account, preburn)
 }
 </code></pre>
 
@@ -1095,7 +1088,7 @@ Fails if
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_destroy_preburn">destroy_preburn</a>&lt;Token&gt;(preburn: <a href="#0x0_Libra_Preburn">Preburn</a>&lt;Token&gt;) {
-    <b>let</b> <a href="#0x0_Libra_Preburn">Preburn</a> { requests, is_approved: _ } = preburn;
+    <b>let</b> <a href="#0x0_Libra_Preburn">Preburn</a> { requests } = preburn;
     <a href="Vector.md#0x0_Vector_destroy_empty">Vector::destroy_empty</a>(requests)
 }
 </code></pre>
