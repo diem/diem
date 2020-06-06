@@ -125,6 +125,17 @@
 <span id="125">125</span>
 <span id="126">126</span>
 <span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -141,7 +152,7 @@
     <span class="doccomment">/// Highest quorum certificate known to the peer.</span>
     <span class="ident">highest_quorum_cert</span>: <span class="ident">QuorumCert</span>,
     <span class="doccomment">/// Highest ledger info known to the peer.</span>
-    <span class="ident">highest_commit_cert</span>: <span class="ident">QuorumCert</span>,
+    <span class="ident">highest_commit_cert</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">QuorumCert</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Optional highest timeout certificate if available.</span>
     <span class="ident">highest_timeout_cert</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TimeoutCertificate</span><span class="op">&gt;</span>,
 }
@@ -168,12 +179,17 @@
         <span class="ident">highest_commit_cert</span>: <span class="ident">QuorumCert</span>,
         <span class="ident">highest_timeout_cert</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TimeoutCertificate</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">commit_cert</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">highest_quorum_cert</span> <span class="op">=</span><span class="op">=</span> <span class="ident">highest_commit_cert</span> {
+            <span class="prelude-val">None</span>
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">highest_commit_cert</span>)
+        };
         <span class="comment">// No need to include HTC if it&#39;s lower than HQC</span>
         <span class="kw">let</span> <span class="ident">highest_timeout_cert</span> <span class="op">=</span> <span class="ident">highest_timeout_cert</span>
             .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">tc</span><span class="op">|</span> <span class="ident">tc</span>.<span class="ident">round</span>() <span class="op">&gt;</span> <span class="ident">highest_quorum_cert</span>.<span class="ident">certified_block</span>().<span class="ident">round</span>());
         <span class="self">Self</span> {
             <span class="ident">highest_quorum_cert</span>,
-            <span class="ident">highest_commit_cert</span>,
+            <span class="ident">highest_commit_cert</span>: <span class="ident">commit_cert</span>,
             <span class="ident">highest_timeout_cert</span>,
         }
     }
@@ -185,7 +201,9 @@
 
     <span class="doccomment">/// Highest ledger info</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">highest_commit_cert</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">QuorumCert</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">highest_commit_cert</span>
+        <span class="self">self</span>.<span class="ident">highest_commit_cert</span>
+            .<span class="ident">as_ref</span>()
+            .<span class="ident">unwrap_or</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">highest_quorum_cert</span>)
     }
 
     <span class="doccomment">/// Highest timeout certificate if available</span>
@@ -214,7 +232,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">validator</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorVerifier</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">epoch</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">highest_quorum_cert</span>.<span class="ident">certified_block</span>().<span class="ident">epoch</span>();
         <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="ident">epoch</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">highest_commit_cert</span>.<span class="ident">certified_block</span>().<span class="ident">epoch</span>(),
+            <span class="ident">epoch</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">highest_commit_cert</span>().<span class="ident">certified_block</span>().<span class="ident">epoch</span>(),
             <span class="string">&quot;Multi epoch in SyncInfo - HCC and HQC&quot;</span>
         );
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tc</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">highest_timeout_cert</span> {
@@ -223,16 +241,20 @@
 
         <span class="macro">ensure</span><span class="macro">!</span>(
             <span class="self">self</span>.<span class="ident">highest_quorum_cert</span>.<span class="ident">certified_block</span>().<span class="ident">round</span>()
-                <span class="op">&gt;</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">highest_commit_cert</span>.<span class="ident">certified_block</span>().<span class="ident">round</span>(),
+                <span class="op">&gt;</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">highest_commit_cert</span>().<span class="ident">certified_block</span>().<span class="ident">round</span>(),
             <span class="string">&quot;HQC has lower round than HCC&quot;</span>
         );
         <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">highest_commit_cert</span>.<span class="ident">commit_info</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">BlockInfo</span>::<span class="ident">empty</span>(),
+            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">highest_commit_cert</span>().<span class="ident">commit_info</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">BlockInfo</span>::<span class="ident">empty</span>(),
             <span class="string">&quot;HCC has no committed block&quot;</span>
         );
         <span class="self">self</span>.<span class="ident">highest_quorum_cert</span>
             .<span class="ident">verify</span>(<span class="ident">validator</span>)
-            .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">highest_commit_cert</span>.<span class="ident">verify</span>(<span class="ident">validator</span>))
+            .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
+                <span class="self">self</span>.<span class="ident">highest_commit_cert</span>
+                    .<span class="ident">as_ref</span>()
+                    .<span class="ident">map_or</span>(<span class="prelude-val">Ok</span>(()), <span class="op">|</span><span class="ident">cert</span><span class="op">|</span> <span class="ident">cert</span>.<span class="ident">verify</span>(<span class="ident">validator</span>))
+            })
             .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tc</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">highest_timeout_cert</span> {
                     <span class="ident">tc</span>.<span class="ident">verify</span>(<span class="ident">validator</span>)<span class="question-mark">?</span>;
