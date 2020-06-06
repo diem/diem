@@ -6,7 +6,10 @@ use crate::{
     peer_manager::{
         self, conn_notifs_channel, ConnectionRequest, PeerManagerNotification, PeerManagerRequest,
     },
-    protocols::rpc::InboundRpcRequest,
+    protocols::{
+        network::{NewNetworkEvents, NewNetworkSender},
+        rpc::InboundRpcRequest,
+    },
     ProtocolId,
 };
 use channel::{libra_channel, message_queues::QueueStyle};

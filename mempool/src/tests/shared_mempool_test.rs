@@ -31,6 +31,7 @@ use network::{
         conn_notifs_channel, ConnectionNotification, ConnectionRequestSender,
         PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
     },
+    protocols::network::{NewNetworkEvents, NewNetworkSender},
     DisconnectReason, ProtocolId,
 };
 use std::{

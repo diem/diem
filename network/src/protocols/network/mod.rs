@@ -95,8 +95,16 @@ pub struct NetworkEvents<TMessage> {
     _marker: PhantomData<TMessage>,
 }
 
-impl<TMessage: Message> NetworkEvents<TMessage> {
-    pub fn new(
+/// Trait specifying the signature for `new()` `NetworkEvents`
+pub trait NewNetworkEvents {
+    fn new(
+        peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+        connection_notifs_rx: libra_channel::Receiver<PeerId, ConnectionNotification>,
+    ) -> Self;
+}
+
+impl<TMessage: Message> NewNetworkEvents for NetworkEvents<TMessage> {
+    fn new(
         peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
         connection_notifs_rx: libra_channel::Receiver<PeerId, ConnectionNotification>,
     ) -> Self {
@@ -178,8 +186,16 @@ pub struct NetworkSender<TMessage> {
     _marker: PhantomData<TMessage>,
 }
 
-impl<TMessage> NetworkSender<TMessage> {
-    pub fn new(
+/// Trait specifying the signature for `new()` `NetworkSender`s
+pub trait NewNetworkSender {
+    fn new(
+        peer_mgr_reqs_tx: PeerManagerRequestSender,
+        connection_reqs_tx: ConnectionRequestSender,
+    ) -> Self;
+}
+
+impl<TMessage> NewNetworkSender for NetworkSender<TMessage> {
+    fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         connection_reqs_tx: ConnectionRequestSender,
     ) -> Self {
@@ -189,7 +205,9 @@ impl<TMessage> NetworkSender<TMessage> {
             _marker: PhantomData,
         }
     }
+}
 
+impl<TMessage> NetworkSender<TMessage> {
     /// Request that a given Peer be dialed at the provided `NetworkAddress` and
     /// synchronously wait for the request to be performed.
     pub async fn dial_peer(

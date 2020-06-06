@@ -28,8 +28,9 @@ use libra_types::{
     validator_info::ValidatorInfo,
     waypoint::Waypoint,
 };
-use network::peer_manager::{
-    conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender,
+use network::{
+    peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
+    protocols::network::{NewNetworkEvents, NewNetworkSender},
 };
 use std::{collections::HashMap, num::NonZeroUsize, sync::Arc};
 use tokio::runtime::{Builder, Runtime};
