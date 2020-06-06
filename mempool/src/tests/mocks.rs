@@ -15,8 +15,9 @@ use libra_config::{
     network_id::NetworkId,
 };
 use libra_types::{mempool_status::MempoolStatusCode, transaction::SignedTransaction};
-use network::peer_manager::{
-    conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender,
+use network::{
+    peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
+    protocols::network::{NewNetworkEvents, NewNetworkSender},
 };
 use std::{
     num::NonZeroUsize,

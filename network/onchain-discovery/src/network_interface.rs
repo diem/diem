@@ -10,7 +10,10 @@ use network::{
         ConnectionNotification, ConnectionRequestSender, PeerManagerNotification,
         PeerManagerRequestSender,
     },
-    protocols::{network::NetworkSender, rpc::error::RpcError},
+    protocols::{
+        network::{NetworkSender, NewNetworkEvents, NewNetworkSender},
+        rpc::error::RpcError,
+    },
     validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
     ProtocolId,
 };
@@ -26,8 +29,8 @@ pub struct OnchainDiscoveryNetworkEvents {
     pub connection_notifs_rx: libra_channel::Receiver<PeerId, ConnectionNotification>,
 }
 
-impl OnchainDiscoveryNetworkEvents {
-    pub fn new(
+impl NewNetworkEvents for OnchainDiscoveryNetworkEvents {
+    fn new(
         peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
         connection_notifs_rx: libra_channel::Receiver<PeerId, ConnectionNotification>,
     ) -> Self {
@@ -44,8 +47,8 @@ pub struct OnchainDiscoveryNetworkSender {
     inner: NetworkSender<OnchainDiscoveryMsg>,
 }
 
-impl OnchainDiscoveryNetworkSender {
-    pub fn new(
+impl NewNetworkSender for OnchainDiscoveryNetworkSender {
+    fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         conn_reqs_tx: ConnectionRequestSender,
     ) -> Self {
@@ -53,7 +56,9 @@ impl OnchainDiscoveryNetworkSender {
             inner: NetworkSender::new(peer_mgr_reqs_tx, conn_reqs_tx),
         }
     }
+}
 
+impl OnchainDiscoveryNetworkSender {
     pub async fn query_discovery_set(
         &mut self,
         recipient: PeerId,
@@ -83,18 +88,13 @@ impl OnchainDiscoveryNetworkSender {
 pub fn add_to_network(
     network: &mut NetworkBuilder,
 ) -> (OnchainDiscoveryNetworkSender, OnchainDiscoveryNetworkEvents) {
-    let (network_sender, network_receiver, conn_reqs_tx, conn_notifs_rx) = network
-        .add_protocol_handler(
-            vec![ProtocolId::OnchainDiscoveryRpc],
-            vec![],
-            QueueStyle::LIFO,
-            NETWORK_CHANNEL_SIZE,
-            // Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
-            // TODO(philiphayes): add a counter for onchain discovery
-            None,
-        );
-    (
-        OnchainDiscoveryNetworkSender::new(network_sender, conn_reqs_tx),
-        OnchainDiscoveryNetworkEvents::new(network_receiver, conn_notifs_rx),
-    )
+    network.add_protocol_handler((
+        vec![ProtocolId::OnchainDiscoveryRpc],
+        vec![],
+        QueueStyle::LIFO,
+        NETWORK_CHANNEL_SIZE,
+        // Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
+        // TODO(philiphayes): add a counter for onchain discovery
+        None,
+    ))
 }

@@ -27,7 +27,10 @@ use libra_types::{
     validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
 };
-use network::peer_manager::{ConnectionRequestSender, PeerManagerRequestSender};
+use network::{
+    peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
+    protocols::network::NewNetworkSender,
+};
 use once_cell::sync::Lazy;
 use safety_rules::{test_utils, SafetyRules, TSafetyRules};
 use std::{collections::BTreeMap, num::NonZeroUsize, sync::Arc, time::Duration};

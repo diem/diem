@@ -7,7 +7,7 @@ use crate::{
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::{
-        network::{Event, NetworkEvents, NetworkSender},
+        network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
         rpc::error::RpcError,
     },
     validator_network::network_builder::{
@@ -33,18 +33,13 @@ const TEST_DIRECT_SEND_PROTOCOL: ProtocolId = ProtocolId::ConsensusDirectSend;
 pub struct DummyMsg(pub Vec<u8>);
 
 fn add_to_network(network: &mut NetworkBuilder) -> (DummyNetworkSender, DummyNetworkEvents) {
-    let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
-        .add_protocol_handler(
-            vec![TEST_RPC_PROTOCOL],
-            vec![TEST_DIRECT_SEND_PROTOCOL],
-            QueueStyle::LIFO,
-            NETWORK_CHANNEL_SIZE,
-            None,
-        );
-    (
-        DummyNetworkSender::new(sender, connection_reqs_tx),
-        DummyNetworkEvents::new(receiver, connection_notifs_rx),
-    )
+    network.add_protocol_handler((
+        vec![TEST_RPC_PROTOCOL],
+        vec![TEST_DIRECT_SEND_PROTOCOL],
+        QueueStyle::LIFO,
+        NETWORK_CHANNEL_SIZE,
+        None,
+    ))
 }
 
 /// TODO(davidiw): In DummyNetwork, replace DummyMsg with a Serde compatible type once migration
@@ -56,8 +51,8 @@ pub struct DummyNetworkSender {
     inner: NetworkSender<DummyMsg>,
 }
 
-impl DummyNetworkSender {
-    pub fn new(
+impl NewNetworkSender for DummyNetworkSender {
+    fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         connection_reqs_tx: ConnectionRequestSender,
     ) -> Self {
@@ -65,7 +60,9 @@ impl DummyNetworkSender {
             inner: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
         }
     }
+}
 
+impl DummyNetworkSender {
     pub fn send_to(&mut self, recipient: PeerId, message: DummyMsg) -> Result<(), NetworkError> {
         let protocol = TEST_DIRECT_SEND_PROTOCOL;
         self.inner.send_to(recipient, protocol, message)
