@@ -51,7 +51,7 @@ use libra_types::{
 };
 use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
-    protocols::network::Event,
+    protocols::network::{Event, NewNetworkEvents, NewNetworkSender},
 };
 use safety_rules::{ConsensusState, PersistentSafetyStorage, SafetyRulesManager};
 use std::{num::NonZeroUsize, sync::Arc, time::Duration};

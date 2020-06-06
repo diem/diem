@@ -38,7 +38,7 @@ use crate::{
     counters,
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
-    protocols::network::{Event, NetworkEvents, NetworkSender},
+    protocols::network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
     validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
     ProtocolId,
 };
@@ -92,23 +92,18 @@ pub struct DiscoveryNetworkSender {
 pub fn add_to_network(
     network: &mut NetworkBuilder,
 ) -> (DiscoveryNetworkSender, DiscoveryNetworkEvents) {
-    let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
-        .add_protocol_handler(
-            vec![],
-            vec![ProtocolId::DiscoveryDirectSend],
-            QueueStyle::LIFO,
-            NETWORK_CHANNEL_SIZE,
-            Some(&counters::PENDING_DISCOVERY_NETWORK_EVENTS),
-        );
-    (
-        DiscoveryNetworkSender::new(sender, connection_reqs_tx),
-        DiscoveryNetworkEvents::new(receiver, connection_notifs_rx),
-    )
+    network.add_protocol_handler((
+        vec![],
+        vec![ProtocolId::DiscoveryDirectSend],
+        QueueStyle::LIFO,
+        NETWORK_CHANNEL_SIZE,
+        Some(&counters::PENDING_DISCOVERY_NETWORK_EVENTS),
+    ))
 }
 
-impl DiscoveryNetworkSender {
+impl NewNetworkSender for DiscoveryNetworkSender {
     /// Create a new Discovery sender
-    pub fn new(
+    fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         connection_reqs_tx: ConnectionRequestSender,
     ) -> Self {
@@ -116,7 +111,8 @@ impl DiscoveryNetworkSender {
             inner: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
         }
     }
-
+}
+impl DiscoveryNetworkSender {
     /// Send a DiscoveryMsg to a peer.
     pub fn send_to(&mut self, peer: PeerId, msg: DiscoveryMsg) -> Result<(), NetworkError> {
         self.inner

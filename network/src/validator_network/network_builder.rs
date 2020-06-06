@@ -19,6 +19,7 @@ use crate::{
     protocols::{
         discovery::{self, Discovery},
         health_checker::{self, HealthChecker},
+        network::{NewNetworkEvents, NewNetworkSender},
         wire::handshake::v1::SupportedProtocols,
     },
     transport::{self, Connection, LibraNetTransport, LIBRA_TCP_TRANSPORT},
@@ -244,7 +245,7 @@ impl NetworkBuilder {
     }
 
     /// Add a handler for given protocols using raw bytes.
-    pub fn add_protocol_handler(
+    fn inner_add_protocol_handler(
         &mut self,
         rpc_protocols: Vec<ProtocolId>,
         direct_send_protocols: Vec<ProtocolId>,
@@ -493,5 +494,35 @@ impl NetworkBuilder {
         debug!("{} Started peer manager", self.network_context);
 
         listen_addr
+    }
+
+    /// Adds a endpoints for the provided configuration.  Returns NetworkSender and NetworkEvent which
+    /// can be attached to other components.
+    pub fn add_protocol_handler<SenderT, EventT>(
+        &mut self,
+        (rpc_protocols, direct_send_protocols, queue_preference, max_queue_size_per_peer, counter): (
+            Vec<ProtocolId>,
+            Vec<ProtocolId>,
+            QueueStyle,
+            usize,
+            Option<&'static IntCounterVec>,
+        ),
+    ) -> (SenderT, EventT)
+    where
+        EventT: NewNetworkEvents,
+        SenderT: NewNetworkSender,
+    {
+        let (peer_mgr_reqs_tx, peer_mgr_reqs_rx, connection_reqs_tx, connection_notifs_rx) = self
+            .inner_add_protocol_handler(
+                rpc_protocols,
+                direct_send_protocols,
+                queue_preference,
+                max_queue_size_per_peer,
+                counter,
+            );
+        (
+            SenderT::new(peer_mgr_reqs_tx, connection_reqs_tx),
+            EventT::new(peer_mgr_reqs_rx, connection_notifs_rx),
+        )
     }
 }
