@@ -289,7 +289,8 @@ impl NoiseUpgrader {
             }
         }
 
-        // if mutual auth mode, verify this handshake is not a replay
+        // if on a mutually authenticated network,
+        // the payload should contain a u64 client timestamp
         if let Some(anti_replay_timestamps) = self.auth_mode.anti_replay_timestamps() {
             // check that the payload received as the client timestamp (in seconds)
             if payload.len() != PAYLOAD_SIZE {
@@ -311,7 +312,7 @@ impl NoiseUpgrader {
                 )
             })?;
             if anti_replay_timestamps.is_replay(their_public_key, client_timestamp) {
-                // TODO: security logging the ip + blocking the ip? (mimoo)
+                // TODO: security logging
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
                     format!(
@@ -323,6 +324,12 @@ impl NoiseUpgrader {
 
             // store the timestamp
             anti_replay_timestamps.store_timestamp(their_public_key, client_timestamp);
+        } else if !payload.is_empty() {
+            // TODO: security logging
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "noise: received an unexpected handshake payload on a public-facing full-node network",
+            ));
         }
 
         // construct the response
