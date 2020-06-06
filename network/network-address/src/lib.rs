@@ -709,6 +709,7 @@ pub fn parse_ip_tcp(protos: &[Protocol]) -> Option<((IpAddr, u16), &[Protocol])>
     }
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum IpFilter {
     Any,
     OnlyIp4,
@@ -959,28 +960,28 @@ mod test {
         let expected_suffix: &[Protocol] = &[];
         assert_eq!(
             parse_dns_tcp(addr.as_slice()).unwrap(),
-            ((&dns_name, 123), expected_suffix)
+            ((IpFilter::Any, &dns_name, 123), expected_suffix)
         );
 
         let addr = NetworkAddress::from_str("/dns4/example.com/tcp/123").unwrap();
         let expected_suffix: &[Protocol] = &[];
         assert_eq!(
             parse_dns_tcp(addr.as_slice()).unwrap(),
-            ((&dns_name, 123), expected_suffix)
+            ((IpFilter::OnlyIp4, &dns_name, 123), expected_suffix)
         );
 
         let addr = NetworkAddress::from_str("/dns6/example.com/tcp/123").unwrap();
         let expected_suffix: &[Protocol] = &[];
         assert_eq!(
             parse_dns_tcp(addr.as_slice()).unwrap(),
-            ((&dns_name, 123), expected_suffix)
+            ((IpFilter::OnlyIp6, &dns_name, 123), expected_suffix)
         );
 
         let addr = NetworkAddress::from_str("/dns/example.com/tcp/123/memory/44").unwrap();
         let expected_suffix: &[Protocol] = &[Protocol::Memory(44)];
         assert_eq!(
             parse_dns_tcp(addr.as_slice()).unwrap(),
-            ((&dns_name, 123), expected_suffix)
+            ((IpFilter::Any, &dns_name, 123), expected_suffix)
         );
 
         let addr = NetworkAddress::from_str("/tcp/999/memory/123").unwrap();

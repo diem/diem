@@ -151,7 +151,11 @@ async fn resolve_and_connect(addr: NetworkAddress) -> io::Result<TcpStream> {
         Err(last_err.unwrap_or_else(|| {
             io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "could not resolve to any address",
+                format!(
+                    "could not resolve dns name to any address: name: {}, ip filter: {:?}",
+                    dns_name.as_ref(),
+                    ip_filter,
+                ),
             )
         }))
     } else {
