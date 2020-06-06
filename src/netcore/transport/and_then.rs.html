@@ -177,8 +177,6 @@
 <span id="177">177</span>
 <span id="178">178</span>
 <span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -186,7 +184,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">transport</span>::{<span class="ident">ConnectionOrigin</span>, <span class="ident">Transport</span>};
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">future</span>::<span class="ident">Future</span>, <span class="ident">stream</span>::<span class="ident">Stream</span>};
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
-<span class="kw">use</span> <span class="ident">pin_project</span>::{<span class="ident">pin_project</span>, <span class="ident">project</span>};
+<span class="kw">use</span> <span class="ident">pin_project</span>::<span class="ident">pin_project</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">pin</span>::<span class="ident">Pin</span>,
     <span class="ident">task</span>::{<span class="ident">Context</span>, <span class="ident">Poll</span>},
@@ -292,7 +290,7 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">pin_project</span>]</span>
+<span class="attribute">#[<span class="ident">pin_project</span>(<span class="ident">project</span> <span class="op">=</span> <span class="ident">AndThenChainProj</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">enum</span> <span class="ident">AndThenChain</span><span class="op">&lt;</span><span class="ident">Fut1</span>, <span class="ident">Fut2</span>, <span class="ident">F</span><span class="op">&gt;</span> {
     <span class="ident">First</span>(<span class="attribute">#[<span class="ident">pin</span>]</span> <span class="ident">Fut1</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">F</span>, <span class="ident">NetworkAddress</span>, <span class="ident">ConnectionOrigin</span>)<span class="op">&gt;</span>),
@@ -336,21 +334,19 @@
 {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">O2</span>, <span class="ident">E</span><span class="op">&gt;</span>;
 
-    <span class="attribute">#[<span class="ident">project</span>]</span>
     <span class="kw">fn</span> <span class="ident">poll</span>(<span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="kw-2">mut</span> <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Poll</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Output</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">this</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">project</span>();
         <span class="kw">loop</span> {
-            <span class="attribute">#[<span class="ident">project</span>]</span>
             <span class="kw">let</span> (<span class="ident">output</span>, (<span class="ident">f</span>, <span class="ident">addr</span>, <span class="ident">origin</span>)) <span class="op">=</span> <span class="kw">match</span> <span class="ident">this</span>.<span class="ident">chain</span>.<span class="ident">as_mut</span>().<span class="ident">project</span>() {
                 <span class="comment">// Step 1: Drive Fut1 to completion</span>
-                <span class="ident">AndThenChain</span>::<span class="ident">First</span>(<span class="ident">fut1</span>, <span class="ident">data</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">fut1</span>.<span class="ident">poll</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>) {
+                <span class="ident">AndThenChainProj</span>::<span class="ident">First</span>(<span class="ident">fut1</span>, <span class="ident">data</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">fut1</span>.<span class="ident">poll</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>) {
                     <span class="ident">Poll</span>::<span class="ident">Pending</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="ident">Poll</span>::<span class="ident">Pending</span>,
                     <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Err</span>(<span class="ident">e</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Err</span>(<span class="ident">e</span>)),
                     <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Ok</span>(<span class="ident">output</span>)) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">output</span>, <span class="ident">data</span>.<span class="ident">take</span>().<span class="ident">expect</span>(<span class="string">&quot;must be initialized&quot;</span>)),
                 },
                 <span class="comment">// Step 4: Drive Fut2 to completion</span>
-                <span class="ident">AndThenChain</span>::<span class="ident">Second</span>(<span class="ident">fut2</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="ident">fut2</span>.<span class="ident">poll</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>),
-                <span class="ident">AndThenChain</span>::<span class="ident">Empty</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
+                <span class="ident">AndThenChainProj</span>::<span class="ident">Second</span>(<span class="ident">fut2</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="ident">fut2</span>.<span class="ident">poll</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>),
+                <span class="ident">AndThenChainProj</span>::<span class="ident">Empty</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
             };
 
             <span class="comment">// Step 2: Ensure that Fut1 is dropped</span>
