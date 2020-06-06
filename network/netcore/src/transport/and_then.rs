@@ -4,7 +4,7 @@
 use crate::transport::{ConnectionOrigin, Transport};
 use futures::{future::Future, stream::Stream};
 use libra_network_address::NetworkAddress;
-use pin_project::{pin_project, project};
+use pin_project::pin_project;
 use std::{
     pin::Pin,
     task::{Context, Poll},
@@ -110,7 +110,7 @@ where
     }
 }
 
-#[pin_project]
+#[pin_project(project = AndThenChainProj)]
 #[derive(Debug)]
 enum AndThenChain<Fut1, Fut2, F> {
     First(#[pin] Fut1, Option<(F, NetworkAddress, ConnectionOrigin)>),
@@ -154,21 +154,19 @@ where
 {
     type Output = Result<O2, E>;
 
-    #[project]
     fn poll(self: Pin<&mut Self>, mut context: &mut Context) -> Poll<Self::Output> {
         let mut this = self.project();
         loop {
-            #[project]
             let (output, (f, addr, origin)) = match this.chain.as_mut().project() {
                 // Step 1: Drive Fut1 to completion
-                AndThenChain::First(fut1, data) => match fut1.poll(&mut context) {
+                AndThenChainProj::First(fut1, data) => match fut1.poll(&mut context) {
                     Poll::Pending => return Poll::Pending,
                     Poll::Ready(Err(e)) => return Poll::Ready(Err(e)),
                     Poll::Ready(Ok(output)) => (output, data.take().expect("must be initialized")),
                 },
                 // Step 4: Drive Fut2 to completion
-                AndThenChain::Second(fut2) => return fut2.poll(&mut context),
-                AndThenChain::Empty => unreachable!(),
+                AndThenChainProj::Second(fut2) => return fut2.poll(&mut context),
+                AndThenChainProj::Empty => unreachable!(),
             };
 
             // Step 2: Ensure that Fut1 is dropped
