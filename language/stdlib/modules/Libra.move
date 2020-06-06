@@ -110,9 +110,6 @@ module Libra {
     resource struct Preburn<Token> {
         // Queue of pending burn requests
         requests: vector<Libra<Token>>,
-        // Boolean that is true if the holder of the BurnCapability has approved this account as a
-        // preburner
-        is_approved: bool,
     }
 
     // An association account holding this privilege can add/remove the
@@ -190,7 +187,7 @@ module Libra {
 
     public fun new_preburn<Token>(): Preburn<Token> {
         assert_is_coin<Token>();
-        Preburn<Token> { requests: Vector::empty(), is_approved: false, }
+        Preburn<Token> { requests: Vector::empty() }
     }
 
     // Mint a new Libra worth `value`. The caller must have a reference to a MintCapability.
@@ -232,7 +229,7 @@ module Libra {
         _capability: &BurnCapability<Token>
     ): Preburn<Token> {
         assert_is_coin<Token>();
-        Preburn<Token> { requests: Vector::empty(), is_approved: true }
+        Preburn<Token> { requests: Vector::empty() }
     }
 
     // Send a coin to the preburn holding area `preburn` that is passed in.
@@ -270,8 +267,8 @@ module Libra {
     // as assocation TC account is creating this resource for DD
     public fun publish_preburn_to_account<Token>(creator: &signer, account: &signer) {
         Association::assert_account_is_blessed(creator);
-        let preburn = Preburn<Token> { requests: Vector::empty(), is_approved: true };
-        move_to(account, preburn)
+        let preburn = Preburn<Token> { requests: Vector::empty() };
+        publish_preburn<Token>(account, preburn)
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -378,7 +375,7 @@ module Libra {
     // Destroys the given preburn resource.
     // Aborts if `requests` is non-empty
     public fun destroy_preburn<Token>(preburn: Preburn<Token>) {
-        let Preburn { requests, is_approved: _ } = preburn;
+        let Preburn { requests } = preburn;
         Vector::destroy_empty(requests)
     }
 
