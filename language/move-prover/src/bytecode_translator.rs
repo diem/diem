@@ -662,7 +662,7 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "var $saved_m: $Memory;");
 
         emitln!(self.writer, "\n// initialize function execution");
-        emitln!(self.writer, "assert !$abort_flag;");
+        emitln!(self.writer, "assume !$abort_flag;");
         emitln!(self.writer, "$saved_m := $m;");
 
         emitln!(self.writer, "\n// track values of parameters at entry time");
@@ -832,6 +832,7 @@ impl<'env> ModuleTranslator<'env> {
             Label(_, label) => {
                 self.writer.unindent();
                 emitln!(self.writer, "L{}:", label.as_usize());
+                emitln!(self.writer, "assume !$abort_flag;");
                 self.writer.indent();
             }
             Jump(_, target) => emitln!(self.writer, "goto L{};", target.as_usize()),

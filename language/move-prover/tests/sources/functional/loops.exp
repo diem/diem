@@ -1,0 +1,40 @@
+Move prover returns: exiting with boogie verification errors
+error: abort not covered by any of the `aborts_if` clauses
+
+    ┌── tests/sources/functional/loops.move:75:5 ───
+    │
+ 75 │ ╭     public fun iter10_abort_incorrect() {
+ 76 │ │         let i = 0;
+ 77 │ │         while ({
+ 78 │ │             spec { assert i <= 7; };
+ 79 │ │             (i <= 10)
+ 80 │ │         }) {
+ 81 │ │             if (i == 7) abort 7;
+ 82 │ │             i = i + 1;
+ 83 │ │         }
+ 84 │ │     }
+    │ ╰─────^
+    ·
+ 81 │             if (i == 7) abort 7;
+    │             ------------------- abort happened here
+    │
+    =     at tests/sources/functional/loops.move:75:5: iter10_abort_incorrect (entry)
+    =     at tests/sources/functional/loops.move:76:13: iter10_abort_incorrect
+    =     at tests/sources/functional/loops.move:78:13: iter10_abort_incorrect
+    =         i = <redacted>
+    =     at tests/sources/functional/loops.move:77:9: iter10_abort_incorrect
+    =     at tests/sources/functional/loops.move:81:13: iter10_abort_incorrect (ABORTED)
+
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/functional/loops.move:58:9 ───
+    │
+ 58 │         aborts_if true;
+    │         ^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/loops.move:47:5: iter10_no_abort_incorrect (entry)
+    =     at tests/sources/functional/loops.move:48:13: iter10_no_abort_incorrect
+    =     at tests/sources/functional/loops.move:50:13: iter10_no_abort_incorrect
+    =         i = <redacted>
+    =     at tests/sources/functional/loops.move:49:9: iter10_no_abort_incorrect
+    =     at tests/sources/functional/loops.move:47:5: iter10_no_abort_incorrect (exit)
