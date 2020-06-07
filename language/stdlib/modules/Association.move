@@ -169,6 +169,22 @@ module Association {
         apply OnlyRootAddressHasRootPrivilege to *<Privilege>, *;
     }
 
+    spec schema InitializationPersists {
+        /// For every `is_initialized` predicate, we want to make sure that the
+        /// predicate never becomes false again.  Since `is_initialized` simply
+        /// checks for the presence of a Root {} value at the root address,
+        /// the same property also checks that "root stays root", which is of
+        /// interest for the correct functioning of the system.
+        ///
+        /// *Informally:* Once initialize is run, the module continues to be
+        /// initialized, forever.
+        ensures old(spec_is_initialized()) ==> spec_is_initialized();
+    }
+    spec module {
+        apply InitializationPersists to *<Privilege>, *;
+    }
+
+
     /// This post-condition to `Self::assert_is_root` is a sanity check that
     /// the `Root` invariant really works. It needs the invariant
     /// `OnlyRootAddressHasRootPrivilege`, because `assert_is_root` does not
