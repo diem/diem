@@ -215,6 +215,18 @@ impl<'input> Lexer<'input> {
         Ok(tok)
     }
 
+    // Look ahead to the next two tokens after the current one and return them without advancing
+    // the state of the lexer.
+    pub fn lookahead2(&self) -> Result<(Tok, Tok), Error> {
+        let text = self.text[self.cur_end..].trim_start();
+        let offset = self.text.len() - text.len();
+        let (first, length) = find_token(self.file, text, offset)?;
+        let text2 = self.text[offset + length..].trim_start();
+        let offset2 = self.text.len() - text2.len();
+        let (second, _) = find_token(self.file, text2, offset2)?;
+        Ok((first, second))
+    }
+
     // Matches the doc comments after the last token (or the beginning of the file) to the position
     // of the current token. This moves the comments out of `doc_comments` and
     // into `matched_doc_comments`. At the end of parsing, if `doc_comments` is not empty, errors

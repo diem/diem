@@ -72,8 +72,14 @@ The available expressions in Spec language are a subset of the Move language, pl
 - If-then-else is supported.
 - A [spec variable](#specification-variables-and-packunpack-invariants) can be generic, and therefore the
   notation `name<T>` (or `Module::name<T>`) is supported. In Move, type arguments can only be provided to calls.
-- A form of lambda, denoted as `|x| x + 1`, is supported. The lambda can only appear as a parameter of the `all`
-  or `any` function (see next section).
+- Universal and existential quantification are supported:
+  - General form is `forall <binding>, ..., <binding> [ where <exp> ] : <exp>`. Similar for `exists`.
+  - Bindings can either be of the form `name: <type>` or `name in <exp>`. For the second form, the expression
+    currently must either be a `range` or a vector.
+  - The optional constraint `where <exp>` allows to restrict the quantified range. `forall x: T where p: q`
+    is equivalent to `forall x: T : p ==> q` and `exists x: T where p: q` is equivalent to
+    `exists x: T : p && q`.
+
 
 ## Builtin Functions
 
@@ -87,11 +93,6 @@ The Spec language supports a number of builtin functions. Most of them are not a
 - `update(vector<T>, num, T>): vector<T>` returns a new vector with the element replaced at the given index.
 - `type<T>()` returns an opaque value of Spec language type `type` which represents
    the type T. Type values can be only compared for equality.
-- `domain<T>()` returns the set of all values of type T. This expression can only be used as a parameter for
-   the `all` or `any` function.
-- `all(vector<T>, |T|bool`, `all(range, |num|bool)`, `all(domain<T>, |T|bool)` is universal quantification over
-   the values in a vector, the numbers in a range, or the whole type T. The second parameter must be a lambda expression.
-- `any(vector<T>, |T|bool`, `any(range, |num|bool)`, `any(domain<T>, |T|bool)` is existential quantification.
 - `old(T): T` delivers the value of the passed argument at point of entry into a Move function. This is only allowed
   in `ensures` post-conditions and certain forms of invariants, as discussed later.
 - `TRACE(T): T` is semantically the identity function and causes visualization of the argument's value in error messages created by the
