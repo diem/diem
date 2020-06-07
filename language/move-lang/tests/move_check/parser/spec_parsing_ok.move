@@ -132,4 +132,10 @@ module M {
         apply ModuleInvariant<X, Y> to *foo*<Y, X>, bar except public *, internal baz<X>;
         pragma do_not_verify, timeout = 60;
     }
+
+    spec module {
+        invariant forall x: num, y: num, z: num : x == y && y == z ==> x == z;
+        invariant forall x: num : exists y: num : y >= x;
+        invariant exists x in 1..10, y in 8..12 : x == y;
+    }
 }

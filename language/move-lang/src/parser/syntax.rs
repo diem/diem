@@ -769,7 +769,8 @@ fn at_end_of_exp<'input>(tokens: &mut Lexer<'input>) -> bool {
 
 // Parse an expression:
 //      Exp =
-//            <LambdaBindList> <Exp>                 lambda: spec only
+//            <LambdaBindList> <Exp>        spec only
+//          | <Quantifier>                  spec only
 //          | "if" "(" <Exp> ")" <Exp> ("else" <Exp>)?
 //          | "while" "(" <Exp> ")" <Exp>
 //          | "loop" <Exp>
@@ -785,6 +786,7 @@ fn parse_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             let body = Box::new(parse_exp(tokens)?);
             Exp_::Lambda(bindings, body)
         }
+        Tok::IdentifierValue if is_quant(tokens) => parse_quant(tokens)?,
         Tok::If => {
             tokens.advance()?;
             consume_token(tokens, Tok::LParen)?;
@@ -1031,6 +1033,127 @@ fn parse_dot_or_index_chain<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, E
         lhs = spanned(tokens.file_name(), start_loc, end_loc, exp);
     }
     Ok(lhs)
+}
+
+// Lookahead to determine whether this is a quantifier. This matches
+//
+//      ( "exists" | "forall" ) <Identifier> ( ":" | <Identifier> ) ...
+//
+// as a sequence to identify a quantifier. While the <Identifier> after
+// the exists/forall would by syntactically sufficient (Move does not
+// have affixed identifiers in expressions), we add another token
+// of lookahead to keep the result more precise in the presence of
+// syntax errors.
+fn is_quant<'input>(tokens: &mut Lexer<'input>) -> bool {
+    if !matches!(tokens.content(), "exists" | "forall") {
+        return false;
+    }
+    match tokens.lookahead2() {
+        Err(_) => false,
+        Ok((tok1, tok2)) => {
+            tok1 == Tok::IdentifierValue && matches!(tok2, Tok::Colon | Tok::IdentifierValue)
+        }
+    }
+}
+
+// Parses a quantifier expressions, assuming is_quant(tokens) is true.
+//
+//   <Quantifier> = ( "forall" | "exists" ) <QuantifierBindings> ("where" <Exp>)? ":" Exp
+//   <QuantifierBindings> = <QuantifierBind> ("," <QuantifierBind>)*
+//   <QuantifierBind> = <Identifier> ":" <Type> | <Identifier> "in" <Exp>
+//
+// Parsing happens recursively and quantifiers are immediately reduced as syntactic sugar
+// for lambdas.
+fn parse_quant<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
+    let is_forall = matches!(tokens.content(), "forall");
+    tokens.advance()?;
+    parse_quant_cont(is_forall, tokens)
+}
+
+// Parses quantifier bindings recursively until the body is reached.
+fn parse_quant_cont<'input>(is_forall: bool, tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
+    // Parse the next quantifier variable binding
+    let start_loc = tokens.start_loc();
+    let ident = parse_identifier(tokens)?;
+    let ident_end_loc = tokens.previous_end_loc();
+    let range = if tokens.peek() == Tok::Colon {
+        // This is a quantifier over the full domain of a type.
+        // Built `domain<ty>()` expression.
+        tokens.advance()?;
+        let ty = parse_type(tokens)?;
+        make_builtin_call(ty.loc, "domain", Some(vec![ty]), vec![])
+    } else {
+        // This is a quantifier over a value, like a vector or a range.
+        consume_identifier(tokens, "in")?;
+        parse_exp(tokens)?
+    };
+
+    // Continue parsing more bindings or the body of the quantifier
+    let (body_loc, body_) = if tokens.peek() == Tok::Comma {
+        tokens.advance()?;
+        (tokens.start_loc(), parse_quant_cont(is_forall, tokens)?)
+    } else {
+        (tokens.start_loc(), parse_quant_body(is_forall, tokens)?)
+    };
+    let body = spanned(
+        tokens.file_name(),
+        body_loc,
+        tokens.previous_end_loc(),
+        body_,
+    );
+
+    // Construct ::<all|any>(range, |ident| body) as the result
+    let bind = spanned(
+        tokens.file_name(),
+        start_loc,
+        ident_end_loc,
+        Bind_::Var(Var(ident)),
+    );
+    let bind_list = sp(bind.loc, vec![bind]);
+    let lambda = spanned(
+        tokens.file_name(),
+        start_loc,
+        tokens.previous_end_loc(),
+        Exp_::Lambda(bind_list, Box::new(body)),
+    );
+    Ok(make_builtin_call(
+        lambda.loc,
+        if is_forall { "all" } else { "any" },
+        None,
+        vec![range, lambda],
+    )
+    .value)
+}
+
+// Parse quantifier body.
+fn parse_quant_body<'input>(is_forall: bool, tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
+    let opt_cond = match tokens.peek() {
+        Tok::IdentifierValue if tokens.content() == "where" => {
+            tokens.advance()?;
+            Some(parse_exp(tokens)?)
+        }
+        _ => None,
+    };
+    consume_token(tokens, Tok::Colon)?;
+    let body = parse_exp(tokens)?;
+    if let Some(cond) = opt_cond {
+        let op = sp(
+            cond.loc,
+            if is_forall {
+                BinOp_::Implies
+            } else {
+                BinOp_::And
+            },
+        );
+        Ok(Exp_::BinopExp(Box::new(cond), op, Box::new(body)))
+    } else {
+        Ok(body.value)
+    }
+}
+
+fn make_builtin_call(loc: Loc, name: &str, type_args: Option<Vec<Type>>, args: Vec<Exp>) -> Exp {
+    let maccess = sp(loc, ModuleAccess_::Global(sp(loc, name.to_string())));
+    sp(loc, Exp_::Call(maccess, type_args, sp(loc, args)))
 }
 
 //**************************************************************************************************

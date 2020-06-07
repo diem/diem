@@ -121,7 +121,7 @@ module VerifyVector {
     }
     spec fun verify_model_reverse {
         aborts_if false;
-        ensures all(0..len(v), |i| old(v[i]) == v[len(v)-1-i]);
+        ensures forall i in 0..len(v): old(v[i]) == v[len(v)-1-i];
     }
 
     // Moves all of the elements of the `other` vector into the `lhs` vector.
@@ -169,7 +169,7 @@ module VerifyVector {
         let len = Vector::length(v);
         while ({
             spec {
-                assert !any(0..i,|j| v[j]==e);
+                assert !(exists j in 0..i: v[j]==e);
             };
             i < len
         }) {
@@ -180,9 +180,9 @@ module VerifyVector {
     }
     spec fun verify_index_of {
 //        aborts_if false; // FIXME: this should be verified.
-        ensures result_1 == any(v,|x| x==e); // whether v contains e or not
+        ensures result_1 == (exists x in v: x==e); // whether v contains e or not
         ensures result_1 ==> v[result_2] == e; // if true, return the index where v contains e
-        ensures result_1 ==> all(0..result_2,|i| v[i]!=e); // ensure the smallest index
+        ensures result_1 ==> (forall i in 0..result_2: v[i]!=e); // ensure the smallest index
         ensures !result_1 ==> result_2 == 0; // return 0 if v does not contain e
     }
 
@@ -191,9 +191,9 @@ module VerifyVector {
     }
     spec fun verify_model_index_of {
         aborts_if false;
-        ensures result_1 == any(v,|x| x==e); // whether v contains e or not
+        ensures result_1 == (exists x in v: x==e); // whether v contains e or not
         ensures result_1 ==> v[result_2] == e; // if true, return the index where v contains e
-        ensures result_1 ==> all(0..result_2,|i| v[i]!=e); // ensure the smallest index
+        ensures result_1 ==> (forall i in 0..result_2: v[i]!=e); // ensure the smallest index
         ensures !result_1 ==> result_2 == 0; // return 0 if v does not contain e
     }
 
@@ -203,7 +203,7 @@ module VerifyVector {
         let len = Vector::length(v);
         while ({
             spec {
-               assert !any(0..i,|j| v[j]==e);
+               assert !(exists j in 0..i: v[j]==e);
             };
             i < len
         }) {
@@ -211,13 +211,13 @@ module VerifyVector {
             i = i + 1;
         };
         spec {
-           assert !any(v,|x| x==e);
+           assert !(exists x in v: x==e);
         };
         false
     }
     spec fun verify_contains {
         //aborts_if false; // FIXME: This should be verified
-        ensures result == any(v,|x| x==e);
+        ensures result == (exists x in v: x==e);
     }
 
     // Return true if `e` is in the vector `v`
@@ -226,7 +226,7 @@ module VerifyVector {
     }
     spec fun verify_model_contains {
         aborts_if false;
-        ensures result == any(v,|x| x==e);
+        ensures result == (exists x in v: x==e);
     }
 
     // Remove the `i`th element E of the vector, shifting all subsequent elements

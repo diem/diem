@@ -22,11 +22,11 @@ module TestTypeValues {
 
     spec module {
         // Quantify over the domain of types, passing the type value to a helper function.
-        invariant all(domain<type>(), |t| resource_invariant_globally_defined(t));
+        invariant forall t: type : resource_invariant_globally_defined(t);
 
         // Quantify over the domain of addresses, and take the type parameter to check a resource.
         define resource_invariant_globally_defined(t: type): bool {
-            all(domain<address>(), |addr| exists<R<t>>(addr) ==> global<R<t>>(addr).x >= 1)
+            forall addr: address where exists<R<t>>(addr) : global<R<t>>(addr).x >= 1
         }
     }
 

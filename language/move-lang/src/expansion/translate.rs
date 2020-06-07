@@ -1161,10 +1161,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::Loop(ploop) => EE::Loop(exp(context, *ploop)),
         PE::Block(seq) => EE::Block(sequence(context, loc, seq)),
         PE::Lambda(pbs, pe) => {
-            if !context.require_spec_context(
-                loc,
-                "`|_| _` lambda expression only allowed in specifications",
-            ) {
+            if !context.require_spec_context(loc, "expression only allowed in specifications") {
                 assert!(context.has_errors());
                 EE::UnresolvedError
             } else {

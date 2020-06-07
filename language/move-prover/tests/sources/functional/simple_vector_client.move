@@ -198,8 +198,8 @@ module TestVector {
         v
     }
     spec fun vector_of_proper_positives {
-      ensures all(result, |n| n > 0);
-      ensures all(0..len(result), (|i| all(0..len(result), (|j| result[i] == result[j] ==> i == j))));
+      ensures forall n in result: n > 0;
+      ensures forall i in 0..len(result), j in 0..len(result) where result[i] == result[j] : i == j;
     }
 
     // succeeds. 7 == 7.
@@ -280,11 +280,11 @@ module TestVector {
         ensures result_1[1] == 2;
         ensures result_1[2] == 3;
         ensures result_1[3] == 5;
-        ensures any(result_1,|x| x==1);
-        ensures any(result_1,|x| x==2);
-        ensures any(result_1,|x| x==3);
-        ensures !any(result_1,|x| x==4);
-        ensures any(result_1,|x| x==5);
+        ensures exists x in result_1: x == 1;
+        ensures exists x in result_1: x == 2;
+        ensures exists x in result_1: x == 3;
+        ensures !(exists x in result_1: x == 4);
+        ensures exists x in result_1: x == 5;
     }
 
     fun test_index_of(): (vector<u64>, bool, u64, bool, u64) {
