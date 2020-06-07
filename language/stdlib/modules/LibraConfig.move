@@ -82,11 +82,6 @@ module LibraConfig {
         reconfigure_();
     }
 
-    // DD -- to ensure initialize only runs once in registered_currencies
-    public fun is_published<Config: copyable>(addr: address): bool {
-        exists<LibraConfig<Config>>(addr)
-    }
-
     // Publish a new config item. The caller will use the returned ModifyConfigCapability to specify the access control
     // policy for who can modify the config.
     public fun publish_new_config_with_capability<Config: copyable>(
@@ -192,10 +187,10 @@ module LibraConfig {
 
     spec module {
 
-        // Verification is disabled because of a false error in signer, called
-        // from offer.  There are other problems that may be genuine, but we have to
-        // debug the previous first.
-        pragma verify = false;
+        /// Specifications of LibraConfig are very incomplete.  There are just a few
+        /// definitions that are used by RegisteredCurrencies
+
+        pragma verify = true;
 
         // spec_default_config_address() is spec version of default_config_address()
         define spec_default_config_address(): address { 0xF1A95 }
@@ -205,7 +200,6 @@ module LibraConfig {
             global<LibraConfig<Config>>(spec_default_config_address()).payload
         }
 
-        // spec_get is the spec version of get<Config>
         define spec_is_published<Config>(addr: address): bool {
             exists<LibraConfig<Config>>(addr)
         }
@@ -214,9 +208,16 @@ module LibraConfig {
     // check spec_is_published
     spec fun publish_new_config {
         // aborts_if spec_is_published<Config>();
-        ensures old(!spec_is_published<Config>(sender()));
-        ensures spec_is_published<Config>(sender());
+        ensures old(!spec_is_published<Config>(Signer::get_address(config_account)));
+        ensures spec_is_published<Config>(Signer::get_address(config_account));
     }
+
+    spec fun publish_new_config_with_capability {
+        // aborts_if spec_is_published<Config>();
+        ensures old(!spec_is_published<Config>(Signer::get_address(config_account)));
+        ensures spec_is_published<Config>(Signer::get_address(config_account));
+    }
+
 
 }
 }

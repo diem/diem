@@ -14,7 +14,6 @@
 -  [Function `get`](#0x0_LibraConfig_get)
 -  [Function `set`](#0x0_LibraConfig_set)
 -  [Function `set_with_capability`](#0x0_LibraConfig_set_with_capability)
--  [Function `is_published`](#0x0_LibraConfig_is_published)
 -  [Function `publish_new_config_with_capability`](#0x0_LibraConfig_publish_new_config_with_capability)
 -  [Function `publish_new_config`](#0x0_LibraConfig_publish_new_config)
 -  [Function `publish_new_config_with_delegate`](#0x0_LibraConfig_publish_new_config_with_delegate)
@@ -24,6 +23,7 @@
 -  [Function `emit_reconfiguration_event`](#0x0_LibraConfig_emit_reconfiguration_event)
 -  [Function `default_config_address`](#0x0_LibraConfig_default_config_address)
 -  [Specification](#0x0_LibraConfig_Specification)
+    -  [Function `publish_new_config_with_capability`](#0x0_LibraConfig_Specification_publish_new_config_with_capability)
     -  [Function `publish_new_config`](#0x0_LibraConfig_Specification_publish_new_config)
 
 
@@ -312,30 +312,6 @@
 
 </details>
 
-<a name="0x0_LibraConfig_is_published"></a>
-
-## Function `is_published`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_is_published">is_published</a>&lt;Config: <b>copyable</b>&gt;(addr: address): bool
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_is_published">is_published</a>&lt;Config: <b>copyable</b>&gt;(addr: address): bool {
-    exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr)
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x0_LibraConfig_publish_new_config_with_capability"></a>
 
 ## Function `publish_new_config_with_capability`
@@ -595,8 +571,11 @@
 ## Specification
 
 
+Specifications of LibraConfig are very incomplete.  There are just a few
+definitions that are used by RegisteredCurrencies
 
-<pre><code>pragma verify = <b>false</b>;
+
+<pre><code>pragma verify = <b>true</b>;
 <a name="0x0_LibraConfig_spec_default_config_address"></a>
 <b>define</b> <a href="#0x0_LibraConfig_spec_default_config_address">spec_default_config_address</a>(): address { 0xF1A95 }
 <a name="0x0_LibraConfig_spec_get"></a>
@@ -607,6 +586,23 @@
 <b>define</b> <a href="#0x0_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(addr: address): bool {
     exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr)
 }
+</code></pre>
+
+
+
+<a name="0x0_LibraConfig_Specification_publish_new_config_with_capability"></a>
+
+### Function `publish_new_config_with_capability`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_publish_new_config_with_capability">publish_new_config_with_capability</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config): <a href="#0x0_LibraConfig_ModifyConfigCapability">LibraConfig::ModifyConfigCapability</a>&lt;Config&gt;
+</code></pre>
+
+
+
+
+<pre><code><b>ensures</b> <b>old</b>(!<a href="#0x0_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(<a href="Signer.md#0x0_Signer_get_address">Signer::get_address</a>(config_account)));
+<b>ensures</b> <a href="#0x0_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(<a href="Signer.md#0x0_Signer_get_address">Signer::get_address</a>(config_account));
 </code></pre>
 
 
@@ -622,6 +618,6 @@
 
 
 
-<pre><code><b>ensures</b> <b>old</b>(!<a href="#0x0_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(sender()));
-<b>ensures</b> <a href="#0x0_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(sender());
+<pre><code><b>ensures</b> <b>old</b>(!<a href="#0x0_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(<a href="Signer.md#0x0_Signer_get_address">Signer::get_address</a>(config_account)));
+<b>ensures</b> <a href="#0x0_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(<a href="Signer.md#0x0_Signer_get_address">Signer::get_address</a>(config_account));
 </code></pre>

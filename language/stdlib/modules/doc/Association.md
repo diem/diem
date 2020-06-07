@@ -596,6 +596,34 @@ Apply
 
 
 
+<a name="0x0_Association_InitializationPersists"></a>
+
+For every
+<code>is_initialized</code> predicate, we want to make sure that the
+predicate never becomes false again.  Since
+<code>is_initialized</code> simply
+checks for the presence of a Root {} value at the root address,
+the same property also checks that "root stays root", which is of
+interest for the correct functioning of the system.
+
+*Informally:* Once initialize is run, the module continues to be
+initialized, forever.
+
+
+<pre><code><b>schema</b> <a href="#0x0_Association_InitializationPersists">InitializationPersists</a> {
+    <b>ensures</b> <b>old</b>(<a href="#0x0_Association_spec_is_initialized">spec_is_initialized</a>()) ==&gt; <a href="#0x0_Association_spec_is_initialized">spec_is_initialized</a>();
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x0_Association_InitializationPersists">InitializationPersists</a> <b>to</b> *&lt;Privilege&gt;, *;
+</code></pre>
+
+
+
+
 <a name="0x0_Association_@Privilege_granting"></a>
 
 #### Privilege granting
