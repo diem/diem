@@ -9,6 +9,7 @@ use std::{
     fmt,
     fs::File,
     io::{Read, Write},
+    mem,
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -206,6 +207,25 @@ impl NodeConfig {
                 .as_ref()
                 .map(|n| n.clone_for_template()),
         }
+    }
+
+    pub fn split_off_full_node_networks_identity(mut self) -> (Self, Vec<NetworkConfig>) {
+        let mut full_node_networks: Vec<NetworkConfig> = self
+            .full_node_networks
+            .iter()
+            .map(|config| config.clone_for_template())
+            .collect();
+        mem::swap(&mut self.full_node_networks, &mut full_node_networks);
+        (self, full_node_networks)
+    }
+
+    pub fn split_off_validator_networks_identity(mut self) -> (Self, Option<NetworkConfig>) {
+        let mut validator_network = self
+            .validator_network
+            .as_ref()
+            .map(|config| config.clone_for_template());
+        mem::swap(&mut self.validator_network, &mut validator_network);
+        (self, validator_network)
     }
 
     /// Reads the config file and returns the configuration object in addition to doing some

@@ -17,7 +17,10 @@ use crate::{
 };
 use channel::message_queues::QueueStyle;
 use futures::{executor::block_on, StreamExt};
-use libra_config::{config::RoleType, network_id::NetworkId};
+use libra_config::{
+    config::{NetworkConfig, RoleType},
+    network_id::NetworkId,
+};
 use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
@@ -132,13 +135,16 @@ pub fn setup_network() -> DummyNetwork {
     .into_iter()
     .collect();
 
+    let mut rng = StdRng::from_seed(TEST_SEED);
+
+    let mut listener_network_config = NetworkConfig::network_with_id(network_id.clone());
+    listener_network_config.random_with_peer_id(&mut rng, Some(listener_peer_id));
+    listener_network_config.listen_address = listener_addr;
     // Set up the listener network
     let mut network_builder = NetworkBuilder::new(
+        listener_network_config,
         runtime.handle().clone(),
-        network_id.clone(),
-        listener_peer_id,
         RoleType::Validator,
-        listener_addr,
     );
     network_builder
         .authentication_mode(AuthenticationMode::Mutual(listener_identity_private_key))
@@ -147,13 +153,14 @@ pub fn setup_network() -> DummyNetwork {
     let (listener_sender, mut listener_events) = add_to_network(&mut network_builder);
     let listener_addr = network_builder.build();
 
+    let mut dialer_network_config = NetworkConfig::network_with_id(network_id);
+    dialer_network_config.random_with_peer_id(&mut rng, Some(dialer_peer_id));
+    dialer_network_config.listen_address = dialer_addr;
     // Set up the dialer network
     let mut network_builder = NetworkBuilder::new(
+        dialer_network_config,
         runtime.handle().clone(),
-        network_id,
-        dialer_peer_id,
         RoleType::Validator,
-        dialer_addr,
     );
     network_builder
         .authentication_mode(AuthenticationMode::Mutual(dialer_identity_private_key))

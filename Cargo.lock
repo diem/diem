@@ -3585,6 +3585,7 @@ dependencies = [
  "libra-metrics 0.1.0",
  "libra-network-address 0.1.0",
  "libra-proptest-helpers 0.1.0",
+ "libra-secure-storage 0.1.0",
  "libra-security-logger 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",

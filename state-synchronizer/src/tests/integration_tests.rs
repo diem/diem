@@ -9,7 +9,7 @@ use anyhow::{bail, Result};
 use executor_types::ExecutedTrees;
 use futures::executor::block_on;
 use libra_config::{
-    config::{PeerNetworkId, RoleType},
+    config::{NetworkConfig, PeerNetworkId, RoleType},
     network_id::NetworkId,
 };
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
@@ -253,12 +253,14 @@ impl SynchronizerEnv {
                 vec![self.peer_addresses[new_peer_idx - 1].clone()],
             );
         }
+        let mut rng = StdRng::from_seed(TEST_SEED);
+        let mut network_config = NetworkConfig::network_with_id(self.network_id.clone());
+        network_config.random_with_peer_id(&mut rng, Some(self.peer_ids[new_peer_idx]));
+        network_config.listen_address = addr;
         let mut network_builder = NetworkBuilder::new(
+            network_config,
             self.runtime.handle().clone(),
-            self.network_id.clone(),
-            self.peer_ids[new_peer_idx],
             RoleType::Validator,
-            addr,
         );
         network_builder
             .authentication_mode(AuthenticationMode::Mutual(

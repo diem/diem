@@ -98,7 +98,7 @@ impl NetworkConfig {
             connectivity_check_interval_ms: self.connectivity_check_interval_ms,
             enable_remote_authentication: self.enable_remote_authentication,
             discovery_method: self.discovery_method,
-            identity: Identity::None,
+            identity: self.identity.clone_without_private_key(),
             network_peers_file: self.network_peers_file.clone(),
             network_peers: self.network_peers.clone(),
             seed_peers_file: self.seed_peers_file.clone(),
@@ -299,6 +299,18 @@ impl Identity {
             None
         }
     }
+
+    pub fn clone_without_private_key(&self) -> Identity {
+        use Identity::*;
+        match &self {
+            FromConfig(config) => FromConfig(IdentityFromConfig {
+                keypair: KeyPair::only_public_key(config.keypair.public_key()),
+                peer_id: config.peer_id,
+            }),
+            FromStorage(storage) => FromStorage(storage.clone()),
+            None => None,
+        }
+    }
 }
 
 /// The identity is stored within the config.
@@ -311,8 +323,8 @@ pub struct IdentityFromConfig {
 }
 
 /// This represents an identity in a secure-storage as defined in NodeConfig::secure.
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
-#[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(PartialEq))]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct IdentityFromStorage {
     pub key_name: String,
     pub peer_id_name: String,

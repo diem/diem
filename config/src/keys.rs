@@ -58,6 +58,13 @@ where
         }
     }
 
+    pub fn only_public_key(public_key: T::PublicKeyMaterial) -> Self {
+        KeyPair {
+            public_key,
+            private_key: None,
+        }
+    }
+
     /// Takes the key from the data structure, calling this function a second time will return None.
     pub fn take_private(&mut self) -> Option<T> {
         self.private_key.take()

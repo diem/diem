@@ -27,14 +27,12 @@ use crate::{
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use futures::stream::StreamExt;
-use libra_config::{
-    config::{RoleType, HANDSHAKE_VERSION},
-    network_id::NetworkId,
-};
+use libra_config::config::{NetworkConfig, RoleType, HANDSHAKE_VERSION};
 use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
+use libra_secure_storage::config;
 use libra_types::PeerId;
 use netcore::transport::{memory, Transport};
 use std::{
@@ -52,11 +50,9 @@ use tokio_retry::strategy::ExponentialBackoff;
 // with your use-case. If you do change a value, please add a comment linking to the PR which
 // advocated the change.
 pub const NETWORK_CHANNEL_SIZE: usize = 1024;
-pub const DISCOVERY_INTERVAL_MS: u64 = 1000;
 pub const PING_INTERVAL_MS: u64 = 1000;
 pub const PING_TIMEOUT_MS: u64 = 10_000;
 pub const DISOVERY_MSG_TIMEOUT_MS: u64 = 10_000;
-pub const CONNECTIVITY_CHECK_INTERNAL_MS: u64 = 5000;
 pub const INBOUND_RPC_TIMEOUT_MS: u64 = 10_000;
 pub const MAX_CONCURRENT_OUTBOUND_RPCS: u32 = 100;
 pub const MAX_CONCURRENT_INBOUND_RPCS: u32 = 100;
@@ -100,20 +96,17 @@ impl AuthenticationMode {
 // TODO(philiphayes): refactor NetworkBuilder and libra-node; current config is
 // pretty tangled.
 pub struct NetworkBuilder {
-    executor: Handle,
-    network_id: NetworkId,
-    peer_id: PeerId,
-    role: RoleType,
     // TODO(philiphayes): better support multiple listening addrs
-    listen_address: NetworkAddress,
-    advertised_address: Option<NetworkAddress>,
+    pub config: NetworkConfig,
+    executor: Handle,
+    pub peer_id: PeerId,
+    role: RoleType,
     seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     authentication_mode: Option<AuthenticationMode>,
     channel_size: usize,
     direct_send_protocols: Vec<ProtocolId>,
     rpc_protocols: Vec<ProtocolId>,
-    discovery_interval_ms: u64,
     ping_interval_ms: u64,
     ping_timeout_ms: u64,
     ping_failures_tolerated: u64,
@@ -125,7 +118,6 @@ pub struct NetworkBuilder {
     connection_reqs_tx: libra_channel::Sender<PeerId, ConnectionRequest>,
     connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
     conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
-    connectivity_check_interval_ms: u64,
     max_concurrent_network_reqs: usize,
     max_concurrent_network_notifs: usize,
     max_connection_delay_ms: u64,
@@ -133,13 +125,7 @@ pub struct NetworkBuilder {
 
 impl NetworkBuilder {
     /// Return a new NetworkBuilder initialized with default configuration values.
-    pub fn new(
-        executor: Handle,
-        network_id: NetworkId,
-        peer_id: PeerId,
-        role: RoleType,
-        listen_address: NetworkAddress,
-    ) -> NetworkBuilder {
+    pub fn new(network_config: NetworkConfig, executor: Handle, role: RoleType) -> NetworkBuilder {
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) = libra_channel::new(
             QueueStyle::FIFO,
@@ -152,13 +138,13 @@ impl NetworkBuilder {
             NonZeroUsize::new(NETWORK_CHANNEL_SIZE).unwrap(),
             None,
         );
+        let peer_id = config::peer_id(&network_config);
+
         NetworkBuilder {
+            config: network_config,
             executor,
-            network_id,
             peer_id,
             role,
-            listen_address,
-            advertised_address: None,
             seed_peers: HashMap::new(),
             trusted_peers: Arc::new(RwLock::new(HashMap::new())),
             authentication_mode: None,
@@ -172,30 +158,18 @@ impl NetworkBuilder {
             connection_reqs_tx,
             connection_reqs_rx,
             conn_mgr_reqs_tx: None,
-            discovery_interval_ms: DISCOVERY_INTERVAL_MS,
             ping_interval_ms: PING_INTERVAL_MS,
             ping_timeout_ms: PING_TIMEOUT_MS,
             ping_failures_tolerated: PING_FAILURES_TOLERATED,
-            connectivity_check_interval_ms: CONNECTIVITY_CHECK_INTERNAL_MS,
             max_concurrent_network_reqs: MAX_CONCURRENT_NETWORK_REQS,
             max_concurrent_network_notifs: MAX_CONCURRENT_NETWORK_NOTIFS,
             max_connection_delay_ms: MAX_CONNECTION_DELAY_MS,
         }
     }
 
-    pub fn peer_id(&self) -> PeerId {
-        self.peer_id
-    }
-
     /// Set network authentication mode.
     pub fn authentication_mode(&mut self, authentication_mode: AuthenticationMode) -> &mut Self {
         self.authentication_mode = Some(authentication_mode);
-        self
-    }
-
-    /// Set an address to advertise, if different from the listen address
-    pub fn advertised_address(&mut self, advertised_address: NetworkAddress) -> &mut Self {
-        self.advertised_address = Some(advertised_address);
         self
     }
 
@@ -211,21 +185,6 @@ impl NetworkBuilder {
     /// Set seed peers to bootstrap discovery
     pub fn seed_peers(&mut self, seed_peers: HashMap<PeerId, Vec<NetworkAddress>>) -> &mut Self {
         self.seed_peers = seed_peers;
-        self
-    }
-
-    /// Set discovery ticker interval
-    pub fn discovery_interval_ms(&mut self, discovery_interval_ms: u64) -> &mut Self {
-        self.discovery_interval_ms = discovery_interval_ms;
-        self
-    }
-
-    /// Set connectivity check ticker interval
-    pub fn connectivity_check_interval_ms(
-        &mut self,
-        connectivity_check_interval_ms: u64,
-    ) -> &mut Self {
-        self.connectivity_check_interval_ms = connectivity_check_interval_ms;
         self
     }
 
@@ -302,23 +261,21 @@ impl NetworkBuilder {
             &counters::PENDING_CONNECTIVITY_MANAGER_REQUESTS,
         );
         self.conn_mgr_reqs_tx = Some(conn_mgr_reqs_tx);
-        let peer_id = self.peer_id;
-        let trusted_peers = self.trusted_peers.clone();
-        let seed_peers = self.seed_peers.clone();
-        let max_connection_delay_ms = self.max_connection_delay_ms;
-        let connectivity_check_interval_ms = self.connectivity_check_interval_ms;
         let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
         let conn_mgr = self.executor.enter(|| {
             ConnectivityManager::new(
-                peer_id,
-                trusted_peers,
-                seed_peers,
-                interval(Duration::from_millis(connectivity_check_interval_ms)).fuse(),
+                self.peer_id,
+                self.trusted_peers.clone(),
+                self.seed_peers.clone(),
+                interval(Duration::from_millis(
+                    self.config.connectivity_check_interval_ms,
+                ))
+                .fuse(),
                 ConnectionRequestSender::new(self.connection_reqs_tx.clone()),
                 pm_conn_mgr_notifs_rx,
                 conn_mgr_reqs_rx,
                 ExponentialBackoff::from_millis(2).factor(1000),
-                max_connection_delay_ms,
+                self.max_connection_delay_ms,
             )
         });
         self.executor.spawn(conn_mgr.start());
@@ -333,7 +290,6 @@ impl NetworkBuilder {
     ///
     /// This is for testing purposes only and should not be used in production networks.
     pub fn add_gossip_discovery(&mut self) -> &mut Self {
-        let peer_id = self.peer_id;
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
             .expect("ConnectivityManager not enabled");
@@ -351,23 +307,22 @@ impl NetworkBuilder {
         // TODO(philiphayes): in network_builder setup, only bind the channels.
         // wait until PeerManager is running to actual setup gossip discovery.
 
-        let advertised_address = self
-            .advertised_address
-            .clone()
-            .unwrap_or_else(|| self.listen_address.clone());
         let authentication_mode = self
             .authentication_mode
             .as_ref()
             .expect("Authentication Mode not set");
         let pubkey = authentication_mode.public_key();
-        let advertised_address = advertised_address.append_prod_protos(pubkey, HANDSHAKE_VERSION);
+        let advertised_address = &self.config.advertised_address;
+        let advertised_address = advertised_address
+            .to_owned()
+            .append_prod_protos(pubkey, HANDSHAKE_VERSION);
 
         let addrs = vec![advertised_address];
         let role = self.role;
-        let discovery_interval_ms = self.discovery_interval_ms;
+        let discovery_interval_ms = self.config.discovery_interval_ms;
         let discovery = self.executor.enter(|| {
             Discovery::new(
-                peer_id,
+                self.peer_id,
                 role,
                 addrs,
                 interval(Duration::from_millis(discovery_interval_ms)).fuse(),
@@ -406,7 +361,7 @@ impl NetworkBuilder {
     pub fn build(mut self) -> NetworkAddress {
         use libra_network_address::Protocol::*;
 
-        let network_id = self.network_id.clone();
+        let network_id = self.config.network_id.clone();
         let protos = self.supported_protocols();
 
         let authentication_mode = self
@@ -419,7 +374,7 @@ impl NetworkBuilder {
             AuthenticationMode::Mutual(key) => (key, Some(self.trusted_peers.clone())),
         };
 
-        match self.listen_address.as_slice() {
+        match self.config.listen_address.as_slice() {
             [Ip4(_), Tcp(_)] | [Ip6(_), Tcp(_)] => {
                 self.build_with_transport(LibraNetTransport::new(
                     LIBRA_TCP_TRANSPORT.clone(),
@@ -441,7 +396,7 @@ impl NetworkBuilder {
             _ => panic!(
                 "Unsupported listen_address: '{}', expected '/memory/<port>', \
                  '/ip4/<addr>/tcp/<port>', or '/ip6/<addr>/tcp/<port>'.",
-                self.listen_address
+                self.config.listen_address
             ),
         }
     }
@@ -460,7 +415,7 @@ impl NetworkBuilder {
             self.role,
             // TODO(philiphayes): peer manager should take `Vec<NetworkAddress>`
             // (which could be empty, like in client use case)
-            self.listen_address,
+            self.config.listen_address,
             self.pm_reqs_rx,
             self.connection_reqs_rx,
             self.upstream_handlers,
