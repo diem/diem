@@ -1,7 +1,7 @@
 module VerifyLoops {
 
     spec module {
-        pragma verify=false;
+        pragma verify=true;
     }
 
     // ----------------------
@@ -36,11 +36,11 @@ module VerifyLoops {
             spec { assert i <= 11; };
             (i <= 10)
         }) {
-            if (i > 10) { spec { assert false; }; abort 10 };
+            if (i > 10) abort 10;
             i = i + 1;
         }
     }
-    spec fun iter10_no_abort { // FIXME: Should be proved.
+    spec fun iter10_no_abort { // Verified. Abort cannot happen.
         aborts_if false;
     }
 
@@ -54,35 +54,35 @@ module VerifyLoops {
             i = i + 1;
         }
     }
-    spec fun iter10_no_abort_incorrect { // FIXME: Should be disproved.
+    spec fun iter10_no_abort_incorrect { // Disproved. Abort cannot happen.
         aborts_if true;
     }
 
     public fun iter10_abort() {
         let i = 0;
         while ({
-            spec { assert i <= 11; };
+            spec { assert i <= 7; };
             (i <= 10)
         }) {
             if (i == 7) abort 7;
             i = i + 1;
         }
     }
-    spec fun iter10_abort { // FIXME: Should be proved.
+    spec fun iter10_abort { // Verified. Abort always happens.
         aborts_if true;
     }
 
     public fun iter10_abort_incorrect() {
         let i = 0;
         while ({
-            spec { assert i <= 11; };
+            spec { assert i <= 7; };
             (i <= 10)
         }) {
             if (i == 7) abort 7;
             i = i + 1;
         }
     }
-    spec fun iter10_abort_incorrect { // FIXME: Should be disproved.
+    spec fun iter10_abort_incorrect { // Disproved. Abort always happens.
         aborts_if false;
     }
 }
