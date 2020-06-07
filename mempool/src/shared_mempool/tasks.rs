@@ -33,7 +33,7 @@ use std::{
     collections::HashSet,
     ops::Deref,
     sync::{Arc, Mutex, RwLock},
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tokio::runtime::Handle;
 use vm_validator::vm_validator::{get_account_sequence_number, TransactionValidation};
@@ -446,10 +446,17 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
                 .iter()
                 .map(|txn| (txn.sender, txn.sequence_number))
                 .collect();
-            let mut txns = mempool
-                .lock()
-                .expect("[get_block] acquire mempool lock")
-                .get_block(block_size, exclude_transactions);
+            let mut txns;
+            {
+                let mut mempool = mempool.lock().expect("failed to acquire mempool lock");
+                // gc before pulling block as extra protection against txns that may expire in consensus
+                // Note: this gc operation relies on the fact that consensus uses the system time to determine block timestamp
+                let curr_time = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("Timestamp generated is before UNIX_EPOCH");
+                mempool.gc_by_expiration_time(curr_time);
+                txns = mempool.get_block(block_size, exclude_transactions);
+            }
             let transactions = txns.drain(..).map(SignedTransaction::into).collect();
 
             (ConsensusResponse::GetBlockResponse(transactions), callback)
