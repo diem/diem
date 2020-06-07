@@ -43,7 +43,7 @@ use num_variants::NumVariants;
 use std::{
     cmp::min,
     collections::HashMap,
-    fmt::Debug,
+    fmt,
     sync::{Arc, RwLock},
     time::{Duration, Instant},
 };
@@ -61,7 +61,7 @@ pub struct ConnectivityManager<TTicker, TBackoff> {
     /// PeerId and address of remote peers to which this peer is connected.
     connected: HashMap<PeerId, NetworkAddress>,
     /// Addresses of peers received from discovery sources.
-    peer_addresses: HashMap<PeerId, Addresses>,
+    peer_addresses: PeerAddresses,
     /// Ticker to trigger connectivity checks to provide the guarantees stated above.
     ticker: TTicker,
     /// Channel to send connection requests to PeerManager.
@@ -106,8 +106,12 @@ pub enum ConnectivityRequest {
     GetDialQueueSize(oneshot::Sender<usize>),
 }
 
-/// A set of NetworkAddress's for a peer, bucketed by DiscoverySource in priority order.
-#[derive(Clone, Debug, Default)]
+/// The set of `NetworkAddress`'s for all peers.
+struct PeerAddresses(HashMap<PeerId, Addresses>);
+
+/// A set of `NetworkAddress`'s for a single peer, bucketed by DiscoverySource in
+/// priority order.
+#[derive(Clone, Default)]
 struct Addresses([Vec<NetworkAddress>; DiscoverySource::NUM_VARIANTS]);
 
 #[derive(Debug)]
@@ -147,18 +151,25 @@ where
     ) -> Self {
         // Ensure seed peers doesn't contain our own address (we want to avoid
         // pointless self-dials).
-        let peer_addresses = seed_peers
-            .into_iter()
-            .filter(|(peer_id, _)| *peer_id != self_peer_id)
-            .map(|(peer_id, seed_addrs)| {
-                (
-                    peer_id,
-                    Addresses::from_addrs(DiscoverySource::Config, seed_addrs),
-                )
-            })
-            .collect::<HashMap<PeerId, Addresses>>();
+        let peer_addresses = PeerAddresses(
+            seed_peers
+                .into_iter()
+                .filter(|(peer_id, _)| peer_id != &self_peer_id)
+                .map(|(peer_id, seed_addrs)| {
+                    (
+                        peer_id,
+                        Addresses::from_addrs(DiscoverySource::Config, seed_addrs),
+                    )
+                })
+                .collect(),
+        );
 
-        info!("ConnectivityManager: {} seed peers", peer_addresses.len());
+        info!(
+            "[{}] ConnectivityManager init: num_seed_peers: {}, peer addresses: {}",
+            self_peer_id.short_str(),
+            peer_addresses.0.len(),
+            peer_addresses,
+        );
 
         Self {
             self_peer_id,
@@ -269,6 +280,7 @@ where
         let eligible = self.eligible.read().unwrap().clone();
         let to_connect: Vec<_> = self
             .peer_addresses
+            .0
             .iter()
             .filter(|(peer_id, addrs)| {
                 eligible.contains_key(peer_id)  // The node is eligible to be dialed.
@@ -287,7 +299,7 @@ where
                     - ((self.dial_queue.len() + to_connect.len()) as f64
                         / eligible
                             .iter()
-                            .filter(|(peer_id, _)| self.peer_addresses.contains_key(peer_id))
+                            .filter(|(peer_id, _)| self.peer_addresses.0.contains_key(&peer_id))
                             .count() as f64))) as u64,
         );
 
@@ -376,20 +388,47 @@ where
     fn handle_request(&mut self, req: ConnectivityRequest) {
         match req {
             ConnectivityRequest::UpdateAddresses(src, address_map) => {
+                // Keep track of if any peer's addresses have actually changed, so
+                // we can log without too much spam.
+                let mut have_any_changed = false;
+                let self_peer_id = self.self_peer_id.short_str();
+
                 for (peer_id, addrs) in address_map {
-                    trace!(
-                        "Received updated addresses for peer: {} from {:?} discovery source",
-                        peer_id.short_str(),
-                        src,
-                    );
-                    // Do not include self_peer_id in the address list for dialing.
-                    if peer_id != self.self_peer_id {
-                        self.update_peer_addrs(src, peer_id, addrs);
-                        // Ensure that the next dial attempt starts from the first addr.
+                    // Do not include self_peer_id in the address list for dialing
+                    // to avoid pointless self-dials.
+                    if peer_id == self.self_peer_id {
+                        continue;
+                    }
+
+                    // Update peer's addresses
+                    let curr_addrs = self.peer_addresses.0.entry(peer_id).or_default();
+                    if curr_addrs.update(src, addrs) {
+                        // At least one peer's addresses have actually changed.
+                        have_any_changed = true;
+
+                        // Ensure that the next dial attempt starts from the first
+                        // address if the addresses have actually changed.
                         if let Some(dial_state) = self.dial_states.get_mut(&peer_id) {
                             dial_state.reset_addr();
                         }
+
+                        // Log the change to this peer's addresses.
+                        let peer_id = peer_id.short_str();
+                        let addrs = curr_addrs;
+                        info!(
+                            "[{}] addresses updated for peer: {}, update src: {:?}, addrs: {}",
+                            self_peer_id, peer_id, src, addrs,
+                        );
                     }
+                }
+
+                // Only log the total state if anything has actually changed.
+                if have_any_changed {
+                    let peer_addresses = &self.peer_addresses;
+                    info!(
+                        "[{}] current addresses: update src: {:?}, all peer addresses: {}",
+                        self_peer_id, src, peer_addresses,
+                    );
                 }
             }
             ConnectivityRequest::UpdateEligibleNodes(nodes) => {
@@ -400,18 +439,6 @@ where
                 sender.send(self.dial_queue.len()).unwrap();
             }
         }
-    }
-
-    fn update_peer_addrs(
-        &mut self,
-        src: DiscoverySource,
-        peer_id: PeerId,
-        addrs: Vec<NetworkAddress>,
-    ) {
-        self.peer_addresses
-            .entry(peer_id)
-            .or_default()
-            .update(src, addrs);
     }
 
     fn handle_control_notification(&mut self, notif: peer_manager::ConnectionNotification) {
@@ -473,6 +500,26 @@ fn log_dial_result(peer_id: PeerId, addr: NetworkAddress, dial_result: DialResul
     }
 }
 
+impl fmt::Display for PeerAddresses {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Write the normal HashMap-style debug format, but shorten the peer_id's
+        // so the output isn't as noisy.
+        f.debug_map()
+            .entries(
+                self.0
+                    .iter()
+                    .map(|(peer_id, addrs)| (peer_id.short_str(), addrs)),
+            )
+            .finish()
+    }
+}
+
+impl fmt::Debug for PeerAddresses {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
 impl Addresses {
     fn new() -> Self {
         Default::default()
@@ -492,13 +539,34 @@ impl Addresses {
         self.len() == 0
     }
 
-    fn update(&mut self, src: DiscoverySource, addrs: Vec<NetworkAddress>) {
-        let idx = src as u8 as usize;
-        self.0[idx] = addrs;
+    /// Update the addresses for the `DiscoverySource` bucket. Return `true` if
+    /// the addresses have actually changed.
+    fn update(&mut self, src: DiscoverySource, addrs: Vec<NetworkAddress>) -> bool {
+        let src_idx = src as u8 as usize;
+        if self.0[src_idx] != addrs {
+            self.0[src_idx] = addrs;
+            true
+        } else {
+            false
+        }
     }
 
     fn get(&self, idx: usize) -> Option<&NetworkAddress> {
         self.0.iter().flatten().nth(idx)
+    }
+}
+
+impl fmt::Display for Addresses {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Write without the typical "Addresses(..)" around the output to reduce
+        // debug noise.
+        write!(f, "{:?}", self.0)
+    }
+}
+
+impl fmt::Debug for Addresses {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
     }
 }
 
