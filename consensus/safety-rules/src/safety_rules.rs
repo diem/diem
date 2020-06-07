@@ -36,6 +36,8 @@ impl SafetyRules {
     /// Constructs a new instance of SafetyRules with the given persistent storage and the
     /// consensus private keys
     /// @TODO replace this with an API that takes in a SafetyRulesConfig
+    /// @TODO change the constructor to fit Option<validator_signer> and address the circular
+    /// dependency with reconcile_key() during initializationg
     pub fn new(author: Author, persistent_storage: PersistentSafetyStorage) -> Self {
         let consensus_key = persistent_storage
             .consensus_key()
@@ -49,13 +51,15 @@ impl SafetyRules {
     }
 
     fn signer(&self) -> Result<&ValidatorSigner, Error> {
-        self.validator_signer.as_ref().ok_or(Error::NotInitialized)
+        self.validator_signer
+            .as_ref()
+            .ok_or_else(|| Error::NotInitialized("validator_signer".into()))
     }
 
     fn verifier(&self) -> Result<&ValidatorVerifier, Error> {
         self.validator_verifier
             .as_ref()
-            .ok_or(Error::NotInitialized)
+            .ok_or_else(|| Error::NotInitialized("validator_verifier".into()))
     }
 
     /// Produces a LedgerInfo that either commits a block based upon the 3-chain commit rule
@@ -112,7 +116,7 @@ impl SafetyRules {
                     .consensus_key_for_version(expected_key.clone())
                     .expect("Unable to retrieve consensus private key");
                 debug!(
-                    "Reconcile pub key for signer {} [{} -> {}]",
+                    "Reconciled pub key for signer {} [{} -> {}]",
                     signer.author(),
                     curr_key,
                     expected_key
@@ -130,17 +134,13 @@ impl SafetyRules {
     /// This sets the current validator verifier and updates the epoch and round information
     /// if this is a new epoch ending ledger info. It also sets the current waypoint to this
     /// LedgerInfo.
-    /// @TODO if public key does not match private key in validator set, access persistent storage
-    /// to identify new key
     fn start_new_epoch(&mut self, ledger_info: &LedgerInfo) -> Result<(), Error> {
         debug!("Starting new epoch.");
         let epoch_state = ledger_info
             .next_epoch_state()
             .cloned()
             .ok_or(Error::InvalidLedgerInfo)?;
-
         self.reconcile_key(&epoch_state)?;
-
         self.validator_verifier = Some(epoch_state.verifier);
 
         let current_epoch = self.persistent_storage.epoch()?;
