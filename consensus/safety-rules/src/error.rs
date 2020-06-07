@@ -32,8 +32,8 @@ pub enum Error {
     #[error("Invalid QC: {}", {0})]
     InvalidQuorumCertificate(String),
 
-    #[error("validator_verifier is not set, SafetyRules is not initialized")]
-    NotInitialized,
+    #[error("{0} is not set, SafetyRules is not initialized")]
+    NotInitialized(String),
 
     /// This proposal's round is less than round of preferred block.
     /// Returns the id of the preferred block.

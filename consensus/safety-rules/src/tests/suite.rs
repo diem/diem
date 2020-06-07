@@ -71,8 +71,8 @@ pub fn run_test_suite(func: Callback) {
     test_sign_proposal_with_early_preferred_round(func);
     test_uninitialized_signer(func);
     test_reconcile_key(func);
-    test_missing_validator(func);
-    // test_missing_validator_key(func);
+    test_a_missing_validator(func);
+    // test_a_missing_validator_key(func);
 }
 
 fn test_bad_execution_output(func: Callback) {
@@ -617,18 +617,20 @@ fn test_uninitialized_signer(func: Callback) {
     let round = genesis_qc.certified_block().round();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
-    let err = safety_rules.update(a1.block().quorum_cert()).unwrap_err();
-    assert_eq!(err, Error::NotInitialized);
+    safety_rules.update(a1.block().quorum_cert()).unwrap_err();
 
     safety_rules.initialize(&proof).unwrap();
-    assert!(safety_rules.update(a1.block().quorum_cert()).is_ok());
+    safety_rules.update(a1.block().quorum_cert()).unwrap();
 }
 
+// Tests for fetching a missing validator key from persistent storage.
+// Ideally under this circumstance, safety rules should panic. However,
+// at current stage of implementation the upper layer (i.e. RoundManager) is
+// unable to handle such failure (actually it is unable ANY failure
+// during key reconciliation!). For more fail cases, refer to debug messages in
+// reconcile_key()
 #[allow(dead_code)]
-fn test_missing_validator_key(func: Callback) {
-    // Tests for fetching a missing validator key from persistent storage.
-    // Ideally safety rules should panic
-
+fn test_a_missing_validator_key(func: Callback) {
     let (mut safety_rules, signer) = func();
     let (proof, genesis_qc) = make_genesis(&signer);
     let round = genesis_qc.certified_block().round();
@@ -651,13 +653,14 @@ fn test_missing_validator_key(func: Callback) {
         Some(1),
         Some(next_epoch_state),
     );
-    assert!(safety_rules.update(a2.block().quorum_cert()).is_err());
+    safety_rules.update(a2.block().quorum_cert()).unwrap_err();
 }
 
-fn test_missing_validator(func: Callback) {
+fn test_a_missing_validator(func: Callback) {
     // Testing for an validator missing from the validator set
     // It does so by updating the safey rule to an epoch state, which does not contain the
-    // current validator. The validator later fails to verify QC with its signer key.
+    // current validator. The validator later fails to verify QC since it is no longer in the
+    // validator set.
 
     let (mut safety_rules, signer) = func();
 
@@ -682,7 +685,7 @@ fn test_missing_validator(func: Callback) {
         Some(1),
         Some(next_epoch_state),
     );
-    assert!(safety_rules.update(a2.block().quorum_cert()).is_ok());
+    safety_rules.update(a2.block().quorum_cert()).unwrap();
 
     let a3 = test_utils::make_proposal_with_parent_and_overrides(
         vec![],
@@ -701,13 +704,15 @@ fn test_missing_validator(func: Callback) {
 }
 
 fn test_reconcile_key(_func: Callback) {
-    // Test to verify desired consensus key can be retrived according to validator set.
-    // It does so by updating the safey rule to a desired epoch state, which later fails
-    // to verify QC with its outdated signer key.
+    // Test to verify desired consensus key can be retrieved according to validator set.
+    // It does so by updating the safey rule to a desired epoch state, reconciling old signer key
+    // with the new one. Later when it tries to verify the QC signed by the old signer key, safety
+    // rules fails the check.
 
+    // Initialize the storage with two versions of signer keys
     let signer = ValidatorSigner::from_int(0);
     let mut storage = test_utils::test_storage(&signer);
-    let new_pub_key = storage.rotate_consensus_key().unwrap();
+    let new_pub_key = test_utils::rotate_consensus_key(&mut storage).unwrap();
     let mut safety_rules = Box::new(SafetyRules::new(signer.author(), storage));
 
     let (proof, genesis_qc) = make_genesis(&signer);
@@ -718,6 +723,7 @@ fn test_reconcile_key(_func: Callback) {
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
     safety_rules.update(a1.block().quorum_cert()).unwrap();
 
+    // Update validator epoch state, reconciling the old key with the new pub key
     let mut next_epoch_state = EpochState::empty();
     next_epoch_state.epoch = 1;
     next_epoch_state.verifier = ValidatorVerifier::new_single(signer.author(), new_pub_key);
@@ -732,6 +738,7 @@ fn test_reconcile_key(_func: Callback) {
     );
     safety_rules.update(a2.block().quorum_cert()).unwrap();
 
+    // Verification fails for proposal signed by the outdated key
     let outdated_signer = &signer;
     let a3 = test_utils::make_proposal_with_parent_and_overrides(
         vec![],

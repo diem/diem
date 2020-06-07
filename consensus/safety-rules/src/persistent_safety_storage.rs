@@ -120,10 +120,9 @@ impl PersistentSafetyStorage {
         Ok(())
     }
 
-    pub fn rotate_consensus_key(&mut self) -> Result<Ed25519PublicKey> {
-        self.internal_store
-            .rotate_key(CONSENSUS_KEY)
-            .map_err(|e| e.into())
+    #[cfg(any(test, feature = "testing"))]
+    pub fn internal_store(&mut self) -> &mut dyn Storage {
+        self.internal_store.as_mut()
     }
 }
 
