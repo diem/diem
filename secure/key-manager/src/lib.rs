@@ -295,13 +295,14 @@ where
     }
 
     fn get_operator_account(&self) -> Result<AccountAddress, Error> {
-        match self.storage.get(OPERATOR_ACCOUNT) {
-            Ok(response) => match response.value.string() {
-                Ok(account_address) => match AccountAddress::from_str(&account_address) {
-                    Ok(account_address) => Ok(account_address),
-                    Err(e) => Err(Error::UnknownError(e.to_string())),
-                },
-                Err(e) => Err(Error::MissingAccountAddress(e)),
+        match self
+            .storage
+            .get(OPERATOR_ACCOUNT)
+            .and_then(|response| response.value.string())
+        {
+            Ok(account_address) => match AccountAddress::from_str(&account_address) {
+                Ok(account_address) => Ok(account_address),
+                Err(e) => Err(Error::UnknownError(e.to_string())),
             },
             Err(e) => Err(Error::MissingAccountAddress(e)),
         }
