@@ -53,6 +53,23 @@ pub const SCRIPT_MODULE_NAME: &str = "<SELF>";
 pub const SCRIPT_BYTECODE_FUN_NAME: &str = "<SELF>";
 pub const SCRIPT_AST_FUN_NAME: &str = "main";
 
+/// Pragma indicating whether verification should be performed for a function.
+pub const VERIFY_PRAGMA: &str = "verify";
+
+/// Pragma indicating whether implementation of function should be ignored and
+/// instead treated to be like a native function.
+pub const INTRINSIC_PRAGMA: &str = "intrinsic";
+
+/// Pragma indicating whether aborts_if specification should be considered partial.
+pub const ABORTS_IF_IS_PARTIAL_PRAGMA: &str = "aborts_if_is_partial";
+
+/// Pragma indicating whether no explicit aborts_if specification should be treated
+/// like `aborts_if` false.
+pub const ABORTS_IF_IS_STRICT_PRAGMA: &str = "aborts_if_is_strict";
+
+/// Pragma indicating that requires are also enforced if the aborts condition is true.
+pub const REQUIRES_IF_ABORTS: &str = "requires_if_aborts";
+
 // =================================================================================================
 /// # Locations
 
@@ -1575,7 +1592,7 @@ impl<'env> FunctionEnv<'env> {
     /// if it has the pragma intrinsic set to true.
     pub fn is_native(&self) -> bool {
         let view = self.definition_view();
-        view.is_native() || self.is_pragma_true("intrinsic", || false)
+        view.is_native() || self.is_pragma_true(INTRINSIC_PRAGMA, || false)
     }
 
     /// Returns true if this function is public.
