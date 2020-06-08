@@ -107,6 +107,11 @@
 <span id="107">107</span>
 <span id="108">108</span>
 <span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -187,7 +192,12 @@
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">CREATE_ACCOUNT_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>
     <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;create_unhosted_account&quot;</span>).<span class="ident">unwrap</span>());
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">PROLOGUE_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;prologue&quot;</span>).<span class="ident">unwrap</span>());
-<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">EPILOGUE_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;epilogue&quot;</span>).<span class="ident">unwrap</span>());
+<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">WRITESET_EPILOGUE_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>
+    <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;epilogue&quot;</span>).<span class="ident">unwrap</span>());
+<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">SUCCESS_EPILOGUE_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>
+    <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;success_epilogue&quot;</span>).<span class="ident">unwrap</span>());
+<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">FAILURE_EPILOGUE_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>
+    <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;failure_epilogue&quot;</span>).<span class="ident">unwrap</span>());
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">BUMP_SEQUENCE_NUMBER_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>
     <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;bump_sequence_number&quot;</span>).<span class="ident">unwrap</span>());
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">BLOCK_PROLOGUE</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>

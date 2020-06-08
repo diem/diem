@@ -1152,6 +1152,39 @@
 <span id="1152">1152</span>
 <span id="1153">1153</span>
 <span id="1154">1154</span>
+<span id="1155">1155</span>
+<span id="1156">1156</span>
+<span id="1157">1157</span>
+<span id="1158">1158</span>
+<span id="1159">1159</span>
+<span id="1160">1160</span>
+<span id="1161">1161</span>
+<span id="1162">1162</span>
+<span id="1163">1163</span>
+<span id="1164">1164</span>
+<span id="1165">1165</span>
+<span id="1166">1166</span>
+<span id="1167">1167</span>
+<span id="1168">1168</span>
+<span id="1169">1169</span>
+<span id="1170">1170</span>
+<span id="1171">1171</span>
+<span id="1172">1172</span>
+<span id="1173">1173</span>
+<span id="1174">1174</span>
+<span id="1175">1175</span>
+<span id="1176">1176</span>
+<span id="1177">1177</span>
+<span id="1178">1178</span>
+<span id="1179">1179</span>
+<span id="1180">1180</span>
+<span id="1181">1181</span>
+<span id="1182">1182</span>
+<span id="1183">1183</span>
+<span id="1184">1184</span>
+<span id="1185">1185</span>
+<span id="1186">1186</span>
+<span id="1187">1187</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1524,7 +1557,7 @@
         .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
             <span class="ident">failed_gas_left</span> <span class="op">=</span> <span class="ident">cost_strategy</span>.<span class="ident">remaining_gas</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cost_strategy</span> <span class="op">=</span> <span class="ident">CostStrategy</span>::<span class="ident">system</span>(<span class="ident">gas_schedule</span>, <span class="ident">failed_gas_left</span>);
-            <span class="self">self</span>.<span class="ident">run_epilogue</span>(
+            <span class="self">self</span>.<span class="ident">run_success_epilogue</span>(
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>,
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
                 <span class="ident">txn_data</span>,
@@ -1566,7 +1599,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data_store</span> <span class="op">=</span> <span class="ident">TransactionDataCache</span>::<span class="ident">new</span>(<span class="ident">remote_cache</span>);
         <span class="kw">match</span> <span class="ident">TransactionStatus</span>::<span class="ident">from</span>(<span class="ident">error_code</span>) {
             <span class="ident">TransactionStatus</span>::<span class="ident">Keep</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>
-                .<span class="ident">run_epilogue</span>(
+                .<span class="ident">run_failure_epilogue</span>(
                     <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>,
                     <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
                     <span class="ident">txn_data</span>,
@@ -1849,7 +1882,7 @@
 
     <span class="doccomment">/// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored</span>
     <span class="doccomment">/// in the `ACCOUNT_MODULE` on chain.</span>
-    <span class="kw">fn</span> <span class="ident">run_epilogue</span>(
+    <span class="kw">fn</span> <span class="ident">run_success_epilogue</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">TransactionDataCache</span>,
         <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
@@ -1865,7 +1898,40 @@
         <span class="kw">let</span> <span class="ident">_timer</span> <span class="op">=</span> <span class="ident">TXN_EPILOGUE_SECONDS</span>.<span class="ident">start_timer</span>();
         <span class="self">self</span>.<span class="ident">move_vm</span>.<span class="ident">execute_function</span>(
             <span class="kw-2">&amp;</span><span class="ident">account_config</span>::<span class="ident">ACCOUNT_MODULE</span>,
-            <span class="kw-2">&amp;</span><span class="ident">EPILOGUE_NAME</span>,
+            <span class="kw-2">&amp;</span><span class="ident">SUCCESS_EPILOGUE_NAME</span>,
+            <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">gas_currency_ty</span>],
+            <span class="macro">vec</span><span class="macro">!</span>[
+                <span class="ident">Value</span>::<span class="ident">transaction_argument_signer_reference</span>(<span class="ident">txn_data</span>.<span class="ident">sender</span>),
+                <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">txn_sequence_number</span>),
+                <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">txn_gas_price</span>),
+                <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">txn_max_gas_units</span>),
+                <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">gas_remaining</span>),
+            ],
+            <span class="ident">txn_data</span>.<span class="ident">sender</span>(),
+            <span class="ident">data_store</span>,
+            <span class="ident">cost_strategy</span>,
+        )
+    }
+
+    <span class="doccomment">/// Run the failure epilogue of a transaction by calling into `FAILURE_EPILOGUE_NAME` function</span>
+    <span class="doccomment">/// stored in the `ACCOUNT_MODULE` on chain.</span>
+    <span class="kw">fn</span> <span class="ident">run_failure_epilogue</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">TransactionDataCache</span>,
+        <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
+        <span class="ident">txn_data</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionMetadata</span>,
+        <span class="ident">account_currency_symbol</span>: <span class="kw-2">&amp;</span><span class="ident">IdentStr</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">gas_currency_ty</span> <span class="op">=</span>
+            <span class="ident">account_config</span>::<span class="ident">type_tag_for_currency_code</span>(<span class="ident">account_currency_symbol</span>.<span class="ident">to_owned</span>());
+        <span class="kw">let</span> <span class="ident">txn_sequence_number</span> <span class="op">=</span> <span class="ident">txn_data</span>.<span class="ident">sequence_number</span>();
+        <span class="kw">let</span> <span class="ident">txn_gas_price</span> <span class="op">=</span> <span class="ident">txn_data</span>.<span class="ident">gas_unit_price</span>().<span class="ident">get</span>();
+        <span class="kw">let</span> <span class="ident">txn_max_gas_units</span> <span class="op">=</span> <span class="ident">txn_data</span>.<span class="ident">max_gas_amount</span>().<span class="ident">get</span>();
+        <span class="kw">let</span> <span class="ident">gas_remaining</span> <span class="op">=</span> <span class="ident">cost_strategy</span>.<span class="ident">remaining_gas</span>().<span class="ident">get</span>();
+        <span class="kw">let</span> <span class="ident">_timer</span> <span class="op">=</span> <span class="ident">TXN_EPILOGUE_SECONDS</span>.<span class="ident">start_timer</span>();
+        <span class="self">self</span>.<span class="ident">move_vm</span>.<span class="ident">execute_function</span>(
+            <span class="kw-2">&amp;</span><span class="ident">account_config</span>::<span class="ident">ACCOUNT_MODULE</span>,
+            <span class="kw-2">&amp;</span><span class="ident">FAILURE_EPILOGUE_NAME</span>,
             <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">gas_currency_ty</span>],
             <span class="macro">vec</span><span class="macro">!</span>[
                 <span class="ident">Value</span>::<span class="ident">transaction_argument_signer_reference</span>(<span class="ident">txn_data</span>.<span class="ident">sender</span>),
@@ -1909,7 +1975,7 @@
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">convert_prologue_runtime_error</span>(<span class="kw-2">&amp;</span><span class="ident">err</span>, <span class="kw-2">&amp;</span><span class="ident">txn_data</span>.<span class="ident">sender</span>))
     }
 
-    <span class="doccomment">/// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored</span>
+    <span class="doccomment">/// Run the epilogue of a transaction by calling into `WRITESET_EPILOGUE_NAME` function stored</span>
     <span class="doccomment">/// in the `WRITESET_MODULE` on chain.</span>
     <span class="kw">fn</span> <span class="ident">run_writeset_epilogue</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -1925,7 +1991,7 @@
         <span class="kw">let</span> <span class="ident">_timer</span> <span class="op">=</span> <span class="ident">TXN_EPILOGUE_SECONDS</span>.<span class="ident">start_timer</span>();
         <span class="self">self</span>.<span class="ident">move_vm</span>.<span class="ident">execute_function</span>(
             <span class="kw-2">&amp;</span><span class="ident">LIBRA_WRITESET_MANAGER_MODULE</span>,
-            <span class="kw-2">&amp;</span><span class="ident">EPILOGUE_NAME</span>,
+            <span class="kw-2">&amp;</span><span class="ident">WRITESET_EPILOGUE_NAME</span>,
             <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="macro">vec</span><span class="macro">!</span>[
                 <span class="ident">Value</span>::<span class="ident">transaction_argument_signer_reference</span>(<span class="ident">txn_data</span>.<span class="ident">sender</span>),
