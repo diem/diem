@@ -28,23 +28,28 @@
 //! let mut rng = StdRng::from_seed(TEST_SEED);
 //! let client_private = x25519::PrivateKey::generate(&mut rng);
 //! let client_public = client_private.public_key();
+//! let client_peer_id = PeerId::random();
 //!
 //! let server_private = x25519::PrivateKey::generate(&mut rng);
 //! let server_public = server_private.public_key();
+//! let server_peer_id = PeerId::random();
 //!
 //! // create list of trusted peers
 //! let mut trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 //! {
-//!     trusted_peers.write().unwrap().insert(PeerId::random(), NetworkPublicKeys {
+//!     trusted_peers.write().unwrap().insert(client_peer_id, NetworkPublicKeys {
 //!        identity_public_key: client_public,
+//!     });
+//!     trusted_peers.write().unwrap().insert(server_peer_id, NetworkPublicKeys {
+//!        identity_public_key: server_public,
 //!     });
 //! }
 //!
 //! let client_auth = HandshakeAuthMode::mutual(trusted_peers.clone());
-//! let client = NoiseUpgrader::new(client_private, client_auth);
+//! let client = NoiseUpgrader::new(client_peer_id, client_private, client_auth);
 //!
 //! let server_auth = HandshakeAuthMode::mutual(trusted_peers);
-//! let server = NoiseUpgrader::new(server_private, server_auth);
+//! let server = NoiseUpgrader::new(server_peer_id, server_private, server_auth);
 //!
 //! // use an in-memory socket as example
 //! let (dialer_socket, listener_socket) = MemorySocket::new_pair();
@@ -55,8 +60,8 @@
 //!    server.upgrade_inbound(listener_socket),
 //! ));
 //!
-//! let mut client_session = client_session?;
-//! let mut server_session = server_session?;
+//! let (mut client_session, _server_peer_id) = client_session?;
+//! let (mut server_session, _client_peer_id) = server_session?;
 //!
 //! // client -> server
 //! executor::block_on(client_session.write_all(b"client hello"))?;

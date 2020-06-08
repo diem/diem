@@ -17,6 +17,7 @@ use futures::{
     task::{Context, Poll},
 };
 use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform as _};
+use libra_types::PeerId;
 use memsocket::MemorySocket;
 use once_cell::sync::Lazy;
 use rand_core::SeedableRng;
@@ -97,8 +98,9 @@ pub static KEYPAIR: Lazy<(x25519::PrivateKey, x25519::PublicKey)> = Lazy::new(||
 fn generate_first_two_messages() -> (Vec<u8>, Vec<u8>) {
     // build
     let (private_key, public_key) = KEYPAIR.clone();
-    let initiator = NoiseUpgrader::new(private_key.clone(), HandshakeAuthMode::ServerOnly);
-    let responder = NoiseUpgrader::new(private_key, HandshakeAuthMode::ServerOnly);
+    let peer_id = PeerId::from_identity_public_key(public_key);
+    let initiator = NoiseUpgrader::new(peer_id, private_key.clone(), HandshakeAuthMode::ServerOnly);
+    let responder = NoiseUpgrader::new(peer_id, private_key, HandshakeAuthMode::ServerOnly);
 
     // create exposing socket
     let (dialer_socket, listener_socket) = ExposingSocket::new_pair();
@@ -110,8 +112,10 @@ fn generate_first_two_messages() -> (Vec<u8>, Vec<u8>) {
     ));
 
     // take result
-    let init_msg = client_session.unwrap().into_socket().written;
-    let resp_msg = server_session.unwrap().into_socket().written;
+    let (client_session, _) = client_session.unwrap();
+    let (server_session, _) = server_session.unwrap();
+    let init_msg = client_session.into_socket().written;
+    let resp_msg = server_session.into_socket().written;
 
     (init_msg, resp_msg)
 }
@@ -180,7 +184,8 @@ impl<'a> AsyncRead for FakeSocket<'a> {
 pub fn fuzz_initiator(data: &[u8]) {
     // setup initiator
     let (private_key, public_key) = KEYPAIR.clone();
-    let initiator = NoiseUpgrader::new(private_key, HandshakeAuthMode::ServerOnly);
+    let peer_id = PeerId::from_identity_public_key(public_key);
+    let initiator = NoiseUpgrader::new(peer_id, private_key, HandshakeAuthMode::ServerOnly);
 
     // setup NoiseStream
     let fake_socket = FakeSocket { content: data };
@@ -191,8 +196,9 @@ pub fn fuzz_initiator(data: &[u8]) {
 
 pub fn fuzz_responder(data: &[u8]) {
     // setup responder
-    let (private_key, _public_key) = KEYPAIR.clone();
-    let responder = NoiseUpgrader::new(private_key, HandshakeAuthMode::ServerOnly);
+    let (private_key, public_key) = KEYPAIR.clone();
+    let peer_id = PeerId::from_identity_public_key(public_key);
+    let responder = NoiseUpgrader::new(peer_id, private_key, HandshakeAuthMode::ServerOnly);
 
     // setup NoiseStream
     let fake_socket = FakeSocket { content: data };

@@ -246,6 +246,11 @@ impl NoiseConfig {
         }
     }
 
+    /// Handy getter to access the configuration's public key
+    pub fn public_key(&self) -> x25519::PublicKey {
+        self.public_key
+    }
+
     //
     // Initiator
     // ---------

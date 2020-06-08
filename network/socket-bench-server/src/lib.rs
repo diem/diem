@@ -12,6 +12,7 @@ use futures::{
 use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform as _};
 use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
+use libra_types::PeerId;
 use memsocket::MemorySocket;
 use netcore::{
     compat::IoCompat,
@@ -80,7 +81,13 @@ pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseStream<
     MemoryTransport::default().and_then(move |socket, addr, origin| async move {
         let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
         let private = x25519::PrivateKey::generate(&mut rng);
-        let noise_config = Arc::new(NoiseUpgrader::new(private, HandshakeAuthMode::ServerOnly));
+        let public = private.public_key();
+        let peer_id = PeerId::from_identity_public_key(public);
+        let noise_config = Arc::new(NoiseUpgrader::new(
+            peer_id,
+            private,
+            HandshakeAuthMode::ServerOnly,
+        ));
         let remote_public_key = addr.find_noise_proto();
         let (_remote_static_key, socket) = noise_config
             .upgrade(socket, origin, remote_public_key)
@@ -94,7 +101,13 @@ pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseStream<TcpSoc
     TcpTransport::default().and_then(move |socket, addr, origin| async move {
         let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
         let private = x25519::PrivateKey::generate(&mut rng);
-        let noise_config = Arc::new(NoiseUpgrader::new(private, HandshakeAuthMode::ServerOnly));
+        let public = private.public_key();
+        let peer_id = PeerId::from_identity_public_key(public);
+        let noise_config = Arc::new(NoiseUpgrader::new(
+            peer_id,
+            private,
+            HandshakeAuthMode::ServerOnly,
+        ));
         let remote_public_key = addr.find_noise_proto();
         let (_remote_static_key, socket) = noise_config
             .upgrade(socket, origin, remote_public_key)
