@@ -218,6 +218,7 @@ impl SharedMempoolNetwork {
         // validator config
         let mut config = NodeConfig::random();
         config.mempool.shared_mempool_batch_size = broadcast_batch_size;
+        config.mempool.shared_mempool_backoff_interval_ms = 50;
         if let Some(capacity) = mempool_size {
             config.mempool.capacity = capacity
         }
@@ -234,6 +235,7 @@ impl SharedMempoolNetwork {
         let mut fn_config = NodeConfig::random();
         fn_config.base.role = RoleType::FullNode;
         fn_config.mempool.shared_mempool_batch_size = broadcast_batch_size;
+        fn_config.mempool.shared_mempool_backoff_interval_ms = 50;
         if let Some(capacity) = mempool_size {
             fn_config.mempool.capacity = capacity
         }

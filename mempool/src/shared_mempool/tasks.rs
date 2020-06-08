@@ -45,31 +45,40 @@ use vm_validator::vm_validator::{get_account_sequence_number, TransactionValidat
 /// attempts broadcast to `peer` and schedules the next broadcast
 pub(crate) fn execute_broadcast<V>(
     peer: PeerNetworkId,
+    backoff: bool,
     smp: &mut SharedMempool<V>,
     scheduled_broadcasts: &mut FuturesUnordered<ScheduledBroadcast>,
     executor: Handle,
 ) where
     V: TransactionValidation,
 {
-    broadcast_single_peer(peer, smp);
+    let next_broadcast_backoff = broadcast_single_peer(peer, backoff, smp);
 
-    let interval_ms = smp.config.shared_mempool_tick_interval_ms;
+    let interval_ms = if next_broadcast_backoff {
+        smp.config.shared_mempool_backoff_interval_ms
+    } else {
+        smp.config.shared_mempool_tick_interval_ms
+    };
+
     scheduled_broadcasts.push(ScheduledBroadcast::new(
         Instant::now() + Duration::from_millis(interval_ms),
         peer,
+        next_broadcast_backoff,
         executor,
     ))
 }
 
 /// broadcasts txns to `peer` if alive
-fn broadcast_single_peer<V>(peer: PeerNetworkId, smp: &mut SharedMempool<V>)
+/// Returns whether the next broadcast scheduled for this peer should be in backpressure mode or not
+fn broadcast_single_peer<V>(peer: PeerNetworkId, backoff: bool, smp: &mut SharedMempool<V>) -> bool
 where
     V: TransactionValidation,
 {
     let peer_manager = &smp.peer_manager;
 
-    let (timeline_id, retry_txns_id) = if peer_manager.is_picked_peer(peer) {
+    let (timeline_id, retry_txns_id, next_backoff) = if peer_manager.is_picked_peer(peer) {
         let state = peer_manager.get_peer_state(peer);
+        let next_backoff = state.broadcast_info.backoff_mode;
         if state.is_alive {
             (
                 state.timeline_id,
@@ -78,13 +87,21 @@ where
                     .total_retry_txns
                     .into_iter()
                     .collect::<Vec<_>>(),
+                next_backoff,
             )
         } else {
-            return;
+            return next_backoff;
         }
     } else {
-        return;
+        return false;
     };
+
+    // It is possible that a broadcast was scheduled as non-backoff before an ACK received after the
+    // broadcast scheduling turns on backoff mode
+    // If this is the case, ignore this schedule and wait till next broadcast scheduled as backoff
+    if !backoff && next_backoff {
+        return next_backoff;
+    }
 
     // craft batch of txns to broadcast
     let mut mempool = smp
@@ -105,7 +122,7 @@ where
     };
 
     if new_txns.is_empty() && retry_txns.is_empty() {
-        return;
+        return next_backoff;
     }
 
     // read first tx in timeline
@@ -160,6 +177,8 @@ where
         );
         notify_subscribers(SharedMempoolNotification::Broadcast, &smp.subscribers);
     }
+
+    next_backoff
 }
 
 fn send_mempool_sync_msg(
