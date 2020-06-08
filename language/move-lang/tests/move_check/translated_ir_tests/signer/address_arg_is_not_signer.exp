@@ -11,6 +11,31 @@ error:
 
 error: 
 
+    ┌── tests/move_check/translated_ir_tests/signer/address_arg_is_not_signer.move:12:9 ───
+    │
+ 12 │         0x1::M::store_signer(s)
+    │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::store_signer'. The call expected 2 argument(s) but got 1
+    ·
+ 12 │         0x1::M::store_signer(s)
+    │                             --- Found 1 argument(s) here
+    │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/signer/address_arg_is_not_signer.move:12:9 ───
+    │
+ 12 │         0x1::M::store_signer(s)
+    │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::store_signer'. Invalid argument for parameter 's1'
+    ·
+ 11 │     fun t1(s: signer) {
+    │               ------ The type: 'signer'
+    ·
+  4 │     public fun store_signer(s1: &signer, s: signer) {
+    │                                 ------- Is not compatible with: '&signer'
+    │
+
+error: 
+
     ┌── tests/move_check/translated_ir_tests/signer/address_arg_is_not_signer.move:18:9 ───
     │
  18 │     fun t2(s: &signer, s2: signer) {
@@ -18,6 +43,31 @@ error:
     ·
  18 │     fun t2(s: &signer, s2: signer) {
     │                            ------ Found: 'signer'. But expected: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<u8>', '&signer'
+    │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/signer/address_arg_is_not_signer.move:19:9 ───
+    │
+ 19 │         0x1::M::store_signer(s2)
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::store_signer'. The call expected 2 argument(s) but got 1
+    ·
+ 19 │         0x1::M::store_signer(s2)
+    │                             ---- Found 1 argument(s) here
+    │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/signer/address_arg_is_not_signer.move:19:9 ───
+    │
+ 19 │         0x1::M::store_signer(s2)
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::store_signer'. Invalid argument for parameter 's1'
+    ·
+ 18 │     fun t2(s: &signer, s2: signer) {
+    │                            ------ The type: 'signer'
+    ·
+  4 │     public fun store_signer(s1: &signer, s: signer) {
+    │                                 ------- Is not compatible with: '&signer'
     │
 
 error: 

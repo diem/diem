@@ -31,11 +31,11 @@ module M {
         foo2(a);
     }
 
-    fun t4(a: address) {
+    fun t4(account: &signer, a: address) {
         exists<R1>(a);
         exists<R2>(a);
-        move_to_sender<R1>(R1{});
-        move_to_sender<R2>(R2{});
+        move_to<R1>(account, R1{});
+        move_to<R2>(account, R2{});
     }
 
     fun t5(a: address) acquires R3 {
@@ -45,11 +45,11 @@ module M {
         borrow_global_mut<R3<R2>>(a);
     }
 
-    fun t6(a: address) {
+    fun t6(account: &signer, a: address) {
         exists<R3<u64>>(a);
         exists<R3<R1>>(a);
-        move_to_sender<R3<bool>>(R3{});
-        move_to_sender<R3<R2>>(R3{});
+        move_to<R3<bool>>(account, R3{});
+        move_to<R3<R2>>(account, R3{});
     }
 
 }

@@ -1,8 +1,8 @@
 address 0x1 {
 module M {
     resource struct R { s: signer }
-    public fun store_signer(s: signer) {
-        move_to_sender(R { s })
+    public fun store_signer(s1: &signer, s: signer) {
+        move_to(s1, R { s })
     }
 }
 }

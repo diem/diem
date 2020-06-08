@@ -31,11 +31,11 @@ module A {
         }
     }
 
-    public fun A4() acquires T {
+    public fun A4(account: &signer) acquires T {
         let sender = Transaction::sender();
         let x = move_from<T>(sender);
         borrow_global_mut<T>(sender);
-        move_to_sender<T>(x);
+        move_to<T>(account, x);
     }
 
     public fun A5() acquires T {

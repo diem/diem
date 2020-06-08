@@ -10,8 +10,8 @@ module M {
     struct S {}
     resource struct R<T> {v: T}
 
-    fun destroy<T>(v: T) {
-        move_to_sender(R { v })
+    fun destroy<T>(account: &signer, v: T) {
+        move_to(account, R { v })
     }
 
     fun t0<T: resource>() acquires
@@ -26,12 +26,12 @@ module M {
         abort 0
     }
 
-    fun t1<T: resource>(a: address) {
-        destroy(move_from(a));
-        destroy(move_from<T>(a));
-        destroy(move_from<u64>(a));
-        destroy(move_from<X::R>(a));
-        destroy(move_from<S>(a));
+    fun t1<T: resource>(account: &signer, a: address) {
+        destroy(account, move_from(a));
+        destroy(account, move_from<T>(a));
+        destroy(account, move_from<u64>(a));
+        destroy(account, move_from<X::R>(a));
+        destroy(account, move_from<S>(a));
 
         borrow_global(a);
         borrow_global<T>(a);
@@ -51,11 +51,11 @@ module M {
         exists<X::R>(a);
         exists<S>(a);
 
-        move_to_sender(any());
-        move_to_sender<T>(any());
-        move_to_sender<u64>(any());
-        move_to_sender<X::R>(any());
-        move_to_sender<S>(any());
+        move_to(account, any());
+        move_to<T>(account, any());
+        move_to<u64>(account, any());
+        move_to<X::R>(account, any());
+        move_to<S>(account, any());
     }
 }
 

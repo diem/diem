@@ -4,13 +4,13 @@ import 0x0.LBR;
     import 0x0.Vector;
     resource Coins { f: vector<Libra.Libra<LBR.LBR>> }
 
-    public new() {
+    public new(account: &signer) {
         let coin_vec: vector<Libra.Libra<LBR.LBR>>;
         let coins: Self.Coins;
         coin_vec = Vector.empty<Libra.Libra<LBR.LBR>>();
         coins = Coins { f: move(coin_vec)};
 
-        move_to_sender<Coins>(move(coins));
+        move_to<Coins>(move(account), move(coins));
         return;
     }
 
@@ -55,7 +55,7 @@ import 0x0.Libra;
 main(account: &signer) {
     let coin: Libra.Libra<LBR.LBR>;
     coin = LibraAccount.withdraw_from<LBR.LBR>(copy(account), 1000);
-    M.new();
+    M.new(copy(account));
     M.put_coin(move(coin));
 
     return;

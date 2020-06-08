@@ -1,13 +1,13 @@
 module Token {
     resource T { count: u64 }
 
-    public test() acquires T {
+    public test(account: &signer) acquires T {
         let t_ref: &mut Self.T;
         let count_ref: &mut u64;
         let local: u64;
         let local_ref: &mut u64;
         let sender: address;
-        move_to_sender<T>(T { count: 0 });
+        move_to<T>(copy(account), T { count: 0 });
         sender = get_txn_sender();
         t_ref = borrow_global_mut<T>(move(sender));
         count_ref = &mut move(t_ref).count;
@@ -24,7 +24,7 @@ module Token {
 
 import {{default}}.Token;
 
-main() {
-    Token.test();
+main(account: &signer) {
+    Token.test(move(account));
     return;
 }

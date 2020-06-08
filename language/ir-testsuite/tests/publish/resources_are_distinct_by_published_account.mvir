@@ -1,5 +1,6 @@
 module LibraAccount {
     import 0x0.LibraAccount;
+    import 0x0.Signer;
 
     resource T{sequence_number: u64}
 
@@ -14,12 +15,12 @@ module LibraAccount {
         return *move(ref);
     }
 
-    public publish(r: Self.T) {
-        move_to_sender<T>(move(r));
+    public publish(account: &signer, r: Self.T) {
+        move_to<T>(copy(account), move(r));
         return;
     }
 
-    public test() acquires T {
+    public test(account: &signer) acquires T {
         let c1: Self.T;
         let sender: address;
         let sequence_number: u64;
@@ -28,9 +29,9 @@ module LibraAccount {
         let fake_value: u64;
 
         c1 = Self.new(112);
-        Self.publish(move(c1));
+        Self.publish(copy(account), move(c1));
 
-        sender = get_txn_sender();
+        sender = Signer.address_of(copy(account));
 
         sequence_number = LibraAccount.sequence_number(copy(sender));
         assert(copy(sequence_number) == 1, 42);
@@ -48,7 +49,7 @@ module LibraAccount {
 
 import {{default}}.LibraAccount as MyAccount;
 
-main() {
-  MyAccount.test();
+main(account: &signer) {
+  MyAccount.test(move(account));
   return;
 }

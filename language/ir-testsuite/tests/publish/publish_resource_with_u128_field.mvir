@@ -3,8 +3,8 @@ module M {
         x: u128,
     }
 
-    public foo() {
-        move_to_sender<Foo>(Foo {x: 100u128});
+    public foo(account: &signer) {
+        move_to<Foo>(move(account),Foo {x: 100u128});
         return;
     }
 
@@ -19,8 +19,8 @@ module M {
 //! new-transaction
 import {{default}}.M;
 
-main() {
-    M.foo();
+main(account: &signer) {
+    M.foo(move(account));
     return;
 }
 

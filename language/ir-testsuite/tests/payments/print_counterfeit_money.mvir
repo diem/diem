@@ -16,13 +16,13 @@ module M {
         return move(t);
     }
 
-    store<T: resource>(x: T) {
-        move_to_sender<R<T>>(R<T> { x: move(x) });
+    store<T: resource>(account: &signer, x: T) {
+        move_to<R<T>>(move(account), R<T> { x: move(x) });
         return;
     }
 
-    transmute<T1: resource, T2: resource>(x: T1): T2 acquires R {
-        Self.store<T1>(move(x));
+    transmute<T1: resource, T2: resource>(account: &signer, x: T1): T2 acquires R {
+        Self.store<T1>(move(account), move(x));
         return Self.fetch<T2>();
     }
 
@@ -31,7 +31,8 @@ module M {
         let real: Libra.Libra<LBR.LBR>;
 
         fake = FakeCoin { value: 400000 };
-        real = Self.transmute<Self.FakeCoin, Libra.Libra<LBR.LBR>>(move(fake));
+
+        real = Self.transmute<Self.FakeCoin, Libra.Libra<LBR.LBR>>(copy(account), move(fake));
 
         LibraAccount.deposit_to<LBR.LBR>(move(account), move(real));
 

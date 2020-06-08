@@ -92,8 +92,8 @@ module ColdWallet {
         amount: u64
     }
 
-    // create a new ColdWallet with a dafault genesis group
-    public create(genesis_group: ApprovalGroup.T) {
+    // create a new ColdWallet with a default genesis group
+    public create(account: &signer, genesis_group: ApprovalGroup.T) {
         let zero_balance: Libra.Libra<LBR.LBR>;
         let wallet: Self.T;
         zero_balance = Libra.zero<LBR.LBR>();
@@ -102,12 +102,12 @@ module ColdWallet {
             sequence_num: 0,
             genesis_group: move(genesis_group)
         };
-        move_to_sender<T>(move(wallet));
+        move_to<T>(move(account), move(wallet));
         return;
     }
 
-    public publish(self: Self.T) {
-        move_to_sender<T>(move(self));
+    public publish(account: &signer, self: Self.T) {
+        move_to<T>(move(account), move(self));
         return;
     }
 
@@ -213,7 +213,7 @@ module ColdWallet {
 //! new-transaction
 import {{default}}.ApprovalGroup;
 import {{default}}.ColdWallet;
-main() {
+main(account: &signer) {
     let genesis_group: ApprovalGroup.T;
     let pk1: vector<u8>;
     let pk2: vector<u8>;
@@ -225,7 +225,7 @@ main() {
     pk3 = h"abc123";
 
     genesis_group = ApprovalGroup.create(move(pk1), move(pk2), move(pk3));
-    ColdWallet.create(move(genesis_group));
+    ColdWallet.create(move(account), move(genesis_group));
 
     return;
 }

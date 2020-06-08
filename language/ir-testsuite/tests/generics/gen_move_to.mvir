@@ -51,12 +51,12 @@ module M {
     }
 
     // publish a well known `Some<Value>` resource
-    public publish_some_value() {
+    public publish_some_value(account: &signer) {
         let value: Self.Value;
         let some_of_value: Self.Some<Self.Value>;
         value = Value { val: 100 };
         some_of_value = Some<Self.Value>{ v : move(value) };
-        move_to_sender<Some<Self.Value>>(move(some_of_value));
+        move_to<Some<Self.Value>>(copy(account), move(some_of_value));
         return;
     }
 
@@ -75,10 +75,10 @@ module M {
     }
 
     // publish a `Some` under sender account
-    public publish_some<T>(v: T) {
+    public publish_some<T>(account: &signer, v: T) {
         let some_of_t: Self.Some<T>;
         some_of_t = Some<T>{ v: move(v) };
-        move_to_sender<Some<T>>(move(some_of_t));
+        move_to<Some<T>>(move(account), move(some_of_t));
         return;
     }
 
@@ -136,11 +136,11 @@ module M {
 //! new-transaction
 import {{default}}.M;
 
-main() {
+main(account: &signer) {
     assert(M.some_exists<M.Value>() == false, 1010);
     assert(M.some_exists<address>() == false, 1011);
 
-    M.publish_some_value();
+    M.publish_some_value(move(account));
 
     assert(M.some_exists<M.Value>() == true, 1012);
     return;
@@ -149,12 +149,12 @@ main() {
 //! new-transaction
 import {{default}}.M;
 
-main() {
+main(account: &signer) {
     assert(M.some_exists<M.Value>() == true, 1020);
     assert(M.some_exists<u64>() == false, 1021);
 
-    M.publish_some<u64>(100);
-    M.publish_some<bool>(true);
+    M.publish_some<u64>(copy(account), 100);
+    M.publish_some<bool>(move(account), true);
 
     assert(M.some_exists<u64>() == true, 1022);
     assert(M.some_exists<bool>() == true, 1023);
@@ -165,14 +165,15 @@ main() {
 //! new-transaction
 import {{default}}.M;
 
-main() {
+main(account: &signer) {
     assert(M.some_exists<M.Value>() == true, 1030);
     assert(M.some_exists<bool>() == true, 1031);
     assert(M.some_exists<address>() == false, 1032);
     assert(M.some_exists<M.Container<u64>>() == false, 1033);
 
-    M.publish_some<address>(0x0);
+    M.publish_some<address>(copy(account), 0x0);
     M.publish_some<M.Container<u64>>(
+        copy(account),
         M.new_container<u64>(7)
     );
 
@@ -182,6 +183,7 @@ main() {
     assert(M.some_exists<M.Value>() == true, 1037);
 
     M.publish_some<M.Container<M.Value>>(
+        copy(account),
         M.new_container<M.Value>(
             M.new_value(5)
         )

@@ -10,12 +10,13 @@ module Token {
 //! new-transaction
 
 import {{default}}.Token;
+import 0x0.Signer;
 
-main() {
+main(account: &signer) {
     let addr1: address;
     let t: Token.T;
-    addr1 = get_txn_sender();
+    addr1 = Signer.address_of(copy(account));
     t = Token.new();
-    move_to_sender<Token>(move(t));
+    move_to<Token>(copy(account), move(t));
     return;
 }

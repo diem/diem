@@ -35,10 +35,10 @@ error:
 
    ┌── tests/move_check/naming/global_builtin_zero_type_arguments.move:7:9 ───
    │
- 7 │         move_to_sender<>(R1{});
-   │         ^^^^^^^^^^^^^^ Invalid call to builtin function: 'move_to_sender'
+ 7 │         move_to<>(account, R1{});
+   │         ^^^^^^^ Invalid call to builtin function: 'move_to'
    ·
- 7 │         move_to_sender<>(R1{});
-   │         ---------------------- Expected 1 type arguments but got 0
+ 7 │         move_to<>(account, R1{});
+   │         ------------------------ Expected 1 type arguments but got 0
    │
 

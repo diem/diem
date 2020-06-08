@@ -11,11 +11,6 @@ module Token {
         return move(yes);
     }
 
-    public publish(t: Self.T) {
-        move_to_sender<T>(move(t));
-        return;
-    }
-
     public test() acquires T {
         let addr1: address;
         let struct1: &mut Self.T;
