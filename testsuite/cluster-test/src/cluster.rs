@@ -10,6 +10,7 @@ use libra_crypto::{
     test_utils::KeyPair,
 };
 use rand::prelude::*;
+use reqwest::Client;
 use std::convert::TryInto;
 
 #[derive(Clone)]
@@ -22,6 +23,7 @@ pub struct Cluster {
 
 impl Cluster {
     pub fn from_host_port(peers: Vec<(String, u32, Option<u32>)>, mint_file: &str) -> Self {
+        let http_client = Client::new();
         let instances: Vec<Instance> = peers
             .into_iter()
             .map(|host_port| {
@@ -30,6 +32,7 @@ impl Cluster {
                     host_port.0,
                     host_port.1,
                     host_port.2,
+                    http_client.clone(),
                 )
             })
             .collect();
@@ -68,6 +71,7 @@ impl Cluster {
     pub fn validator_instances(&self) -> &[Instance] {
         &self.validator_instances
     }
+
     pub fn fullnode_instances(&self) -> &[Instance] {
         &self.fullnode_instances
     }

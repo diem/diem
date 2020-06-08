@@ -8,7 +8,7 @@ use libra_config::config::NodeConfig;
 use libra_json_rpc_client::{JsonRpcAsyncClient, JsonRpcBatch};
 use once_cell::sync::Lazy;
 use regex::Regex;
-use reqwest::Url;
+use reqwest::{Client, Url};
 use serde_json::Value;
 use std::{collections::HashSet, ffi::OsStr, fmt, process::Stdio, str::FromStr};
 
@@ -48,6 +48,7 @@ pub struct Instance {
     k8s_node: Option<String>,
     instance_config: Option<InstanceConfig>,
     debug_interface_port: Option<u32>,
+    http_client: Client,
 }
 
 impl Instance {
@@ -56,6 +57,7 @@ impl Instance {
         ip: String,
         ac_port: u32,
         debug_interface_port: Option<u32>,
+        http_client: Client,
     ) -> Instance {
         Instance {
             peer_name,
@@ -64,6 +66,7 @@ impl Instance {
             k8s_node: None,
             instance_config: None,
             debug_interface_port,
+            http_client,
         }
     }
 
@@ -73,6 +76,7 @@ impl Instance {
         ac_port: u32,
         k8s_node: String,
         instance_config: InstanceConfig,
+        http_client: Client,
     ) -> Instance {
         Instance {
             peer_name,
@@ -85,6 +89,7 @@ impl Instance {
                     .debug_interface
                     .admission_control_node_debug_port as u32,
             ),
+            http_client,
         }
     }
 
@@ -177,11 +182,8 @@ impl Instance {
         }
     }
 
-    // TODO pass http client in here
     pub async fn try_json_rpc(&self) -> Result<()> {
-        JsonRpcAsyncClient::new(self.json_rpc_url())
-            .execute(JsonRpcBatch::new())
-            .await?;
+        self.json_rpc_client().execute(JsonRpcBatch::new()).await?;
         Ok(())
     }
 
@@ -228,6 +230,10 @@ impl Instance {
 
     pub fn debug_interface_port(&self) -> Option<u32> {
         self.debug_interface_port
+    }
+
+    pub fn json_rpc_client(&self) -> JsonRpcAsyncClient {
+        JsonRpcAsyncClient::new_with_client(self.http_client.clone(), self.json_rpc_url())
     }
 }
 

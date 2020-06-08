@@ -36,7 +36,6 @@ use tokio::runtime::Handle;
 use futures::future::{try_join_all, FutureExt};
 use libra_json_rpc_client::JsonRpcAsyncClient;
 use libra_types::transaction::SignedTransaction;
-use reqwest::Client;
 use std::{
     cmp::{max, min},
     ops::Sub,
@@ -49,7 +48,6 @@ const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempoo
 pub struct TxEmitter {
     accounts: Vec<AccountData>,
     mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
-    http_client: Client,
 }
 
 pub struct EmitJob {
@@ -133,7 +131,6 @@ impl TxEmitter {
         Self {
             accounts: vec![],
             mint_key_pair: cluster.mint_key_pair().clone(),
-            http_client: Client::new(),
         }
     }
 
@@ -149,7 +146,7 @@ impl TxEmitter {
     }
 
     fn pick_mint_client(&self, instances: &[Instance]) -> JsonRpcAsyncClient {
-        self.make_client(self.pick_mint_instance(instances))
+        self.pick_mint_instance(instances).json_rpc_client()
     }
 
     pub async fn submit_single_transaction(
@@ -157,7 +154,7 @@ impl TxEmitter {
         instance: &Instance,
         account: &mut AccountData,
     ) -> Result<Instant> {
-        let client = self.make_client(instance);
+        let client = instance.json_rpc_client();
         client
             .submit_transaction(gen_mint_request(account, 10))
             .await?;
@@ -198,7 +195,7 @@ impl TxEmitter {
         let tokio_handle = Handle::current();
         for instance in &req.instances {
             for _ in 0..workers_per_ac {
-                let client = self.make_client(&instance);
+                let client = instance.json_rpc_client();
                 let accounts = (&mut all_accounts).take(req.accounts_per_client).collect();
                 let all_addresses = all_addresses.clone();
                 let stop = stop.clone();
@@ -225,7 +222,7 @@ impl TxEmitter {
     }
 
     pub async fn load_faucet_account(&self, instance: &Instance) -> Result<AccountData> {
-        let client = self.make_client(instance);
+        let client = instance.json_rpc_client();
         let address = association_address();
         let sequence_number = query_sequence_numbers(&client, &[address])
             .await
@@ -283,7 +280,7 @@ impl TxEmitter {
                 // Spawn new threads
                 let instance = req.instances[i].clone();
                 let num_new_accounts = num_accounts / req.instances.len();
-                let client = self.make_client(&instance);
+                let client = instance.json_rpc_client();
                 create_new_accounts(
                     seed_account,
                     num_new_accounts,
@@ -318,10 +315,6 @@ impl TxEmitter {
         job.stats.accumulate()
     }
 
-    fn make_client(&self, instance: &Instance) -> JsonRpcAsyncClient {
-        JsonRpcAsyncClient::new_with_client(self.http_client.clone(), instance.json_rpc_url())
-    }
-
     pub async fn emit_txn_for(
         &mut self,
         duration: Duration,
@@ -338,7 +331,7 @@ impl TxEmitter {
         instance: &Instance,
         address: &AccountAddress,
     ) -> Result<u64> {
-        let client = self.make_client(instance);
+        let client = instance.json_rpc_client();
         let resp = client
             .get_accounts_state(slice::from_ref(address))
             .await
