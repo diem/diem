@@ -71,14 +71,14 @@ impl Instance {
         peer_name: String,
         ip: String,
         ac_port: u32,
-        k8s_node: Option<String>,
+        k8s_node: String,
         instance_config: InstanceConfig,
     ) -> Instance {
         Instance {
             peer_name,
             ip,
             ac_port,
-            k8s_node,
+            k8s_node: Some(k8s_node),
             instance_config: Some(instance_config),
             debug_interface_port: Some(
                 NodeConfig::default()
