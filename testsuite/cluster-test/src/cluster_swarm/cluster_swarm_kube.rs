@@ -495,20 +495,22 @@ impl ClusterSwarm for ClusterSwarmKube {
             Err(e) => bail!("Failed to create service : {}", e),
         }
         let (node_name, pod_ip) = self.get_pod_node_and_ip(&pod_name).await?;
+        assert!(
+            !node_name.is_empty(),
+            "get_pod_node_and_ip returned empty node_name"
+        );
         let ac_port = DEFAULT_JSON_RPC_PORT as u32;
         let instance = Instance::new_k8s(
             pod_name,
             pod_ip,
             ac_port,
-            Some(node_name.clone()),
+            node_name.clone(),
             instance_config.clone(),
         );
-        if node_name.is_empty() {
-            self.node_map
-                .lock()
-                .await
-                .insert(instance_config, instance.clone());
-        }
+        self.node_map
+            .lock()
+            .await
+            .insert(instance_config, instance.clone());
         Ok(instance)
     }
 

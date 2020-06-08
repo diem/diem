@@ -17,7 +17,6 @@ pub struct Cluster {
     // guaranteed non-empty
     validator_instances: Vec<Instance>,
     fullnode_instances: Vec<Instance>,
-    prometheus_ip: Option<String>,
     mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
 }
 
@@ -38,7 +37,6 @@ impl Cluster {
         Self {
             validator_instances: instances,
             fullnode_instances: vec![],
-            prometheus_ip: None,
             mint_key_pair,
         }
     }
@@ -57,7 +55,6 @@ impl Cluster {
         Self {
             validator_instances,
             fullnode_instances,
-            prometheus_ip: None,
             mint_key_pair: Self::get_mint_key_pair(),
         }
     }
@@ -86,10 +83,6 @@ impl Cluster {
 
     pub fn into_fullnode_instances(self) -> Vec<Instance> {
         self.fullnode_instances
-    }
-
-    pub fn prometheus_ip(&self) -> Option<&String> {
-        self.prometheus_ip.as_ref()
     }
 
     pub fn mint_key_pair(&self) -> &KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
@@ -143,7 +136,6 @@ impl Cluster {
         Cluster {
             validator_instances: instances,
             fullnode_instances: vec![],
-            prometheus_ip: self.prometheus_ip.clone(),
             mint_key_pair: self.mint_key_pair.clone(),
         }
     }
@@ -152,7 +144,6 @@ impl Cluster {
         Cluster {
             validator_instances: vec![],
             fullnode_instances: instances,
-            prometheus_ip: self.prometheus_ip.clone(),
             mint_key_pair: self.mint_key_pair.clone(),
         }
     }
