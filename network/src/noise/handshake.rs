@@ -18,6 +18,7 @@ use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
 use std::{
     collections::HashMap,
+    convert::TryFrom as _,
     io,
     sync::{Arc, RwLock},
     time,
@@ -124,6 +125,8 @@ impl HandshakeAuthMode {
 
 /// The Noise configuration to be used to perform a protocol upgrade on an underlying socket.
 pub struct NoiseUpgrader {
+    /// The validator's own peer id.
+    self_peer_id: PeerId,
     /// Config for executing Noise handshakes. Includes our static private key.
     noise_config: noise::NoiseConfig,
     /// Handshake authentication can be either mutual or server-only authentication.
@@ -132,10 +135,38 @@ pub struct NoiseUpgrader {
 
 impl NoiseUpgrader {
     /// Create a new NoiseConfig with the provided keypair and authentication mode.
-    pub fn new(key: x25519::PrivateKey, auth_mode: HandshakeAuthMode) -> Self {
+    pub fn new(peer_id: PeerId, key: x25519::PrivateKey, auth_mode: HandshakeAuthMode) -> Self {
         Self {
+            self_peer_id: peer_id,
             noise_config: noise::NoiseConfig::new(key),
             auth_mode,
+        }
+    }
+
+    /// Convert a remote pubkey into a network `PeerId`.
+    fn identity_pubkey_to_peer_id(&self, remote_pubkey: x25519::PublicKey) -> io::Result<PeerId> {
+        // if mutual authentication, try to find peer with this identity pubkey
+        if let Some(trusted_peers) = self.auth_mode.trusted_peers() {
+            trusted_peers
+                .read()
+                .map_err(|_| {
+                    io::Error::new(
+                        io::ErrorKind::Other,
+                        "noise: unable to read trusted_peers lock",
+                    )
+                })?
+                .iter()
+                .find(|(_peer_id, public_keys)| public_keys.identity_public_key == remote_pubkey)
+                .map(|(peer_id, _)| *peer_id)
+                .ok_or_else(|| {
+                    io::Error::new(
+                        io::ErrorKind::Other,
+                        format!("noise: client {} is not a trusted peer", remote_pubkey),
+                    )
+                })
+        } else {
+            // else, only client authenticating the server. Generate PeerId from x25519::PublicKey.
+            Ok(PeerId::from_identity_public_key(remote_pubkey))
         }
     }
 
@@ -154,7 +185,7 @@ impl NoiseUpgrader {
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
         // perform the noise handshake
-        let socket = match origin {
+        let (socket, _peer_id) = match origin {
             ConnectionOrigin::Outbound => {
                 let remote_public_key = match remote_public_key {
                     Some(key) => key,
@@ -187,7 +218,7 @@ impl NoiseUpgrader {
         &self,
         mut socket: TSocket,
         remote_public_key: x25519::PublicKey,
-    ) -> io::Result<NoiseStream<TSocket>>
+    ) -> io::Result<(NoiseStream<TSocket>, PeerId)>
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
@@ -202,6 +233,11 @@ impl NoiseUpgrader {
             Some(now)
         };
 
+        // send [my_peer_id | expected_public_key] as prologue
+        let mut prologue = self.self_peer_id.to_vec();
+        prologue.extend_from_slice(remote_public_key.as_slice());
+        socket.write_all(&prologue).await?;
+
         // create first handshake message  (-> e, es, s, ss)
         let mut rng = rand::rngs::OsRng;
         let mut first_message = [0u8; noise::handshake_init_msg_len(PAYLOAD_SIZE)];
@@ -209,7 +245,7 @@ impl NoiseUpgrader {
             .noise_config
             .initiate_connection(
                 &mut rng,
-                &[],
+                &prologue,
                 remote_public_key,
                 payload.as_ref().map(|x| &x[..]),
                 &mut first_message,
@@ -233,8 +269,11 @@ impl NoiseUpgrader {
             .finalize_connection(initiator_state, &server_response)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
+        // fetch their peer id
+        let remote_peer_id = self.identity_pubkey_to_peer_id(remote_public_key)?;
+
         // finalize the connection
-        Ok(NoiseStream::new(socket, session))
+        Ok((NoiseStream::new(socket, session), remote_peer_id))
     }
 
     /// Perform an inbound protocol upgrade on this connection.
@@ -248,23 +287,50 @@ impl NoiseUpgrader {
     pub async fn upgrade_inbound<TSocket>(
         &self,
         mut socket: TSocket,
-    ) -> io::Result<NoiseStream<TSocket>>
+    ) -> io::Result<(NoiseStream<TSocket>, PeerId)>
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
+        // receive [remote_peer_id | my_public_key] as prologue
+        let mut prologue = vec![0; PeerId::LENGTH + x25519::PUBLIC_KEY_SIZE];
+        socket.read_exact(&mut prologue).await?;
+
+        // verify that this is indeed my public key
+        let (remote_peer_id, my_expected_public_key) = prologue.split_at(PeerId::LENGTH);
+        if my_expected_public_key != self.noise_config.public_key().as_slice() {
+            // TODO: should we reply with an error message?
+            // TODO: security logging (mimoo)
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "noise: client expecting us to have incorrect public key: {}",
+                    hex::encode(my_expected_public_key)
+                ),
+            ));
+        }
+        let remote_peer_id = PeerId::try_from(remote_peer_id).map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "noise: client sent invalid peer id: {}",
+                    hex::encode(remote_peer_id)
+                ),
+            )
+        })?;
+
         // receive the initiation message
         let mut client_init_message = [0u8; noise::handshake_init_msg_len(PAYLOAD_SIZE)];
         socket.read_exact(&mut client_init_message).await?;
 
         // parse it
-        let (their_public_key, handshake_state, payload) = self
+        let (remote_public_key, handshake_state, payload) = self
             .noise_config
-            .parse_client_init_message(&[], &client_init_message)
+            .parse_client_init_message(&prologue, &client_init_message)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
         // if mutual auth mode, verify the remote pubkey is in our set of trusted peers
         if let Some(trusted_peers) = self.auth_mode.trusted_peers() {
-            let found = trusted_peers
+            match trusted_peers
                 .read()
                 .map_err(|_| {
                     io::Error::new(
@@ -272,15 +338,40 @@ impl NoiseUpgrader {
                         "noise: unable to read trusted_peers lock",
                     )
                 })?
-                .iter()
-                .any(|(_peer_id, public_keys)| public_keys.identity_public_key == their_public_key);
-            if !found {
-                // TODO: security logging (mimoo)
+                .get(&remote_peer_id)
+            {
+                Some(remote_public_keys) => {
+                    if remote_public_keys.identity_public_key != remote_public_key {
+                        return Err(io::Error::new(
+                            io::ErrorKind::InvalidData,
+                            format!(
+                                "noise: peer id {} connecting to us with an unknown public key: {} (expected: {})",
+                                remote_peer_id, remote_public_key, remote_public_keys.identity_public_key,
+                            ),
+                        ));
+                    }
+                }
+                None => {
+                    // TODO: security logging (mimoo)
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!(
+                            "noise: client connecting to us with an unknown peer id: {}",
+                            remote_peer_id
+                        ),
+                    ));
+                }
+            };
+        } else {
+            // if not, verify that their peerid is constructed correctly from their public key
+            let expected_peer_id = self.identity_pubkey_to_peer_id(remote_public_key)?;
+            if expected_peer_id != remote_peer_id {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
                     format!(
-                        "noise: client connecting to us with an unknown public key: {}",
-                        their_public_key
+                        "noise: peer id expected: {}, received: {}",
+                        hex::encode(expected_peer_id),
+                        hex::encode(remote_peer_id),
                     ),
                 ));
             }
@@ -308,7 +399,7 @@ impl NoiseUpgrader {
                     "noise: unable to read anti_replay_timestamps lock",
                 )
             })?;
-            if anti_replay_timestamps.is_replay(their_public_key, client_timestamp) {
+            if anti_replay_timestamps.is_replay(remote_public_key, client_timestamp) {
                 // TODO: security logging
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
@@ -320,7 +411,7 @@ impl NoiseUpgrader {
             }
 
             // store the timestamp
-            anti_replay_timestamps.store_timestamp(their_public_key, client_timestamp);
+            anti_replay_timestamps.store_timestamp(remote_public_key, client_timestamp);
         }
 
         // construct the response
@@ -335,7 +426,7 @@ impl NoiseUpgrader {
         socket.write_all(&server_response).await?;
 
         // finalize the connection
-        Ok(NoiseStream::new(socket, session))
+        Ok((NoiseStream::new(socket, session), remote_peer_id))
     }
 }
 
@@ -352,10 +443,7 @@ mod test {
     use libra_crypto::{test_utils::TEST_SEED, traits::Uniform as _};
     use memsocket::MemorySocket;
     use rand::SeedableRng as _;
-    use std::{
-        io,
-        sync::{Arc, RwLock},
-    };
+    use std::sync::{Arc, RwLock};
 
     /// helper to setup two testing peers
     fn build_peers(
@@ -372,29 +460,36 @@ mod test {
         let server_private = x25519::PrivateKey::generate(&mut rng);
         let server_public = server_private.public_key();
 
-        let (client_auth, server_auth) = if is_mutual_auth {
-            let client_id = PeerId::random();
+        let (client_auth, server_auth, client_peer_id, server_peer_id) = if is_mutual_auth {
+            let client_peer_id = PeerId::random();
             let client_keys = NetworkPublicKeys {
                 identity_public_key: client_public,
             };
-            let server_id = PeerId::random();
+            let server_peer_id = PeerId::random();
             let server_keys = NetworkPublicKeys {
                 identity_public_key: server_public,
             };
             let trusted_peers = Arc::new(RwLock::new(
-                vec![(client_id, client_keys), (server_id, server_keys)]
+                vec![(client_peer_id, client_keys), (server_peer_id, server_keys)]
                     .into_iter()
                     .collect(),
             ));
             let client_auth = HandshakeAuthMode::mutual(trusted_peers.clone());
             let server_auth = HandshakeAuthMode::mutual(trusted_peers);
-            (client_auth, server_auth)
+            (client_auth, server_auth, client_peer_id, server_peer_id)
         } else {
-            (HandshakeAuthMode::ServerOnly, HandshakeAuthMode::ServerOnly)
+            let client_peer_id = PeerId::from_identity_public_key(client_public);
+            let server_peer_id = PeerId::from_identity_public_key(server_public);
+            (
+                HandshakeAuthMode::ServerOnly,
+                HandshakeAuthMode::ServerOnly,
+                client_peer_id,
+                server_peer_id,
+            )
         };
 
-        let client = NoiseUpgrader::new(client_private, client_auth);
-        let server = NoiseUpgrader::new(server_private, server_auth);
+        let client = NoiseUpgrader::new(client_peer_id, client_private, client_auth);
+        let server = NoiseUpgrader::new(server_peer_id, server_private, server_auth);
 
         ((client, client_public), (server, server_public))
     }
@@ -404,7 +499,10 @@ mod test {
         client: NoiseUpgrader,
         server: NoiseUpgrader,
         server_public_key: x25519::PublicKey,
-    ) -> io::Result<(NoiseStream<MemorySocket>, NoiseStream<MemorySocket>)> {
+    ) -> (
+        (NoiseStream<MemorySocket>, PeerId),
+        (NoiseStream<MemorySocket>, PeerId),
+    ) {
         // create an in-memory socket for testing
         let (dialer_socket, listener_socket) = MemorySocket::new_pair();
 
@@ -414,13 +512,13 @@ mod test {
             server.upgrade_inbound(listener_socket),
         ));
 
-        Ok((client_session?, server_session?))
+        (client_session.unwrap(), server_session.unwrap())
     }
 
     fn test_handshake_success(is_mutual_auth: bool) {
         // perform handshake with two testing peers
         let ((client, client_public), (server, server_public)) = build_peers(is_mutual_auth);
-        let (client, server) = perform_handshake(client, server, server_public).unwrap();
+        let ((client, _), (server, _)) = perform_handshake(client, server, server_public);
 
         assert_eq!(client.get_remote_static(), server_public);
         assert_eq!(server.get_remote_static(), client_public);

@@ -557,6 +557,7 @@ mod test {
         io::{AsyncReadExt, AsyncWriteExt},
     };
     use libra_crypto::{test_utils::TEST_SEED, traits::Uniform as _, x25519};
+    use libra_types::PeerId;
     use memsocket::MemorySocket;
     use rand::SeedableRng as _;
     use std::io;
@@ -570,12 +571,22 @@ mod test {
 
         let client_private = x25519::PrivateKey::generate(&mut rng);
         let client_public = client_private.public_key();
+        let client_peer_id = PeerId::from_identity_public_key(client_public);
 
         let server_private = x25519::PrivateKey::generate(&mut rng);
         let server_public = server_private.public_key();
+        let server_peer_id = PeerId::from_identity_public_key(server_public);
 
-        let client = NoiseUpgrader::new(client_private, HandshakeAuthMode::ServerOnly);
-        let server = NoiseUpgrader::new(server_private, HandshakeAuthMode::ServerOnly);
+        let client = NoiseUpgrader::new(
+            client_peer_id,
+            client_private,
+            HandshakeAuthMode::ServerOnly,
+        );
+        let server = NoiseUpgrader::new(
+            server_peer_id,
+            server_private,
+            HandshakeAuthMode::ServerOnly,
+        );
 
         ((client, client_public), (server, server_public))
     }
@@ -585,7 +596,7 @@ mod test {
         client: NoiseUpgrader,
         server_public_key: x25519::PublicKey,
         server: NoiseUpgrader,
-    ) -> io::Result<(NoiseStream<MemorySocket>, NoiseStream<MemorySocket>)> {
+    ) -> (NoiseStream<MemorySocket>, NoiseStream<MemorySocket>) {
         // create an in-memory socket for testing
         let (dialer_socket, listener_socket) = MemorySocket::new_pair();
 
@@ -596,14 +607,16 @@ mod test {
         ));
 
         //
-        Ok((client_session?, server_session?))
+        let (client_session, _) = client_session.unwrap();
+        let (server_session, _) = server_session.unwrap();
+        (client_session, server_session)
     }
 
     #[test]
     fn simple_test() -> io::Result<()> {
         // perform handshake with two testing peers
         let ((client, _client_public), (server, server_public)) = build_peers();
-        let (mut client, mut server) = perform_handshake(client, server_public, server).unwrap();
+        let (mut client, mut server) = perform_handshake(client, server_public, server);
 
         block_on(client.write_all(b"stormlight"))?;
         block_on(client.write_all(b" "))?;
@@ -620,47 +633,43 @@ mod test {
     }
 
     #[test]
-    fn interleaved_writes() -> io::Result<()> {
+    fn interleaved_writes() {
         // perform handshake with two testing peers
         let ((client, _client_public), (server, server_public)) = build_peers();
-        let (mut client, mut server) = perform_handshake(client, server_public, server).unwrap();
+        let (mut client, mut server) = perform_handshake(client, server_public, server);
 
-        block_on(client.write_all(b"The Name of the Wind"))?;
-        block_on(client.flush())?;
-        block_on(client.write_all(b"The Wise Man's Fear"))?;
-        block_on(client.flush())?;
+        block_on(client.write_all(b"The Name of the Wind")).unwrap();
+        block_on(client.flush()).unwrap();
+        block_on(client.write_all(b"The Wise Man's Fear")).unwrap();
+        block_on(client.flush()).unwrap();
 
-        block_on(server.write_all(b"The Doors of Stone"))?;
-        block_on(server.flush())?;
+        block_on(server.write_all(b"The Doors of Stone")).unwrap();
+        block_on(server.flush()).unwrap();
 
         let mut buf = [0; 20];
-        block_on(server.read_exact(&mut buf))?;
+        block_on(server.read_exact(&mut buf)).unwrap();
         assert_eq!(&buf, b"The Name of the Wind");
         let mut buf = [0; 19];
-        block_on(server.read_exact(&mut buf))?;
+        block_on(server.read_exact(&mut buf)).unwrap();
         assert_eq!(&buf, b"The Wise Man's Fear");
 
         let mut buf = [0; 18];
-        block_on(client.read_exact(&mut buf))?;
+        block_on(client.read_exact(&mut buf)).unwrap();
         assert_eq!(&buf, b"The Doors of Stone");
-
-        Ok(())
     }
 
     #[test]
-    fn u16_max_writes() -> io::Result<()> {
+    fn u16_max_writes() {
         // perform handshake with two testing peers
         let ((client, _client_public), (server, server_public)) = build_peers();
-        let (mut client, mut server) = perform_handshake(client, server_public, server).unwrap();
+        let (mut client, mut server) = perform_handshake(client, server_public, server);
 
         let buf_send = [1; noise::MAX_SIZE_NOISE_MSG];
-        block_on(client.write_all(&buf_send))?;
-        block_on(client.flush())?;
+        block_on(client.write_all(&buf_send)).unwrap();
+        block_on(client.flush()).unwrap();
 
         let mut buf_receive = [0; noise::MAX_SIZE_NOISE_MSG];
-        block_on(server.read_exact(&mut buf_receive))?;
+        block_on(server.read_exact(&mut buf_receive)).unwrap();
         assert_eq!(&buf_receive[..], &buf_send[..]);
-
-        Ok(())
     }
 }

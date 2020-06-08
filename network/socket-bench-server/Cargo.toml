@@ -17,6 +17,7 @@ tokio-util = { version = "0.3.1", features = ["codec"] }
 libra-crypto = { path = "../../crypto/crypto" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-network-address = { path = "../network-address", version = "0.1.0" }
+libra-types = { path = "../../types" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 memsocket = { path = "../memsocket", version = "0.1.0" }
 netcore = { path = "../netcore", version = "0.1.0" }

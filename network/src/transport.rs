@@ -18,7 +18,6 @@ use libra_config::{config::HANDSHAKE_VERSION, network_id::NetworkId};
 use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress};
-use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
 use netcore::transport::{tcp, ConnectionOrigin, Transport};
 use std::{
@@ -144,44 +143,6 @@ pub struct Connection<TSocket> {
     pub metadata: ConnectionMetadata,
 }
 
-/// Convert a remote pubkey into a network `PeerId`.
-fn identity_pubkey_to_peer_id(
-    maybe_trusted_peers: Option<&Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>>,
-    remote_pubkey: &x25519::PublicKey,
-) -> io::Result<PeerId> {
-    if let Some(trusted_peers) = maybe_trusted_peers {
-        // if mutual authentication, try to find peer with this identity pubkey.
-
-        let trusted_peers = trusted_peers.read().unwrap();
-        let maybe_peerid_with_pubkey = trusted_peers
-            .iter()
-            .find(|(_peer_id, public_keys)| &public_keys.identity_public_key == remote_pubkey)
-            .map(|(peer_id, _)| *peer_id);
-        maybe_peerid_with_pubkey
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Not a trusted peer"))
-            .map_err(|err| {
-                security_log(SecurityEvent::InvalidNetworkPeer)
-                    .error("UntrustedPeer")
-                    .data(&trusted_peers)
-                    .data(&remote_pubkey)
-                    .log();
-                err
-            })
-    } else {
-        // else, only client authenticating the server. Generate PeerId from x25519::PublicKey.
-        // Note: This is inconsistent with current types because AccountAddress is derived
-        // from consensus key which is of type Ed25519PublicKey. Since AccountAddress does
-        // not mean anything in a setting without remote authentication, we use the network
-        // public key to generate a peer_id for the peer.
-        // See this issue for potential improvements: https://github.com/libra/libra/issues/3960
-        let mut array = [0u8; PeerId::LENGTH];
-        let pubkey_slice = remote_pubkey.as_slice();
-        // keep only the last 16 bytes
-        array.copy_from_slice(&pubkey_slice[x25519::PUBLIC_KEY_SIZE - PeerId::LENGTH..]);
-        Ok(PeerId::new(array))
-    }
-}
-
 /// Exchange HandshakeMsg's to try negotiating a set of common supported protocols.
 pub async fn perform_handshake<T: TSocket>(
     peer_id: PeerId,
@@ -240,7 +201,6 @@ where
 /// Common context for performing both inbound and outbound connection upgrades.
 struct UpgradeContext {
     noise: NoiseUpgrader,
-    trusted_peers: Option<Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>>,
     handshake_version: u8,
     own_handshake: HandshakeMsg,
 }
@@ -259,10 +219,8 @@ async fn upgrade_inbound<T: TSocket>(
     let socket = fut_socket.await?;
 
     // try authenticating via noise handshake
-    let socket = ctxt.noise.upgrade_inbound(socket).await?;
+    let (socket, peer_id) = ctxt.noise.upgrade_inbound(socket).await?;
     let remote_pubkey = socket.get_remote_static();
-
-    let peer_id = identity_pubkey_to_peer_id(ctxt.trusted_peers.as_ref(), &remote_pubkey)?;
     let addr = addr.append_prod_protos(remote_pubkey, HANDSHAKE_VERSION);
 
     // try to negotiate common libranet version and supported application protocols
@@ -280,11 +238,10 @@ async fn upgrade_outbound<T: TSocket>(
     let origin = ConnectionOrigin::Outbound;
     let socket = fut_socket.await?;
 
-    // we can check early if this is even a trusted peer
-    let peer_id = identity_pubkey_to_peer_id(ctxt.trusted_peers.as_ref(), &remote_pubkey)?;
+    // TODO: is this always a trusted peer? Can we enforce this here?
 
     // try authenticating via noise handshake
-    let socket = ctxt.noise.upgrade_outbound(socket, remote_pubkey).await?;
+    let (socket, peer_id) = ctxt.noise.upgrade_outbound(socket, remote_pubkey).await?;
 
     // sanity check: Noise IK should always guarantee this is true
     debug_assert_eq!(remote_pubkey, socket.get_remote_static());
@@ -320,6 +277,7 @@ where
     TTransport::Listener: Send + 'static,
 {
     pub fn new(
+        my_peer_id: PeerId,
         base_transport: TTransport,
         identity_key: x25519::PrivateKey,
         trusted_peers: Option<Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>>,
@@ -338,8 +296,7 @@ where
 
         Self {
             ctxt: Arc::new(UpgradeContext {
-                noise: NoiseUpgrader::new(identity_key, auth_mode),
-                trusted_peers,
+                noise: NoiseUpgrader::new(my_peer_id, identity_key, auth_mode),
                 handshake_version,
                 own_handshake,
             }),
@@ -615,10 +572,8 @@ mod test {
                 (listener_peer_id, dialer_peer_id, Some(trusted_peers))
             }
             Auth::ServerOnly => {
-                let listener_peer_id =
-                    identity_pubkey_to_peer_id(None, &listener_key.public_key()).unwrap();
-                let dialer_peer_id =
-                    identity_pubkey_to_peer_id(None, &dialer_key.public_key()).unwrap();
+                let listener_peer_id = PeerId::from_identity_public_key(listener_key.public_key());
+                let dialer_peer_id = PeerId::from_identity_public_key(dialer_key.public_key());
 
                 (listener_peer_id, dialer_peer_id, None)
             }
@@ -629,6 +584,7 @@ mod test {
         );
 
         let listener_transport = LibraNetTransport::new(
+            listener_peer_id,
             base_transport.clone(),
             listener_key,
             trusted_peers.clone(),
@@ -638,6 +594,7 @@ mod test {
         );
 
         let dialer_transport = LibraNetTransport::new(
+            dialer_peer_id,
             base_transport,
             dialer_key,
             trusted_peers.clone(),

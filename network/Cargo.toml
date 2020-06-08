@@ -22,6 +22,7 @@ thiserror = "1.0.19"
 tokio = { version = "0.2.21", features = ["full"] }
 tokio-util = { version = "0.3.1", features = ["codec"] }
 tokio-retry = "0.2.0"
+hex = "0.4.2"
 
 bitvec = { path = "../common/bitvec", version = "0.1.0", package = "libra-bitvec" }
 channel = { path = "../common/channel", version = "0.1.0" }
