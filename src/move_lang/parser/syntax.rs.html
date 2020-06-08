@@ -3654,9 +3654,8 @@
         <span class="ident">Tok</span>::<span class="ident">Invariant</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_invariant</span>(<span class="ident">tokens</span>),
         <span class="ident">Tok</span>::<span class="ident">Define</span> <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">Native</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_spec_function</span>(<span class="ident">tokens</span>),
         <span class="ident">Tok</span>::<span class="ident">IdentifierValue</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">tokens</span>.<span class="ident">content</span>() {
-            <span class="string">&quot;assert&quot;</span> <span class="op">|</span> <span class="string">&quot;assume&quot;</span> <span class="op">|</span> <span class="string">&quot;decreases&quot;</span> <span class="op">|</span> <span class="string">&quot;aborts_if&quot;</span> <span class="op">|</span> <span class="string">&quot;ensures&quot;</span> <span class="op">|</span> <span class="string">&quot;requires&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">parse_condition</span>(<span class="ident">tokens</span>)
-            }
+            <span class="string">&quot;assert&quot;</span> <span class="op">|</span> <span class="string">&quot;assume&quot;</span> <span class="op">|</span> <span class="string">&quot;decreases&quot;</span> <span class="op">|</span> <span class="string">&quot;aborts_if&quot;</span> <span class="op">|</span> <span class="string">&quot;succeeds_if&quot;</span> <span class="op">|</span> <span class="string">&quot;ensures&quot;</span>
+            <span class="op">|</span> <span class="string">&quot;requires&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_condition</span>(<span class="ident">tokens</span>),
             <span class="string">&quot;include&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_spec_include</span>(<span class="ident">tokens</span>),
             <span class="string">&quot;apply&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_spec_apply</span>(<span class="ident">tokens</span>),
             <span class="string">&quot;pragma&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_spec_pragma</span>(<span class="ident">tokens</span>),
@@ -3669,8 +3668,8 @@
         },
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">unexpected_token_error</span>(
             <span class="ident">tokens</span>,
-            <span class="string">&quot;one of `assert`, `assume`, `decreases`, `aborts_if`, `ensures`, `requires`, \
-             `include`, `apply`, `pragma`, `global`, or a name&quot;</span>,
+            <span class="string">&quot;one of `assert`, `assume`, `decreases`, `aborts_if`, `succeeds_if`, \
+             `ensures`, `requires`, `include`, `apply`, `pragma`, `global`, or a name&quot;</span>,
         )),
     }
 }
@@ -3685,6 +3684,7 @@
         <span class="string">&quot;assume&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SpecConditionKind</span>::<span class="ident">Assume</span>,
         <span class="string">&quot;decreases&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SpecConditionKind</span>::<span class="ident">Decreases</span>,
         <span class="string">&quot;aborts_if&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SpecConditionKind</span>::<span class="ident">AbortsIf</span>,
+        <span class="string">&quot;succeeds_if&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SpecConditionKind</span>::<span class="ident">SucceedsIf</span>,
         <span class="string">&quot;ensures&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SpecConditionKind</span>::<span class="ident">Ensures</span>,
         <span class="string">&quot;requires&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">if</span> <span class="ident">tokens</span>.<span class="ident">lookahead</span>()<span class="question-mark">?</span> <span class="op">=</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">Module</span> {

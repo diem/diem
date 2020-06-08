@@ -1383,6 +1383,8 @@
 <span id="1383">1383</span>
 <span id="1384">1384</span>
 <span id="1385">1385</span>
+<span id="1386">1386</span>
+<span id="1387">1387</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1646,6 +1648,7 @@
     <span class="ident">Assume</span>,
     <span class="ident">Decreases</span>,
     <span class="ident">AbortsIf</span>,
+    <span class="ident">SucceedsIf</span>,
     <span class="ident">Ensures</span>,
     <span class="ident">Requires</span>,
     <span class="ident">RequiresModule</span>,
@@ -2258,6 +2261,7 @@
             <span class="ident">Assume</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;assume &quot;</span>),
             <span class="ident">Decreases</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;decreases &quot;</span>),
             <span class="ident">AbortsIf</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;aborts_if &quot;</span>),
+            <span class="ident">SucceedsIf</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;succeeds_if&quot;</span>),
             <span class="ident">Ensures</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;ensures &quot;</span>),
             <span class="ident">Requires</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;requires &quot;</span>),
             <span class="ident">RequiresModule</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;requires module &quot;</span>),

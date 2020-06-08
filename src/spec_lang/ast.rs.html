@@ -510,6 +510,14 @@
 <span id="510">510</span>
 <span id="511">511</span>
 <span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -565,6 +573,7 @@
     <span class="ident">Assume</span>,
     <span class="ident">Decreases</span>,
     <span class="ident">AbortsIf</span>,
+    <span class="ident">SucceedsIf</span>,
     <span class="ident">Ensures</span>,
     <span class="ident">Requires</span>,
     <span class="ident">RequiresModule</span>,
@@ -596,13 +605,19 @@
     <span class="doccomment">/// Returns true if this condition is allowed on a public function declaration.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">allowed_on_public_fun_decl</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="kw">use</span> <span class="ident">ConditionKind</span>::<span class="kw-2">*</span>;
-        <span class="macro">matches</span><span class="macro">!</span>(<span class="self">self</span>, <span class="ident">Requires</span> <span class="op">|</span> <span class="ident">RequiresModule</span> <span class="op">|</span> <span class="ident">AbortsIf</span> <span class="op">|</span> <span class="ident">Ensures</span>)
+        <span class="macro">matches</span><span class="macro">!</span>(
+            <span class="self">self</span>,
+            <span class="ident">Requires</span> <span class="op">|</span> <span class="ident">RequiresModule</span> <span class="op">|</span> <span class="ident">AbortsIf</span> <span class="op">|</span> <span class="ident">SucceedsIf</span> <span class="op">|</span> <span class="ident">Ensures</span>
+        )
     }
 
     <span class="doccomment">/// Returns true if this condition is allowed on a private function declaration.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">allowed_on_private_fun_decl</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="kw">use</span> <span class="ident">ConditionKind</span>::<span class="kw-2">*</span>;
-        <span class="macro">matches</span><span class="macro">!</span>(<span class="self">self</span>, <span class="ident">Requires</span> <span class="op">|</span> <span class="ident">RequiresModule</span> <span class="op">|</span> <span class="ident">AbortsIf</span> <span class="op">|</span> <span class="ident">Ensures</span>)
+        <span class="macro">matches</span><span class="macro">!</span>(
+            <span class="self">self</span>,
+            <span class="ident">Requires</span> <span class="op">|</span> <span class="ident">RequiresModule</span> <span class="op">|</span> <span class="ident">AbortsIf</span> <span class="op">|</span> <span class="ident">SucceedsIf</span> <span class="op">|</span> <span class="ident">Ensures</span>
+        )
     }
 
     <span class="doccomment">/// Returns true if this condition is allowed in a function body.</span>
@@ -632,6 +647,7 @@
             <span class="ident">Assume</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;assume&quot;</span>),
             <span class="ident">Decreases</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;decreases&quot;</span>),
             <span class="ident">AbortsIf</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;aborts_if&quot;</span>),
+            <span class="ident">SucceedsIf</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;succeeds_if&quot;</span>),
             <span class="ident">Ensures</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;ensures&quot;</span>),
             <span class="ident">Requires</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;requires&quot;</span>),
             <span class="ident">RequiresModule</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;requires module&quot;</span>),

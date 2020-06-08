@@ -1674,6 +1674,7 @@
 <span id="1674">1674</span>
 <span id="1675">1675</span>
 <span id="1676">1676</span>
+<span id="1677">1677</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1712,6 +1713,7 @@
     <span class="ident">cli</span>::{<span class="ident">Options</span>, <span class="ident">VerificationScope</span>},
     <span class="ident">spec_translator</span>::<span class="ident">SpecTranslator</span>,
 };
+<span class="kw">use</span> <span class="ident">spec_lang</span>::<span class="ident">env</span>::<span class="ident">VERIFY_PRAGMA</span>;
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BoogieTranslator</span><span class="op">&lt;</span><span class="lifetime">&#39;env</span><span class="op">&gt;</span> {
     <span class="ident">env</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;env</span> <span class="ident">GlobalEnv</span>,
@@ -2096,7 +2098,7 @@
             <span class="ident">VerificationScope</span>::<span class="ident">All</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
             <span class="ident">VerificationScope</span>::<span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
         };
-        <span class="ident">func_target</span>.<span class="ident">is_pragma_true</span>(<span class="string">&quot;verify&quot;</span>, <span class="ident">default</span>)
+        <span class="ident">func_target</span>.<span class="ident">is_pragma_true</span>(<span class="ident">VERIFY_PRAGMA</span>, <span class="ident">default</span>)
     }
 
     <span class="doccomment">/// Return a string for a boogie procedure header.</span>
