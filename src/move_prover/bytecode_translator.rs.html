@@ -1673,6 +1673,7 @@
 <span id="1673">1673</span>
 <span id="1674">1674</span>
 <span id="1675">1675</span>
+<span id="1676">1676</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2338,7 +2339,7 @@
         <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;var $saved_m: $Memory;&quot;</span>);
 
         <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;\n// initialize function execution&quot;</span>);
-        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;assert !$abort_flag;&quot;</span>);
+        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;assume !$abort_flag;&quot;</span>);
         <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;$saved_m := $m;&quot;</span>);
 
         <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;\n// track values of parameters at entry time&quot;</span>);
@@ -2508,6 +2509,7 @@
             <span class="ident">Label</span>(<span class="kw">_</span>, <span class="ident">label</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">unindent</span>();
                 <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;L{}:&quot;</span>, <span class="ident">label</span>.<span class="ident">as_usize</span>());
+                <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;assume !$abort_flag;&quot;</span>);
                 <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">indent</span>();
             }
             <span class="ident">Jump</span>(<span class="kw">_</span>, <span class="ident">target</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;goto L{};&quot;</span>, <span class="ident">target</span>.<span class="ident">as_usize</span>()),
