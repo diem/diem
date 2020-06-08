@@ -25,6 +25,9 @@ while [[ "$1" =~ ^- ]]; do case $1 in
   --build-all )
     BUILD_PROJECTS=(libra-validator libra-cluster-test libra-init libra-mint libra-safety-rules)
     ;;
+  --build-all-cti )
+    BUILD_PROJECTS=(libra-validator libra-cluster-test libra-safety-rules)
+    ;;
   --build-cluster-test )
     BUILD_PROJECTS=(libra-cluster-test)
     ;;

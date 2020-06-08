@@ -32,7 +32,7 @@ jobs:
           RETRYABLE_EXIT_CODE=2
           for ((i = 0; i < 3; i++)); do
             echo "Build attempt $i"
-            docker/build-aws.sh --build-all --version $LIBRA_GIT_REV --addl_tags canary,${TEST_TAG}
+            docker/build-aws.sh --build-all-cti --version $LIBRA_GIT_REV --addl_tags canary,${TEST_TAG}
             return_code=$?
             if [[ $return_code -eq 0 ]]; then
               echo "Build successful"

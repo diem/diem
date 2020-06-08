@@ -198,7 +198,7 @@ fi
 
 if [ -z "$TAG" ]; then
     aws codebuild list-projects >/dev/null || (echo "Failed to access codebuild, try awsmfa?"; exit 1)
-    ./docker/build-aws.sh --build-all --version pull/$PR
+    ./docker/build-aws.sh --build-all-cti --version pull/$PR
     TAG=dev_${USER}_pull_${PR}
     echo "**TIP Use cti -T $TAG <...> to restart this run with same tag without rebuilding it"
 fi
