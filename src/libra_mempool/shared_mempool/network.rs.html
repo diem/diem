@@ -100,6 +100,8 @@
 <span id="100">100</span>
 <span id="101">101</span>
 <span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -134,6 +136,8 @@
         <span class="ident">request_id</span>: <span class="ident">String</span>,
         <span class="doccomment">/// indices of transactions that failed that may succeed on resend</span>
         <span class="ident">retry_txns</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+        <span class="doccomment">/// backpressure signal from recipient when it is overwhelmed (e.g. mempool is full)</span>
+        <span class="ident">backoff</span>: <span class="ident">bool</span>,
     },
 }
 

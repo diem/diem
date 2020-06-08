@@ -207,6 +207,11 @@
 <span id="207">207</span>
 <span id="208">208</span>
 <span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -242,6 +247,8 @@
     <span class="kw">pub</span> <span class="ident">sent_batches</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="comment">// timeline IDs of all txns that need to be retried and ACKed for</span>
     <span class="kw">pub</span> <span class="ident">total_retry_txns</span>: <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+    <span class="comment">// whether broadcasts are in backoff/backpressure mode, e.g. broadcasting at longer intervals</span>
+    <span class="kw">pub</span> <span class="ident">backoff_mode</span>: <span class="ident">bool</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">BroadcastInfo</span> {
@@ -249,6 +256,7 @@
         <span class="self">Self</span> {
             <span class="ident">sent_batches</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
             <span class="ident">total_retry_txns</span>: <span class="ident">BTreeSet</span>::<span class="ident">new</span>(),
+            <span class="ident">backoff_mode</span>: <span class="bool-val">false</span>,
         }
     }
 }
@@ -334,6 +342,7 @@
         <span class="ident">peer</span>: <span class="ident">PeerNetworkId</span>,
         <span class="ident">batch_id</span>: <span class="ident">String</span>,
         <span class="ident">retry_txns</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+        <span class="ident">backoff</span>: <span class="ident">bool</span>,
     ) {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">peer_info</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">peer_info</span>
@@ -364,6 +373,7 @@
                 }
             }
         }
+        <span class="ident">sync_state</span>.<span class="ident">broadcast_info</span>.<span class="ident">backoff_mode</span> <span class="op">=</span> <span class="ident">backoff</span>;
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_broadcast_batch</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">peer</span>: <span class="ident">PeerNetworkId</span>, <span class="ident">batch_id</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span><span class="op">&gt;</span> {

@@ -35,6 +35,8 @@
 <span id="35">35</span>
 <span id="36">36</span>
 <span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -46,6 +48,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MempoolConfig</span> {
     <span class="kw">pub</span> <span class="ident">broadcast_transactions</span>: <span class="ident">bool</span>,
     <span class="kw">pub</span> <span class="ident">shared_mempool_tick_interval_ms</span>: <span class="ident">u64</span>,
+    <span class="kw">pub</span> <span class="ident">shared_mempool_backoff_interval_ms</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">shared_mempool_batch_size</span>: <span class="ident">usize</span>,
     <span class="kw">pub</span> <span class="ident">shared_mempool_max_concurrent_inbound_syncs</span>: <span class="ident">usize</span>,
     <span class="kw">pub</span> <span class="ident">shared_mempool_min_broadcast_recipient_count</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
@@ -62,6 +65,7 @@
         <span class="ident">MempoolConfig</span> {
             <span class="ident">broadcast_transactions</span>: <span class="bool-val">true</span>,
             <span class="ident">shared_mempool_tick_interval_ms</span>: <span class="number">50</span>,
+            <span class="ident">shared_mempool_backoff_interval_ms</span>: <span class="number">30_000</span>,
             <span class="ident">shared_mempool_batch_size</span>: <span class="number">100</span>,
             <span class="ident">shared_mempool_max_concurrent_inbound_syncs</span>: <span class="number">100</span>,
             <span class="ident">shared_mempool_min_broadcast_recipient_count</span>: <span class="prelude-val">None</span>,
