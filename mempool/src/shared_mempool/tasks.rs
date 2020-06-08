@@ -221,26 +221,12 @@ pub(crate) async fn process_transaction_broadcast<V>(
     let results = process_incoming_transactions(&smp, transactions, timeline_state).await;
     log_txn_process_results(&results, Some(peer.peer_id()));
     // send back ACK
+    let ack_response = gen_ack_response(request_id, results);
     let mut network_sender = smp
         .network_senders
         .get_mut(&peer.network_id())
         .expect("[shared mempool] missing network sender");
-    let retry_txns = results
-        .into_iter()
-        .enumerate()
-        .filter_map(|(idx, result)| {
-            if is_txn_retryable(result) {
-                Some(idx as u64)
-            } else {
-                None
-            }
-        })
-        .collect();
-    if let Err(e) = send_mempool_sync_msg(
-        MempoolSyncMsg::BroadcastTransactionsResponse {
-            request_id,
-            retry_txns,
-        },
+    if let Err(e) = send_mempool_sync_msg(ack_response,
         peer.peer_id(),
         &mut network_sender,
     ) {
@@ -248,6 +234,29 @@ pub(crate) async fn process_transaction_broadcast<V>(
             "[shared mempool] failed to send ACK back to peer {:?}: {}",
             peer, e
         );
+    }
+}
+
+fn gen_ack_response(request_id: String, results: Vec<SubmissionStatus>) -> MempoolSyncMsg {
+    let mut backoff = false;
+    let retry_txns = results
+        .into_iter()
+        .enumerate()
+        .filter_map(|(idx, result)| {
+            backoff = backoff || result.0.code == MempoolStatusCode::MempoolIsFull;
+
+            if is_txn_retryable(result) {
+                Some(idx as u64)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    MempoolSyncMsg::BroadcastTransactionsResponse {
+        request_id,
+        retry_txns,
+        backoff,
     }
 }
 

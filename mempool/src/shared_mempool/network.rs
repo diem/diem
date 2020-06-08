@@ -31,6 +31,8 @@ pub enum MempoolSyncMsg {
         request_id: String,
         /// indices of transactions that failed that may succeed on resend
         retry_txns: Vec<u64>,
+        /// backpressure signal from recipient when it is overwhelmed (e.g. mempool is full)
+        backoff: bool,
     },
 }
 
