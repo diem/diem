@@ -6,6 +6,7 @@
 use crate::transport::Transport;
 use futures::{future::Future, stream::Stream};
 use libra_network_address::NetworkAddress;
+use libra_types::PeerId;
 use pin_project::pin_project;
 use std::{
     pin::Pin,
@@ -53,8 +54,8 @@ where
         Ok((listener, addr))
     }
 
-    fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
-        let fut = self.transport.dial(addr)?;
+    fn dial(&self, peer_id: PeerId, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
+        let fut = self.transport.dial(peer_id, addr)?;
 
         Ok(TimeoutFuture::new(fut, self.timeout))
     }

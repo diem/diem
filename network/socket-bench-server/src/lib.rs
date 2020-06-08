@@ -90,7 +90,7 @@ pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseStream<
         ));
         let remote_public_key = addr.find_noise_proto();
         let (_remote_static_key, socket) = noise_config
-            .upgrade(socket, origin, remote_public_key)
+            .upgrade_with_noise(socket, origin, remote_public_key)
             .await?;
         Ok(socket)
     })
@@ -110,7 +110,7 @@ pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseStream<TcpSoc
         ));
         let remote_public_key = addr.find_noise_proto();
         let (_remote_static_key, socket) = noise_config
-            .upgrade(socket, origin, remote_public_key)
+            .upgrade_with_noise(socket, origin, remote_public_key)
             .await?;
         Ok(socket)
     })

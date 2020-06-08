@@ -112,8 +112,8 @@ fn generate_first_two_messages() -> (Vec<u8>, Vec<u8>) {
     ));
 
     // take result
-    let (client_session, _) = client_session.unwrap();
-    let (server_session, _) = server_session.unwrap();
+    let client_session = client_session.unwrap();
+    let (server_session, _peer_id) = server_session.unwrap();
     let init_msg = client_session.into_socket().written;
     let resp_msg = server_session.into_socket().written;
 

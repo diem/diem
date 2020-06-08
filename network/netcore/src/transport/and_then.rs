@@ -4,6 +4,7 @@
 use crate::transport::{ConnectionOrigin, Transport};
 use futures::{future::Future, stream::Stream};
 use libra_network_address::NetworkAddress;
+use libra_types::PeerId;
 use pin_project::pin_project;
 use std::{
     pin::Pin,
@@ -50,8 +51,8 @@ where
         Ok((listener, addr))
     }
 
-    fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
-        let fut = self.transport.dial(addr.clone())?;
+    fn dial(&self, peer_id: PeerId, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
+        let fut = self.transport.dial(peer_id, addr.clone())?;
         let origin = ConnectionOrigin::Outbound;
         let f = self.function.clone();
 

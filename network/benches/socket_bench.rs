@@ -50,6 +50,7 @@ use futures::{
 };
 use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
+use libra_types::PeerId;
 use netcore::{
     compat::IoCompat,
     transport::{memory::MemoryTransport, tcp::TcpTransport, Transport},
@@ -109,8 +110,9 @@ where
 {
     // Client dials the server. Some of our transports have timeouts built in,
     // which means the futures must be run on a tokio Runtime.
+    let server_peer_id = PeerId::random();
     let client_socket = runtime
-        .block_on(client_transport.dial(server_addr).unwrap())
+        .block_on(client_transport.dial(server_peer_id, server_addr).unwrap())
         .unwrap();
     let mut client_stream = Framed::new(IoCompat::new(client_socket), LengthDelimitedCodec::new());
 
@@ -318,6 +320,7 @@ fn bench_client_connection<F, T, S>(
     T: Transport<Output = S> + Send + Sync + 'static,
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
+    let peer_id = PeerId::random();
     let mut runtime = Builder::new()
         .threaded_scheduler()
         .core_threads(concurrency as usize)
@@ -331,7 +334,7 @@ fn bench_client_connection<F, T, S>(
                 let transport = transport_func();
                 let addr = server_addr.clone();
                 loop {
-                    if let Ok(fut) = transport.dial(addr.clone()) {
+                    if let Ok(fut) = transport.dial(peer_id, addr.clone()) {
                         futures.push(async move {
                             match fut.await {
                                 Ok(_socket) => (),

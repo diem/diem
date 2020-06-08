@@ -7,6 +7,7 @@ use futures::{
     stream::{Stream, StreamExt},
 };
 use libra_network_address::NetworkAddress;
+use libra_types::PeerId;
 use std::pin::Pin;
 
 pub type Listener<O, E> =
@@ -16,7 +17,7 @@ pub type Outbound<O, E> = Pin<Box<dyn Future<Output = Result<O, E>> + Send>>;
 
 trait AbstractBoxedTransport<O, E> {
     fn listen_on(&self, addr: NetworkAddress) -> Result<(Listener<O, E>, NetworkAddress), E>;
-    fn dial(&self, addr: NetworkAddress) -> Result<Outbound<O, E>, E>;
+    fn dial(&self, peer_id: PeerId, addr: NetworkAddress) -> Result<Outbound<O, E>, E>;
 }
 
 impl<T, O, E> AbstractBoxedTransport<O, E> for T
@@ -34,8 +35,8 @@ where
         Ok((listener.boxed() as Listener<O, E>, addr))
     }
 
-    fn dial(&self, addr: NetworkAddress) -> Result<Outbound<O, E>, E> {
-        let outgoing = self.dial(addr)?;
+    fn dial(&self, peer_id: PeerId, addr: NetworkAddress) -> Result<Outbound<O, E>, E> {
+        let outgoing = self.dial(peer_id, addr)?;
         Ok(outgoing.boxed() as Outbound<O, E>)
     }
 }
@@ -79,7 +80,7 @@ where
         self.inner.listen_on(addr)
     }
 
-    fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
-        self.inner.dial(addr)
+    fn dial(&self, peer_id: PeerId, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
+        self.inner.dial(peer_id, addr)
     }
 }

@@ -4,6 +4,7 @@
 use crate::transport::Transport;
 use futures::{future, stream::Stream};
 use libra_network_address::{parse_memory, NetworkAddress, Protocol};
+use libra_types::PeerId;
 use memsocket::{MemoryListener, MemorySocket};
 use std::{
     io,
@@ -47,7 +48,7 @@ impl Transport for MemoryTransport {
         Ok((Listener::new(listener), listen_addr))
     }
 
-    fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
+    fn dial(&self, _peer_id: PeerId, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
         let (port, _addr_suffix) = parse_memory(addr.as_slice()).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::InvalidInput,
@@ -104,6 +105,7 @@ mod test {
         io::{AsyncReadExt, AsyncWriteExt},
         stream::StreamExt,
     };
+    use libra_types::PeerId;
 
     #[test]
     fn simple_listen_and_dial() -> Result<(), ::std::io::Error> {
@@ -120,7 +122,8 @@ mod test {
             socket.read_to_end(&mut buf).await.unwrap();
             assert_eq!(buf, b"hello world");
         };
-        let outbound = t.dial(addr)?;
+        let peer_id = PeerId::random();
+        let outbound = t.dial(peer_id, addr)?;
 
         let dialer = async move {
             let mut socket = outbound.await.unwrap();
@@ -139,7 +142,8 @@ mod test {
         let result = t.listen_on("/ip4/127.0.0.1/tcp/0".parse().unwrap());
         assert!(result.is_err());
 
-        let result = t.dial("/ip4/127.0.0.1/tcp/22".parse().unwrap());
+        let peer_id = PeerId::random();
+        let result = t.dial(peer_id, "/ip4/127.0.0.1/tcp/22".parse().unwrap());
         assert!(result.is_err());
     }
 }

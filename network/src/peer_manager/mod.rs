@@ -805,7 +805,7 @@ where
     > {
         match dial_peer_request {
             TransportRequest::DialPeer(peer_id, addr, response_tx) => {
-                match self.transport.dial(addr.clone()) {
+                match self.transport.dial(peer_id, addr.clone()) {
                     Ok(upgrade) => Some(
                         upgrade
                             .map(move |out| (out, addr, peer_id, response_tx))
