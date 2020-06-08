@@ -257,6 +257,16 @@
 <span id="257">257</span>
 <span id="258">258</span>
 <span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -284,12 +294,14 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">StdlibScript</span> {
     <span class="ident">AddValidator</span>,
     <span class="ident">AddCurrencyToAccount</span>,
+    <span class="ident">AddRecoveryRotationCapability</span>,
     <span class="ident">Burn</span>,
     <span class="ident">BurnTxnFees</span>,
     <span class="ident">CancelBurn</span>,
     <span class="ident">CreateChildVaspAccount</span>,
     <span class="ident">CreateDesignatedDealer</span>,
     <span class="ident">CreateParentVaspAccount</span>,
+    <span class="ident">CreateRecoveryAddress</span>,
     <span class="ident">CreateValidatorAccount</span>,
     <span class="ident">EmptyScript</span>,
     <span class="ident">FreezeAccount</span>,
@@ -306,6 +318,7 @@
     <span class="ident">RemoveValidator</span>,
     <span class="ident">RotateAuthenticationKey</span>,
     <span class="ident">RotateAuthenticationKeyWithNonce</span>,
+    <span class="ident">RotateAuthenticationKeyWithRecoveryAddress</span>,
     <span class="ident">RotateBaseUrl</span>,
     <span class="ident">RotateCompliancePublicKey</span>,
     <span class="ident">RotateValidatorConfig</span>,
@@ -328,12 +341,14 @@
         <span class="macro">vec</span><span class="macro">!</span>[
             <span class="ident">AddValidator</span>,
             <span class="ident">AddCurrencyToAccount</span>,
+            <span class="ident">AddRecoveryRotationCapability</span>,
             <span class="ident">Burn</span>,
             <span class="ident">BurnTxnFees</span>,
             <span class="ident">CancelBurn</span>,
             <span class="ident">CreateChildVaspAccount</span>,
             <span class="ident">CreateDesignatedDealer</span>,
             <span class="ident">CreateParentVaspAccount</span>,
+            <span class="ident">CreateRecoveryAddress</span>,
             <span class="ident">CreateValidatorAccount</span>,
             <span class="ident">EmptyScript</span>,
             <span class="ident">FreezeAccount</span>,
@@ -350,6 +365,7 @@
             <span class="ident">RemoveValidator</span>,
             <span class="ident">RotateAuthenticationKey</span>,
             <span class="ident">RotateAuthenticationKeyWithNonce</span>,
+            <span class="ident">RotateAuthenticationKeyWithRecoveryAddress</span>,
             <span class="ident">RotateBaseUrl</span>,
             <span class="ident">RotateCompliancePublicKey</span>,
             <span class="ident">RotateValidatorConfig</span>,
@@ -450,12 +466,14 @@
             <span class="kw">match</span> <span class="self">self</span> {
                 <span class="ident">AddValidator</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;add_validator&quot;</span>,
                 <span class="ident">AddCurrencyToAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;add_currency_to_account&quot;</span>,
+                <span class="ident">AddRecoveryRotationCapability</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;add_recovery_rotation_capability&quot;</span>,
                 <span class="ident">Burn</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;burn&quot;</span>,
                 <span class="ident">BurnTxnFees</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;burn_txn_fees&quot;</span>,
                 <span class="ident">CancelBurn</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;cancel_burn&quot;</span>,
                 <span class="ident">CreateChildVaspAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_child_vasp_account&quot;</span>,
                 <span class="ident">CreateDesignatedDealer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_designated_dealer&quot;</span>,
                 <span class="ident">CreateParentVaspAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_parent_vasp_account&quot;</span>,
+                <span class="ident">CreateRecoveryAddress</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_recovery_address&quot;</span>,
                 <span class="ident">CreateValidatorAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_validator_account&quot;</span>,
                 <span class="ident">EmptyScript</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;empty_script&quot;</span>,
                 <span class="ident">FreezeAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;freeze_account&quot;</span>,
@@ -472,6 +490,8 @@
                 <span class="ident">RemoveValidator</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;remove_validator&quot;</span>,
                 <span class="ident">RotateAuthenticationKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_authentication_key&quot;</span>,
                 <span class="ident">RotateAuthenticationKeyWithNonce</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_authentication_key_with_nonce&quot;</span>,
+                <span class="ident">RotateAuthenticationKeyWithRecoveryAddress</span> <span class="op">=</span><span class="op">&gt;</span>
+                    <span class="string">&quot;rotate_authentication_key_with_recovery_address&quot;</span>,
                 <span class="ident">RotateBaseUrl</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_base_url&quot;</span>,
                 <span class="ident">RotateCompliancePublicKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_compliance_public_key&quot;</span>,
                 <span class="ident">RotateValidatorConfig</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_validator_config&quot;</span>,

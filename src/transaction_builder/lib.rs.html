@@ -455,6 +455,37 @@
 <span id="455">455</span>
 <span id="456">456</span>
 <span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -557,6 +588,17 @@
 }
 
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {
+    <span class="ident">name</span>: <span class="ident">encode_add_recovery_rotation_capability</span>,
+    <span class="ident">args</span>: [<span class="ident">recovery_address</span>: <span class="ident">Address</span>],
+    <span class="ident">script</span>: <span class="ident">AddRecoveryRotationCapability</span>,
+    <span class="ident">doc</span>: <span class="string">&quot;Add the `KeyRotationCapability` for `to_recover_account` to the `RecoveryAddress`\
+          resource under `recovery_address`. Aborts if `to_recovery_account` and\
+          `to_recovery_address belong to different VASPs, if `recovery_address` does not have a\
+          `RecoveryAddress` resource, or if `to_recover_account` has already extracted its\
+          `KeyRotationCapability`.&quot;</span>
+}
+
+<span class="macro">encode_txn_script</span><span class="macro">!</span> {
     <span class="ident">name</span>: <span class="ident">encode_add_validator_script</span>,
     <span class="ident">args</span>: [<span class="ident">new_validator</span>: <span class="ident">Address</span>],
     <span class="ident">script</span>: <span class="ident">AddValidator</span>,
@@ -591,6 +633,17 @@
     <span class="ident">script</span>: <span class="ident">CancelBurn</span>,
     <span class="ident">doc</span>: <span class="string">&quot;Cancel the oldest burn request from `preburn_address` and return the funds to\
           `preburn_address`.  Fails if the sender does not have a published `MintCapability`.&quot;</span>
+}
+
+<span class="macro">encode_txn_script</span><span class="macro">!</span> {
+    <span class="ident">name</span>: <span class="ident">encode_create_recovery_address</span>,
+    <span class="ident">args</span>: [],
+    <span class="ident">script</span>: <span class="ident">CreateRecoveryAddress</span>,
+    <span class="ident">doc</span>: <span class="string">&quot;Extract the `KeyRotationCapability` for `recovery_account` and publish it in a\
+          `RecoveryAddress` resource under  `recovery_account`. Aborts if `recovery_account` has\
+           delegated its `KeyRotationCapability`, already has a`RecoveryAddress` resource, or is\
+           not a VASP. Cancel the oldest burn request from `preburn_address` and return the funds\
+           to `preburn_address`.  Fails if the sender does not have a published `MintCapability`.&quot;</span>
 }
 
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {
@@ -694,6 +747,15 @@
     <span class="ident">script</span>: <span class="ident">RotateAuthenticationKey</span>,
     <span class="ident">doc</span>: <span class="string">&quot;Encode a program that rotates the sender&#39;s authentication key to `new_key`. `new_key`\
           should be a 256 bit sha3 hash of an ed25519 public key.&quot;</span>
+}
+
+<span class="macro">encode_txn_script</span><span class="macro">!</span> {
+    <span class="ident">name</span>: <span class="ident">encode_rotate_authentication_key_with_recovery_address_script</span>,
+    <span class="ident">args</span>: [<span class="ident">recovery_address</span>: <span class="ident">Address</span>, <span class="ident">to_recover</span>: <span class="ident">Address</span>, <span class="ident">new_key</span>: <span class="ident">Bytes</span>],
+    <span class="ident">script</span>: <span class="ident">RotateAuthenticationKeyWithRecoveryAddress</span>,
+    <span class="ident">doc</span>: <span class="string">&quot;Rotate the authentication key of `to_recover` to `new_key`. Can be invoked by either\
+          `recovery_address` or `to_recover`. Aborts if `recovery_address` does not have the\
+          `KeyRotationCapability` for `to_recover`.&quot;</span>
 }
 
 <span class="macro">encode_txn_script</span><span class="macro">!</span> {
