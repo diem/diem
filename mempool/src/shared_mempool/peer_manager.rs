@@ -32,6 +32,8 @@ pub struct BroadcastInfo {
     pub sent_batches: HashMap<String, Vec<u64>>,
     // timeline IDs of all txns that need to be retried and ACKed for
     pub total_retry_txns: BTreeSet<u64>,
+    // whether broadcasts are in backoff/backpressure mode, e.g. broadcasting at longer intervals
+    pub backoff_mode: bool,
 }
 
 impl BroadcastInfo {
@@ -39,6 +41,7 @@ impl BroadcastInfo {
         Self {
             sent_batches: HashMap::new(),
             total_retry_txns: BTreeSet::new(),
+            backoff_mode: false,
         }
     }
 }
@@ -124,6 +127,7 @@ impl PeerManager {
         peer: PeerNetworkId,
         batch_id: String,
         retry_txns: Vec<u64>,
+        backoff: bool,
     ) {
         let mut peer_info = self
             .peer_info
@@ -154,6 +158,7 @@ impl PeerManager {
                 }
             }
         }
+        sync_state.broadcast_info.backoff_mode = backoff;
     }
 
     pub fn get_broadcast_batch(&self, peer: PeerNetworkId, batch_id: &str) -> Option<Vec<u64>> {
