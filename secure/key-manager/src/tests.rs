@@ -12,7 +12,7 @@ use libra_config::{
     utils::get_genesis_txn,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
-use libra_global_constants::OPERATOR_KEY;
+use libra_global_constants::{OPERATOR_ACCOUNT, OPERATOR_KEY};
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Value};
 use libra_secure_time::{MockTimeService, TimeService};
 use libra_types::{
@@ -291,10 +291,7 @@ impl LibraInterface for MockLibraInterface {
 // Creates and returns NodeConfig and KeyManagerConfig structs that are consistent for testing.
 fn create_test_configs() -> (NodeConfig, KeyManagerConfig) {
     let (node_config, _genesis_key) = config_builder::test_config();
-
-    let mut key_manager_config = KeyManagerConfig::default();
-    key_manager_config.validator_account = node_config.validator_network.clone().unwrap().peer_id();
-
+    let key_manager_config = KeyManagerConfig::default();
     (node_config, key_manager_config)
 }
 
@@ -342,14 +339,22 @@ fn setup_node<T: LibraInterface + Clone>(
     executor: Executor<LibraVM>,
     libra: T,
 ) -> Node<T> {
-    let account = key_manager_config.validator_account;
     let time = MockTimeService::new();
     let libra_test_harness = LibraInterfaceTestHarness::new(libra);
+    let storage = setup_secure_storage(&node_config, time.clone());
+    let account = AccountAddress::try_from(
+        storage
+            .get(OPERATOR_ACCOUNT)
+            .unwrap()
+            .value
+            .string()
+            .unwrap(),
+    )
+    .unwrap();
 
     let key_manager = KeyManager::new(
-        account,
         libra_test_harness.clone(),
-        setup_secure_storage(&node_config, time.clone()),
+        storage,
         time.clone(),
         key_manager_config.rotation_period_secs,
         key_manager_config.sleep_period_secs,

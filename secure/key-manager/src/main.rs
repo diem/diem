@@ -52,9 +52,6 @@ fn create_and_execute_key_manager(key_manager_config: KeyManagerConfig) -> Resul
     let time_service = RealTimeService::new();
 
     KeyManager::new(
-        // TODO(joshlind/davidiw): This needs to be pulled from storage OPERATOR_ACCOUNT for now
-        // and eventually OWNER_ACCOUNT
-        key_manager_config.validator_account,
         libra_interface,
         BoxStorage(storage),
         time_service,

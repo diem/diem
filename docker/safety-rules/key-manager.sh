@@ -20,9 +20,6 @@ fi
 if [ -n "${TXN_EXPIRATION_SECS}" ]; then
     params+="--txn-expiration-secs ${TXN_EXPIRATION_SECS} "
 fi
-if [ -n "${VALIDATOR_ACCOUNT}" ]; then
-    params+="--validator-account ${VALIDATOR_ACCOUNT} "
-fi
 if [ -n "${VAULT_HOST}" ]; then
     params+="--vault-host ${VAULT_HOST} "
 fi
