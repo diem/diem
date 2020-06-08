@@ -5322,6 +5322,7 @@ dependencies = [
  "move-lang 0.0.1",
  "move-prover 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rayon 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
 ]
 
