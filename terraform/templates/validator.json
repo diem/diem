@@ -77,7 +77,7 @@
     {
         "name": "safety-rules",
         "image": "${safety_rules_image}${safety_rules_image_version}",
-        "command": ["/docker-run-dynamic.sh"],
+        "command": ["/safety-rules.sh"],
         "cpu": 512,
         "memory": 256,
         "essential": true,
