@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use crate::{
     coordinator::{CoordinatorMessage, SyncCoordinator, SyncRequest},
+    counters,
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
     network::{StateSynchronizerEvents, StateSynchronizerSender},
     SynchronizerState,
@@ -173,6 +174,9 @@ impl StateSyncClient {
 
             match timeout(Duration::from_secs(5), callback_rcv).await {
                 Err(_) => {
+                    counters::COMMIT_TIMEOUT
+                        .with_label_values(&["consensus"])
+                        .inc();
                     Err(format_err!("[state sync client] failed to receive commit ACK from state synchronizer on time"))
                 }
                 Ok(resp) => {
