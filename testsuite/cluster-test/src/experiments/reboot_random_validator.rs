@@ -56,13 +56,13 @@ impl Experiment for RebootRandomValidators {
     }
 
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
-        let instance_configs = instance::instance_configs(&self.instances)?;
-        let futures: Vec<_> = instance_configs
-            .clone()
-            .into_iter()
-            .map(|ic| context.cluster_swarm.delete_node(ic.clone()))
+        let futures: Vec<_> = self
+            .instances
+            .iter()
+            .map(|instance| context.cluster_swarm.delete_node(instance))
             .collect();
         try_join_all(futures).await?;
+        let instance_configs = instance::instance_configs(&self.instances);
         let futures: Vec<_> = instance_configs
             .into_iter()
             .map(|ic| context.cluster_swarm.upsert_node(ic.clone(), false))

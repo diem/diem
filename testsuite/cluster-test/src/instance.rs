@@ -220,12 +220,17 @@ impl Instance {
         Url::from_str(&format!("http://{}:{}", self.ip(), self.ac_port())).expect("Invalid URL.")
     }
 
-    pub fn k8s_node(&self) -> Option<&String> {
-        self.k8s_node.as_ref()
+    pub fn k8s_node(&self) -> &str {
+        self.k8s_node
+            .as_ref()
+            .expect("k8s_node was queried on non-k8s instance")
     }
 
-    pub fn instance_config(&self) -> Option<&InstanceConfig> {
-        self.instance_config.as_ref()
+    /// This method only works when run on k8s
+    pub fn instance_config(&self) -> &InstanceConfig {
+        self.instance_config
+            .as_ref()
+            .expect("instance_config was queried on non-k8s instance")
     }
 
     pub fn debug_interface_port(&self) -> Option<u32> {
@@ -257,13 +262,6 @@ pub fn instancelist_to_set(instances: &[Instance]) -> HashSet<String> {
     r
 }
 
-pub fn instance_configs(instances: &[Instance]) -> Result<Vec<&InstanceConfig>> {
-    instances
-        .iter()
-        .map(|instance| -> Result<&InstanceConfig> {
-            instance
-                .instance_config()
-                .ok_or_else(|| format_err!("Failed to find instance_config"))
-        })
-        .collect::<Result<_, _>>()
+pub fn instance_configs(instances: &[Instance]) -> Vec<&InstanceConfig> {
+    instances.iter().map(Instance::instance_config).collect()
 }

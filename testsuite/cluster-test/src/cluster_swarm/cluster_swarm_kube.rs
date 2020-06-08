@@ -394,9 +394,7 @@ impl ClusterSwarm for ClusterSwarmKube {
             name = &job_full_name,
             label = job_name,
             image = docker_image,
-            node_name = instance
-                .k8s_node()
-                .ok_or_else(|| { format_err!("k8s_node not found for Instance") })?,
+            node_name = instance.k8s_node(),
             command = &command,
             back_off_limit = back_off_limit,
         );
@@ -425,11 +423,7 @@ impl ClusterSwarm for ClusterSwarmKube {
             self.delete_resource::<Pod>(&pod_name).await?;
         }
         let node_name = if let Some(instance) = self.node_map.lock().await.get(&instance_config) {
-            if let Some(k8s_node) = instance.k8s_node() {
-                k8s_node.to_string()
-            } else {
-                "".to_string()
-            }
+            instance.k8s_node().to_string()
         } else {
             "".to_string()
         };
@@ -522,10 +516,10 @@ impl ClusterSwarm for ClusterSwarmKube {
         Ok(instance)
     }
 
-    async fn delete_node(&self, instance_config: InstanceConfig) -> Result<()> {
-        let pod_name = match instance_config {
-            Validator(validator_config) => format!("val-{}", validator_config.index),
-            Fullnode(fullnode_config) => format!(
+    async fn delete_node(&self, instance: &Instance) -> Result<()> {
+        let pod_name = match instance.instance_config() {
+            Validator(ref validator_config) => format!("val-{}", validator_config.index),
+            Fullnode(ref fullnode_config) => format!(
                 "fn-{}-{}",
                 fullnode_config.validator_index, fullnode_config.fullnode_index
             ),

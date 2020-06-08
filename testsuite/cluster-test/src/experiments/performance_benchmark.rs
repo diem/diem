@@ -97,10 +97,10 @@ impl Experiment for PerformanceBenchmark {
     }
 
     async fn run(&mut self, context: &mut Context<'_>) -> Result<()> {
-        let instance_configs = instance::instance_configs(&self.down_validators)?;
-        let futures: Vec<_> = instance_configs
-            .into_iter()
-            .map(|ic| context.cluster_swarm.delete_node(ic.clone()))
+        let futures: Vec<_> = self
+            .down_validators
+            .iter()
+            .map(|instance| context.cluster_swarm.delete_node(instance))
             .collect();
         try_join_all(futures).await?;
         let buffer = Duration::from_secs(60);
@@ -163,7 +163,7 @@ impl Experiment for PerformanceBenchmark {
             "Tx status from client side: txn {}, avg latency {}",
             stats.committed as u64, avg_latency_client
         );
-        let instance_configs = instance::instance_configs(&self.down_validators)?;
+        let instance_configs = instance::instance_configs(&self.down_validators);
         let futures: Vec<_> = instance_configs
             .into_iter()
             .map(|ic| context.cluster_swarm.upsert_node(ic.clone(), false))

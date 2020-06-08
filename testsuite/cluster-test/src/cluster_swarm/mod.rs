@@ -34,7 +34,7 @@ pub trait ClusterSwarm {
     ) -> Result<Instance>;
 
     /// Deletes a node from the ClusterSwarm
-    async fn delete_node(&self, instance_config: InstanceConfig) -> Result<()>;
+    async fn delete_node(&self, instance: &Instance) -> Result<()>;
 
     /// Creates a set of validators with the given `image_tag`
     async fn create_validator_set(

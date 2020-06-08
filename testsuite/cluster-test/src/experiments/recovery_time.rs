@@ -15,7 +15,6 @@ use crate::{
     instance::Instance,
     tx_emitter::EmitJobRequest,
 };
-use anyhow::format_err;
 use async_trait::async_trait;
 use libra_logger::info;
 use std::time::Instant;
@@ -66,25 +65,11 @@ impl Experiment for RecoveryTime {
             )
             .await?;
         info!("Stopping {}", self.instance);
-        context
-            .cluster_swarm
-            .delete_node(
-                self.instance
-                    .instance_config()
-                    .ok_or_else(|| format_err!("Failed to find instance_config"))?
-                    .clone(),
-            )
-            .await?;
+        context.cluster_swarm.delete_node(&self.instance).await?;
         info!("Deleting db and restarting node for {}", self.instance);
         context
             .cluster_swarm
-            .upsert_node(
-                self.instance
-                    .instance_config()
-                    .ok_or_else(|| format_err!("Failed to find instance_config"))?
-                    .clone(),
-                true,
-            )
+            .upsert_node(self.instance.instance_config().clone(), true)
             .await?;
         info!("Waiting for instance to be up: {}", self.instance);
         while self.instance.try_json_rpc().await.is_err() {
