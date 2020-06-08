@@ -226,10 +226,7 @@ pub(crate) async fn process_transaction_broadcast<V>(
         .network_senders
         .get_mut(&peer.network_id())
         .expect("[shared mempool] missing network sender");
-    if let Err(e) = send_mempool_sync_msg(ack_response,
-        peer.peer_id(),
-        &mut network_sender,
-    ) {
+    if let Err(e) = send_mempool_sync_msg(ack_response, peer.peer_id(), &mut network_sender) {
         error!(
             "[shared mempool] failed to send ACK back to peer {:?}: {}",
             peer, e
@@ -391,6 +388,7 @@ pub(crate) fn process_broadcast_ack(
     peer: PeerNetworkId,
     request_id: String,
     retry_txns: Vec<u64>,
+    backoff: bool,
     is_validator: bool, // whether this node is a validator or not
     peer_manager: Arc<PeerManager>,
 ) {
@@ -415,7 +413,7 @@ pub(crate) fn process_broadcast_ack(
         }
     }
 
-    peer_manager.process_broadcast_ack(peer, request_id, retry_txns);
+    peer_manager.process_broadcast_ack(peer, request_id, retry_txns, backoff);
 }
 
 // ================================= //
