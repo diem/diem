@@ -25,13 +25,13 @@ pub trait ClusterSwarm {
         job_name: &str,
     ) -> Result<()>;
 
-    async fn validator_instances(&self) -> Vec<Instance>;
-
-    async fn fullnode_instances(&self) -> Vec<Instance>;
-
     /// Inserts an into the ClusterSwarm if it doesn't exist. If it
     /// exists, then updates the instance.
-    async fn upsert_node(&self, instance_config: InstanceConfig, delete_data: bool) -> Result<()>;
+    async fn upsert_node(
+        &self,
+        instance_config: InstanceConfig,
+        delete_data: bool,
+    ) -> Result<Instance>;
 
     /// Deletes a node from the ClusterSwarm
     async fn delete_node(&self, instance_config: InstanceConfig) -> Result<()>;
@@ -44,7 +44,7 @@ pub trait ClusterSwarm {
         image_tag: &str,
         config_overrides: Vec<String>,
         delete_data: bool,
-    ) -> Result<()> {
+    ) -> Result<Vec<Instance>> {
         let validators = (0..num_validators).map(|i| {
             let validator_config = ValidatorConfig {
                 index: i,
@@ -55,8 +55,8 @@ pub trait ClusterSwarm {
             };
             self.upsert_node(Validator(validator_config), delete_data)
         });
-        try_join_all(validators).await?;
-        Ok(())
+        let validators = try_join_all(validators).await?;
+        Ok(validators)
     }
 
     /// Creates a set of fullnodes with the given `image_tag`
@@ -67,7 +67,7 @@ pub trait ClusterSwarm {
         image_tag: &str,
         config_overrides: Vec<String>,
         delete_data: bool,
-    ) -> Result<()> {
+    ) -> Result<Vec<Instance>> {
         let fullnodes = (0..num_validators).flat_map(move |validator_index| {
             let config_overrides = config_overrides.clone();
             (0..num_fullnodes_per_validator).map(move |fullnode_index| {
@@ -82,8 +82,8 @@ pub trait ClusterSwarm {
                 self.upsert_node(Fullnode(fullnode_config), delete_data)
             })
         });
-        try_join_all(fullnodes).await?;
-        Ok(())
+        let fullnodes = try_join_all(fullnodes).await?;
+        Ok(fullnodes)
     }
 
     /// Creates a set of validators and fullnodes with the given parameters
@@ -93,7 +93,7 @@ pub trait ClusterSwarm {
         num_fullnodes_per_validator: u32,
         image_tag: &str,
         delete_data: bool,
-    ) -> Result<((), ())> {
+    ) -> Result<(Vec<Instance>, Vec<Instance>)> {
         try_join!(
             self.create_validator_set(
                 num_validators,
