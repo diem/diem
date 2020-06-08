@@ -406,16 +406,33 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
 
 **Description**
 
-Get the current blockchain metadata (e.g., current state of a Libra full node). All Read operations can be batched with get_metadata rpc to obtain synced metadata information with the request.
+Get the blockchain metadata (e.g., state of a Libra full node). All Read operations can be batched with get_metadata rpc to obtain synced metadata information with the request.
 
 You can use this endpoint to verify liveness / status of nodes in the network:
 
-get_metadata returns the latest transaction version and the block timestamp. If the timestamp or version is old (from the past), it means that the full node is not not up-to-date.
+get_metadata returns the transaction version and the block timestamp. If the timestamp or version is old (from the past), it means that the full node is not not up-to-date.
 
 
 ### Parameters
 
-None
+<table>
+  <tr>
+   <td><strong>Name</strong>
+   </td>
+   <td><strong>Type</strong>
+   </td>
+   <td><strong>Description</strong>
+   </td>
+  </tr>
+  <tr>
+   <td><strong>version</strong>
+   </td>
+   <td>u64
+   </td>
+   <td> The version of the blockchain to query for. Set to `null` to query for the latest blockchain metadata
+   </td>
+  </tr>
+</table>
 
 
 ### Returns
@@ -455,7 +472,7 @@ None
 
 ```
 // Request: fetches current block metadata
-curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_metadata","params":[],"id":1}'
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_metadata","params":[null],"id":1}'
 
 // Response
 {
