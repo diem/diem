@@ -1,4 +1,6 @@
 module Tester {
+    import 0x0.Signer;
+
     resource Data { v1: u64, v2: u64 }
     resource Box { f: u64 }
 
@@ -18,13 +20,13 @@ module Tester {
         }
     }
 
-    larger_field(drop: address, result: &mut u64) acquires Box, Data {
+    larger_field(account: &signer, drop: address, result: &mut u64) acquires Box, Data {
         let b1: Self.Box;
         let b2: Self.Box;
         let returned_ref: &u64;
         let dump: u64;
 
-        b1 = move_from<Box>(get_txn_sender());
+        b1 = move_from<Box>(Signer.address_of(copy(account)));
         b2 = move_from<Box>(move(drop));
 
         assert(*&(&b1).f == 0, 42);
@@ -42,7 +44,7 @@ module Tester {
         );
 
         *move(result) = *move(returned_ref);
-        move_to_sender<Box>(move(b1));
+        move_to<Box>(copy(account), move(b1));
         Box { dump } = move(b2);
 
         return;

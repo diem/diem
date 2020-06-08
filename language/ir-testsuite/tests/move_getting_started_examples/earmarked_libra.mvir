@@ -15,7 +15,7 @@ module EarmarkedLibra {
 
   // Create a new earmarked coin with the given `recipient`.
   // Publish the coin under the transaction sender's account address.
-  public create(coin: Libra.Libra<LBR.LBR>, recipient: address) {
+  public create(account: &signer, coin: Libra.Libra<LBR.LBR>, recipient: address) {
     let t: Self.T;
 
     // Construct or "pack" a new resource of type T. Only procedures of the
@@ -28,7 +28,7 @@ module EarmarkedLibra {
     // Publish the earmarked coin under the transaction sender's account
     // address. Each account can contain at most one resource of a given type;
     // this call will fail if the sender already has a resource of this type.
-    move_to_sender<T>(move(t));
+    move_to<T>(move(account), move(t));
     return;
   }
 
@@ -95,7 +95,7 @@ main(account: &signer) {
 
   recipient_address = 0xb0b;
   coin = LibraAccount.withdraw_from<LBR.LBR>(copy(account), 1000);
-  EarmarkedLibra.create(move(coin), move(recipient_address));
+  EarmarkedLibra.create(copy(account), move(coin), move(recipient_address));
 
   earmarked_coin = EarmarkedLibra.claim_for_creator();
   coin = EarmarkedLibra.unwrap(move(earmarked_coin));

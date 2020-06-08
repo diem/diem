@@ -11,6 +11,8 @@
 // but only the list owner/node owner can remove a node
 module SortedLinkedList
 {
+    import 0x0.Signer;
+
     resource Node
     {
         prev: address, //account address where the previous node is stored (head if no previous node exists)
@@ -58,12 +60,12 @@ module SortedLinkedList
     }
 
     //creates a new list whose head is at txn_sender (is owned by the caller)
-    public create_new_list()
+    public create_new_list(account: &signer)
     {
         let sender_address: address;
         let head: Self.Node;
 
-        sender_address = get_txn_sender();
+        sender_address = Signer.address_of(copy(account));
 
         //make sure no node/list is already stored in this account
         assert(!exists<Node>(copy(sender_address)), 1);
@@ -74,14 +76,14 @@ module SortedLinkedList
             head: move(sender_address),
             value: 0
         };
-        move_to_sender<Node>(move(head));
+        move_to<Node>(move(account), move(head));
 
 
         return;
     }
 
     //adds a node that is stored in txn_sender's account and whose location in the list is right after prev_node_address
-    public add_node(value: u64, prev_node_address: address) acquires Node //TODO: make value generic
+    public add_node(account: &signer, value: u64, prev_node_address: address) acquires Node //TODO: make value generic
     {
         let sender_address: address;
         let prev_node_ref: & Self.Node;
@@ -97,7 +99,7 @@ module SortedLinkedList
         let head_address: address;
 
 
-        sender_address = get_txn_sender();
+        sender_address = Signer.address_of(copy(account));
 
         //make sure no node is already stored in this account
         assert(!exists<Node>(copy(sender_address)), 3);
@@ -128,7 +130,7 @@ module SortedLinkedList
             head: move(head_address),
             value: move(value)
         };
-        move_to_sender<Node>(move(current_node));
+        move_to<Node>(copy(account), move(current_node));
 
         //fix the pointers at prev
         prev_node_mut_ref = borrow_global_mut<Node>(move(prev_node_address));
@@ -256,8 +258,8 @@ module SortedLinkedList
 //! sender: alice
 //creating a new list _@alice
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.create_new_list();
+main(account: &signer) {
+    SortedLinkedList.create_new_list(move(account));
     return;
 }
 // check: EXECUTED
@@ -266,8 +268,8 @@ main() {
 //! sender: alice
 //attempting to create another list with the same head
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.create_new_list();
+main(account: &signer) {
+    SortedLinkedList.create_new_list(move(account));
     return;
 }
 // check: ABORTED
@@ -277,8 +279,8 @@ main() {
 //! sender: bob
 //adding a new element to Alice's list _@alice -> 10@bob
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.add_node(10, {{alice}});
+main(account: &signer) {
+    SortedLinkedList.add_node(copy(account), 10, {{alice}});
     return;
 }
 // check: EXECUTED
@@ -287,8 +289,8 @@ main() {
 //! sender: bob
 //adding another Bob node
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.add_node(12, {{alice}});
+main(account: &signer) {
+    SortedLinkedList.add_node(copy(account), 12, {{alice}});
     return;
 }
 // check: ABORTED
@@ -298,8 +300,8 @@ main() {
 //! sender: carol
 //adding a node that does not satisfy the order between Alice and Bob _@alice -> 15@carol -> 10@bob
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.add_node(15, {{alice}});
+main(account: &signer) {
+    SortedLinkedList.add_node(copy(account), 15, {{alice}});
     return;
 }
 // check: ABORTED
@@ -309,8 +311,8 @@ main() {
 //! sender: carol
 //adding a node between Alice and Bob _@alice -> 5@carol -> 10@bob
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.add_node(5, {{alice}});
+main(account: &signer) {
+    SortedLinkedList.add_node(copy(account), 5, {{alice}});
     return;
 }
 // check: EXECUTED
@@ -319,8 +321,8 @@ main() {
 //! sender: david
 //adding a node that does not satisfy order after Bob _@alice -> 5@carol -> 10@bob -> 4@david
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.add_node(4, {{bob}});
+main(account: &signer) {
+    SortedLinkedList.add_node(copy(account), 4, {{bob}});
     return;
 }
 // check: ABORTED
@@ -330,8 +332,8 @@ main() {
 //! sender: david
 //adding a node after Bob _@alice -> 5@carol -> 10@bob -> 15@david
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.add_node(15, {{bob}});
+main(account: &signer) {
+    SortedLinkedList.add_node(copy(account), 15, {{bob}});
     return;
 }
 // check: EXECUTED
@@ -340,8 +342,8 @@ main() {
 //! sender: frank
 //adding a node after a non-existent node
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.add_node(15, {{eve}});
+main(account: &signer) {
+    SortedLinkedList.add_node(copy(account), 15, {{eve}});
     return;
 }
 // check: ABORTED
@@ -351,8 +353,8 @@ main() {
 //! sender: eve
 //adding a node after Carol with the same value _@alice -> 5@carol -> 5@eve -> 10@bob -> 15@david
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.add_node(5, {{carol}});
+main(account: &signer) {
+    SortedLinkedList.add_node(copy(account), 5, {{carol}});
     return;
 }
 // check: ABORTED
@@ -362,8 +364,8 @@ main() {
 //! sender: carol
 //adding a node after itself
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.add_node(5, {{carol}});
+main(account: &signer) {
+    SortedLinkedList.add_node(copy(account), 5, {{carol}});
     return;
 }
 // check: ABORTED
@@ -373,8 +375,8 @@ main() {
 //! sender: eve
 //adding a node between Carol and Bob _@alice -> 5@carol -> 7@eve -> 10@bob -> 15@david
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.add_node(7, {{carol}});
+main(account: &signer) {
+    SortedLinkedList.add_node(copy(account), 7, {{carol}});
     return;
 }
 // check: EXECUTED
@@ -404,8 +406,8 @@ main() {
 //! sender: carol
 //add a new carol node elsewhere in the list _@alice -> 7@eve -> 9@carol -> 10@bob -> 15@david
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.add_node(9, {{eve}});
+main(account: &signer) {
+    SortedLinkedList.add_node(copy(account), 9, {{eve}});
     return;
 }
 // check: EXECUTED
@@ -520,8 +522,8 @@ main() {
 //! sender: bob
 //Bob creates a new list _@bob
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.create_new_list();
+main(account: &signer) {
+    SortedLinkedList.create_new_list(move(account));
     return;
 }
 // check: EXECUTED

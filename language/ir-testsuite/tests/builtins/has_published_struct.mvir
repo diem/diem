@@ -11,8 +11,8 @@ module Token {
         return move(yes);
     }
 
-    public publish(t: Self.T) {
-        move_to_sender<T>(move(t));
+    public publish(account: &signer, t: Self.T) {
+        move_to<T>(move(account), move(t));
         return;
     }
 }
@@ -21,7 +21,7 @@ module Token {
 
 import {{default}}.Token;
 
-main() {
+main(account: &signer) {
     let z: Token.T;
     let sender: address;
     let exists1: bool;
@@ -29,7 +29,7 @@ main() {
     let exists2: bool;
 
     z = Token.new();
-    Token.publish(move(z));
+    Token.publish(copy(account), move(z));
     sender = get_txn_sender();
     exists1 = Token.has(copy(sender));
     assert(copy(exists1), 42);

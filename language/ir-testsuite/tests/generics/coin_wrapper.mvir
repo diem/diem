@@ -6,17 +6,18 @@ module M {
     resource InnerWrapper { f: Self.Foo<Self.Inner>}
     resource Inner { b: vector<u8> }
 
-    public coin_wrapper(c: Libra.Libra<LBR.LBR>) {
+
+    public coin_wrapper(account: &signer, c: Libra.Libra<LBR.LBR>) {
         let foo: Self.Foo<Libra.Libra<LBR.LBR>>;
         let coin_wrapper: Self.CoinWrapper;
 
         foo = Foo<Libra.Libra<LBR.LBR>> {x: move(c)};
         coin_wrapper = CoinWrapper {f: move(foo)};
-        move_to_sender<CoinWrapper>(move(coin_wrapper));
+        move_to<CoinWrapper>(move(account), move(coin_wrapper));
         return;
     }
 
-    public inner_wrapper(b: vector<u8>) {
+    public inner_wrapper(account: &signer, b: vector<u8>) {
         let foo: Self.Foo<Self.Inner>;
         let inner_wrapper: Self.InnerWrapper;
         let inner: Self.Inner;
@@ -24,7 +25,7 @@ module M {
         inner = Inner { b: move(b) };
         foo = Foo<Self.Inner> {x: move(inner)};
         inner_wrapper = InnerWrapper {f: move(foo)};
-        move_to_sender<InnerWrapper>(move(inner_wrapper));
+        move_to<InnerWrapper>(move(account), move(inner_wrapper));
         return;
     }
 
@@ -76,10 +77,10 @@ main(account: &signer) {
   let byte: vector<u8>;
 
   byte = h"bac1ac";
-  coin = LibraAccount.withdraw_from<LBR.LBR>(move(account), 1000);
+  coin = LibraAccount.withdraw_from<LBR.LBR>(copy(account), 1000);
 
-  M.coin_wrapper(move(coin));
-  M.inner_wrapper(move(byte));
+  M.coin_wrapper(copy(account), move(coin));
+  M.inner_wrapper(copy(account), move(byte));
 
   return;
 }

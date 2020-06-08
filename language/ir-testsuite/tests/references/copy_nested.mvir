@@ -7,8 +7,8 @@ module Test {
         config: Self.Config,
     }
 
-    public publish_config(b: bool) {
-        move_to_sender<T>(T { config: Config { b: move(b) } });
+    public publish_config(account: &signer, b: bool) {
+        move_to<T>(move(account), T { config: Config { b: move(b) } });
         return;
     }
 
@@ -44,11 +44,11 @@ module Test {
 //! new-transaction
 import {{default}}.Test;
 
-main() {
+main(account: &signer) {
     let config: Test.Config;
     let config1: Test.Config;
 
-    Test.publish_config(false);
+    Test.publish_config(copy(account), false);
 
     config = Test.config(get_txn_sender());
     assert(Test.value(&config) == false, 77);

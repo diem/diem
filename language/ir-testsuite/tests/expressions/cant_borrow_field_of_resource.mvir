@@ -20,8 +20,8 @@ module Token {
         return move(yes);
     }
 
-    public publish(t: Self.T) {
-        move_to_sender<T>(move(t));
+    public publish(account: &signer, t: Self.T) {
+        move_to<T>(move(account), move(t));
         return;
     }
 
@@ -32,12 +32,10 @@ module Token {
 import {{default}}.Token;
 
 main() {
-    let addr: address;
     let t: Token.T;
     let tref: &mut Token.T;
     let balance_ref: &u64;
 
-    addr = get_txn_sender();
     t = Token.new(1);
     tref = &mut t;
     balance_ref = &move(tref).v;

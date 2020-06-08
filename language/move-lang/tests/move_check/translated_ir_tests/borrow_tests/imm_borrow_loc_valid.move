@@ -10,7 +10,7 @@ module Tester {
         if (b1.f > b2.f) &b1.f else &b2.f
     }
 
-    fun larger_field(drop: address, result: &mut u64) acquires Box, Data {
+    fun larger_field(account: &signer, drop: address, result: &mut u64) acquires Box, Data {
         let b1 = move_from<Box>(0x0::Transaction::sender());
         let b2 = move_from<Box>(drop);
 
@@ -28,7 +28,7 @@ module Tester {
         );
 
         *result = *returned_ref;
-        move_to_sender<Box>(b1);
+        move_to<Box>(account, b1);
         Box { f: _ } = b2;
     }
 }

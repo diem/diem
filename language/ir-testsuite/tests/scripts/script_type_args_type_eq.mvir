@@ -1,10 +1,10 @@
 module M {
     resource Box<T> { _dummy: bool }
 
-    public type_eq<T1, T2>(): bool acquires Box {
+    public type_eq<T1, T2>(account: &signer): bool acquires Box {
         let r: bool;
         let b: bool;
-        move_to_sender<Box<T1>>(Box<T1> { _dummy: false });
+        move_to<Box<T1>>(move(account), Box<T1> { _dummy: false });
         r = exists<Box<T2>>(get_txn_sender());
         Box<T1> { _dummy: b } = move_from<Box<T1>>(get_txn_sender());
         return move(r);
@@ -16,9 +16,9 @@ module M {
 //! type-args: u64
 import {{default}}.M;
 
-main<T>() {
-    assert(M.type_eq<T, u64>(), 100);
-    assert(!M.type_eq<T, u8>(), 101);
+main<T>(account: &signer) {
+    assert(M.type_eq<T, u64>(copy(account)), 100);
+    assert(!M.type_eq<T, u8>(copy(account)), 101);
     return;
 }
 // check: EXECUTED
@@ -29,9 +29,9 @@ main<T>() {
 import {{default}}.M;
 import 0x0.LibraAccount;
 
-main<T>() {
-    assert(M.type_eq<T, LibraAccount.LibraAccount>(), 100);
-    assert(!M.type_eq<T, u8>(), 101);
+main<T>(account: &signer) {
+    assert(M.type_eq<T, LibraAccount.LibraAccount>(copy(account)), 100);
+    assert(!M.type_eq<T, u8>(copy(account)), 101);
     return;
 }
 // check: EXECUTED
@@ -42,9 +42,9 @@ main<T>() {
 import {{default}}.M;
 import 0x0.LibraAccount;
 
-main<T>() {
-    assert(M.type_eq<T, LibraAccount.Balance<LibraAccount.Balance<vector<u64>>>>(), 100);
-    assert(!M.type_eq<T, LibraAccount.Balance<LibraAccount.Balance<vector<u8>>>>(), 101);
+main<T>(account: &signer) {
+    assert(M.type_eq<T, LibraAccount.Balance<LibraAccount.Balance<vector<u64>>>>(copy(account)), 100);
+    assert(!M.type_eq<T, LibraAccount.Balance<LibraAccount.Balance<vector<u8>>>>(copy(account)), 101);
     return;
 }
 // check: EXECUTED

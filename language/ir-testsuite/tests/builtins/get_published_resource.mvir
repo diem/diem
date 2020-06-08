@@ -1,4 +1,6 @@
 module Token {
+    import 0x0.Signer;
+
     resource T {v: u64}
 
     public new(v: u64): Self.T {
@@ -18,12 +20,12 @@ module Token {
         return move(yes);
     }
 
-    public publish(t: Self.T) {
-        move_to_sender<T>(move(t));
+    public publish(account: &signer, t: Self.T) {
+        move_to<T>(move(account), move(t));
         return;
     }
 
-    public test() acquires T {
+    public test(account: &signer) acquires T {
         let z: Self.T;
         let addr1: address;
         let struct1: &mut Self.T;
@@ -31,9 +33,9 @@ module Token {
         let struct1_original_balance: u64;
 
         z = Self.new(0);
-        Self.publish(move(z));
+        Self.publish(copy(account), move(z));
 
-        addr1 = get_txn_sender();
+        addr1 = Signer.address_of(copy(account));
         struct1 = borrow_global_mut<T>(move(addr1));
         imms1 = freeze(move(struct1));
 
@@ -48,7 +50,7 @@ module Token {
 
 import {{default}}.Token;
 
-main() {
-    Token.test();
+main(account: &signer) {
+    Token.test(move(account));
     return;
 }

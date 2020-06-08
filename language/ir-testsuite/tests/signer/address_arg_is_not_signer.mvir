@@ -1,19 +1,11 @@
-module M {
-    resource R { s: signer }
-    public store_signer(s: signer) {
-        move_to_sender<R>(R { s: move(s) });
-        return;
-    }
-}
-
 //! new-transaction
 //! args: 0x0
 import {{default}}.M;
 main(s: signer) {
-    M.store_signer(move(s));
+    move_to<signer>(&s, move(s));
     return;
 }
-// check: INVALID_MAIN_FUNCTION_SIGNATURE
+// check: ParserError
 
 //! new-transaction
 //! args: 0x0
@@ -21,15 +13,6 @@ main(s: &signer) {
     return;
 }
 // check: TYPE_MISMATCH
-
-//! new-transaction
-//! args: 0x0
-import {{default}}.M;
-main(s: &signer, s2: signer) {
-    M.store_signer(move(s2));
-    return;
-}
-// check: INVALID_MAIN_FUNCTION_SIGNATURE
 
 //! new-transaction
 //! args: 0x0

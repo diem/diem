@@ -32,21 +32,21 @@ module M {
         S { b: 18446744073709551615 * 18446744073709551615, a: fail(0) };
     }
 
-    public fun t5() acquires R {
-        move_to_sender(Cup { b: move_from(0x0), a: fail(0) });
+    public fun t5(account: &signer) acquires R {
+        move_to(account, Cup { b: move_from(0x0), a: fail(0) });
     }
 
-    public fun t6() {
-        move_to_sender(Cup { b: R{}, a: 0 });
-        S { b: mts(), a: fail(0) };
+    public fun t6(account: &signer) {
+        move_to(account, Cup { b: R{}, a: 0 });
+        S { b: mts(account), a: fail(0) };
     }
 
     fun fail(code: u64): u64 {
         abort code
     }
 
-    fun mts(): u64 {
-        move_to_sender(Cup { b: R{}, a: 0 });
+    fun mts(account: &signer): u64 {
+        move_to(account, Cup { b: R{}, a: 0 });
         0
     }
 }
@@ -100,8 +100,8 @@ fun main() {
 // check: MISSING_DATA
 script {
 use {{default}}::M;
-fun main() {
-  M::t5()
+fun main(account: &signer) {
+  M::t5(account)
 }
 }
 
@@ -109,7 +109,7 @@ fun main() {
 // check: CANNOT_WRITE_EXISTING_RESOURCE
 script {
 use {{default}}::M;
-fun main() {
-  M::t6()
+fun main(account: &signer) {
+  M::t6(account)
 }
 }

@@ -24,11 +24,11 @@ module TestMoveFrom {
       return;
     }
 
-    public publish() {
+    public publish(account: &signer) {
       let t: Self.Counter;
 
       t = Counter { i: 0 };
-      move_to_sender<Counter>(move(t));
+      move_to<Counter>(move(account), move(t));
 
       return;
     }
@@ -51,11 +51,11 @@ module TestMoveFrom {
 
 import {{default}}.TestMoveFrom;
 
-main() {
+main(account: &signer) {
   let has1: bool;
   let has2: bool;
 
-  TestMoveFrom.publish();
+  TestMoveFrom.publish(copy(account));
   TestMoveFrom.increment();
 
   has1 = TestMoveFrom.has();
