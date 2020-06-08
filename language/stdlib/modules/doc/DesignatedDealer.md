@@ -173,7 +173,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_DesignatedDealer_tiered_mint">tiered_mint</a>(dealer: &<b>mut</b> <a href="#0x0_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a>, amount: u64, tier_index: u64): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_DesignatedDealer_tiered_mint">tiered_mint</a>(dealer: &<b>mut</b> <a href="#0x0_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a>, amount: u64, tier_index: u64, approval_timestamp: u64): bool
 </code></pre>
 
 
@@ -182,8 +182,10 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_DesignatedDealer_tiered_mint">tiered_mint</a>(dealer: &<b>mut</b> <a href="#0x0_DesignatedDealer_Dealer">Dealer</a>, amount: u64, tier_index: u64): bool {
-    <a href="#0x0_DesignatedDealer_reset_window">reset_window</a>(dealer);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_DesignatedDealer_tiered_mint">tiered_mint</a>(dealer: &<b>mut</b> <a href="#0x0_DesignatedDealer_Dealer">Dealer</a>, amount: u64, tier_index: u64, approval_timestamp: u64): bool {
+    // INVALID_PRE_APPROVAL_TIME
+    Txn::assert(approval_timestamp &lt;= <a href="LibraTimestamp.md#0x0_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>(), 300);
+    <a href="#0x0_DesignatedDealer_reset_window">reset_window</a>(dealer, approval_timestamp);
     <b>let</b> cur_inflow = *&dealer.window_inflow;
     <b>let</b> tiers = &<b>mut</b> dealer.tiers;
     // If the tier_index is one past the bounded tiers, minting is unbounded
@@ -237,7 +239,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x0_DesignatedDealer_reset_window">reset_window</a>(dealer: &<b>mut</b> <a href="#0x0_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a>)
+<pre><code><b>fun</b> <a href="#0x0_DesignatedDealer_reset_window">reset_window</a>(dealer: &<b>mut</b> <a href="#0x0_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a>, approval_timestamp: u64)
 </code></pre>
 
 
@@ -246,10 +248,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x0_DesignatedDealer_reset_window">reset_window</a>(dealer: &<b>mut</b> <a href="#0x0_DesignatedDealer_Dealer">Dealer</a>) {
-    <b>let</b> current_time = <a href="LibraTimestamp.md#0x0_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>();
-    <b>if</b> (current_time &gt; dealer.window_start + <a href="#0x0_DesignatedDealer_window_length">window_length</a>()) {
-        dealer.window_start = current_time;
+<pre><code><b>fun</b> <a href="#0x0_DesignatedDealer_reset_window">reset_window</a>(dealer: &<b>mut</b> <a href="#0x0_DesignatedDealer_Dealer">Dealer</a>, approval_timestamp: u64) {
+    <b>if</b> (approval_timestamp &gt; dealer.window_start + <a href="#0x0_DesignatedDealer_window_length">window_length</a>()) {
+        dealer.window_start = approval_timestamp;
         dealer.window_inflow = 0;
     }
 }

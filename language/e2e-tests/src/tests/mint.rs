@@ -31,13 +31,16 @@ fn tiered_mint_designated_dealer() {
     ));
     let mint_amount = 1_000;
     let tier_index = 0;
+    let sliding_nonce = 1;
+    let approval_timestamp = 1000000;
     executor.execute_and_apply(blessed.signed_script_txn(
         encode_tiered_mint(
             account_config::coin1_tag(),
-            1,
+            sliding_nonce,
             *dd.address(),
             mint_amount,
             tier_index,
+            approval_timestamp,
         ),
         1,
     ));

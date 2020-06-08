@@ -29,7 +29,7 @@ script {
     use 0x0::LibraAccount;
     use 0x0::Coin1;
     fun main(tc_account: &signer) {
-        LibraAccount::mint_to_designated_dealer<Coin1::T>(tc_account, 0xDEADBEEF, 99, 0);
+        LibraAccount::mint_to_designated_dealer<Coin1::T>(tc_account, 0xDEADBEEF, 99, 0, 0);
         LibraAccount::add_tier(tc_account, 0xDEADBEEF, 1000); // second Tier
         LibraAccount::add_tier(tc_account, 0xDEADBEEF, 10000); // third Tier
     }
@@ -37,3 +37,8 @@ script {
 
 // check: MintEvent
 // check: EXECUTED
+
+
+// TODO(moezinia) once functional tests allow newly created addresses to send txns (ie 0xdeadbeef to preburn coin)
+// Libra::mint_to_address(x)
+// Libra::preburn(LibraAccount::withdraw_from_sender(amt))

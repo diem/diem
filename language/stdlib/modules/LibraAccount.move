@@ -693,7 +693,7 @@ module LibraAccount {
     /// Tiered Mint called by Treasury Compliance
     /// CoinType should match type called with create_designated_dealer
     public fun mint_to_designated_dealer<CoinType>(
-        blessed: &signer, dealer_address: address, amount: u64, tier: u64
+        blessed: &signer, dealer_address: address, amount: u64, tier: u64, approval_timestamp: u64,
     ) acquires Role, AccountOperationsCapability, Balance, T {
         Association::assert_account_is_blessed(blessed);
         // INVALID_MINT_AMOUNT
@@ -702,8 +702,8 @@ module LibraAccount {
             &mut borrow_global_mut<Role<DesignatedDealer::Dealer>>(dealer_address).role_data;
         // NOT_A_DD
         Transaction::assert(DesignatedDealer::is_designated_dealer(dealer), 1);
-        let tier_check = DesignatedDealer::tiered_mint(dealer, amount, tier);
-        // INVALID_AMOUNT_FOR_TIER
+        let tier_check = DesignatedDealer::tiered_mint(dealer, amount, tier, approval_timestamp);
+        // INVALID_TIERED_MINT_CONFIGURATION
         Transaction::assert(tier_check, 5);
         let coins = Libra::mint<CoinType>(blessed, amount);
         deposit(blessed, dealer_address, coins);

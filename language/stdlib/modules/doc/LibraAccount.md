@@ -2002,7 +2002,7 @@ Tiered Mint called by Treasury Compliance
 CoinType should match type called with create_designated_dealer
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_mint_to_designated_dealer">mint_to_designated_dealer</a>&lt;CoinType&gt;(blessed: &signer, dealer_address: address, amount: u64, tier: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_mint_to_designated_dealer">mint_to_designated_dealer</a>&lt;CoinType&gt;(blessed: &signer, dealer_address: address, amount: u64, tier: u64, approval_timestamp: u64)
 </code></pre>
 
 
@@ -2012,7 +2012,7 @@ CoinType should match type called with create_designated_dealer
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_mint_to_designated_dealer">mint_to_designated_dealer</a>&lt;CoinType&gt;(
-    blessed: &signer, dealer_address: address, amount: u64, tier: u64
+    blessed: &signer, dealer_address: address, amount: u64, tier: u64, approval_timestamp: u64,
 ) <b>acquires</b> <a href="#0x0_LibraAccount_Role">Role</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_T">T</a> {
     <a href="Association.md#0x0_Association_assert_account_is_blessed">Association::assert_account_is_blessed</a>(blessed);
     // INVALID_MINT_AMOUNT
@@ -2021,8 +2021,8 @@ CoinType should match type called with create_designated_dealer
         &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_LibraAccount_Role">Role</a>&lt;<a href="DesignatedDealer.md#0x0_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a>&gt;&gt;(dealer_address).role_data;
     // NOT_A_DD
     Transaction::assert(<a href="DesignatedDealer.md#0x0_DesignatedDealer_is_designated_dealer">DesignatedDealer::is_designated_dealer</a>(dealer), 1);
-    <b>let</b> tier_check = <a href="DesignatedDealer.md#0x0_DesignatedDealer_tiered_mint">DesignatedDealer::tiered_mint</a>(dealer, amount, tier);
-    // INVALID_AMOUNT_FOR_TIER
+    <b>let</b> tier_check = <a href="DesignatedDealer.md#0x0_DesignatedDealer_tiered_mint">DesignatedDealer::tiered_mint</a>(dealer, amount, tier, approval_timestamp);
+    // INVALID_TIERED_MINT_CONFIGURATION
     Transaction::assert(tier_check, 5);
     <b>let</b> coins = <a href="Libra.md#0x0_Libra_mint">Libra::mint</a>&lt;CoinType&gt;(blessed, amount);
     <a href="#0x0_LibraAccount_deposit">deposit</a>(blessed, dealer_address, coins);

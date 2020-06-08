@@ -29,7 +29,8 @@ script {
     use 0x0::LibraAccount;
     use 0x0::Coin1;
     fun main(tc_account: &signer) {
-        LibraAccount::mint_to_designated_dealer<Coin1::T>(tc_account, 0xDEADBEEF, 99, 0);
+        let approval_timestamp = 0;
+        LibraAccount::mint_to_designated_dealer<Coin1::T>(tc_account, 0xDEADBEEF, 90, 0, approval_timestamp);
         LibraAccount::add_tier(tc_account, 0xDEADBEEF, 1000); // second Tier
         LibraAccount::add_tier(tc_account, 0xDEADBEEF, 10000); // third Tier
     }
@@ -37,6 +38,58 @@ script {
 
 // check: MintEvent
 // check: EXECUTED
+
+// --------------------------------------------------------------------
+// Another tiered mint 100 secs later (within same 24 hour window)
+// spills over 0'th tier upperbound and is therefore aborted
+
+//! new-transaction
+//! sender: blessed
+script {
+    use 0x0::LibraAccount;
+    use 0x0::Coin1;
+    fun main(tc_account: &signer) {
+        let approval_timestamp = 100;
+        LibraAccount::mint_to_designated_dealer<Coin1::T>(tc_account, 0xDEADBEEF, 20, 0, approval_timestamp);
+    }
+}
+
+// check: ABORTED
+
+// --------------------------------------------------------------------
+// Another tiered mint (within same 24 hour window) with tier-1 index successfully mints
+// even though cumulative amount spills over
+
+//! new-transaction
+//! sender: blessed
+script {
+    use 0x0::LibraAccount;
+    use 0x0::Coin1;
+    fun main(tc_account: &signer) {
+        let approval_timestamp = 200;
+        LibraAccount::mint_to_designated_dealer<Coin1::T>(tc_account, 0xDEADBEEF, 120, 1, approval_timestamp);
+    }
+}
+
+// check: EXECUTED
+
+// --------------------------------------------------------------------
+// Another tiered mint (outside same 24 hour window) with tier-0 index
+// successfully mints as the cumulative mint sum reset.
+
+//! new-transaction
+//! sender: blessed
+script {
+    use 0x0::LibraAccount;
+    use 0x0::Coin1;
+    fun main(tc_account: &signer) {
+        let approval_timestamp = 86400000001; // more than 24 hours since 1st tiered mint
+        LibraAccount::mint_to_designated_dealer<Coin1::T>(tc_account, 0xDEADBEEF, 90, 0, approval_timestamp);
+    }
+}
+
+// check: EXECUTED
+
 
 // --------------------------------------------------------------------
 // Mint initiated but amount exceeds 1st tier upperbound
@@ -47,7 +100,7 @@ script {
     use 0x0::LibraAccount;
     use 0x0::Coin1;
     fun main(tc_account: &signer) {
-        LibraAccount::mint_to_designated_dealer<Coin1::T>(tc_account, 0xDEADBEEF, 1001, 1);
+        LibraAccount::mint_to_designated_dealer<Coin1::T>(tc_account, 0xDEADBEEF, 1001, 1, 0);
     }
 }
 
@@ -78,7 +131,7 @@ script {
     use 0x0::LibraAccount;
     use 0x0::Coin1;
     fun main(tc_account: &signer) {
-        LibraAccount::mint_to_designated_dealer<Coin1::T>(tc_account, 0xDEADBEEF, 1, 0);
+        LibraAccount::mint_to_designated_dealer<Coin1::T>(tc_account, 0xDEADBEEF, 1, 0, 0);
     }
 }
 

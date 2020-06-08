@@ -14,11 +14,11 @@
 ## Function `main`
 
 Script for Treasury Comliance Account to mint 'mint_amount' to 'designated_dealer_address' for
-'tier_index' tier
+'tier_index' tier based on approval_timestamp (unix time) of aos approval
 sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;(tc_account: &signer, sliding_nonce: u64, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;(tc_account: &signer, sliding_nonce: u64, designated_dealer_address: address, mint_amount: u64, tier_index: u64, approval_timestamp: u64)
 </code></pre>
 
 
@@ -32,11 +32,12 @@ sliding_nonce is a unique nonce for operation, see sliding_nonce.move for detail
     sliding_nonce: u64,
     designated_dealer_address: address,
     mint_amount: u64,
-    tier_index: u64
+    tier_index: u64,
+    approval_timestamp: u64,
 ) {
     <a href="../../modules/doc/SlidingNonce.md#0x0_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(tc_account, sliding_nonce);
     <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_mint_to_designated_dealer">LibraAccount::mint_to_designated_dealer</a>&lt;CoinType&gt;(
-        tc_account, designated_dealer_address, mint_amount, tier_index
+        tc_account, designated_dealer_address, mint_amount, tier_index, approval_timestamp
     );
 }
 </code></pre>

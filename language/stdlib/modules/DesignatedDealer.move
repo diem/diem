@@ -67,8 +67,11 @@ module DesignatedDealer {
         *tier_mut = new_upperbound;
     }
 
-    public fun tiered_mint(dealer: &mut Dealer, amount: u64, tier_index: u64): bool {
-        reset_window(dealer);
+    // check amount to be minted is below upperbound of 'tier_index'. 'approval_timestamp' in microseconds
+    public fun tiered_mint(dealer: &mut Dealer, amount: u64, tier_index: u64, approval_timestamp: u64): bool {
+        // INVALID_PRE_APPROVAL_TIME
+        Txn::assert(approval_timestamp <= LibraTimestamp::now_microseconds(), 300);
+        reset_window(dealer, approval_timestamp);
         let cur_inflow = *&dealer.window_inflow;
         let tiers = &mut dealer.tiers;
         // If the tier_index is one past the bounded tiers, minting is unbounded
@@ -92,12 +95,11 @@ module DesignatedDealer {
     }
 
     // If the time window starting at `dealer.window_start` and lasting for
-    // window_length() has elapsed, resets the window and
-    // the inflow and outflow records.
-    fun reset_window(dealer: &mut Dealer) {
-        let current_time = LibraTimestamp::now_microseconds();
-        if (current_time > dealer.window_start + window_length()) {
-            dealer.window_start = current_time;
+    // window_length() has elapsed past the time the mint was approved (approval_timestamp),
+    // then reset the window and the inflow record.
+    fun reset_window(dealer: &mut Dealer, approval_timestamp: u64) {
+        if (approval_timestamp > dealer.window_start + window_length()) {
+            dealer.window_start = approval_timestamp;
             dealer.window_inflow = 0;
         }
     }

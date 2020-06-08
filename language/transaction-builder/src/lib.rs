@@ -396,9 +396,10 @@ encode_txn_script! {
 encode_txn_script! {
     name: encode_tiered_mint,
     type_arg: coin_type,
-    args: [nonce: U64, designated_dealer_address: Address, mint_amount: U64, tier_index: U64],
+    args: [nonce: U64, designated_dealer_address: Address, mint_amount: U64, tier_index: U64, approval_timestamp: U64],
     script: TieredMint,
     doc: "Mints 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.\
+          Tier based on time of AOS approval (approval_timestamp unixtime in microseconds) of operation.
           Max valid tier index is 3 since there are max 4 tiers per DD.
           Sender should be treasury compliance account and receiver authorized DD"
 }
