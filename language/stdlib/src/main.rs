@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use clap::{App, Arg};
+use rayon::prelude::*;
 use std::{
     fs::File,
     io::Write,
@@ -73,7 +74,7 @@ fn main() {
         .collect::<Vec<_>>();
     if !doc_only {
         time_it("Staging transaction scripts", || {
-            for txn_file in &transaction_files {
+            transaction_files.par_iter().for_each(|txn_file| {
                 let compiled_script = compile_script(txn_file.clone());
                 let mut txn_path = PathBuf::from(STAGED_OUTPUT_PATH);
                 txn_path.push(txn_file.clone());
@@ -81,8 +82,8 @@ fn main() {
                 File::create(txn_path)
                     .unwrap()
                     .write_all(&compiled_script)
-                    .unwrap();
-            }
+                    .unwrap()
+            })
         });
     }
 
@@ -92,9 +93,9 @@ fn main() {
             build_stdlib_doc();
         });
         time_it("Generating script documentation", || {
-            for txn_file in &transaction_files {
-                build_transaction_script_doc(txn_file.clone());
-            }
+            transaction_files
+                .par_iter()
+                .for_each(|txn_file| build_transaction_script_doc(txn_file.clone()));
         });
     }
 
