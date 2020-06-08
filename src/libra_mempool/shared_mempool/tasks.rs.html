@@ -515,6 +515,13 @@
 <span id="515">515</span>
 <span id="516">516</span>
 <span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -551,7 +558,7 @@
     <span class="ident">collections</span>::<span class="ident">HashSet</span>,
     <span class="ident">ops</span>::<span class="ident">Deref</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>, <span class="ident">RwLock</span>},
-    <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">Instant</span>},
+    <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">Instant</span>, <span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>},
 };
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Handle</span>;
 <span class="kw">use</span> <span class="ident">vm_validator</span>::<span class="ident">vm_validator</span>::{<span class="ident">get_account_sequence_number</span>, <span class="ident">TransactionValidation</span>};
@@ -964,10 +971,17 @@
                 .<span class="ident">iter</span>()
                 .<span class="ident">map</span>(<span class="op">|</span><span class="ident">txn</span><span class="op">|</span> (<span class="ident">txn</span>.<span class="ident">sender</span>, <span class="ident">txn</span>.<span class="ident">sequence_number</span>))
                 .<span class="ident">collect</span>();
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">txns</span> <span class="op">=</span> <span class="ident">mempool</span>
-                .<span class="ident">lock</span>()
-                .<span class="ident">expect</span>(<span class="string">&quot;[get_block] acquire mempool lock&quot;</span>)
-                .<span class="ident">get_block</span>(<span class="ident">block_size</span>, <span class="ident">exclude_transactions</span>);
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">txns</span>;
+            {
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mempool</span> <span class="op">=</span> <span class="ident">mempool</span>.<span class="ident">lock</span>().<span class="ident">expect</span>(<span class="string">&quot;failed to acquire mempool lock&quot;</span>);
+                <span class="comment">// gc before pulling block as extra protection against txns that may expire in consensus</span>
+                <span class="comment">// Note: this gc operation relies on the fact that consensus uses the system time to determine block timestamp</span>
+                <span class="kw">let</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>()
+                    .<span class="ident">duration_since</span>(<span class="ident">UNIX_EPOCH</span>)
+                    .<span class="ident">expect</span>(<span class="string">&quot;Timestamp generated is before UNIX_EPOCH&quot;</span>);
+                <span class="ident">mempool</span>.<span class="ident">gc_by_expiration_time</span>(<span class="ident">curr_time</span>);
+                <span class="ident">txns</span> <span class="op">=</span> <span class="ident">mempool</span>.<span class="ident">get_block</span>(<span class="ident">block_size</span>, <span class="ident">exclude_transactions</span>);
+            }
             <span class="kw">let</span> <span class="ident">transactions</span> <span class="op">=</span> <span class="ident">txns</span>.<span class="ident">drain</span>(..).<span class="ident">map</span>(<span class="ident">SignedTransaction</span>::<span class="ident">into</span>).<span class="ident">collect</span>();
 
             (<span class="ident">ConsensusResponse</span>::<span class="ident">GetBlockResponse</span>(<span class="ident">transactions</span>), <span class="ident">callback</span>)
