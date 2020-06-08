@@ -28,6 +28,7 @@ use itertools::Itertools;
 use k8s_openapi::api::batch::v1::Job;
 use kube::api::ListParams;
 use libra_config::config::DEFAULT_JSON_RPC_PORT;
+use reqwest::Client as HttpClient;
 use std::process::Command;
 
 const DEFAULT_NAMESPACE: &str = "default";
@@ -40,10 +41,12 @@ const ERROR_NOT_FOUND: u16 = 404;
 pub struct ClusterSwarmKube {
     client: Client,
     node_map: Arc<Mutex<HashMap<InstanceConfig, Instance>>>,
+    http_client: HttpClient,
 }
 
 impl ClusterSwarmKube {
     pub async fn new() -> Result<Self> {
+        let http_client = HttpClient::new();
         // This uses kubectl proxy locally to forward connections to kubernetes api server
         Command::new("/usr/local/bin/kubectl")
             .arg("proxy")
@@ -63,7 +66,11 @@ impl ClusterSwarmKube {
         );
         let client = Client::new(config);
         let node_map = Arc::new(Mutex::new(HashMap::new()));
-        Ok(Self { client, node_map })
+        Ok(Self {
+            client,
+            node_map,
+            http_client,
+        })
     }
 
     fn service_spec(&self, peer_id: String) -> Service {
@@ -506,6 +513,7 @@ impl ClusterSwarm for ClusterSwarmKube {
             ac_port,
             node_name.clone(),
             instance_config.clone(),
+            self.http_client.clone(),
         );
         self.node_map
             .lock()
