@@ -607,7 +607,7 @@ mod test {
         ));
 
         //
-        let (client_session, _) = client_session.unwrap();
+        let client_session = client_session.unwrap();
         let (server_session, _) = server_session.unwrap();
         (client_session, server_session)
     }

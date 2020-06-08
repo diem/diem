@@ -13,6 +13,7 @@
 
 use futures::{future::Future, stream::Stream};
 use libra_network_address::NetworkAddress;
+use libra_types::PeerId;
 use std::time::Duration;
 
 pub mod and_then;
@@ -86,7 +87,7 @@ pub trait Transport {
         Self: Sized;
 
     /// Dials the given [`NetworkAddress`], returning a future for a pending outbound connection.
-    fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error>
+    fn dial(&self, peer_id: PeerId, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error>
     where
         Self: Sized;
 }

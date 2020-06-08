@@ -38,6 +38,11 @@ use std::{
 pub struct AntiReplayTimestamps(HashMap<x25519::PublicKey, u64>);
 
 impl AntiReplayTimestamps {
+    /// The timestamp is sent as a payload, so that it is encrypted.
+    /// Note that a millisecond value is a 16-byte value in rust,
+    /// but as we use it to store a duration since UNIX_EPOCH we will never use more than 8 bytes.
+    const TIMESTAMP_SIZE: usize = 8;
+
     /// Returns true if the timestamp has already been observed for this peer
     /// or if it's an old timestamp
     pub fn is_replay(&self, pubkey: x25519::PublicKey, timestamp: u64) -> bool {
@@ -56,11 +61,6 @@ impl AntiReplayTimestamps {
             .or_insert(timestamp);
     }
 }
-
-/// The timestamp is sent as a payload, so that it is encrypted.
-/// Note that a millisecond value is a 16-byte value in rust,
-/// but as we use it to store a duration since UNIX_EPOCH we will never use more than 8 bytes.
-const PAYLOAD_SIZE: usize = 8;
 
 /// Noise handshake authentication mode.
 pub enum HandshakeAuthMode {
@@ -143,39 +143,12 @@ impl NoiseUpgrader {
         }
     }
 
-    /// Convert a remote pubkey into a network `PeerId`.
-    fn identity_pubkey_to_peer_id(&self, remote_pubkey: x25519::PublicKey) -> io::Result<PeerId> {
-        // if mutual authentication, try to find peer with this identity pubkey
-        if let Some(trusted_peers) = self.auth_mode.trusted_peers() {
-            trusted_peers
-                .read()
-                .map_err(|_| {
-                    io::Error::new(
-                        io::ErrorKind::Other,
-                        "noise: unable to read trusted_peers lock",
-                    )
-                })?
-                .iter()
-                .find(|(_peer_id, public_keys)| public_keys.identity_public_key == remote_pubkey)
-                .map(|(peer_id, _)| *peer_id)
-                .ok_or_else(|| {
-                    io::Error::new(
-                        io::ErrorKind::Other,
-                        format!("noise: client {} is not a trusted peer", remote_pubkey),
-                    )
-                })
-        } else {
-            // else, only client authenticating the server. Generate PeerId from x25519::PublicKey.
-            Ok(PeerId::from_identity_public_key(remote_pubkey))
-        }
-    }
-
-    /// Perform a protocol upgrade on an underlying connection. In addition perform the noise IX
+    /// Perform a protocol upgrade on an underlying connection. In addition perform the noise IK
     /// handshake to establish a noise stream and exchange static public keys. Upon success,
     /// returns the static public key of the remote as well as a NoiseStream.
     // TODO(philiphayes): rework socket-bench-server so we can remove this function
     #[allow(dead_code)]
-    pub async fn upgrade<TSocket>(
+    pub async fn upgrade_with_noise<TSocket>(
         &self,
         socket: TSocket,
         origin: ConnectionOrigin,
@@ -185,7 +158,7 @@ impl NoiseUpgrader {
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
         // perform the noise handshake
-        let (socket, _peer_id) = match origin {
+        let socket = match origin {
             ConnectionOrigin::Outbound => {
                 let remote_public_key = match remote_public_key {
                     Some(key) => key,
@@ -199,7 +172,10 @@ impl NoiseUpgrader {
                 };
                 self.upgrade_outbound(socket, remote_public_key).await?
             }
-            ConnectionOrigin::Inbound => self.upgrade_inbound(socket).await?,
+            ConnectionOrigin::Inbound => {
+                let (socket, _peer_id) = self.upgrade_inbound(socket).await?;
+                socket
+            }
         };
 
         // return remote public key with a socket including the noise stream
@@ -207,59 +183,71 @@ impl NoiseUpgrader {
         Ok((remote_public_key, socket))
     }
 
+    /// The prologue is the client's peer_id and the remote's expected public key.
+    const PROLOGUE_SIZE: usize = PeerId::LENGTH + x25519::PUBLIC_KEY_SIZE;
+
+    /// The client message consist of the prologue + a noise message with a timestamp as payload.
+    const CLIENT_MESSAGE_SIZE: usize =
+        Self::PROLOGUE_SIZE + noise::handshake_init_msg_len(AntiReplayTimestamps::TIMESTAMP_SIZE);
+
+    /// The server's message contains no payload.
+    const SERVER_MESSAGE_SIZE: usize = noise::handshake_resp_msg_len(0);
+
     /// Perform an outbound protocol upgrade on this connection.
     ///
     /// This runs the "client" side of the Noise IK handshake to establish a
-    /// secure Noise stream and exchange static public keys. In mutual auth
-    /// scenarios, we will also include an anti replay attack counter in the
+    /// secure Noise stream and send its static public key to the server.
+    /// In mutual auth scenarios, we will also include an anti replay attack counter in the
     /// Noise handshake payload. Currently this counter is always a millisecond-
     /// granularity unix epoch timestamp.
     pub async fn upgrade_outbound<TSocket>(
         &self,
         mut socket: TSocket,
         remote_public_key: x25519::PublicKey,
-    ) -> io::Result<(NoiseStream<TSocket>, PeerId)>
+    ) -> io::Result<NoiseStream<TSocket>>
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
-        // send a payload of the current timestamp (in milliseconds)
+        // buffer to hold prologue + first noise handshake message
+        let mut client_message = [0; Self::CLIENT_MESSAGE_SIZE];
+
+        // craft prologue = self_peer_id | expected_public_key
+        client_message[..PeerId::LENGTH].copy_from_slice(self.self_peer_id.as_ref());
+        client_message[PeerId::LENGTH..Self::PROLOGUE_SIZE]
+            .copy_from_slice(remote_public_key.as_slice());
+
+        let (prologue_msg, mut client_noise_msg) = client_message.split_at_mut(Self::PROLOGUE_SIZE);
+
+        // craft 8-byte payload as current timestamp (in milliseconds)
         let payload = {
             let now: u64 = time::SystemTime::now()
                 .duration_since(time::UNIX_EPOCH)
                 .expect("system clock should work")
-                .as_millis() as u64;
+                .as_millis() as u64; // (TIMESTAMP_SIZE)
+
             // e.g. [157, 126, 253, 97, 114, 1, 0, 0]
-            let now = now.to_le_bytes().to_vec();
-            Some(now)
+            now.to_le_bytes()
         };
 
-        // send [my_peer_id | expected_public_key] as prologue
-        let mut prologue = self.self_peer_id.to_vec();
-        prologue.extend_from_slice(remote_public_key.as_slice());
-        socket.write_all(&prologue).await?;
-
-        // create first handshake message  (-> e, es, s, ss)
+        // craft first handshake message  (-> e, es, s, ss)
         let mut rng = rand::rngs::OsRng;
-        let mut first_message = [0u8; noise::handshake_init_msg_len(PAYLOAD_SIZE)];
         let initiator_state = self
             .noise_config
             .initiate_connection(
                 &mut rng,
-                &prologue,
+                &prologue_msg,
                 remote_public_key,
-                payload.as_ref().map(|x| &x[..]),
-                &mut first_message,
+                Some(&payload),
+                &mut client_noise_msg,
             )
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
-        // write the first handshake message
-        socket.write_all(&first_message).await?;
-
-        // flush
+        // send the first handshake message
+        socket.write_all(&client_message).await?;
         socket.flush().await?;
 
         // receive the server's response (<- e, ee, se)
-        let mut server_response = [0u8; noise::handshake_resp_msg_len(0)];
+        let mut server_response = [0u8; Self::SERVER_MESSAGE_SIZE];
         socket.read_exact(&mut server_response).await?;
 
         // parse the server's response
@@ -269,11 +257,8 @@ impl NoiseUpgrader {
             .finalize_connection(initiator_state, &server_response)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
-        // fetch their peer id
-        let remote_peer_id = self.identity_pubkey_to_peer_id(remote_public_key)?;
-
         // finalize the connection
-        Ok((NoiseStream::new(socket, session), remote_peer_id))
+        Ok(NoiseStream::new(socket, session))
     }
 
     /// Perform an inbound protocol upgrade on this connection.
@@ -291,23 +276,19 @@ impl NoiseUpgrader {
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
-        // receive [remote_peer_id | my_public_key] as prologue
-        let mut prologue = vec![0; PeerId::LENGTH + x25519::PUBLIC_KEY_SIZE];
-        socket.read_exact(&mut prologue).await?;
+        // buffer to contain the client first message
+        let mut client_message = [0; Self::CLIENT_MESSAGE_SIZE];
 
-        // verify that this is indeed my public key
-        let (remote_peer_id, my_expected_public_key) = prologue.split_at(PeerId::LENGTH);
-        if my_expected_public_key != self.noise_config.public_key().as_slice() {
-            // TODO: should we reply with an error message?
-            // TODO: security logging (mimoo)
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "noise: client expecting us to have incorrect public key: {}",
-                    hex::encode(my_expected_public_key)
-                ),
-            ));
-        }
+        // receive the prologue + first noise handshake message
+        socket.read_exact(&mut client_message).await?;
+
+        // extract prologue (remote_peer_id | self_public_key)
+        let (remote_peer_id, self_expected_public_key) =
+            client_message[..Self::PROLOGUE_SIZE].split_at(PeerId::LENGTH);
+
+        // parse the client's peer id
+        // note: in mutual authenticated network, we could verify that their peer_id is in the trust peer set now.
+        // We do this later in this function instead (to batch a number of checks) as there is no known attack here.
         let remote_peer_id = PeerId::try_from(remote_peer_id).map_err(|_| {
             io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -318,11 +299,20 @@ impl NoiseUpgrader {
             )
         })?;
 
-        // receive the initiation message
-        let mut client_init_message = [0u8; noise::handshake_init_msg_len(PAYLOAD_SIZE)];
-        socket.read_exact(&mut client_init_message).await?;
+        // verify that this is indeed our public key
+        if self_expected_public_key != self.noise_config.public_key().as_slice() {
+            // TODO: security logging (mimoo)
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "noise: client expecting us to have incorrect public key: {}",
+                    hex::encode(self_expected_public_key)
+                ),
+            ));
+        }
 
         // parse it
+        let (prologue, client_init_message) = client_message.split_at(Self::PROLOGUE_SIZE);
         let (remote_public_key, handshake_state, payload) = self
             .noise_config
             .parse_client_init_message(&prologue, &client_init_message)
@@ -364,13 +354,13 @@ impl NoiseUpgrader {
             };
         } else {
             // if not, verify that their peerid is constructed correctly from their public key
-            let expected_peer_id = self.identity_pubkey_to_peer_id(remote_public_key)?;
-            if expected_peer_id != remote_peer_id {
+            let expected_remote_peer_id = PeerId::from_identity_public_key(remote_public_key);
+            if expected_remote_peer_id != remote_peer_id {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
                     format!(
                         "noise: peer id expected: {}, received: {}",
-                        hex::encode(expected_peer_id),
+                        hex::encode(expected_remote_peer_id),
                         hex::encode(remote_peer_id),
                     ),
                 ));
@@ -381,14 +371,14 @@ impl NoiseUpgrader {
         // the payload should contain a u64 client timestamp
         if let Some(anti_replay_timestamps) = self.auth_mode.anti_replay_timestamps() {
             // check that the payload received as the client timestamp (in seconds)
-            if payload.len() != PAYLOAD_SIZE {
+            if payload.len() != AntiReplayTimestamps::TIMESTAMP_SIZE {
                 // TODO: security logging (mimoo)
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
                     "noise: client initiated connection without an 8-byte timestamp",
                 ));
             }
-            let mut client_timestamp = [0u8; PAYLOAD_SIZE];
+            let mut client_timestamp = [0u8; AntiReplayTimestamps::TIMESTAMP_SIZE];
             client_timestamp.copy_from_slice(&payload);
             let client_timestamp = u64::from_le_bytes(client_timestamp);
 
@@ -416,7 +406,7 @@ impl NoiseUpgrader {
 
         // construct the response
         let mut rng = rand::rngs::OsRng;
-        let mut server_response = [0u8; noise::handshake_resp_msg_len(0)];
+        let mut server_response = [0u8; Self::SERVER_MESSAGE_SIZE];
         let session = self
             .noise_config
             .respond_to_client(&mut rng, handshake_state, None, &mut server_response)
@@ -500,7 +490,7 @@ mod test {
         server: NoiseUpgrader,
         server_public_key: x25519::PublicKey,
     ) -> (
-        (NoiseStream<MemorySocket>, PeerId),
+        NoiseStream<MemorySocket>,
         (NoiseStream<MemorySocket>, PeerId),
     ) {
         // create an in-memory socket for testing
@@ -518,7 +508,7 @@ mod test {
     fn test_handshake_success(is_mutual_auth: bool) {
         // perform handshake with two testing peers
         let ((client, client_public), (server, server_public)) = build_peers(is_mutual_auth);
-        let ((client, _), (server, _)) = perform_handshake(client, server, server_public);
+        let (client, (server, _)) = perform_handshake(client, server, server_public);
 
         assert_eq!(client.get_remote_static(), server_public);
         assert_eq!(server.get_remote_static(), client_public);

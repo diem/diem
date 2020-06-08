@@ -415,12 +415,15 @@ impl NetworkBuilder {
             .expect("Authentication Mode not set");
 
         let (key, maybe_trusted_peers, peer_id) = match authentication_mode {
-            AuthenticationMode::ServerOnly(key) => {
+            // validator-operated full node
+            AuthenticationMode::ServerOnly(key) if self.peer_id == PeerId::default() => {
                 let public_key = key.public_key();
-                // TODO: should I check that self.peer_id is not set then?
                 let peer_id = PeerId::from_identity_public_key(public_key);
                 (key, None, peer_id)
             }
+            // full node
+            AuthenticationMode::ServerOnly(key) => (key, None, self.peer_id),
+            // validator
             AuthenticationMode::Mutual(key) => {
                 (key, Some(self.trusted_peers.clone()), self.peer_id)
             }
@@ -429,8 +432,8 @@ impl NetworkBuilder {
         match self.listen_address.as_slice() {
             [Ip4(_), Tcp(_)] | [Ip6(_), Tcp(_)] => {
                 self.build_with_transport(LibraNetTransport::new(
-                    peer_id,
                     LIBRA_TCP_TRANSPORT.clone(),
+                    peer_id,
                     key,
                     maybe_trusted_peers,
                     HANDSHAKE_VERSION,
@@ -439,8 +442,8 @@ impl NetworkBuilder {
                 ))
             }
             [Memory(_)] => self.build_with_transport(LibraNetTransport::new(
-                peer_id,
                 memory::MemoryTransport,
+                peer_id,
                 key,
                 maybe_trusted_peers,
                 HANDSHAKE_VERSION,

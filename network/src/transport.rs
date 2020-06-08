@@ -233,21 +233,20 @@ async fn upgrade_outbound<T: TSocket>(
     ctxt: Arc<UpgradeContext>,
     fut_socket: impl Future<Output = io::Result<T>>,
     addr: NetworkAddress,
+    remote_peer_id: PeerId,
     remote_pubkey: x25519::PublicKey,
 ) -> io::Result<Connection<NoiseStream<T>>> {
     let origin = ConnectionOrigin::Outbound;
     let socket = fut_socket.await?;
 
-    // TODO: is this always a trusted peer? Can we enforce this here?
-
-    // try authenticating via noise handshake
-    let (socket, peer_id) = ctxt.noise.upgrade_outbound(socket, remote_pubkey).await?;
+    // noise handshake
+    let socket = ctxt.noise.upgrade_outbound(socket, remote_pubkey).await?;
 
     // sanity check: Noise IK should always guarantee this is true
     debug_assert_eq!(remote_pubkey, socket.get_remote_static());
 
     // try to negotiate common libranet version and supported application protocols
-    perform_handshake(peer_id, socket, addr, origin, &ctxt.own_handshake).await
+    perform_handshake(remote_peer_id, socket, addr, origin, &ctxt.own_handshake).await
 }
 
 /// The common LibraNet Transport.
@@ -277,8 +276,8 @@ where
     TTransport::Listener: Send + 'static,
 {
     pub fn new(
-        my_peer_id: PeerId,
         base_transport: TTransport,
+        self_peer_id: PeerId,
         identity_key: x25519::PrivateKey,
         trusted_peers: Option<Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>>,
         handshake_version: u8,
@@ -296,7 +295,7 @@ where
 
         Self {
             ctxt: Arc::new(UpgradeContext {
-                noise: NoiseUpgrader::new(my_peer_id, identity_key, auth_mode),
+                noise: NoiseUpgrader::new(self_peer_id, identity_key, auth_mode),
                 handshake_version,
                 own_handshake,
             }),
@@ -373,6 +372,7 @@ where
     /// `/dns6/<ipaddr>/tcp/<port>`
     pub fn dial(
         &self,
+        peer_id: PeerId,
         addr: NetworkAddress,
     ) -> io::Result<
         impl Future<Output = io::Result<Connection<NoiseStream<TTransport::Output>>>> + Send + 'static,
@@ -393,10 +393,10 @@ where
         }
 
         // try to connect socket
-        let fut_socket = self.base_transport.dial(base_addr)?;
+        let fut_socket = self.base_transport.dial(peer_id, base_addr)?;
 
         // outbound dial upgrade task
-        let upgrade_fut = upgrade_outbound(self.ctxt.clone(), fut_socket, addr, pubkey);
+        let upgrade_fut = upgrade_outbound(self.ctxt.clone(), fut_socket, addr, peer_id, pubkey);
         let upgrade_fut = timeout_io(TRANSPORT_TIMEOUT, upgrade_fut);
         Ok(upgrade_fut)
     }
@@ -478,8 +478,9 @@ where
     type Listener =
         Pin<Box<dyn Stream<Item = io::Result<(Self::Inbound, NetworkAddress)>> + Send + 'static>>;
 
-    fn dial(&self, addr: NetworkAddress) -> io::Result<Self::Outbound> {
-        self.dial(addr).map(|upgrade_fut| upgrade_fut.boxed())
+    fn dial(&self, peer_id: PeerId, addr: NetworkAddress) -> io::Result<Self::Outbound> {
+        self.dial(peer_id, addr)
+            .map(|upgrade_fut| upgrade_fut.boxed())
     }
 
     fn listen_on(&self, addr: NetworkAddress) -> io::Result<(Self::Listener, NetworkAddress)> {
@@ -584,8 +585,8 @@ mod test {
         );
 
         let listener_transport = LibraNetTransport::new(
-            listener_peer_id,
             base_transport.clone(),
+            listener_peer_id,
             listener_key,
             trusted_peers.clone(),
             HANDSHAKE_VERSION,
@@ -594,8 +595,8 @@ mod test {
         );
 
         let dialer_transport = LibraNetTransport::new(
-            dialer_peer_id,
             base_transport,
+            dialer_peer_id,
             dialer_key,
             trusted_peers.clone(),
             HANDSHAKE_VERSION,
@@ -701,7 +702,7 @@ mod test {
         let dialer_task = async move {
             // dial listener
             let mut conn = dialer_transport
-                .dial(listener_addr.clone())
+                .dial(listener_peer_id, listener_addr.clone())
                 .unwrap()
                 .await
                 .unwrap();
@@ -738,7 +739,7 @@ mod test {
     {
         let (
             mut rt,
-            (_listener_peer_id, listener_transport),
+            (listener_peer_id, listener_transport),
             (dialer_peer_id, dialer_transport),
             trusted_peers,
             _supported_protocols,
@@ -774,7 +775,9 @@ mod test {
         // fail because we are not authenticated.
         let dialer_task = async move {
             // dial listener
-            let fut_upgrade = dialer_transport.dial(listener_addr.clone()).unwrap();
+            let fut_upgrade = dialer_transport
+                .dial(listener_peer_id, listener_addr.clone())
+                .unwrap();
             fut_upgrade
                 .await
                 .expect_err("should fail because listener rejects our unauthed connection");

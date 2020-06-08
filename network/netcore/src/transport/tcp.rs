@@ -10,6 +10,7 @@ use futures::{
     stream::Stream,
 };
 use libra_network_address::{parse_dns_tcp, parse_ip_tcp, IpFilter, NetworkAddress};
+use libra_types::PeerId;
 use std::{
     convert::TryFrom,
     fmt::Debug,
@@ -93,7 +94,7 @@ impl Transport for TcpTransport {
         ))
     }
 
-    fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
+    fn dial(&self, _peer_id: PeerId, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
         let protos = addr.as_slice();
 
         // ensure addr is well formed to save some work before potentially
@@ -275,6 +276,7 @@ mod test {
         io::{AsyncReadExt, AsyncWriteExt},
         stream::StreamExt,
     };
+    use libra_types::PeerId;
     use tokio::runtime::Runtime;
 
     #[tokio::test]
@@ -298,8 +300,8 @@ mod test {
         });
 
         let (listener, addr) = t.listen_on("/ip4/127.0.0.1/tcp/0".parse().unwrap())?;
-
-        let dial = t.dial(addr)?;
+        let peer_id = PeerId::random();
+        let dial = t.dial(peer_id, addr)?;
         let listener = listener.into_future().then(|(maybe_result, _stream)| {
             let (incoming, _addr) = maybe_result.unwrap().unwrap();
             incoming.map(Result::unwrap)
@@ -317,7 +319,8 @@ mod test {
         let result = t.listen_on("/memory/0".parse().unwrap());
         assert!(result.is_err());
 
-        let result = t.dial("/memory/22".parse().unwrap());
+        let peer_id = PeerId::random();
+        let result = t.dial(peer_id, "/memory/22".parse().unwrap());
         assert!(result.is_err());
     }
 

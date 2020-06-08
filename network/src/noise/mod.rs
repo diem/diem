@@ -60,7 +60,7 @@
 //!    server.upgrade_inbound(listener_socket),
 //! ));
 //!
-//! let (mut client_session, _server_peer_id) = client_session?;
+//! let mut client_session = client_session?;
 //! let (mut server_session, _client_peer_id) = server_session?;
 //!
 //! // client -> server
