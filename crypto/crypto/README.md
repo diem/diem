@@ -5,7 +5,7 @@ custom_edit_url: https://github.com/libra/libra/edit/master/crypto/crypto/README
 ---
 # Crypto
 
-The crypto component hosts all the implementations of cryptographic primitives we use in Libra: hashing, signing, and key derivation/generation. The parts of the library usig traits.rs contain the crypto API enforcing type safety, verifiable random functions, EdDSA & MultiEdDSA signatures.
+The crypto component hosts all the implementations of cryptographic primitives we use in Libra: hashing, signing, and key derivation/generation. The parts of the library using traits.rs contains the crypto API enforcing type safety, verifiable random functions, EdDSA & MultiEdDSA signatures.
 
 ## Overview
 
