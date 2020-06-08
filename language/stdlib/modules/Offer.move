@@ -38,40 +38,37 @@ module Offer {
 
   // **************** SPECIFICATIONS ****************
 
-  /*
-  This module defines a resource T that is used as a permissioned trading scheme between accounts.
+  /// # Module specification
+
+  /**
+  This module defines a resource `Offer` that is used as a permissioned trading scheme between accounts.
   It defines two main functions for creating and retrieving a struct offered by some user
-  inside the resource T under the offerer's account.
+  inside the resource `Offer` under the offerer's account.
 
   Currently, the only other module that depends on this module is LibraConfig, where it's used to
   pass a capability to an account that allows it to modify a config.
   */
-
-  /// # Module specification
-
   spec module {
     /// Verify all functions in this module
     pragma verify = true;
     /// Helper function that returns whether or not the `recipient` is an intended
-    /// recipient of the offered struct in the T<Offered> resource at the address `offer_address`
-    define is_offer_recipient<Offered>(offer_addr: address, recipient: address): bool {
-      recipient == global<T<Offered>>(offer_addr).for || recipient == offer_addr
+    /// recipient of the offered struct in the `Offer<Offered>` resource at the address `offer_address`
+    /// Returns true if the recipient is allowed to redeem `Offer<Offered>` at `offer_address`
+    /// and false otherwise.
+    define is_allowed_recipient<Offered>(offer_addr: address, recipient: address): bool {
+      recipient == global<Offer<Offered>>(offer_addr).for || recipient == offer_addr
     }
   }
-
-  // Switch documentation context back to module level.
-  spec module {}
 
   /// ## Creation of Offers
 
   spec schema OnlyCreateCanCreateOffer {
-    /// Only `Self::create` can create an Offer.T under an address.
+    /// Only `Self::create` can create a resource `Offer` under an address.
     ///
-    /// **Informally:** No function can create an offer. If there didn't
-    /// exist an Offer under some `addr`, then it continues not to have one.
-    ensures all(domain<type>(), |ty|
-              all(domain<address>(), |addr|
-                !old(exists<T<ty>>(addr)) ==> !exists<T<ty>>(addr)));
+    /// **Informally:** No function to which this is applied can create an offer.
+    /// If there didn't exist an offer under some `addr`, then it continues
+    /// not to have one.
+    ensures forall ty: type, addr: address where !old(exists<Offer<ty>>(addr)) : !exists<Offer<ty>>(addr);
   }
   spec module {
     /// Apply OnlyCreateCanCreateOffer
@@ -79,10 +76,10 @@ module Offer {
   }
   spec fun create {
     /// Offer a struct to the account under address `for` by
-    /// placing the Offer under the signer's address
-    aborts_if exists<T<Offered>>(Signer::get_address(account));
-    ensures exists<T<Offered>>(Signer::get_address(account));
-    ensures global<T<Offered>>(Signer::get_address(account)) == T<Offered> { offered: offered, for: for };
+    /// placing the offer under the signer's address
+    aborts_if exists<Offer<Offered>>(Signer::get_address(account));
+    ensures exists<Offer<Offered>>(Signer::get_address(account));
+    ensures global<Offer<Offered>>(Signer::get_address(account)) == Offer<Offered> { offered: offered, for: for };
   }
 
   // Switch documentation context back to module level.
@@ -91,39 +88,40 @@ module Offer {
   /// ## Removal of Offers
 
   spec schema OnlyRedeemCanRemoveOffer {
-    /// Only `Self::redeem` can remove an Offer.T.
+    /// Only `Self::redeem` can remove the `Offer` resource from an account.
     ///
-    /// **Informally:** No other function except for `redeem` can remove an Offer from an account
-    ensures all(domain<type>(), |ty|
-              all(domain<address>(), |addr|
-                old(exists<T<ty>>(addr))
-                  ==> (exists<T<ty>>(addr) && old(global<T<ty>>(addr)) == global<T<ty>>(addr))));
+    /// **Informally:** No other function except for `redeem` can remove an offer from an account.
+    ensures forall ty: type, addr: address where old(exists<Offer<ty>>(addr)) :
+              (exists<Offer<ty>>(addr) && global<Offer<ty>>(addr) == old(global<Offer<ty>>(addr)));
   }
   spec module {
-    /// Show that every function except `Self::redeem` can remove an Offer.T from the global store
+    /// Enforce that every function except `Self::redeem` can remove an offer from the global store.
     apply OnlyRedeemCanRemoveOffer to *<Offered>, * except redeem;
   }
   spec fun redeem {
-    /// **Informally:** Redeems an offer (T) under the account at `offer_address`
-    aborts_if !exists<T<Offered>>(offer_address);
-    aborts_if !is_offer_recipient<Offered>(offer_address, Signer::get_address(account));
-    ensures old(exists<T<Offered>>(offer_address)) && !exists<T<Offered>>(offer_address);
-    ensures result == old(global<T<Offered>>(offer_address).offered);
+    /// Aborts if there is no offer under `offer_address` or if the account
+    /// cannot redeem the offer.
+    /// Ensures that the offered struct under `offer_address` is removed is returned.
+    aborts_if !exists<Offer<Offered>>(offer_address);
+    aborts_if !is_allowed_recipient<Offered>(offer_address, Signer::get_address(account));
+    ensures old(exists<Offer<Offered>>(offer_address)) && !exists<Offer<Offered>>(offer_address);
+    ensures result == old(global<Offer<Offered>>(offer_address).offered);
   }
 
   // Switch documentation context back to module level.
   spec module {}
 
   spec fun exists_at {
-    /// Returns whether or not an offer (T) is under the given address `offer_address`
-    ensures result == exists<T<Offered>>(offer_address);
+    /// Returns whether or not an `Offer` resource is under the given address `offer_address`.
+    ensures result == exists<Offer<Offered>>(offer_address);
   }
 
   spec fun address_of {
-    /// Returns the address of the intended recipient of the Offer under
-    /// the `offer_address` if one exists
-    aborts_if !exists<T<Offered>>(offer_address);
-    ensures result == global<T<Offered>>(offer_address).for;
+    /// Aborts is there is no offer resource `Offer` at the `offer_address`.
+    /// Returns the address of the intended recipient of the Offer
+    /// under the `offer_address`.
+    aborts_if !exists<Offer<Offered>>(offer_address);
+    ensures result == global<Offer<Offered>>(offer_address).for;
   }
 }
 
