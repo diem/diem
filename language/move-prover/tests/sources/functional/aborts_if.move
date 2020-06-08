@@ -118,4 +118,62 @@ module TestAbortsIf {
         aborts_if true;
         aborts_if x > 0;
     }
+
+    // -------------------------------
+    // `aborts_if` pragmas
+    // -------------------------------
+
+    fun abort_at_2_or_3(x: u64) {
+        if (x == 2 || x == 3) abort 1;
+    }
+    spec fun abort_at_2_or_3 {
+        // It is ok to specify only one abort condition of we set partial to true.
+        pragma aborts_if_is_partial = true;
+        aborts_if x == 2;
+    }
+
+    fun abort_at_2_or_3_total_incorrect(x: u64) {
+        if (x == 2 || x == 3) abort 1;
+    }
+    spec fun abort_at_2_or_3_total_incorrect {
+        // Counter check that we get an error message without the pragma.
+        // pragma aborts_if_is_partial = false;  // default
+        aborts_if x == 2;
+    }
+
+    fun abort_at_2_or_3_spec_incorrect(x: u64) {
+        if (x == 2 || x == 3) abort 1;
+    }
+    spec fun abort_at_2_or_3_spec_incorrect {
+        // Even with the pragma, wrong aborts_if will be flagged.
+        pragma aborts_if_is_partial = true;
+        aborts_if x == 4;
+    }
+
+    fun abort_at_2_or_3_strict_incorrect(x: u64) {
+        if (x == 2 || x == 3) abort 1;
+    }
+    spec fun abort_at_2_or_3_strict_incorrect {
+        // When the strict mode is enabled, no aborts_if clause means aborts_if false.
+        pragma aborts_if_is_strict = true;
+    }
+
+    // -------------------------------
+    // `succeeds_if`
+    // -------------------------------
+
+    fun succeed(x: u64) {
+        if (x == 2 || x == 3) abort 1;
+    }
+    spec fun succeed {
+        succeeds_if x != 2 && x != 3;
+    }
+
+    fun succeed_incorrect(x: u64) {
+        if (x == 2 || x == 3) abort 1;
+    }
+    spec fun succeed_incorrect {
+        succeeds_if x == 2;
+        succeeds_if x == 4;
+    }
 }

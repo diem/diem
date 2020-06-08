@@ -35,6 +35,7 @@ use crate::{
     cli::{Options, VerificationScope},
     spec_translator::SpecTranslator,
 };
+use spec_lang::env::VERIFY_PRAGMA;
 
 pub struct BoogieTranslator<'env> {
     env: &'env GlobalEnv,
@@ -419,7 +420,7 @@ impl<'env> ModuleTranslator<'env> {
             VerificationScope::All => true,
             VerificationScope::None => false,
         };
-        func_target.is_pragma_true("verify", default)
+        func_target.is_pragma_true(VERIFY_PRAGMA, default)
     }
 
     /// Return a string for a boogie procedure header.

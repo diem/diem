@@ -15,7 +15,7 @@ from a reader.
 - [Pragmas](#pragmas)
 - [Helper Functions](#helper-functions)
 - [AbortsIf Condition](#abortsif-condition)
-- [TerminatesIf Condition](#terminatesif-condition)
+- [SucceedsIf Condition](#succeedsif-condition)
 - [Requires Condition](#requires-condition)
 - [Requires Module Condition](#requires-module-condition)
 - [Ensures Condition](#ensures-condition)
@@ -27,6 +27,7 @@ from a reader.
 - [Schemas](#schemas)
 - [Schema Expressions](#schema-expressions)
 - [Schema Apply Operation](#schema-apply-operation)
+- [Available Pragmas](#available-pragmas)
 
 
 ## Type System
@@ -147,8 +148,12 @@ contexts, as will be discussed when they are introduced.
 
 ## Pragmas
 
-Pragmas are special spec block members which allow to influence verification behavior by specifying a configuration
-option to the prover. The general form of a pragma is:
+Pragmas are special spec block members which allow to influence verification behavior by specifying an option
+to the prover. They should be used in favor of command line configuration options when they influence the
+semantic interpretation of the spec language. This ensures those options are transparent through the source. We aim at
+eliminating as much pragmas as possible, but for now they present a utility for experimentation.
+
+The general form of a pragma is:
 
 ```move
 spec <target> {
@@ -159,7 +164,9 @@ spec <target> {
 The `literal` can be any value as supported by the Spec language (which are the same as the Move language).
 
 There are multiple pragmas which the prover understands. They will be introduced in the context
-where they apply. A general mechanism with pragmas is *inheritance*.
+where they apply, and are [summarized here](#available-pragmas).
+
+A general mechanism with pragmas is *inheritance*.
 A pragma in a module spec block sets a value which applies to all other spec blocks in the module. A pragma
 in a function or struct spec block can override this value for the function or struct. Furthermore, the
 default value of some pragmas can be defined via the prover configuration.
@@ -249,22 +256,20 @@ In order to state that a function never aborts, use `aborts_if false`. One can u
 to change this behavior; this is equivalent to as if an `aborts_if false` has been added to each function which
 does not have an explicit `aborts_if` clause.
 
-> NOTE: the pragmas `aborts_if_is_partial` and `aborts_if_is_strict` are not yet implemented. Current behavior
-> is as they both would be set to their respective default (false).
+## SucceedsIf Condition
 
-## TerminatesIf Condition
+> NOTE: this condition is experimental and might be removed in the future unless we find good indication
+> that we need it.
 
-> NOTE: this conditions is currently not implemented and a proposal by @DavidLDill
-
-The `terminates_if` condition allows to positively express when a function is expected to terminate with no abortion.
+The `succeeds_if` condition allows to positively express when a function is expected to terminate with no abortion.
 In the presence of `pragma aborts_if_is_partial = true` is true, it might help
 to minimize the risk of this model as discussed in the [note](#risk-aborts-if-is-partial) above.
 
-If there are multiple `terminates_if` conditions, they are or-ed into a combined terminates condition. That is,
-each individual `terminates_if` is a condition under which the function should always succeed.
+If there are multiple `succeeds_if` conditions, they are or-ed into a combined terminates condition. That is,
+each individual `succeeds_if` is a condition under which the function should always succeed.
 
 Consider a combined aborts condition `A` (which is `false` if there is no `aborts_if`) and a combined terminates
-condition `T ` (which is false if there is no `terminates_if`). Then abortion of a function is governed by the
+condition `T ` (which is false if there is no `succeeds_if`). Then abortion of a function is governed by the
 following predicate:
 
 ```
@@ -273,9 +278,9 @@ A <==> function_aborts && T ==> !functions_abort    // if aborts_if_is_partial i
 ```
 
 Notice that in the 2nd case, we should expect for a sound specification that `!A ==> T`, so
-termination conditions are in fact redundant if `aborts_if_is_partial = true`.
+termination conditions are in fact redundant if `aborts_if_is_partial = false`.
 
-> Note that mixing `aborts_if` and `terminates_if` conditions can cause unsound (contradicting) specifications,
+> Note that mixing `aborts_if` and `succeeds_if` conditions can cause unsound (contradicting) specifications,
 > as illustrated above, and should be done with care.
 
 
@@ -300,8 +305,6 @@ Notice that in the presence of an `aborts_if` with a negation of this condition
 aborts condition of a function to be or-ed with a requires condition. That is `requires P` is translated to
 `requires P || A` (with `A` the combined aborts condition). For our example,
 `requires global<Counter>(a).value < 255 || global<Counter>(a).value == 255` simplifies to `requires true`.
-
-> The automatic enrichment of `requires` with the aborts condition is not yet implemented.
 
 
 ## Requires Module Condition
@@ -549,3 +552,13 @@ with it. For example, in `apply Schema<T> to *<T>`, those functions which have n
 type argument will be silently excluded because they do not match. On the other hand, until now, this kind
 of mistakes often lead to verification errors, and not to the more dangerous instance of unintended
 verification success.
+
+## Available Pragmas
+
+| Name       | Description |
+|------------|--------------
+| `verify`     | Turns on or off verification.
+| `intrinsic`  | Marks a function to skip the Move implementation and use a prover native implementation. This makes a function behave like a native function even if it not so in Move.
+| `aborts_if_is_partial` | Allows a function to abort [under non-specified conditions](#abortsif-condition).
+| `aborts_if_is_strict`  | Disallows a function to abort even if no conditions are specified.
+| `requires_if_aborts`   | Makes a requires condition mandatory to hold even in cases where the function is specified to abort.

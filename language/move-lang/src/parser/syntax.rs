@@ -1621,9 +1621,8 @@ fn parse_spec_block_member<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlo
         Tok::Invariant => parse_invariant(tokens),
         Tok::Define | Tok::Native => parse_spec_function(tokens),
         Tok::IdentifierValue => match tokens.content() {
-            "assert" | "assume" | "decreases" | "aborts_if" | "ensures" | "requires" => {
-                parse_condition(tokens)
-            }
+            "assert" | "assume" | "decreases" | "aborts_if" | "succeeds_if" | "ensures"
+            | "requires" => parse_condition(tokens),
             "include" => parse_spec_include(tokens),
             "apply" => parse_spec_apply(tokens),
             "pragma" => parse_spec_pragma(tokens),
@@ -1636,8 +1635,8 @@ fn parse_spec_block_member<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlo
         },
         _ => Err(unexpected_token_error(
             tokens,
-            "one of `assert`, `assume`, `decreases`, `aborts_if`, `ensures`, `requires`, \
-             `include`, `apply`, `pragma`, `global`, or a name",
+            "one of `assert`, `assume`, `decreases`, `aborts_if`, `succeeds_if`, \
+             `ensures`, `requires`, `include`, `apply`, `pragma`, `global`, or a name",
         )),
     }
 }
@@ -1652,6 +1651,7 @@ fn parse_condition<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember
         "assume" => SpecConditionKind::Assume,
         "decreases" => SpecConditionKind::Decreases,
         "aborts_if" => SpecConditionKind::AbortsIf,
+        "succeeds_if" => SpecConditionKind::SucceedsIf,
         "ensures" => SpecConditionKind::Ensures,
         "requires" => {
             if tokens.lookahead()? == Tok::Module {

@@ -56,6 +56,53 @@ error:  A postcondition might not hold on this return path.
 
 error:  A postcondition might not hold on this return path.
 
+     ┌── tests/sources/functional/aborts_if.move:150:9 ───
+     │
+ 150 │         aborts_if x == 4;
+     │         ^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/aborts_if.move:144:5: abort_at_2_or_3_spec_incorrect (entry)
+     =     at tests/sources/functional/aborts_if.move:145:13: abort_at_2_or_3_spec_incorrect
+     =         x = <redacted>,
+     =         $t1 = <redacted>
+     =     at tests/sources/functional/aborts_if.move:144:5: abort_at_2_or_3_spec_incorrect (exit)
+
+error: abort not covered by any of the `aborts_if` clauses
+
+     ┌── tests/sources/functional/aborts_if.move:153:5 ───
+     │
+ 153 │ ╭     fun abort_at_2_or_3_strict_incorrect(x: u64) {
+ 154 │ │         if (x == 2 || x == 3) abort 1;
+ 155 │ │     }
+     │ ╰─────^
+     ·
+ 154 │         if (x == 2 || x == 3) abort 1;
+     │             ---------------- abort happened here
+     │
+     =     at tests/sources/functional/aborts_if.move:153:5: abort_at_2_or_3_strict_incorrect (entry)
+     =     at tests/sources/functional/aborts_if.move:154:13: abort_at_2_or_3_strict_incorrect (ABORTED)
+     =         x = <redacted>,
+     =         $t1 = <redacted>
+
+error: abort not covered by any of the `aborts_if` clauses
+
+     ┌── tests/sources/functional/aborts_if.move:135:5 ───
+     │
+ 135 │ ╭     fun abort_at_2_or_3_total_incorrect(x: u64) {
+ 136 │ │         if (x == 2 || x == 3) abort 1;
+ 137 │ │     }
+     │ ╰─────^
+     ·
+ 136 │         if (x == 2 || x == 3) abort 1;
+     │             ---------------- abort happened here
+     │
+     =     at tests/sources/functional/aborts_if.move:135:5: abort_at_2_or_3_total_incorrect (entry)
+     =     at tests/sources/functional/aborts_if.move:136:13: abort_at_2_or_3_total_incorrect (ABORTED)
+     =         x = <redacted>,
+     =         $t1 = <redacted>
+
+error:  A postcondition might not hold on this return path.
+
     ┌── tests/sources/functional/aborts_if.move:90:9 ───
     │
  90 │         aborts_if x == y;
@@ -95,3 +142,18 @@ error:  A postcondition might not hold on this return path.
      =     at tests/sources/functional/aborts_if.move:113:9: multi_abort5_incorrect
      =         x = <redacted>
      =     at tests/sources/functional/aborts_if.move:112:5: multi_abort5_incorrect (exit)
+
+error: abort not covered by any of the `aborts_if` clauses
+
+     ┌── tests/sources/functional/aborts_if.move:176:9 ───
+     │
+ 176 │         succeeds_if x == 2;
+     │         ^^^^^^^^^^^^^^^^^^^
+     ·
+ 173 │         if (x == 2 || x == 3) abort 1;
+     │             ---------------- abort happened here
+     │
+     =     at tests/sources/functional/aborts_if.move:172:5: succeed_incorrect (entry)
+     =     at tests/sources/functional/aborts_if.move:173:13: succeed_incorrect (ABORTED)
+     =         x = <redacted>,
+     =         $t1 = <redacted>

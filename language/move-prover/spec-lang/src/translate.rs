@@ -1628,6 +1628,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             PK::Ensures => Some((Ensures, exp)),
             PK::Requires => Some((Requires, exp)),
             PK::AbortsIf => Some((AbortsIf, exp)),
+            PK::SucceedsIf => Some((SucceedsIf, exp)),
             PK::RequiresModule => Some((RequiresModule, exp)),
             PK::Invariant => Some((Invariant, exp)),
             PK::InvariantModule => Some((InvariantModule, exp)),

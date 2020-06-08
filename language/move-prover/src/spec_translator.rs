@@ -26,7 +26,10 @@ use spec_lang::{
     ast::{Condition, ConditionKind, Exp, LocalVarDecl, Operation, Value},
     code_writer::CodeWriter,
     emit, emitln,
-    env::{GlobalEnv, SpecVarId},
+    env::{
+        GlobalEnv, SpecVarId, ABORTS_IF_IS_PARTIAL_PRAGMA, ABORTS_IF_IS_STRICT_PRAGMA,
+        REQUIRES_IF_ABORTS,
+    },
     symbol::Symbol,
     ty::TypeDisplayContext,
 };
@@ -357,6 +360,9 @@ impl<'env> SpecTranslator<'env> {
         let spec = func_target.get_spec();
         emitln!(self.writer, "requires $ExistsTxnSenderAccount($m, $txn);");
 
+        // Get all aborts_if conditions.
+        let aborts_if = spec.filter_kind(ConditionKind::AbortsIf).collect_vec();
+
         // Generate requires.
         let requires = spec
             .filter(|c| {
@@ -367,20 +373,42 @@ impl<'env> SpecTranslator<'env> {
             })
             .collect_vec();
         if !requires.is_empty() {
+            // Each requires condition is or-ed with the aborts condition (unless pragma
+            // `requires_if_aborts` is true). That is, the requires only needs to hold if the
+            // function does not abort.
             self.translate_seq(requires.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
                 emit!(self.writer, "requires b#$Boolean(");
                 self.translate_exp(&cond.exp);
-                emit!(self.writer, ");")
+                emit!(self.writer, ")");
+                if !func_target.is_pragma_true(REQUIRES_IF_ABORTS, || false) {
+                    for aborts in &aborts_if {
+                        emit!(self.writer, "\n    || b#$Boolean(");
+                        self.translate_exp(&aborts.exp);
+                        emit!(self.writer, ")")
+                    }
+                }
+                emit!(self.writer, ";")
             });
             emitln!(self.writer);
         }
 
         // Generate aborts_if. Logically, if we have abort conditions P1..Pn, we have
         // (P1 || .. || Pn) <==> abort_flag. However, we generate different code to get
-        // better error positions.
-        let aborts_if = spec.filter_kind(ConditionKind::AbortsIf).collect_vec();
-        if !aborts_if.is_empty() {
+        // better error positions. We also need to respect the pragma `aborts_if_is_partial`
+        // which changes the iff above into an implies.
+        let aborts_if_is_partial =
+            func_target.is_pragma_true(ABORTS_IF_IS_PARTIAL_PRAGMA, || false);
+        if aborts_if.is_empty() {
+            if !aborts_if_is_partial
+                && func_target.is_pragma_true(ABORTS_IF_IS_STRICT_PRAGMA, || false)
+            {
+                // No user provided aborts_if and pragma is set for handling this
+                // as s.t. the function must never abort.
+                self.writer.set_location(&func_target.get_loc());
+                emitln!(self.writer, "ensures !$abort_flag;")
+            }
+        } else {
             // Emit `ensures P1 ==> abort_flag; ... ensures PN ==> abort_flag;`. This gives us
             // good error positions which Pi is expected to cause failure but doesn't. (Boogie
             // reports positions only back per entire ensures, not individual sub-expression.)
@@ -391,18 +419,31 @@ impl<'env> SpecTranslator<'env> {
                 emitln!(self.writer, ")) ==> $abort_flag;")
             }
 
-            // Emit `ensures abort_flag => (P1 || .. || Pn)`. If the error
+            // If aborts_if is configured to be total,
+            // emit `ensures abort_flag => (P1 || .. || Pn)`. If the error
             // is reported on this condition, we catch the case where the function aborts but no
             // conditions covers it. We use as a position for the ensures the function itself,
             // because reporting on (non-covering) aborts_if conditions is misleading.
-            self.writer.set_location(&func_target.get_loc());
-            emit!(self.writer, "ensures $abort_flag ==> (");
-            self.translate_seq(aborts_if.iter(), "\n    || ", |c| {
-                emit!(self.writer, "b#$Boolean(old(");
-                self.translate_exp_parenthesised(&c.exp);
-                emit!(self.writer, "))")
-            });
-            emitln!(self.writer, ");");
+            if !aborts_if_is_partial {
+                self.writer.set_location(&func_target.get_loc());
+                emit!(self.writer, "ensures $abort_flag ==> (");
+                self.translate_seq(aborts_if.iter(), "\n    || ", |c| {
+                    emit!(self.writer, "b#$Boolean(old(");
+                    self.translate_exp_parenthesised(&c.exp);
+                    emit!(self.writer, "))")
+                });
+                emitln!(self.writer, ");");
+            }
+        }
+
+        // Generate succeeds_if.
+        // Emits `ensures S1 ==> !abort_flag; ... ensures Sn ==> !abort_flag;`.
+        let succeeds_if = spec.filter_kind(ConditionKind::SucceedsIf).collect_vec();
+        for c in succeeds_if {
+            self.writer.set_location(&c.loc);
+            emit!(self.writer, "ensures b#$Boolean(old(");
+            self.translate_exp(&c.exp);
+            emitln!(self.writer, ")) ==> !$abort_flag;")
         }
 
         // Generate ensures

@@ -52,6 +52,7 @@ pub enum ConditionKind {
     Assume,
     Decreases,
     AbortsIf,
+    SucceedsIf,
     Ensures,
     Requires,
     RequiresModule,
@@ -83,13 +84,19 @@ impl ConditionKind {
     /// Returns true if this condition is allowed on a public function declaration.
     pub fn allowed_on_public_fun_decl(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Requires | RequiresModule | AbortsIf | Ensures)
+        matches!(
+            self,
+            Requires | RequiresModule | AbortsIf | SucceedsIf | Ensures
+        )
     }
 
     /// Returns true if this condition is allowed on a private function declaration.
     pub fn allowed_on_private_fun_decl(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Requires | RequiresModule | AbortsIf | Ensures)
+        matches!(
+            self,
+            Requires | RequiresModule | AbortsIf | SucceedsIf | Ensures
+        )
     }
 
     /// Returns true if this condition is allowed in a function body.
@@ -119,6 +126,7 @@ impl std::fmt::Display for ConditionKind {
             Assume => write!(f, "assume"),
             Decreases => write!(f, "decreases"),
             AbortsIf => write!(f, "aborts_if"),
+            SucceedsIf => write!(f, "succeeds_if"),
             Ensures => write!(f, "ensures"),
             Requires => write!(f, "requires"),
             RequiresModule => write!(f, "requires module"),
