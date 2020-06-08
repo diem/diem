@@ -367,6 +367,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 "[state sync] did not receive ACK for commit notification sent to mempool: {:?}",
                 e
             );
+            counters::COMMIT_TIMEOUT
+                .with_label_values(&["mempool"])
+                .inc();
             msg = "state sync did not receive ACK for commit notification sent to mempool";
         }
 

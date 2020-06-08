@@ -117,3 +117,13 @@ pub static TIMEOUT: Lazy<IntCounter> = Lazy::new(|| {
     )
     .unwrap()
 });
+
+/// Number of timeouts that occur during the commit flow across consensus, state sync, and mempool
+pub static COMMIT_TIMEOUT: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_state_sync_commit_timeout_total",
+        "Number of timeouts that occur during the commit flow across consensus, state sync, and mempool",
+        &["component"] // component with which state sync timed out with: consensus, mempool
+    )
+        .unwrap()
+});
