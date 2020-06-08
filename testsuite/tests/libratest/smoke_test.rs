@@ -10,7 +10,7 @@ use libra_crypto::{
     ed25519::Ed25519PrivateKey, hash::CryptoHash, traits::ValidCryptoMaterialStringExt, PrivateKey,
     SigningKey, Uniform,
 };
-use libra_global_constants::{CONSENSUS_KEY, OPERATOR_KEY};
+use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
 use libra_json_rpc::views::{ScriptView, TransactionDataView};
 use libra_key_manager::libra_interface::{JsonRpcLibraInterface, LibraInterface};
 use libra_logger::prelude::*;
@@ -1306,6 +1306,14 @@ fn test_key_manager_consensus_rotation() {
         .operator_keypair
         .unwrap()
         .take_private()
+        .unwrap();
+    let operator_account =
+        libra_types::account_address::from_public_key(&operator_private.public_key());
+    storage
+        .set(
+            OPERATOR_ACCOUNT,
+            Value::String(operator_account.to_string()),
+        )
         .unwrap();
     storage
         .set(OPERATOR_KEY, Value::Ed25519PrivateKey(operator_private))

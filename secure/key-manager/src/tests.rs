@@ -375,15 +375,22 @@ fn setup_secure_storage(
 
     let mut a_keypair = test_config.operator_keypair.unwrap();
     let a_prikey = Value::Ed25519PrivateKey(a_keypair.take_private().unwrap());
-
     sec_storage.set(OPERATOR_KEY, a_prikey).unwrap();
+
+    let operator_account = libra_types::account_address::from_public_key(&a_keypair.public_key());
+    sec_storage
+        .set(
+            OPERATOR_ACCOUNT,
+            Value::String(operator_account.to_string()),
+        )
+        .unwrap();
 
     let mut c_keypair = test_config.consensus_keypair.unwrap();
     let c_prikey = c_keypair.take_private().unwrap();
     let c_prikey0 = Value::Ed25519PrivateKey(c_prikey.clone());
     let c_prikey1 = Value::Ed25519PrivateKey(c_prikey);
-
     sec_storage.set(crate::CONSENSUS_KEY, c_prikey0).unwrap();
+
     // Ugly hack but we need this until we support retrieving a policy from within storage and that
     // currently is not easy, since we would need to convert from Vault -> Libra policy.
     let previous = format!("{}_previous", crate::CONSENSUS_KEY);
