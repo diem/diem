@@ -74,9 +74,11 @@ impl OnchainDiscoveryBuilder {
         }
     }
 
-    /// Starts the provided onchain_discovery_service and onchain_discovery.
-    pub fn start(self, executor: &Handle) {
+    /// Starts the provided onchain_discovery_service and onchain_discovery.  Should be called at
+    /// most once.
+    pub fn start(mut self, executor: &Handle) {
         assert!(!self.started);
+        self.started = true;
         executor.spawn(self.onchain_discovery_service.start());
         executor.spawn(self.onchain_discovery.start());
     }
