@@ -500,6 +500,18 @@
 <span id="500">500</span>
 <span id="501">501</span>
 <span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -716,6 +728,18 @@
         <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">text</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="ident">text</span>.<span class="ident">len</span>();
         <span class="kw">let</span> (<span class="ident">tok</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">find_token</span>(<span class="self">self</span>.<span class="ident">file</span>, <span class="ident">text</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">tok</span>)
+    }
+
+    <span class="comment">// Look ahead to the next two tokens after the current one and return them without advancing</span>
+    <span class="comment">// the state of the lexer.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lookahead2</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Tok</span>, <span class="ident">Tok</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">text</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">text</span>[<span class="self">self</span>.<span class="ident">cur_end</span>..].<span class="ident">trim_start</span>();
+        <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">text</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="ident">text</span>.<span class="ident">len</span>();
+        <span class="kw">let</span> (<span class="ident">first</span>, <span class="ident">length</span>) <span class="op">=</span> <span class="ident">find_token</span>(<span class="self">self</span>.<span class="ident">file</span>, <span class="ident">text</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">text2</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">text</span>[<span class="ident">offset</span> <span class="op">+</span> <span class="ident">length</span>..].<span class="ident">trim_start</span>();
+        <span class="kw">let</span> <span class="ident">offset2</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">text</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="ident">text2</span>.<span class="ident">len</span>();
+        <span class="kw">let</span> (<span class="ident">second</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">find_token</span>(<span class="self">self</span>.<span class="ident">file</span>, <span class="ident">text2</span>, <span class="ident">offset2</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>((<span class="ident">first</span>, <span class="ident">second</span>))
     }
 
     <span class="comment">// Matches the doc comments after the last token (or the beginning of the file) to the position</span>

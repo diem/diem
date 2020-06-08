@@ -1642,9 +1642,6 @@
 <span id="1642">1642</span>
 <span id="1643">1643</span>
 <span id="1644">1644</span>
-<span id="1645">1645</span>
-<span id="1646">1646</span>
-<span id="1647">1647</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2809,10 +2806,7 @@
         <span class="ident">PE</span>::<span class="ident">Loop</span>(<span class="ident">ploop</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EE</span>::<span class="ident">Loop</span>(<span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">ploop</span>)),
         <span class="ident">PE</span>::<span class="ident">Block</span>(<span class="ident">seq</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EE</span>::<span class="ident">Block</span>(<span class="ident">sequence</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">seq</span>)),
         <span class="ident">PE</span>::<span class="ident">Lambda</span>(<span class="ident">pbs</span>, <span class="ident">pe</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">context</span>.<span class="ident">require_spec_context</span>(
-                <span class="ident">loc</span>,
-                <span class="string">&quot;`|_| _` lambda expression only allowed in specifications&quot;</span>,
-            ) {
+            <span class="kw">if</span> <span class="op">!</span><span class="ident">context</span>.<span class="ident">require_spec_context</span>(<span class="ident">loc</span>, <span class="string">&quot;expression only allowed in specifications&quot;</span>) {
                 <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">context</span>.<span class="ident">has_errors</span>());
                 <span class="ident">EE</span>::<span class="ident">UnresolvedError</span>
             } <span class="kw">else</span> {
