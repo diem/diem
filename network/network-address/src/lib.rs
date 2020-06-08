@@ -773,8 +773,8 @@ fn parse_libranet_protos(protos: &[Protocol]) -> Option<&[Protocol]> {
     // <or> parse_dns_tcp
     // <or> cfg!(test) parse_memory
 
-    let transport_suffix = None
-        .or_else(|| parse_ip_tcp(protos).map(|x| x.1))
+    let transport_suffix = parse_ip_tcp(protos)
+        .map(|x| x.1)
         .or_else(|| parse_dns_tcp(protos).map(|x| x.1))
         .or_else(|| {
             if cfg!(test) {

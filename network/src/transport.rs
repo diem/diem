@@ -357,10 +357,10 @@ where
 
         // parse out the base transport protocol(s), which we will just ignore
         // and leave for the base_transport to actually parse and dial.
-        let (base_transport_protos, base_transport_suffix) = None
-            // TODO(philiphayes): protos[..X] is kinda hacky. `Transport` trait
-            // should handle this.
-            .or_else(|| parse_ip_tcp(protos).map(|x| (&protos[..2], x.1)))
+        // TODO(philiphayes): protos[..X] is kinda hacky. `Transport` trait
+        // should handle this.
+        let (base_transport_protos, base_transport_suffix) = parse_ip_tcp(protos)
+            .map(|x| (&protos[..2], x.1))
             .or_else(|| parse_dns_tcp(protos).map(|x| (&protos[..2], x.1)))
             .or_else(|| parse_memory(protos).map(|x| (&protos[..1], x.1)))
             .ok_or_else(|| {
