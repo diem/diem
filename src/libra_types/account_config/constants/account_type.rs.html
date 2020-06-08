@@ -109,6 +109,8 @@
 <span id="109">109</span>
 <span id="110">110</span>
 <span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -120,11 +122,12 @@
 };
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
 
-<span class="kw">static</span> <span class="ident">ACCOUNT_TYPE_MODULE_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>
-    <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;AccountType&quot;</span>).<span class="ident">unwrap</span>());
-<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">ACCOUNT_TYPE_MODULE</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">ModuleId</span><span class="op">&gt;</span> <span class="op">=</span>
-    <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ModuleId</span>::<span class="ident">new</span>(<span class="ident">CORE_CODE_ADDRESS</span>, <span class="ident">ACCOUNT_TYPE_MODULE_NAME</span>.<span class="ident">clone</span>()));
-<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">ACCOUNT_TYPE_STRUCT_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;T&quot;</span>).<span class="ident">unwrap</span>());
+<span class="kw">static</span> <span class="ident">ACCOUNT_ROLE_MODULE_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>
+    <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;LibraAccount&quot;</span>).<span class="ident">unwrap</span>());
+<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">ACCOUNT_ROLE_MODULE</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">ModuleId</span><span class="op">&gt;</span> <span class="op">=</span>
+    <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ModuleId</span>::<span class="ident">new</span>(<span class="ident">CORE_CODE_ADDRESS</span>, <span class="ident">ACCOUNT_ROLE_MODULE_NAME</span>.<span class="ident">clone</span>()));
+<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">ACCOUNT_ROLE_STRUCT_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>
+    <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;Role&quot;</span>).<span class="ident">unwrap</span>());
 
 <span class="kw">static</span> <span class="ident">VASP_TYPE_MODULE_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;VASP&quot;</span>).<span class="ident">unwrap</span>());
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">VASP_TYPE_MODULE</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">ModuleId</span><span class="op">&gt;</span> <span class="op">=</span>
@@ -132,25 +135,26 @@
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">ROOT_VASP_STRUCT_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>
     <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;RootVASP&quot;</span>).<span class="ident">unwrap</span>());
 
-<span class="kw">static</span> <span class="ident">EMPTY_ACCOUNT_TYPE_MODULE_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>
+<span class="kw">static</span> <span class="ident">EMPTY_ACCOUNT_ROLE_MODULE_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>
     <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;Empty&quot;</span>).<span class="ident">unwrap</span>());
-<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">EMPTY_ACCOUNT_TYPE_MODULE</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">ModuleId</span><span class="op">&gt;</span> <span class="op">=</span>
-    <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ModuleId</span>::<span class="ident">new</span>(<span class="ident">CORE_CODE_ADDRESS</span>, <span class="ident">EMPTY_ACCOUNT_TYPE_MODULE_NAME</span>.<span class="ident">clone</span>()));
+<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">EMPTY_ACCOUNT_ROLE_MODULE</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">ModuleId</span><span class="op">&gt;</span> <span class="op">=</span>
+    <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ModuleId</span>::<span class="ident">new</span>(<span class="ident">CORE_CODE_ADDRESS</span>, <span class="ident">EMPTY_ACCOUNT_ROLE_MODULE_NAME</span>.<span class="ident">clone</span>()));
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">EMPTY_ACCOUNT_STRUCT_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>
-    <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;T&quot;</span>).<span class="ident">unwrap</span>());
+    <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;Empty&quot;</span>).<span class="ident">unwrap</span>());
 
 <span class="kw">static</span> <span class="ident">UNHOSTED_TYPE_MODULE_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>
     <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;Unhosted&quot;</span>).<span class="ident">unwrap</span>());
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">UNHOSTED_TYPE_MODULE</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">ModuleId</span><span class="op">&gt;</span> <span class="op">=</span>
     <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ModuleId</span>::<span class="ident">new</span>(<span class="ident">CORE_CODE_ADDRESS</span>, <span class="ident">UNHOSTED_TYPE_MODULE_NAME</span>.<span class="ident">clone</span>()));
-<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">UNHOSTED_STRUCT_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;T&quot;</span>).<span class="ident">unwrap</span>());
+<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">UNHOSTED_STRUCT_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>
+    <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;Unhosted&quot;</span>).<span class="ident">unwrap</span>());
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">account_type_module_name</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">IdentStr</span> {
-    <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">ACCOUNT_TYPE_MODULE_NAME</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">account_role_module_name</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">IdentStr</span> {
+    <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">ACCOUNT_ROLE_MODULE_NAME</span>
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">account_type_struct_name</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">IdentStr</span> {
-    <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">ACCOUNT_TYPE_STRUCT_NAME</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">account_role_struct_name</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">IdentStr</span> {
+    <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">ACCOUNT_ROLE_STRUCT_NAME</span>
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">vasp_type_module_name</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">IdentStr</span> {
@@ -161,11 +165,11 @@
     <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">ROOT_VASP_STRUCT_NAME</span>
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_account_type_module_name</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">IdentStr</span> {
-    <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">EMPTY_ACCOUNT_TYPE_MODULE_NAME</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_account_role_module_name</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">IdentStr</span> {
+    <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">EMPTY_ACCOUNT_ROLE_MODULE_NAME</span>
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_account_type_struct_name</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">IdentStr</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_account_role_struct_name</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">IdentStr</span> {
     <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">EMPTY_ACCOUNT_STRUCT_NAME</span>
 }
 
@@ -177,22 +181,22 @@
     <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">UNHOSTED_STRUCT_NAME</span>
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_account_type_struct_tag</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">StructTag</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_account_role_struct_tag</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">StructTag</span> {
     <span class="kw">let</span> <span class="ident">inner_struct_tag</span> <span class="op">=</span> <span class="ident">StructTag</span> {
         <span class="ident">address</span>: <span class="ident">CORE_CODE_ADDRESS</span>,
-        <span class="ident">module</span>: <span class="ident">empty_account_type_module_name</span>().<span class="ident">to_owned</span>(),
+        <span class="ident">module</span>: <span class="ident">empty_account_role_module_name</span>().<span class="ident">to_owned</span>(),
         <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[],
-        <span class="ident">name</span>: <span class="ident">empty_account_type_struct_name</span>().<span class="ident">to_owned</span>(),
+        <span class="ident">name</span>: <span class="ident">empty_account_role_struct_name</span>().<span class="ident">to_owned</span>(),
     };
     <span class="ident">StructTag</span> {
         <span class="ident">address</span>: <span class="ident">CORE_CODE_ADDRESS</span>,
-        <span class="ident">module</span>: <span class="ident">account_type_module_name</span>().<span class="ident">to_owned</span>(),
+        <span class="ident">module</span>: <span class="ident">account_role_module_name</span>().<span class="ident">to_owned</span>(),
         <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">TypeTag</span>::<span class="ident">Struct</span>(<span class="ident">inner_struct_tag</span>)],
-        <span class="ident">name</span>: <span class="ident">account_type_struct_name</span>().<span class="ident">to_owned</span>(),
+        <span class="ident">name</span>: <span class="ident">account_role_struct_name</span>().<span class="ident">to_owned</span>(),
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">vasp_account_type_struct_tag</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">StructTag</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">vasp_account_role_struct_tag</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">StructTag</span> {
     <span class="kw">let</span> <span class="ident">inner_struct_tag</span> <span class="op">=</span> <span class="ident">StructTag</span> {
         <span class="ident">address</span>: <span class="ident">CORE_CODE_ADDRESS</span>,
         <span class="ident">module</span>: <span class="ident">vasp_type_module_name</span>().<span class="ident">to_owned</span>(),
@@ -201,13 +205,13 @@
     };
     <span class="ident">StructTag</span> {
         <span class="ident">address</span>: <span class="ident">CORE_CODE_ADDRESS</span>,
-        <span class="ident">module</span>: <span class="ident">account_type_module_name</span>().<span class="ident">to_owned</span>(),
+        <span class="ident">module</span>: <span class="ident">account_role_module_name</span>().<span class="ident">to_owned</span>(),
         <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">TypeTag</span>::<span class="ident">Struct</span>(<span class="ident">inner_struct_tag</span>)],
-        <span class="ident">name</span>: <span class="ident">account_type_struct_name</span>().<span class="ident">to_owned</span>(),
+        <span class="ident">name</span>: <span class="ident">account_role_struct_name</span>().<span class="ident">to_owned</span>(),
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">unhosted_account_type_struct_tag</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">StructTag</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">unhosted_account_role_struct_tag</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">StructTag</span> {
     <span class="kw">let</span> <span class="ident">inner_struct_tag</span> <span class="op">=</span> <span class="ident">StructTag</span> {
         <span class="ident">address</span>: <span class="ident">CORE_CODE_ADDRESS</span>,
         <span class="ident">module</span>: <span class="ident">unhosted_type_module_name</span>().<span class="ident">to_owned</span>(),
@@ -216,9 +220,9 @@
     };
     <span class="ident">StructTag</span> {
         <span class="ident">address</span>: <span class="ident">CORE_CODE_ADDRESS</span>,
-        <span class="ident">module</span>: <span class="ident">account_type_module_name</span>().<span class="ident">to_owned</span>(),
+        <span class="ident">module</span>: <span class="ident">account_role_module_name</span>().<span class="ident">to_owned</span>(),
         <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">TypeTag</span>::<span class="ident">Struct</span>(<span class="ident">inner_struct_tag</span>)],
-        <span class="ident">name</span>: <span class="ident">account_type_struct_name</span>().<span class="ident">to_owned</span>(),
+        <span class="ident">name</span>: <span class="ident">account_role_struct_name</span>().<span class="ident">to_owned</span>(),
     }
 }
 </pre></div>

@@ -341,11 +341,11 @@
         <span class="ident">AccessPath</span>::<span class="ident">resource_access_vec</span>(<span class="kw-2">&amp;</span><span class="ident">StructTag</span> {
             <span class="ident">address</span>: <span class="ident">CORE_CODE_ADDRESS</span>,
             <span class="ident">module</span>: <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;LibraConfig&quot;</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">name</span>: <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;T&quot;</span>).<span class="ident">unwrap</span>(),
+            <span class="ident">name</span>: <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;LibraConfig&quot;</span>).<span class="ident">unwrap</span>(),
             <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">TypeTag</span>::<span class="ident">Struct</span>(<span class="ident">StructTag</span> {
                 <span class="ident">address</span>: <span class="ident">CORE_CODE_ADDRESS</span>,
-                <span class="ident">module</span>: <span class="ident">config_name</span>,
-                <span class="ident">name</span>: <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;T&quot;</span>).<span class="ident">unwrap</span>(),
+                <span class="ident">module</span>: <span class="ident">config_name</span>.<span class="ident">clone</span>(),
+                <span class="ident">name</span>: <span class="ident">config_name</span>,
                 <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[],
             })],
         }),

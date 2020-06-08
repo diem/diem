@@ -15,15 +15,11 @@
 <span id="15">15</span>
 <span id="16">16</span>
 <span id="17">17</span>
-<span id="18">18</span>
-<span id="19">19</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">account_config</span>::<span class="ident">constants</span>::{
-    <span class="ident">coin_struct_name</span>, <span class="ident">from_currency_code_string</span>, <span class="ident">CORE_CODE_ADDRESS</span>,
-};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">account_config</span>::<span class="ident">constants</span>::{<span class="ident">from_currency_code_string</span>, <span class="ident">CORE_CODE_ADDRESS</span>};
 <span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">language_storage</span>::{<span class="ident">StructTag</span>, <span class="ident">TypeTag</span>};
 
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">COIN1_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;Coin1&quot;</span>;
@@ -33,7 +29,7 @@
     <span class="ident">TypeTag</span>::<span class="ident">Struct</span>(<span class="ident">StructTag</span> {
         <span class="ident">address</span>: <span class="ident">CORE_CODE_ADDRESS</span>,
         <span class="ident">module</span>: <span class="ident">from_currency_code_string</span>(<span class="ident">COIN1_NAME</span>).<span class="ident">unwrap</span>(),
-        <span class="ident">name</span>: <span class="ident">coin_struct_name</span>().<span class="ident">to_owned</span>(),
+        <span class="ident">name</span>: <span class="ident">from_currency_code_string</span>(<span class="ident">COIN1_NAME</span>).<span class="ident">unwrap</span>(),
         <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[],
     })
 }

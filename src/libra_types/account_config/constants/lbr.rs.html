@@ -22,15 +22,11 @@
 <span id="22">22</span>
 <span id="23">23</span>
 <span id="24">24</span>
-<span id="25">25</span>
-<span id="26">26</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">account_config</span>::<span class="ident">constants</span>::{
-    <span class="ident">coin_struct_name</span>, <span class="ident">from_currency_code_string</span>, <span class="ident">CORE_CODE_ADDRESS</span>,
-};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">account_config</span>::<span class="ident">constants</span>::{<span class="ident">from_currency_code_string</span>, <span class="ident">CORE_CODE_ADDRESS</span>};
 <span class="kw">use</span> <span class="ident">move_core_types</span>::{
     <span class="ident">identifier</span>::<span class="ident">Identifier</span>,
     <span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">StructTag</span>, <span class="ident">TypeTag</span>},
@@ -41,13 +37,13 @@
 
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">LBR_MODULE</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">ModuleId</span><span class="op">&gt;</span> <span class="op">=</span>
     <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ModuleId</span>::<span class="ident">new</span>(<span class="ident">CORE_CODE_ADDRESS</span>, <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="ident">LBR_NAME</span>).<span class="ident">unwrap</span>()));
-<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">LBR_STRUCT_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;T&quot;</span>).<span class="ident">unwrap</span>());
+<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">LBR_STRUCT_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="ident">LBR_NAME</span>).<span class="ident">unwrap</span>());
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lbr_type_tag</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TypeTag</span> {
     <span class="ident">TypeTag</span>::<span class="ident">Struct</span>(<span class="ident">StructTag</span> {
         <span class="ident">address</span>: <span class="ident">CORE_CODE_ADDRESS</span>,
         <span class="ident">module</span>: <span class="ident">from_currency_code_string</span>(<span class="ident">LBR_NAME</span>).<span class="ident">unwrap</span>(),
-        <span class="ident">name</span>: <span class="ident">coin_struct_name</span>().<span class="ident">to_owned</span>(),
+        <span class="ident">name</span>: <span class="ident">from_currency_code_string</span>(<span class="ident">LBR_NAME</span>).<span class="ident">unwrap</span>(),
         <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[],
     })
 }

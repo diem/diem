@@ -31,11 +31,6 @@
 <span id="31">31</span>
 <span id="32">32</span>
 <span id="33">33</span>
-<span id="34">34</span>
-<span id="35">35</span>
-<span id="36">36</span>
-<span id="37">37</span>
-<span id="38">38</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -43,31 +38,26 @@
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">account_config</span>::<span class="ident">constants</span>::<span class="ident">CORE_CODE_ADDRESS</span>;
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">move_core_types</span>::{
-    <span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>},
+    <span class="ident">identifier</span>::<span class="ident">Identifier</span>,
     <span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">StructTag</span>, <span class="ident">TypeTag</span>},
 };
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
 
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">LIBRA_MODULE_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;Libra&quot;</span>;
 <span class="kw">static</span> <span class="ident">COIN_MODULE_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;Libra&quot;</span>).<span class="ident">unwrap</span>());
-<span class="kw">static</span> <span class="ident">COIN_STRUCT_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;T&quot;</span>).<span class="ident">unwrap</span>());
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">COIN_MODULE</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">ModuleId</span><span class="op">&gt;</span> <span class="op">=</span>
     <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ModuleId</span>::<span class="ident">new</span>(<span class="ident">CORE_CODE_ADDRESS</span>, <span class="ident">COIN_MODULE_NAME</span>.<span class="ident">clone</span>()));
-
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">coin_struct_name</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">IdentStr</span> {
-    <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">COIN_STRUCT_NAME</span>
-}
 
 <span class="comment">// TODO: This imposes a few implied restrictions:</span>
 <span class="comment">//   1) The currency module must be published under the core code address.</span>
 <span class="comment">//   2) The module name must be the same as the gas specifier.</span>
-<span class="comment">//   3) The struct name must be &quot;T&quot;</span>
+<span class="comment">//   3) The struct name must be the same as the module name</span>
 <span class="comment">// We need to consider whether we want to switch to a more or fully qualified name.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">type_tag_for_currency_code</span>(<span class="ident">currency_code</span>: <span class="ident">Identifier</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TypeTag</span> {
     <span class="ident">TypeTag</span>::<span class="ident">Struct</span>(<span class="ident">StructTag</span> {
         <span class="ident">address</span>: <span class="ident">CORE_CODE_ADDRESS</span>,
-        <span class="ident">module</span>: <span class="ident">currency_code</span>,
-        <span class="ident">name</span>: <span class="ident">coin_struct_name</span>().<span class="ident">to_owned</span>(),
+        <span class="ident">module</span>: <span class="ident">currency_code</span>.<span class="ident">clone</span>(),
+        <span class="ident">name</span>: <span class="ident">currency_code</span>,
         <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[],
     })
 }

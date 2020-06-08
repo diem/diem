@@ -261,7 +261,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">common</span>::<span class="ident">strip</span>, <span class="ident">errors</span>::<span class="kw-2">*</span>, <span class="ident">genesis_accounts</span>::<span class="ident">make_genesis_accounts</span>};
 <span class="kw">use</span> <span class="ident">language_e2e_tests</span>::{
-    <span class="ident">account</span>::{<span class="ident">Account</span>, <span class="ident">AccountData</span>, <span class="ident">AccountTypeSpecifier</span>},
+    <span class="ident">account</span>::{<span class="ident">Account</span>, <span class="ident">AccountData</span>, <span class="ident">AccountRoleSpecifier</span>},
     <span class="ident">keygen</span>::<span class="ident">KeyGen</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">generator</span>;
@@ -326,7 +326,7 @@
     <span class="doccomment">/// Special role this account has in the system (if any)</span>
     <span class="kw">pub</span> <span class="ident">role</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Role</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Specifier on what type of account this is. Default is VASP.</span>
-    <span class="kw">pub</span> <span class="ident">account_type_specifier</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AccountTypeSpecifier</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">account_type_specifier</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AccountRoleSpecifier</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">FromStr</span> <span class="kw">for</span> <span class="ident">Role</span> {
@@ -385,7 +385,7 @@
             <span class="comment">// These two are mutually exclusive, so we can double-use the third position</span>
             <span class="kw">let</span> <span class="ident">account_type_specifier</span> <span class="op">=</span> <span class="ident">v</span>
                 .<span class="ident">get</span>(<span class="number">3</span>)
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">AccountTypeSpecifier</span><span class="op">&gt;</span>().<span class="ident">ok</span>());
+                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">AccountRoleSpecifier</span><span class="op">&gt;</span>().<span class="ident">ok</span>());
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">Entry</span>::<span class="ident">AccountDefinition</span>(<span class="ident">AccountDefinition</span> {
                 <span class="ident">name</span>: <span class="ident">v</span>[<span class="number">0</span>].<span class="ident">to_string</span>(),
                 <span class="ident">balance</span>,
@@ -489,7 +489,7 @@
                 <span class="ident">DEFAULT_BALANCE</span>.<span class="ident">currency_code</span>.<span class="ident">clone</span>(),
                 <span class="comment">/* sequence_number */</span>
                 <span class="number">0</span>,
-                <span class="comment">/* is_empty_account_type */</span> <span class="ident">AccountTypeSpecifier</span>::<span class="ident">default</span>(),
+                <span class="comment">/* is_empty_account_type */</span> <span class="ident">AccountRoleSpecifier</span>::<span class="ident">default</span>(),
             ));
         }
         <span class="prelude-val">Ok</span>(<span class="ident">Config</span> {
