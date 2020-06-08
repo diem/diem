@@ -401,39 +401,11 @@ impl ClusterSwarm for ClusterSwarmKube {
         self.run_jobs(vec![job_spec], back_off_limit).await
     }
 
-    async fn validator_instances(&self) -> Vec<Instance> {
-        self.node_map
-            .lock()
-            .await
-            .values()
-            .filter(|instance| {
-                if let Some(Validator(_)) = instance.instance_config() {
-                    true
-                } else {
-                    false
-                }
-            })
-            .cloned()
-            .collect()
-    }
-
-    async fn fullnode_instances(&self) -> Vec<Instance> {
-        self.node_map
-            .lock()
-            .await
-            .values()
-            .filter(|instance| {
-                if let Some(Fullnode(_)) = instance.instance_config() {
-                    true
-                } else {
-                    false
-                }
-            })
-            .cloned()
-            .collect()
-    }
-
-    async fn upsert_node(&self, instance_config: InstanceConfig, delete_data: bool) -> Result<()> {
+    async fn upsert_node(
+        &self,
+        instance_config: InstanceConfig,
+        delete_data: bool,
+    ) -> Result<Instance> {
         let pod_name = match &instance_config {
             Validator(validator_config) => format!("val-{}", validator_config.index),
             Fullnode(fullnode_config) => format!(
@@ -522,19 +494,22 @@ impl ClusterSwarm for ClusterSwarmKube {
             }
             Err(e) => bail!("Failed to create service : {}", e),
         }
+        let (node_name, pod_ip) = self.get_pod_node_and_ip(&pod_name).await?;
+        let ac_port = DEFAULT_JSON_RPC_PORT as u32;
+        let instance = Instance::new_k8s(
+            pod_name,
+            pod_ip,
+            ac_port,
+            Some(node_name.clone()),
+            instance_config.clone(),
+        );
         if node_name.is_empty() {
-            let (node_name, pod_ip) = self.get_pod_node_and_ip(&pod_name).await?;
-            let ac_port = DEFAULT_JSON_RPC_PORT as u32;
-            let instance = Instance::new_k8s(
-                pod_name,
-                pod_ip,
-                ac_port,
-                Some(node_name),
-                instance_config.clone(),
-            );
-            self.node_map.lock().await.insert(instance_config, instance);
+            self.node_map
+                .lock()
+                .await
+                .insert(instance_config, instance.clone());
         }
-        Ok(())
+        Ok(instance)
     }
 
     async fn delete_node(&self, instance_config: InstanceConfig) -> Result<()> {

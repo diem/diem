@@ -4,7 +4,6 @@
 #![forbid(unsafe_code)]
 
 use crate::instance::Instance;
-use anyhow::Result;
 use config_builder::ValidatorConfig;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
@@ -55,16 +54,13 @@ impl Cluster {
         KeyPair::from(mint_key)
     }
 
-    pub fn new_k8s(
-        validator_instances: Vec<Instance>,
-        fullnode_instances: Vec<Instance>,
-    ) -> Result<Self> {
-        Ok(Self {
+    pub fn new(validator_instances: Vec<Instance>, fullnode_instances: Vec<Instance>) -> Self {
+        Self {
             validator_instances,
             fullnode_instances,
             prometheus_ip: None,
             mint_key_pair: Self::get_mint_key_pair(),
-        })
+        }
     }
 
     pub fn random_validator_instance(&self) -> Instance {

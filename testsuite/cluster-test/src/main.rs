@@ -450,7 +450,7 @@ impl ClusterUtil {
             )
             .await
             .unwrap_or_else(|_| panic!("{} scaling failed", asg_name));
-            cluster_swarm
+            let (validators, fullnodes) = cluster_swarm
                 .create_validator_and_fullnode_set(
                     args.k8s_num_validators,
                     args.k8s_fullnodes_per_validator,
@@ -460,11 +460,7 @@ impl ClusterUtil {
                 .await
                 .expect("Failed to create_validator_and_fullnode_set");
             info!("Deployment complete");
-            let cluster = Cluster::new_k8s(
-                cluster_swarm.validator_instances().await,
-                cluster_swarm.fullnode_instances().await,
-            )
-            .unwrap();
+            let cluster = Cluster::new(validators, fullnodes);
 
             let cluster = if args.peers.is_empty() {
                 cluster
