@@ -24,7 +24,7 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey,
 };
-use libra_global_constants::{CONSENSUS_KEY, OPERATOR_KEY};
+use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
 use libra_logger::{error, info};
 use libra_secure_storage::Storage;
 use libra_secure_time::TimeService;
@@ -33,7 +33,7 @@ use libra_types::{
     account_config::LBR_NAME,
     transaction::{RawTransaction, Script, Transaction, TransactionArgument},
 };
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 use thiserror::Error;
 
 pub mod counters;
@@ -69,8 +69,8 @@ pub enum Error {
         "The libra_timestamp value on-chain isn't increasing. Last value: {0}, Current value: {0}"
     )]
     LivenessError(u64, u64),
-    #[error("Internal storage error: {0}")]
-    SecureStorageError(#[from] libra_secure_storage::Error),
+    #[error("Unable to retrieve the operator account address. Storage error: {0}")]
+    MissingAccountAddress(#[from] libra_secure_storage::Error),
     #[error("ValidatorInfo not found in ValidatorConfig: {0}")]
     ValidatorInfoNotFound(AccountAddress),
     #[error("Unknown error: {0}")]
@@ -85,7 +85,6 @@ impl From<anyhow::Error> for Error {
 }
 
 pub struct KeyManager<LI, S, T> {
-    account: AccountAddress,
     libra: LI,
     storage: S,
     time_service: T,
@@ -102,7 +101,6 @@ where
     T: TimeService,
 {
     pub fn new(
-        account: AccountAddress,
         libra: LI,
         storage: S,
         time_service: T,
@@ -111,7 +109,6 @@ where
         txn_expiration_secs: u64,
     ) -> Self {
         Self {
-            account,
             libra,
             storage,
             time_service,
@@ -158,7 +155,8 @@ where
 
     pub fn compare_storage_to_config(&self) -> Result<(), Error> {
         let storage_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
-        let validator_config = self.libra.retrieve_validator_config(self.account)?;
+        let operator_account = self.get_operator_account()?;
+        let validator_config = self.libra.retrieve_validator_config(operator_account)?;
         let config_key = validator_config.consensus_public_key;
 
         if storage_key == config_key {
@@ -168,9 +166,10 @@ where
     }
 
     pub fn compare_info_to_config(&self) -> Result<(), Error> {
-        let validator_info = self.libra.retrieve_validator_info(self.account)?;
+        let operator_account = self.get_operator_account()?;
+        let validator_info = self.libra.retrieve_validator_info(operator_account)?;
         let info_key = validator_info.consensus_public_key();
-        let validator_config = self.libra.retrieve_validator_config(self.account)?;
+        let validator_config = self.libra.retrieve_validator_config(operator_account)?;
         let config_key = validator_config.consensus_public_key;
 
         if &config_key == info_key {
@@ -211,11 +210,17 @@ where
         &self,
         new_key: Ed25519PublicKey,
     ) -> Result<Ed25519PublicKey, Error> {
+        let operator_account = self.get_operator_account()?;
         let account_prikey = self.storage.export_private_key(OPERATOR_KEY)?;
-        let seq_id = self.libra.retrieve_sequence_number(self.account)?;
+        let seq_id = self.libra.retrieve_sequence_number(operator_account)?;
         let expiration = Duration::from_secs(self.time_service.now() + self.txn_expiration_secs);
-        let txn =
-            build_rotation_transaction(self.account, seq_id, &account_prikey, &new_key, expiration);
+        let txn = build_rotation_transaction(
+            operator_account,
+            seq_id,
+            &account_prikey,
+            &new_key,
+            expiration,
+        );
         self.libra.submit_transaction(txn)?;
 
         info!("Submitted the rotation transaction to the blockchain.");
@@ -286,6 +291,19 @@ where
                 COUNTERS.no_actions_required.inc();
                 Ok(())
             }
+        }
+    }
+
+    fn get_operator_account(&self) -> Result<AccountAddress, Error> {
+        match self.storage.get(OPERATOR_ACCOUNT) {
+            Ok(response) => match response.value.string() {
+                Ok(account_address) => match AccountAddress::from_str(&account_address) {
+                    Ok(account_address) => Ok(account_address),
+                    Err(e) => Err(Error::UnknownError(e.to_string())),
+                },
+                Err(e) => Err(Error::MissingAccountAddress(e)),
+            },
+            Err(e) => Err(Error::MissingAccountAddress(e)),
         }
     }
 }

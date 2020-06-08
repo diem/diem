@@ -1287,7 +1287,6 @@ fn test_key_manager_consensus_rotation() {
     key_manager_config.json_rpc_endpoint = json_rpc_endpoint.clone();
     key_manager_config.rotation_period_secs = 10;
     key_manager_config.sleep_period_secs = 10;
-    key_manager_config.validator_account = node_config.validator_network.clone().unwrap().peer_id();
     let mut on_disk_storage_config = OnDiskStorageConfig::default();
     on_disk_storage_config.path =
         node_config_path.with_file_name(on_disk_storage_config.path.clone());

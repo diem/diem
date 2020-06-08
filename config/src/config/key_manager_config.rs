@@ -3,7 +3,6 @@
 
 use crate::config::{LoggerConfig, PersistableConfig, SecureBackend};
 use anyhow::Result;
-use libra_types::account_address::AccountAddress;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -22,8 +21,6 @@ pub struct KeyManagerConfig {
     pub txn_expiration_secs: u64,
 
     pub json_rpc_endpoint: String,
-    pub validator_account: AccountAddress,
-
     pub logger: LoggerConfig,
     pub secure_backend: SecureBackend,
 }
@@ -37,7 +34,6 @@ impl Default for KeyManagerConfig {
             secure_backend: SecureBackend::InMemoryStorage,
             sleep_period_secs: DEFAULT_SLEEP_PERIOD_SECS,
             txn_expiration_secs: DEFAULT_TXN_EXPIRATION_SECS,
-            validator_account: AccountAddress::default(),
         }
     }
 }
