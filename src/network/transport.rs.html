@@ -1297,10 +1297,10 @@
 
         <span class="comment">// parse out the base transport protocol(s), which we will just ignore</span>
         <span class="comment">// and leave for the base_transport to actually parse and dial.</span>
-        <span class="kw">let</span> (<span class="ident">base_transport_protos</span>, <span class="ident">base_transport_suffix</span>) <span class="op">=</span> <span class="prelude-val">None</span>
-            <span class="comment">// TODO(philiphayes): protos[..X] is kinda hacky. `Transport` trait</span>
-            <span class="comment">// should handle this.</span>
-            .<span class="ident">or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">parse_ip_tcp</span>(<span class="ident">protos</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> (<span class="kw-2">&amp;</span><span class="ident">protos</span>[..<span class="number">2</span>], <span class="ident">x</span>.<span class="number">1</span>)))
+        <span class="comment">// TODO(philiphayes): protos[..X] is kinda hacky. `Transport` trait</span>
+        <span class="comment">// should handle this.</span>
+        <span class="kw">let</span> (<span class="ident">base_transport_protos</span>, <span class="ident">base_transport_suffix</span>) <span class="op">=</span> <span class="ident">parse_ip_tcp</span>(<span class="ident">protos</span>)
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> (<span class="kw-2">&amp;</span><span class="ident">protos</span>[..<span class="number">2</span>], <span class="ident">x</span>.<span class="number">1</span>))
             .<span class="ident">or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">parse_dns_tcp</span>(<span class="ident">protos</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> (<span class="kw-2">&amp;</span><span class="ident">protos</span>[..<span class="number">2</span>], <span class="ident">x</span>.<span class="number">1</span>)))
             .<span class="ident">or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">parse_memory</span>(<span class="ident">protos</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> (<span class="kw-2">&amp;</span><span class="ident">protos</span>[..<span class="number">1</span>], <span class="ident">x</span>.<span class="number">1</span>)))
             .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {

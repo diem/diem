@@ -273,6 +273,87 @@
 <span id="273">273</span>
 <span id="274">274</span>
 <span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -285,16 +366,17 @@
     <span class="ident">ready</span>,
     <span class="ident">stream</span>::<span class="ident">Stream</span>,
 };
-<span class="kw">use</span> <span class="ident">libra_network_address</span>::{<span class="ident">parse_dns_tcp</span>, <span class="ident">parse_ip_tcp</span>, <span class="ident">NetworkAddress</span>, <span class="ident">Protocol</span>};
+<span class="kw">use</span> <span class="ident">libra_network_address</span>::{<span class="ident">parse_dns_tcp</span>, <span class="ident">parse_ip_tcp</span>, <span class="ident">IpFilter</span>, <span class="ident">NetworkAddress</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">convert</span>::<span class="ident">TryFrom</span>,
     <span class="ident">fmt</span>::<span class="ident">Debug</span>,
     <span class="ident">io</span>,
+    <span class="ident">net</span>::<span class="ident">SocketAddr</span>,
     <span class="ident">pin</span>::<span class="ident">Pin</span>,
     <span class="ident">task</span>::{<span class="ident">Context</span>, <span class="ident">Poll</span>},
     <span class="ident">time</span>::<span class="ident">Duration</span>,
 };
-<span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">net</span>::{<span class="ident">TcpListener</span>, <span class="ident">TcpStream</span>};
+<span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">net</span>::{<span class="ident">lookup_host</span>, <span class="ident">TcpListener</span>, <span class="ident">TcpStream</span>};
 
 <span class="doccomment">/// Transport to build TCP connections</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Default</span>)]</span>
@@ -369,20 +451,81 @@
     }
 
     <span class="kw">fn</span> <span class="ident">dial</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Outbound</span>, <span class="self">Self</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> (<span class="ident">addr_string</span>, <span class="ident">_addr_suffix</span>) <span class="op">=</span>
-            <span class="ident">parse_addr_and_port</span>(<span class="ident">addr</span>.<span class="ident">as_slice</span>()).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">invalid_addr_error</span>(<span class="kw-2">&amp;</span><span class="ident">addr</span>))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">protos</span> <span class="op">=</span> <span class="ident">addr</span>.<span class="ident">as_slice</span>();
+
+        <span class="comment">// ensure addr is well formed to save some work before potentially</span>
+        <span class="comment">// spawning a dial task that will fail anyway.</span>
         <span class="comment">// TODO(philiphayes): base tcp transport should not allow trailing protocols</span>
-        <span class="comment">// TODO(philiphayes): use `tokio::net::lookup_host()` then filter the results</span>
-        <span class="comment">// so e.g. `Protocol::Dns4` only returns `SocketAddrV4`s and `Protocol::Dns6`</span>
-        <span class="comment">// only returns `SocketAddrV6`.</span>
+        <span class="ident">parse_ip_tcp</span>(<span class="ident">protos</span>)
+            .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
+            .<span class="ident">or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">parse_dns_tcp</span>(<span class="ident">protos</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ()))
+            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">invalid_addr_error</span>(<span class="kw-2">&amp;</span><span class="ident">addr</span>))<span class="question-mark">?</span>;
+
         <span class="kw">let</span> <span class="ident">f</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TcpStream</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span>
-            <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="ident">TcpStream</span>::<span class="ident">connect</span>(<span class="ident">addr_string</span>));
+            <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="ident">resolve_and_connect</span>(<span class="ident">addr</span>));
 
         <span class="prelude-val">Ok</span>(<span class="ident">TcpOutbound</span> {
             <span class="ident">inner</span>: <span class="ident">f</span>,
             <span class="ident">config</span>: <span class="self">self</span>.<span class="ident">clone</span>(),
         })
     }
+}
+
+<span class="doccomment">/// Try to lookup the dns name, then filter addrs according to the `IpFilter`.</span>
+<span class="kw">fn</span> <span class="ident">resolve_with_filter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(
+    <span class="ident">ip_filter</span>: <span class="ident">IpFilter</span>,
+    <span class="ident">dns_name</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>,
+    <span class="ident">port</span>: <span class="ident">u16</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">SocketAddr</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span> {
+    <span class="kw">async</span> <span class="kw">move</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">lookup_host</span>((<span class="ident">dns_name</span>, <span class="ident">port</span>))
+            .<span class="kw">await</span><span class="question-mark">?</span>
+            .<span class="ident">filter</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">socketaddr</span><span class="op">|</span> <span class="ident">ip_filter</span>.<span class="ident">matches</span>(<span class="ident">socketaddr</span>.<span class="ident">ip</span>())))
+    }
+}
+
+<span class="doccomment">/// Note: we need to take ownership of this `NetworkAddress` (instead of just</span>
+<span class="doccomment">/// borrowing the `&amp;[Protocol]` slice) so this future can be `Send + &#39;static`.</span>
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">resolve_and_connect</span>(<span class="ident">addr</span>: <span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TcpStream</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">protos</span> <span class="op">=</span> <span class="ident">addr</span>.<span class="ident">as_slice</span>();
+
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(((<span class="ident">ipaddr</span>, <span class="ident">port</span>), <span class="ident">_addr_suffix</span>)) <span class="op">=</span> <span class="ident">parse_ip_tcp</span>(<span class="ident">protos</span>) {
+        <span class="comment">// this is an /ip4 or /ip6 address, so we can just connect without any</span>
+        <span class="comment">// extra resolving or filtering.</span>
+        <span class="ident">TcpStream</span>::<span class="ident">connect</span>((<span class="ident">ipaddr</span>, <span class="ident">port</span>)).<span class="kw">await</span>
+    } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(((<span class="ident">ip_filter</span>, <span class="ident">dns_name</span>, <span class="ident">port</span>), <span class="ident">_addr_suffix</span>)) <span class="op">=</span> <span class="ident">parse_dns_tcp</span>(<span class="ident">protos</span>) {
+        <span class="comment">// resolve dns name and filter</span>
+        <span class="kw">let</span> <span class="ident">socketaddr_iter</span> <span class="op">=</span> <span class="ident">resolve_with_filter</span>(<span class="ident">ip_filter</span>, <span class="ident">dns_name</span>.<span class="ident">as_ref</span>(), <span class="ident">port</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">last_err</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+
+        <span class="comment">// try to connect until the first succeeds</span>
+        <span class="kw">for</span> <span class="ident">socketaddr</span> <span class="kw">in</span> <span class="ident">socketaddr_iter</span> {
+            <span class="kw">match</span> <span class="ident">TcpStream</span>::<span class="ident">connect</span>(<span class="ident">socketaddr</span>).<span class="kw">await</span> {
+                <span class="prelude-val">Ok</span>(<span class="ident">stream</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">stream</span>),
+                <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">last_err</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">err</span>),
+            }
+        }
+
+        <span class="prelude-val">Err</span>(<span class="ident">last_err</span>.<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+            <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(
+                <span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">InvalidInput</span>,
+                <span class="macro">format</span><span class="macro">!</span>(
+                    <span class="string">&quot;could not resolve dns name to any address: name: {}, ip filter: {:?}&quot;</span>,
+                    <span class="ident">dns_name</span>.<span class="ident">as_ref</span>(),
+                    <span class="ident">ip_filter</span>,
+                ),
+            )
+        }))
+    } <span class="kw">else</span> {
+        <span class="prelude-val">Err</span>(<span class="ident">invalid_addr_error</span>(<span class="kw-2">&amp;</span><span class="ident">addr</span>))
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">invalid_addr_error</span>(<span class="ident">addr</span>: <span class="kw-2">&amp;</span><span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span> {
+    <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(
+        <span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">InvalidInput</span>,
+        <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Invalid NetworkAddress: &#39;{}&#39;&quot;</span>, <span class="ident">addr</span>),
+    )
 }
 
 <span class="attribute">#[<span class="ident">must_use</span> <span class="op">=</span> <span class="string">&quot;streams do nothing unless polled&quot;</span>]</span>
@@ -480,30 +623,16 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">invalid_addr_error</span>(<span class="ident">addr</span>: <span class="kw-2">&amp;</span><span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span> {
-    <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(
-        <span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">InvalidInput</span>,
-        <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Invalid NetworkAddress: &#39;{}&#39;&quot;</span>, <span class="ident">addr</span>),
-    )
-}
-
-<span class="kw">fn</span> <span class="ident">parse_addr_and_port</span>(<span class="ident">protos</span>: <span class="kw-2">&amp;</span>[<span class="ident">Protocol</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="kw-2">&amp;</span>[<span class="ident">Protocol</span>])<span class="op">&gt;</span> {
-    <span class="ident">parse_ip_tcp</span>(<span class="ident">protos</span>)
-        .<span class="ident">map</span>(<span class="op">|</span>((<span class="ident">ip</span>, <span class="ident">port</span>), <span class="ident">suffix</span>)<span class="op">|</span> (<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="ident">ip</span>, <span class="ident">port</span>), <span class="ident">suffix</span>))
-        .<span class="ident">or_else</span>(<span class="op">|</span><span class="op">|</span> {
-            <span class="ident">parse_dns_tcp</span>(<span class="ident">protos</span>)
-                .<span class="ident">map</span>(<span class="op">|</span>((<span class="ident">dnsname</span>, <span class="ident">port</span>), <span class="ident">suffix</span>)<span class="op">|</span> (<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="ident">dnsname</span>, <span class="ident">port</span>), <span class="ident">suffix</span>))
-        })
-}
-
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">test</span> {
-    <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">transport</span>::{<span class="ident">tcp</span>::<span class="ident">TcpTransport</span>, <span class="ident">ConnectionOrigin</span>, <span class="ident">Transport</span>, <span class="ident">TransportExt</span>};
+    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">transport</span>::{<span class="ident">ConnectionOrigin</span>, <span class="ident">Transport</span>, <span class="ident">TransportExt</span>};
     <span class="kw">use</span> <span class="ident">futures</span>::{
         <span class="ident">future</span>::{<span class="ident">join</span>, <span class="ident">FutureExt</span>},
         <span class="ident">io</span>::{<span class="ident">AsyncReadExt</span>, <span class="ident">AsyncWriteExt</span>},
         <span class="ident">stream</span>::<span class="ident">StreamExt</span>,
     };
+    <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Runtime</span>;
 
     <span class="attribute">#[<span class="ident">tokio</span>::<span class="ident">test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">simple_listen_and_dial</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), ::<span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
@@ -547,6 +676,39 @@
 
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">dial</span>(<span class="string">&quot;/memory/22&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">result</span>.<span class="ident">is_err</span>());
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_resolve_with_filter</span>() {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rt</span> <span class="op">=</span> <span class="ident">Runtime</span>::<span class="ident">new</span>().<span class="ident">unwrap</span>();
+
+        <span class="comment">// note: we only lookup &quot;localhost&quot;, which is not really a DNS name, but</span>
+        <span class="comment">// should always resolve to something and keep this test from being flaky.</span>
+
+        <span class="kw">let</span> <span class="ident">f</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
+            <span class="comment">// this should always return something</span>
+            <span class="kw">let</span> <span class="ident">addrs</span> <span class="op">=</span> <span class="ident">resolve_with_filter</span>(<span class="ident">IpFilter</span>::<span class="ident">Any</span>, <span class="string">&quot;localhost&quot;</span>, <span class="number">1234</span>)
+                .<span class="kw">await</span>
+                .<span class="ident">unwrap</span>()
+                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+            <span class="macro">assert</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">addrs</span>.<span class="ident">is_empty</span>(), <span class="string">&quot;addrs: {:?}&quot;</span>, <span class="ident">addrs</span>);
+
+            <span class="comment">// we should only get Ip4 addrs</span>
+            <span class="kw">let</span> <span class="ident">addrs</span> <span class="op">=</span> <span class="ident">resolve_with_filter</span>(<span class="ident">IpFilter</span>::<span class="ident">OnlyIp4</span>, <span class="string">&quot;localhost&quot;</span>, <span class="number">1234</span>)
+                .<span class="kw">await</span>
+                .<span class="ident">unwrap</span>()
+                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+            <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">addrs</span>.<span class="ident">iter</span>().<span class="ident">all</span>(<span class="ident">SocketAddr</span>::<span class="ident">is_ipv4</span>), <span class="string">&quot;addrs: {:?}&quot;</span>, <span class="ident">addrs</span>);
+
+            <span class="comment">// we should only get Ip6 addrs</span>
+            <span class="kw">let</span> <span class="ident">addrs</span> <span class="op">=</span> <span class="ident">resolve_with_filter</span>(<span class="ident">IpFilter</span>::<span class="ident">OnlyIp6</span>, <span class="string">&quot;localhost&quot;</span>, <span class="number">1234</span>)
+                .<span class="kw">await</span>
+                .<span class="ident">unwrap</span>()
+                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+            <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">addrs</span>.<span class="ident">iter</span>().<span class="ident">all</span>(<span class="ident">SocketAddr</span>::<span class="ident">is_ipv6</span>), <span class="string">&quot;addrs: {:?}&quot;</span>, <span class="ident">addrs</span>);
+        };
+
+        <span class="ident">rt</span>.<span class="ident">block_on</span>(<span class="ident">f</span>);
     }
 }
 </pre></div>
