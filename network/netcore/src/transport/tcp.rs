@@ -99,7 +99,8 @@ impl Transport for TcpTransport {
         // ensure addr is well formed to save some work before potentially
         // spawning a dial task that will fail anyway.
         // TODO(philiphayes): base tcp transport should not allow trailing protocols
-        None.or_else(|| parse_ip_tcp(protos).map(|_| ()))
+        parse_ip_tcp(protos)
+            .map(|_| ())
             .or_else(|| parse_dns_tcp(protos).map(|_| ()))
             .ok_or_else(|| invalid_addr_error(&addr))?;
 
