@@ -49,9 +49,9 @@ module LibraTimestamp {
         !exists<CurrentTimeMicroseconds>(0xA550C18) || now_microseconds() == 0
     }
 
-    // **************** SPECIFICATIONS ****************
+    /**
+    **************** SPECIFICATIONS ****************
 
-    /*
     This module keeps a global wall clock that stores the current Unix time in microseconds.
     It interacts with the other modules in the following ways:
         * Genesis: to initialize the timestamp
@@ -67,6 +67,7 @@ module LibraTimestamp {
     spec module {
         /// Verify all functions in this module.
         pragma verify = true;
+
         /// The association root address.
         define root_address(): address {
             0xA550C18
@@ -75,18 +76,15 @@ module LibraTimestamp {
         define null_address(): address {
             0x0
         }
-        // True if the association root account has a CurrentTimeMicroseconds.
+        /// True if the association root account has a CurrentTimeMicroseconds.
         define root_ctm_initialized(): bool {
             exists<CurrentTimeMicroseconds>(root_address())
         }
-        // Auxiliary function to get the association's Unix time in microseconds.
+        /// Auxiliary function to get the association's Unix time in microseconds.
         define assoc_unix_time(): u64 {
             global<CurrentTimeMicroseconds>(root_address()).microseconds
         }
     }
-
-    // Switch documentation context back to module level.
-    spec module {}
 
     /// ## Management of the global wall clock time
 
