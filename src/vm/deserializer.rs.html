@@ -1356,32 +1356,6 @@
 <span id="1356">1356</span>
 <span id="1357">1357</span>
 <span id="1358">1358</span>
-<span id="1359">1359</span>
-<span id="1360">1360</span>
-<span id="1361">1361</span>
-<span id="1362">1362</span>
-<span id="1363">1363</span>
-<span id="1364">1364</span>
-<span id="1365">1365</span>
-<span id="1366">1366</span>
-<span id="1367">1367</span>
-<span id="1368">1368</span>
-<span id="1369">1369</span>
-<span id="1370">1370</span>
-<span id="1371">1371</span>
-<span id="1372">1372</span>
-<span id="1373">1373</span>
-<span id="1374">1374</span>
-<span id="1375">1375</span>
-<span id="1376">1376</span>
-<span id="1377">1377</span>
-<span id="1378">1378</span>
-<span id="1379">1379</span>
-<span id="1380">1380</span>
-<span id="1381">1381</span>
-<span id="1382">1382</span>
-<span id="1383">1383</span>
-<span id="1384">1384</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1455,32 +1429,50 @@
 
 <span class="doccomment">/// Module internal function that manages deserialization of transactions.</span>
 <span class="kw">fn</span> <span class="ident">deserialize_compiled_script</span>(<span class="ident">binary</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">CompiledScriptMut</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">binary_len</span> <span class="op">=</span> <span class="ident">binary</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cursor</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="ident">binary</span>);
-    <span class="kw">let</span> <span class="ident">table_count</span> <span class="op">=</span> <span class="ident">check_binary</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
+    <span class="ident">check_binary</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">table_count</span> <span class="op">=</span> <span class="ident">read_uleb_u8_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tables</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Table</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
     <span class="ident">read_tables</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>, <span class="ident">table_count</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tables</span>)<span class="question-mark">?</span>;
-    <span class="ident">check_tables</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tables</span>, <span class="ident">cursor</span>.<span class="ident">position</span>(), <span class="ident">binary_len</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">content_len</span> <span class="op">=</span> <span class="ident">read_uleb_u32_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
+    <span class="ident">check_tables</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tables</span>, <span class="ident">content_len</span>)<span class="question-mark">?</span>;
 
-    <span class="ident">build_compiled_script</span>(<span class="ident">binary</span>, <span class="kw-2">&amp;</span><span class="ident">tables</span>)
+    <span class="kw">let</span> <span class="ident">table_contents</span> <span class="op">=</span> <span class="ident">read_table_contents</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>, <span class="ident">content_len</span> <span class="kw">as</span> <span class="ident">usize</span>)<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">script</span> <span class="op">=</span> <span class="ident">CompiledScriptMut</span>::<span class="ident">default</span>();
+    <span class="ident">script</span>.<span class="ident">type_parameters</span> <span class="op">=</span> <span class="ident">load_kinds</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
+    <span class="ident">script</span>.<span class="ident">parameters</span> <span class="op">=</span> <span class="ident">SignatureIndex</span>::<span class="ident">new</span>(<span class="ident">read_uleb_u16_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>);
+    <span class="ident">script</span>.<span class="ident">code</span> <span class="op">=</span> <span class="ident">load_code_unit</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
+
+    <span class="ident">build_compiled_script</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">script</span>, <span class="kw-2">&amp;</span><span class="ident">table_contents</span>, <span class="kw-2">&amp;</span><span class="ident">tables</span>)<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(<span class="ident">script</span>)
 }
 
 <span class="doccomment">/// Module internal function that manages deserialization of modules.</span>
 <span class="kw">fn</span> <span class="ident">deserialize_compiled_module</span>(<span class="ident">binary</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">CompiledModuleMut</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">binary_len</span> <span class="op">=</span> <span class="ident">binary</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cursor</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="ident">binary</span>);
-    <span class="kw">let</span> <span class="ident">table_count</span> <span class="op">=</span> <span class="ident">check_binary</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
+    <span class="ident">check_binary</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">table_count</span> <span class="op">=</span> <span class="ident">read_uleb_u8_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tables</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Table</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
     <span class="ident">read_tables</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>, <span class="ident">table_count</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tables</span>)<span class="question-mark">?</span>;
-    <span class="ident">check_tables</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tables</span>, <span class="ident">cursor</span>.<span class="ident">position</span>(), <span class="ident">binary_len</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">content_len</span> <span class="op">=</span> <span class="ident">read_uleb_u32_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
+    <span class="ident">check_tables</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tables</span>, <span class="ident">content_len</span>)<span class="question-mark">?</span>;
 
-    <span class="ident">build_compiled_module</span>(<span class="ident">binary</span>, <span class="kw-2">&amp;</span><span class="ident">tables</span>)
+    <span class="kw">let</span> <span class="ident">table_contents</span> <span class="op">=</span> <span class="ident">read_table_contents</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>, <span class="ident">content_len</span> <span class="kw">as</span> <span class="ident">usize</span>)<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">module</span> <span class="op">=</span> <span class="ident">CompiledModuleMut</span>::<span class="ident">default</span>();
+    <span class="ident">module</span>.<span class="ident">self_module_handle_idx</span> <span class="op">=</span> <span class="ident">ModuleHandleIndex</span>::<span class="ident">new</span>(<span class="ident">read_uleb_u16_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>);
+
+    <span class="ident">build_compiled_module</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">module</span>, <span class="kw-2">&amp;</span><span class="ident">table_contents</span>, <span class="kw-2">&amp;</span><span class="ident">tables</span>)<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(<span class="ident">module</span>)
 }
 
 <span class="doccomment">/// Verifies the correctness of the &quot;static&quot; part of the binary&#39;s header.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Returns the offset where the count of tables in the binary.</span>
-<span class="kw">fn</span> <span class="ident">check_binary</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">check_binary</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">magic</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="ident">BinaryConstants</span>::<span class="ident">LIBRA_MAGIC_SIZE</span>];
     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">count</span>) <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">magic</span>) {
         <span class="kw">if</span> <span class="ident">count</span> <span class="op">!</span><span class="op">=</span> <span class="ident">BinaryConstants</span>::<span class="ident">LIBRA_MAGIC_SIZE</span> <span class="op">|</span><span class="op">|</span> <span class="ident">magic</span> <span class="op">!</span><span class="op">=</span> <span class="ident">BinaryConstants</span>::<span class="ident">LIBRA_MAGIC</span> {
@@ -1511,9 +1503,7 @@
             <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>).<span class="ident">with_message</span>(<span class="string">&quot;Bad binary header&quot;</span>.<span class="ident">to_string</span>())
         );
     }
-    <span class="ident">cursor</span>.<span class="ident">read_u8</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-        <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>).<span class="ident">with_message</span>(<span class="string">&quot;Bad binary header&quot;</span>.<span class="ident">to_string</span>())
-    })
+    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Reads all the table headers.</span>
@@ -1533,44 +1523,59 @@
 <span class="doccomment">/// Reads a table from a slice at a given offset.</span>
 <span class="doccomment">/// If a table is not recognized an error is returned.</span>
 <span class="kw">fn</span> <span class="ident">read_table</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">Table</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">kind</span>) <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>() {
-        <span class="kw">let</span> <span class="ident">table_offset</span> <span class="op">=</span> <span class="ident">read_u32_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">count</span> <span class="op">=</span> <span class="ident">read_u32_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">Table</span>::<span class="ident">new</span>(<span class="ident">TableType</span>::<span class="ident">from_u8</span>(<span class="ident">kind</span>)<span class="question-mark">?</span>, <span class="ident">table_offset</span>, <span class="ident">count</span>))
-    } <span class="kw">else</span> {
-        <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>).<span class="ident">with_message</span>(<span class="string">&quot;Error reading table&quot;</span>.<span class="ident">to_string</span>()))
+    <span class="kw">let</span> <span class="ident">kind</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>() {
+        <span class="prelude-val">Ok</span>(<span class="ident">kind</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">kind</span>,
+        <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>)
+                .<span class="ident">with_message</span>(<span class="string">&quot;Error reading table&quot;</span>.<span class="ident">to_string</span>()))
+        }
+    };
+    <span class="kw">let</span> <span class="ident">table_offset</span> <span class="op">=</span> <span class="ident">read_uleb_u32_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">count</span> <span class="op">=</span> <span class="ident">read_uleb_u32_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(<span class="ident">Table</span>::<span class="ident">new</span>(<span class="ident">TableType</span>::<span class="ident">from_u8</span>(<span class="ident">kind</span>)<span class="question-mark">?</span>, <span class="ident">table_offset</span>, <span class="ident">count</span>))
+}
+
+<span class="kw">fn</span> <span class="ident">read_table_contents</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>, <span class="ident">n</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bytes</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+    <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">n</span> {
+        <span class="kw">match</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>() {
+            <span class="prelude-val">Ok</span>(<span class="ident">b</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">bytes</span>.<span class="ident">push</span>(<span class="ident">b</span>),
+            <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>)
+                    .<span class="ident">with_message</span>(<span class="string">&quot;Error reading table contents&quot;</span>.<span class="ident">to_string</span>()))
+            }
+        }
     }
+    <span class="prelude-val">Ok</span>(<span class="ident">bytes</span>)
 }
 
 <span class="doccomment">/// Verify correctness of tables.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Tables cannot have duplicates, must cover the entire blob and must be disjoint.</span>
-<span class="kw">fn</span> <span class="ident">check_tables</span>(<span class="ident">tables</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Table</span><span class="op">&gt;</span>, <span class="ident">end_tables</span>: <span class="ident">u64</span>, <span class="ident">length</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">check_tables</span>(<span class="ident">tables</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Table</span><span class="op">&gt;</span>, <span class="ident">content_length</span>: <span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="comment">// there is no real reason to pass a mutable reference but we are sorting next line</span>
     <span class="ident">tables</span>.<span class="ident">sort_by</span>(<span class="op">|</span><span class="ident">t1</span>, <span class="ident">t2</span><span class="op">|</span> <span class="ident">t1</span>.<span class="ident">offset</span>.<span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="ident">t2</span>.<span class="ident">offset</span>));
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">current_offset</span> <span class="op">=</span> <span class="ident">end_tables</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">current_offset</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">0</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">table_types</span> <span class="op">=</span> <span class="ident">HashSet</span>::<span class="ident">new</span>();
     <span class="kw">for</span> <span class="ident">table</span> <span class="kw">in</span> <span class="ident">tables</span> {
-        <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">u64</span>::<span class="ident">from</span>(<span class="ident">table</span>.<span class="ident">offset</span>);
-        <span class="kw">if</span> <span class="ident">offset</span> <span class="op">!</span><span class="op">=</span> <span class="ident">current_offset</span> {
+        <span class="kw">if</span> <span class="ident">table</span>.<span class="ident">offset</span> <span class="op">!</span><span class="op">=</span> <span class="ident">current_offset</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_HEADER_TABLE</span>));
         }
         <span class="kw">if</span> <span class="ident">table</span>.<span class="ident">count</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_HEADER_TABLE</span>));
         }
-        <span class="kw">let</span> <span class="ident">count</span> <span class="op">=</span> <span class="ident">u64</span>::<span class="ident">from</span>(<span class="ident">table</span>.<span class="ident">count</span>);
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">checked_offset</span>) <span class="op">=</span> <span class="ident">current_offset</span>.<span class="ident">checked_add</span>(<span class="ident">count</span>) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">checked_offset</span>) <span class="op">=</span> <span class="ident">current_offset</span>.<span class="ident">checked_add</span>(<span class="ident">table</span>.<span class="ident">count</span>) {
             <span class="ident">current_offset</span> <span class="op">=</span> <span class="ident">checked_offset</span>;
         }
-        <span class="kw">if</span> <span class="ident">current_offset</span> <span class="op">&gt;</span> <span class="ident">length</span> {
+        <span class="kw">if</span> <span class="ident">current_offset</span> <span class="op">&gt;</span> <span class="ident">content_length</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_HEADER_TABLE</span>));
         }
         <span class="kw">if</span> <span class="op">!</span><span class="ident">table_types</span>.<span class="ident">insert</span>(<span class="ident">table</span>.<span class="ident">kind</span>) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">DUPLICATE_TABLE</span>));
         }
     }
-    <span class="kw">if</span> <span class="ident">current_offset</span> <span class="op">!</span><span class="op">=</span> <span class="ident">length</span> {
+    <span class="kw">if</span> <span class="ident">current_offset</span> <span class="op">!</span><span class="op">=</span> <span class="ident">content_length</span> {
         <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_HEADER_TABLE</span>));
     }
     <span class="prelude-val">Ok</span>(())
@@ -1660,19 +1665,25 @@
 }
 
 <span class="doccomment">/// Builds and returns a `CompiledScriptMut`.</span>
-<span class="kw">fn</span> <span class="ident">build_compiled_script</span>(<span class="ident">binary</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">tables</span>: <span class="kw-2">&amp;</span>[<span class="ident">Table</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">CompiledScriptMut</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">script</span> <span class="op">=</span> <span class="ident">CompiledScriptMut</span>::<span class="ident">default</span>();
-    <span class="ident">build_common_tables</span>(<span class="ident">binary</span>, <span class="ident">tables</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">script</span>)<span class="question-mark">?</span>;
-    <span class="ident">build_script_tables</span>(<span class="ident">binary</span>, <span class="ident">tables</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">script</span>)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(<span class="ident">script</span>)
+<span class="kw">fn</span> <span class="ident">build_compiled_script</span>(
+    <span class="ident">script</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CompiledScriptMut</span>,
+    <span class="ident">binary</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+    <span class="ident">tables</span>: <span class="kw-2">&amp;</span>[<span class="ident">Table</span>],
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="ident">build_common_tables</span>(<span class="ident">binary</span>, <span class="ident">tables</span>, <span class="ident">script</span>)<span class="question-mark">?</span>;
+    <span class="ident">build_script_tables</span>(<span class="ident">binary</span>, <span class="ident">tables</span>, <span class="ident">script</span>)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Builds and returns a `CompiledModuleMut`.</span>
-<span class="kw">fn</span> <span class="ident">build_compiled_module</span>(<span class="ident">binary</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">tables</span>: <span class="kw-2">&amp;</span>[<span class="ident">Table</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">CompiledModuleMut</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">module</span> <span class="op">=</span> <span class="ident">CompiledModuleMut</span>::<span class="ident">default</span>();
-    <span class="ident">build_common_tables</span>(<span class="ident">binary</span>, <span class="ident">tables</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">module</span>)<span class="question-mark">?</span>;
-    <span class="ident">build_module_tables</span>(<span class="ident">binary</span>, <span class="ident">tables</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">module</span>)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(<span class="ident">module</span>)
+<span class="kw">fn</span> <span class="ident">build_compiled_module</span>(
+    <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CompiledModuleMut</span>,
+    <span class="ident">binary</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+    <span class="ident">tables</span>: <span class="kw-2">&amp;</span>[<span class="ident">Table</span>],
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="ident">build_common_tables</span>(<span class="ident">binary</span>, <span class="ident">tables</span>, <span class="ident">module</span>)<span class="question-mark">?</span>;
+    <span class="ident">build_module_tables</span>(<span class="ident">binary</span>, <span class="ident">tables</span>, <span class="ident">module</span>)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Builds the common tables in a compiled unit.</span>
@@ -1711,9 +1722,7 @@
             <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">STRUCT_DEFS</span>
             <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">STRUCT_DEF_INST</span>
             <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">FIELD_HANDLE</span>
-            <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">FIELD_INST</span>
-            <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">MAIN</span>
-            <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">MISC</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">continue</span>,
+            <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">FIELD_INST</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">continue</span>,
         }
     }
     <span class="prelude-val">Ok</span>(())
@@ -1742,9 +1751,6 @@
             <span class="ident">TableType</span>::<span class="ident">FIELD_INST</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">load_field_instantiations</span>(<span class="ident">binary</span>, <span class="ident">table</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">module</span>.<span class="ident">field_instantiations</span>)<span class="question-mark">?</span>;
             }
-            <span class="ident">TableType</span>::<span class="ident">MISC</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">load_miscellaneous_items</span>(<span class="ident">binary</span>, <span class="ident">table</span>, <span class="ident">module</span>)<span class="question-mark">?</span>;
-            }
             <span class="ident">TableType</span>::<span class="ident">MODULE_HANDLES</span>
             <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">STRUCT_HANDLES</span>
             <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">FUNCTION_HANDLES</span>
@@ -1755,10 +1761,6 @@
             <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">SIGNATURES</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">continue</span>;
             }
-            <span class="ident">TableType</span>::<span class="ident">MAIN</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>)
-                    .<span class="ident">with_message</span>(<span class="string">&quot;Bad table in Module&quot;</span>.<span class="ident">to_string</span>()))
-            }
         }
     }
     <span class="prelude-val">Ok</span>(())
@@ -1766,22 +1768,12 @@
 
 <span class="doccomment">/// Builds tables related to a `CompiledScriptMut`.</span>
 <span class="kw">fn</span> <span class="ident">build_script_tables</span>(
-    <span class="ident">binary</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+    <span class="ident">_binary</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
     <span class="ident">tables</span>: <span class="kw-2">&amp;</span>[<span class="ident">Table</span>],
-    <span class="ident">script</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CompiledScriptMut</span>,
+    <span class="ident">_script</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CompiledScriptMut</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">for</span> <span class="ident">table</span> <span class="kw">in</span> <span class="ident">tables</span> {
         <span class="kw">match</span> <span class="ident">table</span>.<span class="ident">kind</span> {
-            <span class="ident">TableType</span>::<span class="ident">MAIN</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">start</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">table</span>.<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">usize</span>;
-                <span class="comment">// `check_tables()` ensures that the table indices are in bounds</span>
-                <span class="macro">assume</span><span class="macro">!</span>(<span class="ident">start</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">usize</span>::<span class="ident">max_value</span>() <span class="op">-</span> (<span class="ident">table</span>.<span class="ident">count</span> <span class="kw">as</span> <span class="ident">usize</span>));
-                <span class="kw">let</span> <span class="ident">end</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">start</span> <span class="op">+</span> <span class="ident">table</span>.<span class="ident">count</span> <span class="kw">as</span> <span class="ident">usize</span>;
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cursor</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">binary</span>[<span class="ident">start</span>..<span class="ident">end</span>]);
-                <span class="ident">script</span>.<span class="ident">type_parameters</span> <span class="op">=</span> <span class="ident">load_kinds</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
-                <span class="ident">script</span>.<span class="ident">parameters</span> <span class="op">=</span> <span class="ident">SignatureIndex</span>::<span class="ident">new</span>(<span class="ident">read_uleb_u16_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>);
-                <span class="ident">script</span>.<span class="ident">code</span> <span class="op">=</span> <span class="ident">load_code_unit</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
-            }
             <span class="ident">TableType</span>::<span class="ident">MODULE_HANDLES</span>
             <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">STRUCT_HANDLES</span>
             <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">FUNCTION_HANDLES</span>
@@ -1796,8 +1788,7 @@
             <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">STRUCT_DEF_INST</span>
             <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">FUNCTION_DEFS</span>
             <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">FIELD_INST</span>
-            <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">FIELD_HANDLE</span>
-            <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">MISC</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="op">|</span> <span class="ident">TableType</span>::<span class="ident">FIELD_HANDLE</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>)
                     .<span class="ident">with_message</span>(<span class="string">&quot;Bad table in Script&quot;</span>.<span class="ident">to_string</span>()));
             }
@@ -1815,10 +1806,7 @@
     <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">table</span>.<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">usize</span>;
     <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">start</span> <span class="op">+</span> <span class="ident">table</span>.<span class="ident">count</span> <span class="kw">as</span> <span class="ident">usize</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cursor</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">binary</span>[<span class="ident">start</span>..<span class="ident">end</span>]);
-    <span class="kw">loop</span> {
-        <span class="kw">if</span> <span class="ident">cursor</span>.<span class="ident">position</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">u64</span>::<span class="ident">from</span>(<span class="ident">table</span>.<span class="ident">count</span>) {
-            <span class="kw">break</span>;
-        }
+    <span class="kw">while</span> <span class="ident">cursor</span>.<span class="ident">position</span>() <span class="op">&lt;</span> <span class="ident">table</span>.<span class="ident">count</span> <span class="kw">as</span> <span class="ident">u64</span> {
         <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
         <span class="ident">module_handles</span>.<span class="ident">push</span>(<span class="ident">ModuleHandle</span> {
@@ -1838,10 +1826,7 @@
     <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">table</span>.<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">usize</span>;
     <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">start</span> <span class="op">+</span> <span class="ident">table</span>.<span class="ident">count</span> <span class="kw">as</span> <span class="ident">usize</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cursor</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">binary</span>[<span class="ident">start</span>..<span class="ident">end</span>]);
-    <span class="kw">loop</span> {
-        <span class="kw">if</span> <span class="ident">cursor</span>.<span class="ident">position</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">u64</span>::<span class="ident">from</span>(<span class="ident">table</span>.<span class="ident">count</span>) {
-            <span class="kw">break</span>;
-        }
+    <span class="kw">while</span> <span class="ident">cursor</span>.<span class="ident">position</span>() <span class="op">&lt;</span> <span class="ident">table</span>.<span class="ident">count</span> <span class="kw">as</span> <span class="ident">u64</span> {
         <span class="kw">let</span> <span class="ident">module_handle</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">is_nominal_resource</span> <span class="op">=</span> <span class="ident">load_nominal_resource_flag</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
@@ -1856,18 +1841,6 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">fn</span> <span class="ident">load_miscellaneous_items</span>(
-    <span class="ident">binary</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    <span class="ident">table</span>: <span class="kw-2">&amp;</span><span class="ident">Table</span>,
-    <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CompiledModuleMut</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">table</span>.<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">usize</span>;
-    <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">start</span> <span class="op">+</span> <span class="ident">table</span>.<span class="ident">count</span> <span class="kw">as</span> <span class="ident">usize</span>;
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cursor</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">binary</span>[<span class="ident">start</span>..<span class="ident">end</span>]);
-    <span class="ident">module</span>.<span class="ident">self_module_handle_idx</span> <span class="op">=</span> <span class="ident">ModuleHandleIndex</span>::<span class="ident">new</span>(<span class="ident">read_uleb_u16_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>);
-    <span class="prelude-val">Ok</span>(())
-}
-
 <span class="doccomment">/// Builds the `FunctionHandle` table.</span>
 <span class="kw">fn</span> <span class="ident">load_function_handles</span>(
     <span class="ident">binary</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
@@ -1877,10 +1850,7 @@
     <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">table</span>.<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">usize</span>;
     <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">start</span> <span class="op">+</span> <span class="ident">table</span>.<span class="ident">count</span> <span class="kw">as</span> <span class="ident">usize</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cursor</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">binary</span>[<span class="ident">start</span>..<span class="ident">end</span>]);
-    <span class="kw">loop</span> {
-        <span class="kw">if</span> <span class="ident">cursor</span>.<span class="ident">position</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">u64</span>::<span class="ident">from</span>(<span class="ident">table</span>.<span class="ident">count</span>) {
-            <span class="kw">break</span>;
-        }
+    <span class="kw">while</span> <span class="ident">cursor</span>.<span class="ident">position</span>() <span class="op">&lt;</span> <span class="ident">table</span>.<span class="ident">count</span> <span class="kw">as</span> <span class="ident">u64</span> {
         <span class="kw">let</span> <span class="ident">module_handle</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">parameters</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
@@ -1907,10 +1877,8 @@
     <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">table</span>.<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">usize</span>;
     <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">start</span> <span class="op">+</span> <span class="ident">table</span>.<span class="ident">count</span> <span class="kw">as</span> <span class="ident">usize</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cursor</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">binary</span>[<span class="ident">start</span>..<span class="ident">end</span>]);
-    <span class="kw">loop</span> {
-        <span class="kw">if</span> <span class="ident">cursor</span>.<span class="ident">position</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">u64</span>::<span class="ident">from</span>(<span class="ident">table</span>.<span class="ident">count</span>) {
-            <span class="kw">break</span>;
-        }
+
+    <span class="kw">while</span> <span class="ident">cursor</span>.<span class="ident">position</span>() <span class="op">&lt;</span> <span class="ident">table</span>.<span class="ident">count</span> <span class="kw">as</span> <span class="ident">u64</span> {
         <span class="kw">let</span> <span class="ident">def</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">type_parameters</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
         <span class="ident">struct_insts</span>.<span class="ident">push</span>(<span class="ident">StructDefInstantiation</span> {
@@ -1930,10 +1898,7 @@
     <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">table</span>.<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">usize</span>;
     <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">start</span> <span class="op">+</span> <span class="ident">table</span>.<span class="ident">count</span> <span class="kw">as</span> <span class="ident">usize</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cursor</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">binary</span>[<span class="ident">start</span>..<span class="ident">end</span>]);
-    <span class="kw">loop</span> {
-        <span class="kw">if</span> <span class="ident">cursor</span>.<span class="ident">position</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">u64</span>::<span class="ident">from</span>(<span class="ident">table</span>.<span class="ident">count</span>) {
-            <span class="kw">break</span>;
-        }
+    <span class="kw">while</span> <span class="ident">cursor</span>.<span class="ident">position</span>() <span class="op">&lt;</span> <span class="ident">table</span>.<span class="ident">count</span> <span class="kw">as</span> <span class="ident">u64</span> {
         <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">type_parameters</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
         <span class="ident">func_insts</span>.<span class="ident">push</span>(<span class="ident">FunctionInstantiation</span> {
@@ -2051,9 +2016,7 @@
 }
 
 <span class="kw">fn</span> <span class="ident">load_signature_tokens</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SignatureToken</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-        <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>).<span class="ident">with_message</span>(<span class="string">&quot;Unexpected EOF&quot;</span>.<span class="ident">to_string</span>())
-    })<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">read_uleb_u8_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tokens</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
     <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">len</span> {
         <span class="ident">tokens</span>.<span class="ident">push</span>(<span class="ident">load_signature_token</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>);
@@ -2160,10 +2123,7 @@
                 }
                 <span class="ident">S</span>::<span class="ident">STRUCT_INST</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">let</span> <span class="ident">sh_idx</span> <span class="op">=</span> <span class="ident">StructHandleIndex</span>(<span class="ident">read_uleb_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>);
-                    <span class="kw">let</span> <span class="ident">arity</span> <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-                        <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>)
-                            .<span class="ident">with_message</span>(<span class="string">&quot;Unexpected EOF&quot;</span>.<span class="ident">to_string</span>())
-                    })<span class="question-mark">?</span>;
+                    <span class="kw">let</span> <span class="ident">arity</span> <span class="op">=</span> <span class="ident">read_uleb_u8_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
                     <span class="ident">T</span>::<span class="ident">StructInst</span> {
                         <span class="ident">sh_idx</span>,
                         <span class="ident">arity</span>: <span class="ident">arity</span> <span class="kw">as</span> <span class="ident">usize</span>,
@@ -2367,9 +2327,7 @@
 <span class="kw">fn</span> <span class="ident">load_struct_definition_indices</span>(
     <span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">StructDefinitionIndex</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-        <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>).<span class="ident">with_message</span>(<span class="string">&quot;Unexpected EOF&quot;</span>.<span class="ident">to_string</span>())
-    })<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">read_uleb_u8_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">indices</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
     <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">len</span> {
         <span class="ident">indices</span>.<span class="ident">push</span>(<span class="ident">StructDefinitionIndex</span>(<span class="ident">read_uleb_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>));
@@ -2392,7 +2350,7 @@
 
 <span class="doccomment">/// Deserializes a code stream (`Bytecode`s).</span>
 <span class="kw">fn</span> <span class="ident">load_code</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>, <span class="ident">code</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Bytecode</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">bytecode_count</span> <span class="op">=</span> <span class="ident">read_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">bytecode_count</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
     <span class="kw">while</span> <span class="ident">code</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">bytecode_count</span> <span class="kw">as</span> <span class="ident">usize</span> {
         <span class="kw">let</span> <span class="ident">byte</span> <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
             <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>).<span class="ident">with_message</span>(<span class="string">&quot;Unexpected EOF&quot;</span>.<span class="ident">to_string</span>())
@@ -2401,15 +2359,15 @@
             <span class="ident">Opcodes</span>::<span class="ident">POP</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">Pop</span>,
             <span class="ident">Opcodes</span>::<span class="ident">RET</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">Ret</span>,
             <span class="ident">Opcodes</span>::<span class="ident">BR_TRUE</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">jump</span> <span class="op">=</span> <span class="ident">read_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">jump</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
                 <span class="ident">Bytecode</span>::<span class="ident">BrTrue</span>(<span class="ident">jump</span>)
             }
             <span class="ident">Opcodes</span>::<span class="ident">BR_FALSE</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">jump</span> <span class="op">=</span> <span class="ident">read_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">jump</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
                 <span class="ident">Bytecode</span>::<span class="ident">BrFalse</span>(<span class="ident">jump</span>)
             }
             <span class="ident">Opcodes</span>::<span class="ident">BRANCH</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">jump</span> <span class="op">=</span> <span class="ident">read_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">jump</span> <span class="op">=</span> <span class="ident">read_uleb_u16_internal</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
                 <span class="ident">Bytecode</span>::<span class="ident">Branch</span>(<span class="ident">jump</span>)
             }
             <span class="ident">Opcodes</span>::<span class="ident">LD_U8</span> <span class="op">=</span><span class="op">&gt;</span> {
@@ -2588,24 +2546,16 @@
 <span class="comment">// Helpers to read uleb128 and uncompressed integers</span>
 <span class="comment">//</span>
 
+<span class="kw">fn</span> <span class="ident">read_uleb_u8_internal</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+    <span class="ident">read_uleb128_as_u8</span>(<span class="ident">cursor</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_ULEB_U8</span>))
+}
+
 <span class="kw">fn</span> <span class="ident">read_uleb_u16_internal</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span> {
     <span class="ident">read_uleb128_as_u16</span>(<span class="ident">cursor</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_ULEB_U16</span>))
 }
 
 <span class="kw">fn</span> <span class="ident">read_uleb_u32_internal</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> {
     <span class="ident">read_uleb128_as_u32</span>(<span class="ident">cursor</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_ULEB_U32</span>))
-}
-
-<span class="kw">fn</span> <span class="ident">read_u16_internal</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span> {
-    <span class="ident">cursor</span>
-        .<span class="ident">read_u16</span>::<span class="op">&lt;</span><span class="ident">LittleEndian</span><span class="op">&gt;</span>()
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_U16</span>))
-}
-
-<span class="kw">fn</span> <span class="ident">read_u32_internal</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> {
-    <span class="ident">cursor</span>
-        .<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">LittleEndian</span><span class="op">&gt;</span>()
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_U32</span>))
 }
 
 <span class="kw">fn</span> <span class="ident">read_u64_internal</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> {
@@ -2631,13 +2581,11 @@
             <span class="number">0x6</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">TableType</span>::<span class="ident">CONSTANT_POOL</span>),
             <span class="number">0x7</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">TableType</span>::<span class="ident">IDENTIFIERS</span>),
             <span class="number">0x8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">TableType</span>::<span class="ident">ADDRESS_IDENTIFIERS</span>),
-            <span class="number">0x9</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">TableType</span>::<span class="ident">MAIN</span>),
             <span class="number">0xA</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">TableType</span>::<span class="ident">STRUCT_DEFS</span>),
             <span class="number">0xB</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">TableType</span>::<span class="ident">STRUCT_DEF_INST</span>),
             <span class="number">0xC</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">TableType</span>::<span class="ident">FUNCTION_DEFS</span>),
             <span class="number">0xD</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">TableType</span>::<span class="ident">FIELD_HANDLE</span>),
             <span class="number">0xE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">TableType</span>::<span class="ident">FIELD_INST</span>),
-            <span class="number">0xF</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">TableType</span>::<span class="ident">MISC</span>),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_TABLE_TYPE</span>)),
         }
     }

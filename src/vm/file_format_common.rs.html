@@ -422,6 +422,35 @@
 <span id="422">422</span>
 <span id="423">423</span>
 <span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -473,13 +502,11 @@
     <span class="ident">CONSTANT_POOL</span>           <span class="op">=</span> <span class="number">0x6</span>,
     <span class="ident">IDENTIFIERS</span>             <span class="op">=</span> <span class="number">0x7</span>,
     <span class="ident">ADDRESS_IDENTIFIERS</span>     <span class="op">=</span> <span class="number">0x8</span>,
-    <span class="ident">MAIN</span>                    <span class="op">=</span> <span class="number">0x9</span>,
     <span class="ident">STRUCT_DEFS</span>             <span class="op">=</span> <span class="number">0xA</span>,
     <span class="ident">STRUCT_DEF_INST</span>         <span class="op">=</span> <span class="number">0xB</span>,
     <span class="ident">FUNCTION_DEFS</span>           <span class="op">=</span> <span class="number">0xC</span>,
     <span class="ident">FIELD_HANDLE</span>            <span class="op">=</span> <span class="number">0xD</span>,
     <span class="ident">FIELD_INST</span>              <span class="op">=</span> <span class="number">0xE</span>,
-    <span class="ident">MISC</span>                    <span class="op">=</span> <span class="number">0xF</span>,
 }
 
 <span class="doccomment">/// Constants for signature blob values.</span>
@@ -608,7 +635,7 @@
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">BINARY_SIZE_LIMIT</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">usize</span>::<span class="ident">max_value</span>();
 
 <span class="doccomment">/// A wrapper for the binary vector</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BinaryData</span> {
     <span class="ident">_binary</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
@@ -676,6 +703,10 @@
     }
 }
 
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_u8_as_uleb128</span>(<span class="ident">binary</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BinaryData</span>, <span class="ident">value</span>: <span class="ident">u8</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="ident">write_u32_as_uleb128</span>(<span class="ident">binary</span>, <span class="ident">u32</span>::<span class="ident">from</span>(<span class="ident">value</span>))
+}
+
 <span class="doccomment">/// Take a `Vec&lt;u8&gt;` and a value to write to that vector and applies LEB128 logic to</span>
 <span class="doccomment">/// compress the u16.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_u16_as_uleb128</span>(<span class="ident">binary</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BinaryData</span>, <span class="ident">value</span>: <span class="ident">u16</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
@@ -717,6 +748,33 @@
 <span class="doccomment">/// Write a `u128` in Little Endian format.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_u128</span>(<span class="ident">binary</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BinaryData</span>, <span class="ident">value</span>: <span class="ident">u128</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="ident">binary</span>.<span class="ident">extend</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>.<span class="ident">to_le_bytes</span>())
+}
+
+<span class="doccomment">/// Reads a `u8` in ULEB128 format from a `binary`.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Takes a `&amp;mut Cursor&lt;&amp;[u8]&gt;` and returns a pair:</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// u16 - value read</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Return an error on an invalid representation.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_uleb128_as_u8</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">value</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="number">0</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">shift</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="number">0</span>;
+    <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">byte</span>) <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>() {
+        <span class="kw">let</span> <span class="ident">val</span> <span class="op">=</span> <span class="ident">byte</span> <span class="op">&amp;</span> <span class="number">0x7f</span>;
+        <span class="ident">value</span> <span class="op">|</span><span class="op">=</span> <span class="ident">u16</span>::<span class="ident">from</span>(<span class="ident">val</span>) <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">shift</span>;
+        <span class="kw">if</span> <span class="ident">val</span> <span class="op">=</span><span class="op">=</span> <span class="ident">byte</span> {
+            <span class="kw">if</span> (<span class="ident">shift</span> <span class="op">&gt;</span> <span class="number">0</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">val</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span>) <span class="op">|</span><span class="op">|</span> <span class="ident">value</span> <span class="op">&gt;</span> <span class="ident">u16</span>::<span class="ident">from</span>(<span class="ident">std</span>::<span class="ident">u8</span>::<span class="ident">MAX</span>) {
+                <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;invalid ULEB128 representation for u8&quot;</span>);
+            }
+            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">value</span> <span class="kw">as</span> <span class="ident">u8</span>);
+        }
+        <span class="ident">shift</span> <span class="op">+</span><span class="op">=</span> <span class="number">7</span>;
+        <span class="kw">if</span> <span class="ident">shift</span> <span class="op">&gt;</span> <span class="number">7</span> {
+            <span class="kw">break</span>;
+        }
+    }
+    <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;invalid ULEB128 representation for u8&quot;</span>)
 }
 
 <span class="doccomment">/// Reads a `u16` in ULEB128 format from a `binary`.</span>
