@@ -570,12 +570,13 @@ jobs:
             a1981c0ab68b011eab1bb02f729e0dd7-3c9f20567ceb2efd.elb.us-west-2.amazonaws.com:80,\
             a569b48655cbc40d092379f55e630966-e1f284c7eb8add73.elb.eu-west-1.amazonaws.com:80,\
             aa4d66f81665240019022d50326c1654-cf61b8e99df12293.elb.eu-west-1.amazonaws.com:80,\
-            a5b46d6b8b23e42538ec0de5f0680350-46d80c995764cdd9.elb.us-west-2.amazonaws.com:80,\
             a88662827a2d341bbb7beb883d6e32b9-2e166f46672c7f2b.elb.us-east-1.amazonaws.com:80,\
+            a092976324bb748d7b2885dc64e6c71a-dac92eeea83a39b1.elb.us-west-2.amazonaws.com:80,\
             libra-fullnode-pre-mainnet.shopifyapps.com:80,\
             20.50.43.42:80,\
             34.68.134.0:80,\
             35.193.177.28:80,\
+            51.159.75.165:80,\
             3.230.173.177:32251' >> $BASH_ENV
             echo 'export CARGO_INCREMENTAL=0' >> $BASH_ENV
             echo 'export CI_TIMEOUT="timeout 40m"' >> $BASH_ENV
