@@ -191,18 +191,15 @@ impl NoiseUpgrader {
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
-        // in mutual authenticated networks, send a payload of the current timestamp (in milliseconds)
-        let payload = match self.auth_mode {
-            HandshakeAuthMode::Mutual { .. } => {
-                let now: u64 = time::SystemTime::now()
-                    .duration_since(time::UNIX_EPOCH)
-                    .expect("system clock should work")
-                    .as_millis() as u64;
-                // e.g. [157, 126, 253, 97, 114, 1, 0, 0]
-                let now = now.to_le_bytes().to_vec();
-                Some(now)
-            }
-            HandshakeAuthMode::ServerOnly => None,
+        // send a payload of the current timestamp (in milliseconds)
+        let payload = {
+            let now: u64 = time::SystemTime::now()
+                .duration_since(time::UNIX_EPOCH)
+                .expect("system clock should work")
+                .as_millis() as u64;
+            // e.g. [157, 126, 253, 97, 114, 1, 0, 0]
+            let now = now.to_le_bytes().to_vec();
+            Some(now)
         };
 
         // create first handshake message  (-> e, es, s, ss)
@@ -324,12 +321,6 @@ impl NoiseUpgrader {
 
             // store the timestamp
             anti_replay_timestamps.store_timestamp(their_public_key, client_timestamp);
-        } else if !payload.is_empty() {
-            // TODO: security logging
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "noise: received an unexpected handshake payload on a public-facing full-node network",
-            ));
         }
 
         // construct the response
