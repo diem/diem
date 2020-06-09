@@ -17,7 +17,6 @@ use async_trait::async_trait;
 
 use crate::{
     cluster::Cluster,
-    cluster_swarm::ClusterSwarm,
     experiments::{Context, Experiment, ExperimentParam},
     instance,
     instance::Instance,
@@ -75,12 +74,7 @@ impl Experiment for CpuFlamegraph {
                 .collect::<String>()
         );
         let command = generate_perf_flamegraph_command(&filename, self.duration_secs);
-        let flame_graph = context.cluster_swarm.run(
-            &self.perf_instance,
-            "853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest",
-            command,
-            "generate-flamegraph",
-        );
+        let flame_graph = self.perf_instance.util_cmd(command, "generate-flamegraph");
         let flame_graph_future = tokio::time::delay_for(buffer)
             .then(|_| async move { flame_graph.await })
             .boxed();

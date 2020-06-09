@@ -3,14 +3,15 @@
 
 #![forbid(unsafe_code)]
 
-use anyhow::{ensure, format_err, Result};
+use crate::cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm};
+use anyhow::{format_err, Result};
 use libra_config::config::NodeConfig;
 use libra_json_rpc_client::{JsonRpcAsyncClient, JsonRpcBatch};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use reqwest::{Client, Url};
 use serde_json::Value;
-use std::{collections::HashSet, ffi::OsStr, fmt, process::Stdio, str::FromStr};
+use std::{collections::HashSet, fmt, str::FromStr};
 
 static VAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"val-(\d+)").unwrap());
 static FULLNODE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"fn-(\d+)").unwrap());
@@ -45,10 +46,22 @@ pub struct Instance {
     peer_name: String,
     ip: String,
     ac_port: u32,
-    k8s_node: Option<String>,
-    instance_config: Option<InstanceConfig>,
     debug_interface_port: Option<u32>,
     http_client: Client,
+    backend: InstanceBackend,
+}
+
+#[derive(Clone)]
+enum InstanceBackend {
+    K8S(K8sInstanceInfo),
+    Swarm,
+}
+
+#[derive(Clone)]
+struct K8sInstanceInfo {
+    k8s_node: String,
+    instance_config: InstanceConfig,
+    kube: ClusterSwarmKube,
 }
 
 impl Instance {
@@ -59,12 +72,12 @@ impl Instance {
         debug_interface_port: Option<u32>,
         http_client: Client,
     ) -> Instance {
+        let backend = InstanceBackend::Swarm;
         Instance {
             peer_name,
             ip,
             ac_port,
-            k8s_node: None,
-            instance_config: None,
+            backend,
             debug_interface_port,
             http_client,
         }
@@ -77,87 +90,25 @@ impl Instance {
         k8s_node: String,
         instance_config: InstanceConfig,
         http_client: Client,
+        kube: ClusterSwarmKube,
     ) -> Instance {
+        let backend = InstanceBackend::K8S(K8sInstanceInfo {
+            k8s_node,
+            instance_config,
+            kube,
+        });
         Instance {
             peer_name,
             ip,
             ac_port,
-            k8s_node: Some(k8s_node),
-            instance_config: Some(instance_config),
             debug_interface_port: Some(
                 NodeConfig::default()
                     .debug_interface
                     .admission_control_node_debug_port as u32,
             ),
             http_client,
+            backend,
         }
-    }
-
-    pub async fn run_cmd_tee_err<I, S>(&self, args: I) -> Result<()>
-    where
-        I: IntoIterator<Item = S>,
-        S: AsRef<OsStr>,
-    {
-        self.run_cmd_inner(false, args).await
-    }
-
-    pub async fn run_cmd<I, S>(&self, args: I) -> Result<()>
-    where
-        I: IntoIterator<Item = S>,
-        S: AsRef<OsStr>,
-    {
-        self.run_cmd_inner(true, args).await
-    }
-
-    pub async fn run_cmd_inner<I, S>(&self, no_std_err: bool, args: I) -> Result<()>
-    where
-        I: IntoIterator<Item = S>,
-        S: AsRef<OsStr>,
-    {
-        let ssh_dest = format!("ec2-user@{}", self.ip);
-        let ssh_args = vec![
-            "ssh",
-            "-i",
-            "/libra_rsa",
-            "-oStrictHostKeyChecking=no",
-            "-oConnectTimeout=3",
-            "-oConnectionAttempts=10",
-            ssh_dest.as_str(),
-        ];
-        let mut ssh_cmd = tokio::process::Command::new("timeout");
-        ssh_cmd.arg("90").args(ssh_args).args(args);
-        if no_std_err {
-            ssh_cmd.stderr(Stdio::null());
-        }
-        let status = ssh_cmd.status().await?;
-        ensure!(
-            status.success(),
-            "Failed with code {}",
-            status.code().unwrap_or(-1)
-        );
-        Ok(())
-    }
-
-    pub async fn scp(&self, remote_file: &str, local_file: &str) -> Result<()> {
-        let remote_file = format!("ec2-user@{}:{}", self.ip, remote_file);
-        let status = tokio::process::Command::new("scp")
-            .args(vec![
-                "-i",
-                "/libra_rsa",
-                "-oStrictHostKeyChecking=no",
-                "-oConnectTimeout=3",
-                "-oConnectionAttempts=10",
-                remote_file.as_str(),
-                local_file,
-            ])
-            .status()
-            .await?;
-        ensure!(
-            status.success(),
-            "Failed with code {}",
-            status.code().unwrap_or(-1)
-        );
-        Ok(())
     }
 
     pub fn counter(&self, counter: &str) -> Result<f64> {
@@ -220,17 +171,16 @@ impl Instance {
         Url::from_str(&format!("http://{}:{}", self.ip(), self.ac_port())).expect("Invalid URL.")
     }
 
+    #[deprecated(note = "Avoid using this method as it expose backend details outside of Instance")]
     pub fn k8s_node(&self) -> &str {
-        self.k8s_node
-            .as_ref()
-            .expect("k8s_node was queried on non-k8s instance")
+        &self.k8s_backend().k8s_node
     }
 
-    /// This method only works when run on k8s
-    pub fn instance_config(&self) -> &InstanceConfig {
-        self.instance_config
-            .as_ref()
-            .expect("instance_config was queried on non-k8s instance")
+    fn k8s_backend(&self) -> &K8sInstanceInfo {
+        if let InstanceBackend::K8S(ref k8s) = self.backend {
+            return k8s;
+        }
+        panic!("Instance was not started with k8s");
     }
 
     pub fn debug_interface_port(&self) -> Option<u32> {
@@ -239,6 +189,35 @@ impl Instance {
 
     pub fn json_rpc_client(&self) -> JsonRpcAsyncClient {
         JsonRpcAsyncClient::new_with_client(self.http_client.clone(), self.json_rpc_url())
+    }
+
+    pub async fn stop(&self) -> Result<()> {
+        let backend = self.k8s_backend();
+        backend.kube.delete_node(&backend.instance_config).await
+    }
+
+    /// Node must be stopped first
+    pub async fn start(&self, delete_data: bool) -> Result<()> {
+        let backend = self.k8s_backend();
+        backend
+            .kube
+            .upsert_node(backend.instance_config.clone(), delete_data)
+            .await
+            .map(|_| ())
+    }
+
+    /// Runs command on the same host in separate utility container based on cluster-test-util image
+    pub async fn util_cmd(&self, command: String, job_name: &str) -> Result<()> {
+        let backend = self.k8s_backend();
+        backend
+            .kube
+            .run(
+                &backend.k8s_node,
+                "853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest",
+                command,
+                job_name,
+            )
+            .await
     }
 }
 
@@ -260,8 +239,4 @@ pub fn instancelist_to_set(instances: &[Instance]) -> HashSet<String> {
         r.insert(instance.peer_name().clone());
     }
     r
-}
-
-pub fn instance_configs(instances: &[Instance]) -> Vec<&InstanceConfig> {
-    instances.iter().map(Instance::instance_config).collect()
 }

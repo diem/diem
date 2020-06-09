@@ -3,7 +3,6 @@
 
 use crate::{
     cluster::Cluster,
-    cluster_swarm::ClusterSwarm,
     experiments::{Context, Experiment, ExperimentParam},
     instance,
     instance::Instance,
@@ -97,11 +96,7 @@ impl Experiment for PerformanceBenchmark {
     }
 
     async fn run(&mut self, context: &mut Context<'_>) -> Result<()> {
-        let futures: Vec<_> = self
-            .down_validators
-            .iter()
-            .map(|instance| context.cluster_swarm.delete_node(instance))
-            .collect();
+        let futures: Vec<_> = self.down_validators.iter().map(Instance::stop).collect();
         try_join_all(futures).await?;
         let buffer = Duration::from_secs(60);
         let window = self.duration + buffer * 2;
@@ -163,10 +158,10 @@ impl Experiment for PerformanceBenchmark {
             "Tx status from client side: txn {}, avg latency {}",
             stats.committed as u64, avg_latency_client
         );
-        let instance_configs = instance::instance_configs(&self.down_validators);
-        let futures: Vec<_> = instance_configs
-            .into_iter()
-            .map(|ic| context.cluster_swarm.upsert_node(ic.clone(), false))
+        let futures: Vec<_> = self
+            .down_validators
+            .iter()
+            .map(|ic| ic.start(false))
             .collect();
         try_join_all(futures).await?;
         let submitted_txn = stats.submitted;
