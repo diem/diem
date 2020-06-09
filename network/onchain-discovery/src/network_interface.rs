@@ -7,6 +7,7 @@ use channel::{libra_channel, message_queues::QueueStyle};
 use libra_metrics::IntCounterVec;
 use libra_types::PeerId;
 use network::{
+    constants::NETWORK_CHANNEL_SIZE,
     peer_manager::{
         ConnectionNotification, ConnectionRequestSender, PeerManagerNotification,
         PeerManagerRequestSender,
@@ -15,7 +16,6 @@ use network::{
         network::{NetworkSender, NewNetworkEvents, NewNetworkSender},
         rpc::error::RpcError,
     },
-    validator_network::network_builder::NETWORK_CHANNEL_SIZE,
     ProtocolId,
 };
 use std::time::Duration;

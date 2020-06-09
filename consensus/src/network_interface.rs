@@ -15,13 +15,13 @@ use consensus_types::{
 use libra_metrics::IntCounterVec;
 use libra_types::{epoch_change::EpochChangeProof, PeerId};
 use network::{
+    constants::NETWORK_CHANNEL_SIZE,
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::{
         network::{NetworkEvents, NetworkSender, NewNetworkSender},
         rpc::error::RpcError,
     },
-    validator_network::network_builder::NETWORK_CHANNEL_SIZE,
     ProtocolId,
 };
 use serde::{Deserialize, Serialize};
