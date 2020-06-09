@@ -404,19 +404,10 @@
 <span id="404">404</span>
 <span id="405">405</span>
 <span id="406">406</span>
-<span id="407">407</span>
-<span id="408">408</span>
-<span id="409">409</span>
-<span id="410">410</span>
-<span id="411">411</span>
-<span id="412">412</span>
-<span id="413">413</span>
-<span id="414">414</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="ident">admission_control_service</span>::<span class="ident">admission_control_service</span>::<span class="ident">AdmissionControlService</span>;
 <span class="kw">use</span> <span class="ident">backup_service</span>::<span class="ident">start_backup_service</span>;
 <span class="kw">use</span> <span class="ident">consensus</span>::{<span class="ident">consensus_provider</span>::<span class="ident">start_consensus</span>, <span class="ident">gen_consensus_reconfig_subscription</span>};
 <span class="kw">use</span> <span class="ident">debug_interface</span>::<span class="ident">node_debug_service</span>::<span class="ident">NodeDebugService</span>;
@@ -460,7 +451,6 @@
 <span class="kw">const</span> <span class="ident">INTRA_NODE_CHANNEL_BUFFER_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1</span>;
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LibraHandle</span> {
-    <span class="ident">_ac</span>: <span class="ident">Runtime</span>,
     <span class="ident">_rpc</span>: <span class="ident">Runtime</span>,
     <span class="ident">_mempool</span>: <span class="ident">Runtime</span>,
     <span class="ident">_state_synchronizer</span>: <span class="ident">StateSynchronizer</span>,
@@ -744,11 +734,6 @@
     );
     <span class="kw">let</span> (<span class="ident">mp_client_sender</span>, <span class="ident">mp_client_events</span>) <span class="op">=</span> <span class="ident">channel</span>(<span class="ident">AC_SMP_CHANNEL_BUFFER_SIZE</span>);
 
-    <span class="kw">let</span> <span class="ident">admission_control_runtime</span> <span class="op">=</span> <span class="ident">AdmissionControlService</span>::<span class="ident">bootstrap</span>(
-        <span class="kw-2">&amp;</span><span class="ident">node_config</span>,
-        <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">db_rw</span>.<span class="ident">reader</span>),
-        <span class="ident">mp_client_sender</span>.<span class="ident">clone</span>(),
-    );
     <span class="kw">let</span> <span class="ident">rpc_runtime</span> <span class="op">=</span> <span class="ident">bootstrap_rpc</span>(<span class="kw-2">&amp;</span><span class="ident">node_config</span>, <span class="ident">libra_db</span>.<span class="ident">clone</span>(), <span class="ident">mp_client_sender</span>);
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">consensus_runtime</span> <span class="op">=</span> <span class="prelude-val">None</span>;
@@ -818,7 +803,6 @@
 
     <span class="ident">LibraHandle</span> {
         <span class="ident">_network_runtimes</span>: <span class="ident">network_runtimes</span>,
-        <span class="ident">_ac</span>: <span class="ident">admission_control_runtime</span>,
         <span class="ident">_rpc</span>: <span class="ident">rpc_runtime</span>,
         <span class="ident">_mempool</span>: <span class="ident">mempool</span>,
         <span class="ident">_state_synchronizer</span>: <span class="ident">state_synchronizer</span>,

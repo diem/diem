@@ -258,8 +258,6 @@
 <span id="258">258</span>
 <span id="259">259</span>
 <span id="260">260</span>
-<span id="261">261</span>
-<span id="262">262</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -338,8 +336,7 @@
 
 <span class="doccomment">/// A `Stream` of `Event&lt;TMessage&gt;` from the lower network layer to an upper</span>
 <span class="doccomment">/// network application that deserializes inbound network direct-send and rpc</span>
-<span class="doccomment">/// messages into `TMessage`, which is some protobuf format implementing</span>
-<span class="doccomment">/// the `prost::Message` trait.</span>
+<span class="doccomment">/// messages into `TMessage`.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// `NetworkEvents` is really just a thin wrapper around a</span>
 <span class="doccomment">/// `channel::Receiver&lt;NetworkNotification&gt;` that deserializes inbound messages.</span>
@@ -435,7 +432,6 @@
 <span class="doccomment">/// `MempoolNetworkSender` only exposes a `send_to` function.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Provide Protobuf wrapper over `[peer_manager::PeerManagerRequestSender]`</span>
-<span class="doccomment">/// The `TMessage` generic is a protobuf message type (`prost::Message`).</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NetworkSender</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span> {
     <span class="ident">peer_mgr_reqs_tx</span>: <span class="ident">PeerManagerRequestSender</span>,

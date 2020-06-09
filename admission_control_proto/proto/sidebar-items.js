@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["admission_control",""]],"struct":[["AdmissionControlClientAsync",""],["AdmissionControlClientBlocking",""]]});

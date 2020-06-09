@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["AdmissionControlService","Struct implementing trait (service handle) AdmissionControlService."]]});
