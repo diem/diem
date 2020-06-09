@@ -335,14 +335,14 @@
         <span class="ident">peer_name</span>: <span class="ident">String</span>,
         <span class="ident">ip</span>: <span class="ident">String</span>,
         <span class="ident">ac_port</span>: <span class="ident">u32</span>,
-        <span class="ident">k8s_node</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+        <span class="ident">k8s_node</span>: <span class="ident">String</span>,
         <span class="ident">instance_config</span>: <span class="ident">InstanceConfig</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Instance</span> {
         <span class="ident">Instance</span> {
             <span class="ident">peer_name</span>,
             <span class="ident">ip</span>,
             <span class="ident">ac_port</span>,
-            <span class="ident">k8s_node</span>,
+            <span class="ident">k8s_node</span>: <span class="prelude-val">Some</span>(<span class="ident">k8s_node</span>),
             <span class="ident">instance_config</span>: <span class="prelude-val">Some</span>(<span class="ident">instance_config</span>),
             <span class="ident">debug_interface_port</span>: <span class="prelude-val">Some</span>(
                 <span class="ident">NodeConfig</span>::<span class="ident">default</span>()
