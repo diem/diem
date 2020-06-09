@@ -239,11 +239,12 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             .add_protocol_handler(state_synchronizer::network::network_endpoint_config());
         state_sync_network_handles.push((peer_id, state_sync_sender, state_sync_events));
 
-        // Create the endpoints to connect the network to MemPool.
-        let (mempool_sender, mempool_events) = libra_mempool::network::add_to_network(
-            &mut network_builder,
-            node_config.mempool.max_broadcasts_per_peer,
-        );
+        // Create the endpoints t connect the Network to MemPool.
+        let (mempool_sender, mempool_events) =
+            network_builder.add_protocol_handler(libra_mempool::network::network_endpoint_config(
+                // TODO:  Make this configuration option more clear.
+                node_config.mempool.max_broadcasts_per_peer,
+            ));
         mempool_network_handles.push((peer_id, mempool_sender, mempool_events));
 
         match role {
