@@ -87,6 +87,7 @@ members = [
     "libra-node",
     "mempool",
     "network",
+    "network/builder",
     "network/memsocket",
     "network/netcore",
     "network/network-address",

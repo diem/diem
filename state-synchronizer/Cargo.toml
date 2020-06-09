@@ -29,6 +29,7 @@ libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 network = { path = "../network", version = "0.1.0" }
+network-builder = {path  = "../network/builder", version = "0.1.0"}
 storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
 subscription-service = { path = "../common/subscription-service", version = "0.1.0" }
 libra-vm = { path = "../language/libra-vm", version = "0.1.0" }

@@ -20,13 +20,8 @@ use futures::{
     stream::{FuturesUnordered, StreamExt},
 };
 use libra_types::PeerId;
-use network::protocols::{
-    network::{
-        dummy::{setup_network, DummyMsg, DummyNetworkSender},
-        Event,
-    },
-    rpc::error::RpcError,
-};
+use network::protocols::{network::Event, rpc::error::RpcError};
+use network_builder::dummy::{setup_network, DummyMsg, DummyNetworkSender};
 use std::time::Duration;
 
 const KiB: usize = 1 << 10;

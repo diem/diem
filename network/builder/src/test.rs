@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Integration tests for validator_network.
-use super::*;
-use crate::protocols::network::dummy::{setup_network, DummyMsg};
+use crate::dummy::{setup_network, DummyMsg};
 use futures::{future::join, StreamExt};
+use network::protocols::network::Event;
 use std::time::Duration;
 
 #[test]
