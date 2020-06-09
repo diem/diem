@@ -384,7 +384,8 @@ impl NetworkBuilder {
 
     pub fn add_connection_monitoring(&mut self) -> &mut Self {
         // Initialize and start HealthChecker.
-        let (hc_network_tx, hc_network_rx) = health_checker::add_to_network(self);
+        let (hc_network_tx, hc_network_rx) =
+            self.add_protocol_handler(health_checker::network_endpoint_config());
         let ping_interval_ms = self.ping_interval_ms;
         let ping_timeout_ms = self.ping_timeout_ms;
         let ping_failures_tolerated = self.ping_failures_tolerated;
