@@ -11,7 +11,7 @@
 //! long as the latter is in its trusted peers set.
 use crate::{
     connectivity_manager::{ConnectivityManager, ConnectivityRequest},
-    counters,
+    constants, counters,
     peer_manager::{
         conn_notifs_channel, ConnectionRequest, ConnectionRequestSender, PeerManager,
         PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
@@ -47,24 +47,6 @@ use std::{
 };
 use tokio::{runtime::Handle, time::interval};
 use tokio_retry::strategy::ExponentialBackoff;
-
-// NB: Almost all of these values are educated guesses, and not determined using any empirical
-// data. If you run into a limit and believe that it is unreasonably tight, please submit a PR
-// with your use-case. If you do change a value, please add a comment linking to the PR which
-// advocated the change.
-pub const NETWORK_CHANNEL_SIZE: usize = 1024;
-pub const DISCOVERY_INTERVAL_MS: u64 = 1000;
-pub const PING_INTERVAL_MS: u64 = 1000;
-pub const PING_TIMEOUT_MS: u64 = 10_000;
-pub const DISOVERY_MSG_TIMEOUT_MS: u64 = 10_000;
-pub const CONNECTIVITY_CHECK_INTERNAL_MS: u64 = 5000;
-pub const INBOUND_RPC_TIMEOUT_MS: u64 = 10_000;
-pub const MAX_CONCURRENT_OUTBOUND_RPCS: u32 = 100;
-pub const MAX_CONCURRENT_INBOUND_RPCS: u32 = 100;
-pub const PING_FAILURES_TOLERATED: u64 = 10;
-pub const MAX_CONCURRENT_NETWORK_REQS: usize = 100;
-pub const MAX_CONCURRENT_NETWORK_NOTIFS: usize = 100;
-pub const MAX_CONNECTION_DELAY_MS: u64 = 60_000; /* 1 minute */
 
 #[derive(Debug)]
 pub enum AuthenticationMode {
@@ -144,13 +126,13 @@ impl NetworkBuilder {
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) = libra_channel::new(
             QueueStyle::FIFO,
-            NonZeroUsize::new(NETWORK_CHANNEL_SIZE).unwrap(),
+            NonZeroUsize::new(constants::NETWORK_CHANNEL_SIZE).unwrap(),
             Some(&counters::PENDING_PEER_MANAGER_REQUESTS),
         );
         // Setup channel to send connection requests to peer manager.
         let (connection_reqs_tx, connection_reqs_rx) = libra_channel::new(
             QueueStyle::FIFO,
-            NonZeroUsize::new(NETWORK_CHANNEL_SIZE).unwrap(),
+            NonZeroUsize::new(constants::NETWORK_CHANNEL_SIZE).unwrap(),
             None,
         );
         NetworkBuilder {
@@ -162,7 +144,7 @@ impl NetworkBuilder {
             seed_peers: HashMap::new(),
             trusted_peers: Arc::new(RwLock::new(HashMap::new())),
             authentication_mode: None,
-            channel_size: NETWORK_CHANNEL_SIZE,
+            channel_size: constants::NETWORK_CHANNEL_SIZE,
             direct_send_protocols: vec![],
             rpc_protocols: vec![],
             upstream_handlers: HashMap::new(),
@@ -172,14 +154,14 @@ impl NetworkBuilder {
             connection_reqs_tx,
             connection_reqs_rx,
             conn_mgr_reqs_tx: None,
-            discovery_interval_ms: DISCOVERY_INTERVAL_MS,
-            ping_interval_ms: PING_INTERVAL_MS,
-            ping_timeout_ms: PING_TIMEOUT_MS,
-            ping_failures_tolerated: PING_FAILURES_TOLERATED,
-            connectivity_check_interval_ms: CONNECTIVITY_CHECK_INTERNAL_MS,
-            max_concurrent_network_reqs: MAX_CONCURRENT_NETWORK_REQS,
-            max_concurrent_network_notifs: MAX_CONCURRENT_NETWORK_NOTIFS,
-            max_connection_delay_ms: MAX_CONNECTION_DELAY_MS,
+            discovery_interval_ms: constants::DISCOVERY_INTERVAL_MS,
+            ping_interval_ms: constants::PING_INTERVAL_MS,
+            ping_timeout_ms: constants::PING_TIMEOUT_MS,
+            ping_failures_tolerated: constants::PING_FAILURES_TOLERATED,
+            connectivity_check_interval_ms: constants::CONNECTIVITY_CHECK_INTERNAL_MS,
+            max_concurrent_network_reqs: constants::MAX_CONCURRENT_NETWORK_REQS,
+            max_concurrent_network_notifs: constants::MAX_CONCURRENT_NETWORK_NOTIFS,
+            max_connection_delay_ms: constants::MAX_CONNECTION_DELAY_MS,
         }
     }
 

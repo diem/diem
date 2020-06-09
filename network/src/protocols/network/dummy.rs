@@ -4,15 +4,14 @@
 //! Integration tests for validator_network.
 
 use crate::{
+    constants::NETWORK_CHANNEL_SIZE,
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::{
         network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
         rpc::error::RpcError,
     },
-    validator_network::network_builder::{
-        AuthenticationMode, NetworkBuilder, NETWORK_CHANNEL_SIZE,
-    },
+    validator_network::network_builder::{AuthenticationMode, NetworkBuilder},
     ProtocolId,
 };
 use channel::message_queues::QueueStyle;
