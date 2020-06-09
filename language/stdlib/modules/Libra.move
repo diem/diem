@@ -282,16 +282,6 @@ module Libra {
         Libra<CoinType> { value }
     }
 
-    /// Creates a new `Preburn` resource for `CoinType` currency. Can only be
-    /// called by the holder of a `BurnCapability<CoinType>` capability.
-    /// `CoinType` must be a registered currency on-chain.
-    public fun new_preburn_with_capability<CoinType>(
-        _capability: &BurnCapability<CoinType>
-    ): Preburn<CoinType> {
-        assert_is_coin<CoinType>();
-        Preburn<CoinType> { requests: Vector::empty() }
-    }
-
     /// Add the `coin` to the `preburn` queue in the `Preburn` resource
     /// held at the address `preburn_address`. Emits a `PreburnEvent` to
     /// the `preburn_events` event stream in the `CurrencyInfo` for the
@@ -327,15 +317,23 @@ module Libra {
     // Treasury Compliance specific methods for DDs
     ///////////////////////////////////////////////////////////////////////////
 
+    /// Create a `Preburn<CoinType>` resource
+    public fun create_preburn<CoinType>(creator: &signer): Preburn<CoinType> {
+        // TODO: this should check for AssocRoot in the future
+        Association::assert_is_association(creator);
+        Transaction::assert(is_currency<CoinType>(), 201);
+        Preburn<CoinType> { requests: Vector::empty() }
+    }
+
     /// Publishes a `Preburn` resource under `account`. This function is
     /// used for bootstrapping the designated dealer at account-creation
     /// time, and the association TC account `creator` (at `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()`) is creating
     /// this resource for the designated dealer.
-    public fun publish_preburn_to_account<CoinType>(creator: &signer, account: &signer) {
-        Association::assert_account_is_blessed(creator);
-        assert_is_coin<CoinType>();
-        let preburn = Preburn<CoinType> { requests: Vector::empty() };
-        publish_preburn<CoinType>(account, preburn)
+    public fun publish_preburn_to_account<CoinType>(
+        creator: &signer, account: &signer
+    ) acquires CurrencyInfo {
+        Transaction::assert(!is_synthetic_currency<CoinType>(), 202);
+        move_to(account, create_preburn<CoinType>(creator))
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -344,7 +342,8 @@ module Libra {
     /// or returned to the balance of `account`.
     /// Calls to this function will fail if `account` does not have a
     /// `Preburn<CoinType>` resource published under it.
-    public fun preburn_to<CoinType>(account: &signer, coin: Libra<CoinType>) acquires CurrencyInfo, Preburn {
+    public fun preburn_to<CoinType>(
+        account: &signer, coin: Libra<CoinType>) acquires CurrencyInfo, Preburn {
         let sender = Signer::address_of(account);
         preburn_with_resource(coin, borrow_global_mut<Preburn<CoinType>>(sender), sender);
     }
@@ -433,24 +432,6 @@ module Libra {
         };
 
         coin
-    }
-
-    /// Publishes the `Preburn<CoinType>` `preburn` under `account`.
-    public fun publish_preburn<CoinType>(account: &signer, preburn: Preburn<CoinType>) {
-        move_to(account, preburn)
-    }
-
-
-    /// Removes and returns the `Preburn<CoinType>` resource held under `account`
-    public fun remove_preburn<CoinType>(account: &signer): Preburn<CoinType> acquires Preburn {
-        move_from<Preburn<CoinType>>(Signer::address_of(account))
-    }
-
-    /// Destroys the passed-in `preburn` resource. This will abort if the
-    /// requests in the preburn is non-empty.
-    public fun destroy_preburn<CoinType>(preburn: Preburn<CoinType>) {
-        let Preburn { requests } = preburn;
-        Vector::destroy_empty(requests)
     }
 
     /// Removes and returns the `MintCapability<CoinType>` from `account`.

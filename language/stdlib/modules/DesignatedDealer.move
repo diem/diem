@@ -20,8 +20,9 @@ module DesignatedDealer {
     // To-be designated-dealer called functions
     ///////////////////////////////////////////////////////////////////////////
 
-    public fun publish_designated_dealer_credential(blessed: &signer, dd: &signer) {
-        Association::assert_account_is_blessed(blessed);
+    public fun publish_designated_dealer_credential(association: &signer, dd: &signer) {
+        // TODO: this should check for AssocRoot in the future
+        Association::assert_is_association(association);
         move_to(
             dd,
             Dealer {

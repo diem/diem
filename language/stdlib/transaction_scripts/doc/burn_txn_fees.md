@@ -29,13 +29,13 @@
     <b>if</b> (<a href="../../modules/doc/TransactionFee.md#0x0_TransactionFee_is_lbr">TransactionFee::is_lbr</a>&lt;CoinType&gt;()) {
         <b>let</b> coin1_burn_cap = <a href="../../modules/doc/Libra.md#0x0_Libra_remove_burn_capability">Libra::remove_burn_capability</a>&lt;<a href="../../modules/doc/Coin1.md#0x0_Coin1">Coin1</a>&gt;(blessed_account);
         <b>let</b> coin2_burn_cap = <a href="../../modules/doc/Libra.md#0x0_Libra_remove_burn_capability">Libra::remove_burn_capability</a>&lt;<a href="../../modules/doc/Coin2.md#0x0_Coin2">Coin2</a>&gt;(blessed_account);
-        <a href="../../modules/doc/TransactionFee.md#0x0_TransactionFee_burn_fees">TransactionFee::burn_fees</a>(blessed_account, &coin1_burn_cap);
-        <a href="../../modules/doc/TransactionFee.md#0x0_TransactionFee_burn_fees">TransactionFee::burn_fees</a>(blessed_account, &coin2_burn_cap);
+        <a href="../../modules/doc/TransactionFee.md#0x0_TransactionFee_burn_fees">TransactionFee::burn_fees</a>(&coin1_burn_cap);
+        <a href="../../modules/doc/TransactionFee.md#0x0_TransactionFee_burn_fees">TransactionFee::burn_fees</a>(&coin2_burn_cap);
         <a href="../../modules/doc/Libra.md#0x0_Libra_publish_burn_capability">Libra::publish_burn_capability</a>(blessed_account, coin1_burn_cap);
         <a href="../../modules/doc/Libra.md#0x0_Libra_publish_burn_capability">Libra::publish_burn_capability</a>(blessed_account, coin2_burn_cap);
     } <b>else</b> {
         <b>let</b> burn_cap = <a href="../../modules/doc/Libra.md#0x0_Libra_remove_burn_capability">Libra::remove_burn_capability</a>&lt;CoinType&gt;(blessed_account);
-        <a href="../../modules/doc/TransactionFee.md#0x0_TransactionFee_burn_fees">TransactionFee::burn_fees</a>(blessed_account, &burn_cap);
+        <a href="../../modules/doc/TransactionFee.md#0x0_TransactionFee_burn_fees">TransactionFee::burn_fees</a>(&burn_cap);
         <a href="../../modules/doc/Libra.md#0x0_Libra_publish_burn_capability">Libra::publish_burn_capability</a>(blessed_account, burn_cap);
     }
 }

@@ -169,7 +169,7 @@ register_all_txn_scripts! {
     args: [nonce: U64, preburn_address: Address],
     doc: "Permanently destroy the coins stored in the oldest burn request under the `Preburn` \
           resource stored at `preburn_address`. This will only succeed if the sender has a \
-          `MintCapability` stored under their account and `preburn_address` has a pending burn request"
+          `BurnCapability` stored under their account and `preburn_address` has a pending burn request"
 }
 
 {
@@ -187,7 +187,7 @@ register_all_txn_scripts! {
     type_args: [type_],
     args: [preburn_address: Address],
     doc: "Cancel the oldest burn request from `preburn_address` and return the funds to \
-          `preburn_address`.  Fails if the sender does not have a published `MintCapability`."
+          `preburn_address`.  Fails if the sender does not have a published `BurnCapability`."
 }
 
 {
@@ -197,9 +197,8 @@ register_all_txn_scripts! {
     args: [],
     doc: "Extract the `KeyRotationCapability` for `recovery_account` and publish it in a \
           `RecoveryAddress` resource under  `recovery_account`. Aborts if `recovery_account` has \
-           delegated its `KeyRotationCapability`, already has a`RecoveryAddress` resource, or is \
-           not a VASP. Cancel the oldest burn request from `preburn_address` and return the funds \
-           to `preburn_address`.  Fails if the sender does not have a published `MintCapability`."
+          delegated its `KeyRotationCapability`, already has a`RecoveryAddress` resource, or is \
+          not a VASP."
 }
 
 {
@@ -243,15 +242,6 @@ register_all_txn_scripts! {
     args: [],
     doc: "Add the currency identified by the type `currency` to the sending accounts. \
           Aborts if the account already holds a balance fo `currency` type."
-}
-
-{
-    script: RegisterPreburner,
-    builder: encode_register_preburner_script,
-    type_args: [type_],
-    args: [],
-    doc: "Publish a newly created `Preburn` resource under the sender's account. \
-          This will fail if the sender already has a published `Preburn` resource."
 }
 
 {
@@ -587,7 +577,6 @@ mod tests {
                 "preburn",
                 "publish_shared_ed25519_public_key",
                 "add_currency_to_account",
-                "register_preburner",
                 "register_validator",
                 "remove_validator",
                 "rotate_compliance_public_key",

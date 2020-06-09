@@ -1,4 +1,6 @@
 //! account: bob, 0Coin1
+//! account: c1, 0Coin1
+//! account: c2, 0Coin2
 
 module BurnCapabilityHolder {
     use 0x0::Libra;
@@ -10,21 +12,17 @@ module BurnCapabilityHolder {
         move_to(account, Holder<Token>{ cap })
     }
 }
+// check: EXECUTED
 
 //! new-transaction
 //! sender: blessed
 script {
 use 0x0::Libra;
+use 0x0::LibraAccount;
 use 0x0::Coin1::Coin1;
 use 0x0::Coin2::Coin2;
-use 0x0::Signer;
 use 0x0::Transaction;
 fun main(account: &signer) {
-    let sender = Signer::address_of(account);
-    let pre_coin1 = Libra::new_preburn<Coin1>();
-    let pre_coin2 = Libra::new_preburn<Coin2>();
-    Libra::publish_preburn(account, pre_coin1);
-    Libra::publish_preburn(account, pre_coin2);
     let coin1 = Libra::mint<Coin1>(account, 10000);
     let coin2 = Libra::mint<Coin2>(account, 10000);
     Transaction::assert(Libra::value<Coin1>(&coin1) == 10000, 0);
@@ -46,11 +44,9 @@ fun main(account: &signer) {
     let coin2 = Libra::join(coin21, coin22);
     Transaction::assert(Libra::value<Coin1>(&coin1) == 10000, 7);
     Transaction::assert(Libra::value<Coin2>(&coin2) == 10000, 8);
+    LibraAccount::deposit(account, {{c1}}, coin1);
+    LibraAccount::deposit(account, {{c2}}, coin2);
 
-    Libra::preburn_to(account, coin1);
-    Libra::preburn_to(account, coin2);
-    Libra::burn<Coin1>(account, sender);
-    Libra::burn<Coin2>(account, sender);
     Libra::destroy_zero(Libra::zero<Coin1>());
     Libra::destroy_zero(Libra::zero<Coin2>());
 }

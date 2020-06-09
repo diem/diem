@@ -510,7 +510,7 @@ module LibraAccount {
         destroy_signer(new_account);
     }
 
-    /// Create an account with the Empty role at `new_account_address` with authentication key
+    /// Create an account with the AssocRoot role at `new_account_address` with authentication key
     /// `auth_key_prefix` | `new_account_address`
     // TODO: can we get rid of this? the main thing this does is create an account without an
     // EventGenerator resource (which is just needed to avoid circular dep issues in gensis)
@@ -558,16 +558,16 @@ module LibraAccount {
     /// `auth_key_prefix` | `new_account_address`, for non synthetic CoinType.
     /// Creates Preburn resource under account 'new_account_address'
     public fun create_designated_dealer<CoinType>(
-        blessed: &signer,
+        association: &signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
     ) {
-        Association::assert_account_is_blessed(blessed);
-        Transaction::assert(!Libra::is_synthetic_currency<CoinType>(), 202);
+        // TODO: this should check for AssocRoot in the future
+        Association::assert_is_association(association);
         let new_dd_account = create_signer(new_account_address);
         Event::publish_generator(&new_dd_account);
-        Libra::publish_preburn_to_account<CoinType>(blessed, &new_dd_account);
-        DesignatedDealer::publish_designated_dealer_credential(blessed, &new_dd_account);
+        Libra::publish_preburn_to_account<CoinType>(association, &new_dd_account);
+        DesignatedDealer::publish_designated_dealer_credential(association, &new_dd_account);
         let role_id = 2;
         make_account<CoinType>(new_dd_account, auth_key_prefix, false, role_id)
     }
@@ -585,6 +585,7 @@ module LibraAccount {
         compliance_public_key: vector<u8>,
         add_all_currencies: bool
     ) {
+        // TODO: this should check for AssocRoot in the future
         Association::assert_is_association(association);
         let new_account = create_signer(new_account_address);
         VASP::publish_parent_vasp_credential(
