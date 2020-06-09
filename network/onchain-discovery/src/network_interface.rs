@@ -4,6 +4,7 @@
 //! Protobuf based interface between OnchainDiscovery and Network layers.
 use crate::types::{OnchainDiscoveryMsg, QueryDiscoverySetRequest, QueryDiscoverySetResponse};
 use channel::{libra_channel, message_queues::QueueStyle};
+use libra_metrics::IntCounterVec;
 use libra_types::PeerId;
 use network::{
     peer_manager::{
@@ -14,7 +15,7 @@ use network::{
         network::{NetworkSender, NewNetworkEvents, NewNetworkSender},
         rpc::error::RpcError,
     },
-    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
+    validator_network::network_builder::NETWORK_CHANNEL_SIZE,
     ProtocolId,
 };
 use std::time::Duration;
@@ -83,12 +84,15 @@ impl OnchainDiscoveryNetworkSender {
     }
 }
 
-/// Construct OnchainDiscoveryNetworkSender/Events and register them with the
-/// given network builder.
-pub fn add_to_network(
-    network: &mut NetworkBuilder,
-) -> (OnchainDiscoveryNetworkSender, OnchainDiscoveryNetworkEvents) {
-    network.add_protocol_handler((
+/// Provides the configuration parameters for the network endpoint.
+pub fn network_endpoint_config() -> (
+    Vec<ProtocolId>,
+    Vec<ProtocolId>,
+    QueueStyle,
+    usize,
+    Option<&'static IntCounterVec>,
+) {
+    (
         vec![ProtocolId::OnchainDiscoveryRpc],
         vec![],
         QueueStyle::LIFO,
@@ -96,5 +100,5 @@ pub fn add_to_network(
         // Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
         // TODO(philiphayes): add a counter for onchain discovery
         None,
-    ))
+    )
 }
