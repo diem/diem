@@ -25,16 +25,13 @@
 -  [Function `cancel_burn`](#0x0_Libra_cancel_burn)
 -  [Function `new_preburn`](#0x0_Libra_new_preburn)
 -  [Function `mint_with_capability`](#0x0_Libra_mint_with_capability)
--  [Function `new_preburn_with_capability`](#0x0_Libra_new_preburn_with_capability)
 -  [Function `preburn_with_resource`](#0x0_Libra_preburn_with_resource)
+-  [Function `create_preburn`](#0x0_Libra_create_preburn)
 -  [Function `publish_preburn_to_account`](#0x0_Libra_publish_preburn_to_account)
 -  [Function `preburn_to`](#0x0_Libra_preburn_to)
 -  [Function `burn_with_capability`](#0x0_Libra_burn_with_capability)
 -  [Function `burn_with_resource_cap`](#0x0_Libra_burn_with_resource_cap)
 -  [Function `cancel_burn_with_capability`](#0x0_Libra_cancel_burn_with_capability)
--  [Function `publish_preburn`](#0x0_Libra_publish_preburn)
--  [Function `remove_preburn`](#0x0_Libra_remove_preburn)
--  [Function `destroy_preburn`](#0x0_Libra_destroy_preburn)
 -  [Function `remove_mint_capability`](#0x0_Libra_remove_mint_capability)
 -  [Function `remove_burn_capability`](#0x0_Libra_remove_burn_capability)
 -  [Function `preburn_value`](#0x0_Libra_preburn_value)
@@ -959,39 +956,6 @@ reference.
 
 </details>
 
-<a name="0x0_Libra_new_preburn_with_capability"></a>
-
-## Function `new_preburn_with_capability`
-
-Creates a new
-<code><a href="#0x0_Libra_Preburn">Preburn</a></code> resource for
-<code>CoinType</code> currency. Can only be
-called by the holder of a
-<code><a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code> capability.
-<code>CoinType</code> must be a registered currency on-chain.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_new_preburn_with_capability">new_preburn_with_capability</a>&lt;CoinType&gt;(_capability: &<a href="#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;): <a href="#0x0_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_new_preburn_with_capability">new_preburn_with_capability</a>&lt;CoinType&gt;(
-    _capability: &<a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
-): <a href="#0x0_Libra_Preburn">Preburn</a>&lt;CoinType&gt; {
-    <a href="#0x0_Libra_assert_is_coin">assert_is_coin</a>&lt;CoinType&gt;();
-    <a href="#0x0_Libra_Preburn">Preburn</a>&lt;CoinType&gt; { requests: <a href="Vector.md#0x0_Vector_empty">Vector::empty</a>() }
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x0_Libra_preburn_with_resource"></a>
 
 ## Function `preburn_with_resource`
@@ -1051,6 +1015,35 @@ the
 
 </details>
 
+<a name="0x0_Libra_create_preburn"></a>
+
+## Function `create_preburn`
+
+Create a
+<code><a href="#0x0_Libra_Preburn">Preburn</a>&lt;CoinType&gt;</code> resource
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_create_preburn">create_preburn</a>&lt;CoinType&gt;(creator: &signer): <a href="#0x0_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_create_preburn">create_preburn</a>&lt;CoinType&gt;(creator: &signer): <a href="#0x0_Libra_Preburn">Preburn</a>&lt;CoinType&gt; {
+    // TODO: this should check for AssocRoot in the future
+    <a href="Association.md#0x0_Association_assert_is_association">Association::assert_is_association</a>(creator);
+    Transaction::assert(<a href="#0x0_Libra_is_currency">is_currency</a>&lt;CoinType&gt;(), 201);
+    <a href="#0x0_Libra_Preburn">Preburn</a>&lt;CoinType&gt; { requests: <a href="Vector.md#0x0_Vector_empty">Vector::empty</a>() }
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x0_Libra_publish_preburn_to_account"></a>
 
 ## Function `publish_preburn_to_account`
@@ -1074,11 +1067,11 @@ this resource for the designated dealer.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_preburn_to_account">publish_preburn_to_account</a>&lt;CoinType&gt;(creator: &signer, account: &signer) {
-    <a href="Association.md#0x0_Association_assert_account_is_blessed">Association::assert_account_is_blessed</a>(creator);
-    <a href="#0x0_Libra_assert_is_coin">assert_is_coin</a>&lt;CoinType&gt;();
-    <b>let</b> preburn = <a href="#0x0_Libra_Preburn">Preburn</a>&lt;CoinType&gt; { requests: <a href="Vector.md#0x0_Vector_empty">Vector::empty</a>() };
-    <a href="#0x0_Libra_publish_preburn">publish_preburn</a>&lt;CoinType&gt;(account, preburn)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_preburn_to_account">publish_preburn_to_account</a>&lt;CoinType&gt;(
+    creator: &signer, account: &signer
+) <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
+    Transaction::assert(!<a href="#0x0_Libra_is_synthetic_currency">is_synthetic_currency</a>&lt;CoinType&gt;(), 202);
+    move_to(account, <a href="#0x0_Libra_create_preburn">create_preburn</a>&lt;CoinType&gt;(creator))
 }
 </code></pre>
 
@@ -1109,7 +1102,8 @@ Calls to this function will fail if
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_preburn_to">preburn_to</a>&lt;CoinType&gt;(account: &signer, coin: <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;) <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x0_Libra_Preburn">Preburn</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_preburn_to">preburn_to</a>&lt;CoinType&gt;(
+    account: &signer, coin: <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;) <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x0_Libra_Preburn">Preburn</a> {
     <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     <a href="#0x0_Libra_preburn_with_resource">preburn_with_resource</a>(coin, borrow_global_mut&lt;<a href="#0x0_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(sender), sender);
 }
@@ -1274,89 +1268,6 @@ at
     };
 
     coin
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x0_Libra_publish_preburn"></a>
-
-## Function `publish_preburn`
-
-Publishes the
-<code><a href="#0x0_Libra_Preburn">Preburn</a>&lt;CoinType&gt;</code>
-<code>preburn</code> under
-<code>account</code>.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_preburn">publish_preburn</a>&lt;CoinType&gt;(account: &signer, preburn: <a href="#0x0_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_preburn">publish_preburn</a>&lt;CoinType&gt;(account: &signer, preburn: <a href="#0x0_Libra_Preburn">Preburn</a>&lt;CoinType&gt;) {
-    move_to(account, preburn)
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x0_Libra_remove_preburn"></a>
-
-## Function `remove_preburn`
-
-Removes and returns the
-<code><a href="#0x0_Libra_Preburn">Preburn</a>&lt;CoinType&gt;</code> resource held under
-<code>account</code>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_remove_preburn">remove_preburn</a>&lt;CoinType&gt;(account: &signer): <a href="#0x0_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_remove_preburn">remove_preburn</a>&lt;CoinType&gt;(account: &signer): <a href="#0x0_Libra_Preburn">Preburn</a>&lt;CoinType&gt; <b>acquires</b> <a href="#0x0_Libra_Preburn">Preburn</a> {
-    move_from&lt;<a href="#0x0_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account))
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x0_Libra_destroy_preburn"></a>
-
-## Function `destroy_preburn`
-
-Destroys the passed-in
-<code>preburn</code> resource. This will abort if the
-requests in the preburn is non-empty.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_destroy_preburn">destroy_preburn</a>&lt;CoinType&gt;(preburn: <a href="#0x0_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_destroy_preburn">destroy_preburn</a>&lt;CoinType&gt;(preburn: <a href="#0x0_Libra_Preburn">Preburn</a>&lt;CoinType&gt;) {
-    <b>let</b> <a href="#0x0_Libra_Preburn">Preburn</a> { requests } = preburn;
-    <a href="Vector.md#0x0_Vector_destroy_empty">Vector::destroy_empty</a>(requests)
 }
 </code></pre>
 

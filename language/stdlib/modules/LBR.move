@@ -7,6 +7,7 @@ module LBR {
     use 0x0::FixedPoint32::{Self, FixedPoint32};
     use 0x0::Libra::{Self, Libra};
     use 0x0::Signer;
+    use 0x0::Transaction;
 
     // The type tag for this coin type.
     resource struct LBR { }
@@ -37,17 +38,18 @@ module LBR {
     // already be registered in order for this to succeed. The sender must
     // both be the correct address and have the correct permissions. These
     // restrictions are enforced in the Libra::register_currency function.
-    public fun initialize(account: &signer) {
+    public fun initialize(association: &signer) {
+        Transaction::assert(Signer::address_of(association) == 0xA550C18, 0);
         // Register the LBR currency.
         let (mint_cap, burn_cap) = Libra::register_currency<LBR>(
-            account,
+            association,
             FixedPoint32::create_from_rational(1, 1), // exchange rate to LBR
             true,    // is_synthetic
             1000000, // scaling_factor = 10^6
             1000,    // fractional_part = 10^3
             b"LBR"
         );
-        let preburn_cap = Libra::new_preburn_with_capability(&burn_cap);
+        let preburn_cap = Libra::create_preburn<LBR>(association);
         let coin1 = ReserveComponent<Coin1> {
             ratio: FixedPoint32::create_from_rational(1, 2),
             backing: Libra::zero<Coin1>(),
@@ -56,7 +58,7 @@ module LBR {
             ratio: FixedPoint32::create_from_rational(1, 2),
             backing: Libra::zero<Coin2>(),
         };
-        move_to(account, Reserve { mint_cap, burn_cap, preburn_cap, coin1, coin2 });
+        move_to(association, Reserve { mint_cap, burn_cap, preburn_cap, coin1, coin2 });
     }
 
     // Given the constituent coins return as much LBR as possible, with any

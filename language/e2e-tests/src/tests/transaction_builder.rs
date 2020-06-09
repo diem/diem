@@ -25,55 +25,6 @@ use move_core_types::{
     language_storage::{StructTag, TypeTag},
 };
 use transaction_builder::*;
-#[test]
-fn register_preburn_burn() {
-    // TODO: use Coin1 or Coin2 in this test instead of LBR
-    // create a FakeExecutor with a genesis from file
-    let mut executor = FakeExecutor::from_genesis_file();
-    // association account to do the actual burning
-    let association = Account::new_association();
-
-    // account to initiate preburning
-    let preburner = {
-        let data = AccountData::new(0, 0);
-        executor.add_account_data(&data);
-        data.into_account()
-    };
-
-    // We need to mint in order to bump the market cap
-    executor.execute_and_apply(association.signed_script_txn(
-        encode_mint_lbr_to_address_script(&preburner.address(), vec![], 1_000_000),
-        1,
-    ));
-
-    // Register preburner
-    executor.execute_and_apply(preburner.signed_script_txn(
-        encode_register_preburner_script(account_config::lbr_type_tag()),
-        0,
-    ));
-    // Send a preburn request
-    executor.execute_and_apply(preburner.signed_script_txn(
-        encode_preburn_script(account_config::lbr_type_tag(), 100),
-        1,
-    ));
-    // Send a second preburn request
-    executor.execute_and_apply(preburner.signed_script_txn(
-        encode_preburn_script(account_config::lbr_type_tag(), 200),
-        2,
-    ));
-
-    // Complete the first request by burning
-    // TODO: bring this back once we can  use Coin1 or Coin2 here
-    //executor.execute_and_apply(association.signed_script_txn(
-    //    encode_burn_script(account_config::lbr_type_tag(), *preburner.address()),
-    //    2,
-    //));
-    // Complete the second request by cancelling
-    //executor.execute_and_apply(association.signed_script_txn(
-    //    encode_cancel_burn_script(account_config::lbr_type_tag(), *preburner.address()),
-    //    3,
-    //));
-}
 
 #[test]
 fn freeze_unfreeze_account() {

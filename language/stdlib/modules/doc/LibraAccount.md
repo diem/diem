@@ -1225,7 +1225,7 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
 
 ## Function `create_genesis_account`
 
-Create an account with the Empty role at
+Create an account with the AssocRoot role at
 <code>new_account_address</code> with authentication key
 <code>auth_key_prefix</code> |
 <code>new_account_address</code>
@@ -1313,7 +1313,7 @@ Create a designated dealer account at
 Creates Preburn resource under account 'new_account_address'
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(blessed: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(association: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -1323,16 +1323,16 @@ Creates Preburn resource under account 'new_account_address'
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(
-    blessed: &signer,
+    association: &signer,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
 ) {
-    <a href="Association.md#0x0_Association_assert_account_is_blessed">Association::assert_account_is_blessed</a>(blessed);
-    Transaction::assert(!<a href="Libra.md#0x0_Libra_is_synthetic_currency">Libra::is_synthetic_currency</a>&lt;CoinType&gt;(), 202);
+    // TODO: this should check for AssocRoot in the future
+    <a href="Association.md#0x0_Association_assert_is_association">Association::assert_is_association</a>(association);
     <b>let</b> new_dd_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_dd_account);
-    <a href="Libra.md#0x0_Libra_publish_preburn_to_account">Libra::publish_preburn_to_account</a>&lt;CoinType&gt;(blessed, &new_dd_account);
-    <a href="DesignatedDealer.md#0x0_DesignatedDealer_publish_designated_dealer_credential">DesignatedDealer::publish_designated_dealer_credential</a>(blessed, &new_dd_account);
+    <a href="Libra.md#0x0_Libra_publish_preburn_to_account">Libra::publish_preburn_to_account</a>&lt;CoinType&gt;(association, &new_dd_account);
+    <a href="DesignatedDealer.md#0x0_DesignatedDealer_publish_designated_dealer_credential">DesignatedDealer::publish_designated_dealer_credential</a>(association, &new_dd_account);
     <b>let</b> role_id = 2;
     <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;CoinType&gt;(new_dd_account, auth_key_prefix, <b>false</b>, role_id)
 }
@@ -1373,6 +1373,7 @@ This can only be invoked by an Association account.
     compliance_public_key: vector&lt;u8&gt;,
     add_all_currencies: bool
 ) {
+    // TODO: this should check for AssocRoot in the future
     <a href="Association.md#0x0_Association_assert_is_association">Association::assert_is_association</a>(association);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="VASP.md#0x0_VASP_publish_parent_vasp_credential">VASP::publish_parent_vasp_credential</a>(

@@ -67,7 +67,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>(blessed: &signer, dd: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>(association: &signer, dd: &signer)
 </code></pre>
 
 
@@ -76,8 +76,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>(blessed: &signer, dd: &signer) {
-    <a href="Association.md#0x0_Association_assert_account_is_blessed">Association::assert_account_is_blessed</a>(blessed);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>(association: &signer, dd: &signer) {
+    // TODO: this should check for AssocRoot in the future
+    <a href="Association.md#0x0_Association_assert_is_association">Association::assert_is_association</a>(association);
     move_to(
         dd,
         <a href="#0x0_DesignatedDealer_Dealer">Dealer</a> {
