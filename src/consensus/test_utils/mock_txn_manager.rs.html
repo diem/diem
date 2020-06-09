@@ -79,6 +79,7 @@
 <span id="79">79</span>
 <span id="80">80</span>
 <span id="81">81</span>
+<span id="82">82</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -118,7 +119,8 @@
 <span class="comment">// mock transaction status on the fly</span>
 <span class="kw">fn</span> <span class="ident">mock_transaction_status</span>(<span class="ident">count</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TransactionStatus</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">statuses</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-    <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">count</span> {
+    <span class="comment">// generate count + 1 status to mock the block metadata txn in mempool proxy</span>
+    <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="op">=</span><span class="ident">count</span> {
         <span class="kw">let</span> <span class="ident">random_status</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">rand</span>::<span class="ident">thread_rng</span>().<span class="ident">gen_range</span>(<span class="number">0</span>, <span class="number">2</span>) {
             <span class="number">0</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">TransactionStatus</span>::<span class="ident">Keep</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">EXECUTED</span>)),
             <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">TransactionStatus</span>::<span class="ident">Discard</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_VALIDATION_STATUS</span>)),

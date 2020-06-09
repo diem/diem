@@ -788,10 +788,6 @@
 <span id="788">788</span>
 <span id="789">789</span>
 <span id="790">790</span>
-<span id="791">791</span>
-<span id="792">792</span>
-<span id="793">793</span>
-<span id="794">794</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -936,7 +932,7 @@
         <span class="self">self</span>.<span class="ident">sync_up</span>(<span class="kw-2">&amp;</span><span class="ident">sync_info</span>, <span class="ident">author</span>).<span class="kw">await</span>
     }
 
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">vote_msg</span>: <span class="ident">VoteMsg</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RecoveryData</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_vote_msg</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">vote_msg</span>: <span class="ident">VoteMsg</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RecoveryData</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">author</span> <span class="op">=</span> <span class="ident">vote_msg</span>.<span class="ident">vote</span>().<span class="ident">author</span>();
         <span class="kw">let</span> <span class="ident">sync_info</span> <span class="op">=</span> <span class="ident">vote_msg</span>.<span class="ident">sync_info</span>();
         <span class="self">self</span>.<span class="ident">sync_up</span>(<span class="kw-2">&amp;</span><span class="ident">sync_info</span>, <span class="ident">author</span>).<span class="kw">await</span>
@@ -1087,56 +1083,25 @@
         ))
     }
 
-    <span class="doccomment">/// Process a ProposalMsg, pre_process would bring all the dependencies and filter out invalid</span>
-    <span class="doccomment">/// proposal, process_proposed_block would execute and decide whether to vote for it.</span>
+    <span class="doccomment">/// Process the proposal message:</span>
+    <span class="doccomment">/// 1. ensure after processing sync info, we&#39;re at the same round as the proposal</span>
+    <span class="doccomment">/// 2. execute and decide whether to vode for the proposal</span>
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_proposal_msg</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposal_msg</span>: <span class="ident">ProposalMsg</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">block</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">pre_process_proposal</span>(<span class="ident">proposal_msg</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">process_proposed_block</span>(<span class="ident">block</span>).<span class="kw">await</span>
-    }
-
-    <span class="doccomment">/// The function is responsible for processing the incoming proposals and the Quorum</span>
-    <span class="doccomment">/// Certificate.</span>
-    <span class="doccomment">/// 1. sync up to the SyncInfo including committing to the committed state the HCC carries</span>
-    <span class="doccomment">/// and fetch all the blocks from the committed state to the HQC</span>
-    <span class="doccomment">/// 2. forwarding the proposals to the ProposerElection queue,</span>
-    <span class="doccomment">/// which is going to eventually trigger one winning proposal per round</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">pre_process_proposal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposal_msg</span>: <span class="ident">ProposalMsg</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&gt;</span> {
         <span class="macro">trace_event</span><span class="macro">!</span>(<span class="string">&quot;round_manager::pre_process_proposal&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">proposal_msg</span>.<span class="ident">proposal</span>().<span class="ident">id</span>()});
-        <span class="comment">// RoundState is going to be updated with all the proposal certificates later,</span>
-        <span class="comment">// but it&#39;s known that the round_state&#39;s round is not going to decrease so we can already</span>
-        <span class="comment">// filter out the proposals from old rounds.</span>
-        <span class="kw">let</span> <span class="ident">current_round</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">round_state</span>.<span class="ident">current_round</span>();
-        <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="ident">proposal_msg</span>.<span class="ident">round</span>() <span class="op">&gt;</span><span class="op">=</span> <span class="ident">current_round</span>,
-            <span class="string">&quot;[RoundManager] Proposal round {} is less than current round {}&quot;</span>,
-            <span class="ident">proposal_msg</span>.<span class="ident">round</span>(),
-            <span class="ident">current_round</span>,
-        );
-        <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="self">self</span>.<span class="ident">proposer_election</span>
-                .<span class="ident">is_valid_proposal</span>(<span class="ident">proposal_msg</span>.<span class="ident">proposal</span>()),
-            <span class="string">&quot;[RoundManager] Proposer {} for block {} is not a valid proposer for this round&quot;</span>,
+        <span class="self">self</span>.<span class="ident">ensure_round_and_sync_up</span>(
+            <span class="ident">proposal_msg</span>.<span class="ident">proposal</span>().<span class="ident">round</span>(),
+            <span class="ident">proposal_msg</span>.<span class="ident">sync_info</span>(),
             <span class="ident">proposal_msg</span>.<span class="ident">proposer</span>(),
-            <span class="ident">proposal_msg</span>.<span class="ident">proposal</span>()
-        );
-        <span class="self">self</span>.<span class="ident">sync_up</span>(<span class="ident">proposal_msg</span>.<span class="ident">sync_info</span>(), <span class="ident">proposal_msg</span>.<span class="ident">proposer</span>(), <span class="bool-val">true</span>)
-            .<span class="kw">await</span>
-            .<span class="ident">context</span>(<span class="string">&quot;[RoundManager] Process proposal&quot;</span>)<span class="question-mark">?</span>;
-
-        <span class="comment">// round_state may catch up with the SyncInfo, check again</span>
-        <span class="kw">let</span> <span class="ident">current_round</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">round_state</span>.<span class="ident">current_round</span>();
-        <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="ident">proposal_msg</span>.<span class="ident">round</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">current_round</span>,
-            <span class="string">&quot;[RoundManager] Proposal round doesn&#39;t match current round after sync&quot;</span>
-        );
-        <span class="prelude-val">Ok</span>(<span class="ident">proposal_msg</span>.<span class="ident">take_proposal</span>())
+            <span class="bool-val">true</span>,
+        )
+        .<span class="kw">await</span>
+        .<span class="ident">context</span>(<span class="string">&quot;[RoundManager] Process proposal&quot;</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">process_proposal</span>(<span class="ident">proposal_msg</span>.<span class="ident">take_proposal</span>()).<span class="kw">await</span>
     }
 
-    <span class="doccomment">/// The function makes sure that it brings the missing dependencies from the QC and LedgerInfo</span>
-    <span class="doccomment">/// of the given sync info and update the round_state with the certificates if succeed.</span>
-    <span class="doccomment">/// Returns Error in case sync mgr failed to bring the missing dependencies.</span>
-    <span class="doccomment">/// We&#39;ll try to help the remote if the SyncInfo lags behind and the flag is set.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">sync_up</span>(
+    <span class="doccomment">/// Sync to the sync info sending from peer if it has newer certificates, if we have newer certificates</span>
+    <span class="doccomment">/// and help_remote is set, send it back the local sync info.</span>
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">sync_up</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">sync_info</span>: <span class="kw-2">&amp;</span><span class="ident">SyncInfo</span>,
         <span class="ident">author</span>: <span class="ident">Author</span>,
@@ -1173,15 +1138,39 @@
                 })<span class="question-mark">?</span>;
             <span class="self">self</span>.<span class="ident">block_store</span>
                 .<span class="ident">add_certs</span>(<span class="kw-2">&amp;</span><span class="ident">sync_info</span>, <span class="self">self</span>.<span class="ident">create_block_retriever</span>(<span class="ident">author</span>))
-                .<span class="kw">await</span>
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
-                    <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Fail to sync up to {}: {:?}&quot;</span>, <span class="ident">sync_info</span>, <span class="ident">e</span>);
-                    <span class="ident">e</span>
-                })<span class="question-mark">?</span>;
+                .<span class="kw">await</span><span class="question-mark">?</span>;
 
             <span class="comment">// Update safety rules and round_state and potentially start a new round.</span>
             <span class="self">self</span>.<span class="ident">process_certificates</span>().<span class="kw">await</span><span class="question-mark">?</span>;
         }
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="doccomment">/// The function makes sure that it ensures the message_round equal to what we have locally,</span>
+    <span class="doccomment">/// brings the missing dependencies from the QC and LedgerInfo of the given sync info and</span>
+    <span class="doccomment">/// update the round_state with the certificates if succeed.</span>
+    <span class="doccomment">/// Returns Error in case sync mgr failed to bring the missing dependencies.</span>
+    <span class="doccomment">/// We&#39;ll try to help the remote if the SyncInfo lags behind and the flag is set.</span>
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">ensure_round_and_sync_up</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">message_round</span>: <span class="ident">Round</span>,
+        <span class="ident">sync_info</span>: <span class="kw-2">&amp;</span><span class="ident">SyncInfo</span>,
+        <span class="ident">author</span>: <span class="ident">Author</span>,
+        <span class="ident">help_remote</span>: <span class="ident">bool</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="macro">ensure</span><span class="macro">!</span>(
+            <span class="ident">message_round</span> <span class="op">&gt;</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">round_state</span>.<span class="ident">current_round</span>(),
+            <span class="string">&quot;round {} is stale than local {}&quot;</span>,
+            <span class="ident">message_round</span>,
+            <span class="self">self</span>.<span class="ident">round_state</span>.<span class="ident">current_round</span>()
+        );
+        <span class="self">self</span>.<span class="ident">sync_up</span>(<span class="ident">sync_info</span>, <span class="ident">author</span>, <span class="ident">help_remote</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="macro">ensure</span><span class="macro">!</span>(
+            <span class="ident">message_round</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">round_state</span>.<span class="ident">current_round</span>(),
+            <span class="string">&quot;After sync, round {} doesn&#39;t match local {}&quot;</span>,
+            <span class="ident">message_round</span>,
+            <span class="self">self</span>.<span class="ident">round_state</span>.<span class="ident">current_round</span>()
+        );
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -1194,7 +1183,7 @@
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Received a sync info msg: {}&quot;</span>, <span class="ident">sync_info</span>);
         <span class="ident">counters</span>::<span class="ident">SYNC_INFO_MSGS_RECEIVED_COUNT</span>.<span class="ident">inc</span>();
         <span class="comment">// To avoid a ping-pong cycle between two peers that move forward together.</span>
-        <span class="self">self</span>.<span class="ident">sync_up</span>(<span class="kw-2">&amp;</span><span class="ident">sync_info</span>, <span class="ident">peer</span>, <span class="bool-val">false</span>)
+        <span class="self">self</span>.<span class="ident">ensure_round_and_sync_up</span>(<span class="ident">sync_info</span>.<span class="ident">highest_round</span>() <span class="op">+</span> <span class="number">1</span>, <span class="kw-2">&amp;</span><span class="ident">sync_info</span>, <span class="ident">peer</span>, <span class="bool-val">false</span>)
             .<span class="kw">await</span>
             .<span class="ident">context</span>(<span class="string">&quot;[RoundManager] Failed to process sync info msg&quot;</span>)
     }
@@ -1202,10 +1191,9 @@
     <span class="doccomment">/// The replica broadcasts a &quot;timeout vote message&quot;, which includes the round signature, which</span>
     <span class="doccomment">/// can be aggregated to a TimeoutCertificate.</span>
     <span class="doccomment">/// The timeout vote message can be one of the following three options:</span>
-    <span class="doccomment">/// 1) In case a validator has previously voted in this round, it repeats the same vote.</span>
-    <span class="doccomment">/// 2) In case a validator didn&#39;t vote yet but has a secondary proposal, it executes this</span>
-    <span class="doccomment">/// proposal and votes.</span>
-    <span class="doccomment">/// 3) If neither primary nor secondary proposals are available, vote for a NIL block.</span>
+    <span class="doccomment">/// 1) In case a validator has previously voted in this round, it repeats the same vote and sign</span>
+    <span class="doccomment">/// a timeout.</span>
+    <span class="doccomment">/// 2) Otherwise vote for a NIL block and sign a timeout.</span>
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_local_timeout</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">round</span>: <span class="ident">Round</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="macro">ensure</span><span class="macro">!</span>(
             <span class="self">self</span>.<span class="ident">round_state</span>.<span class="ident">process_local_timeout</span>(<span class="ident">round</span>),
@@ -1259,12 +1247,22 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// This function processes a proposal that was chosen as a representative of its round:</span>
-    <span class="doccomment">/// 1. Add it to a block store.</span>
-    <span class="doccomment">/// 2. Try to vote for it following the safety rules.</span>
-    <span class="doccomment">/// 3. In case a validator chooses to vote, send the vote to the representatives at the next</span>
-    <span class="doccomment">/// position.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_proposed_block</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposal</span>: <span class="ident">Block</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="doccomment">/// This function processes a proposal for the current round:</span>
+    <span class="doccomment">/// 1. Filter if it&#39;s proposed by valid proposer.</span>
+    <span class="doccomment">/// 2. Execute and add it to a block store.</span>
+    <span class="doccomment">/// 3. Try to vote for it following the safety rules.</span>
+    <span class="doccomment">/// 4. In case a validator chooses to vote, send the vote to the representatives at the next</span>
+    <span class="doccomment">/// round.</span>
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_proposal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposal</span>: <span class="ident">Block</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="macro">ensure</span><span class="macro">!</span>(
+            <span class="self">self</span>.<span class="ident">proposer_election</span>.<span class="ident">is_valid_proposal</span>(<span class="kw-2">&amp;</span><span class="ident">proposal</span>),
+            <span class="string">&quot;[RoundManager] Proposer {} for block {} is not a valid proposer for this round&quot;</span>,
+            <span class="ident">proposal</span>
+                .<span class="ident">author</span>()
+                .<span class="ident">expect</span>(<span class="string">&quot;Proposal should be verified having an author&quot;</span>),
+            <span class="ident">proposal</span>,
+        );
+
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;RoundManager: process_proposed_block {}&quot;</span>, <span class="ident">proposal</span>);
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">time_to_receival</span>) <span class="op">=</span>
@@ -1359,8 +1357,6 @@
     <span class="doccomment">/// * then verify the voting rules</span>
     <span class="doccomment">/// * save the updated state to consensus DB</span>
     <span class="doccomment">/// * return a VoteMsg with the LedgerInfo to be committed in case the vote gathers QC.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This function assumes that it might be called from different tasks concurrently.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">execute_and_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proposed_block</span>: <span class="ident">Block</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vote</span><span class="op">&gt;</span> {
         <span class="macro">trace_code_block</span><span class="macro">!</span>(<span class="string">&quot;round_manager::execute_and_vote&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">proposed_block</span>.<span class="ident">id</span>()});
         <span class="kw">let</span> <span class="ident">executed_block</span> <span class="op">=</span> <span class="self">self</span>
@@ -1380,16 +1376,6 @@
             );
         }
         <span class="kw">let</span> <span class="ident">block</span> <span class="op">=</span> <span class="ident">executed_block</span>.<span class="ident">block</span>();
-
-        <span class="comment">// Checking round_state round again, because multiple proposed_block can now race</span>
-        <span class="comment">// during async block retrieval</span>
-        <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="ident">block</span>.<span class="ident">round</span>() <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">round_state</span>.<span class="ident">current_round</span>(),
-            <span class="string">&quot;[RoundManager] Proposal {} rejected because round is incorrect. RoundState: {}, proposed_block: {}&quot;</span>,
-            <span class="ident">block</span>,
-            <span class="self">self</span>.<span class="ident">round_state</span>.<span class="ident">current_round</span>(),
-            <span class="ident">block</span>.<span class="ident">round</span>(),
-        );
 
         <span class="comment">// Short circuit if already voted.</span>
         <span class="macro">ensure</span><span class="macro">!</span>(
@@ -1439,28 +1425,23 @@
     }
 
     <span class="doccomment">/// Upon new vote:</span>
-    <span class="doccomment">/// 1. Filter out votes for rounds that should not be processed by this validator (to avoid</span>
+    <span class="doccomment">/// 1. Ensures we&#39;re processing the vote from the same round as local round</span>
+    <span class="doccomment">/// 2. Filter out votes for rounds that should not be processed by this validator (to avoid</span>
     <span class="doccomment">/// potential attacks).</span>
-    <span class="doccomment">/// 2. Add the vote to the store and check whether it finishes a QC.</span>
-    <span class="doccomment">/// 3. Once the QC successfully formed, notify the RoundState.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">vote_msg</span>: <span class="ident">VoteMsg</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="doccomment">/// 2. Add the vote to the pending votes and check whether it finishes a QC.</span>
+    <span class="doccomment">/// 3. Once the QC/TC successfully formed, notify the RoundState.</span>
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_vote_msg</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">vote_msg</span>: <span class="ident">VoteMsg</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="macro">trace_code_block</span><span class="macro">!</span>(<span class="string">&quot;round_manager::process_vote&quot;</span>, {<span class="string">&quot;block&quot;</span>, <span class="ident">vote_msg</span>.<span class="ident">proposed_block_id</span>()});
         <span class="comment">// Check whether this validator is a valid recipient of the vote.</span>
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">vote_msg</span>.<span class="ident">vote</span>().<span class="ident">is_timeout</span>() {
-            <span class="comment">// Unlike timeout votes regular votes are sent to the leaders of the next round only.</span>
-            <span class="kw">let</span> <span class="ident">next_round</span> <span class="op">=</span> <span class="ident">vote_msg</span>.<span class="ident">vote</span>().<span class="ident">vote_data</span>().<span class="ident">proposed</span>().<span class="ident">round</span>() <span class="op">+</span> <span class="number">1</span>;
-            <span class="macro">ensure</span><span class="macro">!</span>(
-                <span class="self">self</span>.<span class="ident">proposer_election</span>
-                    .<span class="ident">is_valid_proposer</span>(<span class="self">self</span>.<span class="ident">proposal_generator</span>.<span class="ident">author</span>(), <span class="ident">next_round</span>),
-                <span class="string">&quot;[RoundManager] Received {}, but I am not a valid proposer for round {}, ignore.&quot;</span>,
-                <span class="ident">vote_msg</span>,
-                <span class="ident">next_round</span>
-            );
-        }
-        <span class="self">self</span>.<span class="ident">sync_up</span>(<span class="ident">vote_msg</span>.<span class="ident">sync_info</span>(), <span class="ident">vote_msg</span>.<span class="ident">vote</span>().<span class="ident">author</span>(), <span class="bool-val">true</span>)
-            .<span class="kw">await</span>
-            .<span class="ident">context</span>(<span class="string">&quot;[RoundManager] Stop processing vote&quot;</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">add_vote</span>(<span class="ident">vote_msg</span>.<span class="ident">vote</span>())
+        <span class="self">self</span>.<span class="ident">ensure_round_and_sync_up</span>(
+            <span class="ident">vote_msg</span>.<span class="ident">vote</span>().<span class="ident">vote_data</span>().<span class="ident">proposed</span>().<span class="ident">round</span>(),
+            <span class="ident">vote_msg</span>.<span class="ident">sync_info</span>(),
+            <span class="ident">vote_msg</span>.<span class="ident">vote</span>().<span class="ident">author</span>(),
+            <span class="bool-val">true</span>,
+        )
+        .<span class="kw">await</span>
+        .<span class="ident">context</span>(<span class="string">&quot;[RoundManager] Stop processing vote&quot;</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">process_vote</span>(<span class="ident">vote_msg</span>.<span class="ident">vote</span>())
             .<span class="kw">await</span>
             .<span class="ident">context</span>(<span class="string">&quot;[RoundManager] Add a new vote&quot;</span>)
     }
@@ -1469,7 +1450,18 @@
     <span class="doccomment">/// If a new QC / TC is formed then</span>
     <span class="doccomment">/// 1) fetch missing dependencies if required, and then</span>
     <span class="doccomment">/// 2) call process_certificates(), which will start a new round in return.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">add_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">vote</span>: <span class="kw-2">&amp;</span><span class="ident">Vote</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">vote</span>: <span class="kw-2">&amp;</span><span class="ident">Vote</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="op">!</span><span class="ident">vote</span>.<span class="ident">is_timeout</span>() {
+            <span class="comment">// Unlike timeout votes regular votes are sent to the leaders of the next round only.</span>
+            <span class="kw">let</span> <span class="ident">next_round</span> <span class="op">=</span> <span class="ident">vote</span>.<span class="ident">vote_data</span>().<span class="ident">proposed</span>().<span class="ident">round</span>() <span class="op">+</span> <span class="number">1</span>;
+            <span class="macro">ensure</span><span class="macro">!</span>(
+                <span class="self">self</span>.<span class="ident">proposer_election</span>
+                    .<span class="ident">is_valid_proposer</span>(<span class="self">self</span>.<span class="ident">proposal_generator</span>.<span class="ident">author</span>(), <span class="ident">next_round</span>),
+                <span class="string">&quot;[RoundManager] Received {}, but I am not a valid proposer for round {}, ignore.&quot;</span>,
+                <span class="ident">vote</span>,
+                <span class="ident">next_round</span>
+            );
+        }
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Add vote: {}&quot;</span>, <span class="ident">vote</span>);
         <span class="kw">let</span> <span class="ident">block_id</span> <span class="op">=</span> <span class="ident">vote</span>.<span class="ident">vote_data</span>().<span class="ident">proposed</span>().<span class="ident">id</span>();
         <span class="comment">// Check if the block already had a QC</span>
