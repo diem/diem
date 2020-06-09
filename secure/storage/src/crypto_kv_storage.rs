@@ -38,22 +38,21 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
             return Ok(current_private_key);
         }
 
-        let previous_private_key = self.export_private_key(&get_previous_version_name(name))?;
-        if previous_private_key.public_key().eq(&version) {
-            return Ok(previous_private_key);
+        match self.export_private_key(&get_previous_version_name(name)) {
+            Ok(previous_private_key) => {
+                if previous_private_key.public_key().eq(&version) {
+                    Ok(previous_private_key)
+                } else {
+                    Err(Error::KeyVersionNotFound(version.to_string()))
+                }
+            }
+            Err(Error::KeyNotSet(_)) => Err(Error::KeyVersionNotFound(version.to_string())),
+            Err(e) => Err(e),
         }
-
-        Err(Error::KeyVersionNotFound(version.to_string()))
     }
 
     fn import_private_key(&mut self, name: &str, key: Ed25519PrivateKey) -> Result<(), Error> {
-        self.set(name, Value::Ed25519PrivateKey(key))?;
-
-        // Set the previous key pair version to be the newly generated key pair.
-        self.set(
-            &get_previous_version_name(name),
-            Value::Ed25519PrivateKey(self.export_private_key(name)?),
-        )
+        self.set(name, Value::Ed25519PrivateKey(key))
     }
 
     fn get_public_key(&self, name: &str) -> Result<PublicKeyResponse, Error> {
