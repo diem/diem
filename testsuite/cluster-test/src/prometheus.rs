@@ -64,30 +64,35 @@ impl Prometheus {
                 end.as_secs(),
                 step
             ))
-            .expect("Failed to make query_range url");
+            .expect("hhhFailed to make query_range url111");
 
         let response = self
             .client
             .get(url.clone())
             .send()
-            .map_err(|e| format_err!("Failed to query prometheus: {:?}", e))?;
+            .map_err(|e| format_err!("hhhFailed to query prometheus111: {:?}", e))?;
 
         // We don't check HTTP error code here
         // Prometheus supplies error status in json response along with error text
 
         let response: PrometheusResponse = response.json().map_err(|e| {
-            format_err!("Failed to parse prometheus response: {:?}. Url: {}", e, url)
+            format_err!(
+                "hhhFailed to parse prometheus response111: {:?}. Url: {}",
+                e,
+                url
+            )
         })?;
 
         match response.data {
             Some(data) => MatrixResponse::from_prometheus(data),
             None => bail!(
-                "Prometheus query failed: {} {}",
+                "hhhPrometheus query failed111: {} {}",
                 response.error_type,
                 response.error
             ),
         }
     }
+
     pub fn query_range_avg(
         &self,
         query: String,
@@ -100,9 +105,50 @@ impl Prometheus {
             .avg()
             .ok_or_else(|| format_err!("Failed to compute avg"))
     }
+
+    pub fn query_range_max(
+        &self,
+        query: String,
+        start: &Duration,
+        end: &Duration,
+        step: u64,
+    ) -> Result<HashMap<String, f64>> {
+        let response = self.query_range(query, start, end, step)?;
+        response
+            .max()
+            .ok_or_else(|| format_err!("hhhhFailed to compute avg111"))
+    }
 }
 
 impl MatrixResponse {
+    pub fn max(&self) -> Option<HashMap<String, f64>> {
+        if self.inner.is_empty() {
+            return None;
+        }
+        let mut max = HashMap::new();
+        let mut count = 0usize;
+        for (peer_id, time_series) in &self.inner {
+            let mut cur_max = 0.;
+            for (_, v) in time_series.inner.iter() {
+                if !v.is_normal() {
+                    // Some time series can return NaN
+                    // we simply ignore NaN values when calculating max
+                    continue;
+                }
+                if *v > cur_max {
+                    cur_max = *v;
+                }
+            }
+            max.insert(peer_id.clone(), cur_max);
+            count += 1;
+        }
+        if count == 0 {
+            None
+        } else {
+            Some(max)
+        }
+    }
+
     pub fn avg(&self) -> Option<f64> {
         if self.inner.is_empty() {
             return None;

@@ -151,7 +151,7 @@ pub fn main() {
     } else if args.health_check && args.swarm {
         let util = BasicSwarmUtil::setup(&args);
         let logs = DebugPortLogThread::spawn_new(&util.cluster).0;
-        let mut health_check_runner = HealthCheckRunner::new_all(util.cluster);
+        let mut health_check_runner = HealthCheckRunner::new_all(util.cluster, None);
         let duration = Duration::from_secs(args.duration);
         exit_on_error(run_health_check(&logs, &mut health_check_runner, duration));
         return;
@@ -322,7 +322,7 @@ fn run_health_check(
         // This assumes so far that event propagation time is << 1s, this need to be refined
         // in future to account for actual event propagation delay
         let events = logs.recv_all_until_deadline(deadline);
-        let result = health_check_runner.run(&events, &HashSet::new(), PrintFailures::All);
+        let result = health_check_runner.run(&events, &HashSet::new(), PrintFailures::All, false);
         let now = Instant::now();
         if now > health_check_deadline {
             return result.map(|_| ());
@@ -510,7 +510,8 @@ impl ClusterTestRunner {
             "Log tail thread started in {} ms",
             log_tail_startup_time.as_millis()
         );
-        let health_check_runner = HealthCheckRunner::new_all(cluster.clone());
+        let health_check_runner =
+            HealthCheckRunner::new_all(cluster.clone(), Some(util.prometheus.clone()));
         let experiment_interval_sec = match env::var("EXPERIMENT_INTERVAL") {
             Ok(s) => s.parse().expect("EXPERIMENT_INTERVAL env is not a number"),
             Err(..) => 15,
@@ -671,10 +672,13 @@ impl ClusterTestRunner {
     ) -> Result<()> {
         self.wait_until_all_healthy()?;
         let events = self.logs.recv_all();
-        if let Err(s) =
-            self.health_check_runner
-                .run(&events, &HashSet::new(), PrintFailures::UnexpectedOnly)
-        {
+        let affected_validators = experiment.affected_validators();
+        if let Err(s) = self.health_check_runner.run(
+            &events,
+            &affected_validators,
+            PrintFailures::UnexpectedOnly,
+            false,
+        ) {
             bail!(
                 "Some validators are unhealthy before experiment started : {}",
                 s
@@ -689,7 +693,6 @@ impl ClusterTestRunner {
             color::Fg(color::Reset),
             style::Reset
         );
-        let affected_validators = experiment.affected_validators();
         let deadline = experiment.deadline();
         let experiment_deadline = Instant::now() + deadline;
         let context = Context::new(
@@ -725,6 +728,7 @@ impl ClusterTestRunner {
                                 &events,
                                 &affected_validators,
                                 PrintFailures::UnexpectedOnly,
+                                false,
                             ) {
                                 bail!("Validators which were not under experiment failed : {}", s);
                             }
@@ -759,6 +763,7 @@ impl ClusterTestRunner {
                 &events,
                 &affected_validators,
                 PrintFailures::UnexpectedOnly,
+                true,
             ) {
                 Err(s) => bail!("Validators which were not under experiment failed : {}", s),
                 Ok(r) => unhealthy_validators = r,
@@ -787,7 +792,7 @@ impl ClusterTestRunner {
             let events = self.logs.recv_all_until_deadline(deadline);
             if let Ok(failed_instances) =
                 self.health_check_runner
-                    .run(&events, &HashSet::new(), PrintFailures::None)
+                    .run(&events, &HashSet::new(), PrintFailures::None, false)
             {
                 if failed_instances.is_empty() {
                     break;

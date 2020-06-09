@@ -5,13 +5,16 @@
 
 mod commit_check;
 mod debug_interface_log_tail;
+mod fullnode_check;
 mod liveness_check;
 mod log_tail;
 
+use crate::prometheus::Prometheus;
 use crate::{cluster::Cluster, util::unix_timestamp_now};
 use anyhow::{bail, Result};
 pub use commit_check::CommitHistoryHealthCheck;
 pub use debug_interface_log_tail::DebugPortLogThread;
+pub use fullnode_check::FullNodeHealthCheck;
 use itertools::Itertools;
 pub use liveness_check::LivenessHealthCheck;
 pub use log_tail::{LogTail, TraceTail};
@@ -87,13 +90,15 @@ impl HealthCheckRunner {
         }
     }
 
-    pub fn new_all(cluster: Cluster) -> Self {
+    pub fn new_all(cluster: Cluster, prometheus: Option<Prometheus>) -> Self {
         let liveness_health_check = LivenessHealthCheck::new(&cluster);
+        let fullnode_check = FullNodeHealthCheck::new(cluster.clone(), prometheus);
         Self::new(
             cluster,
             vec![
                 Box::new(CommitHistoryHealthCheck::new()),
                 Box::new(liveness_health_check),
+                Box::new(fullnode_check),
             ],
         )
     }
@@ -108,6 +113,7 @@ impl HealthCheckRunner {
         events: &[ValidatorEvent],
         affected_validators_set: &HashSet<String>,
         print_failures: PrintFailures,
+        full_node_check: bool,
     ) -> Result<Vec<String>> {
         let mut node_health = HashMap::new();
         for instance in self.cluster.validator_instances() {
@@ -117,6 +123,9 @@ impl HealthCheckRunner {
 
         let mut context = HealthCheckContext::new();
         for health_check in self.health_checks.iter_mut() {
+            if !full_node_check && health_check.name().eq("fullnode_check") {
+                continue;
+            }
             let start = Instant::now();
             for event in events {
                 health_check.on_event(event, &mut context);
