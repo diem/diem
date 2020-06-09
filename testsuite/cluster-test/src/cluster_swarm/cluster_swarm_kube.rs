@@ -41,7 +41,7 @@ const ERROR_NOT_FOUND: u16 = 404;
 #[derive(Clone)]
 pub struct ClusterSwarmKube {
     client: Client,
-    node_map: Arc<Mutex<HashMap<InstanceConfig, Instance>>>,
+    node_map: Arc<Mutex<HashMap<InstanceConfig, String>>>,
     http_client: HttpClient,
 }
 
@@ -365,18 +365,8 @@ impl ClusterSwarmKube {
             .ok_or_else(|| format_err!("Failed to find workspace"))?;
         Ok(workspace.clone())
     }
-}
 
-#[async_trait]
-impl ClusterSwarm for ClusterSwarmKube {
-    async fn remove_all_network_effects(&self) -> Result<()> {
-        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 3), || {
-            Box::pin(async move { self.remove_all_network_effects_helper().await })
-        })
-        .await
-    }
-
-    async fn run(
+    pub async fn run(
         &self,
         k8s_node: &str,
         docker_image: &str,
@@ -407,7 +397,7 @@ impl ClusterSwarm for ClusterSwarmKube {
         self.run_jobs(vec![job_spec], back_off_limit).await
     }
 
-    async fn upsert_node(
+    pub async fn upsert_node(
         &self,
         instance_config: InstanceConfig,
         delete_data: bool,
@@ -423,12 +413,13 @@ impl ClusterSwarm for ClusterSwarmKube {
         if pod_api.get(&pod_name).await.is_ok() {
             self.delete_resource::<Pod>(&pod_name).await?;
         }
-        let node_name = if let Some(instance) = self.node_map.lock().await.get(&instance_config) {
-            #[allow(deprecated)]
-            instance.k8s_node().to_string()
-        } else {
-            "".to_string()
-        };
+        let node_name = self
+            .node_map
+            .lock()
+            .await
+            .get(&instance_config)
+            .cloned()
+            .unwrap_or_else(|| "".to_string());
         debug!("Creating pod {} on node {:?}", pod_name, node_name);
         let (p, s): (Pod, Service) = match &instance_config {
             Validator(validator_config) => (
@@ -515,11 +506,11 @@ impl ClusterSwarm for ClusterSwarmKube {
         self.node_map
             .lock()
             .await
-            .insert(instance_config, instance.clone());
+            .insert(instance_config, node_name);
         Ok(instance)
     }
 
-    async fn delete_node(&self, instance_config: &InstanceConfig) -> Result<()> {
+    pub async fn delete_node(&self, instance_config: &InstanceConfig) -> Result<()> {
         let pod_name = match instance_config {
             Validator(ref validator_config) => format!("val-{}", validator_config.index),
             Fullnode(ref fullnode_config) => format!(
@@ -530,6 +521,20 @@ impl ClusterSwarm for ClusterSwarmKube {
         let service_name = pod_name.clone();
         self.delete_resource::<Pod>(&pod_name).await?;
         self.delete_resource::<Service>(&service_name).await
+    }
+}
+
+#[async_trait]
+impl ClusterSwarm for ClusterSwarmKube {
+    async fn remove_all_network_effects(&self) -> Result<()> {
+        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 3), || {
+            Box::pin(async move { self.remove_all_network_effects_helper().await })
+        })
+        .await
+    }
+
+    async fn spawn_new_instance(&self, instance_config: InstanceConfig) -> Result<Instance> {
+        self.upsert_node(instance_config, false).await
     }
 
     async fn delete_all(&self) -> Result<()> {

@@ -451,14 +451,13 @@ impl ClusterUtil {
             .await
             .unwrap_or_else(|_| panic!("{} scaling failed", asg_name));
             let (validators, fullnodes) = cluster_swarm
-                .create_validator_and_fullnode_set(
+                .spawn_validator_and_fullnode_set(
                     args.k8s_num_validators,
                     args.k8s_fullnodes_per_validator,
                     &image_tag,
-                    true,
                 )
                 .await
-                .expect("Failed to create_validator_and_fullnode_set");
+                .expect("Failed to spawn_validator_and_fullnode_set");
             info!("Deployment complete");
             let cluster = Cluster::new(validators, fullnodes);
 
