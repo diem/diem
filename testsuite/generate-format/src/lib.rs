@@ -12,6 +12,8 @@ use structopt::{clap::arg_enum, StructOpt};
 mod consensus;
 /// Libra transactions.
 mod libra;
+/// Move ABI.
+mod move_abi;
 /// Network messages.
 mod network;
 
@@ -22,6 +24,7 @@ pub enum Corpus {
     Libra,
     Consensus,
     Network,
+    MoveABI,
 }
 }
 
@@ -40,6 +43,7 @@ impl Corpus {
             Corpus::Libra => libra::get_registry().unwrap(),
             Corpus::Consensus => consensus::get_registry().unwrap(),
             Corpus::Network => network::get_registry().unwrap(),
+            Corpus::MoveABI => move_abi::get_registry().unwrap(),
         }
     }
 
@@ -49,6 +53,7 @@ impl Corpus {
             Corpus::Libra => libra::output_file(),
             Corpus::Consensus => consensus::output_file(),
             Corpus::Network => network::output_file(),
+            Corpus::MoveABI => move_abi::output_file(),
         }
     }
 }

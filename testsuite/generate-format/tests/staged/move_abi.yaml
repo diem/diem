@@ -1,0 +1,61 @@
+---
+AccountAddress:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+ArgumentABI:
+  STRUCT:
+    - name: STR
+    - type_tag:
+        TYPENAME: TypeTag
+Identifier:
+  NEWTYPESTRUCT: STR
+ScriptABI:
+  STRUCT:
+    - name: STR
+    - doc: STR
+    - code:
+        SEQ: U8
+    - ty_args:
+        SEQ:
+          TYPENAME: TypeArgumentABI
+    - args:
+        SEQ:
+          TYPENAME: ArgumentABI
+StructTag:
+  STRUCT:
+    - address:
+        TYPENAME: AccountAddress
+    - module:
+        TYPENAME: Identifier
+    - name:
+        TYPENAME: Identifier
+    - type_params:
+        SEQ:
+          TYPENAME: TypeTag
+TypeArgumentABI:
+  STRUCT:
+    - name: STR
+TypeTag:
+  ENUM:
+    0:
+      Bool: UNIT
+    1:
+      U8: UNIT
+    2:
+      U64: UNIT
+    3:
+      U128: UNIT
+    4:
+      Address: UNIT
+    5:
+      Signer: UNIT
+    6:
+      Vector:
+        NEWTYPE:
+          TYPENAME: TypeTag
+    7:
+      Struct:
+        NEWTYPE:
+          TYPENAME: StructTag
