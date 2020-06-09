@@ -25,7 +25,7 @@ use crate::{
         network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
         rpc::error::RpcError,
     },
-    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
+    validator_network::network_builder::NETWORK_CHANNEL_SIZE,
     ProtocolId,
 };
 use bytes::Bytes;
@@ -36,6 +36,7 @@ use futures::{
 };
 use libra_config::network_id::NetworkContext;
 use libra_logger::prelude::*;
+use libra_metrics::IntCounterVec;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
 use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng};
@@ -66,16 +67,21 @@ pub struct HealthCheckerNetworkSender {
     inner: NetworkSender<HealthCheckerMsg>,
 }
 
-pub fn add_to_network(
-    network: &mut NetworkBuilder,
-) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents) {
-    network.add_protocol_handler((
+/// Configuration for the network endpoints to support HealthChecker.
+pub fn network_endpoint_config() -> (
+    Vec<ProtocolId>,
+    Vec<ProtocolId>,
+    QueueStyle,
+    usize,
+    Option<&'static IntCounterVec>,
+) {
+    (
         vec![ProtocolId::HealthCheckerRpc],
         vec![],
         QueueStyle::LIFO,
         NETWORK_CHANNEL_SIZE,
         Some(&counters::PENDING_HEALTH_CHECKER_NETWORK_EVENTS),
-    ))
+    )
 }
 
 impl NewNetworkSender for HealthCheckerNetworkSender {
